@@ -5,11 +5,11 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from secrets import token_bytes
 from typing import Dict, List, Optional, Set, Tuple
 
 import pytest
 from blspy import G1Element
-from Crypto.Random import get_random_bytes
 
 from chia.farmer.farmer_api import Farmer
 from chia.harvester.harvester_api import Harvester
@@ -262,7 +262,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(get_random_bytes(32)), x % 255),
+            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), x % 255),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),

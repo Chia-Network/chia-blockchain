@@ -1,10 +1,10 @@
 import logging
 import time
+from secrets import token_bytes
 from typing import Any, Callable, List, Tuple
 
 import pytest
 from blspy import G1Element
-from Crypto.Random import get_random_bytes
 
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
@@ -154,7 +154,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
         Plot(
             filename=str(x),
             size=uint8(0),
-            plot_id=bytes32(get_random_bytes(32)),
+            plot_id=bytes32(token_bytes(32)),
             pool_contract_puzzle_hash=None,
             pool_public_key=None,
             plot_public_key=G1Element(),

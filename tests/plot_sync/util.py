@@ -1,8 +1,7 @@
 import time
 from dataclasses import dataclass
+from secrets import token_bytes
 from typing import Optional
-
-from Crypto.Random import get_random_bytes
 
 from chia.harvester.harvester_api import Harvester
 from chia.plot_sync.sender import Sender
@@ -27,7 +26,7 @@ class WSChiaConnectionDummy:
 
 
 def get_dummy_connection(node_type: NodeType, peer_id=None) -> WSChiaConnectionDummy:
-    return WSChiaConnectionDummy(node_type, bytes32(get_random_bytes(32)) if peer_id is None else peer_id)
+    return WSChiaConnectionDummy(node_type, bytes32(token_bytes(32)) if peer_id is None else peer_id)
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:
