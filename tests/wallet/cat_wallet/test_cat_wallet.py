@@ -14,8 +14,10 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_info import WalletInfo
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -104,6 +106,20 @@ class TestCATWallet:
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cat_wallet.get_spendable_balance, 100)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 100)
+
+        # Test migration
+        all_lineage = await cat_wallet.lineage_store.get_all_lineage_proofs()
+        current_info = cat_wallet.wallet_info
+        data_str = bytes(
+            LegacyCATInfo(
+                cat_wallet.cat_info.limitations_program_hash, cat_wallet.cat_info.my_tail, list(all_lineage.items())
+            )
+        ).hex()
+        wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
+        new_cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, wallet_info)
+        assert new_cat_wallet.cat_info.limitations_program_hash == cat_wallet.cat_info.limitations_program_hash
+        assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
+        assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
     @pytest.mark.parametrize(
         "trusted",
