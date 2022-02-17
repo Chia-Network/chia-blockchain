@@ -2,6 +2,7 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -11,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
@@ -32,17 +34,17 @@ def event_loop():
 
 
 class TestWalletSync:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_node_and_wallet(test_constants):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_starting_height(self):
         async for _ in setup_node_and_wallet(test_constants, starting_height=100):
             yield _
@@ -261,7 +263,7 @@ class TestWalletSync:
 
     @pytest.mark.parametrize(
         "trusted",
-        [True, False],
+        [False],
     )
     @pytest.mark.asyncio
     async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks, trusted):
@@ -296,6 +298,7 @@ class TestWalletSync:
             return len(txs)
 
         await time_out_assert(10, get_tx_count, 0, 1)
+        await time_out_assert(30, wallet_is_synced, True, wallet_node, full_node_api)
 
         num_blocks_reorg_1 = 40
         blocks_reorg_1 = bt.get_consecutive_blocks(
@@ -304,6 +307,7 @@ class TestWalletSync:
         blocks_reorg_2 = bt.get_consecutive_blocks(num_blocks_reorg_1, block_list_input=blocks_reorg_1)
 
         for block in blocks_reorg_2[-41:]:
+            await asyncio.sleep(0.4)
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await disconnect_all_and_reconnect(server_2, fn_server)
@@ -313,5 +317,6 @@ class TestWalletSync:
             uint32(len(blocks_reorg_1))
         )
 
-        await time_out_assert(10, get_tx_count, 2, 1)
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(60, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, get_tx_count, 2, 1)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)

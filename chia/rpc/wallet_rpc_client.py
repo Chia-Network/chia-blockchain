@@ -328,7 +328,7 @@ class WalletRpcClient(RpcClient):
 
     async def pw_join_pool(
         self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
-    ) -> TransactionRecord:
+    ) -> Dict:
         request = {
             "wallet_id": int(wallet_id),
             "target_puzzlehash": target_puzzlehash.hex(),
@@ -337,13 +337,19 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
         }
 
-        join_reply = await self.fetch("pw_join_pool", request)
-        return TransactionRecord.from_json_dict(join_reply["transaction"])
+        reply = await self.fetch("pw_join_pool", request)
+        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
+        if reply["fee_transaction"]:
+            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
+        return reply["transaction"]
 
-    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> TransactionRecord:
-        return TransactionRecord.from_json_dict(
-            (await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
-        )
+    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> Dict:
+        reply = await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee})
+        reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
+        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
+        if reply["fee_transaction"]:
+            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
+        return reply
 
     async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
         json_dict = await self.fetch("pw_status", {"wallet_id": wallet_id})

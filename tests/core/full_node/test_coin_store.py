@@ -16,6 +16,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
+from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
@@ -368,3 +369,44 @@ class TestCoinStoreWithBlocks:
             assert len(coins_pool) == num_blocks - 2
 
             b.shut_down()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("cache_size", [0, 10, 100000])
+    async def test_get_coin_states(self, cache_size: uint32, tmp_dir, db_version):
+        async with DBConnection(db_version) as db_wrapper:
+            crs = [
+                CoinRecord(
+                    Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(100)),
+                    uint32(i),
+                    uint32(2 * i),
+                    False,
+                    uint64(12321312),
+                )
+                for i in range(1, 301)
+            ]
+            crs += [
+                CoinRecord(
+                    Coin(std_hash(b"X" + i.to_bytes(4, byteorder="big")), std_hash(b"3"), uint64(100)),
+                    uint32(i),
+                    uint32(2 * i),
+                    False,
+                    uint64(12321312),
+                )
+                for i in range(1, 301)
+            ]
+            coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
+            await coin_store._add_coin_records(crs)
+
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0)) == 300
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, [std_hash(b"2")], 0)) == 0
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 300)) == 151
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 603)) == 0
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"1")], 0)) == 0
+
+            coins = [cr.coin.name() for cr in crs]
+            bad_coins = [std_hash(cr.coin.name()) for cr in crs]
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, 0)) == 600
+            assert len(await coin_store.get_coin_states_by_ids(False, coins, 0)) == 0
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, 300)) == 302
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, 603)) == 0
+            assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, 0)) == 0

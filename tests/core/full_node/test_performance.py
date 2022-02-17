@@ -6,7 +6,9 @@ import random
 import time
 from typing import Dict
 
+from clvm.casts import int_to_bytes
 import pytest
+import pytest_asyncio
 import cProfile
 
 from chia.consensus.block_record import BlockRecord
@@ -15,7 +17,6 @@ from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.clvm import int_to_bytes
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
 
@@ -44,7 +45,7 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def wallet_nodes():
     async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
     nodes, wallets = await async_gen.__anext__()

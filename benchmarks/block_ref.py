@@ -1,13 +1,13 @@
-import click
-import aiosqlite
 import asyncio
-import time
-import random
 import os
-
-from typing import Optional, List
-from pathlib import Path
+import random
 from dataclasses import dataclass
+from pathlib import Path
+from time import monotonic
+from typing import List, Optional
+
+import aiosqlite
+import click
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -62,7 +62,7 @@ async def main(db_path: Path):
         hint_store = await HintStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
 
-        start_time = time.time()
+        start_time = monotonic()
         # make configurable
         reserved_cores = 4
         blockchain = await Blockchain.create(
@@ -78,9 +78,9 @@ async def main(db_path: Path):
                 random_refs(),
             )
 
-            start_time = time.time()
+            start_time = monotonic()
             gen = await blockchain.get_block_generator(block)
-            one_call = time.time() - start_time
+            one_call = monotonic() - start_time
             timing += one_call
             assert gen is not None
 

@@ -11,6 +11,7 @@ from operator import attrgetter
 import logging
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -32,6 +33,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -39,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
@@ -168,6 +170,7 @@ class TestWalletRpc:
             async def eventual_balance_det(c, wallet_id: str):
                 return (await c.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
 
+            await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", transaction_id)
             assert tx_confirmed.confirmed
