@@ -308,7 +308,7 @@ async def environment(tmp_path: Path, farmer_multi_harvester: Tuple[List[Service
         dir_invalid,
         dir_keys_missing,
         dir_duplicates,
-        [ExpectedResult() for _ in range(len(harvesters))],
+        [ExpectedResult() for _ in harvesters],
     )
 
 
