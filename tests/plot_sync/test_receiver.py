@@ -6,6 +6,7 @@ import pytest
 from blspy import G1Element
 from Crypto.Random import get_random_bytes
 
+from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.util import ErrorCodes, State
 from chia.protocols.harvester_protocol import (
@@ -206,14 +207,7 @@ async def test_reset() -> None:
     # Call `reset` and make sure all expected values are set back to their defaults.
     receiver.reset()
     assert_default_values(receiver)
-    assert receiver._delta.valid.additions == {}
-    assert receiver._delta.valid.removals == []
-    assert receiver._delta.invalid.additions == []
-    assert receiver._delta.invalid.removals == []
-    assert receiver._delta.keys_missing.additions == []
-    assert receiver._delta.keys_missing.removals == []
-    assert receiver._delta.duplicates.additions == []
-    assert receiver._delta.duplicates.removals == []
+    assert receiver._delta == Delta()
     # Connection should remain
     assert receiver.connection() == connection_before
 
@@ -226,9 +220,11 @@ async def test_to_dict() -> None:
     assert "failed_to_open_filenames" in plot_sync_dict_1 and len(plot_sync_dict_1["failed_to_open_filenames"]) == 0
     assert "no_key_filenames" in plot_sync_dict_1 and len(plot_sync_dict_1["no_key_filenames"]) == 0
     assert "last_sync_time" not in plot_sync_dict_1
-    assert plot_sync_dict_1["connection"]["node_id"] == receiver.connection().peer_node_id
-    assert plot_sync_dict_1["connection"]["host"] == receiver.connection().peer_host
-    assert plot_sync_dict_1["connection"]["port"] == receiver.connection().peer_port
+    assert plot_sync_dict_1["connection"] == {
+        "node_id": receiver.connection().peer_node_id,
+        "host": receiver.connection().peer_host,
+        "port": receiver.connection().peer_port,
+    }
 
     # We should get equal dicts
     plot_sync_dict_2 = receiver.to_dict()
