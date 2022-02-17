@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 
 from typing import Dict, Optional, List
 from blspy import G2Element
@@ -43,7 +44,7 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
 class TestOfferLifecycle:
     cost: Dict[str, int] = {}
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def setup_sim(self):
         sim = await SpendSim.create()
         sim_client = SimClient(sim)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
+import pytest_asyncio
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
@@ -23,7 +24,7 @@ def event_loop():
 
 
 class TestWalletBlockchain:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_node_and_wallet(test_constants):
             yield _

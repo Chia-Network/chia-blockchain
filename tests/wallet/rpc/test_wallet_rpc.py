@@ -11,6 +11,7 @@ from operator import attrgetter
 import logging
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -40,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _

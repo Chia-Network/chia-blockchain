@@ -1071,6 +1071,7 @@ class WebSocketServer:
         error = None
         success = False
         testing = False
+        already_running = False
         if "testing" in request:
             testing = request["testing"]
 
@@ -1084,9 +1085,17 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = f"Service {service_command} already running"
+                self.log.info(f"Service {service_command} already running")
+                already_running = True
+        elif service_command in self.connections:
+            # If the service was started manually (not launched by the daemon), we should
+            # have a connection to it.
+            self.log.info(f"Service {service_command} already registered")
+            already_running = True
 
-        if error is None:
+        if already_running:
+            success = True
+        elif error is None:
             try:
                 exe_command = service_command
                 if testing is True:
@@ -1121,6 +1130,12 @@ class WebSocketServer:
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
+            if not is_running:
+                # Check if we have a connection to the requested service. This might be the
+                # case if the service was started manually (i.e. not started by the daemon).
+                service_connections = self.connections.get(service_name)
+                if service_connections is not None:
+                    is_running = len(service_connections) > 0
             response = {
                 "success": True,
                 "service_name": service_name,

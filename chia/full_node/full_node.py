@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import random
@@ -729,9 +730,9 @@ class FullNode:
             self._transaction_queue_task.cancel()
         if hasattr(self, "_blockchain_lock_queue"):
             self._blockchain_lock_queue.close()
+        cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
-        cancel_task_safe(self._sync_task, self.log)
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
@@ -739,6 +740,9 @@ class FullNode:
             await asyncio.wait([self._init_weight_proof])
         if hasattr(self, "_blockchain_lock_queue"):
             await self._blockchain_lock_queue.await_closed()
+        if self._sync_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._sync_task
 
     async def _sync(self):
         """
