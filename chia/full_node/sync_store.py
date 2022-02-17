@@ -74,9 +74,9 @@ class SyncStore:
             self.peak_to_peer[header_hash].add(peer_id)
         else:
             self.peak_to_peer[header_hash] = {peer_id}
-            # sync target hash is used throughout the sync process and should not be deleted.
             if len(self.peak_to_peer) > 256:  # nice power of two
                 item = self.peak_to_peer.popitem(last=False)  # Remove the oldest entry
+                # sync target hash is used throughout the sync process and should not be deleted.
                 if item[0] == self.sync_target_header_hash:
                     self.peak_to_peer[item[0]] = item[1]  # Put it back in if it was the sync target
                     self.peak_to_peer.popitem(last=False)  # Remove the oldest entry again
