@@ -53,17 +53,6 @@ class ExpectedResult:
     duplicates_delta: PathListDelta = field(default_factory=PathListDelta)
     callback_passed: bool = False
 
-    def reset(self) -> None:
-        self.valid_count = 0
-        self.valid_delta.clear()
-        self.invalid_count = 0
-        self.invalid_delta.clear()
-        self.keys_missing_count = 0
-        self.keys_missing_delta.clear()
-        self.duplicates_count = 0
-        self.duplicates_delta.clear()
-        self.callback_passed = False
-
     def add_valid(self, list_plots: List) -> None:
         self.valid_count += len(list_plots)
         self.valid_delta.additions.update({x.prover.get_filename(): x for x in list_plots})
@@ -493,7 +482,7 @@ async def test_harvester_restart(environment: Environment) -> None:
     # Remove the duplicates dir to avoid conflicts with the original plots
     env.remove_directory(0, env.dir_duplicates)
     # Reset the expected data for harvester 0 and re-add all directories because of the restart
-    env.expected[0].reset()
+    env.expected[0] = ExpectedResult()
     env.add_all_directories(0)
     # Run the refresh two times and make sure everything recovers and stays recovered after harvester restart
     await env.run_sync_test()
