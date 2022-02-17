@@ -994,7 +994,7 @@ class Timelord:
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
                     # default value so that it's always set for state_changed later
-                    ips = 0
+                    ips: float = 0
                     if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
@@ -1023,7 +1023,13 @@ class Timelord:
                             self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
                         self.state_changed(
                             "finished_pot",
-                            {"estimated_ips": ips, "iterations_needed": iterations_needed, "chain": chain.value},
+                            {
+                                "estimated_ips": ips,
+                                "iterations_needed": iterations_needed,
+                                "chain": chain.value,
+                                "vdf_info": vdf_info,
+                                "vdf_proof": vdf_proof,
+                            },
                         )
                     else:
                         async with self.lock:
