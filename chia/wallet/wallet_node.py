@@ -633,7 +633,7 @@ class WalletNode:
                 self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
                 nonlocal num_concurrent_tasks
-                num_concurrent_tasks -= 1
+                num_concurrent_tasks -= 1  # pylint: disable=E0602
 
         for idx, potential_state in enumerate(items):
             if self.server is None:
@@ -1044,7 +1044,6 @@ class WalletNode:
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
-            self.log.info("Cache hit!")
             return True
 
         spent_height = coin_state.spent_height
