@@ -66,6 +66,7 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, CompressorArg
@@ -73,7 +74,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
