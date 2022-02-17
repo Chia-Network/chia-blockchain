@@ -1002,7 +1002,7 @@ class Timelord:
                             f"Estimated IPS: {ips}, Chain: {chain}"
                         )
                         self.state_changed(
-                            "finished_pot_challenge",
+                            "finished_pot",
                             {"estimated_ips": ips, "iterations_needed": iterations_needed, "chain": chain.value},
                         )
 
