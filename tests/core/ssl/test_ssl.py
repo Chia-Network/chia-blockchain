@@ -93,8 +93,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(farmer_server, 12312, ssl_context)
-        assert connected is True
+        await establish_connection(farmer_server, 12312, ssl_context)
 
         # Create not authenticated cert
         pub_crt = farmer_server._private_key_path.parent / "non_valid.crt"
@@ -131,8 +130,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             full_node_server.chia_ca_crt_path, full_node_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(full_node_server, 12312, ssl_context)
-        assert connected is True
+        await establish_connection(full_node_server, 12312, ssl_context)
 
     @pytest.mark.asyncio
     async def test_wallet(self, wallet_node):
@@ -217,8 +215,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             introducer_server.chia_ca_crt_path, introducer_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(introducer_server, 12312, ssl_context)
-        assert connected is True
+        await establish_connection(introducer_server, 12312, ssl_context)
 
     @pytest.mark.asyncio
     async def test_timelord(self, timelord):
