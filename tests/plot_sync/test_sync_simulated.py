@@ -3,6 +3,7 @@ import functools
 import logging
 import time
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -27,6 +28,15 @@ from tests.plot_sync.util import start_harvester_service
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
+
+
+class ErrorSimulation(Enum):
+    DropEveryFourthMessage = 1
+    DropThreeMessages = 2
+    RespondTooLateEveryFourthMessage = 3
+    RespondTwice = 4
+    NonRecoverableError = 5
+    NotConnected = 6
 
 
 @dataclass
@@ -184,24 +194,24 @@ class TestRunner:
 
 async def skip_processing(self, _, message_type, message) -> bool:
     self.message_counter += 1
-    if self.simulate_error == 1:  # Drop every fourth message
+    if self.simulate_error == ErrorSimulation.DropEveryFourthMessage:
         if self.message_counter % 4 == 0:
             return True
-    if self.simulate_error == 2:  # Drop 3 messages
+    if self.simulate_error == ErrorSimulation.DropThreeMessages:
         if 2 < self.message_counter < 6:
             return True
-    if self.simulate_error == 3:  # Respond too late every fourth message
+    if self.simulate_error == ErrorSimulation.RespondTooLateEveryFourthMessage:
         if self.message_counter % 4 == 0:
             await asyncio.sleep(Constants.message_timeout + 1)
             return False
-    if self.simulate_error == 4:  # Respond twice
+    if self.simulate_error == ErrorSimulation.RespondTwice:
         await self.connection().send_message(
             make_msg(
                 ProtocolMessageTypes.plot_sync_response,
                 PlotSyncResponse(message.identifier, int16(message_type.value), None),
             )
         )
-    if self.simulate_error == 5 and self.message_counter > 1:  # Non recoverable error
+    if self.simulate_error == ErrorSimulation.NonRecoverableError and self.message_counter > 1:
         await self.connection().send_message(
             make_msg(
                 ProtocolMessageTypes.plot_sync_response,
@@ -337,19 +347,19 @@ async def test_sync_simulated(
 
 @pytest.mark.harvesters(count=1)
 @pytest.mark.parametrize(
-    ["simulate_error"],
+    "simulate_error",
     [
-        pytest.param(1, id="drops one message"),
-        pytest.param(2, id="drops multiple messages"),
-        pytest.param(3, id="responds too late"),
-        pytest.param(4, id="responds twice"),
+        ErrorSimulation.DropEveryFourthMessage,
+        ErrorSimulation.DropThreeMessages,
+        ErrorSimulation.RespondTooLateEveryFourthMessage,
+        ErrorSimulation.RespondTwice,
     ],
 )
 @pytest.mark.asyncio
 async def test_farmer_error_simulation(
     farmer_multi_harvester: Tuple[List[Service], Service],
     event_loop: asyncio.events.AbstractEventLoop,
-    simulate_error: int,
+    simulate_error: ErrorSimulation,
 ) -> None:
     Constants.message_timeout = 5
     harvester_services: List[Service]
@@ -372,16 +382,12 @@ async def test_farmer_error_simulation(
 
 
 @pytest.mark.harvesters(count=1)
-@pytest.mark.parametrize(
-    ["simulate_error"],
-    [
-        pytest.param(5, id="non recoverable error"),
-        pytest.param(6, id="not connected"),
-    ],
-)
+@pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.asyncio
 async def test_sync_reset_cases(
-    farmer_multi_harvester: Tuple[List[Service], Service], event_loop: asyncio.events.AbstractEventLoop, simulate_error
+    farmer_multi_harvester: Tuple[List[Service], Service],
+    event_loop: asyncio.events.AbstractEventLoop,
+    simulate_error: ErrorSimulation,
 ) -> None:
     harvester_services: List[Service]
     farmer_service: Service
@@ -418,7 +424,7 @@ async def test_sync_reset_cases(
     # Sleep 2 seconds to make sure we have a different sync_id after the reset which gets triggered
     await asyncio.sleep(2)
     saved_connection = sender._connection
-    if simulate_error == 6:
+    if simulate_error == ErrorSimulation.NotConnected:
         sender._connection = None
     sender.process_batch(plots, 0)
     await time_out_assert(60, wait_for_reset)
