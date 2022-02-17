@@ -201,6 +201,8 @@ async def test_reset() -> None:
     receiver._delta.invalid.removals = ["1"]
     receiver._delta.keys_missing.additions = ["1"]
     receiver._delta.keys_missing.removals = ["1"]
+    receiver._delta.duplicates.additions = ["1"]
+    receiver._delta.duplicates.removals = ["1"]
     # Call `reset` and make sure all expected values are set back to their defaults.
     receiver.reset()
     assert_default_values(receiver)
@@ -210,6 +212,8 @@ async def test_reset() -> None:
     assert receiver._delta.invalid.removals == []
     assert receiver._delta.keys_missing.additions == []
     assert receiver._delta.keys_missing.removals == []
+    assert receiver._delta.duplicates.additions == []
+    assert receiver._delta.duplicates.removals == []
     # Connection should remain
     assert receiver.connection() == connection_before
 
@@ -252,6 +256,9 @@ async def test_to_dict() -> None:
     for path in sync_steps[State.keys_missing].args[0]:
         assert path in plot_sync_dict_3["no_key_filenames"]
 
+    for path in sync_steps[State.duplicates].args[0]:
+        assert path in plot_sync_dict_3["duplicates"]
+
     assert plot_sync_dict_3["last_sync_time"] > 0
 
 
@@ -271,6 +278,9 @@ async def test_sync_flow() -> None:
     for path in sync_steps[State.keys_missing].args[0]:
         assert path not in receiver.keys_missing()
 
+    for path in sync_steps[State.duplicates].args[0]:
+        assert path not in receiver.duplicates()
+
     # Walk through all states from idle to done and run them with the test data
     for state in State:
         await run_sync_step(receiver, sync_steps[state], state)
@@ -286,6 +296,9 @@ async def test_sync_flow() -> None:
 
     for path in sync_steps[State.keys_missing].args[0]:
         assert path in receiver.keys_missing()
+
+    for path in sync_steps[State.duplicates].args[0]:
+        assert path in receiver.duplicates()
 
     # We should be in idle state again
     assert receiver.state() == State.idle
