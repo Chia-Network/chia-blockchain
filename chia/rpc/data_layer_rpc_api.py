@@ -231,7 +231,7 @@ class DataLayerRpcApi:
 
     async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
-        get history of state hashes for a store
+        get kv diff between two root hashes
         """
         if self.service is None:
             raise Exception("Data layer not created")
