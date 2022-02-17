@@ -993,6 +993,8 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
+                    # default value so that it's always set for state_changed later
+                    ips = 0
                     if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
@@ -1000,10 +1002,6 @@ class Timelord:
                             f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
                             f" iters, "
                             f"Estimated IPS: {ips}, Chain: {chain}"
-                        )
-                        self.state_changed(
-                            "finished_pot",
-                            {"estimated_ips": ips, "iterations_needed": iterations_needed, "chain": chain.value},
                         )
 
                     vdf_info: VDFInfo = VDFInfo(
@@ -1023,6 +1021,10 @@ class Timelord:
                         async with self.lock:
                             assert proof_label is not None
                             self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
+                        self.state_changed(
+                            "finished_pot",
+                            {"estimated_ips": ips, "iterations_needed": iterations_needed, "chain": chain.value},
+                        )
                     else:
                         async with self.lock:
                             writer.write(b"010")
