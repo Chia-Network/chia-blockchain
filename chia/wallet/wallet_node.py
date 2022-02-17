@@ -610,7 +610,6 @@ class WalletNode:
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
-                    nonlocal num_concurrent_tasks
                     assert self.wallet_state_manager is not None
                     if header_hash is not None:
                         assert height is not None
@@ -633,7 +632,8 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
-                num_concurrent_tasks -= 1
+                nonlocal num_concurrent_tasks
+                num_concurrent_tasks -= 1  # pylint: disable=E0602
 
         for idx, potential_state in enumerate(items):
             if self.server is None:
@@ -1044,7 +1044,6 @@ class WalletNode:
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
-            self.log.info(f"Using cache for coin state: {last_change_height_cs(coin_state)}")
             return True
 
         spent_height = coin_state.spent_height
