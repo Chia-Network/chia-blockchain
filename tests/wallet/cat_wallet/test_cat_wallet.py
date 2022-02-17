@@ -192,6 +192,8 @@ class TestCATWallet:
                 await time_out_assert(
                     15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
                 )
+            if tx_record.wallet_id is cat_wallet.id():
+                assert tx_record.to_puzzle_hash == cat_2_hash
 
         await time_out_assert(15, cat_wallet.get_pending_change_balance, 40)
 

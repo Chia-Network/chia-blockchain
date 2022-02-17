@@ -124,7 +124,7 @@ class CATWallet:
         cc_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=cc_coin.puzzle_hash,
+            to_puzzle_hash=(await self.convert_puzzle_hash(cc_coin.puzzle_hash)),
             amount=uint64(cc_coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -152,6 +152,8 @@ class CATWallet:
         self.cost_of_single_tx = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
+
+        limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
         for id, wallet in wallet_state_manager.wallets.items():
             if wallet.type() == CATWallet.type():
