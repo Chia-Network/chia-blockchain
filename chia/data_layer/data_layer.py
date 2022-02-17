@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
 import aiosqlite
 import traceback
 import asyncio
+import aiohttp
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -243,7 +244,14 @@ class DataLayer:
 
         try:
             downloaded = await download_data(self.data_store, subscription, singleton_record.root)
-        except Exception:
+        except aiohttp.client_exceptions.ClientConnectorError:
+            self.log.error(f"Server unavailable for {tree_id}.")
+            downloaded = False
+        except RuntimeError as e:
+            self.log.error(f"Server sended invalid data for {tree_id}: {e}.")
+            downloaded = False
+        except Exception as e:
+            self.log.error(f"Exception while downloading data for {tree_id}: {e}.")
             downloaded = False
         if not downloaded:
             await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
@@ -294,7 +302,7 @@ class DataLayer:
     async def subscribe(self, store_id: bytes32, mode: DownloadMode, ip: str, port: uint16) -> None:
         subscription = Subscription(store_id, mode, ip, port)
         subscriptions = await self.get_subscriptions()
-        if subscription.tree_id in [subscription.tree_id for subscription in subscriptions]:
+        if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
             await self.data_store.update_existing_subscription(subscription)
             self.log.info(f"Successfully updated subscription {subscription.tree_id}")
             return
@@ -305,7 +313,7 @@ class DataLayer:
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
-        if tree_id not in [subscription.tree_id for subscription in subscriptions]:
+        if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
