@@ -120,7 +120,7 @@ class Environment:
         elif state == State.duplicates:
             self.expected[harvester_index].add_duplicates(directory.path_list())
         else:
-            assert False
+            assert False, "Invalid state"
 
     def remove_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.removed):
         remove_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
@@ -133,7 +133,7 @@ class Environment:
         elif state == State.duplicates:
             self.expected[harvester_index].remove_duplicates(directory.path_list())
         else:
-            assert False
+            assert False, "Invalid state"
 
     def add_all_directories(self, harvester_index: int) -> None:
         self.add_directory(harvester_index, self.dir_1)

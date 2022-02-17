@@ -368,4 +368,4 @@ async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes
             await current_step.function(
                 create_payload(current_step.payload_type, state == State.idle, *current_step.args)
             )
-    assert False
+    assert False, "Didn't fail in the expected state"
