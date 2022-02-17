@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 import pytest
+import pytest_asyncio
 from clvm.casts import int_to_bytes
 
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -31,7 +32,7 @@ def event_loop():
 
 
 class TestBlockchainTransactions:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self, db_version):
         async for _ in setup_two_nodes(test_constants, db_version=db_version):
             yield _

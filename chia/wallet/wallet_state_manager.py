@@ -740,7 +740,7 @@ class WalletStateManager:
                         tx_record = TransactionRecord(
                             confirmed_at_height=coin_state.created_height,
                             created_at_time=uint64(created_timestamp),
-                            to_puzzle_hash=coin_state.coin.puzzle_hash,
+                            to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin_state.coin.puzzle_hash)),
                             amount=uint64(coin_state.coin.amount),
                             fee_amount=uint64(0),
                             confirmed=True,
@@ -794,7 +794,7 @@ class WalletStateManager:
                             tx_record = TransactionRecord(
                                 confirmed_at_height=coin_state.spent_height,
                                 created_at_time=uint64(spent_timestamp),
-                                to_puzzle_hash=to_puzzle_hash,
+                                to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, to_puzzle_hash)),
                                 amount=uint64(int(amount)),
                                 fee_amount=uint64(fee),
                                 confirmed=True,
@@ -995,7 +995,7 @@ class WalletStateManager:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=timestamp,
-                to_puzzle_hash=coin.puzzle_hash,
+                to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
                 amount=coin.amount,
                 fee_amount=uint64(0),
                 confirmed=True,
@@ -1027,7 +1027,7 @@ class WalletStateManager:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),
                     created_at_time=timestamp,
-                    to_puzzle_hash=coin.puzzle_hash,
+                    to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
                     amount=coin.amount,
                     fee_amount=uint64(0),
                     confirmed=True,
@@ -1277,3 +1277,11 @@ class WalletStateManager:
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
         for tx in txs:
             await self.tx_store.delete_transaction_record(tx.name)
+
+    async def convert_puzzle_hash(self, wallet_id: uint32, puzzle_hash: bytes32) -> bytes32:
+        wallet = self.wallets[wallet_id]
+        # This should be general to wallets but for right now this is just for CATs so we'll add this if
+        if wallet.type() == WalletType.CAT.value:
+            return await wallet.convert_puzzle_hash(puzzle_hash)
+
+        return puzzle_hash

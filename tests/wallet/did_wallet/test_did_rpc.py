@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import pytest
+import pytest_asyncio
 
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -26,7 +27,7 @@ def event_loop():
 
 
 class TestDIDWallet:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _

@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import tempfile
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from pathlib import Path
 #       fixtures avoids the issue.
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
@@ -43,21 +44,21 @@ def softfork_height(request):
 block_format_version = "rc4"
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def default_400_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", seed=b"alternate2")
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def default_1000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db")
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def pre_genesis_empty_slots_1000_blocks():
     from tests.util.blockchain import persistent_blocks
 
@@ -66,21 +67,21 @@ async def pre_genesis_empty_slots_1000_blocks():
     )
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def default_10000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db")
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def default_20000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def default_10000_blocks_compact():
     from tests.util.blockchain import persistent_blocks
 
@@ -94,7 +95,7 @@ async def default_10000_blocks_compact():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)

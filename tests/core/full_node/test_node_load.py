@@ -2,6 +2,7 @@ import asyncio
 import time
 
 import pytest
+import pytest_asyncio
 
 from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo
@@ -18,7 +19,7 @@ def event_loop():
 
 
 class TestNodeLoad:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self, db_version):
         async for _ in setup_two_nodes(test_constants, db_version=db_version):
             yield _

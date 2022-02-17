@@ -5,13 +5,17 @@ import sqlite3
 import dataclasses
 
 import pytest
+from clvm.casts import int_to_bytes
 
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.util.ints import uint8
 from chia.types.blockchain_format.vdf import VDFProof
+from chia.types.blockchain_format.program import SerializedProgram
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
 from tests.setup_nodes import bt, test_constants
@@ -221,3 +225,44 @@ class TestBlockStore:
                 block_store.rollback_cache_block(block.header_hash)
                 b = await block_store.get_full_block(block.header_hash)
                 assert b.challenge_chain_ip_proof == proof
+
+    @pytest.mark.asyncio
+    async def test_get_generator(self, db_version):
+        blocks = bt.get_consecutive_blocks(10)
+
+        def generator(i: int) -> SerializedProgram:
+            return SerializedProgram.from_bytes(int_to_bytes(i))
+
+        async with DBConnection(db_version) as db_wrapper:
+            store = await BlockStore.create(db_wrapper)
+
+            new_blocks = []
+            for i, block in enumerate(blocks):
+                block = dataclasses.replace(block, transactions_generator=generator(i))
+                block_record = header_block_to_sub_block_record(
+                    DEFAULT_CONSTANTS, 0, block, 0, False, 0, max(0, block.height - 1), None
+                )
+                await store.add_full_block(block.header_hash, block, block_record)
+                await store.set_in_chain([(block_record.header_hash,)])
+                await store.set_peak(block_record.header_hash)
+                new_blocks.append(block)
+
+            if db_version == 2:
+                expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
+                generators = await store.get_generators_at(range(1, 10))
+                assert generators == expected_generators
+
+                # test out-of-order heights
+                expected_generators = list(
+                    map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]])
+                )
+                generators = await store.get_generators_at([4, 8, 3, 9])
+                assert generators == expected_generators
+
+                with pytest.raises(KeyError):
+                    await store.get_generators_at([100])
+
+            assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator
+            assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
+            assert await store.get_generator(blocks[6].header_hash) == new_blocks[6].transactions_generator
+            assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
