@@ -40,7 +40,7 @@ class WalletPuzzleStore:
                 "CREATE TABLE IF NOT EXISTS derivation_paths("
                 "derivation_index int,"
                 " pubkey text,"
-                " puzzle_hash text PRIMARY_KEY,"
+                " puzzle_hash text PRIMARY KEY,"
                 " wallet_type int,"
                 " wallet_id int,"
                 " used tinyint,"
