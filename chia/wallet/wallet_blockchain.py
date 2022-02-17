@@ -46,7 +46,7 @@ class WalletBlockchain(BlockchainInterface):
         self = WalletBlockchain()
         self._basic_store = _basic_store
         self.constants = constants
-        self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS + 100
+        self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS * 3
         self._weight_proof_handler = weight_proof_handler
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
         self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
@@ -109,6 +109,8 @@ class WalletBlockchain(BlockchainInterface):
         else:
             sub_slot_iters = self._sub_slot_iters
             difficulty = self._difficulty
+
+        # Validation requires a block cache (self) that goes back to a subepoch barrier
         required_iters, error = validate_finished_header_block(
             self.constants, self, block, False, difficulty, sub_slot_iters, False
         )
@@ -117,6 +119,8 @@ class WalletBlockchain(BlockchainInterface):
         if required_iters is None:
             return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
 
+        # We are passing in sub_slot_iters here so we don't need to backtrack until the start of the epoch to find
+        # the sub slot iters and difficulty. This allows us to keep the cache small.
         block_record: BlockRecord = block_to_block_record(
             self.constants, self, required_iters, None, block, sub_slot_iters
         )

@@ -134,7 +134,7 @@ class WalletNode:
         self.wallet_peers = None
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
-        self.untrusted_caches: Dict[bytes32, Any] = {}
+        self.untrusted_caches: Dict[bytes32, PeerRequestCache] = {}
         self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
         self.race_cache_hashes = []
         self._process_new_subscriptions_task = None
@@ -741,8 +741,8 @@ class WalletNode:
             return self.height_to_time[height]
 
         for cache in self.untrusted_caches.values():
-            if height in cache.blocks:
-                block = cache.blocks[height]
+            block: Optional[HeaderBlock] = cache.get_block(height)
+            if block is not None:
                 if (
                     block.foliage_transaction_block is not None
                     and block.foliage_transaction_block.timestamp is not None
@@ -1044,6 +1044,7 @@ class WalletNode:
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
+            self.log.info(f"Using cache for coin state: {last_change_height_cs(coin_state)}")
             return True
 
         spent_height = coin_state.spent_height

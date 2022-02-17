@@ -15,9 +15,9 @@ class PeerRequestCache:
     _states_validated: LRUCache  # coin state hash -> last change height, or None for reorg
 
     def __init__(self):
-        self._blocks = LRUCache(100)
+        self._blocks = LRUCache(32)
         self._block_requests = LRUCache(64)
-        self._ses_requests = LRUCache(100)
+        self._ses_requests = LRUCache(32)
         self._states_validated = LRUCache(1000)
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
