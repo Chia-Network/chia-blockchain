@@ -405,6 +405,13 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
             await asyncio.sleep(0.2)
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec1)
         history2 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
+        diff = await data_rpc_api.get_kv_diff(
+            {
+                "id": store_id1.hex(),
+                "hash_1": bytes32([0] * 32).hex(),
+                "hash_2": history1["root_history"][1]["root_hash"].hex(),
+            }
+        )
         assert len(history2["root_history"]) == 3
         assert history2["root_history"][0]["root_hash"] == bytes32([0] * 32)
         assert history2["root_history"][0]["confirmed"] is True

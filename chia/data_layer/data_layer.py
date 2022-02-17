@@ -1,10 +1,10 @@
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
 import aiosqlite
 import traceback
 import asyncio
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root, DiffData
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -307,6 +307,11 @@ class DataLayer:
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
+
+    async def get_kv_diff(
+        self, tree_id: bytes32, hash_1: Optional[bytes32], hash_2: Optional[bytes32]
+    ) -> Set[DiffData]:
+        return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def periodically_fetch_data(self) -> None:
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
