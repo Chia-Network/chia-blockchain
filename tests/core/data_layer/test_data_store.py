@@ -22,6 +22,7 @@ from chia.data_layer.data_layer_types import (
     TerminalNode,
     OperationType,
     DiffData,
+    DownloadMode,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -29,7 +30,8 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-
+from chia.data_layer.data_layer_types import Subscription
+from chia.util.ints import uint16
 from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
@@ -985,3 +987,34 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     root_end = await data_store.get_tree_root(tree_id)
     diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
     assert diffs == expected_diff
+
+
+@pytest.mark.asyncio
+async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store, tree_id)
+    expected_hashes = []
+    roots = await data_store.get_roots_between(tree_id, 1, 5)
+    for generation, root in enumerate(roots):
+        expected_hashes.append((generation + 1, root.node_hash))
+    for generation, expected_hash in reversed(expected_hashes):
+        await data_store.rollback_to_generation(tree_id, generation)
+        root = await data_store.get_tree_root(tree_id)
+        assert root.node_hash == expected_hash
+
+
+@pytest.mark.asyncio
+async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) -> None:
+    await data_store.subscribe(Subscription(tree_id, DownloadMode.HISTORY, "127.0.0.1", uint16(8000)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "127.0.0.1", uint16(8000))
+    ]
+    await data_store.update_existing_subscription(Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8000)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8000))
+    ]
+    await data_store.update_existing_subscription(Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8001)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8001))
+    ]
+    await data_store.unsubscribe(tree_id)
+    assert await data_store.get_subscriptions() == []
