@@ -7,14 +7,14 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from src.protocols.shared_protocol import protocol_version
-from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer, ssl_context_for_client
-from src.server.ws_connection import WSChiaConnection
-from src.ssl.create_ssl import generate_ca_signed_cert
-from src.types.blockchain_format.sized_bytes import bytes32
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
+from chia.protocols.shared_protocol import protocol_version
+from chia.server.outbound_message import NodeType
+from chia.server.server import ChiaServer, ssl_context_for_client
+from chia.server.ws_connection import WSChiaConnection
+from chia.ssl.create_ssl import generate_ca_signed_cert
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16
 from tests.setup_nodes import self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -28,7 +28,9 @@ async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaSer
     return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
 
 
-async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
+async def add_dummy_connection(
+    server: ChiaServer, dummy_port: int, type: NodeType = NodeType.FULL_NODE
+) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue: asyncio.Queue = asyncio.Queue()
@@ -46,7 +48,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     url = f"wss://{self_hostname}:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
-        NodeType.FULL_NODE,
+        type,
         ws,
         server._port,
         log,

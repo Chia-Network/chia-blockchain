@@ -1,0 +1,12 @@
+contact_links:
+  - about: Ask a question or request support here
+    name: Ask for Support
+    url: >-
+      https://github.com/Chia-Network/chia-blockchain/discussions/new?category=support
+  - about: Request a new feature or idea here
+    name: Make a Request
+    url: >-
+      https://github.com/Chia-Network/chia-blockchain/discussions/new?category=ideas
+  - about: Get support on the Chia Keybase chat channels.
+    name: Join the Keybase.io support chat
+    url: 'https://keybase.io/team/chia_network.public'

@@ -1,4 +1,7 @@
-name: MacOS Simulation Tests
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#
+name: MacOS simulation Tests
 
 on:
   push:
@@ -10,11 +13,16 @@ on:
     branches:
       - '**'
 
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: MacOS Simulation Tests
+    name: MacOS simulation Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 80
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -23,12 +31,6 @@ jobs:
         os: [macOS-latest]
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/dev' }}
-      uses: styfle/cancel-workflow-action@0.8.0
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
       uses: actions/checkout@v2
       with:
@@ -39,13 +41,20 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Create keychain for CI use
+      run: |
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
+
     - name: Get pip cache dir
       id: pip-cache
       run: |
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -58,7 +67,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.24.0'
+        ref: '0.28.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -74,7 +83,7 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
-        sh install.sh
+        sh install.sh -d
 
     - name: Install timelord
       run: |
@@ -82,12 +91,10 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-    - name: Install developer requirements
-      run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio
-
     - name: Test simulation code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/simulation -s -v --durations 0
+        ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0
+#
+# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
+#

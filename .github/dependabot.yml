@@ -11,7 +11,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
-    target-branch: "dev"
+    target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`
@@ -24,7 +24,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
-    target-branch: "dev"
+    target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen
       # for example, `dependabot-npm_and_yarn-next_js-acorn-6.4.1`

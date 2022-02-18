@@ -13,12 +13,17 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main, dev ]
+    branches: [ main ]
   schedule:
     - cron: '34 14 * * 3'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
 
 jobs:
   analyze:

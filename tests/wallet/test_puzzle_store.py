@@ -6,10 +6,11 @@ import aiosqlite
 import pytest
 from blspy import AugSchemeMPL
 
-from src.util.ints import uint32
-from src.wallet.derivation_record import DerivationRecord
-from src.wallet.util.wallet_types import WalletType
-from src.wallet.wallet_puzzle_store import WalletPuzzleStore
+from chia.util.db_wrapper import DBWrapper
+from chia.util.ints import uint32
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 
 
 @pytest.fixture(scope="module")
@@ -27,7 +28,8 @@ class TestPuzzleStore:
             db_filename.unlink()
 
         con = await aiosqlite.connect(db_filename)
-        db = await WalletPuzzleStore.create(con)
+        wrapper = DBWrapper(con)
+        db = await WalletPuzzleStore.create(wrapper)
         try:
             derivation_recs = []
             # wallet_types = [t for t in WalletType]
@@ -41,6 +43,7 @@ class TestPuzzleStore:
                         AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
                         WalletType.STANDARD_WALLET,
                         uint32(1),
+                        False,
                     )
                 )
                 derivation_recs.append(
@@ -50,6 +53,7 @@ class TestPuzzleStore:
                         AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
                         WalletType.RATE_LIMITED,
                         uint32(2),
+                        False,
                     )
                 )
             assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is False
@@ -59,7 +63,7 @@ class TestPuzzleStore:
             assert len((await db.get_all_puzzle_hashes())) == 0
             assert await db.get_last_derivation_path() is None
             assert await db.get_unused_derivation_path() is None
-            assert await db.get_derivation_record(0, 2) is None
+            assert await db.get_derivation_record(0, 2, False) is None
 
             await db.add_derivation_paths(derivation_recs)
 
@@ -85,7 +89,7 @@ class TestPuzzleStore:
             assert len((await db.get_all_puzzle_hashes())) == 2000
             assert await db.get_last_derivation_path() == 999
             assert await db.get_unused_derivation_path() == 0
-            assert await db.get_derivation_record(0, 2) == derivation_recs[1]
+            assert await db.get_derivation_record(0, 2, False) == derivation_recs[1]
 
             # Indeces up to 250
             await db.set_used_up_to(249)

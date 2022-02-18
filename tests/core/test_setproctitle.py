@@ -1,6 +1,6 @@
 import unittest
 
-from src.util.setproctitle import setproctitle
+from chia.util.setproctitle import setproctitle
 
 
 class TestSetProcTitle(unittest.TestCase):

@@ -9,17 +9,18 @@ the virtual environment.
 ```bash
 . ./activate
 
+chmod +x ./install-timelord.sh
 sh install-timelord.sh
 ```
 
-If the compile fails, it's likely due to a missing dependency.
+If the compile fails, it's likely due to a missing dependency. The script
 [install-timelord.sh](https://github.com/Chia-Network/chia-blockchain/blob/main/install-timelord.sh)
 attempts to install required build dependencies for Linux and MacOS before
 invoking pip to build from the source python distribution of chiavdf.
 
 The `install-timelord.sh` install script leverages two environmental variables
-that the chiavdf wheels can use to specify how to build. `vdf_client` is the
-service that the Timelord uses to run the VDF and prove the Proof of Time.
+that the chiavdf wheels can use to specify how to build. The service that the
+Timelord uses to run the VDF and prove the Proof of Time is `vdf_client` and
 `vdf_bench` is a utility to get a sense of a given CPU's iterations per second.
 
 - To build vdf_client set the environment variable BUILD_VDF_CLIENT to "Y".

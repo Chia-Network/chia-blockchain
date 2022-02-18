@@ -2,8 +2,8 @@ import unittest
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from src.util.ints import uint8
-from src.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
+from chia.util.ints import uint8
+from chia.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
 
 
 class TestIsTypeList(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestIsTypeList(unittest.TestCase):
         assert is_type_List(List[int])
         assert is_type_List(List[uint8])
         assert is_type_List(list)
-        assert not is_type_List(Tuple)  # type: ignore
+        assert not is_type_List(Tuple)
         assert not is_type_List(tuple)
         assert not is_type_List(dict)
 
@@ -42,7 +42,7 @@ class TestStrictClass(unittest.TestCase):
         assert good
         assert good.a == 24
         assert good.b == "!@12"
-        good2 = TestClass1(52, bytes([1, 2, 3]))  # type: ignore
+        good2 = TestClass1(52, bytes([1, 2, 3]))
         assert good2.b == str(bytes([1, 2, 3]))
 
     def test_StrictDataClassBad(self):
@@ -54,7 +54,7 @@ class TestStrictClass(unittest.TestCase):
 
         assert TestClass2(25)
         try:
-            TestClass2(1, 2)  # type: ignore
+            TestClass2(1, 2)
             assert False
         except TypeError:
             pass
@@ -73,7 +73,7 @@ class TestStrictClass(unittest.TestCase):
         except AssertionError:
             pass
         try:
-            TestClass([1, 2, 3], [uint8(200), uint8(25)])  # type: ignore
+            TestClass([1, 2, 3], [uint8(200), uint8(25)])
             assert False
         except ValueError:
             pass
@@ -89,14 +89,6 @@ class TestStrictClass(unittest.TestCase):
 
         good = TestClass(12, None, 13, None)
         assert good
-
-    def test_StrictDataClassEmpty(self):
-        @dataclass(frozen=True)
-        @strictdataclass
-        class A:
-            pass
-
-        A()
 
 
 if __name__ == "__main__":

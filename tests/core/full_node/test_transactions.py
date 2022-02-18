@@ -3,14 +3,15 @@ from secrets import token_bytes
 from typing import Optional
 
 import pytest
+import pytest_asyncio
 
-from src.consensus.block_record import BlockRecord
-from src.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
-from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols import full_node_protocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint32
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -22,17 +23,17 @@ def event_loop():
 
 
 class TestTransactions:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_nodes_two_wallets(self):
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _

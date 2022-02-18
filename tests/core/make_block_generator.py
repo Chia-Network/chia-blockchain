@@ -2,14 +2,15 @@ from typing import Dict
 
 import blspy
 
-from src.full_node.bundle_tools import best_solution_program
-from src.types.blockchain_format.coin import Coin
-from src.types.blockchain_format.program import Program, SerializedProgram
-from src.types.coin_solution import CoinSolution
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.spend_bundle import SpendBundle
-from src.util.ints import uint64
-from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.generator_types import BlockGenerator
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint64
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 
@@ -36,7 +37,10 @@ def make_fake_coin(index: int, puzzle_hash_db: dict) -> Coin:
     parent = index.to_bytes(32, "big")
     puzzle_hash = puzzle_hash_for_index(index, puzzle_hash_db)
     amount = 100000
-    return Coin(parent, puzzle_hash, uint64(amount))
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    return Coin(parent, puzzle_hash, uint64(amount))  # type: ignore[arg-type]
 
 
 def conditions_for_payment(coin) -> Program:
@@ -45,17 +49,22 @@ def conditions_for_payment(coin) -> Program:
     return Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
 
 
-def make_block_generator(count: int) -> SerializedProgram:
+def make_spend_bundle(count: int) -> SpendBundle:
     puzzle_hash_db: Dict = dict()
     coins = [make_fake_coin(_, puzzle_hash_db) for _ in range(count)]
 
-    coin_solutions = []
+    coin_spends = []
     for coin in coins:
         puzzle_reveal = puzzle_hash_db[coin.puzzle_hash]
         conditions = conditions_for_payment(coin)
         solution = solution_for_conditions(conditions)
-        coin_solution = CoinSolution(coin, puzzle_reveal, solution)
-        coin_solutions.append(coin_solution)
+        coin_spend = CoinSpend(coin, puzzle_reveal, solution)
+        coin_spends.append(coin_spend)
 
-    spend_bundle = SpendBundle(coin_solutions, blspy.G2Element())
-    return best_solution_program(spend_bundle)
+    spend_bundle = SpendBundle(coin_spends, blspy.G2Element())
+    return spend_bundle
+
+
+def make_block_generator(count: int) -> BlockGenerator:
+    spend_bundle = make_spend_bundle(count)
+    return simple_solution_generator(spend_bundle)

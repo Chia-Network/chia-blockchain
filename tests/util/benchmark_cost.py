@@ -4,13 +4,14 @@ from secrets import token_bytes
 from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
-from src.types.blockchain_format.program import Program
-from src.types.condition_opcodes import ConditionOpcode
-from src.types.condition_var_pair import ConditionVarPair
-from src.util.ints import uint32
-from src.util.wallet_tools import WalletTool
-from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.ints import uint32
+from tests.wallet_tools import WalletTool
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
 
 def float_to_str(f):
@@ -39,7 +40,7 @@ def run_and_return_cost_time(chialisp):
     clvm_loop_solution = f"(1000 {chialisp})"
     solution_program = Program.to(binutils.assemble(clvm_loop_solution))
 
-    cost, sexp = loop_program.run_with_cost(solution_program)
+    cost, sexp = loop_program.run_with_cost(solution_program, INFINITE_COST)
 
     end = time.time()
     total_time = end - start
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     Naive way to calculate cost ratio between vByte and CLVM cost unit.
     AggSig has assigned cost of 20vBytes, simple CLVM program is benchmarked against it.
     """
-    wallet_tool = WalletTool()
+    wallet_tool = WalletTool(DEFAULT_CONSTANTS)
     benchmark_all_operators()
     secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     puzzles = []
@@ -113,7 +114,7 @@ if __name__ == "__main__":
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
-            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
+            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
         )
         puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)
@@ -125,7 +126,7 @@ if __name__ == "__main__":
     puzzle_start = time.time()
     clvm_cost = 0
     for i in range(0, 1000):
-        cost_run, sexp = puzzles[i].run_with_cost(solutions[i])
+        cost_run, sexp = puzzles[i].run_with_cost(solutions[i], INFINITE_COST)
         clvm_cost += cost_run
 
     puzzle_end = time.time()

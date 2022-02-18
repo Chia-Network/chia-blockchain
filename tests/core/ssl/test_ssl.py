@@ -2,15 +2,16 @@ import asyncio
 
 import aiohttp
 import pytest
+import pytest_asyncio
 
-from src.protocols.shared_protocol import protocol_version
-from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer, ssl_context_for_client
-from src.server.ws_connection import WSChiaConnection
-from src.ssl.create_ssl import generate_ca_signed_cert
-from src.types.peer_info import PeerInfo
-from src.util.block_tools import test_constants
-from src.util.ints import uint16
+from chia.protocols.shared_protocol import protocol_version
+from chia.server.outbound_message import NodeType
+from chia.server.server import ChiaServer, ssl_context_for_client
+from chia.server.ws_connection import WSChiaConnection
+from chia.ssl.create_ssl import generate_ca_signed_cert
+from chia.types.peer_info import PeerInfo
+from tests.block_tools import test_constants
+from chia.util.ints import uint16
 from tests.setup_nodes import (
     bt,
     self_hostname,
@@ -51,22 +52,22 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
 
 
 class TestSSL:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def harvester_farmer(self):
         async for _ in setup_farmer_harvester(test_constants):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def introducer(self):
         async for _ in setup_introducer(21233):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def timelord(self):
         async for _ in setup_timelord(21236, 21237, False, test_constants, bt):
             yield _
@@ -83,7 +84,8 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_farmer(self, harvester_farmer):
-        harvester_api, farmer_api = harvester_farmer
+        harvester_service, farmer_service = harvester_farmer
+        farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
         # Create valid cert (valid meaning signed with private CA)
@@ -96,7 +98,7 @@ class TestSSL:
             priv_key,
         )
         ssl_context = ssl_context_for_client(
-            farmer_server.ca_private_crt_path, farmer_server.ca_private_crt_path, priv_crt, priv_key
+            farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, priv_crt, priv_key
         )
         connected = await establish_connection(farmer_server, 12312, ssl_context)
         assert connected is True
@@ -108,12 +110,12 @@ class TestSSL:
             farmer_server.chia_ca_crt_path.read_bytes(), farmer_server.chia_ca_key_path.read_bytes(), pub_crt, pub_key
         )
         ssl_context = ssl_context_for_client(
-            farmer_server.chia_ca_crt_path, farmer_server.chia_ca_crt_path, pub_crt, pub_key
+            farmer_server.chia_ca_crt_path, farmer_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(farmer_server, 12312, ssl_context)
         assert connected is False
         ssl_context = ssl_context_for_client(
-            farmer_server.ca_private_crt_path, farmer_server.ca_private_crt_path, pub_crt, pub_key
+            farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(farmer_server, 12312, ssl_context)
         assert connected is False
@@ -134,7 +136,7 @@ class TestSSL:
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            full_node_server.chia_ca_crt_path, full_node_server.chia_ca_crt_path, pub_crt, pub_key
+            full_node_server.chia_ca_crt_path, full_node_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(full_node_server, 12312, ssl_context)
         assert connected is True
@@ -151,7 +153,7 @@ class TestSSL:
             wallet_server.chia_ca_crt_path.read_bytes(), wallet_server.chia_ca_key_path.read_bytes(), pub_crt, pub_key
         )
         ssl_context = ssl_context_for_client(
-            wallet_server.chia_ca_crt_path, wallet_server.chia_ca_crt_path, pub_crt, pub_key
+            wallet_server.chia_ca_crt_path, wallet_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(wallet_server, 12312, ssl_context)
         assert connected is False
@@ -166,7 +168,7 @@ class TestSSL:
             priv_key,
         )
         ssl_context = ssl_context_for_client(
-            wallet_server.ca_private_crt_path, wallet_server.ca_private_crt_path, priv_crt, priv_key
+            wallet_server.ca_private_crt_path, wallet_server.ca_private_key_path, priv_crt, priv_key
         )
         connected = await establish_connection(wallet_server, 12312, ssl_context)
         assert connected is False
@@ -174,7 +176,7 @@ class TestSSL:
     @pytest.mark.asyncio
     async def test_harvester(self, harvester_farmer):
         harvester, farmer_api = harvester_farmer
-        harvester_server = harvester.server
+        harvester_server = harvester._server
 
         # harvester should not accept incoming connections
         pub_crt = harvester_server._private_key_path.parent / "p2p.crt"
@@ -186,7 +188,7 @@ class TestSSL:
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            harvester_server.chia_ca_crt_path, harvester_server.chia_ca_crt_path, pub_crt, pub_key
+            harvester_server.chia_ca_crt_path, harvester_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(harvester_server, 12312, ssl_context)
         assert connected is False
@@ -201,7 +203,7 @@ class TestSSL:
             priv_key,
         )
         ssl_context = ssl_context_for_client(
-            harvester_server.ca_private_crt_path, harvester_server.ca_private_crt_path, priv_crt, priv_key
+            harvester_server.ca_private_crt_path, harvester_server.ca_private_key_path, priv_crt, priv_key
         )
         connected = await establish_connection(harvester_server, 12312, ssl_context)
         assert connected is False
@@ -220,7 +222,7 @@ class TestSSL:
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            introducer_server.chia_ca_crt_path, introducer_server.chia_ca_crt_path, pub_crt, pub_key
+            introducer_server.chia_ca_crt_path, introducer_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(introducer_server, 12312, ssl_context)
         assert connected is True
@@ -239,7 +241,7 @@ class TestSSL:
             pub_key,
         )
         ssl_context = ssl_context_for_client(
-            timelord_server.chia_ca_crt_path, timelord_server.chia_ca_crt_path, pub_crt, pub_key
+            timelord_server.chia_ca_crt_path, timelord_server.chia_ca_key_path, pub_crt, pub_key
         )
         connected = await establish_connection(timelord_server, 12312, ssl_context)
         assert connected is False
@@ -254,7 +256,7 @@ class TestSSL:
             priv_key,
         )
         ssl_context = ssl_context_for_client(
-            timelord_server.ca_private_crt_path, timelord_server.ca_private_crt_path, priv_crt, priv_key
+            timelord_server.ca_private_crt_path, timelord_server.ca_private_key_path, priv_crt, priv_key
         )
         connected = await establish_connection(timelord_server, 12312, ssl_context)
         assert connected is False
