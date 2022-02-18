@@ -311,7 +311,7 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants, b_tools):
+async def setup_timelord(port, full_node_port, rpc_port, sanitizer, consensus_constants: ConsensusConstants, b_tools):
     config = b_tools.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
@@ -319,6 +319,8 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     config["fast_algorithm"] = False
     if sanitizer:
         config["vdf_server"]["port"] = 7999
+    config["start_rpc_server"] = True
+    config["rpc_port"] = rpc_port
 
     kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(
@@ -509,7 +511,7 @@ async def setup_full_system(
             setup_harvester(21234, 21235, consensus_constants, b_tools),
             setup_farmer(21235, consensus_constants, b_tools, uint16(21237)),
             setup_vdf_clients(8000),
-            setup_timelord(21236, 21237, False, consensus_constants, b_tools),
+            setup_timelord(21236, 21237, 21241, False, consensus_constants, b_tools),
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",
@@ -535,7 +537,7 @@ async def setup_full_system(
                 db_version=db_version,
             ),
             setup_vdf_client(7999),
-            setup_timelord(21239, 1000, True, consensus_constants, b_tools_1),
+            setup_timelord(21239, 1000, 21242, True, consensus_constants, b_tools_1),
         ]
 
         introducer, introducer_server = await node_iters[0].__anext__()
