@@ -881,18 +881,22 @@ class Blockchain(BlockchainInterface):
         ):
             # We are not in a reorg, no need to look up alternate header hashes
             # (we can get them from height_to_hash)
-            for ref_height in block.transactions_generator_ref_list:
-                header_hash = self.height_to_hash(ref_height)
+            if self.block_store.db_wrapper.db_version == 2:
+                # in the v2 database, we can look up blocks by height directly
+                # (as long as we're in the main chain)
+                result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
+            else:
+                for ref_height in block.transactions_generator_ref_list:
+                    header_hash = self.height_to_hash(ref_height)
 
-                # if ref_height is invalid, this block should have failed with
-                # FUTURE_GENERATOR_REFS before getting here
-                assert header_hash is not None
+                    # if ref_height is invalid, this block should have failed with
+                    # FUTURE_GENERATOR_REFS before getting here
+                    assert header_hash is not None
 
-                ref_block = await self.block_store.get_full_block(header_hash)
-                assert ref_block is not None
-                if ref_block.transactions_generator is None:
-                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                result.append(ref_block.transactions_generator)
+                    ref_gen = await self.block_store.get_generator(header_hash)
+                    if ref_gen is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                    result.append(ref_gen)
         else:
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
@@ -933,15 +937,17 @@ class Blockchain(BlockchainInterface):
                 else:
                     if ref_height in additional_height_dict:
                         ref_block = additional_height_dict[ref_height]
+                        assert ref_block is not None
+                        if ref_block.transactions_generator is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        result.append(ref_block.transactions_generator)
                     else:
                         header_hash = self.height_to_hash(ref_height)
-                        # TODO: address hint error and remove ignore
-                        #       error: Argument 1 to "get_full_block" of "Blockchain" has incompatible type
-                        #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-                        ref_block = await self.get_full_block(header_hash)  # type: ignore[arg-type]
-                    assert ref_block is not None
-                    if ref_block.transactions_generator is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_block.transactions_generator)
+                        if header_hash is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        gen = await self.block_store.get_generator(header_hash)
+                        if gen is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        result.append(gen)
         assert len(result) == len(ref_list)
         return BlockGenerator(block.transactions_generator, result, [])
