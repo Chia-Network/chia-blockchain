@@ -11,8 +11,7 @@ from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
 from pathlib import Path
 from sys import exit, platform
-from typing import Any, List, Optional, Tuple, Type, Union
-
+from typing import Any, List, Optional, Tuple, Type, Union, TypeVar
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
 #
@@ -82,6 +81,9 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
     return False
 
 
+_T_KeyringWrapper = TypeVar("_T_KeyringWrapper", bound="KeyringWrapper")
+
+
 class KeyringWrapper:
     """
     KeyringWrapper provides an abstraction that the Keychain class can use
@@ -104,24 +106,37 @@ class KeyringWrapper:
     cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
-    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, force_legacy: bool = False):
+    @classmethod
+    def create(
+        cls: Type[_T_KeyringWrapper], keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, force_legacy: bool = False
+    ) -> Optional[_T_KeyringWrapper]:
         """
-        Initializes the keyring backend based on the OS. For Linux, we previously
-        used CryptFileKeyring. We now use our own FileKeyring backend and migrate
-        the data from the legacy CryptFileKeyring (on write).
+        Create a new KeyringWrapper instance.
         """
-        self.keys_root_path = keys_root_path
+        # instance: KeyringWrapper = KeyringWrapper()
+        instance = cls()
+        instance.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
             if check_legacy_keyring_keys_present(legacy_keyring):
-                self.keyring = legacy_keyring
+                instance.keyring = legacy_keyring
             else:
                 return None
         else:
-            self.refresh_keyrings()
+            instance.refresh_keyrings(keys_root_path)
+        return instance
 
-    def refresh_keyrings(self):
-        self.keyring = None
+    def refresh_keyrings(self, keys_root_path: Optional[Path]) -> None:
+        """
+        Initializes or updates the keyring backend based on the OS. For Linux, we
+        previously used CryptFileKeyring. We now use our own FileKeyring backend
+        and migrate the data from the legacy CryptFileKeyring (on write).
+        """
+
+        if keys_root_path is not None:
+            self.keys_root_path = keys_root_path
+
+        self.cleanup_keyring()
         self.keyring = self._configure_backend()
 
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
@@ -187,17 +202,29 @@ class KeyringWrapper:
     @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
+            KeyringWrapper.__shared_instance = KeyringWrapper.create(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 
     @staticmethod
-    def cleanup_shared_instance():
-        KeyringWrapper.__shared_instance = None
+    def set_shared_instance(instance: "KeyringWrapper"):
+        KeyringWrapper.__shared_instance = instance
 
     @staticmethod
-    def get_legacy_instance() -> Optional["KeyringWrapper"]:
-        return KeyringWrapper(force_legacy=True)
+    def cleanup_shared_instance():
+        if KeyringWrapper.__shared_instance is not None:
+            KeyringWrapper.__shared_instance.cleanup_keyring()
+            KeyringWrapper.__shared_instance = None
+
+    def cleanup_keyring(self):
+        filekeyring: Optional[FileKeyring] = self.keyring if type(self.keyring) == FileKeyring else None
+        if filekeyring is not None:
+            filekeyring.cleanup_keyring_file_watcher()
+        self.keyring = None
+
+    @staticmethod
+    def get_legacy_instance() -> Optional[_T_KeyringWrapper]:
+        return KeyringWrapper.create(force_legacy=True)
 
     def get_keyring(self):
         """
@@ -423,7 +450,8 @@ class KeyringWrapper:
             if user is not None:
                 passphrase = self.get_passphrase(service, user)
 
-            if passphrase is not None:
+            # if passphrase and user:
+            if passphrase:
                 user_passphrase_pairs.append((user, passphrase))
 
             index += 1
