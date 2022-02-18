@@ -10,7 +10,7 @@ class Chia {
   private _unit: Unit
 
   constructor(value: number | string | Big, unit: Unit) {
-    const stringValue = value === '' || value === null || value === undefined
+    const stringValue = value === '' || value === '.' || value === null || value === undefined
       ? '0'
       : value.toString();
 
