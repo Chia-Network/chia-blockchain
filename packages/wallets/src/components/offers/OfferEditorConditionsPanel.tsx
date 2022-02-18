@@ -79,6 +79,14 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
     updateRow(row);
   }
 
+  function handleAmountChange(namePrefix: string, amount: number) {
+    const row: OfferEditorRowData = getValues(namePrefix);
+
+    row.amount = amount;
+
+    updateRow(row);
+  }
+
   return (
     <Flex flexDirection="row" gap={0} {...rest}>
       <Flex flexDirection="row" gap={0} style={{width: '90%'}}>
@@ -108,10 +116,11 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
               disabled={disabled}
               symbol={item.walletType === WalletType.STANDARD_WALLET ? undefined : ""}
               showAmountInMojos={item.walletType === WalletType.STANDARD_WALLET}
+              onChange={(value: number) => handleAmountChange(namePrefix, value)}
               required
               fullWidth
             />
-            {tradeSide === 'sell' && row.assetWalletId && (
+            {tradeSide === 'sell' && (row.assetWalletId > 0) && (
               <Flex flexDirection="row" alignItems="center" gap={1}>
                 <Typography variant="body2">Spendable balance: </Typography>
                 {(spendableBalanceString === undefined) ? (
@@ -173,12 +182,12 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
       const makerWalletIds: Set<number> = new Set();
       const takerWalletIds: Set<number> = new Set();
       makerRows.forEach((makerRow) => {
-        if (makerRow.assetWalletId) {
+        if (makerRow.assetWalletId > 0) {
           makerWalletIds.add(makerRow.assetWalletId);
         }
       });
       takerRows.forEach((takerRow) => {
-        if (takerRow.assetWalletId) {
+        if (takerRow.assetWalletId > 0) {
           takerWalletIds.add(takerRow.assetWalletId);
         }
       });
@@ -196,8 +205,8 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     let takerExchangeRate: number | undefined = undefined;
 
     if (!isLoading && makerRows.length === 1 && takerRows.length === 1) {
-      const makerWalletId: string | undefined = makerRows[0].assetWalletId?.toString();
-      const takerWalletId: string | undefined = takerRows[0].assetWalletId?.toString();
+      const makerWalletId: string | undefined = makerRows[0].assetWalletId > 0 ? makerRows[0].assetWalletId.toString() : undefined;
+      const takerWalletId: string | undefined = takerRows[0].assetWalletId > 0 ? takerRows[0].assetWalletId.toString() : undefined;
 
       if (makerWalletId && takerWalletId) {
         makerAssetInfo = lookupByWalletId(makerWalletId);
@@ -222,6 +231,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     { side: 'sell', fields: makerFields, namePrefix: 'makerRows', canAddRow: canAddMakerRow },
   ];
   const showAddCATsMessage = !canAddTakerRow && wallets.length === 1;
+  const showExchangeRate = !!makerAssetInfo && !!makerExchangeRate && !!takerAssetInfo && !!takerExchangeRate;
 
   if (makerSide === 'sell') {
     sections.reverse();
@@ -238,7 +248,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
           <Typography variant="subtitle1">{section.headerTitle}</Typography>
           {section.fields.map((field, fieldIndex) => (
             <OfferEditorConditionRow
-              key={field.id}
+              key={fieldIndex}
               namePrefix={`${section.namePrefix}[${fieldIndex}]`}
               item={field}
               tradeSide={section.side}

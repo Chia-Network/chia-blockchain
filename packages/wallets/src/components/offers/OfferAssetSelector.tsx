@@ -29,13 +29,13 @@ function buildAssetSelectorList(
   const otherUsedWalletIds: Set<number> = new Set();
 
   rows.map(row => {
-    if (row.assetWalletId !== undefined && row.assetWalletId !== selectedWalletId) {
+    if (row.assetWalletId > 0 && row.assetWalletId !== selectedWalletId) {
       usedWalletIds.add(row.assetWalletId);
     }
   });
 
   otherRows.map(row => {
-    if (row.assetWalletId !== undefined) {
+    if (row.assetWalletId > 0) {
       otherUsedWalletIds.add(row.assetWalletId);
     }
   });
