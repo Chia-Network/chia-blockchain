@@ -104,6 +104,9 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
             await asyncio.sleep(0.2)
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
         res = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
+        assert wallet_root["hash"] == local_root["hash"]
         assert hexstr_to_bytes(res["value"]) == value
         changelist = [{"action": "delete", "key": key.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
@@ -115,6 +118,10 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec1)
         with pytest.raises(Exception):
             val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
+        wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
+        local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
+        assert wallet_root["hash"] == bytes32([0] * 32)
+        assert local_root["hash"] == None
 
 
 @pytest.mark.asyncio

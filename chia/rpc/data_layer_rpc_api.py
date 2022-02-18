@@ -58,6 +58,7 @@ class DataLayerRpcApi:
             "/get_keys_values": self.get_keys_values,
             "/get_ancestors": self.get_ancestors,
             "/get_root": self.get_root,
+            "/get_local_root": self.get_local_root,
             "/get_roots": self.get_roots,
             "/delete_key": self.delete_key,
             "/insert": self.insert,
@@ -163,6 +164,15 @@ class DataLayerRpcApi:
         if rec is None:
             raise Exception(f"Failed to get root for {store_id.hex()}")
         return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
+
+    async def get_local_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """get hash of latest tree root saved in our local datastore"""
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        res = await self.service.get_local_root(store_id)
+        return {"hash": res}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
