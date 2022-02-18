@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import os
 import logging
 import logging.config
@@ -79,9 +80,9 @@ class Service:
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
-        if NodeType == NodeType.WALLET:
+        if node_type == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
-            outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
+            outbound_rlp = 60
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -181,13 +182,23 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        signal.signal(signal.SIGINT, self._accept_signal)
-        signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
             signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
+            signal.signal(signal.SIGINT, self._accept_signal)
+            signal.signal(signal.SIGTERM, self._accept_signal)
+        else:
+            loop = asyncio.get_running_loop()
+            loop.add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            loop.add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
 
-    def _accept_signal(self, signal_number: int, stack_frame):
+    def _accept_signal(self, signal_number: int, stack_frame=None):
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor

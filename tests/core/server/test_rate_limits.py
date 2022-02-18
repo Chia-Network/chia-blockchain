@@ -23,11 +23,11 @@ class TestRateLimits:
         # Too many messages
         r = RateLimiter(incoming=True)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-        for i in range(3000):
+        for i in range(4900):
             assert r.process_msg_and_check(new_tx_message)
 
         saw_disconnect = False
-        for i in range(3000):
+        for i in range(4900):
             response = r.process_msg_and_check(new_tx_message)
             if not response:
                 saw_disconnect = True
@@ -146,11 +146,11 @@ class TestRateLimits:
         # Counts reset also
         r = RateLimiter(True, 5)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-        for i in range(3000):
+        for i in range(4900):
             assert r.process_msg_and_check(new_tx_message)
 
         saw_disconnect = False
-        for i in range(3000):
+        for i in range(4900):
             response = r.process_msg_and_check(new_tx_message)
             if not response:
                 saw_disconnect = True

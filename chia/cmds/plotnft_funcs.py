@@ -104,7 +104,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
                     print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
                     return None
         except Exception as e:
-            print(f"Error creating plot NFT: {e}")
+            print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
         return
     print("Aborting.")
 

@@ -2,6 +2,7 @@ import logging
 import time
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.protocols import farmer_protocol
@@ -24,13 +25,13 @@ from tests.util.rpc import validate_get_routes
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def simulation():
     async for _ in setup_farmer_harvester(test_constants):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def environment(simulation):
     harvester_service, farmer_service = simulation
 

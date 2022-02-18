@@ -7,6 +7,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
 from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
@@ -27,7 +28,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.cached_bls import LOCAL_CACHE
-from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
@@ -304,7 +304,7 @@ class MempoolManager:
         for add in additions:
             additions_dict[add.name()] = add
 
-        addition_amount = uint64(0)
+        addition_amount: int = 0
         # Check additions for max coin amount
         for coin in additions:
             if coin.amount < 0:
@@ -319,7 +319,7 @@ class MempoolManager:
                     MempoolInclusionStatus.FAILED,
                     Err.COIN_AMOUNT_EXCEEDS_MAXIMUM,
                 )
-            addition_amount = uint64(addition_amount + coin.amount)
+            addition_amount = addition_amount + coin.amount
         # Check for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
@@ -336,7 +336,7 @@ class MempoolManager:
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
         removal_coin_dict: Dict[bytes32, Coin] = {}
-        removal_amount = uint64(0)
+        removal_amount: int = 0
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
@@ -359,7 +359,7 @@ class MempoolManager:
                 )
 
             assert removal_record is not None
-            removal_amount = uint64(removal_amount + removal_record.coin.amount)
+            removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
             removal_coin_dict[name] = removal_record.coin
 
