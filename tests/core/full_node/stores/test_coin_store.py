@@ -59,7 +59,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height):
+    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -157,7 +157,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_set_spent(self, cache_size: uint32, db_version):
+    async def test_set_spent(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(9, [])
 
         async with DBConnection(db_version) as db_wrapper:
@@ -223,7 +223,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_rollback(self, cache_size: uint32, db_version):
+    async def test_rollback(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(20)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -275,7 +275,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version, bt):
 
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
@@ -336,7 +336,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version, bt):
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
             farmer_ph = 32 * b"0"

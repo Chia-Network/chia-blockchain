@@ -2012,6 +2012,7 @@ def create_test_unfinished_block(
     )
 
 
+# xxx do the callers need different instances?
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
@@ -2025,6 +2026,7 @@ async def create_block_tools_async(
     return bt
 
 
+# xxx redirect to the fixture
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
