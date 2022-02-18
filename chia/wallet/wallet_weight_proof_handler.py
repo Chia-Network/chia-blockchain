@@ -24,6 +24,7 @@ from chia.types.weight_proof import (
 )
 
 from chia.util.ints import uint32
+from chia.util.setproctitle import setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +46,9 @@ class WalletWeightProofHandler:
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
+        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
+            self._num_processes, initializer=setproctitle, initargs=("chia_wallet",)
+        )
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):
