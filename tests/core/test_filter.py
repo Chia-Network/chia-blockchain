@@ -2,6 +2,7 @@ import asyncio
 from typing import List
 
 import pytest
+import pytest_asyncio
 from chiabip158 import PyBIP158
 
 from tests.setup_nodes import setup_simulators_and_wallets, bt
@@ -14,7 +15,7 @@ def event_loop():
 
 
 class TestFilter:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_and_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _

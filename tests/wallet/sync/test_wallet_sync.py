@@ -2,6 +2,7 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -33,17 +34,17 @@ def event_loop():
 
 
 class TestWalletSync:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_node_and_wallet(test_constants):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_simulator(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_starting_height(self):
         async for _ in setup_node_and_wallet(test_constants, starting_height=100):
             yield _

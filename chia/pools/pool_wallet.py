@@ -405,7 +405,7 @@ class PoolWallet:
         balance = await standard_wallet.get_confirmed_balance(unspent_records)
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
-        if balance < fee:
+        if balance < PoolWallet.MINIMUM_INITIAL_BALANCE + fee:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
 
         # Verify Parameters - raise if invalid
@@ -613,11 +613,9 @@ class PoolWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
         """
-        coins: Set[Coin] = await standard_wallet.select_coins(amount)
+        coins: Set[Coin] = await standard_wallet.select_coins(uint64(amount + fee))
         if coins is None:
             raise ValueError("Not enough coins to create pool wallet")
-
-        assert len(coins) == 1
 
         launcher_parent: Coin = coins.copy().pop()
         genesis_launcher_puz: Program = SINGLETON_LAUNCHER
@@ -662,7 +660,7 @@ class PoolWallet:
             amount,
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            None,
+            launcher_parent.name(),
             coins,
             None,
             False,

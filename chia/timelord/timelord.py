@@ -7,7 +7,7 @@ import random
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from chiavdf import create_discriminant, prove
 
@@ -151,6 +151,13 @@ class Timelord:
 
     async def _await_closed(self):
         pass
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change, change_data)
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -986,6 +993,8 @@ class Timelord:
                     # Verifies our own proof just in case
                     form_size = ClassgroupElement.get_size(self.constants)
                     output = ClassgroupElement.from_bytes(y_bytes[:form_size])
+                    # default value so that it's always set for state_changed later
+                    ips: float = 0
                     if not self.bluebox_mode:
                         time_taken = time.time() - self.chain_start_time[chain]
                         ips = int(iterations_needed / time_taken * 10) / 10
@@ -1012,6 +1021,16 @@ class Timelord:
                         async with self.lock:
                             assert proof_label is not None
                             self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
+                        self.state_changed(
+                            "finished_pot",
+                            {
+                                "estimated_ips": ips,
+                                "iterations_needed": iterations_needed,
+                                "chain": chain.value,
+                                "vdf_info": vdf_info,
+                                "vdf_proof": vdf_proof,
+                            },
+                        )
                     else:
                         async with self.lock:
                             writer.write(b"010")
@@ -1025,6 +1044,10 @@ class Timelord:
                         if self.server is not None:
                             message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                             await self.server.send_to_all([message], NodeType.FULL_NODE)
+                        self.state_changed(
+                            "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
+                        )
+
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
 

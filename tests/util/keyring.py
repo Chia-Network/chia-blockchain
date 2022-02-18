@@ -194,9 +194,7 @@ class TempKeyring:
 
         if self.delete_on_cleanup:
             self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
-            temp_dir = self.keychain._temp_dir
-            print(f"Cleaning up temp keychain in dir: {temp_dir}")
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(self.keychain._temp_dir)
 
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()

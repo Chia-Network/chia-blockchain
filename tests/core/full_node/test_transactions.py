@@ -3,6 +3,7 @@ from secrets import token_bytes
 from typing import Optional
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -22,17 +23,17 @@ def event_loop():
 
 
 class TestTransactions:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_nodes_two_wallets(self):
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
