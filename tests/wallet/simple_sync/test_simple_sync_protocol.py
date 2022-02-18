@@ -24,6 +24,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
