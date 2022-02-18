@@ -81,7 +81,7 @@ class FullNode:
     full_node_peers: Optional[FullNodePeers]
     sync_store: Any
     coin_store: CoinStore
-    mempool_manager: MempoolManager
+    mempool_manager: Optional[MempoolManager]
     connection: aiosqlite.Connection
     _sync_task: Optional[asyncio.Task]
     _init_weight_proof: Optional[asyncio.Task] = None
@@ -102,7 +102,6 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
-    mempool_manager: Optional[MempoolManager]
     uncompact_task: Optional[asyncio.Task]
 
     def __init__(
@@ -719,11 +718,11 @@ class FullNode:
         if self._init_weight_proof is not None:
             self._init_weight_proof.cancel()
 
-        # blockchain is created in _start and in certain cases it may not exist here during _close
-        if hasattr(self, "blockchain"):
+        # blockchain is created in _start and in certain cases it may still be None here during _close
+        if self.blockchain is not None:
             self.blockchain.shut_down()
         # same for mempool_manager
-        if hasattr(self, "mempool_manager"):
+        if self.mempool_manager is not None:
             self.mempool_manager.shut_down()
 
         if self.full_node_peers is not None:
