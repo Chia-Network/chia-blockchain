@@ -79,7 +79,7 @@ class PeerRequestCache:
 async def can_use_peer_request_cache(
     coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
 ):
-    if peer_request_cache.in_states_validated(coin_state.get_hash()):
+    if not peer_request_cache.in_states_validated(coin_state.get_hash()):
         return False
     if fork_height is None:
         return True
