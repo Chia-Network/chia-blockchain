@@ -119,7 +119,7 @@ async def setup_full_node(
         connect_to_daemon=connect_to_daemon,
     )
 
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
 
     await service.start()
 
@@ -185,7 +185,7 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        service = Service(**kwargs)
+        service = Service(**kwargs, handle_signals=False)
 
         await service.start()
 
@@ -210,7 +210,7 @@ async def setup_harvester(
         connect_to_daemon=False,
     )
 
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
 
     if start_service:
         await service.start()
@@ -250,7 +250,7 @@ async def setup_farmer(
         connect_to_daemon=False,
     )
 
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
 
     if start_service:
         await service.start()
@@ -272,7 +272,7 @@ async def setup_introducer(port):
         connect_to_daemon=False,
     )
 
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
 
     await service.start()
 
@@ -328,7 +328,7 @@ async def setup_timelord(port, full_node_port, rpc_port, sanitizer, consensus_co
         connect_to_daemon=False,
     )
 
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
 
     await service.start()
 
