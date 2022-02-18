@@ -56,11 +56,17 @@ class CrawlerRpcApi:
         if after is None:
             raise ValueError("`after` is required and must be a unix timestamp")
 
+        offset = _request.get("offset", 0)
+        limit = _request.get("limit", 10000)
+
         matched_ips: List[str] = []
         for ip, timestamp in self.service.best_timestamp_per_peer.items():
             if timestamp > after:
                 matched_ips.append(ip)
 
+        matched_ips.sort()
+
         return {
-            "ips": matched_ips,
+            "ips": matched_ips[offset : (offset + limit)],
+            "total": len(matched_ips),
         }
