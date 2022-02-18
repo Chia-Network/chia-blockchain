@@ -51,6 +51,7 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
+        handle_signals=True,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -64,6 +65,7 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self._handle_signals = handle_signals
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -80,9 +82,9 @@ class Service:
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
-        if NodeType == NodeType.WALLET:
+        if node_type == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
-            outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
+            outbound_rlp = 60
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -135,7 +137,8 @@ class Service:
 
         self._did_start = True
 
-        self._enable_signals()
+        if self._handle_signals:
+            self._enable_signals()
 
         await self._node._start(**kwargs)
         self._node._shut_down = False

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import random
 from typing import List, Optional, Tuple, Union, Dict
 
 from chia.consensus.constants import ConsensusConstants
@@ -14,6 +16,9 @@ from chia.protocols.wallet_protocol import (
     CoinState,
     RespondToPhUpdates,
     RespondToCoinUpdates,
+    RespondHeaderBlocks,
+    RequestHeaderBlocks,
+    RejectHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
@@ -22,7 +27,7 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
-
+from chia.wallet.util.peer_request_cache import PeerRequestCache
 
 log = logging.getLogger(__name__)
 
@@ -270,3 +275,75 @@ def get_block_challenge(
                 curr = all_blocks.get(curr.prev_header_hash, None)
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     return challenge
+
+
+def last_change_height_cs(cs: CoinState) -> uint32:
+    if cs.spent_height is not None:
+        return cs.spent_height
+    if cs.created_height is not None:
+        return cs.created_height
+    return uint32(0)
+
+
+async def _fetch_header_blocks_inner(
+    all_peers: List[WSChiaConnection], selected_peer_node_id: bytes32, request: RequestHeaderBlocks
+) -> Optional[RespondHeaderBlocks]:
+    if len(all_peers) == 0:
+        return None
+    random_peer: WSChiaConnection = random.choice(all_peers)
+    res = await random_peer.request_header_blocks(request)
+    if isinstance(res, RespondHeaderBlocks):
+        return res
+    elif isinstance(res, RejectHeaderBlocks):
+        # Peer is not synced, close connection
+        await random_peer.close()
+
+    bad_peer_id = random_peer.peer_node_id
+    if len(all_peers) == 1:
+        # No more peers to fetch from
+        return None
+    else:
+        if selected_peer_node_id == bad_peer_id:
+            # Select another peer fallback
+            while random_peer != bad_peer_id and len(all_peers) > 1:
+                random_peer = random.choice(all_peers)
+        else:
+            # Use the selected peer instead
+            random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
+        # Retry
+        res = await random_peer.request_header_blocks(request)
+        if isinstance(res, RespondHeaderBlocks):
+            return res
+        else:
+            return None
+
+
+async def fetch_header_blocks_in_range(
+    start: uint32,
+    end: uint32,
+    peer_request_cache: PeerRequestCache,
+    all_peers: List[WSChiaConnection],
+    selected_peer_id: bytes32,
+) -> Optional[List[HeaderBlock]]:
+    blocks: List[HeaderBlock] = []
+    for i in range(start - (start % 32), end + 1, 32):
+        request_start = min(uint32(i), end)
+        request_end = min(uint32(i + 31), end)
+        if (request_start, request_end) in peer_request_cache.block_requests:
+            res_h_blocks_task: asyncio.Task = peer_request_cache.block_requests[(request_start, request_end)]
+            if res_h_blocks_task.done():
+                res_h_blocks: Optional[RespondHeaderBlocks] = res_h_blocks_task.result()
+            else:
+                res_h_blocks = await res_h_blocks_task
+        else:
+            request_header_blocks = RequestHeaderBlocks(request_start, request_end)
+            res_h_blocks_task = asyncio.create_task(
+                _fetch_header_blocks_inner(all_peers, selected_peer_id, request_header_blocks)
+            )
+            peer_request_cache.block_requests[(request_start, request_end)] = res_h_blocks_task
+            res_h_blocks = await res_h_blocks_task
+        if res_h_blocks is None:
+            return None
+        assert res_h_blocks is not None
+        blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
+    return blocks

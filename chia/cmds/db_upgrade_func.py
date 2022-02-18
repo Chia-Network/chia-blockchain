@@ -65,6 +65,14 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
 
     from contextlib import closing
 
+    if not in_path.exists():
+        print(f"input file doesn't exist. {in_path}")
+        raise RuntimeError(f"can't find {in_path}")
+
+    if in_path == out_path:
+        print(f"output file is the same as the input {in_path}")
+        raise RuntimeError("invalid conversion files")
+
     if out_path.exists():
         print(f"output file already exists. {out_path}")
         raise RuntimeError("already exists")

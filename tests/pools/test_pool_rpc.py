@@ -35,7 +35,7 @@ from tests.time_out_assert import time_out_assert
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
-FEE_AMOUNT = 10
+FEE_AMOUNT = 2000000000000
 
 
 def get_pool_plot_dir():
