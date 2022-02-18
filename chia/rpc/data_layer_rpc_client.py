@@ -48,9 +48,15 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("unsubscribe", {"id": store_id})
+        response = await self.fetch("unsubscribe", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
 
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("get_kv_diff", {"id": store_id, "hash_1": hash_1, "hash_2": hash_2})
+        response = await self.fetch(
+            "get_kv_diff", {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
+        )
+        return response  # type: ignore[no-any-return]
+
+    async def get_root_history(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_root_history", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]

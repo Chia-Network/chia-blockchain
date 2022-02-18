@@ -62,7 +62,8 @@ class DataLayerRpcApi:
             "/delete_key": self.delete_key,
             "/insert": self.insert,
             "/subscribe": self.subscribe,
-            "/unsubscribe": self.unsubscribe,
+            "/get_kv_diff": self.get_kv_diff,
+            "/get_root_history": self.get_root_history,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -242,4 +243,7 @@ class DataLayerRpcApi:
         hash_2 = request["hash_2"]
         hash_2_bytes = bytes32.from_hexstr(hash_2)
         records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
-        return {"diff": records}
+        res: List[Dict[str, Any]] = []
+        for rec in records:
+            res.insert(0, {"type": rec.type.name, "key": rec.key, "value": rec.value})
+        return {"diff": res}
