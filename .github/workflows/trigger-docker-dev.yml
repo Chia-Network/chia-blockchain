@@ -1,0 +1,19 @@
+name: Trigger Dev Docker Build
+
+on:
+  pull_request:
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  trigger:
+    name: Trigger building a new dev tag for the chia-docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docker dev workflow via github-glue
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"sha":"${{ github.sha }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-dev/${{ github.sha }}/success/build-dev
