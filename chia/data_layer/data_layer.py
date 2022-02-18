@@ -150,6 +150,13 @@ class DataLayer:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return latest
 
+    async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
+        res = await self.data_store.get_tree_root(tree_id=store_id)
+        if res is None:
+            self.log.error(f"Failed to get root for {store_id.hex()}")
+            return None
+        return res.node_hash
+
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)
         if records is None:
