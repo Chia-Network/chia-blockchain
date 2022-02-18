@@ -245,5 +245,5 @@ class DataLayerRpcApi:
         records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
         res: List[Dict[str, Any]] = []
         for rec in records:
-            res.insert(0, {"type": rec.type.name, "key": rec.key, "value": rec.value})
+            res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
         return {"diff": res}

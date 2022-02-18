@@ -470,14 +470,13 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
                 "hash_2": history["root_history"][1]["root_hash"].hex(),
             }
         )
-        diff: Set[DiffData] = diff_res["diff"]
-        assert len(diff) == 3
-        diff1 = DiffData(type=OperationType.INSERT, key=key1, value=value1)
-        diff2 = DiffData(type=OperationType.INSERT, key=key2, value=value2)
-        diff3 = DiffData(type=OperationType.INSERT, key=key3, value=value3)
-        assert diff1 in diff
-        assert diff2 in diff
-        assert diff3 in diff
+        assert len(diff_res["diff"]) == 3
+        diff1 = {"type": "INSERT", "key": key1.hex(), "value": value1.hex()}
+        diff2 = {"type": "INSERT", "key": key2.hex(), "value": value2.hex()}
+        diff3 = {"type": "INSERT", "key": key3.hex(), "value": value3.hex()}
+        assert diff1 in diff_res["diff"]
+        assert diff2 in diff_res["diff"]
+        assert diff3 in diff_res["diff"]
         key4 = b"d"
         value4 = b"\x06\x03"
         changelist = [{"action": "insert", "key": key4.hex(), "value": value4.hex()}]
@@ -499,9 +498,8 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
                 "hash_2": history["root_history"][2]["root_hash"].hex(),
             }
         )
-        diff = diff_res["diff"]
-        assert len(diff) == 2
-        diff4 = DiffData(type=OperationType.INSERT, key=key4, value=value4)
-        diff5 = DiffData(type=OperationType.INSERT, key=key5, value=value5)
-        assert diff4 in diff
-        assert diff5 in diff
+        assert len(diff_res["diff"]) == 2
+        diff4 = {"type": "INSERT", "key": key4.hex(), "value": value4.hex()}
+        diff5 = {"type": "INSERT", "key": key5.hex(), "value": value5.hex()}
+        assert diff4 in diff_res["diff"]
+        assert diff5 in diff_res["diff"]
