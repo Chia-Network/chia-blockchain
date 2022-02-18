@@ -4,6 +4,59 @@ import pytest_asyncio
 import tempfile
 from pathlib import Path
 
+from chia.consensus.constants import ConsensusConstants
+from tests.block_tools import BlockTools, test_constants, create_block_tools
+
+# from tests.setup_nodes import setup_shared_block_tools_and_keyring
+from tests.setup_nodes import bt
+from tests.util.keyring import TempKeyring
+from tests.wallet_tools import WalletTool
+from typing import Tuple
+
+# the_block_tools = BlockTools()
+# the_wallet_tool = WalletTool()
+
+
+# @pytest.fixture(scope="module")
+# def shared_block_tools_helper():
+#    yield the_block_tools
+# cleanup the_block_tools
+
+
+# @pytest.fixture(scope="module")
+# def shared_wallet_tool_helper():
+#    return the_wallet_tool
+# cleanup
+
+
+def setup_shared_block_tools_and_keyring(
+    consensus_constants: ConsensusConstants = test_constants,
+) -> Tuple[BlockTools, TempKeyring]:
+    temp_keyring = TempKeyring(populate=True)
+    bt = create_block_tools(constants=consensus_constants, keychain=temp_keyring.get_keychain())
+    return bt, temp_keyring
+
+
+# @pytest.fixture(scope="module")
+# def shared_block_tools(cleanup_shared_block_tools) -> BlockTools:
+#    """
+#    This fixture is run once per module and is used to create the shared block tools
+#    for all tests in the module.
+#    """
+#    b_tools, keyring = setup_shared_block_tools_and_keyring()
+#    shared_block_tools_helper = BlockToolsFixtureHelper(b_tools, keyring)
+#    yield shared_block_tools_helper.block_tools
+#    shared_block_tools_helper.cleanup()
+
+
+@pytest.fixture(scope="module")
+def wallet_a(shared_block_tools, cleanup_shared_wallet_tool) -> WalletTool:
+    """
+    This fixture is run once per module and is used to create the shared wallet tool
+    for all tests in the module.
+    """
+    return shared_block_tools.wallet_tool
+
 
 multiprocessing.set_start_method("spawn")
 
@@ -49,49 +102,50 @@ block_format_version = "rc4"
 
 
 @pytest_asyncio.fixture(scope="session")
-async def default_400_blocks():
+async def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", seed=b"alternate2")
+    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"alternate2")
 
 
 @pytest_asyncio.fixture(scope="session")
-async def default_1000_blocks():
+async def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db")
+    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt)
 
 
 @pytest_asyncio.fixture(scope="session")
-async def pre_genesis_empty_slots_1000_blocks():
+async def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", seed=b"alternate2", empty_sub_slots=1
+        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", bt, seed=b"alternate2", empty_sub_slots=1
     )
 
 
 @pytest_asyncio.fixture(scope="session")
-async def default_10000_blocks():
+async def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db")
+    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt)
 
 
 @pytest_asyncio.fixture(scope="session")
-async def default_20000_blocks():
+async def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
+    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
 
 
 @pytest_asyncio.fixture(scope="session")
-async def default_10000_blocks_compact():
+async def default_10000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         10000,
         f"test_blocks_10000_compact_{block_format_version}.db",
+        bt,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
         normalized_to_identity_cc_ip=True,

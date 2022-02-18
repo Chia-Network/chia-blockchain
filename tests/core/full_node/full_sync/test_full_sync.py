@@ -50,7 +50,7 @@ class TestFullSync:
             yield _
 
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
         blocks: List[FullBlock] = default_400_blocks
@@ -209,7 +209,7 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
-    async def test_batch_sync(self, two_nodes):
+    async def test_batch_sync(self, two_nodes, bt):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20
         num_blocks_2 = 9
@@ -232,7 +232,7 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_1(self, two_nodes):
+    async def test_backtrack_sync_1(self, two_nodes, bt):
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
@@ -249,7 +249,7 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_2(self, two_nodes):
+    async def test_backtrack_sync_2(self, two_nodes, bt):
         blocks = bt.get_consecutive_blocks(1, skip_slots=3)
         blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -265,7 +265,7 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 8)
 
     @pytest.mark.asyncio
-    async def test_close_height_but_big_reorg(self, three_nodes):
+    async def test_close_height_but_big_reorg(self, three_nodes, bt):
         blocks_a = bt.get_consecutive_blocks(50)
         blocks_b = bt.get_consecutive_blocks(51, seed=b"B")
         blocks_c = bt.get_consecutive_blocks(90, seed=b"C")

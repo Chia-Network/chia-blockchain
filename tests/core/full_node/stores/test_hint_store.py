@@ -115,7 +115,7 @@ class TestHintStore:
                 assert rows[0][0] == 4
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, empty_blockchain):  # noqa: F811
+    async def test_hints_in_blockchain(self, empty_blockchain, bt):  # noqa: F811
         blockchain: Blockchain = empty_blockchain
 
         blocks = bt.get_consecutive_blocks(
