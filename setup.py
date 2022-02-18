@@ -134,7 +134,7 @@ kwargs = dict(
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
-    use_scm_version={"fallback_version": "unknown-no-.git-directory"},
+    use_scm_version={"fallback_version": "unknown-no-.git-directory", "local_scheme": "no-local-version"},
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     zip_safe=False,
