@@ -57,6 +57,8 @@ jobs:
         mypy
 
     - name: Build source distribution
+      env:
+        SETUPTOOLS_SCM_DEBUG: not-empty
       run: |
         python -m build --sdist --outdir dist .
 
