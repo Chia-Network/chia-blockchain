@@ -305,6 +305,9 @@ timelord:
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
 
+  start_rpc_server: True
+  rpc_port: 8557
+
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
     private_key:  "config/ssl/timelord/private_timelord.key"
