@@ -29,6 +29,7 @@ from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -410,7 +411,9 @@ class TestWalletRpc:
             assert bal_0["pending_coin_removal_count"] == 1
             col = await client.get_cat_asset_id(cat_0_id)
             assert col == asset_id
-            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            assert (await client.get_cat_name(cat_0_id)) == CATWallet.default_wallet_name_for_unknown_cat(
+                asset_id.hex()
+            )
             await client.set_cat_name(cat_0_id, "My cat")
             assert (await client.get_cat_name(cat_0_id)) == "My cat"
             wid, name = await client.cat_asset_id_to_name(col)
