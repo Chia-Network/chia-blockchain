@@ -158,16 +158,20 @@ class DataLayer:
             return None
         return res.node_hash
 
-    async def get_local_timestamp(self, store_id: bytes32) -> int:
-        generation = await self.data_store.get_validated_wallet_generation(store_id)
-        records = await self.wallet_rpc.dl_history(
-            launcher_id=store_id,
-            min_generation=uint32(generation),
-            max_generation=uint32(generation),
-        )
-        if len(records) != 1:
-            raise RuntimeError("Can't find DL record in the wallet store.")
-        return int(records[0].timestamp)
+    async def get_local_timestamp(self, store_id: bytes32) -> Optional[int]:
+        try:
+            generation = await self.data_store.get_validated_wallet_generation(store_id)
+            records = await self.wallet_rpc.dl_history(
+                launcher_id=store_id,
+                min_generation=uint32(generation),
+                max_generation=uint32(generation),
+            )
+            if len(records) == 0:
+                return None
+            return int(records[0].timestamp)
+        except Exception as e:
+            self.log.error(f"Exception get local timestamp: {type(e)} {e}")
+            return None
 
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)
