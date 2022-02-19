@@ -44,12 +44,17 @@ async function main(opts) {
     console.log('Finished');
 }
 
-const appPath = './dist/Chia.app';
 const appName = 'Chia';
 const dmgIcon = '../chia-blockchain-gui/packages/gui/src/assets/img/Chia.icns';
 const dmgBackground = './assets/dmg/background.tiff';
 const outputDir = './final_installer';
-const appVersion = process.argv[2]; // undefined is ok
+const appPath = process.argv[2]; // required
+const appVersion = process.argv[3]; // undefined is ok
+
+if (!appPath) {
+    console.error('appPath is required');
+    process.exit(1);
+}
 
 main({
     appPath,
