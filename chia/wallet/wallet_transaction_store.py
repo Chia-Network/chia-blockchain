@@ -267,7 +267,9 @@ class WalletTransactionStore:
             return self.tx_record_cache[tx_id]
 
         # NOTE: bundle_id is being stored as bytes, not hex
-        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (tx_id,))
+        cursor = await self.db_connection.execute(
+            "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
+        )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -281,7 +283,7 @@ class WalletTransactionStore:
         """
         current_time = int(time.time())
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=?",
+            "SELECT transaction_record from transaction_record WHERE confirmed=?",
             (0,),
         )
         rows = await cursor.fetchall()
@@ -311,7 +313,8 @@ class WalletTransactionStore:
         fee_int = TransactionType.FEE_REWARD.value
         pool_int = TransactionType.COINBASE_REWARD.value
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and (type=? or type=?)", (1, fee_int, pool_int)
+            "SELECT transaction_record from transaction_record WHERE confirmed=? and (type=? or type=?)",
+            (1, fee_int, pool_int),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -328,7 +331,9 @@ class WalletTransactionStore:
         Returns the list of all transaction that have not yet been confirmed.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE confirmed=?", (0,))
+        cursor = await self.db_connection.execute(
+            "SELECT transaction_record from transaction_record WHERE confirmed=?", (0,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -367,7 +372,9 @@ class WalletTransactionStore:
             query_str = SortKey[sort_key].ascending()
 
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
+            f"SELECT transaction_record from transaction_record where wallet_id=?"
+            f" {query_str}, rowid"
+            f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -398,11 +405,11 @@ class WalletTransactionStore:
         """
         if type is None:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
+                "SELECT transaction_record from transaction_record where wallet_id=?", (wallet_id,)
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=? and type=?",
+                "SELECT transaction_record from transaction_record where wallet_id=? and type=?",
                 (
                     wallet_id,
                     type,
@@ -424,7 +431,7 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
-        cursor = await self.db_connection.execute("SELECT * from transaction_record")
+        cursor = await self.db_connection.execute("SELECT transaction_record from transaction_record")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -439,7 +446,7 @@ class WalletTransactionStore:
         # Can be -1 (get all tx)
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed_at_height>?", (height,)
+            "SELECT transaction_record from transaction_record WHERE confirmed_at_height>?", (height,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -452,7 +459,9 @@ class WalletTransactionStore:
         return records
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
-        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
+        cursor = await self.db_connection.execute(
+            "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
