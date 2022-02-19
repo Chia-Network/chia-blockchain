@@ -127,7 +127,8 @@ class WalletPuzzleStore:
         else:
             hard = 0
         cursor = await self.db_connection.execute(
-            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used FROM derivation_paths WHERE derivation_index=? AND wallet_id=? AND hardened=?;",
+            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used FROM derivation_paths "
+            "WHERE derivation_index=? AND wallet_id=? AND hardened=?",
             (index, wallet_id, hard),
         )
         row = await cursor.fetchone()
@@ -150,7 +151,8 @@ class WalletPuzzleStore:
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
-            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened FROM derivation_paths WHERE puzzle_hash=?;",
+            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened FROM derivation_paths "
+            "WHERE puzzle_hash=?",
             (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
@@ -246,7 +248,10 @@ class WalletPuzzleStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened FROM derivation_paths WHERE pubkey=?", (bytes(pubkey).hex(),)
+            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened "
+            "FROM derivation_paths "
+            "WHERE pubkey=?",
+            (bytes(pubkey).hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -278,7 +283,10 @@ class WalletPuzzleStore:
         Returns None if not present.
         """
         cursor = await self.db_connection.execute(
-            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened FROM derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened "
+            "FROM derivation_paths "
+            "WHERE puzzle_hash=?",
+            (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()
