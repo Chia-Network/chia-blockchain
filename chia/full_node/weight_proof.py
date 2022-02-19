@@ -39,6 +39,7 @@ from chia.types.weight_proof import (
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.setproctitle import setproctitle
 from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -618,7 +619,11 @@ class WeightProofHandler:
 
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
-        with ProcessPoolExecutor(max_workers=self._num_processes) as executor:
+        with ProcessPoolExecutor(
+            max_workers=self._num_processes,
+            initializer=setproctitle,
+            initargs=("chia_full_node",),
+        ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
