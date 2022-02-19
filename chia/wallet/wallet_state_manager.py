@@ -201,9 +201,6 @@ class WalletStateManager:
                 )
             if wallet is not None:
                 self.wallets[wallet_info.id] = wallet
-
-        # Lock
-        self.lock = asyncio.Lock()  # external
         return self
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
