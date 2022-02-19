@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 if sys.version_info < (3, 8):
 
@@ -18,6 +18,10 @@ else:
 
 def is_type_List(f_type: Type) -> bool:
     return (get_origin(f_type) is not None and get_origin(f_type) == list) or f_type == list
+
+
+def is_type_dict(f_type: Type) -> bool:
+    return get_origin(f_type) == dict or f_type == dict
 
 
 def is_type_SpecificOptional(f_type) -> bool:
@@ -50,6 +54,18 @@ def strictdataclass(cls: Any):
                 for el in item:
                     collected_list.append(self.parse_item(el, f_name, inner_type))
                 return collected_list
+            if is_type_dict(f_type):
+                parsed_dict: Dict = {}
+                args = get_args(f_type)
+                key_type: Type = args[0]
+                value_type: Type = args[1]
+                if not is_type_dict(type(item)):
+                    raise TypeError(f"Wrong type for {f_name}, need a dict.")
+                for key, value in item.items():
+                    parsed_key = self.parse_item(key, f_name, key_type)
+                    parsed_value = self.parse_item(value, f_name, value_type)
+                    parsed_dict[parsed_key] = parsed_value
+                return parsed_dict
             if is_type_SpecificOptional(f_type):
                 if item is None:
                     return None

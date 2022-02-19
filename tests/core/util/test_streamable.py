@@ -1,6 +1,6 @@
 import unittest
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import io
 
 from clvm_tools import binutils
@@ -22,6 +22,7 @@ from chia.util.streamable import (
     parse_optional,
     parse_bytes,
     parse_list,
+    parse_dict,
     parse_tuple,
     parse_size_hints,
     parse_str,
@@ -41,8 +42,20 @@ class TestStreamable(unittest.TestCase):
             e: Optional[uint32]
             f: Optional[uint32]
             g: Tuple[uint32, str, bytes]
+            h: Dict[str, uint32]
+            i: Dict[str, Dict[uint32, uint32]]
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))
+        a = TestClass(
+            24,
+            352,
+            [1, 2, 4],
+            [[1, 2, 3], [3, 4]],
+            728,
+            None,
+            (383, "hello", b"goodbye"),
+            {"a": uint32(1), "b": uint32(2)},
+            {"a": {uint32(1): uint32(1)}, "b": {uint32(2): uint32(2)}},
+        )
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
@@ -74,6 +87,25 @@ class TestStreamable(unittest.TestCase):
         dict_block = block.to_json_dict()
         assert FullBlock.from_json_dict(dict_block) == block
 
+    def test_json_dict(self) -> None:
+        @dataclass(frozen=True)
+        @streamable
+        class TestClassInner(Streamable):
+            a: Dict[uint32, str]
+
+        @dataclass(frozen=True)
+        @streamable
+        class TestClass(Streamable):
+            a: Dict[str, TestClassInner]
+
+        a = TestClass(
+            {
+                "1": TestClassInner({uint32(10): "10", uint32(11): "11"}),
+                "2": TestClassInner({uint32(20): "20", uint32(21): "21"}),
+            }
+        )
+        assert a == TestClass.from_json_dict(a.to_json_dict())
+
     def test_recursive_json(self):
         @dataclass(frozen=True)
         @streamable
@@ -86,12 +118,13 @@ class TestStreamable(unittest.TestCase):
             a: uint32
             b: List[Optional[List[TestClass1]]]
             c: bytes32
+            d: Dict[str, List[TestClass1]]
 
         tc1_a = TestClass1([uint32(1), uint32(2)])
         tc1_b = TestClass1([uint32(4), uint32(5)])
         tc1_c = TestClass1([uint32(7), uint32(8)])
 
-        tc2 = TestClass2(uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32)))
+        tc2 = TestClass2(uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32)), {"a": [tc1_c, tc1_b]})
         assert TestClass2.from_json_dict(tc2.to_json_dict()) == tc2
 
     def test_recursive_types(self):
@@ -131,6 +164,16 @@ class TestStreamable(unittest.TestCase):
         @streamable
         class TestClassList(Streamable):
             a: List[uint8]
+
+        # Does not have the required elements
+        with raises(AssertionError):
+            TestClassList.from_bytes(bytes([0, 0, 100, 24]))
+
+    def test_ambiguous_deserialization_dict(self) -> None:
+        @dataclass(frozen=True)
+        @streamable
+        class TestClassList(Streamable):
+            a: Dict[str, uint8]
 
         # Does not have the required elements
         with raises(AssertionError):
@@ -308,6 +351,42 @@ class TestStreamable(unittest.TestCase):
         # failure to parser internal type
         with raises(ValueError):
             parse_list(io.BytesIO(b"\x00\x00\x00\x01\x02"), parse_bool)
+
+    def test_parse_dict(self) -> None:
+        assert parse_dict(io.BytesIO(b"\x00\x00\x00\x00"), parse_str, parse_bool) == {}
+        assert parse_dict(io.BytesIO(b"\x00\x00\x00\x01\x00\x00\x00\x01\x61\x01"), parse_str, parse_bool) == {"a": True}
+        assert (
+            parse_dict(
+                io.BytesIO(b"\x00\x00\x00\x03\x00\x00\x00\x01\x61\x01\x00\x00\x00\x01\x62\x00\x00\x00\x00\x01\x63\x01"),
+                parse_str,
+                parse_bool,
+            )
+            == {"a": True, "b": False, "c": True}
+        )
+
+        # EOF
+        with raises(AssertionError):
+            parse_dict(io.BytesIO(b"\x00\x00\x00\x01"), parse_str, parse_bool)
+
+        with raises(AssertionError):
+            parse_dict(io.BytesIO(b"\x00\x00\x00\x01\x00\x00\x00\x01"), parse_str, parse_bool)
+
+        with raises(AssertionError):
+            parse_dict(io.BytesIO(b"\x00\x00\x00\x01\x00\x00\x00\x01\x61"), parse_str, parse_bool)
+
+        # failure to parse key type
+        with raises(ValueError):
+            parse_dict(io.BytesIO(b"\x00\x00\x00\x01\x00\x00\x00\x01\xff"), parse_str, parse_bool)
+
+        # failure to parse value type
+        with raises(ValueError):
+            parse_dict(io.BytesIO(b"\x00\x00\x00\x01\x00\x00\x00\x01\x61\x02"), parse_str, parse_bool)
+
+        # failure to parse duplicated key
+        with raises(KeyError):
+            parse_dict(
+                io.BytesIO(b"\x00\x00\x00\x02\x00\x00\x00\x01\x61\x01\x00\x00\x00\x01\x61\x01"), parse_str, parse_bool
+            )
 
     def test_parse_tuple(self):
 

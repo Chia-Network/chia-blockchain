@@ -16,7 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
-from chia.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
+from chia.util.type_checking import is_type_dict, is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
 
 if sys.version_info < (3, 8):
 
@@ -74,6 +74,9 @@ def dataclass_from_dict(klass, d):
     elif is_type_List(klass):
         # Type is a list, data is a list
         return [dataclass_from_dict(get_args(klass)[0], item) for item in d]
+    elif is_type_dict(klass):
+        args = get_args(klass)
+        return {dataclass_from_dict(args[0], key): dataclass_from_dict(args[1], value) for key, value in d.items()}
     elif issubclass(klass, bytes):
         # Type is bytes, data is a hex string
         return klass(hexstr_to_bytes(d))
@@ -242,6 +245,20 @@ def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Li
     return full_list
 
 
+def parse_dict(
+    f: BinaryIO, parse_key_type_f: Callable[[BinaryIO], Any], parse_value_type_f: Callable[[BinaryIO], Any]
+) -> Dict[Any, Any]:
+    parsed_dict: Dict = {}
+    dict_size = parse_uint32(f)
+    for dict_index in range(dict_size):
+        key = parse_key_type_f(f)
+        if key in parsed_dict:
+            raise KeyError(f"Duplicated key {key}")
+        value = parse_value_type_f(f)
+        parsed_dict[key] = value
+    return parsed_dict
+
+
 def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[Callable[[BinaryIO], Any]]) -> Tuple[Any, ...]:
     full_list = []
     for parse_f in list_parse_inner_type_f:
@@ -284,6 +301,11 @@ class Streamable:
             inner_type = get_args(f_type)[0]
             parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_list(f, parse_inner_type_f)
+        if is_type_dict(f_type):
+            args = get_args(f_type)
+            parse_key_type_f = cls.function_to_parse_one_item(args[0])
+            parse_value_type_f = cls.function_to_parse_one_item(args[1])
+            return lambda f: parse_dict(f, parse_key_type_f, parse_value_type_f)
         if is_type_Tuple(f_type):
             inner_types = get_args(f_type)
             list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
@@ -334,6 +356,15 @@ class Streamable:
             # wjb assert inner_type != get_args(List)[0]  # type: ignore
             for element in item:
                 self.stream_one_item(inner_type, element, f)
+        elif is_type_dict(f_type):
+            assert is_type_dict(type(item))
+            write_uint32(f, uint32(len(item)))
+            args = get_args(f_type)
+            key_type = args[0]
+            value_type = args[1]
+            for key, value in item.items():
+                self.stream_one_item(key_type, key, f)
+                self.stream_one_item(value_type, value, f)
         elif is_type_Tuple(f_type):
             inner_types = get_args(f_type)
             assert len(item) == len(inner_types)

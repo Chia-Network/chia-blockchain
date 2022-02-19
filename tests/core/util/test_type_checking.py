@@ -2,8 +2,10 @@ import unittest
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+import pytest
+
 from chia.util.ints import uint8
-from chia.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
+from chia.util.type_checking import is_type_dict, is_type_List, is_type_SpecificOptional, strictdataclass
 
 
 class TestIsTypeList(unittest.TestCase):
@@ -89,6 +91,28 @@ class TestStrictClass(unittest.TestCase):
 
         good = TestClass(12, None, 13, None)
         assert good
+
+
+def test_is_type_dict() -> None:
+    a = {1: 2, 3: 4}
+    assert is_type_dict(type(a))
+    assert is_type_dict(dict)
+    assert is_type_dict(Dict)
+    assert is_type_dict(Dict[int, int])
+    assert not is_type_dict(Tuple)  # type:ignore[arg-type]
+    assert not is_type_dict(tuple)
+    assert not is_type_dict(List)
+    assert not is_type_dict(list)
+
+
+def test_invalid_dict_type() -> None:
+    @dataclass(frozen=True)
+    @strictdataclass
+    class TestClass:
+        a: Dict[int, int]
+
+    with pytest.raises(TypeError):
+        TestClass([])  # type:ignore[arg-type]
 
 
 if __name__ == "__main__":
