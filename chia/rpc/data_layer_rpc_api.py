@@ -202,9 +202,9 @@ class DataLayerRpcApi:
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
             res = await self.service.get_local_root(id_bytes)
-            if res is not None:
-                timestamp = await self.service.get_local_timestamp(id_bytes)
-                roots.append({"id": id_bytes, "hash": res, "timestamp": timestamp})
+            timestamp = await self.service.get_local_timestamp(id_bytes)
+            roots.append({"id": id_bytes, "hash": res, "timestamp": timestamp})
+
         return {"root_hashes": roots}
 
     async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
