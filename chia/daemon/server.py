@@ -1087,7 +1087,7 @@ class WebSocketServer:
             else:
                 self.log.info(f"Service {service_command} already running")
                 already_running = True
-        elif service_command in self.connections:
+        elif len(self.connections.get(service_command, [])) > 0:
             # If the service was started manually (not launched by the daemon), we should
             # have a connection to it.
             self.log.info(f"Service {service_command} already registered")

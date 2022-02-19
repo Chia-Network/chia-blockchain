@@ -1,9 +1,9 @@
 [build-system]
-# setuptools !=60.9.1, !=60.9.2 for bug missing no-local-version
-requires = ["setuptools>=42,!=60.9.1,!=60.9.2", "wheel", "setuptools_scm[toml]>=4.1.2"]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=4.1.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+fallback_version = "unknown-no-.git-directory"
 local_scheme = "no-local-version"
 
 [tool.black]

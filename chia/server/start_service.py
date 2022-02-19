@@ -51,6 +51,8 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
+        handle_signals=True,
+        service_name_prefix="",
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -64,8 +66,9 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self._handle_signals = handle_signals
 
-        proctitle_name = f"chia_{service_name}"
+        proctitle_name = f"chia_{service_name_prefix}{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
 
@@ -135,7 +138,8 @@ class Service:
 
         self._did_start = True
 
-        self._enable_signals()
+        if self._handle_signals:
+            self._enable_signals()
 
         await self._node._start(**kwargs)
         self._node._shut_down = False
