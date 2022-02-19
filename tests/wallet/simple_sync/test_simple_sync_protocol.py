@@ -226,6 +226,8 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(SINGLETON_LAUNCHER_HASH))
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+
         # Send a transaction to make sure the wallet is still running
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
         await wallet.push_transaction(tx_record)
