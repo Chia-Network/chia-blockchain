@@ -52,6 +52,7 @@ class Service:
         parse_cli_args=True,
         connect_to_daemon=True,
         handle_signals=True,
+        service_name_prefix="",
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -67,7 +68,7 @@ class Service:
         self._network_id: str = network_id
         self._handle_signals = handle_signals
 
-        proctitle_name = f"chia_{service_name}"
+        proctitle_name = f"chia_{service_name_prefix}{service_name}"
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
 
