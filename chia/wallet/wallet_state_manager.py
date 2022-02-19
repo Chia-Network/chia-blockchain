@@ -78,11 +78,6 @@ class WalletStateManager:
 
     start_index: int
 
-    # Makes sure only one asyncio thread is changing the blockchain state at one time
-    lock: asyncio.Lock
-
-    tx_lock: asyncio.Lock
-
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
