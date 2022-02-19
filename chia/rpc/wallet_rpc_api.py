@@ -680,8 +680,13 @@ class WalletRpcApi:
         sort_key = request.get("sort_key", None)
         reverse = request.get("reverse", False)
 
+        address = request.get("address", None)
+        to_puzzle_hash: Optional[bytes32] = None
+        if address is not None:
+            to_puzzle_hash = decode_puzzle_hash(address)
+
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
         )
         return {
             "transactions": [
