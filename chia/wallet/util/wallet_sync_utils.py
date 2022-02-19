@@ -329,18 +329,21 @@ async def fetch_header_blocks_in_range(
     for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
         request_end = min(uint32(i + 31), end)
-        if (request_start, request_end) in peer_request_cache.block_requests:
-            res_h_blocks_task: asyncio.Task = peer_request_cache.block_requests[(request_start, request_end)]
+        res_h_blocks_task: Optional[asyncio.Task] = peer_request_cache.get_block_request(request_start, request_end)
+
+        if res_h_blocks_task is not None:
+            log.info(f"Using cache for: {start}-{end}")
             if res_h_blocks_task.done():
                 res_h_blocks: Optional[RespondHeaderBlocks] = res_h_blocks_task.result()
             else:
                 res_h_blocks = await res_h_blocks_task
         else:
+            log.info(f"Fetching: {start}-{end}")
             request_header_blocks = RequestHeaderBlocks(request_start, request_end)
             res_h_blocks_task = asyncio.create_task(
                 _fetch_header_blocks_inner(all_peers, selected_peer_id, request_header_blocks)
             )
-            peer_request_cache.block_requests[(request_start, request_end)] = res_h_blocks_task
+            peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:
             return None

@@ -134,7 +134,7 @@ class WalletNode:
         self.wallet_peers = None
         self.wallet_peers_initialized = False
         self.valid_wp_cache: Dict[bytes32, Any] = {}
-        self.untrusted_caches: Dict[bytes32, Any] = {}
+        self.untrusted_caches: Dict[bytes32, PeerRequestCache] = {}
         self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
         self.race_cache_hashes = []
         self._process_new_subscriptions_task = None
@@ -741,8 +741,8 @@ class WalletNode:
             return self.height_to_time[height]
 
         for cache in self.untrusted_caches.values():
-            if height in cache.blocks:
-                block = cache.blocks[height]
+            block: Optional[HeaderBlock] = cache.get_block(height)
+            if block is not None:
                 if (
                     block.foliage_transaction_block is not None
                     and block.foliage_transaction_block.timestamp is not None
@@ -1062,28 +1062,30 @@ class WalletNode:
             and current_spent_height == spent_height
             and current.confirmed_block_height == confirmed_height
         ):
-            peer_request_cache.states_validated[coin_state.get_hash()] = coin_state
+            peer_request_cache.add_to_states_validated(coin_state)
             return True
 
         reorg_mode = False
-        if current is not None and confirmed_height is None:
+
+        # If coin was removed from the blockchain
+        if confirmed_height is None:
+            if current is None:
+                # Coin does not exist in local DB, so no need to do anything
+                return False
             # This coin got reorged
             reorg_mode = True
             confirmed_height = current.confirmed_block_height
 
-        if confirmed_height is None:
-            return False
-
         # request header block for created height
-        if confirmed_height in peer_request_cache.blocks and reorg_mode is False:
-            state_block: HeaderBlock = peer_request_cache.blocks[confirmed_height]
-        else:
+        state_block: Optional[HeaderBlock] = peer_request_cache.get_block(confirmed_height)
+        if state_block is None or reorg_mode:
             request = RequestHeaderBlocks(confirmed_height, confirmed_height)
             res = await peer.request_header_blocks(request)
             if res is None:
                 return False
             state_block = res.header_blocks[0]
-            peer_request_cache.blocks[confirmed_height] = state_block
+            assert state_block is not None
+            peer_request_cache.add_to_blocks(state_block)
 
         # get proof of inclusion
         assert state_block.foliage_transaction_block is not None
@@ -1107,46 +1109,45 @@ class WalletNode:
             if not validated:
                 return False
 
-        if spent_height is None and current is not None and current.spent_block_height != 0:
-            # Peer is telling us that coin that was previously known to be spent is not spent anymore
-            # Check old state
-            if current.spent_block_height != spent_height:
-                reorg_mode = True
-            if spent_height in peer_request_cache.blocks and reorg_mode is False:
-                spent_state_block: HeaderBlock = peer_request_cache.blocks[current.spent_block_height]
-            else:
+        # TODO: make sure all cases are covered
+        if current is not None:
+            if spent_height is None and current.spent_block_height != 0:
+                # Peer is telling us that coin that was previously known to be spent is not spent anymore
+                # Check old state
+
                 request = RequestHeaderBlocks(current.spent_block_height, current.spent_block_height)
                 res = await peer.request_header_blocks(request)
                 spent_state_block = res.header_blocks[0]
                 assert spent_state_block.height == current.spent_block_height
-                peer_request_cache.blocks[current.spent_block_height] = spent_state_block
-            assert spent_state_block.foliage_transaction_block is not None
-            validate_removals_result: bool = await request_and_validate_removals(
-                peer,
-                current.spent_block_height,
-                spent_state_block.header_hash,
-                coin_state.coin.name(),
-                spent_state_block.foliage_transaction_block.removals_root,
-            )
-            if validate_removals_result is False:
-                self.log.warning("Validate false 2")
-                await peer.close(9999)
-                return False
-            validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
-            if not validated:
-                return False
+                assert spent_state_block.foliage_transaction_block is not None
+                peer_request_cache.add_to_blocks(spent_state_block)
+
+                validate_removals_result: bool = await request_and_validate_removals(
+                    peer,
+                    current.spent_block_height,
+                    spent_state_block.header_hash,
+                    coin_state.coin.name(),
+                    spent_state_block.foliage_transaction_block.removals_root,
+                )
+                if validate_removals_result is False:
+                    self.log.warning("Validate false 2")
+                    await peer.close(9999)
+                    return False
+                validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
+                if not validated:
+                    return False
 
         if spent_height is not None:
             # request header block for created height
-            if spent_height in peer_request_cache.blocks:
-                spent_state_block = peer_request_cache.blocks[spent_height]
-            else:
+            spent_state_block = peer_request_cache.get_block(spent_height)
+            if spent_state_block is None:
                 request = RequestHeaderBlocks(spent_height, spent_height)
                 res = await peer.request_header_blocks(request)
                 spent_state_block = res.header_blocks[0]
                 assert spent_state_block.height == spent_height
-                peer_request_cache.blocks[spent_height] = spent_state_block
-            assert spent_state_block.foliage_transaction_block is not None
+                assert spent_state_block.foliage_transaction_block is not None
+                peer_request_cache.add_to_blocks(spent_state_block)
+            assert spent_state_block is not None
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,
@@ -1161,7 +1162,8 @@ class WalletNode:
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
             if not validated:
                 return False
-        peer_request_cache.states_validated[coin_state.get_hash()] = coin_state
+        peer_request_cache.add_to_states_validated(coin_state)
+
         return True
 
     async def validate_block_inclusion(
@@ -1204,11 +1206,11 @@ class WalletNode:
                     end = self.constants.SUB_EPOCH_BLOCKS + inserted.num_blocks_overflow
                 else:
                     request = RequestSESInfo(block.height, block.height + 32)
-                    if block.height in peer_request_cache.ses_requests:
-                        res_ses: RespondSESInfo = peer_request_cache.ses_requests[block.height]
-                    else:
+                    res_ses: Optional[RespondSESInfo] = peer_request_cache.get_ses_request(block.height)
+                    if res_ses is None:
                         res_ses = await peer.request_ses_hashes(request)
-                        peer_request_cache.ses_requests[block.height] = res_ses
+                        peer_request_cache.add_to_ses_requests(block.height, res_ses)
+                    assert res_ses is not None
 
                     ses_0 = res_ses.reward_chain_hash[0]
                     last_height = res_ses.heights[0][-1]  # Last height in sub epoch
@@ -1284,7 +1286,7 @@ class WalletNode:
                         return False
             return True
 
-    async def fetch_puzzle_solution(self, peer, height: uint32, coin: Coin) -> CoinSpend:
+    async def fetch_puzzle_solution(self, peer: WSChiaConnection, height: uint32, coin: Coin) -> CoinSpend:
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
