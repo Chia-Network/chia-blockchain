@@ -323,7 +323,7 @@ class WalletPuzzleStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT puzzle_hash, wallet_type FROM derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
+            "SELECT wallet_type, wallet_id FROM derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
