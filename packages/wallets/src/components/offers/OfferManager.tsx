@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
 import { Trans, t } from '@lingui/macro';
@@ -6,9 +6,9 @@ import moment from 'moment';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Back,
+  ButtonLoading,
   Card,
   CardHero,
-  ConfirmDialog,
   Fee,
   Flex,
   Form,
@@ -31,7 +31,11 @@ import {
   Button,
   Checkbox,
   Chip,
-  Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControlLabel,
   Grid,
   ListItemIcon,
@@ -61,78 +65,120 @@ type OfferCancellationOptions = {
 };
 
 type ConfirmOfferCancellationProps = {
-  onUpdateValues: (values: OfferCancellationOptions) => void;
+  onClose: (value: any) => void;
+  open: boolean;
 };
 
 function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
-  const { onUpdateValues } = props;
+  const { onClose, open } = props;
   const methods = useForm({
     defaultValues: {
-      cancelWithTransaction: true,
       fee: '',
     }
   });
-  const { watch } = methods;
-  const fee = watch('fee');
   const [cancelWithTransaction, setCancelWithTransaction] = useState<boolean>(true);
 
-  // Communicate value updates to the parent component
-  useEffect(() => {
-    const feeInMojos = fee ? Number.parseFloat(chiaToMojo(fee)) : 0;
-    onUpdateValues({ cancelWithTransaction, cancellationFee: feeInMojos });
-  }, [cancelWithTransaction, fee]);
+  function handleCancel() {
+    onClose([false]);
+  }
+
+  async function handleConfirm() {
+    const { fee: xchFee } = methods.getValues();
+    var fee = 0;
+
+    if (cancelWithTransaction) {
+      fee = Number.parseFloat(chiaToMojo(xchFee));
+    }
+    onClose([true, { cancelWithTransaction, cancellationFee: fee }]);
+  }
 
   return (
-    <Form methods={methods}>
-      <Flex flexDirection="column" gap={3}>
-        <Typography variant="body1">
-          <Trans>
-            Are you sure you want to cancel your offer?
-          </Trans>
-        </Typography>
-        <Typography variant="body1">
-          <Trans>
-            If you have already shared your offer file,
-            you may need to submit a transaction to cancel
-            the pending offer. Click "Cancel on blockchain"
-            to submit a cancellation transaction.
-          </Trans>
-        </Typography>
-        <Flex flexDirection="row" gap={3}>
-          <Grid container>
-            <Grid xs={6} item>
-              <FormControlLabel
-                control={<Checkbox name="cancelWithTransaction" checked={cancelWithTransaction} onChange={(event) => setCancelWithTransaction(event.target.checked)} />}
-                label={
-                  <>
-                    <Trans>Cancel on blockchain</Trans>{' '}
-                    <TooltipIcon>
-                      <Trans>
-                        Creates and submits a transaction on the blockchain that cancels the offer
-                      </Trans>
-                    </TooltipIcon>
-                  </>
-                }
-              />
-            </Grid>
-            {cancelWithTransaction && (
-              <Grid xs={6} item>
-                <Fee
-                  id="filled-secondary"
-                  variant="filled"
-                  name="fee"
-                  color="secondary"
-                  label={<Trans>Fee</Trans>}
-                  fullWidth
-                />
-              </Grid>
-            )}
-          </Grid>
+    <Dialog
+      onClose={handleCancel}
+      open={open}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+    >
+      <DialogTitle id="alert-dialog-title"><Trans>Cancel Offer</Trans></DialogTitle>
+      <DialogContent>
+        <DialogContentText id="alert-dialog-description">
+          <Form methods={methods} onSubmit={handleConfirm}>
+            <Flex flexDirection="column" gap={3}>
+              <Typography variant="body1">
+                <Trans>
+                  Are you sure you want to cancel your offer?
+                </Trans>
+              </Typography>
+              <Typography variant="body1">
+                <Trans>
+                  If you have already shared your offer file,
+                  you may need to submit a transaction to cancel
+                  the pending offer. Click "Cancel on blockchain"
+                  to submit a cancellation transaction.
+                </Trans>
+              </Typography>
+              <Flex flexDirection="row" gap={3}>
+                <Grid container>
+                  <Grid xs={6} item>
+                    <FormControlLabel
+                      control={<Checkbox name="cancelWithTransaction" checked={cancelWithTransaction} onChange={(event) => setCancelWithTransaction(event.target.checked)} />}
+                      label={
+                        <>
+                          <Trans>Cancel on blockchain</Trans>{' '}
+                          <TooltipIcon>
+                            <Trans>
+                              Creates and submits a transaction on the blockchain that cancels the offer
+                            </Trans>
+                          </TooltipIcon>
+                        </>
+                      }
+                    />
+                  </Grid>
+                  {cancelWithTransaction && (
+                    <Grid xs={6} item>
+                      <Fee
+                        id="filled-secondary"
+                        variant="filled"
+                        name="fee"
+                        color="secondary"
+                        label={<Trans>Fee</Trans>}
+                        fullWidth
+                      />
+                    </Grid>
+                  )}
+                </Grid>
+              </Flex>
+            </Flex>
+          </Form>
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Flex flexDirection="row" gap={3} style={{paddingBottom: '8px', paddingRight: '16px'}}>
+          <Button
+            onClick={handleCancel}
+            color="secondary"
+            variant="outlined"
+            autoFocus
+          >
+            <Trans>Close</Trans>
+          </Button>
+          <ButtonLoading
+            onClick={handleConfirm}
+            color="danger"
+            variant="contained"
+          >
+            <Trans>Cancel Offer</Trans>
+          </ButtonLoading>
         </Flex>
-      </Flex>
-    </Form>
+      </DialogActions>
+    </Dialog>
   );
 }
+
+ConfirmOfferCancellation.defaultProps = {
+  onClose: () => {},
+  open: true,
+};
 
 type OfferListProps = {
   title: string | React.ReactElement;
@@ -187,25 +233,12 @@ function OfferList(props: OfferListProps) {
   }
 
   async function handleCancelOffer(tradeId: string) {
-    let options: OfferCancellationOptions = {
-      cancelWithTransaction: false,
-      cancellationFee: 0,
-    };
-    const cancelConfirmed = await openDialog(
-      <ConfirmDialog
-        title={<Trans>Cancel Offer</Trans>}
-        confirmTitle={<Trans>Cancel Offer</Trans>}
-        confirmColor="danger"
-        cancelTitle={<Trans>Close</Trans>}
-      >
-        <ConfirmOfferCancellation
-          onUpdateValues={(values) => options = values}
-        />
-      </ConfirmDialog>
+    const [cancelConfirmed, cancellationOptions] = await openDialog(
+      <ConfirmOfferCancellation />
     );
 
     if (cancelConfirmed === true) {
-      await cancelOffer({ tradeId, secure: options.cancelWithTransaction, fee: options.cancellationFee });
+      await cancelOffer({ tradeId, secure: cancellationOptions.cancelWithTransaction, fee: cancellationOptions.cancellationFee });
     }
   }
 
