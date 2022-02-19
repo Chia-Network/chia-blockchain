@@ -171,7 +171,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_local_root(store_id)
-        return {"hash": res}
+        timestamp = await self.service.get_local_timestamp(store_id)
+        return {"hash": res, "timestamp": timestamp}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -187,6 +188,23 @@ class DataLayerRpcApi:
             rec = await self.service.get_root(id_bytes)
             if rec is not None:
                 roots.append({"id": id_bytes, "hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
+        return {"root_hashes": roots}
+
+    async def get_local_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        get local state hashes for a list of roots
+        """
+        store_ids = request["ids"]
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        roots = []
+        for id in store_ids:
+            id_bytes = bytes32.from_hexstr(id)
+            res = await self.service.get_local_root(id_bytes)
+            if res is not None:
+                timestamp = await self.service.get_local_timestamp(id_bytes)
+                roots.append({"id": id_bytes, "hash": res, "timestamp": timestamp})
         return {"root_hashes": roots}
 
     async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:

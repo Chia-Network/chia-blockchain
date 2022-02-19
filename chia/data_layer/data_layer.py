@@ -158,6 +158,17 @@ class DataLayer:
             return None
         return res.node_hash
 
+    async def get_local_timestamp(self, store_id: bytes32) -> int:
+        generation = await self.data_store.get_validated_wallet_generation(store_id)
+        records = await self.wallet_rpc.dl_history(
+            launcher_id=store_id,
+            min_generation=uint32(generation),
+            max_generation=uint32(generation),
+        )
+        if len(records) != 1:
+            raise RuntimeError("Can't find DL record in the wallet store.")
+        return int(records[0].timestamp)
+
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)
         if records is None:
@@ -273,8 +284,8 @@ class DataLayer:
                 f"Wallet generation: {to_check[0].generation}"
             )
         else:
-            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-            raise RuntimeError("Can't find data on chain in our datastore.")
+            await self.data_store.rollback_to_generation(tree_id, 0)
+            raise RuntimeError("Can't find data on chain in our datastore. Downloading from scratch as a fallback.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
@@ -296,8 +307,8 @@ class DataLayer:
             to_check.pop(0)
             is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
             if not is_valid:
-                await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-                raise RuntimeError("Could not validate on-chain data.")
+                await self.data_store.rollback_to_generation(tree_id, 0)
+                raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
 
         self.log.info(
             f"Finished downloading and validating {subscription.tree_id}. "

@@ -48,6 +48,11 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+    async def get_local_roots(self, store_ids: List[bytes32]) -> Dict[str, Any]:
+        response = await self.fetch("get_local_roots", {"ids": store_ids})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
     async def subscribe(self, store_id: bytes32, ip: str, port: uint16) -> Dict[str, Any]:
         response = await self.fetch("subscribe", {"id": store_id.hex(), "ip": ip, "port": port})
         return response  # type: ignore[no-any-return]
