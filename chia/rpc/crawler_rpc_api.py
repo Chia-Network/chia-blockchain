@@ -13,6 +13,7 @@ class CrawlerRpcApi:
     def get_routes(self) -> Dict[str, Callable]:
         return {
             "/get_peer_counts": self.get_peer_counts,
+            "/get_ips_after_timestamp": self.get_ips_after_timestamp,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
@@ -49,3 +50,23 @@ class CrawlerRpcApi:
             }
         }
         return data
+
+    async def get_ips_after_timestamp(self, _request: Dict) -> Dict[str, Any]:
+        after = _request.get("after", None)
+        if after is None:
+            raise ValueError("`after` is required and must be a unix timestamp")
+
+        offset = _request.get("offset", 0)
+        limit = _request.get("limit", 10000)
+
+        matched_ips: List[str] = []
+        for ip, timestamp in self.service.best_timestamp_per_peer.items():
+            if timestamp > after:
+                matched_ips.append(ip)
+
+        matched_ips.sort()
+
+        return {
+            "ips": matched_ips[offset : (offset + limit)],
+            "total": len(matched_ips),
+        }
