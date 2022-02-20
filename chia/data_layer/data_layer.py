@@ -289,6 +289,7 @@ class DataLayer:
             )
         else:
             await self.data_store.rollback_to_generation(tree_id, 0)
+            await self.data_store.set_validated_wallet_generation(tree_id, 0)
             raise RuntimeError("Can't find data on chain in our datastore. Downloading from scratch as a fallback.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
@@ -311,6 +312,7 @@ class DataLayer:
             to_check.pop(0)
             is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
             if not is_valid:
+                await self.data_store.set_validated_wallet_generation(tree_id, 0)
                 await self.data_store.rollback_to_generation(tree_id, 0)
                 raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
 
