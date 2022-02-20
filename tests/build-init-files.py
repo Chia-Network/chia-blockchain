@@ -26,6 +26,10 @@ log_levels = {
 ignores = {"__pycache__", ".pytest_cache"}
 
 
+def ignored_path(path: pathlib.Path):
+    return any(part in ignores for part in path.parts)
+
+
 @click.command()
 @click.option(
     "-r", "--root", "root_str", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True), default="."
@@ -45,7 +49,7 @@ def command(verbose, root_str):
         path
         for tree_root in tree_roots
         for path in root.joinpath(tree_root).rglob("**/")
-        if all(part not in ignores for part in path.parts)
+        if not ignored_path(path) and not all(map(ignored_path, path.iterdir()))
     )
 
     for path in directories:
