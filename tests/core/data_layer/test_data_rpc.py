@@ -121,8 +121,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
         local_root_2 = await data_rpc_api.get_local_roots({"ids": [store_id.hex()]})
-        assert wallet_root["hash"] == bytes32([0] * 32)
-        assert local_root["hash"] == local_root_2["root_hashes"][0]["hash"] == None
+        assert wallet_root["hash"] == local_root["hash"] == local_root_2["root_hashes"][0]["hash"] == bytes32([0] * 32)
 
 
 @pytest.mark.asyncio

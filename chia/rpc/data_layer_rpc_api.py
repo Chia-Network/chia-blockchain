@@ -173,6 +173,8 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         res = await self.service.get_local_root(store_id)
         timestamp = await self.service.get_local_timestamp(store_id)
+        if res is None:
+            res = bytes32([0] * 32)
         return {"hash": res, "timestamp": timestamp}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -204,6 +206,8 @@ class DataLayerRpcApi:
             id_bytes = bytes32.from_hexstr(id)
             res = await self.service.get_local_root(id_bytes)
             timestamp = await self.service.get_local_timestamp(id_bytes)
+            if res is None:
+                res = bytes32([0] * 32)
             roots.append({"id": id_bytes, "hash": res, "timestamp": timestamp})
 
         return {"root_hashes": roots}
