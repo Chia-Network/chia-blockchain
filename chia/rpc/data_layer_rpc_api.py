@@ -63,6 +63,7 @@ class DataLayerRpcApi:
             "/delete_key": self.delete_key,
             "/insert": self.insert,
             "/subscribe": self.subscribe,
+            "/unsubscribe": self.unsubscribe,
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
         }

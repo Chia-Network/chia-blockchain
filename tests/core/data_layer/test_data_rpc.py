@@ -490,6 +490,7 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
         key5 = b"e"
         value5 = b"\x07\x01"
         changelist.append({"action": "insert", "key": key5.hex(), "value": value5.hex()})
+        changelist.append({"action": "delete", "key": key1.hex()})
         res = await data_rpc_api.batch_update({"id": store_id1.hex(), "changelist": changelist})
         update_tx_rec1 = res["tx_id"]
         await asyncio.sleep(1)
@@ -505,8 +506,10 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
                 "hash_2": history["root_history"][2]["root_hash"].hex(),
             }
         )
-        assert len(diff_res["diff"]) == 2
+        assert len(diff_res["diff"]) == 3
+        diff1 = {"type": "DELETE", "key": key1.hex(), "value": value1.hex()}
         diff4 = {"type": "INSERT", "key": key4.hex(), "value": value4.hex()}
         diff5 = {"type": "INSERT", "key": key5.hex(), "value": value5.hex()}
         assert diff4 in diff_res["diff"]
         assert diff5 in diff_res["diff"]
+        assert diff1 in diff_res["diff"]
