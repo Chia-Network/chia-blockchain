@@ -285,22 +285,15 @@ def last_change_height_cs(cs: CoinState) -> uint32:
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[WSChiaConnection], selected_peer_node_id: Optional[bytes32], request: RequestHeaderBlocks
+    all_peers: List[WSChiaConnection],
+    request: RequestHeaderBlocks,
 ) -> Optional[RespondHeaderBlocks]:
     # We will modify this list, don't modify passed parameters.
     remaining_peers = list(all_peers)
     response = None
-    peer = None
-
-    if selected_peer_node_id is not None:
-        try:
-            peer = next(peer for peer in remaining_peers if peer.peer_node_id == selected_peer_node_id)
-        except StopIteration:
-            peer = None
 
     while len(remaining_peers) > 0:
-        if peer is None:
-            peer = random.choice(remaining_peers)
+        peer = random.choice(remaining_peers)
 
         response = await peer.request_header_blocks(request)
 
@@ -314,7 +307,6 @@ async def _fetch_header_blocks_inner(
         # from our list.
         await peer.close()
         remaining_peers.remove(peer)
-        peer = None
 
     return response
 
@@ -324,7 +316,6 @@ async def fetch_header_blocks_in_range(
     end: uint32,
     peer_request_cache: PeerRequestCache,
     all_peers: List[WSChiaConnection],
-    selected_peer_id: bytes32,
 ) -> Optional[List[HeaderBlock]]:
     blocks: List[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
@@ -342,7 +333,7 @@ async def fetch_header_blocks_in_range(
             log.info(f"Fetching: {start}-{end}")
             request_header_blocks = RequestHeaderBlocks(request_start, request_end)
             res_h_blocks_task = asyncio.create_task(
-                _fetch_header_blocks_inner(all_peers, selected_peer_id, request_header_blocks)
+                _fetch_header_blocks_inner(all_peers, request_header_blocks)
             )
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
