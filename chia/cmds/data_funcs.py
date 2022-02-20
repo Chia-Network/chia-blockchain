@@ -154,3 +154,38 @@ async def unsubscribe_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def get_kv_diff_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    hash_1: str,
+    hash_2: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    hash_1_bytes = bytes32.from_hexstr(hash_1)
+    hash_2_bytes = bytes32.from_hexstr(hash_2)
+
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def get_root_history_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_root_history(store_id=store_id_bytes)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

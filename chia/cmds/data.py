@@ -207,3 +207,31 @@ def unsubscribe(
     from chia.cmds.data_funcs import unsubscribe_cmd
 
     run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.command("get_kv_diff", short_help="")
+@create_data_store_id_option()
+@click.option("-hash_1", "--hash_1", help="", type=str)
+@click.option("-hash_2", "--hash_2", help="", type=str)
+@create_rpc_port_option()
+def get_kv_diff(
+    id: str,
+    hash_1: str,
+    hash_2: str,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_kv_diff_cmd
+
+    run(get_kv_diff_cmd(rpc_port=data_rpc_port, store_id=id, hash_1=hash_1, hash_2=hash_2))
+
+
+@data_cmd.command("get_root_history", short_help="")
+@create_data_store_id_option()
+@create_rpc_port_option()
+def get_root_history(
+    id: str,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_root_history_cmd
+
+    run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id))
