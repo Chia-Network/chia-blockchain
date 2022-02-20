@@ -286,36 +286,38 @@ def last_change_height_cs(cs: CoinState) -> uint32:
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[WSChiaConnection], selected_peer_node_id: bytes32, request: RequestHeaderBlocks
+    all_peers: List[WSChiaConnection], selected_peer_node_id: Optional[bytes32], request: RequestHeaderBlocks
 ) -> Optional[RespondHeaderBlocks]:
-    if len(all_peers) == 0:
-        return None
-    random_peer: WSChiaConnection = random.choice(all_peers)
-    res = await random_peer.request_header_blocks(request)
-    if isinstance(res, RespondHeaderBlocks):
-        return res
-    elif isinstance(res, RejectHeaderBlocks):
-        # Peer is not synced, close connection
-        await random_peer.close()
+    # We will modify this list, don't modify passed parameters.
+    remaining_peers = list(all_peers)
+    response = None
+    peer = None
 
-    bad_peer_id = random_peer.peer_node_id
-    if len(all_peers) == 1:
-        # No more peers to fetch from
-        return None
-    else:
-        if selected_peer_node_id == bad_peer_id:
-            # Select another peer fallback
-            while random_peer.peer_node_id == bad_peer_id and len(all_peers) > 1:
-                random_peer = random.choice(all_peers)
-        else:
-            # Use the selected peer instead
-            random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
-        # Retry
-        res = await random_peer.request_header_blocks(request)
-        if isinstance(res, RespondHeaderBlocks):
-            return res
-        else:
-            return None
+    if selected_peer_node_id is not None:
+        try:
+            peer = next(peer for peer in remaining_peers if peer.peer_node_id == selected_peer_node_id)
+        except StopIteration:
+            peer = None
+
+    while len(remaining_peers) > 0:
+        if peer is None:
+            peer = random.choice(remaining_peers)
+
+        response = await peer.request_header_blocks(request)
+
+        if response is None or isinstance(response, RespondHeaderBlocks):
+            # None only occurs for a badly formed request that .request_header_blocks()
+            # rejects locally.  No need to close the peer for this.  All attempts will
+            # fail.  Give up.  If the response is good, return it.
+            break
+
+        # Request to peer failed in some way, close the connection and remove the peer
+        # from our list.
+        await peer.close()
+        remaining_peers.remove(peer)
+        peer = None
+
+    return response
 
 
 async def fetch_header_blocks_in_range(
