@@ -678,6 +678,8 @@ class Blockchain(BlockchainInterface):
         return self.__height_map.get_ses(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        if not self.__height_map.contains_height(height):
+            return None
         return self.__height_map.get_hash(height)
 
     def contains_height(self, height: uint32) -> bool:
