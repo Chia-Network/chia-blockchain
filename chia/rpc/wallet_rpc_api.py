@@ -1315,7 +1315,12 @@ class WalletRpcApi:
             return {"success": False, "error": "not_initialized"}
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
-        wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        except KeyError as e:
+            wallet_ids = self.service.wallet_state_manager.wallets.keys()
+            wallet_ids_string = ", ".join(str(id) for id in wallet_ids)
+            raise ValueError(f"Wallet ID {wallet_id} not found, available IDs: {wallet_ids_string}") from e
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
