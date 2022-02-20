@@ -290,25 +290,21 @@ async def _fetch_header_blocks_inner(
 ) -> Optional[RespondHeaderBlocks]:
     # We will modify this list, don't modify passed parameters.
     remaining_peers = list(all_peers)
-    response = None
 
     while len(remaining_peers) > 0:
         peer = random.choice(remaining_peers)
 
         response = await peer.request_header_blocks(request)
 
-        if response is None or isinstance(response, RespondHeaderBlocks):
-            # None only occurs for a badly formed request that .request_header_blocks()
-            # rejects locally.  No need to close the peer for this.  All attempts will
-            # fail.  Give up.  If the response is good, return it.
-            break
+        if isinstance(response, RespondHeaderBlocks):
+            return response
 
         # Request to peer failed in some way, close the connection and remove the peer
-        # from our list.
+        # from our local list.
         await peer.close()
         remaining_peers.remove(peer)
 
-    return response
+    return None
 
 
 async def fetch_header_blocks_in_range(
