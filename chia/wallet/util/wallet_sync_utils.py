@@ -332,9 +332,7 @@ async def fetch_header_blocks_in_range(
         else:
             log.info(f"Fetching: {start}-{end}")
             request_header_blocks = RequestHeaderBlocks(request_start, request_end)
-            res_h_blocks_task = asyncio.create_task(
-                _fetch_header_blocks_inner(all_peers, request_header_blocks)
-            )
+            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_header_blocks))
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:
