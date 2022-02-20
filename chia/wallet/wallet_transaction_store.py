@@ -268,7 +268,7 @@ class WalletTransactionStore:
 
         # NOTE: bundle_id is being stored as bytes, not hex
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
+            "SELECT transaction_record FROM transaction_record WHERE bundle_id=?", (tx_id,)
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -283,7 +283,7 @@ class WalletTransactionStore:
         """
         current_time = int(time.time())
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE confirmed=?",
+            "SELECT transaction_record FROM transaction_record WHERE confirmed=?",
             (0,),
         )
         rows = await cursor.fetchall()
@@ -313,7 +313,7 @@ class WalletTransactionStore:
         fee_int = TransactionType.FEE_REWARD.value
         pool_int = TransactionType.COINBASE_REWARD.value
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE confirmed=? and (type=? or type=?)",
+            "SELECT transaction_record FROM transaction_record WHERE confirmed=? AND (type=? OR type=?)",
             (1, fee_int, pool_int),
         )
         rows = await cursor.fetchall()
@@ -332,7 +332,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE confirmed=?", (0,)
+            "SELECT transaction_record FROM transaction_record WHERE confirmed=?", (0,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -372,7 +372,7 @@ class WalletTransactionStore:
             query_str = SortKey[sort_key].ascending()
 
         cursor = await self.db_connection.execute(
-            f"SELECT transaction_record from transaction_record where wallet_id=?"
+            f"SELECT transaction_record FROM transaction_record WHERE wallet_id=?"
             f" {query_str}, rowid"
             f" LIMIT {start}, {limit}",
             (wallet_id,),
@@ -389,7 +389,7 @@ class WalletTransactionStore:
 
     async def get_transaction_count_for_wallet(self, wallet_id) -> int:
         cursor = await self.db_connection.execute(
-            "SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,)
+            "SELECT COUNT(*) FROM transaction_record WHERE wallet_id=?", (wallet_id,)
         )
         count_result = await cursor.fetchone()
         if count_result is not None:
@@ -405,11 +405,11 @@ class WalletTransactionStore:
         """
         if type is None:
             cursor = await self.db_connection.execute(
-                "SELECT transaction_record from transaction_record where wallet_id=?", (wallet_id,)
+                "SELECT transaction_record FROM transaction_record WHERE wallet_id=?", (wallet_id,)
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT transaction_record from transaction_record where wallet_id=? and type=?",
+                "SELECT transaction_record FROM transaction_record WHERE wallet_id=? AND type=?",
                 (
                     wallet_id,
                     type,
@@ -431,7 +431,7 @@ class WalletTransactionStore:
         """
         Returns all stored transactions.
         """
-        cursor = await self.db_connection.execute("SELECT transaction_record from transaction_record")
+        cursor = await self.db_connection.execute("SELECT transaction_record FROM transaction_record")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -446,7 +446,7 @@ class WalletTransactionStore:
         # Can be -1 (get all tx)
 
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE confirmed_at_height>?", (height,)
+            "SELECT transaction_record FROM transaction_record WHERE confirmed_at_height>?", (height,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -460,7 +460,7 @@ class WalletTransactionStore:
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
         cursor = await self.db_connection.execute(
-            "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
+            "SELECT transaction_record FROM transaction_record WHERE trade_id=?", (trade_id,)
         )
         rows = await cursor.fetchall()
         await cursor.close()
