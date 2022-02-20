@@ -18,7 +18,6 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondHeaderBlocks,
     RequestHeaderBlocks,
-    RejectHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
