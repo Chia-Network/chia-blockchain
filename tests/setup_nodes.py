@@ -117,6 +117,7 @@ async def setup_full_node(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=connect_to_daemon,
+        service_name_prefix="test_",
     )
 
     service = Service(**kwargs, handle_signals=False)
@@ -183,6 +184,7 @@ async def setup_wallet_node(
         kwargs.update(
             parse_cli_args=False,
             connect_to_daemon=False,
+            service_name_prefix="test_",
         )
 
         service = Service(**kwargs, handle_signals=False)
@@ -208,6 +210,7 @@ async def setup_harvester(
         connect_peers=[PeerInfo(self_hostname, farmer_port)],
         parse_cli_args=False,
         connect_to_daemon=False,
+        service_name_prefix="test_",
     )
 
     service = Service(**kwargs, handle_signals=False)
@@ -248,6 +251,7 @@ async def setup_farmer(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
+        service_name_prefix="test_",
     )
 
     service = Service(**kwargs, handle_signals=False)
@@ -270,6 +274,7 @@ async def setup_introducer(port):
         advertised_port=port,
         parse_cli_args=False,
         connect_to_daemon=False,
+        service_name_prefix="test_",
     )
 
     service = Service(**kwargs, handle_signals=False)
@@ -326,6 +331,7 @@ async def setup_timelord(port, full_node_port, rpc_port, sanitizer, consensus_co
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
+        service_name_prefix="test_",
     )
 
     service = Service(**kwargs, handle_signals=False)
