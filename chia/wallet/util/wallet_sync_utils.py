@@ -305,8 +305,9 @@ async def _fetch_header_blocks_inner(
     else:
         if selected_peer_node_id == bad_peer_id:
             # Select another peer fallback
-            while random_peer.peer_node_id == bad_peer_id and len(all_peers) > 1:
-                random_peer = random.choice(all_peers)
+            other_peers = [peer for peer in all_peers if peer.peer_node_id != bad_peer_id]
+            if len(other_peers) > 0:
+                random_peer = random.choice(other_peers)
         else:
             # Use the selected peer instead
             random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
