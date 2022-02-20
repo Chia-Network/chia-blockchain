@@ -372,8 +372,8 @@ class WalletTransactionStore:
             query_str = SortKey[sort_key].ascending()
 
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?"
-            f"{puzz_hash_where} {query_str}, rowid"
+            f"SELECT * from transaction_record where wallet_id=?{puzz_hash_where}"
+            f" {query_str}, rowid"
             f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
