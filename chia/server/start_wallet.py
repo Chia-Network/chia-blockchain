@@ -29,18 +29,14 @@ def service_kwargs_for_wallet(
 ) -> Dict:
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
     # add local node to trusted peers if old config
     if "trusted_peers" not in config:
+        full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
         trusted_peer = full_node_config["ssl"]["public_crt"]
         config["trusted_peers"] = {}
         config["trusted_peers"]["local_node"] = trusted_peer
     if "short_sync_blocks_behind_threshold" not in config:
         config["short_sync_blocks_behind_threshold"] = 20
-    # reuse the full node's weight_proof_timeout value
-    if "weight_proof_timeout" not in full_node_config:
-        config["weight_proof_timeout"] = 360
-    config["weight_proof_timeout"] = full_node_config["weight_proof_timeout"]
     node = WalletNode(
         config,
         root_path,
