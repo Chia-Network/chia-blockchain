@@ -68,8 +68,8 @@ class TestStrictClass(unittest.TestCase):
 
         assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
 
-        with raises(AssertionError):
-            TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
+        with raises(ValueError):
+            TestClass({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]])
 
         with raises(ValueError):
             TestClass([1, 2, 3], [uint8(200), uint8(25)])
