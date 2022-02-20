@@ -69,8 +69,10 @@ class TestKeysCommands:
     @pytest.fixture(scope="function")
     def empty_keyring(self):
         with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
-            yield keychain
-            KeyringWrapper.cleanup_shared_instance()
+            try:
+                yield keychain
+            finally:
+                KeyringWrapper.cleanup_shared_instance()
 
     @pytest.fixture(scope="function")
     def keyring_with_one_key(self, empty_keyring):
@@ -90,9 +92,11 @@ class TestKeysCommands:
         KeyringWrapper.cleanup_shared_instance()
         KeyringWrapper.set_keys_root_path(tmp_path)
         _ = KeyringWrapper.get_shared_instance()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+        try:
+            yield
+        finally:
+            KeyringWrapper.cleanup_shared_instance()
+            KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
 
     @pytest.fixture(scope="function")
     def setup_legacy_keyringwrapper(self, tmp_path, monkeypatch):
@@ -105,9 +109,11 @@ class TestKeysCommands:
         KeyringWrapper.cleanup_shared_instance()
         KeyringWrapper.set_keys_root_path(tmp_path)
         KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+        try:
+            yield
+        finally:
+            KeyringWrapper.cleanup_shared_instance()
+            KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
 
     def test_generate_with_new_config(self, tmp_path, empty_keyring):
         """

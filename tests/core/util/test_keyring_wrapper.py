@@ -12,8 +12,10 @@ log = logging.getLogger(__name__)
 class TestKeyringWrapper:
     @pytest.fixture(autouse=True, scope="function")
     def setup_keyring_wrapper(self):
-        yield
-        KeyringWrapper.cleanup_shared_instance()
+        try:
+            yield
+        finally:
+            KeyringWrapper.cleanup_shared_instance()
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
 
     def test_shared_instance(self):

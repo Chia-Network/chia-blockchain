@@ -72,55 +72,56 @@ class TestDaemon:
         session = aiohttp.ClientSession()
         ssl_context = get_b_tools.get_daemon_ssl_context()
 
-        ws = await session.ws_connect(
+        async with session.ws_connect(
             "wss://127.0.0.1:55401",
             autoclose=True,
             autoping=True,
             heartbeat=60,
             ssl_context=ssl_context,
             max_msg_size=100 * 1024 * 1024,
-        )
-        service_name = "test_service_name"
-        data = {"service": service_name}
-        payload = create_payload("register_service", data, service_name, "daemon")
-        await ws.send_str(payload)
-        message_queue = asyncio.Queue()
+        ) as ws:
+            service_name = "test_service_name"
+            data = {"service": service_name}
+            payload = create_payload("register_service", data, service_name, "daemon")
+            await ws.send_str(payload)
+            message_queue = asyncio.Queue()
 
-        async def reader(ws, queue):
-            while True:
-                msg = await ws.receive()
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    message = msg.data.strip()
-                    message = json.loads(message)
-                    await queue.put(message)
-                elif msg.type == aiohttp.WSMsgType.PING:
-                    await ws.pong()
-                elif msg.type == aiohttp.WSMsgType.PONG:
-                    continue
-                else:
-                    if msg.type == aiohttp.WSMsgType.CLOSE:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.ERROR:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.CLOSED:
-                        pass
+            async def reader(ws, queue):
+                while True:
+                    msg = await ws.receive()
+                    if msg.type == aiohttp.WSMsgType.TEXT:
+                        message = msg.data.strip()
+                        message = json.loads(message)
+                        await queue.put(message)
+                    elif msg.type == aiohttp.WSMsgType.PING:
+                        await ws.pong()
+                    elif msg.type == aiohttp.WSMsgType.PONG:
+                        continue
+                    else:
+                        if msg.type == aiohttp.WSMsgType.CLOSE:
+                            await ws.close()
+                        elif msg.type == aiohttp.WSMsgType.ERROR:
+                            await ws.close()
+                        elif msg.type == aiohttp.WSMsgType.CLOSED:
+                            pass
 
-                    break
+                        break
 
-        read_handler = asyncio.create_task(reader(ws, message_queue))
-        data = {}
-        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
-        await ws.send_str(payload)
+            read_handler = asyncio.create_task(reader(ws, message_queue))
+            try:
+                data = {}
+                payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
+                await ws.send_str(payload)
 
-        await asyncio.sleep(5)
-        blockchain_state_found = False
-        while not message_queue.empty():
-            message = await message_queue.get()
-            if message["command"] == "get_blockchain_state":
-                blockchain_state_found = True
+                await asyncio.sleep(5)
+                blockchain_state_found = False
+                while not message_queue.empty():
+                    message = await message_queue.get()
+                    if message["command"] == "get_blockchain_state":
+                        blockchain_state_found = True
+            finally:
+                read_handler.cancel()
 
-        await ws.close()
-        read_handler.cancel()
         assert blockchain_state_found
 
     # Suppress warning: "The explicit passing of coroutine objects to asyncio.wait() is deprecated since Python 3.8..."

@@ -24,11 +24,12 @@ async def empty_blockchain(request):
     from tests.setup_nodes import test_constants
 
     bc1, connection, db_path = await create_blockchain(test_constants, request.param)
-    yield bc1
-
-    await connection.close()
-    bc1.shut_down()
-    db_path.unlink()
+    try:
+        yield bc1
+    finally:
+        await connection.close()
+        bc1.shut_down()
+        db_path.unlink()
 
 
 @pytest.fixture(scope="function", params=[1, 2])

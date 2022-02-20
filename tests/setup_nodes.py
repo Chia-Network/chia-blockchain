@@ -66,9 +66,10 @@ async def setup_daemon(btools):
     ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
     await ws_server.start()
 
-    yield ws_server
-
-    await ws_server.stop()
+    try:
+        yield ws_server
+    finally:
+        await ws_server.stop()
 
 
 async def setup_full_node(
@@ -124,12 +125,13 @@ async def setup_full_node(
 
     await service.start()
 
-    yield service._api
-
-    service.stop()
-    await service.wait_closed()
-    if db_path.exists():
-        db_path.unlink()
+    try:
+        yield service._api
+    finally:
+        service.stop()
+        await service.wait_closed()
+        if db_path.exists():
+            db_path.unlink()
 
 
 async def setup_wallet_node(
@@ -191,13 +193,14 @@ async def setup_wallet_node(
 
         await service.start()
 
-        yield service._node, service._node.server
-
-        service.stop()
-        await service.wait_closed()
-        if db_path.exists():
-            db_path.unlink()
-        keychain.delete_all_keys()
+        try:
+            yield service._node, service._node.server
+        finally:
+            service.stop()
+            await service.wait_closed()
+            if db_path.exists():
+                db_path.unlink()
+            keychain.delete_all_keys()
 
 
 async def setup_harvester(
@@ -218,10 +221,11 @@ async def setup_harvester(
     if start_service:
         await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 async def setup_farmer(
@@ -259,10 +263,11 @@ async def setup_farmer(
     if start_service:
         await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 async def setup_introducer(port):
@@ -281,10 +286,11 @@ async def setup_introducer(port):
 
     await service.start()
 
-    yield service._api, service._node.server
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service._api, service._node.server
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 async def setup_vdf_client(port):
@@ -296,8 +302,10 @@ async def setup_vdf_client(port):
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
-    yield vdf_task_1
-    await kill_processes()
+    try:
+        yield vdf_task_1
+    finally:
+        await kill_processes()
 
 
 async def setup_vdf_clients(port):
@@ -311,9 +319,10 @@ async def setup_vdf_clients(port):
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
-    yield vdf_task_1, vdf_task_2, vdf_task_3
-
-    await kill_processes()
+    try:
+        yield vdf_task_1, vdf_task_2, vdf_task_3
+    finally:
+        await kill_processes()
 
 
 async def setup_timelord(port, full_node_port, rpc_port, sanitizer, consensus_constants: ConsensusConstants, b_tools):
@@ -338,10 +347,11 @@ async def setup_timelord(port, full_node_port, rpc_port, sanitizer, consensus_co
 
     await service.start()
 
-    yield service._api, service._node.server
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service._api, service._node.server
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int):
@@ -372,9 +382,10 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
         fn1 = await node_iters[0].__anext__()
         fn2 = await node_iters[1].__anext__()
 
-        yield fn1, fn2, fn1.full_node.server, fn2.full_node.server
-
-        await _teardown_nodes(node_iters)
+        try:
+            yield fn1, fn2, fn1.full_node.server, fn2.full_node.server
+        finally:
+            await _teardown_nodes(node_iters)
 
 
 async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_version: int):
@@ -401,12 +412,13 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
     for ni in node_iters:
         nodes.append(await ni.__anext__())
 
-    yield nodes
+    try:
+        yield nodes
+    finally:
+        await _teardown_nodes(node_iters)
 
-    await _teardown_nodes(node_iters)
-
-    for keyring in keyrings_to_cleanup:
-        keyring.cleanup()
+        for keyring in keyrings_to_cleanup:
+            keyring.cleanup()
 
 
 async def setup_node_and_wallet(
@@ -426,9 +438,10 @@ async def setup_node_and_wallet(
         full_node_api = await node_iters[0].__anext__()
         wallet, s2 = await node_iters[1].__anext__()
 
-        yield full_node_api, wallet, full_node_api.full_node.server, s2
-
-        await _teardown_nodes(node_iters)
+        try:
+            yield full_node_api, wallet, full_node_api.full_node.server, s2
+        finally:
+            await _teardown_nodes(node_iters)
 
 
 async def setup_simulators_and_wallets(
@@ -485,9 +498,10 @@ async def setup_simulators_and_wallets(
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
 
-        yield simulators, wallets
-
-        await _teardown_nodes(node_iters)
+        try:
+            yield simulators, wallets
+        finally:
+            await _teardown_nodes(node_iters)
 
 
 async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_services: bool = True):
@@ -499,9 +513,10 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants, start_
     harvester_service = await node_iters[0].__anext__()
     farmer_service = await node_iters[1].__anext__()
 
-    yield harvester_service, farmer_service
-
-    await _teardown_nodes(node_iters)
+    try:
+        yield harvester_service, farmer_service
+    finally:
+        await _teardown_nodes(node_iters)
 
 
 async def setup_full_system(
@@ -565,18 +580,19 @@ async def setup_full_system(
         vdf_sanitizer = await node_iters[7].__anext__()
         sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
-        yield (
-            node_api_1,
-            node_api_2,
-            harvester,
-            farmer,
-            introducer,
-            timelord,
-            vdf_clients,
-            vdf_sanitizer,
-            sanitizer,
-            sanitizer_server,
-            node_api_1.full_node.server,
-        )
-
-        await _teardown_nodes(node_iters)
+        try:
+            yield (
+                node_api_1,
+                node_api_2,
+                harvester,
+                farmer,
+                introducer,
+                timelord,
+                vdf_clients,
+                vdf_sanitizer,
+                sanitizer,
+                sanitizer_server,
+                node_api_1.full_node.server,
+            )
+        finally:
+            await _teardown_nodes(node_iters)

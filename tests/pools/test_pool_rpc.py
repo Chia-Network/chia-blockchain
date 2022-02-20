@@ -117,11 +117,12 @@ class TestPoolWalletRpc:
             )
             client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
-            yield client, wallet_node_0, full_node_api
-
-            client.close()
-            await client.await_closed()
-            await rpc_cleanup()
+            try:
+                yield client, wallet_node_0, full_node_api
+            finally:
+                client.close()
+                await client.await_closed()
+                await rpc_cleanup()
 
     @pytest_asyncio.fixture(scope="function")
     async def setup(self, two_wallet_nodes):

@@ -152,9 +152,10 @@ def test_environment(tmp_path) -> Iterator[TestEnvironment]:
     refresh_tester = PlotRefreshTester(tmp_path)
     refresh_tester.plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    yield TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
-
-    refresh_tester.plot_manager.stop_refreshing()
+    try:
+        yield TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+    finally:
+        refresh_tester.plot_manager.stop_refreshing()
 
 
 # Wrap `remove_plot` to give it the same interface as the other triggers, e.g. `add_plot_directory(Path, str)`.
