@@ -384,7 +384,7 @@ full_node:
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False
   # timeout for weight proof request
-  weight_proof_timeout: 360
+  weight_proof_timeout: &weight_proof_timeout 360
 
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
@@ -521,4 +521,4 @@ wallet:
   outbound_rate_limit_percent: 60
 
   # timeout for weight proof request
-  weight_proof_timeout: 360
+  weight_proof_timeout: *weight_proof_timeout
