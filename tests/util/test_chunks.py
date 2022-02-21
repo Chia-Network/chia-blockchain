@@ -1,0 +1,11 @@
+from chia.util.chunks import chunks
+
+
+def test_chunks() -> None:
+
+    assert list(chunks([], 0)) == []
+    assert list(chunks(["a"], 0)) == [["a"]]
+    assert list(chunks(["a", "b"], 0)) == [["a"], ["b"]]
+
+    assert list(chunks(["a", "b", "c", "d"], 2)) == [["a", "b"], ["c", "d"]]
+    assert list(chunks(["a", "b", "c", "d"], 200)) == [["a", "b", "c", "d"]]
