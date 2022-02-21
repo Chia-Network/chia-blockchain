@@ -9,6 +9,7 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.cat_utils import get_cat_coin_asset_id, get_cat_puzzle_hash, normalize_coin_id
+from chia.rpc.utils import get_coin_records_map
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -524,6 +525,7 @@ class FullNodeRpcApi:
         """
         if "names" not in request:
             raise ValueError("Names not in request")
+
         kwargs: Dict[str, Any] = {
             "include_spent_coins": False,
             "names": [hexstr_to_bytes(name) for name in request["names"]],
@@ -537,8 +539,9 @@ class FullNodeRpcApi:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records_map: Dict[str, CoinRecord] = get_coin_records_map(coin_records=coin_records)
 
-        return {"coin_records": coin_records}
+        return {"coin_records_map": coin_records_map}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
