@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.ints import uint8, uint32
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
     Streamable,
     streamable,
@@ -369,6 +369,12 @@ class TestStreamable(unittest.TestCase):
         # EOF off by one
         with raises(AssertionError):
             parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
+
+
+def test_json(bt):
+    block = bt.create_genesis_block(test_constants, bytes32([0] * 32), uint64(0))
+    dict_block = block.to_json_dict()
+    assert FullBlock.from_json_dict(dict_block) == block
 
 
 if __name__ == "__main__":
