@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple
 
 import blspy
 from blspy import G1Element, G2Element
@@ -783,65 +783,22 @@ class FullNodeRpcApi:
         - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
         '''
         coin_ids: List[str] = request["coin_ids"]
-        coin_names: List[bytes32] = [hexstr_to_bytes(coin_id) for coin_id in coin_ids]
-        if len(coin_names) != len(set(coin_names)):
-            raise ValueError(f"Existing duplicated coin_names {coin_ids}")
+        coin_records: List[CoinRecord] = await self._get_coin_records(coin_ids=coin_ids)
+        puzzles: List[Program] = await self._get_coins_puzzles(coin_records=coin_records)
 
-        coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(names=coin_names, include_spent_coins=True)
-        if coin_records is None:
-            raise ValueError(f"Not found coin records")
-
-        if len(coin_records) != len(coin_names):
-            raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
-
-        coin_records_map: Dict[bytes32, CoinRecord] = {}
-        for cr in coin_records:
-            coin_records_map[cr.name] = cr
-
-        block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
-        async def get_block_generator(height: int) -> Optional[BlockGenerator]:
-            if height in block_generator_map:
-                return block_generator_map[height]
-
-            header_hash = self.service.blockchain.height_to_hash(height)
-            block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-
-            if block is None or block.transactions_generator is None:
-                raise ValueError("Invalid block or block generator")
-
-            block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
-            block_generator_map[height] = block_generator
-            return block_generator
+        if len(coin_records) != len(puzzles):
+            raise ValueError(f"Inconsistent length between coin_records and puzzles: {len(coin_records)} != {len(puzzles)}")
 
         # Make sure the are_cat_list has the same order with the coin_names
-        res: List[bool] = []
-        for coin_name in coin_names:
-            if not coin_name in coin_records_map:
-                raise ValueError(f"Not found coin record")
-
-            coin_record = coin_records_map[coin_name]
-            if coin_record.spent_block_index == 0:
-                raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
-            if coin_record.name != coin_name:
-                raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name} != {coin_name}")
-
-            height = coin_record.spent_block_index
-            block_generator = await get_block_generator(height=height)
-            assert block_generator is not None
-
-            error, puzzle, _ = get_puzzle_and_solution_for_coin(
-                block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
-            )
-            if error is not None:
-                raise ValueError(f"Error: {error}")
-
+        are_cat_list: List[bool] = []
+        for puzzle in puzzles:
             is_cat_coin, _ = match_cat_puzzle(puzzle)
-            res.append(is_cat_coin)
+            are_cat_list.append(is_cat_coin)
 
-        if len(coin_names) != len(res):
-            raise ValueError(f"Inconsisten length between coin_names and result: {len(coin_names)} != {len(res)}")
+        if len(coin_records) != len(are_cat_list):
+            raise ValueError(f"Inconsisten length between coin_records and are_cat_list: {len(coin_records)} != {len(are_cat_list)}")
 
-        return {"are_cat_coins": res}
+        return {"are_cat_coins": are_cat_list}
 
     async def get_coins_asset_ids(self, request: Dict) -> Optional[Dict]:
         '''
@@ -851,6 +808,24 @@ class FullNodeRpcApi:
         - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
         '''
         coin_ids: List[str] = request["coin_ids"]
+        coin_records: List[CoinRecord] = await self._get_coin_records(coin_ids=coin_ids)
+        puzzles: List[Program] = await self._get_coins_puzzles(coin_records=coin_records)
+
+        if len(coin_records) != len(puzzles):
+            raise ValueError(f"Inconsistent length between coin_records and puzzles: {len(coin_records)} != {len(puzzles)}")
+
+        # Make sure the asset_ids has the same order with the coin_names
+        asset_ids: List[str] = []
+        for puzzle in puzzles:
+            asset_id = get_cat_coin_asset_id(puzzle=puzzle)
+            asset_ids.append(asset_id)
+
+        if len(coin_records) != len(asset_ids):
+            raise ValueError(f"Inconsisten length between coin_names and result: {len(coin_records)} != {len(asset_ids)}: \coin_records\n{coin_records}\n\nasset_ids: {asset_ids}")
+
+        return {"asset_ids": asset_ids}
+
+    async def _get_coin_records(self, coin_ids: List[str]) -> List[CoinRecord]:
         coin_names: List[bytes32] = [hexstr_to_bytes(coin_id) for coin_id in coin_ids]
         if len(coin_names) != len(set(coin_names)):
             raise ValueError(f"Existing duplicated coin_names {coin_ids}")
@@ -861,11 +836,9 @@ class FullNodeRpcApi:
 
         if len(coin_records) != len(coin_names):
             raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
+        return coin_records
 
-        coin_records_map: Dict[bytes32, CoinRecord] = {}
-        for cr in coin_records:
-            coin_records_map[cr.name] = cr
-
+    async def _get_coins_puzzles(self, coin_records: List[CoinRecord]) -> List[Program]:
         block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
         async def get_block_generator(height: int) -> Optional[BlockGenerator]:
             if height in block_generator_map:
@@ -873,7 +846,6 @@ class FullNodeRpcApi:
 
             header_hash = self.service.blockchain.height_to_hash(height)
             block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-
             if block is None or block.transactions_generator is None:
                 raise ValueError("Invalid block or block generator")
 
@@ -881,35 +853,25 @@ class FullNodeRpcApi:
             block_generator_map[height] = block_generator
             return block_generator
 
-        # Make sure the asset_ids has the same order with the coin_names
-        res: List[str] = []
-        for coin_name in coin_names:
-            if not coin_name in coin_records_map:
-                raise ValueError(f"Not found coin record")
-
-            coin_record = coin_records_map[coin_name]
+        puzzles: List[Program]
+        for coin_record in coin_records:
             if coin_record.spent_block_index == 0:
                 raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
-            if coin_record.name != coin_name:
-                raise ValueError(f"Inconsistent between coin name and coin_record.name(): {coin_record.name} != {coin_name}")
 
             height = coin_record.spent_block_index
             block_generator = await get_block_generator(height=height)
             assert block_generator is not None
-
             error, puzzle, _ = get_puzzle_and_solution_for_coin(
-                block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
+                block_generator, coin_record.name, self.service.constants.MAX_BLOCK_COST_CLVM
             )
             if error is not None:
-                raise ValueError(f"Error: {error}")
+                raise ValueError(f"get_puzzle_and_solution_for_coin: {error}")
+            puzzles.append(puzzle)
 
-            asset_id = get_cat_coin_asset_id(puzzle=puzzle)
-            res.append(asset_id)
+        if len(coin_records) != len(puzzles):
+            raise ValueError(f"Inconsistent length between coin_records and puzzles: {len(coin_records)} != {len(puzzles)}")
 
-        if len(coin_names) != len(res):
-            raise ValueError(f"Inconsisten length between coin_names and result: {len(coin_names)} != {len(res)}: \ncoin_names\n{coin_names}\n\nasset_ids: {res}")
-
-        return {"asset_ids": res}
+        return puzzles
 
     async def get_cat_puzzle_hash(self, request: Dict) -> Optional[Dict]:
         asset_id: str = request["asset_id"] # CAT program tail hash
