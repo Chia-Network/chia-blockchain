@@ -282,7 +282,7 @@ timelord:
   # without slowing down but running more than 1 with fast_algorithm will
   # run each vdf_client slower.
   fast_algorithm: False
-  # Bluebox (sanitizing Timelord):
+  # Bluebox (sanitizing timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in bluebox_mode.
