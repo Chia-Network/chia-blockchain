@@ -211,7 +211,6 @@ class WalletNode:
                 self.log.info(f"Copying wallet db from {standalone_path} to {path}")
                 path.write_bytes(standalone_path.read_bytes())
 
-        self.new_peak_lock = asyncio.Lock()
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
             private_key,
