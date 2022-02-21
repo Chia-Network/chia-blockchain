@@ -166,6 +166,8 @@ class CATWallet:
         if limitations_program_hash_hex in DEFAULT_CATS:
             cat_info = DEFAULT_CATS[limitations_program_hash_hex]
             name = cat_info["name"]
+        else:
+            name = f"CAT {limitations_program_hash_hex[:16]}..."
 
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
         self.cat_info = CATInfo(limitations_program_hash, None)
