@@ -159,7 +159,13 @@ class DataLayer:
         return res.node_hash
 
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
-        records = await self.wallet_rpc.dl_history(store_id)
+        try:
+            # If we're subscribed to the store_id, don't get more than history than we've downloaded.
+            max_generation = await self.data_store.get_validated_wallet_generation(store_id)
+            records = await self.wallet_rpc.dl_history(store_id, max_generation=uint32(max_generation))
+        except Exception:
+            # We own the store_id, return the full history.
+            records = await self.wallet_rpc.dl_history(store_id)
         if records is None:
             self.log.error(f"Failed to get root history for {store_id.hex()}")
         root_history = []
@@ -167,6 +173,8 @@ class DataLayer:
         for record in records:
             if prev is None or record.root != prev.root:
                 root_history.append(record)
+                prev = record
+
         return root_history
 
     async def _validate_batch(
