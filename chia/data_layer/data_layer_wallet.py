@@ -236,6 +236,7 @@ class DataLayerWallet:
                 await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
+                return None
         else:
             timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
