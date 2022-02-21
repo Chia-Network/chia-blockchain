@@ -10,7 +10,6 @@ if sys.version_info < (3, 8):
     def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
         return getattr(t, "__origin__", None)
 
-
 else:
 
     from typing import get_args, get_origin
