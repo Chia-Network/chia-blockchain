@@ -20,10 +20,12 @@ def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
 def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
     if type(raw_coin) != dict:
         raise Exception(f"Expected coin is a dict, got {raw_coin}")
+    if not 'parent_coin_info' in raw_coin:
+        raise Exception(f"Coin is missing parent_coin_info field: {raw_coin}")
     if not 'puzzle_hash' in raw_coin:
         raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-    if not 'puzzle_hash' in raw_coin:
-        raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
+    if not 'amount' in raw_coin:
+        raise Exception(f"Coin is missing amount field: {raw_coin}")
     coin = Coin(
         parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].replace("0x", "")),
         puzzle_hash=bytes.fromhex(raw_coin["puzzle_hash"].replace("0x", "")),
