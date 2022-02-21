@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Dict, Optional
 
@@ -19,7 +18,6 @@ class CATLineageStore:
     """
 
     db_connection: aiosqlite.Connection
-    lock: asyncio.Lock
     db_wrapper: DBWrapper
     table_name: str
 
@@ -34,8 +32,6 @@ class CATLineageStore:
         )
 
         await self.db_connection.commit()
-        # Lock
-        self.lock = asyncio.Lock()  # external
         return self
 
     async def close(self):
