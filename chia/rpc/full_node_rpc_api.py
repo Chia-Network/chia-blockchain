@@ -836,7 +836,22 @@ class FullNodeRpcApi:
 
         if len(coin_records) != len(coin_names):
             raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
-        return coin_records
+
+        # Make sure that the coin_records are in the correct order of coin_names
+        coin_map: Dict[bytes32, CoinRecord] = {}
+        for coin_record in coin_records:
+            coin_name = coin_record.name
+            if coin_name in coin_map:
+                raise Exception(f"Duplicated coin_name: {coin_name}")
+            coin_map[coin_name] = coin_record
+
+        res: List[CoinRecord] = []
+        for coin_name in coin_names:
+            if not coin_name in coin_map:
+                raise Exception(f"Inconsistent coin_name: {coin_name}")
+            res.append(coin_map[coin_name])
+
+        return res
 
     async def _get_coins_puzzles(self, coin_records: List[CoinRecord]) -> List[Program]:
         block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
