@@ -166,6 +166,8 @@ class DataLayerWallet:
         height: Optional[uint32] = None,
         in_transaction: bool = False,
     ) -> None:
+        if await self.get_launcher() is not None:
+            return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
             await self.new_launcher_spend(spend, height, in_transaction)
         else:
