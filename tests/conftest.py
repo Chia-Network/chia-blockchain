@@ -1,34 +1,13 @@
 import multiprocessing
 import atexit
-
 import pytest
 import pytest_asyncio
 import tempfile
 from pathlib import Path
-
 from chia.consensus.constants import ConsensusConstants
 from tests.block_tools import BlockTools, test_constants, create_block_tools
-
-# from tests.setup_nodes import setup_shared_block_tools_and_keyring
 from tests.util.keyring import TempKeyring
-
-# from tests.wallet_tools import WalletTool # see test_mempool.py
 from typing import Tuple
-
-# the_block_tools = BlockTools()
-# the_wallet_tool = WalletTool()
-
-
-# @pytest.fixture(scope="module")
-# def shared_block_tools_helper():
-#    yield the_block_tools
-# cleanup the_block_tools
-
-
-# @pytest.fixture(scope="module")
-# def shared_wallet_tool_helper():
-#    return the_wallet_tool
-# cleanup
 
 
 def cleanup_keyring(keyring: TempKeyring):
@@ -59,6 +38,7 @@ def setup_shared_block_tools_and_keyring(
     temp_keyring = TempKeyring(populate=True)
     bt = create_block_tools(constants=consensus_constants, keychain=temp_keyring.get_keychain())
     return bt, temp_keyring
+
 
 
 # @pytest.fixture(scope="module")
