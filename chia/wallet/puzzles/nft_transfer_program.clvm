@@ -1,8 +1,25 @@
-(mod ((BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE URI) current_owner new_owner trade_price solution)
+(mod ((BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE URI) current_owner new_owner trade_price_list solution)
     ; in this instance the curried arg is (backpayment_address trade_price_divisor)
     (include condition_codes.clvm)
     (defconstant HUNDRED 100)
 
+    ; trade_price_list is a list of (amount type) pairs
+    ; type 0 is standard chia
+    ; any other type is a bytes32 mod hash of a launcher
+
+    (defun extract_trade_price_list (BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id)
+      (if trade_price_list
+        (c
+          (if (r trade_price_list)
+              (list ASSERT_PUZZLE_ANNOUNCEMENT (r (f trade_price_list)) my_id)
+              (list CREATE_COIN BACKPAYMENT_ADDRESS (f (divmod (* (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE) HUNDRED)))
+          )
+          (extract_trade_price_list BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE (r trade_price_list))
+        )
+        ()
+      )
+    )
+
     ; the compiler optimises out the below (r c URI (...)) I'm leaving it in to illustrate that URI should be curried in
-    (r (c URI (list (list CREATE_COIN BACKPAYMENT_ADDRESS (f (divmod (* trade_price TRADE_PRICE_PERCENTAGE) HUNDRED))))))
+    (r (c URI (extract_trade_price_list BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id))))
 )

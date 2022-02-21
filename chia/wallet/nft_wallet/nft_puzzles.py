@@ -77,23 +77,23 @@ def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     return None
 
 
-def get_backpayment_amount_from_inner_solution(solution: Program) -> uint64:
-    try:
-        transfer_prog = get_transfer_program_from_inner_solution(solution)
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        percentage = curried_args.first().rest().first().as_int()
-        amount = (get_trade_price_from_inner_solution(solution) * percentage) // 100
-        return uint64(amount)
-    except Exception:
-        return None
-    return None
+# def get_backpayment_amount_from_inner_solution(solution: Program) -> uint64:
+#     try:
+#         transfer_prog = get_transfer_program_from_inner_solution(solution)
+#         mod, curried_args = transfer_prog.uncurry()
+#         assert mod == NFT_TRANSFER_PROGRAM
+#         percentage = curried_args.first().rest().first().as_int()
+#         amount = (get_trade_price_from_inner_solution(solution) * percentage) // 100
+#         return uint64(amount)
+#     except Exception:
+#         return None
+#     return None
 
 
-def get_trade_price_from_inner_solution(solution: Program) -> uint64:
+def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
         prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
-        return prog.as_int()
+        return prog
     except Exception:
         return None
     return None

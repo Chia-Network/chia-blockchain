@@ -393,11 +393,11 @@ class NFTWallet:
         new_did_parent,
         new_did_inner_hash,
         new_did_amount,
-        trade_price,
+        trade_prices_list,
     ):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # 1 is a coin announcement
-        messages = [(1, int_to_bytes(trade_price) + bytes(new_did))]
+        messages = [(1, Program.to(trade_prices_list).get_tree_hash() + bytes(new_did))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -424,7 +424,7 @@ class NFTWallet:
                 new_did_parent,
                 new_did_inner_hash,
                 new_did_amount,
-                trade_price,
+                trade_prices_list,
                 nft_coin_info.transfer_program,
                 0,  # this should be expanded for other possible transfer_programs
             ]
@@ -443,23 +443,47 @@ class NFTWallet:
         return full_spend
 
     async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = 0) -> SpendBundle:
-        trade_price_discovered = None
+        trade_price_list_discovered = None
         nft_id = None
+        #breakpoint()
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
-                trade_price_discovered = nft_puzzles.get_trade_price_from_inner_solution(
-                    Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-                )
-                backpayment_amount = nft_puzzles.get_backpayment_amount_from_inner_solution(
+                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(
                     Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 )
                 nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
 
-        assert trade_price_discovered is not None
-        assert backpayment_amount is not None
+        assert trade_price_list_discovered is not None
         assert nft_id is not None
+
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        messages = [(1, int_to_bytes(trade_price_discovered) + bytes(nft_id))]
+        if trade_price_list_discovered == Program.to(0):
+            nft_record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=did_wallet.did_info.origin_coin.name(),
+                amount=uint64(coin_spend.coin.amount),
+                fee_amount=uint64(0),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=sending_sb,
+                additions=sending_sb.additions(),
+                removals=sending_sb.removals(),
+                wallet_id=self.wallet_info.id,
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=token_bytes(),
+                memos=[],
+            )
+            await self.standard_wallet.push_transaction(nft_record)
+
+        backpayment_amount = 0
+        for pair in trade_price_list_discovered.as_python():
+            if len(pair) == 1:
+                backpayment_amount += Program.from_bytes(pair[0]).as_int()
+
+        messages = [(1, trade_price_list_discovered.get_tree_hash() + bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")

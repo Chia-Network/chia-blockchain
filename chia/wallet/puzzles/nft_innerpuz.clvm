@@ -11,7 +11,7 @@
   new_did_parent
   new_did_inner_hash
   new_did_amount
-  trade_price
+  trade_prices_list
   transfer_program_reveal
   transfer_program_solution
 )
@@ -49,22 +49,61 @@
     (sha256 parent (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c launcher_id (r (r SINGLETON_STRUCT)))) innerpuzhash) amount)
   )
 
-  (if new_did
-    (c (list CREATE_COIN_ANNOUNCEMENT trade_price)
-      (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_price (f (r SINGLETON_STRUCT))))
-        ; Using i is cheaper and small than if in this situation
-        ; We also pollute the returned conditions with an empty list here but it has no side effects
-        (c (i trade_price (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_price new_did)) 0)
+  (defun stager (
+    NFT_MOD_HASH
+    SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    CURRENT_OWNER_DID
+    NFT_TRANSFER_PROGRAM_HASH
+    my_amount
+    my_did_inner_hash
+    my_did_amount
+    my_did_parent
+    new_did
+    new_did_parent
+    new_did_inner_hash
+    new_did_amount
+    trade_prices_list
+    transfer_program_reveal
+    transfer_program_solution
+    trade_prices_list_hash
+  )
+    (c (list CREATE_COIN_ANNOUNCEMENT trade_prices_list_hash)
+    ; Using i is cheaper and small than if in this situation
+    ; We also pollute the returned conditions with an empty list here but it has no side effects
+      (c (i trade_prices_list (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_prices_list_hash (f (r SINGLETON_STRUCT)))) 0)
+        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_prices_list_hash new_did))
           (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH new_did) my_amount (list new_did))
             (c (list ASSERT_MY_AMOUNT my_amount)
               (if (= (sha256tree1 transfer_program_reveal) NFT_TRANSFER_PROGRAM_HASH)
-                  (a transfer_program_reveal (list CURRENT_OWNER_DID new_did trade_price transfer_program_solution))
+                  (a transfer_program_reveal (list CURRENT_OWNER_DID new_did trade_prices_list transfer_program_solution))
                   (x)
               )
             )
           )
         )
       )
+    )
+  )
+
+  ; main
+  (if new_did
+    (stager
+      NFT_MOD_HASH
+      SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+      CURRENT_OWNER_DID
+      NFT_TRANSFER_PROGRAM_HASH
+      my_amount
+      my_did_inner_hash
+      my_did_amount
+      my_did_parent
+      new_did
+      new_did_parent
+      new_did_inner_hash
+      new_did_amount
+      trade_prices_list
+      transfer_program_reveal
+      transfer_program_solution
+      (sha256tree1 trade_prices_list)
     )
     (list
       (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH CURRENT_OWNER_DID) my_amount (list CURRENT_OWNER_DID))

@@ -162,9 +162,9 @@ class TestNFTWallet:
         # new_did_parent,
         # new_did_inner_hash,
         # new_did_amount,
-        # trade_price,
+        # trade_price_list,
         did_coin_threeple = await did_wallet_1.get_info_for_recovery()
-        trade_price = 10
+        trade_price_list = [[10]]
 
         sb = await nft_wallet_0.transfer_nft(
             coins[0],
@@ -172,7 +172,7 @@ class TestNFTWallet:
             did_coin_threeple[0],
             did_coin_threeple[1],
             did_coin_threeple[2],
-            trade_price
+            trade_price_list
         )
         assert sb is not None
 
@@ -191,7 +191,7 @@ class TestNFTWallet:
         await asyncio.sleep(3)
         # Send it back to original owner
         did_coin_threeple = await did_wallet_0.get_info_for_recovery()
-        trade_price = 10
+        trade_price_list = [[10]]
 
         await asyncio.sleep(3)
 
@@ -201,7 +201,7 @@ class TestNFTWallet:
             did_coin_threeple[0],
             did_coin_threeple[1],
             did_coin_threeple[2],
-            trade_price
+            trade_price_list
         )
         assert sb is not None
 
