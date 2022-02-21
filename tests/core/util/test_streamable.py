@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import unittest
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -26,7 +27,7 @@ from chia.util.streamable import (
     parse_size_hints,
     parse_str,
 )
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 
 
 class TestStreamable(unittest.TestCase):

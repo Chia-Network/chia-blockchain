@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import pytest
 import pytest_asyncio
 
@@ -5,7 +6,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import create_block_tools_async
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import self_hostname, setup_full_node, setup_full_system, test_constants
+from tests.setup_nodes import setup_full_node, setup_full_system, test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
 from tests.util.socket import find_available_listen_port

@@ -2012,6 +2012,10 @@ def create_test_unfinished_block(
     )
 
 
+create_block_tools_async_count = 0
+create_block_tools_count = 0
+
+
 # xxx do the callers need different instances?
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
@@ -2019,6 +2023,9 @@ async def create_block_tools_async(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
+    global create_block_tools_async_count
+    create_block_tools_async_count += 1
+    print(f"  create_block_tools_async called {create_block_tools_async_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain)
     await bt.setup_keys()
     await bt.setup_plots()
@@ -2033,6 +2040,9 @@ def create_block_tools(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
+    global create_block_tools_count
+    create_block_tools_count += 1
+    print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())

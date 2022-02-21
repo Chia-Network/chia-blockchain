@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import asyncio
 from typing import List
 
@@ -5,7 +6,7 @@ import pytest
 import pytest_asyncio
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import setup_simulators_and_wallets, bt
+from tests.setup_nodes import setup_simulators_and_wallets
 
 
 @pytest.fixture(scope="module")

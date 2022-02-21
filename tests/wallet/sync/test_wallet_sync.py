@@ -13,7 +13,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -54,7 +54,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, wallet_node, default_400_blocks, trusted):
+    async def test_basic_sync_wallet(self, bt, wallet_node, default_400_blocks, trusted):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -88,7 +88,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, wallet_node, default_1000_blocks, trusted):
+    async def test_almost_recent(self, bt, wallet_node, default_1000_blocks, trusted):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -169,7 +169,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks, trusted):
+    async def test_long_sync_wallet(self, bt, wallet_node, default_1000_blocks, default_400_blocks, trusted):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -213,7 +213,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, wallet_node_simulator, default_400_blocks, trusted):
+    async def test_wallet_reorg_sync(self, bt, wallet_node_simulator, default_400_blocks, trusted):
         num_blocks = 5
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -266,7 +266,7 @@ class TestWalletSync:
         [False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks, trusted):
+    async def test_wallet_reorg_get_coinbase(self, bt, wallet_node_simulator, default_400_blocks, trusted):
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
