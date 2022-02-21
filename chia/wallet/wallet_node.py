@@ -979,7 +979,11 @@ class WalletNode:
         assert self.wallet_state_manager.weight_proof_handler is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request, timeout=60)
+        wp_timeout = self.config.get("weight_proof_timeout", 360)
+        self.log.debug(f"weight proof timeout is {wp_timeout} sec")
+        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
+            weight_request, timeout=wp_timeout
+        )
 
         if weight_proof_response is None:
             return False, None, [], []
