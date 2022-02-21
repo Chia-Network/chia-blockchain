@@ -1,3 +1,4 @@
+import atexit
 import pytest
 import asyncio
 import signal
@@ -20,7 +21,7 @@ from chia.simulator.start_simulator import service_kwargs_for_full_node_simulato
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from tests.block_tools import create_block_tools_async, test_constants, BlockTools
+from tests.block_tools import create_block_tools_async, test_constants, BlockTools, create_block_tools
 from tests.util.keyring import TempKeyring
 from tests.util.socket import find_available_listen_port
 from chia.util.hash import std_hash
@@ -47,7 +48,6 @@ def bt() -> BlockTools:
 # if you have a system that has an unusual hostname for localhost and you want
 # to run the tests, change this constant
 self_hostname = "localhost"
-
 
 
 def constants_for_dic(dic):
@@ -449,7 +449,7 @@ async def setup_node_and_wallet(
     consensus_constants: ConsensusConstants, starting_height=None, key_seed=None, db_version=1
 ):
     with TempKeyring(populate=True) as keychain:
-        btools = await create_block_tools_async(constants=test_constants, keychain=keychain)  # xxx
+        btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
         node_iters = [
             setup_full_node(
                 consensus_constants,
@@ -481,7 +481,7 @@ async def setup_node_and_wallet(
         await _teardown_nodes(node_iters)
 
 
-async def setup_simulators_and_wallets(  # XXX
+async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
@@ -500,7 +500,7 @@ async def setup_simulators_and_wallets(  # XXX
             port = find_available_listen_port(f"node{index}")
             rpc_port = find_available_listen_port(f"node{index} rpc")
             db_name = f"blockchain_test_{port}.db"
-            # xxx convert bt_tools to bt fixture
+            # TODO convert this bt_tools variable to a passed-in variable
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1
             )  # block tools modifies constants
@@ -564,7 +564,7 @@ async def setup_farmer_harvester(bt: BlockTools, consensus_constants: ConsensusC
     await _teardown_nodes(node_iters)
 
 
-async def setup_full_system(  # xxx which of these 3 block_tools are needed in which places?
+async def setup_full_system(
     consensus_constants: ConsensusConstants,
     shared_b_tools: BlockTools,
     b_tools: BlockTools = None,
