@@ -985,6 +985,8 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
             root_start = await data_store.get_tree_root(tree_id)
 
     root_end = await data_store.get_tree_root(tree_id)
+    assert root_start.node_hash is not None
+    assert root_end.node_hash is not None
     diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
     assert diffs == expected_diff
 

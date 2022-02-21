@@ -167,6 +167,7 @@ class DataLayer:
         for record in records:
             if prev is None or record.root != prev.root:
                 root_history.append(record)
+                prev = record
         return root_history
 
     async def _validate_batch(
@@ -183,7 +184,7 @@ class DataLayer:
                 continue
             # Pick the latest root in our data store with the desired hash, before our already validated data.
             root: Optional[Root] = await self.data_store.get_last_tree_root_by_hash(
-                tree_id, record.root, max_generation
+                tree_id, None if record.root == bytes32([0] * 32) else record.root, max_generation
             )
             if root is None or root.generation < min_generation:
                 return False
@@ -200,6 +201,7 @@ class DataLayer:
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
+        none_bytes = bytes32([0] * 32)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
             return
@@ -228,8 +230,7 @@ class DataLayer:
         # TODO: wallet should handle identical hashes part?
         if (
             old_root is not None
-            and old_root.node_hash is not None
-            and to_check[0].root == old_root.node_hash
+            and to_check[0].root == (old_root.node_hash if old_root.node_hash is not None else none_bytes)
             and len(set(record.root for record in to_check)) == 1
         ):
             await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
@@ -240,7 +241,7 @@ class DataLayer:
             return
         # Delete all identical root hashes to our old root hash, until we detect a change.
         if old_root is not None and old_root.node_hash is not None:
-            while to_check[-1].root == old_root.node_hash:
+            while to_check[-1].root == (old_root.node_hash if old_root.node_hash is not None else none_bytes):
                 to_check.pop()
 
         self.log.info(
@@ -267,14 +268,15 @@ class DataLayer:
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         # Wallet root hash must match to our data store root hash.
-        if root.node_hash is not None and root.node_hash == to_check[0].root:
+        if to_check[0].root == (root.node_hash if root.node_hash is not None else none_bytes):
             self.log.info(
                 f"Validated chain hash {root.node_hash} in downloaded datastore. "
                 f"Wallet generation: {to_check[0].generation}"
             )
         else:
-            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-            raise RuntimeError("Can't find data on chain in our datastore.")
+            await self.data_store.set_validated_wallet_generation(tree_id, 0)
+            await self.data_store.rollback_to_generation(tree_id, 0)
+            raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
@@ -296,8 +298,9 @@ class DataLayer:
             to_check.pop(0)
             is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
             if not is_valid:
-                await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-                raise RuntimeError("Could not validate on-chain data.")
+                await self.data_store.set_validated_wallet_generation(tree_id, 0)
+                await self.data_store.rollback_to_generation(tree_id, 0)
+                raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
 
         self.log.info(
             f"Finished downloading and validating {subscription.tree_id}. "
@@ -331,9 +334,7 @@ class DataLayer:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
 
-    async def get_kv_diff(
-        self, tree_id: bytes32, hash_1: Optional[bytes32], hash_2: Optional[bytes32]
-    ) -> Set[DiffData]:
+    async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def periodically_fetch_data(self) -> None:

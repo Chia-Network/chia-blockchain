@@ -98,6 +98,10 @@ async def download_data_history(
             root_json = json.loads(msg.data)
             generation = root_json["generation"]
             root = await data_store.get_tree_root(tree_id=tree_id, lock=lock)
+            # We've downloaded too much, rollback.
+            if root.generation > generation:
+                await data_store.rollback_to_generation(tree_id=tree_id, target_generation=generation, lock=lock)
+                return True
             existing_generation = root.generation + 1
             while existing_generation <= generation:
                 request = {
