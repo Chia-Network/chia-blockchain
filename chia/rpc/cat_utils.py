@@ -2,6 +2,7 @@
 from typing import Any, Dict, List, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
+from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle
 from chia.wallet.puzzles.cc_loader import CC_MOD
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
@@ -103,3 +104,15 @@ def convert_to_parent_coin_spends(
         coin_spend: CoinSpend = convert_to_coin_spend(raw_coin_spend=raw_coin_spend)
         parent_coin_spends[name.replace("0x", "")] = coin_spend
     return parent_coin_spends
+
+
+def get_cat_coin_asset_id(puzzle: Program) -> str:
+    is_cat_coin, _ = match_cat_puzzle(puzzle)
+    if not is_cat_coin:
+        raise Exception(f"Must be a CAT coin to get the asset ID:\npuzzle: {puzzle}")
+
+    _, curried_args = puzzle.uncurry()
+    args = [p for p in curried_args.as_iter()]
+    tail_hash_bytes = args[1].as_python()
+    tail_hash = bytes(tail_hash_bytes).hex()
+    return tail_hash
