@@ -46,7 +46,11 @@ class WalletWeightProofHandler:
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes, initializer=setproctitle, initargs=(f"{getproctitle()}_worker",))
+        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
+            self._num_processes,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):

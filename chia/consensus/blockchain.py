@@ -118,7 +118,11 @@ class Blockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - reserved_cores, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers, initializer=setproctitle, initargs=(f"{getproctitle()}_worker",))
+        self.pool = ProcessPoolExecutor(
+            max_workers=num_workers,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
         log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
