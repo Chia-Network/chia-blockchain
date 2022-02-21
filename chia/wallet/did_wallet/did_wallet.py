@@ -1003,9 +1003,9 @@ class DIDWallet:
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
-        record: Optional[DerivationRecord] = await self.wallet_state_manager.puzzle_store.record_for_pubkey(pubkey)
-        assert record is not None
-        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, record.index)
+        index: = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        assert index is not None
+        private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
