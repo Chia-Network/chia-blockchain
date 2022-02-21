@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import asyncio
 from typing import Optional
 
@@ -35,7 +36,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 

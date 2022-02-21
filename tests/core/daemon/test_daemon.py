@@ -6,7 +6,7 @@ from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
+from tests.setup_nodes import setup_daemon, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
@@ -26,9 +26,14 @@ class TestDaemon:
     # because of a hack in shutting down the full node, which means you cannot run
     # more than one simulations per process.
     @pytest_asyncio.fixture(scope="function")
-    async def simulation(self, get_b_tools, get_b_tools_1):
+    async def simulation(self, bt, get_b_tools, get_b_tools_1):
         async for _ in setup_full_system(
-            test_constants_modified, b_tools=get_b_tools, b_tools_1=get_b_tools_1, connect_to_daemon=True, db_version=1
+            test_constants_modified,
+            bt,
+            b_tools=get_b_tools,
+            b_tools_1=get_b_tools_1,
+            connect_to_daemon=True,
+            db_version=1,
         ):
             yield _
 
@@ -42,7 +47,7 @@ class TestDaemon:
         return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
 
     @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools(self, get_temp_keyring):
+    async def get_b_tools(self, get_temp_keyring):  # xxx
         local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
         new_config = local_b_tools._config
         local_b_tools.change_config(new_config)
@@ -54,7 +59,7 @@ class TestDaemon:
             yield get_b_tools, daemon
 
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, simulation, get_b_tools):
+    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools, self_hostname):
         node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
         node2_port = node2.full_node.config["port"]
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))

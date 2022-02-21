@@ -1,10 +1,10 @@
+# flake8: noqa: F811
 import asyncio
 import itertools
 
 import pytest
 
 from chia.util.merkle_set import MerkleSet, confirm_included_already_hashed
-from tests.setup_nodes import bt
 
 
 @pytest.fixture(scope="module")

@@ -12,7 +12,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -39,7 +39,7 @@ class TestTransactions:
             yield _
 
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node):
+    async def test_wallet_coinbase(self, wallet_node, self_hostname):
         num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -61,7 +61,7 @@ class TestTransactions:
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_tx_propagation(self, three_nodes_two_wallets):
+    async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname):
         num_blocks = 5
         full_nodes, wallets = three_nodes_two_wallets
 
@@ -143,7 +143,7 @@ class TestTransactions:
         await time_out_assert(15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
     @pytest.mark.asyncio
-    async def test_mempool_tx_sync(self, three_nodes_two_wallets):
+    async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname):
         num_blocks = 5
         full_nodes, wallets = three_nodes_two_wallets
 

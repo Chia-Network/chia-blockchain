@@ -14,7 +14,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, setup_two_nodes, test_constants
+from tests.setup_nodes import setup_two_nodes, test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
 
 BURN_PUZZLE_HASH = b"0" * 32
@@ -33,8 +33,8 @@ def event_loop():
 
 class TestBlockchainTransactions:
     @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version):
+    async def two_nodes(self, db_version, self_hostname):
+        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
             yield _
 
     @pytest.mark.asyncio

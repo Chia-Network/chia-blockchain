@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -25,12 +26,12 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import get_plot_dir
+from tests.block_tools import get_plot_dir, BlockTools
 from chia.util.config import load_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 
@@ -45,21 +46,22 @@ def get_pool_plot_dir():
 
 @dataclass
 class TemporaryPoolPlot:
+    bt: BlockTools
     p2_singleton_puzzle_hash: bytes32
     plot_id: Optional[bytes32] = None
 
     async def __aenter__(self):
-        plot_id: bytes32 = await bt.new_plot(self.p2_singleton_puzzle_hash, get_pool_plot_dir())
+        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, get_pool_plot_dir())
         assert plot_id is not None
-        await bt.refresh_plots()
+        await self.bt.refresh_plots()
         self.plot_id = plot_id
         return self
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
-        await bt.delete_plot(self.plot_id)
+        await self.bt.delete_plot(self.plot_id)
 
 
-async def create_pool_plot(p2_singleton_puzzle_hash: bytes32) -> Optional[bytes32]:
+async def create_pool_plot(bt: BlockTools, p2_singleton_puzzle_hash: bytes32) -> Optional[bytes32]:
     plot_id = await bt.new_plot(p2_singleton_puzzle_hash, get_pool_plot_dir())
     await bt.refresh_plots()
     return plot_id
@@ -89,7 +91,7 @@ class TestPoolWalletRpc:
             yield _
 
     @pytest_asyncio.fixture(scope="function")
-    async def one_wallet_node_and_rpc(self):
+    async def one_wallet_node_and_rpc(self, bt):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
             full_nodes, wallets = nodes
@@ -124,7 +126,7 @@ class TestPoolWalletRpc:
             await rpc_cleanup()
 
     @pytest_asyncio.fixture(scope="function")
-    async def setup(self, two_wallet_nodes):
+    async def setup(self, two_wallet_nodes, bt):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -458,7 +460,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted):
+    async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted, bt):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -497,7 +499,7 @@ class TestPoolWalletRpc:
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
-        async with TemporaryPoolPlot(status.p2_singleton_puzzle_hash) as pool_plot:
+        async with TemporaryPoolPlot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
             all_blocks = await full_node_api.get_all_full_blocks()
             blocks = bt.get_consecutive_blocks(
                 3,
@@ -574,7 +576,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, trusted):
+    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, trusted, bt):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -614,7 +616,7 @@ class TestPoolWalletRpc:
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
-        async with TemporaryPoolPlot(status.p2_singleton_puzzle_hash) as pool_plot:
+        async with TemporaryPoolPlot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
             all_blocks = await full_node_api.get_all_full_blocks()
             blocks = bt.get_consecutive_blocks(
                 3,
@@ -1085,7 +1087,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_change_pools_reorg(self, setup, fee, trusted):
+    async def test_change_pools_reorg(self, setup, fee, trusted, bt):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         full_nodes, wallet_nodes, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]

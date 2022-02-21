@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import logging
 import time
 from os import unlink
@@ -22,7 +23,6 @@ from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path) -> Iterator[TestEnvironment]:
+def test_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = get_test_plots()
