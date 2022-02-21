@@ -137,7 +137,7 @@ if [ "$(uname)" = "Linux" ]; then
     if ! command -v python3.9 >/dev/null 2>&1; then
       echo "Installing on Arch Linux."
       echo "Python <= 3.9.9 is required. You can install 'python39' from the AUR and try again, or proceed with installing 'python-3.9.9-1' from the Arch Linux Archive."
-      read -r -p "Proceed with installing 'python-3.9.9-1'? " ARCH_CONFIRM
+      read -r -p "Proceed with installing 'python-3.9.9-1'? [y/N] " ARCH_CONFIRM
       case "$ARCH_CONFIRM" in
         [yY][eE][sS]|[yY])
           case $(uname -m) in
