@@ -55,7 +55,6 @@ class TestWalletSync:
     )
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, bt, wallet_node, default_400_blocks, trusted, self_hostname):
-
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for block in default_400_blocks:

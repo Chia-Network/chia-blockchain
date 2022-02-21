@@ -470,7 +470,7 @@ async def setup_node_and_wallet(
         await _teardown_nodes(node_iters)
 
 
-async def setup_simulators_and_wallets(
+async def setup_simulators_and_wallets(  # XXX
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
@@ -489,6 +489,7 @@ async def setup_simulators_and_wallets(
             port = find_available_listen_port(f"node{index}")
             rpc_port = find_available_listen_port(f"node{index} rpc")
             db_name = f"blockchain_test_{port}.db"
+            # xxx convert bt_tools to bt fixture
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1
             )  # block tools modifies constants
@@ -567,7 +568,7 @@ async def setup_farmer_harvester(bt: BlockTools, consensus_constants: ConsensusC
     await _teardown_nodes(node_iters)
 
 
-async def setup_full_system(
+async def setup_full_system(  # xxx which of these 3 block_tools are needed in which places?
     consensus_constants: ConsensusConstants,
     shared_b_tools: BlockTools,
     b_tools: BlockTools = None,
@@ -619,6 +620,8 @@ async def setup_full_system(
             setup_timelord(
                 timelord2_port, node1_port, timelord2_rpc_port, vdf1_port, False, consensus_constants, b_tools
             ),
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
+            setup_timelord(timelord2_port, node1_port, timelord2_rpc_port, vdf1_port, False, consensus_constants, b_tools),
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",

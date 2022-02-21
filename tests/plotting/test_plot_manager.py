@@ -1,3 +1,4 @@
+# flake8: noqa: F811
 import logging
 import time
 from os import unlink
