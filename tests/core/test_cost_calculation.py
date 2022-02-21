@@ -55,7 +55,7 @@ def large_block_generator(size):
 
 class TestCostCalculation:
     @pytest.mark.asyncio
-    async def test_basics(self, softfork_height):
+    async def test_basics(self, softfork_height, bt):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
         num_blocks = 3
@@ -111,7 +111,7 @@ class TestCostCalculation:
         )
 
     @pytest.mark.asyncio
-    async def test_mempool_mode(self, softfork_height):
+    async def test_mempool_mode(self, softfork_height, bt):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
 
