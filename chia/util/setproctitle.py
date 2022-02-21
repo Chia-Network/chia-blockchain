@@ -13,6 +13,7 @@ def setproctitle(ps_name: str) -> None:
 
 def getproctitle() -> str:
     if no_setproctitle is False:
-        return pysetproctitle.getproctitle()
+        # TODO: add type hints to setproctitle
+        return pysetproctitle.getproctitle()  # type: ignore[no-any-return]
 
     return ""
