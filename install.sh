@@ -133,20 +133,31 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt-get install -y python3-venv
   elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
-    echo "Installing on Arch Linux."
-    echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
-    case $(uname -m) in
-      x86_64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
-        ;;
-      aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
-        ;;
-      *)
-        echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
-        exit 1
-        ;;
+    # python39 is available in the AUR, so a check is needed to accommodate this being installed alongside python 3.10
+    if ! command -v python3.9 >/dev/null 2>&1; then
+      echo "Installing on Arch Linux."
+      echo "Python <= 3.9.9 is required. You can install 'python39' from the AUR and try again, or proceed with installing 'python-3.9.9-1' from the Arch Linux Archive."
+      read -r -p "Proceed with installing 'python-3.9.9-1'? " ARCH_CONFIRM
+      case "$ARCH_CONFIRM" in
+        [yY][eE][sS]|[yY])
+          case $(uname -m) in
+            x86_64)
+              sudo pacman ${PACMAN_AUTOMATED} -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
+              ;;
+            aarch64)
+              sudo pacman ${PACMAN_AUTOMATED} -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
+              ;;
+            *)
+              echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
+              exit 1
+              ;;
+          esac
+          ;;
+        *)
+          exit 0
+          ;;
       esac
+    fi
     sudo pacman ${PACMAN_AUTOMATED} -S --needed git
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
