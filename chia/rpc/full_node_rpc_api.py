@@ -853,7 +853,7 @@ class FullNodeRpcApi:
             block_generator_map[height] = block_generator
             return block_generator
 
-        puzzles: List[Program]
+        puzzles: List[Program] = []
         for coin_record in coin_records:
             if coin_record.spent_block_index == 0:
                 raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
