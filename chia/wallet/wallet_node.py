@@ -622,6 +622,9 @@ class WalletNode:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(inner_state)
                             )
+            except asyncio.CancelledError as e:
+                self.log.info(f"receive and validate task cancelled: {e}")
+                raise
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
