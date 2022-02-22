@@ -179,6 +179,7 @@ class DataLayer:
         min_generation: int,
     ) -> bool:
         root: Optional[Root] = await self.data_store.get_tree_root(tree_id=tree_id)
+        assert root is not None
         if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
             self.log.info(
                 f"Validated chain hash {to_check[0].root} in downloaded datastore. "
