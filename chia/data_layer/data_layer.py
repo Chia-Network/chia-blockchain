@@ -241,7 +241,7 @@ class DataLayer:
             )
             return
         # Delete all identical root hashes to our old root hash, until we detect a change.
-        if old_root is not None and old_root.node_hash is not None:
+        if old_root is not None:
             while to_check[-1].root == (old_root.node_hash if old_root.node_hash is not None else none_bytes):
                 to_check.pop()
 
