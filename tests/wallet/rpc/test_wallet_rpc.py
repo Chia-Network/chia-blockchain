@@ -386,9 +386,9 @@ class TestWalletRpc:
             ph_by_addr = await wallet.get_new_puzzlehash()
             await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "xch"))
             await client.farm_block(encode_puzzle_hash(ph_by_addr, "xch"))
-            await asyncio.sleep(0.5)
+            await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
             tx_for_address = await wallet_rpc_api.get_transactions(
-                {"wallet_id": "1", "address": encode_puzzle_hash(ph_by_addr, "xch")}
+                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "xch")}
             )
             assert len(tx_for_address["transactions"]) == 1
             assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
