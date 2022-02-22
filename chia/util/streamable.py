@@ -1,5 +1,3 @@
-# flake8: noqa
-# pylint: disable
 from __future__ import annotations
 
 import dataclasses
@@ -7,7 +5,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -46,6 +44,8 @@ unhashable_types = [
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON
 big_ints = [uint64, int64, uint128, int512]
+
+_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 
 def dataclass_from_dict(klass, d):
@@ -156,8 +156,10 @@ def streamable(cls: Any):
 
     1. A tuple of x items is serialized by appending the serialization of each item.
     2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
-    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the serialization of the item.
-    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is a CLVM program.
+    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the
+       serialization of the item.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is
+       a CLVM program.
 
     All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
@@ -263,7 +265,7 @@ def parse_str(f: BinaryIO) -> str:
 
 class Streamable:
     @classmethod
-    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+    def function_to_parse_one_item(cls, f_type: Type) -> Callable[[BinaryIO], Any]:
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
@@ -295,9 +297,9 @@ class Streamable:
         raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
-    def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
+    def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: Streamable = object.__new__(cls)
+        obj: _T_Streamable = object.__new__(cls)
         fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
