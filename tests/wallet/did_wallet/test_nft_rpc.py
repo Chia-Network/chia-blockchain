@@ -187,7 +187,7 @@ class TestNFTRPC:
         val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_0})
         assert val["success"]
 
-        trade_price = 50
+        trade_price = [[50]]
 
         val = await api_0.nft_transfer_nft({
             "wallet_id": nft_wallet_id_0,
