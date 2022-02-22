@@ -251,7 +251,7 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE trade_id=?", (trade_id.hex(),))
+        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE trade_id=?", (trade_id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -263,7 +263,7 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE status=?", (status.value,))
+        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE status=?", (status.value,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -279,7 +279,7 @@ class TradeStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE sent<? and confirmed=?",
+            "SELECT trade_record FROM trade_records WHERE sent<? AND confirmed=?",
             (
                 4,
                 0,
@@ -299,7 +299,7 @@ class TradeStore:
         Returns the list of all trades that have not yet been confirmed.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed=?", (0,))
+        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE confirmed=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -315,7 +315,7 @@ class TradeStore:
         Returns all stored trades.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from trade_records")
+        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records")
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -396,7 +396,7 @@ class TradeStore:
         else:
             raise ValueError(f"No known sort {sort_key}")
 
-        query = "SELECT * from trade_records "
+        query = "SELECT trade_record FROM trade_records "
         args = []
 
         if exclude_my_offers or exclude_taken_offers:
@@ -409,7 +409,7 @@ class TradeStore:
             if where_status_clause is not None:
                 query += "AND " + where_status_clause
         else:
-            query = "SELECT * from trade_records "
+            query = "SELECT trade_record FROM trade_records "
             # Include the additional WHERE status clause if we're filtering out certain statuses
             if where_status_clause is not None:
                 query += "WHERE " + where_status_clause
@@ -435,7 +435,7 @@ class TradeStore:
         return records
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed_at_index>?", (height,))
+        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE confirmed_at_index>?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
