@@ -32,6 +32,7 @@ class DataLayer:
     state_changed_callback: Optional[Callable[..., object]]
     wallet_id: uint64
     initialized: bool
+    none_bytes: bytes32
 
     def __init__(
         self,
@@ -54,6 +55,7 @@ class DataLayer:
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
         self.data_layer_server = DataLayerServer(self.config, self.db_path, self.log)
+        self.none_bytes = bytes32([0] * 32)
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -119,7 +121,7 @@ class DataLayer:
         if root.node_hash is not None:
             node_hash = root.node_hash
         else:
-            node_hash = bytes32([0] * 32)  # todo change
+            node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
         assert transaction_record
         # todo register callback to change status in data store
@@ -185,7 +187,7 @@ class DataLayer:
                 continue
             # Pick the latest root in our data store with the desired hash, before our already validated data.
             root: Optional[Root] = await self.data_store.get_last_tree_root_by_hash(
-                tree_id, None if record.root == bytes32([0] * 32) else record.root, max_generation
+                tree_id, None if record.root == self.none_bytes else record.root, max_generation
             )
             if root is None or root.generation < min_generation:
                 return False
@@ -202,7 +204,6 @@ class DataLayer:
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
-        none_bytes = bytes32([0] * 32)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
             return
@@ -231,7 +232,7 @@ class DataLayer:
         # TODO: wallet should handle identical hashes part?
         if (
             old_root is not None
-            and to_check[0].root == (old_root.node_hash if old_root.node_hash is not None else none_bytes)
+            and to_check[0].root == (old_root.node_hash if old_root.node_hash is not None else self.none_bytes)
             and len(set(record.root for record in to_check)) == 1
         ):
             await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
@@ -242,7 +243,7 @@ class DataLayer:
             return
         # Delete all identical root hashes to our old root hash, until we detect a change.
         if old_root is not None:
-            while to_check[-1].root == (old_root.node_hash if old_root.node_hash is not None else none_bytes):
+            while to_check[-1].root == (old_root.node_hash if old_root.node_hash is not None else self.none_bytes):
                 to_check.pop()
 
         self.log.info(
@@ -269,7 +270,7 @@ class DataLayer:
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         # Wallet root hash must match to our data store root hash.
-        if to_check[0].root == (root.node_hash if root.node_hash is not None else none_bytes):
+        if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
             self.log.info(
                 f"Validated chain hash {to_check[0].root} in downloaded datastore. "
                 f"Wallet generation: {to_check[0].generation}"
