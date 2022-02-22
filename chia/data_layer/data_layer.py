@@ -224,6 +224,8 @@ class DataLayer:
         old_root: Optional[Root] = None
         try:
             old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             pass
         wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
@@ -265,6 +267,8 @@ class DataLayer:
 
         try:
             downloaded = await download_data(self.data_store, subscription, singleton_record.root)
+        except asyncio.CancelledError:
+            raise
         except aiohttp.client_exceptions.ClientConnectorError:
             self.log.error(f"Server unavailable for {tree_id}.")
             downloaded = False
@@ -285,6 +289,8 @@ class DataLayer:
         min_generation = (0 if old_root is None else old_root.generation) + 1
         try:
             is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation)
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.log.error(f"Error in validate batch for {tree_id}: {e}")
             is_valid = False
@@ -295,6 +301,8 @@ class DataLayer:
             to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
             try:
                 is_valid = await self._validate_batch(tree_id, to_check, 0)
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 self.log.error(f"Error in validate batch for {tree_id}: {e}")
                 is_valid = False
