@@ -135,18 +135,18 @@ if [ "$(uname)" = "Linux" ]; then
     # Arch Linux
     # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
     echo "Installing on Arch Linux."
-      case $(uname -m) in
-        x86_64|aarch64)
-				  if ! command -v python3.9 >/dev/null 2>&1; then
-            echo "Python <= 3.9.10 is required. Please see https://wiki.archlinux.org/title/python#Old_versions for support."
-            exit 0
-          fi
-          ;;
-        *)
-          echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
-          exit 0
-          ;;
-      esac
+    case $(uname -m) in
+      x86_64|aarch64)
+        if ! command -v python3.9 >/dev/null 2>&1; then
+          echo "Python <= 3.9.10 is required. Please see https://wiki.archlinux.org/title/python#Old_versions for support."
+          exit 1
+        fi
+        ;;
+      *)
+        echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
+        exit 1
+        ;;
+    esac
     sudo pacman ${PACMAN_AUTOMATED} -S --needed git
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
