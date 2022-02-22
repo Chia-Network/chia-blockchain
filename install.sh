@@ -139,12 +139,12 @@ if [ "$(uname)" = "Linux" ]; then
         x86_64|aarch64)
 				  if ! command -v python3.9 >/dev/null 2>&1; then
             echo "Python <= 3.9.10 is required. Please see https://wiki.archlinux.org/title/python#Old_versions for support."
-            exit 1
+            exit 0
           fi
           ;;
         *)
           echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
-          exit 1
+          exit 0
           ;;
       esac
     sudo pacman ${PACMAN_AUTOMATED} -S --needed git
