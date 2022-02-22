@@ -174,13 +174,14 @@ class DataLayer:
         self,
         tree_id: bytes32,
         to_check: List[SingletonRecord],
+        last_checked_hash: bytes32,
         min_generation: int,
         max_generation: int,
     ) -> bool:
-        last_checked_hash: Optional[bytes32] = None
         for record in to_check:
             # Ignore two consecutive identical root hashes, as we've already validated it.
-            if last_checked_hash is not None and record.root == last_checked_hash:
+            if record.root == last_checked_hash:
+                self.log.info(f"Skipped checking {record.root}, as it matches the previously checked hash.")
                 continue
             # Pick the latest root in our data store with the desired hash, before our already validated data.
             root: Optional[Root] = await self.data_store.get_last_tree_root_by_hash(
@@ -277,6 +278,7 @@ class DataLayer:
             await self.data_store.set_validated_wallet_generation(tree_id, 0)
             await self.data_store.rollback_to_generation(tree_id, 0)
             raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
+        last_checked_hash = to_check[0].root
         to_check.pop(0)
         min_generation = (0 if old_root is None else old_root.generation) + 1
         max_generation = root.generation
@@ -285,7 +287,9 @@ class DataLayer:
         # If this matches, we know all data will match, as we've previously checked that data matches
         # for `min_generation` data store root and `wallet_current_generation` wallet record.
         try:
-            is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation, max_generation)
+            is_valid: bool = await self._validate_batch(
+                tree_id, to_check, last_checked_hash, min_generation, max_generation
+            )
         except Exception as e:
             self.log.error(f"Error in validate batch for {tree_id}: {e}")
             is_valid = False
@@ -299,9 +303,10 @@ class DataLayer:
                 f"Validated chain hash {root.node_hash} in downloaded datastore. "
                 f"Wallet generation: {to_check[0].generation}"
             )
+            last_checked_hash = to_check[0].root
             to_check.pop(0)
             try:
-                is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
+                is_valid = await self._validate_batch(tree_id, to_check, last_checked_hash, 0, max_generation)
             except Exception as e:
                 self.log.error(f"Error in validate batch for {tree_id}: {e}")
                 is_valid = False
