@@ -176,10 +176,21 @@ class DataLayer:
         self,
         tree_id: bytes32,
         to_check: List[SingletonRecord],
-        last_checked_hash: bytes32,
         min_generation: int,
-        max_generation: int,
     ) -> bool:
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
+            self.log.info(
+                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
+                f"Wallet generation: {to_check[0].generation}"
+            )
+        else:
+            return False
+
+        max_generation = root.generation
+        last_checked_hash = to_check[0].root
+        to_check.pop(0)
+
         for record in to_check:
             # Ignore two consecutive identical root hashes, as we've already validated it.
             if record.root == last_checked_hash:
@@ -268,29 +279,12 @@ class DataLayer:
             raise RuntimeError("Could not download the data.")
         self.log.info(f"Successfully downloaded data for {tree_id}.")
 
-        root = await self.data_store.get_tree_root(tree_id=tree_id)
-        # Wallet root hash must match to our data store root hash.
-        if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
-            self.log.info(
-                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
-                f"Wallet generation: {to_check[0].generation}"
-            )
-        else:
-            await self.data_store.set_validated_wallet_generation(tree_id, 0)
-            await self.data_store.rollback_to_generation(tree_id, 0)
-            raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
-        last_checked_hash = to_check[0].root
-        to_check.pop(0)
-        min_generation = (0 if old_root is None else old_root.generation) + 1
-        max_generation = root.generation
-
         # Light validation: check the new set of operations against the new set of wallet records.
         # If this matches, we know all data will match, as we've previously checked that data matches
         # for `min_generation` data store root and `wallet_current_generation` wallet record.
+        min_generation = (0 if old_root is None else old_root.generation) + 1
         try:
-            is_valid: bool = await self._validate_batch(
-                tree_id, to_check, last_checked_hash, min_generation, max_generation
-            )
+            is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation)
         except Exception as e:
             self.log.error(f"Error in validate batch for {tree_id}: {e}")
             is_valid = False
@@ -299,15 +293,8 @@ class DataLayer:
         if not is_valid:
             self.log.warning(f"Light validation failed for {tree_id}. Validating all history.")
             to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
-            # Already checked above.
-            self.log.info(
-                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
-                f"Wallet generation: {to_check[0].generation}"
-            )
-            last_checked_hash = to_check[0].root
-            to_check.pop(0)
             try:
-                is_valid = await self._validate_batch(tree_id, to_check, last_checked_hash, 0, max_generation)
+                is_valid = await self._validate_batch(tree_id, to_check, 0)
             except Exception as e:
                 self.log.error(f"Error in validate batch for {tree_id}: {e}")
                 is_valid = False
