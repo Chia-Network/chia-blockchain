@@ -178,7 +178,7 @@ class DataLayer:
         to_check: List[SingletonRecord],
         min_generation: int,
     ) -> bool:
-        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        root: Optional[Root] = await self.data_store.get_tree_root(tree_id=tree_id)
         if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
             self.log.info(
                 f"Validated chain hash {to_check[0].root} in downloaded datastore. "
@@ -197,7 +197,7 @@ class DataLayer:
                 self.log.info(f"Skipped checking {record.root}, as it matches the previously checked hash.")
                 continue
             # Pick the latest root in our data store with the desired hash, before our already validated data.
-            root: Optional[Root] = await self.data_store.get_last_tree_root_by_hash(
+            root = await self.data_store.get_last_tree_root_by_hash(
                 tree_id, None if record.root == self.none_bytes else record.root, max_generation
             )
             if root is None or root.generation < min_generation:
