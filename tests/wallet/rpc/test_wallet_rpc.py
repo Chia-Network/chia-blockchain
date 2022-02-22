@@ -23,7 +23,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -381,6 +381,17 @@ class TestWalletRpc:
             assert [b"SeMemo"] in memos.values()
             assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
             assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+
+            # Test get_transactions to address
+            ph_by_addr = await wallet.get_new_puzzlehash()
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "xch"))
+            await client.farm_block(encode_puzzle_hash(ph_by_addr, "xch"))
+            await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+            tx_for_address = await wallet_rpc_api.get_transactions(
+                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "xch")}
+            )
+            assert len(tx_for_address["transactions"]) == 1
+            assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
 
             ##############
             # CATS       #
