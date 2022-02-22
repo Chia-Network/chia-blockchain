@@ -284,7 +284,11 @@ class DataLayer:
         # Light validation: check the new set of operations against the new set of wallet records.
         # If this matches, we know all data will match, as we've previously checked that data matches
         # for `min_generation` data store root and `wallet_current_generation` wallet record.
-        is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation, max_generation)
+        try:
+            is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation, max_generation)
+        except Exception as e:
+            self.log.error(f"Error in validate batch for {tree_id}: {e}")
+            is_valid = False
 
         # If for some reason we have mismatched data using the light checks, recheck all history as a fallback.
         if not is_valid:
@@ -296,7 +300,11 @@ class DataLayer:
                 f"Wallet generation: {to_check[0].generation}"
             )
             to_check.pop(0)
-            is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
+            try:
+                is_valid = await self._validate_batch(tree_id, to_check, 0, max_generation)
+            except Exception as e:
+                self.log.error(f"Error in validate batch for {tree_id}: {e}")
+                is_valid = False
             if not is_valid:
                 await self.data_store.set_validated_wallet_generation(tree_id, 0)
                 await self.data_store.rollback_to_generation(tree_id, 0)
