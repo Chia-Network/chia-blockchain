@@ -271,7 +271,7 @@ class DataLayer:
         # Wallet root hash must match to our data store root hash.
         if to_check[0].root == (root.node_hash if root.node_hash is not None else none_bytes):
             self.log.info(
-                f"Validated chain hash {root.node_hash} in downloaded datastore. "
+                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
                 f"Wallet generation: {to_check[0].generation}"
             )
         else:
@@ -300,7 +300,7 @@ class DataLayer:
             to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
             # Already checked above.
             self.log.info(
-                f"Validated chain hash {root.node_hash} in downloaded datastore. "
+                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
                 f"Wallet generation: {to_check[0].generation}"
             )
             last_checked_hash = to_check[0].root
