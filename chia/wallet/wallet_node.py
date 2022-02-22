@@ -625,7 +625,7 @@ class WalletNode:
                     if valid:
                         self.log.info(
                             f"new coin state received ({inner_idx_start}-"
-                            f"{inner_idx_start + len(inner_states)}/ {len(items)})"
+                            f"{inner_idx_start + len(inner_states)}/ {len(items) + 1})"
                         )
                         assert self.new_state_lock is not None
                         async with self.new_state_lock:
@@ -807,6 +807,8 @@ class WalletNode:
                 # disconnected), we assume that the full node will continue to give us state updates, so we do
                 # not need to resync.
                 if peer.peer_node_id not in self.synced_peers:
+                    if new_peak.height - current_height > self.LONG_SYNC_THRESHOLD:
+                        self.wallet_state_manager.set_sync_mode(True)
                     await self.long_sync(new_peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
                     self.wallet_state_manager.set_sync_mode(False)
         else:
