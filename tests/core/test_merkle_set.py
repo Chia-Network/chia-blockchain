@@ -14,7 +14,7 @@ def event_loop():
 
 class TestMerkleSet:
     @pytest.mark.asyncio
-    async def test_basics(self):
+    async def test_basics(self, bt):
         num_blocks = 20
         blocks = bt.get_consecutive_blocks(num_blocks)
 

@@ -90,7 +90,7 @@ class TestPoolWalletRpc:
             yield _
 
     @pytest_asyncio.fixture(scope="function")
-    async def one_wallet_node_and_rpc(self, bt):
+    async def one_wallet_node_and_rpc(self, bt, self_hostname):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
             full_nodes, wallets = nodes
@@ -125,7 +125,7 @@ class TestPoolWalletRpc:
             await rpc_cleanup()
 
     @pytest_asyncio.fixture(scope="function")
-    async def setup(self, two_wallet_nodes, bt):
+    async def setup(self, two_wallet_nodes, bt, self_hostname):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -174,7 +174,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc, fee, trusted):
+    async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc, fee, trusted, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
@@ -250,7 +250,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_create_new_pool_wallet_farm_to_pool(self, one_wallet_node_and_rpc, fee, trusted):
+    async def test_create_new_pool_wallet_farm_to_pool(self, one_wallet_node_and_rpc, fee, trusted, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
@@ -329,7 +329,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc, fee, trusted):
+    async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc, fee, trusted, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -459,7 +459,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted, bt):
+    async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted, bt, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -575,7 +575,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, trusted, bt):
+    async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, trusted, bt, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -723,7 +723,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True])
     @pytest.mark.parametrize("fee", [0])
-    async def test_self_pooling_to_pooling(self, setup, fee, trusted):
+    async def test_self_pooling_to_pooling(self, setup, fee, trusted, self_hostname):
         """This tests self-pooling -> pooling"""
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
@@ -860,7 +860,7 @@ class TestPoolWalletRpc:
         "fee",
         [0, FEE_AMOUNT],
     )
-    async def test_leave_pool(self, setup, fee, trusted):
+    async def test_leave_pool(self, setup, fee, trusted, self_hostname):
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
         full_nodes, wallet_nodes, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]
@@ -982,7 +982,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_change_pools(self, setup, fee, trusted):
+    async def test_change_pools(self, setup, fee, trusted, self_hostname):
         """This tests Pool A -> escaping -> Pool B"""
         full_nodes, wallet_nodes, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]
@@ -1086,7 +1086,7 @@ class TestPoolWalletRpc:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.parametrize("fee", [0, FEE_AMOUNT])
-    async def test_change_pools_reorg(self, setup, fee, trusted, bt):
+    async def test_change_pools_reorg(self, setup, fee, trusted, bt, self_hostname):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         full_nodes, wallet_nodes, receive_address, client, rpc_cleanup = setup
         our_ph = receive_address[0]

@@ -447,7 +447,7 @@ async def test_keys_missing(test_environment: TestEnvironment) -> None:
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching(test_environment):
+async def test_plot_info_caching(test_environment, bt):
     env: TestEnvironment = test_environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))
