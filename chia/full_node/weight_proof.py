@@ -20,6 +20,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia.util.chunks import chunks
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -871,11 +872,6 @@ def handle_end_of_slot(
         None,
         None,
     )
-
-
-def chunks(some_list, chunk_size):
-    chunk_size = max(1, chunk_size)
-    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
 
 
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
