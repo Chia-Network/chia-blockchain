@@ -1,4 +1,3 @@
-# flake8: noqa: F811
 import asyncio
 import logging
 from dataclasses import dataclass

@@ -1,4 +1,3 @@
-# flake8: noqa: F811
 import unittest
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
