@@ -1344,14 +1344,15 @@ class WalletRpcApi:
                 )
 
         try:
-            dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
-                bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
-            )
+            async with self.service.wallet_state_manager.lock:
+                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                    bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
+                )
+                await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
+                await self.service.wallet_state_manager.add_pending_transaction(std_tx)
         except ValueError as e:
             log.error(f"Error while generating new reporter {e}")
             return {"success": False, "error": str(e)}
-        await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
-        await self.service.wallet_state_manager.add_pending_transaction(std_tx)
 
         return {
             "success": True,

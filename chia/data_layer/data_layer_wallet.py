@@ -166,6 +166,8 @@ class DataLayerWallet:
         height: Optional[uint32] = None,
         in_transaction: bool = False,
     ) -> None:
+        if await self.wallet_state_manager.dl_store.get_launcher(launcher_id) is not None:
+            return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
             await self.new_launcher_spend(spend, height, in_transaction)
         else:
@@ -209,6 +211,7 @@ class DataLayerWallet:
             CoinSpend(launcher_coin, response.puzzle, response.solution),
             height=response.height,
         )
+        await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def new_launcher_spend(
         self,
@@ -236,6 +239,7 @@ class DataLayerWallet:
                 await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
+                return None
         else:
             timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
