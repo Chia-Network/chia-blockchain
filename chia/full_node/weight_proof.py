@@ -601,7 +601,9 @@ class WeightProofHandler:
         log.info(f"validate weight proof peak height {peak_height}")
 
         # TODO: Consider if this can be spun off to a thread as an alternative to
-        #       sprinkling async sleeps around.
+        #       sprinkling async sleeps around.  Also see the corresponding comment
+        #       in the wallet code.
+        #       all instances tagged as: 098faior2ru08d08ufa
 
         # timing reference: start
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
