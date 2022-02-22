@@ -434,7 +434,7 @@ class Farmer:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
 
-                add_auth_key(self._root_path, pool_config, authentication_sk)
+                add_auth_key(self._root_path, pool_config, authentication_sk.get_g1())
 
                 if p2_singleton_puzzle_hash not in self.pool_state:
                     self.pool_state[p2_singleton_puzzle_hash] = {
