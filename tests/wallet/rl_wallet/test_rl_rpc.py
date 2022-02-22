@@ -60,7 +60,7 @@ class TestRLWallet:
 
     @pytest.mark.asyncio
     @pytest.mark.skip
-    async def test_create_rl_coin(self, three_wallet_nodes):
+    async def test_create_rl_coin(self, three_wallet_nodes, self_hostname):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
