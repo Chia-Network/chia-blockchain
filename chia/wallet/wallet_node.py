@@ -605,27 +605,34 @@ class WalletNode:
         target_concurrent_tasks: int = 20
         num_concurrent_tasks: int = 0
 
-        async def receive_and_validate(inner_state: CoinState, inner_idx: int):
+        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
                     assert self.wallet_state_manager is not None
                     if header_hash is not None:
                         assert height is not None
-                        self.add_state_to_race_cache(header_hash, height, inner_state)
-                        self.log.info(f"Added to race cache: {height}, {inner_state}")
+                        for inner_state in inner_states:
+                            self.add_state_to_race_cache(header_hash, height, inner_state)
+                            self.log.info(f"Added to race cache: {height}, {inner_state}")
                     if trusted:
                         valid = True
                     else:
-                        valid = await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
+                        for inner_state in inner_states:
+                            valid = await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
+                            if not valid:
+                                break
                     if valid:
-                        self.log.info(f"new coin state received ({inner_idx + 1} / {len(items)})")
+                        self.log.info(
+                            f"new coin state received ({inner_idx_start}-"
+                            f"{inner_idx_start + len(inner_states)}/ {len(items)})"
+                        )
                         assert self.new_state_lock is not None
                         async with self.new_state_lock:
-                            await self.wallet_state_manager.new_coin_state([inner_state], peer, fork_height)
+                            await self.wallet_state_manager.new_coin_state(inner_states, peer, fork_height)
                         if update_finished_height:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                                last_change_height_cs(inner_state)
+                                last_change_height_cs(inner_states[-1])
                             )
             except Exception as e:
                 tb = traceback.format_exc()
@@ -634,7 +641,10 @@ class WalletNode:
                 nonlocal num_concurrent_tasks
                 num_concurrent_tasks -= 1  # pylint: disable=E0602
 
-        for idx, potential_state in enumerate(items):
+        idx = 1
+        # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
+        chunk_size: int = 900 if trusted else 10
+        for states in chunks(items, chunk_size):
             if self.server is None:
                 self.log.error("No server")
                 return False
@@ -642,9 +652,10 @@ class WalletNode:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
             while num_concurrent_tasks >= target_concurrent_tasks:
-                await asyncio.sleep(1)
-            all_tasks.append(asyncio.create_task(receive_and_validate(potential_state, idx)))
+                await asyncio.sleep(0.1)
+            all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
             num_concurrent_tasks += 1
+            idx += len(states)
 
         await asyncio.gather(*all_tasks)
         await self.update_ui()
@@ -740,21 +751,19 @@ class WalletNode:
             return self.height_to_time[height]
 
         for cache in self.untrusted_caches.values():
-            block: Optional[HeaderBlock] = cache.get_block(height)
-            if block is not None:
-                if (
-                    block.foliage_transaction_block is not None
-                    and block.foliage_transaction_block.timestamp is not None
-                ):
-                    self.height_to_time[height] = block.foliage_transaction_block.timestamp
-                    return block.foliage_transaction_block.timestamp
+            cache_ts: Optional[uint64] = cache.get_height_timestamp(height)
+            if cache_ts is not None:
+                return cache_ts
+
         peer: Optional[WSChiaConnection] = self.get_full_node_peer()
         if peer is None:
             raise ValueError("Cannot fetch timestamp, no peers")
+        self.log.debug(f"Fetching block at height: {height}")
         last_tx_block: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
         if last_tx_block is None:
             raise ValueError(f"Error fetching blocks from peer {peer.get_peer_info()}")
         assert last_tx_block.foliage_transaction_block is not None
+        self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
         return last_tx_block.foliage_transaction_block.timestamp
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
