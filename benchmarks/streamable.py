@@ -201,6 +201,7 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
                 if mode == Mode.all or current_mode == mode:
                     ns_iteration_results: List[int]
                     all_results: List[List[int]] = results[current_data][current_mode]
+                    obj = parameter.object_creation_cb()
 
                     def print_results(print_run: int, final: bool) -> None:
                         total_iterations: int = sum(len(x) for x in all_results)
@@ -218,7 +219,7 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
                     current_run: int = 0
                     while current_run < runs:
                         current_run += 1
-                        obj = parameter.object_creation_cb()
+
                         if current_mode == Mode.creation:
                             cls = type(obj)
                             ns_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), milliseconds)
@@ -226,10 +227,10 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
                             assert current_mode_parameter is not None
                             conversion_cb = current_mode_parameter.conversion_cb
                             assert conversion_cb is not None
-                            obj = parameter.object_creation_cb()
+                            prepared_obj = parameter.object_creation_cb()
                             if current_mode_parameter.preparation_cb is not None:
-                                obj = current_mode_parameter.preparation_cb(obj)
-                            ns_iteration_results = run_for_ms(lambda: conversion_cb(obj), milliseconds)
+                                prepared_obj = current_mode_parameter.preparation_cb(obj)
+                            ns_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), milliseconds)
                         all_results.append(ns_iteration_results)
                         print_results(current_run, False)
                     assert current_run == runs
