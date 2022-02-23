@@ -167,6 +167,7 @@ class DataLayerWallet:
         in_transaction: bool = False,
     ) -> None:
         if await self.wallet_state_manager.dl_store.get_launcher(launcher_id) is not None:
+            self.log.info(f"Spend of launcher {launcher_id} has already been processed")
             return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
             await self.new_launcher_spend(spend, height, in_transaction)
@@ -672,6 +673,7 @@ class DataLayerWallet:
 
         matched, curried_args = match_dl_singleton(puzzle)
         if matched:
+            self.log.info(f"DL singleton removed: {parent_spend.coin}")
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
                 parent_name
             )
@@ -749,6 +751,7 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
+            await self.wallet_state_manager.add_interested_coin_id(new_singleton.name())
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
@@ -770,6 +773,7 @@ class DataLayerWallet:
             return
 
         # Now we have detected a fork so we should check whether the root changed at all
+        self.log.info("Attempting automatic rebase")
         parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(
             unconfirmed_singletons[0].lineage_proof.parent_name
         )
