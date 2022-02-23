@@ -519,8 +519,6 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
 async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
-    config = load_config(root_path, "config.yaml")
-    config["data_layer"]["database_path"] = "data_layer_test.sqlite"
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
