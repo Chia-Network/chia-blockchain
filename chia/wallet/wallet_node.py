@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import logging
 import random
@@ -95,9 +96,9 @@ class WalletNode:
     _process_new_subscriptions_task: Optional[asyncio.Task]
     _secondary_peer_sync_task: Optional[asyncio.Task]
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
-    validation_semaphore: Optional[asyncio.Semaphore]
+    validation_semaphore: asyncio.Semaphore
     local_node_synced: bool
-    new_state_lock: Optional[asyncio.Lock]
+    new_state_lock: asyncio.Lock
 
     def __init__(
         self,
@@ -120,7 +121,7 @@ class WalletNode:
         self.proof_hashes: List = []
         self.state_changed_callback = None
         self.wallet_state_manager = None
-        self.new_state_lock = None
+        self.new_state_lock = asyncio.Lock()
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
@@ -140,7 +141,7 @@ class WalletNode:
         self._process_new_subscriptions_task = None
         self._secondary_peer_sync_task = None
         self.node_peaks = {}
-        self.validation_semaphore = None
+        self.validation_semaphore = asyncio.Semaphore(6)
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
 
@@ -589,10 +590,6 @@ class WalletNode:
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
-        if self.validation_semaphore is None:
-            self.validation_semaphore = asyncio.Semaphore(6)
-        if self.new_state_lock is None:
-            self.new_state_lock = asyncio.Lock()
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
@@ -607,7 +604,6 @@ class WalletNode:
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
             try:
-                assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
                     assert self.wallet_state_manager is not None
                     if header_hash is not None:
@@ -628,13 +624,15 @@ class WalletNode:
                             f"new coin state received ({inner_idx_start}-"
                             f"{inner_idx_start + len(inner_states) - 1}/ {len(items) + 1})"
                         )
-                        assert self.new_state_lock is not None
                         async with self.new_state_lock:
                             await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
                         if update_finished_height:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(inner_states[-1])
                             )
+            except asyncio.CancelledError as e:
+                self.log.info(f"receive and validate task cancelled: {e}")
+                raise
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -655,11 +653,24 @@ class WalletNode:
                 return False
             while num_concurrent_tasks >= target_concurrent_tasks:
                 await asyncio.sleep(0.1)
+                if self._shut_down:
+                    break
             all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
             num_concurrent_tasks += 1
             idx += len(states)
 
-        await asyncio.gather(*all_tasks)
+        if not self._shut_down:
+            await asyncio.gather(*all_tasks)
+        else:
+            for task in all_tasks:
+                task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                # If the current task, not one from all_tasks, is cancelled then this
+                # inappropriately suppresses that.  We are already shutting down so
+                # hopefully this is less painful to deal with than the noise of the
+                # otherwise cancelled tests.
+                await asyncio.gather(*all_tasks)
+
         await self.update_ui()
         return True
 
