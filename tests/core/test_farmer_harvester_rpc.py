@@ -21,6 +21,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ async def environment(simulation):
     farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
     harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
 
-    rpc_port_farmer = uint16(21522)
-    rpc_port_harvester = uint16(21523)
+    rpc_port_farmer = uint16(find_available_listen_port("farmer rpc"))
+    rpc_port_harvester = uint16(find_available_listen_port("harvester rpc"))
 
     rpc_cleanup = await start_rpc_server(
         farmer_rpc_api,

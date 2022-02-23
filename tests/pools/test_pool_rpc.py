@@ -32,6 +32,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class TestPoolWalletRpc:
             config = bt.config
             hostname = config["self_hostname"]
             daemon_port = config["daemon_port"]
-            test_rpc_port = uint16(21529)
+            test_rpc_port = find_available_listen_port()
 
             rpc_cleanup = await start_rpc_server(
                 api_user,

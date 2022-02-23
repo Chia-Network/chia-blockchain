@@ -36,6 +36,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +53,9 @@ class TestWalletRpc:
     )
     @pytest.mark.asyncio
     async def test_wallet_rpc(self, two_wallet_nodes, trusted):
-        test_rpc_port = uint16(21529)
-        test_rpc_port_2 = uint16(21536)
-        test_rpc_port_node = uint16(21530)
+        test_rpc_port = find_available_listen_port()
+        test_rpc_port_2 = find_available_listen_port()
+        test_rpc_port_node = find_available_listen_port()
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
