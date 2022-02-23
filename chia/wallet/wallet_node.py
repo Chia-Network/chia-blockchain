@@ -616,20 +616,21 @@ class WalletNode:
                             self.add_state_to_race_cache(header_hash, height, inner_state)
                             self.log.info(f"Added to race cache: {height}, {inner_state}")
                     if trusted:
-                        valid = True
+                        valid_states = inner_states
                     else:
-                        for inner_state in inner_states:
-                            valid = await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
-                            if not valid:
-                                break
-                    if valid:
+                        valid_states = [
+                            inner_state
+                            for inner_state in inner_states
+                            if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
+                        ]
+                    if len(valid_states) > 0:
                         self.log.info(
                             f"new coin state received ({inner_idx_start}-"
-                            f"{inner_idx_start + len(inner_states)}/ {len(items) + 1})"
+                            f"{inner_idx_start + len(inner_states) - 1}/ {len(items) + 1})"
                         )
                         assert self.new_state_lock is not None
                         async with self.new_state_lock:
-                            await self.wallet_state_manager.new_coin_state(inner_states, peer, fork_height)
+                            await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
                         if update_finished_height:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(inner_states[-1])
@@ -643,6 +644,7 @@ class WalletNode:
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
+        # Untrusted has a smaller batch size since validation has to happen which takes a while
         chunk_size: int = 900 if trusted else 10
         for states in chunks(items, chunk_size):
             if self.server is None:
@@ -925,7 +927,7 @@ class WalletNode:
                     for potential_height in range(backtrack_fork_height + 1, new_peak.height + 1):
                         header_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(potential_height))
                         if header_hash in self.race_cache:
-                            self.log.debug(f"Receiving race state: {self.race_cache[header_hash]}")
+                            self.log.info(f"Receiving race state: {self.race_cache[header_hash]}")
                             await self.receive_state_from_peer(list(self.race_cache[header_hash]), peer)
 
                     self.wallet_state_manager.state_changed("new_block")
