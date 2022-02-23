@@ -164,7 +164,6 @@ class TestDLWallet:
 
         await dl_wallet_1.track_new_launcher_id(launcher_id)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
-        current_record = await dl_wallet_1.get_latest_singleton(launcher_id)
         await asyncio.sleep(0.5)
 
         for i in range(0, 5):
