@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from statistics import stdev
+from statistics import mean, stdev
 from time import monotonic
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
@@ -66,19 +66,22 @@ def get_random_benchmark_object() -> BenchmarkClass:
 
 
 def print_row(
+    *,
     runs: Union[str, int],
-    iterations: Union[str, int],
+    ms_per_run: Union[str, int],
+    ns_per_iteration: Union[str, int],
     mode: str,
-    duration: Union[str, int],
-    std_deviation: Union[str, float],
+    avg_iterations: Union[str, int],
+    stdev_iterations: Union[str, float],
     end: str = "\n",
 ) -> None:
     runs = "{0:<10}".format(f"{runs}")
-    iterations = "{0:<10}".format(f"{iterations}")
+    ms_per_run = "{0:<10}".format(f"{ms_per_run}")
+    ns_per_iteration = "{0:<12}".format(f"{ns_per_iteration}")
     mode = "{0:<10}".format(f"{mode}")
-    duration = "{0:>14}".format(f"{duration}")
-    std_deviation = "{0:>13}".format(f"{std_deviation}")
-    print(f"{runs} | {iterations} | {mode} | {duration} | {std_deviation}", end=end)
+    avg_iterations = "{0:>14}".format(f"{avg_iterations}")
+    stdev_iterations = "{0:>13}".format(f"{stdev_iterations}")
+    print(f"{runs} | {ms_per_run} | {ns_per_iteration} | {mode} | {avg_iterations} | {stdev_iterations}", end=end)
 
 
 def benchmark_object_creation(iterations: int, class_generator: Callable[[], Any]) -> float:
@@ -164,13 +167,15 @@ benchmark_parameter: Dict[Data, BenchmarkParameter] = {
 }
 
 
-def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> int:
-    iterations: int = 0
+def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
+    ns_iteration_results: List[int] = []
     start = monotonic()
     while int((monotonic() - start) * 1000) < ms_to_run:
+        start_iteration = monotonic()
         cb()
-        iterations += 1
-    return iterations
+        stop_iteration = monotonic()
+        ns_iteration_results.append(int((stop_iteration - start_iteration) * 1000 * 1000))
+    return ns_iteration_results
 
 
 def calc_stdev(iterations: List[int]) -> float:
@@ -178,33 +183,57 @@ def calc_stdev(iterations: List[int]) -> float:
 
 
 def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None:
-    results: Dict[Data, Dict[Mode, List[int]]] = {}
+    results: Dict[Data, Dict[Mode, List[List[int]]]] = {}
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
         if data == Data.all or current_data == data:
             print(f"\nRun {mode.name} benchmarks with the class: {parameter.data_class.__name__}")
-            print_row("runs", "ms/run", "mode", "avg iterations", "std deviation")
+            print_row(
+                runs="runs",
+                ms_per_run="ms/run",
+                ns_per_iteration="ns/iteration",
+                mode="mode",
+                avg_iterations="avg iterations",
+                stdev_iterations="stdev iterations",
+            )
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
                 if mode == Mode.all or current_mode == mode:
-                    iterations: int
-                    all_iterations: List[int] = results[current_data][current_mode]
-                    for _ in range(max(1, runs)):
+                    ns_iteration_results: List[int]
+                    all_results: List[List[int]] = results[current_data][current_mode]
+
+                    def print_results(print_run: int, final: bool) -> None:
+                        total_iterations: int = sum(len(x) for x in all_results)
+                        total_elapsed_ns: int = sum(sum(x) for x in all_results)
+                        print_row(
+                            runs=print_run if final else "current",
+                            ms_per_run=int(mean(sum(x) for x in all_results) / 1000),
+                            ns_per_iteration=int(total_elapsed_ns / total_iterations),
+                            mode=current_mode.name,
+                            avg_iterations=int(total_iterations / print_run),
+                            stdev_iterations=calc_stdev([len(x) for x in all_results]),
+                            end="\n" if final else "\r",
+                        )
+
+                    current_run: int = 0
+                    while current_run < runs:
+                        current_run += 1
                         obj = parameter.object_creation_cb()
                         if current_mode == Mode.creation:
                             cls = type(obj)
-                            iterations = run_for_ms(lambda: cls(**obj.__dict__), milliseconds)
+                            ns_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), milliseconds)
                         else:
                             assert current_mode_parameter is not None
                             conversion_cb = current_mode_parameter.conversion_cb
                             assert conversion_cb is not None
+                            obj = parameter.object_creation_cb()
                             if current_mode_parameter.preparation_cb is not None:
                                 obj = current_mode_parameter.preparation_cb(obj)
-                            iterations = run_for_ms(lambda: conversion_cb(obj), milliseconds)
-                        all_iterations.append(iterations)
-                        print_row("last", milliseconds, current_mode.name, iterations, calc_stdev(all_iterations), "\r")
-                    average_iterations: int = int(sum(all_iterations) / runs)
-                    print_row(runs, milliseconds, current_mode.name, average_iterations, calc_stdev(all_iterations))
+                            ns_iteration_results = run_for_ms(lambda: conversion_cb(obj), milliseconds)
+                        all_results.append(ns_iteration_results)
+                        print_results(current_run, False)
+                    assert current_run == runs
+                    print_results(runs, True)
 
 
 data_option_help: str = "|".join([d.name for d in Data])
@@ -214,7 +243,7 @@ mode_option_help: str = "|".join([m.name for m in Mode])
 @click.command()
 @click.option("-d", "--data", default=Data.all.name, help=data_option_help)
 @click.option("-m", "--mode", default=Mode.all.name, help=mode_option_help)
-@click.option("-r", "--runs", default=50, help="Number of benchmark runs to average results")
+@click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
 @click.option("-t", "--ms", default=50, help="Milliseconds per run")
 def run(data: str, mode: str, runs: int, ms: int) -> None:
     try:
@@ -225,7 +254,7 @@ def run(data: str, mode: str, runs: int, ms: int) -> None:
         Mode[mode]
     except Exception:
         raise click.BadOptionUsage("mode", f"{mode} is not a valid mode option. Select one from: " + mode_option_help)
-    run_benchmarks(Data[data], Mode[mode], runs, ms)
+    run_benchmarks(Data[data], Mode[mode], max(1, runs), ms)
 
 
 if __name__ == "__main__":
