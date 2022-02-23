@@ -68,10 +68,13 @@ class DataLayer:
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
-        self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
             await self.data_layer_server.start()
+        subscriptions = await self.get_subscriptions()
+        for subscription in subscriptions:
+            await self.wallet_rpc.dl_track_new(subscription.tree_id)
+        self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         return True
 
     def _close(self) -> None:
