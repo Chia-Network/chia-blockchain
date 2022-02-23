@@ -28,8 +28,9 @@ class WalletInterestedStore:
         )
 
         # Table for unknown CATs
+        fields = "asset_id text PRIMARY KEY, name text, first_seen_height integer, sender_puzzle_hash text"
         await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS unacknowledged_asset_tokens(asset_id text PRIMARY KEY, name text, first_seen_height integer, sender_puzzle_hash text)"
+            f"CREATE TABLE IF NOT EXISTS unacknowledged_asset_tokens({fields})"
         )
 
         await self.db_connection.commit()
@@ -78,7 +79,7 @@ class WalletInterestedStore:
         return row[0]
 
     async def add_interested_puzzle_hash(
-        self, puzzle_hash: bytes32, wallet_id: int, in_transaction: bool = False
+            self, puzzle_hash: bytes32, wallet_id: int, in_transaction: bool = False
     ) -> None:
 
         if not in_transaction:
@@ -125,7 +126,8 @@ class WalletInterestedStore:
             await self.db_wrapper.lock.acquire()
         try:
             cursor = await self.db_connection.execute(
-                "INSERT OR IGNORE INTO unacknowledged_asset_tokens VALUES (?, ?, ?, ?)", (asset_id.hex(), name, first_seen_height, sender_puzzle_hash.hex())
+                "INSERT OR IGNORE INTO unacknowledged_asset_tokens VALUES (?, ?, ?, ?)",
+                (asset_id.hex(), name, first_seen_height, sender_puzzle_hash.hex())
             )
             await cursor.close()
         finally:
@@ -138,7 +140,9 @@ class WalletInterestedStore:
         Get a list of all unacknowledged CATs
         :return: A json style list of unacknowledged CATs
         """
-        cursor = await self.db_connection.execute("SELECT asset_id, name, first_seen_height, sender_puzzle_hash FROM unacknowledged_asset_tokens")
+        cursor = await self.db_connection.execute(
+            "SELECT asset_id, name, first_seen_height, sender_puzzle_hash FROM unacknowledged_asset_tokens"
+        )
         cats = await cursor.fetchall()
         return [{"asset_id": cat[0],
                  "name": cat[1],
