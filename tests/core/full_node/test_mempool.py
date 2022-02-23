@@ -73,6 +73,9 @@ def generate_test_spend_bundle(
     return transaction
 
 
+# this is here to avoid this error:
+# ScopeMismatch: You tried to access the 'function' scoped fixture 'event_loop'
+#   with a 'module' scoped request object, involved factories
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
@@ -323,9 +326,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     # this test makes sure that one spend successfully asserts the announce from
     # another spend, even though the create announcement is duplicated 100 times
@@ -347,9 +350,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
@@ -375,8 +378,8 @@ class TestMempoolManager:
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         status, err = await respond_transaction(full_node_1, tx1, peer)
-        assert status == MempoolInclusionStatus.SUCCESS
         assert err is None
+        assert status == MempoolInclusionStatus.SUCCESS
 
         spend_bundle2 = generate_test_spend_bundle(
             list(blocks[-1].get_included_reward_coins())[0],
@@ -389,10 +392,10 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         sb2 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle2.name())
 
+        assert err == Err.MEMPOOL_CONFLICT
         assert sb1 == spend_bundle1
         assert sb2 is None
         assert status == MempoolInclusionStatus.PENDING
-        assert err == Err.MEMPOOL_CONFLICT
 
     async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
         tx = wallet_protocol.SendTransaction(sb)
@@ -602,8 +605,8 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         # the transaction may become valid later
-        assert status == MempoolInclusionStatus.PENDING
         assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
+        assert status == MempoolInclusionStatus.PENDING
 
     @pytest.mark.asyncio
     async def test_block_index_missing_arg(self, two_nodes):
@@ -616,8 +619,8 @@ class TestMempoolManager:
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         # the transaction may become valid later
-        assert status == MempoolInclusionStatus.FAILED
         assert err == Err.INVALID_CONDITION
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
@@ -627,9 +630,9 @@ class TestMempoolManager:
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_block_index_garbage(self, two_nodes):
@@ -640,9 +643,9 @@ class TestMempoolManager:
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_negative_block_index(self, two_nodes):
@@ -652,9 +655,9 @@ class TestMempoolManager:
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
@@ -664,10 +667,10 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
         assert sb1 is None
         # the transaction may become valid later
         assert status == MempoolInclusionStatus.PENDING
-        assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
 
     @pytest.mark.asyncio
     async def test_block_age_missing_arg(self, two_nodes):
@@ -677,10 +680,10 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         # the transaction may become valid later
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
@@ -691,9 +694,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_block_age_garbage(self, two_nodes):
@@ -705,9 +708,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_negative_block_age(self, two_nodes):
@@ -718,9 +721,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, num_blocks=4)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
@@ -733,9 +736,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_id_garbage(self, two_nodes):
@@ -749,9 +752,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, two_nodes):
@@ -765,9 +768,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, coin=coin)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.ASSERT_MY_COIN_ID_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_COIN_ID_FAILED
 
     @pytest.mark.asyncio
     async def test_my_id_missing_arg(self, two_nodes):
@@ -779,9 +782,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
@@ -794,9 +797,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_fail(self, two_nodes):
@@ -808,9 +811,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_height_pending(self, two_nodes):
@@ -823,9 +826,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.PENDING
-        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_time_negative(self, two_nodes):
@@ -837,9 +840,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_missing_arg(self, two_nodes):
@@ -850,9 +853,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_garbage(self, two_nodes):
@@ -865,9 +868,9 @@ class TestMempoolManager:
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_exceeds(self, two_nodes):
@@ -880,9 +883,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         for i in range(0, 4):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -892,9 +895,9 @@ class TestMempoolManager:
         status, err = await respond_transaction(full_node_1, tx2, peer)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_garbage(self, two_nodes):
@@ -908,9 +911,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_missing_arg(self, two_nodes):
@@ -922,9 +925,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_negative(self, two_nodes):
@@ -937,9 +940,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     # ensure one spend can assert a coin announcement from another spend
     @pytest.mark.asyncio
@@ -960,9 +963,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     # ensure one spend can assert a coin announcement from another spend, even
     # though the conditions have garbage (ignored) at the end
@@ -986,9 +989,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg(self, two_nodes):
@@ -1007,9 +1010,9 @@ class TestMempoolManager:
 
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
 
+        assert err == Err.INVALID_CONDITION
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg2(self, two_nodes):
@@ -1029,9 +1032,9 @@ class TestMempoolManager:
 
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
 
+        assert err == Err.INVALID_CONDITION
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_coin_announcement_too_big(self, two_nodes):
@@ -1053,9 +1056,9 @@ class TestMempoolManager:
 
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
 
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundle
@@ -1093,9 +1096,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_invalid_coin_announcement_rejected_two(self, two_nodes):
@@ -1119,9 +1122,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_puzzle_announcement(self, two_nodes):
@@ -1145,9 +1148,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_garbage(self, two_nodes):
@@ -1170,9 +1173,9 @@ class TestMempoolManager:
         blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err is None
         assert mempool_bundle is bundle
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg(self, two_nodes):
@@ -1196,9 +1199,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.INVALID_CONDITION
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg2(self, two_nodes):
@@ -1224,9 +1227,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.INVALID_CONDITION
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_puzzle_announcement_rejected(self, two_nodes):
@@ -1253,9 +1256,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_invalid_puzzle_announcement_rejected_two(self, two_nodes):
@@ -1282,9 +1285,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
+        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
@@ -1295,9 +1298,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert mempool_bundle is not None
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_garbage(self, two_nodes):
@@ -1309,9 +1312,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert mempool_bundle is not None
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_missing_arg(self, two_nodes):
@@ -1319,8 +1322,8 @@ class TestMempoolManager:
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
-        assert status == MempoolInclusionStatus.FAILED
         assert err == Err.INVALID_CONDITION
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_negative_fee(self, two_nodes):
@@ -1328,8 +1331,8 @@ class TestMempoolManager:
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
-        assert status == MempoolInclusionStatus.FAILED
         assert err == Err.RESERVE_FEE_CONDITION_FAILED
+        assert status == MempoolInclusionStatus.FAILED
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
@@ -1344,8 +1347,8 @@ class TestMempoolManager:
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=10)
-        assert status == MempoolInclusionStatus.FAILED
         assert err == Err.RESERVE_FEE_CONDITION_FAILED
+        assert status == MempoolInclusionStatus.FAILED
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
@@ -1364,9 +1367,9 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(two_nodes, dic, fee=9)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
     async def test_stealing_fee(self, two_nodes):
@@ -1421,9 +1424,9 @@ class TestMempoolManager:
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.RESERVE_FEE_CONDITION_FAILED
         assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.RESERVE_FEE_CONDITION_FAILED
 
     @pytest.mark.asyncio
     async def test_double_spend_same_bundle(self, two_nodes):
@@ -1463,9 +1466,9 @@ class TestMempoolManager:
         status, err = await respond_transaction(full_node_1, tx, peer)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle_combined.name())
+        assert err == Err.DOUBLE_SPEND
         assert sb is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.DOUBLE_SPEND
 
     @pytest.mark.asyncio
     async def test_agg_sig_condition(self, two_nodes):
@@ -1529,9 +1532,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_parent_garbage(self, two_nodes):
@@ -1546,9 +1549,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_parent_missing_arg(self, two_nodes):
@@ -1561,9 +1564,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_parent(self, two_nodes):
@@ -1578,9 +1581,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.ASSERT_MY_PARENT_ID_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_PARENT_ID_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_my_puzhash(self, two_nodes):
@@ -1594,9 +1597,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_puzhash_garbage(self, two_nodes):
@@ -1611,9 +1614,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_puzhash_missing_arg(self, two_nodes):
@@ -1626,9 +1629,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_puzhash(self, two_nodes):
@@ -1642,9 +1645,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.ASSERT_MY_PUZZLEHASH_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_PUZZLEHASH_FAILED
 
     @pytest.mark.asyncio
     async def test_correct_my_amount(self, two_nodes):
@@ -1658,9 +1661,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_amount_garbage(self, two_nodes):
@@ -1675,9 +1678,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
-        assert err is None
 
     @pytest.mark.asyncio
     async def test_my_amount_missing_arg(self, two_nodes):
@@ -1690,9 +1693,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.INVALID_CONDITION
 
     @pytest.mark.asyncio
     async def test_invalid_my_amount(self, two_nodes):
@@ -1705,9 +1708,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_AMOUNT_FAILED
 
     @pytest.mark.asyncio
     async def test_negative_my_amount(self, two_nodes):
@@ -1720,9 +1723,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_AMOUNT_FAILED
 
     @pytest.mark.asyncio
     async def test_my_amount_too_large(self, two_nodes):
@@ -1735,9 +1738,9 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
+        assert err == Err.ASSERT_MY_AMOUNT_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ASSERT_MY_AMOUNT_FAILED
 
 
 # the following tests generate generator programs and run them through get_name_puzzle_conditions()
