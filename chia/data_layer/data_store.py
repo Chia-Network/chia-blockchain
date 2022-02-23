@@ -1129,6 +1129,10 @@ class DataStore:
     async def rollback_to_generation(self, tree_id: bytes32, target_generation: int, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
+                "DELETE FROM ancestors WHERE tree_id == :tree_id AND generation > :target_generation",
+                {"tree_id": tree_id.hex(), "target_generation": target_generation},
+            )
+            await self.db.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
                 {"tree_id": tree_id.hex(), "target_generation": target_generation},
             )
