@@ -5,6 +5,13 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
+from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.full_block import FullBlock
+from chia.util.ints import uint128
 from chia.util.db_wrapper import DBWrapper
 from typing import Tuple
 from pathlib import Path
@@ -17,6 +24,9 @@ from blspy import G2Element, G1Element, AugSchemeMPL
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)
+
+with open(Path(os.path.realpath(__file__)).parent / "clvm_generator.bin", "rb") as f:
+    clvm_generator = f.read()
 
 
 def rewards(height: uint32) -> Tuple[Coin, Coin]:
@@ -64,6 +74,93 @@ def rand_vdf_proof() -> VDFProof:
         rand_hash(),  # witness
         bool(random.randint(0, 1)),  # normalized_to_identity
     )
+
+
+def rand_full_block() -> FullBlock:
+    proof_of_space = ProofOfSpace(
+        rand_hash(),
+        rand_g1(),
+        None,
+        rand_g1(),
+        uint8(0),
+        rand_bytes(8 * 32),
+    )
+
+    reward_chain_block = RewardChainBlock(
+        uint128(1),
+        uint32(2),
+        uint128(3),
+        uint8(4),
+        rand_hash(),
+        proof_of_space,
+        None,
+        rand_g2(),
+        rand_vdf(),
+        None,
+        rand_g2(),
+        rand_vdf(),
+        rand_vdf(),
+        True,
+    )
+
+    pool_target = PoolTarget(
+        rand_hash(),
+        uint32(0),
+    )
+
+    foliage_block_data = FoliageBlockData(
+        rand_hash(),
+        pool_target,
+        rand_g2(),
+        rand_hash(),
+        rand_hash(),
+    )
+
+    foliage = Foliage(
+        rand_hash(),
+        rand_hash(),
+        foliage_block_data,
+        rand_g2(),
+        rand_hash(),
+        rand_g2(),
+    )
+
+    foliage_transaction_block = FoliageTransactionBlock(
+        rand_hash(),
+        uint64(0),
+        rand_hash(),
+        rand_hash(),
+        rand_hash(),
+        rand_hash(),
+    )
+
+    farmer_coin, pool_coin = rewards(uint32(0))
+
+    transactions_info = TransactionsInfo(
+        rand_hash(),
+        rand_hash(),
+        rand_g2(),
+        uint64(0),
+        uint64(1),
+        [farmer_coin, pool_coin],
+    )
+
+    full_block = FullBlock(
+        [],
+        reward_chain_block,
+        rand_vdf_proof(),
+        rand_vdf_proof(),
+        rand_vdf_proof(),
+        rand_vdf_proof(),
+        rand_vdf_proof(),
+        foliage,
+        foliage_transaction_block,
+        transactions_info,
+        SerializedProgram.from_bytes(clvm_generator),
+        [],
+    )
+
+    return full_block
 
 
 async def setup_db(name: str, db_version: int) -> DBWrapper:
