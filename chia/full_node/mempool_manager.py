@@ -486,7 +486,7 @@ class MempoolManager:
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
-            if record.spent == 1:
+            if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
             if removal.name() in self.mempool.removals:
