@@ -68,7 +68,7 @@ def print_row(
     runs: Union[str, int], iterations: Union[str, int], mode: str, duration: Union[str, int], end: str = "\n"
 ) -> None:
     runs = "{0:<10}".format(f"{runs}")
-    iterations = "{0:<14}".format(f"{iterations}")
+    iterations = "{0:<10}".format(f"{iterations}")
     mode = "{0:<10}".format(f"{mode}")
     duration = "{0:>13}".format(f"{duration}")
     print(f"{runs} | {iterations} | {mode} | {duration}", end=end)
@@ -120,8 +120,7 @@ def to_bytes(obj: Any) -> bytes:
 
 @dataclass
 class ModeParameter:
-    iterations: int
-    conversion_cb: Optional[Callable[[Any], Any]] = None
+    conversion_cb: Callable[[Any], Any]
     preparation_cb: Optional[Callable[[Any], Any]] = None
 
 
@@ -129,7 +128,7 @@ class ModeParameter:
 class BenchmarkParameter:
     data_class: Type[Any]
     object_creation_cb: Callable[[], Any]
-    mode_parameter: Dict[Mode, ModeParameter]
+    mode_parameter: Dict[Mode, Optional[ModeParameter]]
 
 
 benchmark_parameter: Dict[Data, BenchmarkParameter] = {
@@ -137,55 +136,63 @@ benchmark_parameter: Dict[Data, BenchmarkParameter] = {
         BenchmarkClass,
         get_random_benchmark_object,
         {
-            Mode.creation: ModeParameter(58000),
-            Mode.to_bytes: ModeParameter(2200, to_bytes),
-            Mode.from_bytes: ModeParameter(3600, BenchmarkClass.from_bytes, to_bytes),
-            Mode.to_json: ModeParameter(1100, BenchmarkClass.to_json_dict),
-            Mode.from_json: ModeParameter(930, BenchmarkClass.from_json_dict, BenchmarkClass.to_json_dict),
+            Mode.creation: None,
+            Mode.to_bytes: ModeParameter(to_bytes),
+            Mode.from_bytes: ModeParameter(BenchmarkClass.from_bytes, to_bytes),
+            Mode.to_json: ModeParameter(BenchmarkClass.to_json_dict),
+            Mode.from_json: ModeParameter(BenchmarkClass.from_json_dict, BenchmarkClass.to_json_dict),
         },
     ),
     Data.full_block: BenchmarkParameter(
         FullBlock,
         rand_full_block,
         {
-            Mode.creation: ModeParameter(43000),
-            Mode.to_bytes: ModeParameter(9650, to_bytes),
-            Mode.from_bytes: ModeParameter(365, FullBlock.from_bytes, to_bytes),
-            Mode.to_json: ModeParameter(2400, FullBlock.to_json_dict),
-            Mode.from_json: ModeParameter(335, FullBlock.from_json_dict, FullBlock.to_json_dict),
+            Mode.creation: None,
+            Mode.to_bytes: ModeParameter(to_bytes),
+            Mode.from_bytes: ModeParameter(FullBlock.from_bytes, to_bytes),
+            Mode.to_json: ModeParameter(FullBlock.to_json_dict),
+            Mode.from_json: ModeParameter(FullBlock.from_json_dict, FullBlock.to_json_dict),
         },
     ),
 }
 
 
-def run_benchmarks(data: Data, mode: Mode, runs: int, multiplier: int) -> None:
+def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> int:
+    iterations: int = 0
+    start = monotonic()
+    while int((monotonic() - start) * 1000) < ms_to_run:
+        cb()
+        iterations += 1
+    return iterations
+
+
+def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None:
     results: Dict[Data, Dict[Mode, List[int]]] = {}
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
         if data == Data.all or current_data == data:
             print(f"\nRun {mode.name} benchmarks with the class: {parameter.data_class.__name__}")
-            print_row("runs", "iterations/run", "mode", "result [ms]")
-            for current_mode, mode_parameter in parameter.mode_parameter.items():
+            print_row("runs", "ms/run", "mode", "avg iterations")
+            for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
                 if mode == Mode.all or current_mode == mode:
-                    duration: float
-                    iterations: int = mode_parameter.iterations * multiplier
+                    iterations: int
                     for _ in range(max(1, runs)):
+                        obj = parameter.object_creation_cb()
                         if current_mode == Mode.creation:
-                            duration = benchmark_object_creation(iterations, parameter.object_creation_cb)
+                            cls = type(obj)
+                            iterations = run_for_ms(lambda: cls(**obj.__dict__), milliseconds)
                         else:
-                            assert mode_parameter.conversion_cb is not None
-                            duration = benchmark_conversion(
-                                iterations,
-                                parameter.object_creation_cb,
-                                mode_parameter.conversion_cb,
-                                mode_parameter.preparation_cb,
-                            )
-                        current_duration: int = int(duration * 1000)
-                        results[current_data][current_mode].append(current_duration)
-                        print_row("last", iterations, current_mode.name, current_duration, "\r")
-                    average_duration: int = int(sum(results[current_data][current_mode]) / runs)
-                    print_row(runs, iterations, current_mode.name, average_duration)
+                            assert current_mode_parameter is not None
+                            conversion_cb = current_mode_parameter.conversion_cb
+                            assert conversion_cb is not None
+                            if current_mode_parameter.preparation_cb is not None:
+                                obj = current_mode_parameter.preparation_cb(obj)
+                            iterations = run_for_ms(lambda: conversion_cb(obj), milliseconds)
+                        results[current_data][current_mode].append(iterations)
+                        print_row("last", milliseconds, current_mode.name, iterations, "\r")
+                    average_iterations: int = int(sum(results[current_data][current_mode]) / runs)
+                    print_row(runs, milliseconds, current_mode.name, average_iterations)
 
 
 data_option_help: str = "|".join([d.name for d in Data])
@@ -195,9 +202,9 @@ mode_option_help: str = "|".join([m.name for m in Mode])
 @click.command()
 @click.option("-d", "--data", default=Data.all.name, help=data_option_help)
 @click.option("-m", "--mode", default=Mode.all.name, help=mode_option_help)
-@click.option("-r", "--runs", default=5, help="Number of benchmark runs to average results")
-@click.option("-n", "--multiplier", default=1, help="Multiplier for iterations/run")
-def run(data: str, mode: str, runs: int, multiplier: int) -> None:
+@click.option("-r", "--runs", default=50, help="Number of benchmark runs to average results")
+@click.option("-t", "--ms", default=50, help="Milliseconds per run")
+def run(data: str, mode: str, runs: int, ms: int) -> None:
     try:
         Data[data]
     except Exception:
@@ -206,7 +213,7 @@ def run(data: str, mode: str, runs: int, multiplier: int) -> None:
         Mode[mode]
     except Exception:
         raise click.BadOptionUsage("mode", f"{mode} is not a valid mode option. Select one from: " + mode_option_help)
-    run_benchmarks(Data[data], Mode[mode], runs, multiplier)
+    run_benchmarks(Data[data], Mode[mode], runs, ms)
 
 
 if __name__ == "__main__":
