@@ -13,7 +13,7 @@ on:
 jobs:
   build:
     name: Windows Installer on Windows 10 and Python 3.9
-    runs-on: [windows-latest]
+    runs-on: [windows-2019]
     timeout-minutes: 40
 
     steps:

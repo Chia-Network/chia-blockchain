@@ -38,6 +38,11 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+    async def get_local_root(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_local_root", {"id": store_id.hex()})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
     async def get_roots(self, store_ids: List[bytes32]) -> Dict[str, Any]:
         response = await self.fetch("get_roots", {"ids": store_ids})
         # TODO: better hinting for .fetch() (probably a TypedDict)
@@ -48,5 +53,15 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("unsubscribe", {"id": store_id})
+        response = await self.fetch("unsubscribe", {"id": store_id.hex()})
+        return response  # type: ignore[no-any-return]
+
+    async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Dict[str, Any]:
+        response = await self.fetch(
+            "get_kv_diff", {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
+        )
+        return response  # type: ignore[no-any-return]
+
+    async def get_root_history(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_root_history", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]

@@ -1,6 +1,5 @@
 import dataclasses
-from typing import Any, Callable, Dict
-
+from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_types import Side, DownloadMode
@@ -59,11 +58,14 @@ class DataLayerRpcApi:
             "/get_keys_values": self.get_keys_values,
             "/get_ancestors": self.get_ancestors,
             "/get_root": self.get_root,
+            "/get_local_root": self.get_local_root,
             "/get_roots": self.get_roots,
             "/delete_key": self.delete_key,
             "/insert": self.insert,
             "/subscribe": self.subscribe,
             "/unsubscribe": self.unsubscribe,
+            "/get_kv_diff": self.get_kv_diff,
+            "/get_root_history": self.get_root_history,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -159,7 +161,18 @@ class DataLayerRpcApi:
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
-        res = await self.service.get_root(store_id)
+        rec = await self.service.get_root(store_id)
+        if rec is None:
+            raise Exception(f"Failed to get root for {store_id.hex()}")
+        return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
+
+    async def get_local_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """get hash of latest tree root saved in our local datastore"""
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        # todo input checks
+        if self.service is None:
+            raise Exception("Data layer not created")
+        res = await self.service.get_local_root(store_id)
         return {"hash": res}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -173,11 +186,12 @@ class DataLayerRpcApi:
         roots = []
         for id in store_ids:
             id_bytes = bytes32.from_hexstr(id)
-            res = await self.service.get_root(store_id=id_bytes)
-            roots.append({"id": id_bytes, "hash": res})
+            rec = await self.service.get_root(id_bytes)
+            if rec is not None:
+                roots.append({"id": id_bytes, "hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_hashes": roots}
 
-    async def subscribe(self, request: Dict[str, Any]) -> bool:
+    async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         subscribe to singleton
         """
@@ -196,10 +210,11 @@ class DataLayerRpcApi:
             mode = DownloadMode(req_mode)
         if self.service is None:
             raise Exception("Data layer not created")
-        await self.service.subscribe(store_id=store_id, mode=mode, ip=ip, port=port)
-        return True
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        await self.service.subscribe(store_id=store_id_bytes, mode=mode, ip=ip, port=port)
+        return {}
 
-    async def unsubscribe(self, request: Dict[str, Any]) -> bool:
+    async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         unsubscribe from singleton
         """
@@ -208,5 +223,38 @@ class DataLayerRpcApi:
             raise Exception("missing store id in request")
         if self.service is None:
             raise Exception("Data layer not created")
-        await self.service.unsubscribe(store_id)
-        return True
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        await self.service.unsubscribe(store_id_bytes)
+        return {}
+
+    async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        get history of state hashes for a store
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        records = await self.service.get_root_history(id_bytes)
+        res: List[Dict[str, Any]] = []
+        for rec in records:
+            res.insert(0, {"root_hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
+        return {"root_history": res}
+
+    async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        get kv diff between two root hashes
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        hash_1 = request["hash_1"]
+        hash_1_bytes = bytes32.from_hexstr(hash_1)
+        hash_2 = request["hash_2"]
+        hash_2_bytes = bytes32.from_hexstr(hash_2)
+        records = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
+        res: List[Dict[str, Any]] = []
+        for rec in records:
+            res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
+        return {"diff": res}

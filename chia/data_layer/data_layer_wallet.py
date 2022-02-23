@@ -2,6 +2,7 @@ import logging
 import json
 import time
 import dataclasses
+from operator import attrgetter
 from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
 
 from blspy import G2Element
@@ -48,6 +49,7 @@ class SingletonRecord(Streamable):
     confirmed_at_height: uint32
     lineage_proof: LineageProof
     generation: uint32
+    timestamp: uint64
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -164,6 +166,8 @@ class DataLayerWallet:
         height: Optional[uint32] = None,
         in_transaction: bool = False,
     ) -> None:
+        if await self.wallet_state_manager.dl_store.get_launcher(launcher_id) is not None:
+            return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
             await self.new_launcher_spend(spend, height, in_transaction)
         else:
@@ -207,6 +211,7 @@ class DataLayerWallet:
             CoinSpend(launcher_coin, response.puzzle, response.solution),
             height=response.height,
         )
+        await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def new_launcher_spend(
         self,
@@ -218,7 +223,6 @@ class DataLayerWallet:
         if height is None:
             height = (await self.get_launcher_coin_state(launcher_id)).spent_height
             assert height is not None
-
         full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
             launcher_spend.solution.to_program()
         )
@@ -231,10 +235,13 @@ class DataLayerWallet:
             if (  # This is an unconfirmed singleton that we know about
                 singleton_record.coin_id == new_singleton.name() and not singleton_record.confirmed
             ):
-                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height)
+                timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
+                await self.wallet_state_manager.dl_store.set_confirmed(singleton_record.coin_id, height, timestamp)
             else:
                 self.log.info(f"Spend of launcher {launcher_id} has already been processed")
+                return None
         else:
+            timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -243,6 +250,7 @@ class DataLayerWallet:
                     inner_puzzle_hash=inner_puzhash,
                     confirmed=True,
                     confirmed_at_height=height,
+                    timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
                         create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
@@ -388,6 +396,7 @@ class DataLayerWallet:
             inner_puzzle_hash=inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             lineage_proof=LineageProof(
                 launcher_coin.name(),
                 create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
@@ -486,7 +495,7 @@ class DataLayerWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=next_inner_puzzle.get_tree_hash(),
             amount=uint64(singleton_record.lineage_proof.amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=spend_bundle,
@@ -518,6 +527,7 @@ class DataLayerWallet:
             inner_puzzle_hash=next_inner_puzzle.get_tree_hash(),
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
                 next_inner_puzzle.get_tree_hash(),
@@ -603,6 +613,7 @@ class DataLayerWallet:
             root=singleton_record.root,
             confirmed=False,
             confirmed_at_height=uint32(0),
+            timestamp=uint64(0),
             inner_puzzle_hash=singleton_record.inner_puzzle_hash,
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
@@ -708,6 +719,7 @@ class DataLayerWallet:
                 return
 
             new_singleton = Coin(parent_name, full_puzzle_hash, amount)
+            timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -716,6 +728,7 @@ class DataLayerWallet:
                     inner_puzzle_hash=inner_puzzle_hash,
                     confirmed=True,
                     confirmed_at_height=height,
+                    timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
                         create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(),
@@ -736,6 +749,79 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
+            await self.potentially_handle_resubmit(singleton_record.launcher_id)
+
+    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
+        """
+        This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
+        been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
+        singletons on to the new latest singleton.  If there is a fork and the root changed, we assume that everything
+        has failed and delete any pending state.
+        """
+        unconfirmed_singletons = await self.wallet_state_manager.dl_store.get_unconfirmed_singletons(launcher_id)
+        if len(unconfirmed_singletons) == 0:
+            return
+        unconfirmed_singletons = sorted(unconfirmed_singletons, key=attrgetter("generation"))
+        full_branch: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
+            launcher_id,
+            min_generation=unconfirmed_singletons[0].generation,
+        )
+        if len(unconfirmed_singletons) == len(full_branch) and set(unconfirmed_singletons) == set(full_branch):
+            return
+
+        # Now we have detected a fork so we should check whether the root changed at all
+        parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(
+            unconfirmed_singletons[0].lineage_proof.parent_name
+        )
+        if parent_singleton is None or any(parent_singleton.root != s.root for s in full_branch if s.confirmed):
+            root_changed: bool = True
+        else:
+            root_changed = False
+
+        # Regardless of whether the root changed or not, our old state is bad so let's eliminate it
+        # First let's find all of our txs matching our unconfirmed singletons
+        unconfirmed_ids: Set[bytes32] = {s.lineage_proof.parent_name for s in unconfirmed_singletons}
+        relevant_dl_txs: List[TransactionRecord] = []
+        for id in unconfirmed_ids:
+            tx = await self.wallet_state_manager.tx_store.get_transaction_record(id)
+            if tx is not None:
+                relevant_dl_txs.append(tx)
+        # Let's check our standard wallet for fee transactions related to these dl txs
+        all_spends: List[SpendBundle] = [tx.spend_bundle for tx in relevant_dl_txs if tx.spend_bundle is not None]
+        all_removal_ids: Set[bytes32] = {removal.name() for sb in all_spends for removal in sb.removals()}
+        unconfirmed_std_txs: List[
+            TransactionRecord
+        ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.standard_wallet.id())
+        relevant_std_txs: List[TransactionRecord] = [
+            tx for tx in unconfirmed_std_txs if any(c.name() in all_removal_ids for c in tx.removals)
+        ]
+        # Delete all of the relevant transactions
+        for tx in [*relevant_dl_txs, *relevant_std_txs]:
+            await self.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
+        # Delete all of the unconfirmed singleton records
+        for singleton in unconfirmed_singletons:
+            await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
+
+        if not root_changed:
+            # The root never changed so let's attempt a rebase
+            try:
+                all_txs: List[TransactionRecord] = []
+                for singleton in unconfirmed_singletons:
+                    for tx in relevant_dl_txs:
+                        if any(c.name() == singleton.coin_id for c in tx.additions):
+                            if tx.spend_bundle is not None:
+                                fee = uint64(tx.spend_bundle.fees())
+                            else:
+                                fee = uint64(0)
+
+                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
+                for tx in all_txs:
+                    await self.wallet_state_manager.add_pending_transaction(tx)
+            except Exception as e:
+                self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
+                # Something went wrong so let's delete anything pending that was created
+                for singleton in unconfirmed_singletons:
+                    await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
 
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
@@ -766,9 +852,11 @@ class DataLayerWallet:
     # UTILITY #
     ###########
 
-    async def get_latest_singleton(self, launcher_id: bytes32) -> Optional[SingletonRecord]:
+    async def get_latest_singleton(
+        self, launcher_id: bytes32, only_confirmed: bool = False
+    ) -> Optional[SingletonRecord]:
         singleton: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_latest_singleton(
-            launcher_id
+            launcher_id, only_confirmed
         )
         return singleton
 

@@ -3,6 +3,7 @@ requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=4.1.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+fallback_version = "unknown-no-.git-directory"
 local_scheme = "no-local-version"
 
 [tool.black]
