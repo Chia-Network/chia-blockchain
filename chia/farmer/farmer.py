@@ -347,7 +347,7 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
-
+        self.log.debug(f"POST /farmer request {post_farmer_request}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -387,7 +387,7 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
         put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
-
+        self.log.debug(f"PUT /farmer request {put_farmer_request}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
