@@ -10,16 +10,16 @@
     (defun extract_trade_price_list (BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id)
       (if trade_price_list
         (c
-          (if (r trade_price_list)
-              (list ASSERT_PUZZLE_ANNOUNCEMENT (r (f trade_price_list)) my_id)
+          (if (r (f trade_price_list))
+              (list ASSERT_PUZZLE_ANNOUNCEMENT (r (f trade_price_list)) my_id (f (divmod (* (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE) HUNDRED)))
               (list CREATE_COIN BACKPAYMENT_ADDRESS (f (divmod (* (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE) HUNDRED)))
           )
           (extract_trade_price_list BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE (r trade_price_list))
         )
-        ()
+        (list)
       )
     )
 
     ; the compiler optimises out the below (r c URI (...)) I'm leaving it in to illustrate that URI should be curried in
-    (r (c URI (extract_trade_price_list BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id))))
+    (r (c URI (extract_trade_price_list BACKPAYMENT_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id)))
 )
