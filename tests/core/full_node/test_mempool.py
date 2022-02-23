@@ -80,11 +80,8 @@ def event_loop():
 
 
 # TODO: this fixture should really be at function scope, to make all tests
-# independent. Right now, TestMempool::test_basic_mempool initializes these
-# nodes, and the remaining tests just build on top of them. This means
-# test_basic_mempool must alwasy be run in order to have most of the other tests
-# pass.
-# The reason for this is that our simulators can't be destroyed correctly, which
+# independent.
+# The reason it isn't is that our simulators can't be destroyed correctly, which
 # means you can't instantiate more than one per process, so this is a hack until
 # that is fixed. For now, our tests are not independent
 @pytest_asyncio.fixture(scope="module")
