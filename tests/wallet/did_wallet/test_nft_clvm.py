@@ -77,11 +77,11 @@ def test_transfer_no_backpayments():
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     ann = bytes(bytes(trade_price) + did_two)
     announcement_one = Announcement(did_one_coin.name(), ann)
-    announcement_two = Announcement(did_two_coin.name(), ann)
+    # announcement_two = Announcement(did_two_coin.name(), ann)
     assert res.rest().first().first().as_int() == 61
-    assert res.rest().first().rest().first().as_atom() == announcement_two.name()
-    assert res.rest().rest().first().first().as_int() == 61
-    assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
+    assert res.rest().first().rest().first().as_atom() == announcement_one.name()
+    # assert res.rest().rest().first().first().as_int() == 61
+    # assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
 
 
 def test_transfer_with_backpayments():
@@ -122,7 +122,7 @@ def test_transfer_with_backpayments():
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
     nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20, "http://chia.net"])
-    trade_price = 20
+    trade_price = [[20]]
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
@@ -145,7 +145,7 @@ def test_transfer_with_backpayments():
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
 
-    ann = bytes(bytes(Program.to(trade_price).as_atom()) + did_two)
+    ann = bytes(bytes(Program.to(trade_price).get_tree_hash()) + did_two)
     announcement_one = Announcement(did_one_coin.name(), ann)
     announcement_two = Announcement(did_two_coin.name(), ann)
     assert res.rest().first().first().as_int() == 61
