@@ -985,8 +985,29 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
             root_start = await data_store.get_tree_root(tree_id)
 
     root_end = await data_store.get_tree_root(tree_id)
+    assert root_start.node_hash is not None
+    assert root_end.node_hash is not None
     diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
     assert diffs == expected_diff
+
+
+@pytest.mark.asyncio
+async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
+    node_hash = await data_store.insert(
+        key=b"000",
+        value=b"000",
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+    )
+    empty_hash = bytes32([0] * 32)
+    invalid_hash = bytes32([0] * 31 + [1])
+    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, node_hash)
+    assert diff_1 == set([DiffData(OperationType.INSERT, b"000", b"000")])
+    diff_2 = await data_store.get_kv_diff(tree_id, node_hash, empty_hash)
+    assert diff_2 == set([DiffData(OperationType.DELETE, b"000", b"000")])
+    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, node_hash)
+    assert diff_3 == set()
 
 
 @pytest.mark.asyncio
