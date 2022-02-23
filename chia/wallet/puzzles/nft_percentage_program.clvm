@@ -1,3 +1,0 @@
-(mod (DIVISOR trade_price extra_solution)
-  (f (divmod trade_price DIVISOR))
-)

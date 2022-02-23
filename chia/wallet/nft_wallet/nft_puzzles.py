@@ -11,7 +11,6 @@ NFT_MOD = load_clvm("nft_innerpuz.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
-NFT_PERCENTAGE_MOD = load_clvm("nft_percentage_program.clvm")
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
 
