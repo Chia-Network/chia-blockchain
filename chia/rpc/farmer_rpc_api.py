@@ -11,7 +11,7 @@ class FarmerRpcApi:
         self.service = farmer
         self.service_name = "chia_farmer"
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
             "/get_signage_point": self.get_signage_point,
             "/get_signage_points": self.get_signage_points,
