@@ -11,14 +11,14 @@
 ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
   (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include curry-and-treehash.clinc)  ; also imports the constant ONE == 1
   (include singleton_truths.clib)
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
       (if (l TREE)
           (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)
+          (sha256 ONE TREE)
       )
   )
 
@@ -48,7 +48,7 @@
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a singleton
-  (defun create_my_ID (SINGLETON_STRUCT full_puzzle_hash parent_parent parent_inner_puzzle_hash parent_amount my_amount)
+  (defun-inline create_my_ID (SINGLETON_STRUCT full_puzzle_hash parent_parent parent_inner_puzzle_hash parent_amount my_amount)
     (sha256 (sha256 parent_parent (calculate_full_puzzle_hash SINGLETON_STRUCT parent_inner_puzzle_hash) parent_amount)
             full_puzzle_hash
             my_amount)
@@ -80,7 +80,7 @@
   ;; Returns a (bool . bool)
   (defun odd_cons_m113 (output_amount)
     (c
-      (= (logand output_amount 1) 1) ;; is it odd?
+      (= (logand output_amount ONE) ONE) ;; is it odd?
       (= output_amount -113) ;; is it the escape value?
     )
   )
@@ -124,17 +124,16 @@
   ; this final stager asserts our ID
   ; it also runs the innerpuz with the innersolution with the "truths" added
   ; it then passes that output conditions from the innerpuz to the morph conditions function
-  (defun stager_three (SINGLETON_STRUCT lineage_proof my_id full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
+  (defun-inline stager_three (SINGLETON_STRUCT my_id INNER_PUZZLE inner_solution)
     (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE inner_solution) 0))
   )
 
   ; this checks whether we are an eve spend or not and calculates our full coin ID appropriately and passes it on to the final stager
   ; if we are the eve spend it also adds the additional checks that our parent's puzzle is the standard launcher format and that out parent ID is the same as our singleton ID
 
-  (defun stager_two (SINGLETON_STRUCT lineage_proof full_puzhash innerpuzhash my_amount INNER_PUZZLE inner_solution)
+  (defun-inline stager_two (SINGLETON_STRUCT lineage_proof full_puzhash my_amount INNER_PUZZLE inner_solution)
     (stager_three
       SINGLETON_STRUCT
-      lineage_proof
       (if (is_not_eve_proof lineage_proof)
           (create_my_ID
             SINGLETON_STRUCT
@@ -152,17 +151,14 @@
               (x)
           )
       )
-      full_puzhash
-      innerpuzhash
-      my_amount
       INNER_PUZZLE
       inner_solution
     )
   )
 
   ; this calculates our current full puzzle hash and passes it to stager two
-  (defun stager_one (SINGLETON_STRUCT lineage_proof my_innerpuzhash my_amount INNER_PUZZLE inner_solution)
-    (stager_two SINGLETON_STRUCT lineage_proof (calculate_full_puzzle_hash SINGLETON_STRUCT my_innerpuzhash) my_innerpuzhash my_amount INNER_PUZZLE inner_solution)
+  (defun-inline stager_one (SINGLETON_STRUCT lineage_proof my_innerpuzhash my_amount INNER_PUZZLE inner_solution)
+    (stager_two SINGLETON_STRUCT lineage_proof (calculate_full_puzzle_hash SINGLETON_STRUCT my_innerpuzhash) my_amount INNER_PUZZLE inner_solution)
   )
 
 
@@ -170,7 +166,7 @@
 
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
-  (if (logand my_amount 1)
+  (if (logand my_amount ONE)
     (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
     (x)
   )

@@ -444,16 +444,17 @@ class DataStore:
         return roots
 
     async def get_last_tree_root_by_hash(
-        self, tree_id: bytes32, hash: bytes32, max_generation: Optional[int] = None, *, lock: bool = True
+        self, tree_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None, *, lock: bool = True
     ) -> Optional[Root]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
+            node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 f"{max_generation_str}"
-                "AND node_hash == :node_hash "
+                f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": tree_id.hex(), "node_hash": hash.hex()},
+                {"tree_id": tree_id.hex(), "node_hash": None if hash is None else hash.hex()},
             )
             row = await cursor.fetchone()
 
@@ -1100,6 +1101,20 @@ class DataStore:
                 },
             )
 
+    async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                """
+                UPDATE subscriptions SET ip = :ip, port = :port, mode = :mode WHERE tree_id == :tree_id
+                """,
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                    "mode": subscription.mode.value,
+                    "ip": subscription.ip,
+                    "port": subscription.port,
+                },
+            )
+
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
@@ -1109,6 +1124,13 @@ class DataStore:
             await self.db.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id",
                 {"tree_id": tree_id.hex()},
+            )
+
+    async def rollback_to_generation(self, tree_id: bytes32, target_generation: int, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
+                {"tree_id": tree_id.hex(), "target_generation": target_generation},
             )
 
     async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
@@ -1151,14 +1173,18 @@ class DataStore:
     async def get_kv_diff(
         self,
         tree_id: bytes32,
-        hash_1: Optional[bytes32],
-        hash_2: Optional[bytes32],
+        hash_1: bytes32,
+        hash_2: bytes32,
         *,
         lock: bool = True,
     ) -> Set[DiffData]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            old_pairs = set() if hash_1 is None else set(await self.get_keys_values(tree_id, hash_1, lock=False))
-            new_pairs = set() if hash_2 is None else set(await self.get_keys_values(tree_id, hash_2, lock=False))
+            old_pairs = set(await self.get_keys_values(tree_id, hash_1, lock=False))
+            new_pairs = set(await self.get_keys_values(tree_id, hash_2, lock=False))
+            if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
+                return set()
+            if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
+                return set()
             insertions = set(
                 DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
                 for node in new_pairs

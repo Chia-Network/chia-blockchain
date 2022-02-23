@@ -23,6 +23,7 @@ from chia.data_layer.data_layer_types import (
     DeletionData,
     OperationType,
     DiffData,
+    DownloadMode,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -30,7 +31,8 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-
+from chia.data_layer.data_layer_types import Subscription
+from chia.util.ints import uint16
 from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
@@ -1111,5 +1113,57 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
             root_start = await data_store.get_tree_root(tree_id)
 
     root_end = await data_store.get_tree_root(tree_id)
+    assert root_start.node_hash is not None
+    assert root_end.node_hash is not None
     diffs = await data_store.get_kv_diff(tree_id, root_start.node_hash, root_end.node_hash)
     assert diffs == expected_diff
+
+
+@pytest.mark.asyncio
+async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
+    node_hash = await data_store.insert(
+        key=b"000",
+        value=b"000",
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+    )
+    empty_hash = bytes32([0] * 32)
+    invalid_hash = bytes32([0] * 31 + [1])
+    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, node_hash)
+    assert diff_1 == set([DiffData(OperationType.INSERT, b"000", b"000")])
+    diff_2 = await data_store.get_kv_diff(tree_id, node_hash, empty_hash)
+    assert diff_2 == set([DiffData(OperationType.DELETE, b"000", b"000")])
+    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, node_hash)
+    assert diff_3 == set()
+
+
+@pytest.mark.asyncio
+async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store, tree_id)
+    expected_hashes = []
+    roots = await data_store.get_roots_between(tree_id, 1, 5)
+    for generation, root in enumerate(roots):
+        expected_hashes.append((generation + 1, root.node_hash))
+    for generation, expected_hash in reversed(expected_hashes):
+        await data_store.rollback_to_generation(tree_id, generation)
+        root = await data_store.get_tree_root(tree_id)
+        assert root.node_hash == expected_hash
+
+
+@pytest.mark.asyncio
+async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) -> None:
+    await data_store.subscribe(Subscription(tree_id, DownloadMode.HISTORY, "127.0.0.1", uint16(8000)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "127.0.0.1", uint16(8000))
+    ]
+    await data_store.update_existing_subscription(Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8000)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8000))
+    ]
+    await data_store.update_existing_subscription(Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8001)))
+    assert await data_store.get_subscriptions() == [
+        Subscription(tree_id, DownloadMode.HISTORY, "0.0.0.0", uint16(8001))
+    ]
+    await data_store.unsubscribe(tree_id)
+    assert await data_store.get_subscriptions() == []
