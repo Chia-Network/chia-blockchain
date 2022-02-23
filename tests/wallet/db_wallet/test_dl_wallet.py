@@ -167,21 +167,23 @@ class TestDLWallet:
         current_record = await dl_wallet_1.get_latest_singleton(launcher_id)
         await asyncio.sleep(0.5)
 
-        new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
-        txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root)
+        for i in range(0, 5):
+            new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
+            txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root)
 
-        for tx in txs:
-            await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-        await full_node_api.process_transaction_records(records=txs)
+            for tx in txs:
+                await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+            await full_node_api.process_transaction_records(records=txs)
 
-        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
-        await asyncio.sleep(0.5)
+            await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
+            await asyncio.sleep(0.5)
 
-        async def is_tip_updated() -> bool:
-            latest_singleton = await dl_wallet_1.get_latest_singleton(launcher_id)
-            return latest_singleton != current_record
+        async def do_tips_match() -> bool:
+            latest_singleton_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
+            latest_singleton_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
+            return latest_singleton_0 == latest_singleton_1
 
-        await time_out_assert(15, is_tip_updated, True)
+        await time_out_assert(15, do_tips_match, True)
 
         await dl_wallet_1.stop_tracking_singleton(launcher_id)
         assert await dl_wallet_1.get_latest_singleton(launcher_id) is None

@@ -679,7 +679,7 @@ class WalletStateManager:
                 if potential_dl is not None:
                     if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
                         wallet_id = potential_dl.id()
-                        wallet_type = potential_dl.type()
+                        wallet_type = WalletType(potential_dl.type())
 
             if wallet_id is None or wallet_type is None:
                 self.log.info(f"No wallet for coin state: {coin_state}")
