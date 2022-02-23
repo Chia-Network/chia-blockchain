@@ -585,7 +585,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
 
         root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         expected_res_hash = root_1["root_hashes"][0]["hash"]
-        assert expected_res_hash != None
+        assert expected_res_hash != bytes32([0] * 32)
 
         changelist = [{"action": "delete", "key": key_2.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
@@ -607,7 +607,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
 
         root_2 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         hash_2 = root_2["root_hashes"][0]["hash"]
-        assert hash_2 == None
+        assert hash_2 == bytes32([0] * 32)
 
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         changelist.append({"action": "insert", "key": key_2.hex(), "value": value_2.hex()})
