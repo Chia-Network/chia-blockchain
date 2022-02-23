@@ -17,6 +17,7 @@ from typing import Tuple
 from pathlib import Path
 from datetime import datetime
 import aiosqlite
+import click
 import os
 import sys
 import random
@@ -27,6 +28,17 @@ ph = bytes32(b"a" * 32)
 
 with open(Path(os.path.realpath(__file__)).parent / "clvm_generator.bin", "rb") as f:
     clvm_generator = f.read()
+
+
+# Workaround to allow `Enum` with click.Choice: https://github.com/pallets/click/issues/605#issuecomment-901099036
+class EnumType(click.Choice):
+    def __init__(self, enum, case_sensitive=False):
+        self.__enum = enum
+        super().__init__(choices=[item.value for item in enum], case_sensitive=case_sensitive)
+
+    def convert(self, value, param, ctx):
+        converted_str = super().convert(value, param, ctx)
+        return self.__enum(converted_str)
 
 
 def rewards(height: uint32) -> Tuple[Coin, Coin]:

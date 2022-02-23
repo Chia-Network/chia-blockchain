@@ -5,7 +5,7 @@ from time import monotonic
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import click
-from utils import rand_bytes, rand_full_block, rand_hash
+from utils import EnumType, rand_bytes, rand_full_block, rand_hash
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -109,19 +109,21 @@ def benchmark_conversion(
     return monotonic() - start
 
 
-class Data(Enum):
-    all = 0
-    benchmark = 1
-    full_block = 2
+# The strings in this Enum are by purpose. See benchmark.utils.EnumType.
+class Data(str, Enum):
+    all = "all"
+    benchmark = "benchmark"
+    full_block = "full_block"
 
 
-class Mode(Enum):
-    all = 0
-    creation = 1
-    to_bytes = 2
-    from_bytes = 3
-    to_json = 4
-    from_json = 5
+# The strings in this Enum are by purpose. See benchmark.utils.EnumType.
+class Mode(str, Enum):
+    all = "all"
+    creation = "creation"
+    to_bytes = "to_bytes"
+    from_bytes = "from_bytes"
+    to_json = "to_json"
+    from_json = "from_json"
 
 
 def to_bytes(obj: Any) -> bytes:
@@ -182,7 +184,12 @@ def calc_stdev(iterations: List[int]) -> float:
     return 0 if len(iterations) < 2 else int(stdev(iterations) * 100) / 100
 
 
-def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None:
+@click.command()
+@click.option("-d", "--data", default=Data.all, type=EnumType(Data))
+@click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
+@click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
+@click.option("-t", "--ms", default=50, help="Milliseconds per run")
+def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
     results: Dict[Data, Dict[Mode, List[List[int]]]] = {}
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
@@ -222,7 +229,7 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
 
                         if current_mode == Mode.creation:
                             cls = type(obj)
-                            ns_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), milliseconds)
+                            ns_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), ms)
                         else:
                             assert current_mode_parameter is not None
                             conversion_cb = current_mode_parameter.conversion_cb
@@ -230,32 +237,11 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
                             prepared_obj = parameter.object_creation_cb()
                             if current_mode_parameter.preparation_cb is not None:
                                 prepared_obj = current_mode_parameter.preparation_cb(obj)
-                            ns_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), milliseconds)
+                            ns_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), ms)
                         all_results.append(ns_iteration_results)
                         print_results(current_run, False)
                     assert current_run == runs
                     print_results(runs, True)
-
-
-data_option_help: str = "|".join([d.name for d in Data])
-mode_option_help: str = "|".join([m.name for m in Mode])
-
-
-@click.command()
-@click.option("-d", "--data", default=Data.all.name, help=data_option_help)
-@click.option("-m", "--mode", default=Mode.all.name, help=mode_option_help)
-@click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
-@click.option("-t", "--ms", default=50, help="Milliseconds per run")
-def run(data: str, mode: str, runs: int, ms: int) -> None:
-    try:
-        Data[data]
-    except Exception:
-        raise click.BadOptionUsage("data", f"{data} is not a valid data option. Select one from: " + data_option_help)
-    try:
-        Mode[mode]
-    except Exception:
-        raise click.BadOptionUsage("mode", f"{mode} is not a valid mode option. Select one from: " + mode_option_help)
-    run_benchmarks(Data[data], Mode[mode], max(1, runs), ms)
 
 
 if __name__ == "__main__":
