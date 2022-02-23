@@ -655,6 +655,9 @@ class WalletNode:
                 return False
             while num_concurrent_tasks >= target_concurrent_tasks:
                 await asyncio.sleep(0.1)
+                if self._shut_down:
+                    self.log.info("Terminating receipt and validation due to shut down request")
+                    return False
             all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
             num_concurrent_tasks += 1
             idx += len(states)
