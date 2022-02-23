@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from statistics import stdev
 from time import monotonic
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
@@ -65,13 +66,19 @@ def get_random_benchmark_object() -> BenchmarkClass:
 
 
 def print_row(
-    runs: Union[str, int], iterations: Union[str, int], mode: str, duration: Union[str, int], end: str = "\n"
+    runs: Union[str, int],
+    iterations: Union[str, int],
+    mode: str,
+    duration: Union[str, int],
+    std_deviation: Union[str, float],
+    end: str = "\n",
 ) -> None:
     runs = "{0:<10}".format(f"{runs}")
     iterations = "{0:<10}".format(f"{iterations}")
     mode = "{0:<10}".format(f"{mode}")
-    duration = "{0:>13}".format(f"{duration}")
-    print(f"{runs} | {iterations} | {mode} | {duration}", end=end)
+    duration = "{0:>14}".format(f"{duration}")
+    std_deviation = "{0:>13}".format(f"{std_deviation}")
+    print(f"{runs} | {iterations} | {mode} | {duration} | {std_deviation}", end=end)
 
 
 def benchmark_object_creation(iterations: int, class_generator: Callable[[], Any]) -> float:
@@ -166,17 +173,22 @@ def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> int:
     return iterations
 
 
+def calc_stdev(iterations: List[int]) -> float:
+    return 0 if len(iterations) < 2 else int(stdev(iterations) * 100) / 100
+
+
 def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None:
     results: Dict[Data, Dict[Mode, List[int]]] = {}
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
         if data == Data.all or current_data == data:
             print(f"\nRun {mode.name} benchmarks with the class: {parameter.data_class.__name__}")
-            print_row("runs", "ms/run", "mode", "avg iterations")
+            print_row("runs", "ms/run", "mode", "avg iterations", "std deviation")
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
                 if mode == Mode.all or current_mode == mode:
                     iterations: int
+                    all_iterations: List[int] = results[current_data][current_mode]
                     for _ in range(max(1, runs)):
                         obj = parameter.object_creation_cb()
                         if current_mode == Mode.creation:
@@ -189,10 +201,10 @@ def run_benchmarks(data: Data, mode: Mode, runs: int, milliseconds: int) -> None
                             if current_mode_parameter.preparation_cb is not None:
                                 obj = current_mode_parameter.preparation_cb(obj)
                             iterations = run_for_ms(lambda: conversion_cb(obj), milliseconds)
-                        results[current_data][current_mode].append(iterations)
-                        print_row("last", milliseconds, current_mode.name, iterations, "\r")
-                    average_iterations: int = int(sum(results[current_data][current_mode]) / runs)
-                    print_row(runs, milliseconds, current_mode.name, average_iterations)
+                        all_iterations.append(iterations)
+                        print_row("last", milliseconds, current_mode.name, iterations, calc_stdev(all_iterations), "\r")
+                    average_iterations: int = int(sum(all_iterations) / runs)
+                    print_row(runs, milliseconds, current_mode.name, average_iterations, calc_stdev(all_iterations))
 
 
 data_option_help: str = "|".join([d.name for d in Data])
