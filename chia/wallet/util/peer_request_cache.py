@@ -20,7 +20,7 @@ class PeerRequestCache:
         self._block_requests = LRUCache(100)
         self._ses_requests = LRUCache(100)
         self._states_validated = LRUCache(1000)
-        self._timestamps = LRUCache(10000)
+        self._timestamps = LRUCache(1000)
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
         return self._blocks.get(height)
