@@ -58,15 +58,12 @@ class TestStreamable(unittest.TestCase):
         a = TestClass2(uint32(1), uint32(2), b"3")
         bytes(a)
 
-        try:
+        with raises(NotImplementedError):
 
             @dataclass(frozen=True)
             @streamable
             class TestClass3(Streamable):
                 a: int
-
-        except NotImplementedError:
-            pass
 
     def test_json(self):
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")

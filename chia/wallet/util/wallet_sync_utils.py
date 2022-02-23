@@ -18,7 +18,6 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondHeaderBlocks,
     RequestHeaderBlocks,
-    RejectHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_list, Coin
@@ -286,36 +285,26 @@ def last_change_height_cs(cs: CoinState) -> uint32:
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[WSChiaConnection], selected_peer_node_id: bytes32, request: RequestHeaderBlocks
+    all_peers: List[WSChiaConnection],
+    request: RequestHeaderBlocks,
 ) -> Optional[RespondHeaderBlocks]:
-    if len(all_peers) == 0:
-        return None
-    random_peer: WSChiaConnection = random.choice(all_peers)
-    res = await random_peer.request_header_blocks(request)
-    if isinstance(res, RespondHeaderBlocks):
-        return res
-    elif isinstance(res, RejectHeaderBlocks):
-        # Peer is not synced, close connection
-        await random_peer.close()
+    # We will modify this list, don't modify passed parameters.
+    remaining_peers = list(all_peers)
 
-    bad_peer_id = random_peer.peer_node_id
-    if len(all_peers) == 1:
-        # No more peers to fetch from
-        return None
-    else:
-        if selected_peer_node_id == bad_peer_id:
-            # Select another peer fallback
-            while random_peer.peer_node_id == bad_peer_id and len(all_peers) > 1:
-                random_peer = random.choice(all_peers)
-        else:
-            # Use the selected peer instead
-            random_peer = [p for p in all_peers if p.peer_node_id == selected_peer_node_id][0]
-        # Retry
-        res = await random_peer.request_header_blocks(request)
-        if isinstance(res, RespondHeaderBlocks):
-            return res
-        else:
-            return None
+    while len(remaining_peers) > 0:
+        peer = random.choice(remaining_peers)
+
+        response = await peer.request_header_blocks(request)
+
+        if isinstance(response, RespondHeaderBlocks):
+            return response
+
+        # Request to peer failed in some way, close the connection and remove the peer
+        # from our local list.
+        await peer.close()
+        remaining_peers.remove(peer)
+
+    return None
 
 
 async def fetch_header_blocks_in_range(
@@ -323,7 +312,6 @@ async def fetch_header_blocks_in_range(
     end: uint32,
     peer_request_cache: PeerRequestCache,
     all_peers: List[WSChiaConnection],
-    selected_peer_id: bytes32,
 ) -> Optional[List[HeaderBlock]]:
     blocks: List[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
@@ -340,9 +328,7 @@ async def fetch_header_blocks_in_range(
         else:
             log.info(f"Fetching: {start}-{end}")
             request_header_blocks = RequestHeaderBlocks(request_start, request_end)
-            res_h_blocks_task = asyncio.create_task(
-                _fetch_header_blocks_inner(all_peers, selected_peer_id, request_header_blocks)
-            )
+            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_header_blocks))
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:
