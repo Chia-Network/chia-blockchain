@@ -104,7 +104,7 @@ class TestPoolWalletRpc:
             config = bt.config
             hostname = config["self_hostname"]
             daemon_port = config["daemon_port"]
-            test_rpc_port = find_available_listen_port()
+            test_rpc_port = find_available_listen_port("rpc_port")
 
             rpc_cleanup = await start_rpc_server(
                 api_user,
@@ -138,7 +138,7 @@ class TestPoolWalletRpc:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(21529)
+        test_rpc_port = find_available_listen_port("rpc_port")
 
         rpc_cleanup = await start_rpc_server(
             api_user,
