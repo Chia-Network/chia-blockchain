@@ -13,7 +13,7 @@ from chia.data_layer.data_layer_types import Side, TerminalNode
 from chia.types.blockchain_format.program import Program
 
 
-async def generate_datastore(num_nodes: int) -> None:
+async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
     db_path = path_from_root(DEFAULT_ROOT_PATH, "dl_benchmark")
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -46,25 +46,43 @@ async def generate_datastore(num_nodes: int) -> None:
             side = None
         if i % 3 == 0:
             t1 = time.time()
-            await data_store.insert(
-                key=key,
-                value=value,
-                tree_id=tree_id,
-                reference_node_hash=reference_node_hash,
-                side=side,
-                hint_keys_values=hint_keys_values,
-            )
+            if not slow_mode:
+                await data_store.insert(
+                    key=key,
+                    value=value,
+                    tree_id=tree_id,
+                    reference_node_hash=reference_node_hash,
+                    side=side,
+                    hint_keys_values=hint_keys_values,
+                )
+            else:
+                await data_store.insert(
+                    key=key,
+                    value=value,
+                    tree_id=tree_id,
+                    reference_node_hash=reference_node_hash,
+                    side=side,
+                    use_optimized=False,
+                )
             t2 = time.time()
             insert_time += t2 - t1
             insert_count += 1
         elif i % 3 == 1:
             t1 = time.time()
-            await data_store.autoinsert(
-                key=key,
-                value=value,
-                tree_id=tree_id,
-                hint_keys_values=hint_keys_values,
-            )
+            if not slow_mode:
+                await data_store.autoinsert(
+                    key=key,
+                    value=value,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                )
+            else:
+                await data_store.autoinsert(
+                    key=key,
+                    value=value,
+                    tree_id=tree_id,
+                    use_optimized=False,
+                )
             t2 = time.time()
             autoinsert_time += t2 - t1
             autoinsert_count += 1
@@ -73,7 +91,10 @@ async def generate_datastore(num_nodes: int) -> None:
             assert reference_node_hash is not None
             node = await data_store.get_node(reference_node_hash)
             assert isinstance(node, TerminalNode)
-            await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+            if not slow_mode:
+                await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+            else:
+                await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
             t2 = time.time()
             delete_time += t2 - t1
             delete_count += 1
@@ -82,10 +103,15 @@ async def generate_datastore(num_nodes: int) -> None:
     print(f"Average autoinsert time: {autoinsert_time / autoinsert_count}")
     print(f"Average delete time: {delete_time / delete_count}")
     print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
+    root = await data_store.get_tree_root(tree_id=tree_id)
+    print(f"Root hash: {root.node_hash}")
     await connection.close()
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(generate_datastore(int(sys.argv[1])))
+    slow_mode = False
+    if len(sys.argv) > 2 and sys.argv[2] == "slow":
+        slow_mode = True
+    loop.run_until_complete(generate_datastore(int(sys.argv[1]), slow_mode))
     loop.close()

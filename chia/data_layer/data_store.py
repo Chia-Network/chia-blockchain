@@ -624,6 +624,7 @@ class DataStore:
         value: bytes,
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
+        use_optimized: bool = True,
         *,
         lock: bool = True,
     ) -> bytes32:
@@ -646,6 +647,7 @@ class DataStore:
                 side=side,
                 hint_keys_values=hint_keys_values,
                 lock=False,
+                use_optimized=use_optimized,
             )
 
     async def get_keys_values_dict(self, tree_id: bytes32, *, lock: bool = True) -> Dict[bytes, bytes]:
