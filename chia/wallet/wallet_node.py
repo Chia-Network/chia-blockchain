@@ -519,7 +519,6 @@ class WalletNode:
                     [p for p in chunk if p not in already_checked_ph], full_node, 0
                 )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
-                ph_update_res.sort(key=last_change_height_cs)
                 if not await self.receive_state_from_peer(ph_update_res, full_node, update_finished_height=True):
                     # If something goes wrong, abort sync
                     return
@@ -545,7 +544,6 @@ class WalletNode:
             for chunk in one_k_chunks:
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
                 c_update_res = list(filter(is_new_state_update, c_update_res))
-                c_update_res.sort(key=last_change_height_cs)
                 if not await self.receive_state_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
@@ -585,7 +583,10 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
-        assert self.wallet_state_manager is not None
+        # The items will be sorted in place.
+
+        if self.wallet_state_manager is None:
+            return False
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
@@ -605,12 +606,14 @@ class WalletNode:
         target_concurrent_tasks: int = 20
         concurrent_tasks_cs_heights: List[uint32] = []
 
+        # Ensure the list is sorted
+        items.sort(key=last_change_height_cs)
+
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
             nonlocal concurrent_tasks_cs_heights
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
-                    assert self.wallet_state_manager is not None
                     if header_hash is not None:
                         assert height is not None
                         for inner_state in inner_states:
@@ -631,6 +634,8 @@ class WalletNode:
                         )
                         assert self.new_state_lock is not None
                         async with self.new_state_lock:
+                            if self.wallet_state_manager is None:
+                                return
                             await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
                             if update_finished_height:
@@ -735,7 +740,9 @@ class WalletNode:
             )
 
     def get_full_node_peer(self) -> Optional[WSChiaConnection]:
-        assert self.server is not None
+        if self.server is None:
+            return None
+
         nodes = self.server.get_full_node_connections()
         if len(nodes) > 0:
             return random.choice(nodes)
@@ -743,7 +750,10 @@ class WalletNode:
             return None
 
     async def disconnect_and_stop_wpeers(self):
-        # Close connection of non trusted peers
+        if self.server is None:
+            return False
+
+        # Close connection of non-trusted peers
         if len(self.server.get_full_node_connections()) > 1:
             for peer in self.server.get_full_node_connections():
                 if not self.is_trusted(peer):
@@ -752,6 +762,14 @@ class WalletNode:
         if self.wallet_peers is not None:
             await self.wallet_peers.ensure_is_closed()
             self.wallet_peers = None
+
+    async def check_for_synced_peer(self, header_block: HeaderBlock, request_time: uint64):
+        if self.server is None:
+            return False
+        for peer in self.server.get_full_node_connections():
+            if self.is_trusted(peer) and await self.is_peer_synced(peer, header_block, request_time):
+                return True
+        return False
 
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         """
@@ -847,6 +865,11 @@ class WalletNode:
                         if syncing:
                             self.wallet_state_manager.set_sync_mode(False)
                         await peer.close()
+                        return
+
+                    if self.check_for_synced_peer(header_block, request_time):
+                        self.wallet_state_manager.set_sync_mode(False)
+                        self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
                         return
                     assert weight_proof is not None
                     old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
