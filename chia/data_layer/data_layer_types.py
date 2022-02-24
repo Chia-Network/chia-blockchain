@@ -148,6 +148,7 @@ class Root:
     node_hash: Optional[bytes32]
     generation: int
     status: Status
+    submissions: int
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "Root":
@@ -162,6 +163,7 @@ class Root:
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),
+            submissions=row["submissions"],
         )
 
 

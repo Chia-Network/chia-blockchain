@@ -65,3 +65,7 @@ class DataLayerRpcClient(RpcClient):
     async def get_root_history(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_root_history", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
+
+    async def get_submissions(self, store_id: bytes32, root_hash: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_submissions", {"id": store_id, "root_hash": root_hash})
+        return response  # type: ignore[no-any-return]

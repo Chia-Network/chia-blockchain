@@ -399,6 +399,9 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
         assert history1["root_history"][1]["root_hash"] != bytes32([0] * 32)
         assert history1["root_history"][1]["confirmed"] is True
         assert history1["root_history"][1]["timestamp"] > 0
+        root_hash = history1["root_history"][1]["root_hash"]
+        res = await data_rpc_api.get_root_submissions({"id": store_id1.hex(), "root_hash": root_hash.hex()})
+        assert res["submissions"] == 1
         key4 = b"d"
         value4 = b"\x06\x03"
         changelist = [{"action": "insert", "key": key4.hex(), "value": value4.hex()}]

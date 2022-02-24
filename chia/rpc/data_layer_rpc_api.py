@@ -241,6 +241,17 @@ class DataLayerRpcApi:
             res.insert(0, {"root_hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_history": res}
 
+    async def get_root_submissions(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """get hash of latest tree root"""
+        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        generation = request["generation"]
+        if self.service is None:
+            raise Exception("Data layer not created")
+        rec = await self.service.get_root_submissions(store_id, generation)
+        if rec is None:
+            raise Exception(f"Failed to get root for {store_id.hex()}")
+        return {"hash": rec.node_hash, "confirmed": rec.status, "submissions": rec.submissions}
+
     async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         get kv diff between two root hashes
