@@ -263,15 +263,16 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     first_insertions = [True, False, True, False, True, True, False, True, False, True, True, False, False, True, False]
     deleted_all = False
     node_count = 0
-    for i in range(2500):
+    for i in range(1000):
         is_insert = False
         if i <= 14:
             is_insert = first_insertions[i]
         if i > 14 and i <= 25:
             is_insert = True
-        if i > 25 and i <= 300 and random.randint(0, 4):
+        if i > 25 and i <= 200 and random.randint(0, 4):
             is_insert = True
-        if i > 300:
+        if i > 200:
+            hint_keys_values = await data_store.get_keys_values_dict(tree_id)
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
@@ -280,7 +281,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     assert node_hash is not None
                     node = await data_store.get_node(node_hash)
                     assert isinstance(node, TerminalNode)
-                    await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
+                    await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
                 deleted_all = True
                 is_insert = True
             else:
@@ -289,8 +290,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     is_insert = True
                 elif node_count < 4 and random.randint(0, 2):
                     is_insert = True
-        key = (i % 350).to_bytes(4, byteorder="big")
-        value = (i % 350).to_bytes(4, byteorder="big")
+        key = (i % 200).to_bytes(4, byteorder="big")
+        value = (i % 200).to_bytes(4, byteorder="big")
         seed = Program.to((key, value)).get_tree_hash()
         node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if is_insert:
