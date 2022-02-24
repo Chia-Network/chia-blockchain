@@ -603,9 +603,10 @@ class WalletNode:
 
         all_tasks: List[asyncio.Task] = []
         target_concurrent_tasks: int = 20
-        num_concurrent_tasks: int = 0
+        concurrent_tasks_cs_heights: List[uint32] = []
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
+            nonlocal concurrent_tasks_cs_heights
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -616,7 +617,7 @@ class WalletNode:
                             self.add_state_to_race_cache(header_hash, height, inner_state)
                             self.log.info(f"Added to race cache: {height}, {inner_state}")
                     if trusted:
-                        valid_states = inner_states
+                        valid_states = inner_states.copy()
                     else:
                         valid_states = [
                             inner_state
@@ -626,21 +627,26 @@ class WalletNode:
                     if len(valid_states) > 0:
                         self.log.info(
                             f"new coin state received ({inner_idx_start}-"
-                            f"{inner_idx_start + len(inner_states) - 1}/ {len(items) + 1})"
+                            f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                         )
                         assert self.new_state_lock is not None
                         async with self.new_state_lock:
                             await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
-                        if update_finished_height:
-                            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                                last_change_height_cs(inner_states[-1])
-                            )
+
+                            if update_finished_height:
+                                if len(concurrent_tasks_cs_heights) == 1:
+                                    # We have processed all past tasks so we can
+                                    synced_up_to = last_change_height_cs(inner_states[-1]) - 1
+                                else:
+                                    # We know we have processed everything before this min height
+                                    synced_up_to = min(concurrent_tasks_cs_heights)
+                                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
+
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
-                nonlocal num_concurrent_tasks
-                num_concurrent_tasks -= 1  # pylint: disable=E0602
+                concurrent_tasks_cs_heights.remove(last_change_height_cs(inner_states[0]))  # pylint: disable=E0602
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
@@ -653,13 +659,13 @@ class WalletNode:
             if peer.peer_node_id not in self.server.all_connections:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
-            while num_concurrent_tasks >= target_concurrent_tasks:
+            while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                 await asyncio.sleep(0.1)
                 if self._shut_down:
                     self.log.info("Terminating receipt and validation due to shut down request")
                     return False
+            concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
             all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
-            num_concurrent_tasks += 1
             idx += len(states)
 
         await asyncio.gather(*all_tasks)
@@ -820,6 +826,7 @@ class WalletNode:
             far_behind: bool = (
                 new_peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
             )
+            return
 
             # check if claimed peak is heavier or same as our current peak
             # if we haven't synced fully to this peer sync again
