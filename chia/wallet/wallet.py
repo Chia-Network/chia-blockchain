@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, List, Optional, Set, Dict
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 

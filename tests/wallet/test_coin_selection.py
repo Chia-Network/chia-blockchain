@@ -1,11 +1,12 @@
 from typing import Set
 
 import pytest
+
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint128
 from chia.wallet.coin_selection import check_for_exact_match, find_smallest_coin, knapsack_coin_algorithm
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 
 class TestCoinSelection:
