@@ -37,7 +37,10 @@ def make_fake_coin(index: int, puzzle_hash_db: dict) -> Coin:
     parent = index.to_bytes(32, "big")
     puzzle_hash = puzzle_hash_for_index(index, puzzle_hash_db)
     amount = 100000
-    return Coin(parent, puzzle_hash, uint64(amount))
+    # TODO: address hint error and remove ignore
+    #       error: Argument 1 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    return Coin(parent, puzzle_hash, uint64(amount))  # type: ignore[arg-type]
 
 
 def conditions_for_payment(coin) -> Program:

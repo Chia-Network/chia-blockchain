@@ -28,7 +28,7 @@ def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
     """
     Add a fake key to the CryptFileKeyring
     """
-    crypt_file_keyring.keyring_key = "your keyring password"  # type: ignore
+    crypt_file_keyring.keyring_key = "your keyring password"
     user: str = get_private_key_user(default_keychain_user(), 0)
     crypt_file_keyring.set_password(default_keychain_service(), user, "abc123")
 
@@ -194,9 +194,7 @@ class TempKeyring:
 
         if self.delete_on_cleanup:
             self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
-            temp_dir = self.keychain._temp_dir
-            print(f"Cleaning up temp keychain in dir: {temp_dir}")
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(self.keychain._temp_dir)
 
         self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()

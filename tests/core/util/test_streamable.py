@@ -42,7 +42,7 @@ class TestStreamable(unittest.TestCase):
             f: Optional[uint32]
             g: Tuple[uint32, str, bytes]
 
-        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore
+        a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))
 
         b: bytes = bytes(a)
         assert a == TestClass.from_bytes(b)
@@ -58,15 +58,12 @@ class TestStreamable(unittest.TestCase):
         a = TestClass2(uint32(1), uint32(2), b"3")
         bytes(a)
 
-        try:
+        with raises(NotImplementedError):
 
             @dataclass(frozen=True)
             @streamable
             class TestClass3(Streamable):
                 a: int
-
-        except NotImplementedError:
-            pass
 
     def test_json(self):
         block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")

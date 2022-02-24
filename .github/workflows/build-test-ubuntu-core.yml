@@ -13,6 +13,11 @@ on:
     branches:
       - '**'
 
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Ubuntu core Test
@@ -26,12 +31,6 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
       uses: actions/checkout@v2
       with:
@@ -68,7 +67,7 @@ jobs:
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
-        ref: '0.27.0'
+        ref: '0.28.0'
         fetch-depth: 1
 
     - name: Link home directory
@@ -89,7 +88,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Install timelord
       run: |
@@ -97,15 +96,10 @@ jobs:
         sh install-timelord.sh
         ./vdf_bench square_asm 400000
 
-    - name: Install developer requirements
-      run: |
-        . ./activate
-        venv/bin/python -m pip install pytest pytest-asyncio pytest-xdist pytest-monitor
-
     - name: Test core code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/test_cost_calculation.py tests/core/test_farmer_harvester_rpc.py tests/core/test_filter.py tests/core/test_full_node_rpc.py tests/core/test_merkle_set.py tests/core/test_setproctitle.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/test_*.py -s -v --durations 0
 
 
 #

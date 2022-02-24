@@ -28,7 +28,7 @@ class BlockCache(BlockchainInterface):
         self._headers = headers
         self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
-        self._sub_epoch_segments: Dict[uint32, SubEpochSegments] = {}
+        self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
@@ -36,7 +36,10 @@ class BlockCache(BlockchainInterface):
 
     def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
         header_hash = self.height_to_hash(height)
-        return self.block_record(header_hash)
+        # TODO: address hint error and remove ignore
+        #       error: Argument 1 to "block_record" of "BlockCache" has incompatible type "Optional[bytes32]"; expected
+        #       "bytes32"  [arg-type]
+        return self.block_record(header_hash)  # type: ignore[arg-type]
 
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self._sub_epoch_summaries.keys())
@@ -80,15 +83,15 @@ class BlockCache(BlockchainInterface):
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: uint32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ):
-        self._sub_epoch_segments[sub_epoch_summary_height] = SubEpochSegments(segments)
+        self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
-        sub_epoch_summary_height: uint32,
+        sub_epoch_summary_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments = self._sub_epoch_segments.get(sub_epoch_summary_height)
+        segments = self._sub_epoch_segments.get(sub_epoch_summary_hash)
         if segments is None:
             return None
         return segments.challenge_segments

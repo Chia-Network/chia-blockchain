@@ -8,9 +8,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint64
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.lineage_proof import LineageProof

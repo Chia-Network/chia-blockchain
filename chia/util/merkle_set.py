@@ -40,7 +40,7 @@ TERMINAL = bytes([1])
 MIDDLE = bytes([2])
 TRUNCATED = bytes([3])
 
-BLANK = bytes([0] * 32)
+BLANK = bytes32([0] * 32)
 
 prehashed: Dict[bytes, Any] = {}
 
@@ -61,14 +61,14 @@ def hashdown(mystr: bytes) -> bytes:
     return h.digest()[:32]
 
 
-def compress_root(mystr: bytes) -> bytes:
+def compress_root(mystr: bytes) -> bytes32:
     assert len(mystr) == 33
     if mystr[0:1] == MIDDLE:
-        return mystr[1:]
+        return bytes32(mystr[1:])
     if mystr[0:1] == EMPTY:
         assert mystr[1:] == BLANK
         return BLANK
-    return sha256(mystr).digest()[:32]
+    return bytes32(sha256(mystr).digest()[:32])
 
 
 def get_bit(mybytes: bytes, pos: int) -> int:
@@ -125,7 +125,7 @@ class MerkleSet:
         else:
             self.root = root
 
-    def get_root(self) -> bytes:
+    def get_root(self) -> bytes32:
         return compress_root(self.root.get_hash())
 
     def add_already_hashed(self, toadd: bytes):
@@ -213,7 +213,7 @@ class TerminalNode(Node):
         if cbits[0] != cbits[1]:
             return MiddleNode(children)
         nextvals: List[Node] = [_empty, _empty]
-        nextvals[cbits[0] ^ 1] = _empty  # type: ignore
+        nextvals[cbits[0] ^ 1] = _empty
         nextvals[cbits[0]] = self._make_middle(children, depth + 1)
         return MiddleNode(nextvals)
 
@@ -349,23 +349,23 @@ class SetError(Exception):
     pass
 
 
-def confirm_included(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, True)
 
 
-def confirm_not_included(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_not_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_not_included_already_hashed(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_not_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, False)
 
 
-def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
+def _confirm(root: bytes32, val: bytes, proof: bytes, expected: bool) -> bool:
     try:
         p = deserialize_proof(proof)
         if p.get_root() != root:
@@ -376,7 +376,7 @@ def _confirm(root: Node, val: bytes, proof: bytes32, expected: bool) -> bool:
         return False
 
 
-def deserialize_proof(proof: bytes32) -> MerkleSet:
+def deserialize_proof(proof: bytes) -> MerkleSet:
     try:
         r, pos = _deserialize(proof, 0, [])
         if pos != len(proof):
@@ -386,7 +386,7 @@ def deserialize_proof(proof: bytes32) -> MerkleSet:
         raise SetError()
 
 
-def _deserialize(proof: bytes32, pos: int, bits: List[int]) -> Tuple[Node, int]:
+def _deserialize(proof: bytes, pos: int, bits: List[int]) -> Tuple[Node, int]:
     t = proof[pos : pos + 1]  # flake8: noqa
     if t == EMPTY:
         return _empty, pos + 1

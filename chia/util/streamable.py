@@ -1,5 +1,3 @@
-# flake8: noqa
-# pylint: disable
 from __future__ import annotations
 
 import dataclasses
@@ -7,9 +5,10 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
+from typing_extensions import Literal
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -21,7 +20,6 @@ if sys.version_info < (3, 8):
 
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
-
 
 else:
 
@@ -46,6 +44,8 @@ unhashable_types = [
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON
 big_ints = [uint64, int64, uint128, int512]
+
+_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 
 def dataclass_from_dict(klass, d):
@@ -125,6 +125,7 @@ def recurse_jsonify(d):
 
 
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+FIELDS_FOR_STREAMABLE_CLASS = {}
 
 
 def streamable(cls: Any):
@@ -155,8 +156,10 @@ def streamable(cls: Any):
 
     1. A tuple of x items is serialized by appending the serialization of each item.
     2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
-    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the serialization of the item.
-    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is a CLVM program.
+    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the
+       serialization of the item.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is
+       a CLVM program.
 
     All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
@@ -178,9 +181,12 @@ def streamable(cls: Any):
 
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        hints = get_type_hints(t)
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(t)}
     except Exception:
         fields = {}
+
+    FIELDS_FOR_STREAMABLE_CLASS[t] = fields
 
     for _, f_type in fields.items():
         parse_functions.append(cls.function_to_parse_one_item(f_type))
@@ -200,13 +206,13 @@ def parse_bool(f: BinaryIO) -> bool:
         raise ValueError("Bool byte must be 0 or 1")
 
 
-def parse_uint32(f: BinaryIO, byteorder: str = "big") -> uint32:
+def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> uint32:
     size_bytes = f.read(4)
     assert size_bytes is not None and len(size_bytes) == 4  # Checks for EOF
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
-def write_uint32(f: BinaryIO, value: uint32, byteorder: str = "big"):
+def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"] = "big"):
     f.write(value.to_bytes(4, byteorder))
 
 
@@ -259,7 +265,7 @@ def parse_str(f: BinaryIO) -> str:
 
 class Streamable:
     @classmethod
-    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+    def function_to_parse_one_item(cls, f_type: Type) -> Callable[[BinaryIO], Any]:
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
@@ -291,10 +297,10 @@ class Streamable:
         raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
-    def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
+    def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        obj: _T_Streamable = object.__new__(cls)
+        fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
@@ -346,7 +352,7 @@ class Streamable:
 
     def stream(self, f: BinaryIO) -> None:
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
             fields = {}
         for f_name, f_type in fields.items():
