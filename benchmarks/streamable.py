@@ -67,21 +67,17 @@ def get_random_benchmark_object() -> BenchmarkClass:
 
 def print_row(
     *,
-    runs: Union[str, int],
-    ms_per_run: Union[str, int],
-    us_per_iteration: Union[str, int],
     mode: str,
+    us_per_iteration: Union[str, int],
     avg_iterations: Union[str, int],
     stdev_iterations: Union[str, float],
     end: str = "\n",
 ) -> None:
-    runs = "{0:<10}".format(f"{runs}")
-    ms_per_run = "{0:<10}".format(f"{ms_per_run}")
-    us_per_iteration = "{0:<12}".format(f"{us_per_iteration}")
     mode = "{0:<10}".format(f"{mode}")
+    us_per_iteration = "{0:<12}".format(f"{us_per_iteration}")
     avg_iterations = "{0:>14}".format(f"{avg_iterations}")
-    stdev_iterations = "{0:>13}".format(f"{stdev_iterations}")
-    print(f"{runs} | {ms_per_run} | {us_per_iteration} | {mode} | {avg_iterations} | {stdev_iterations}", end=end)
+    stdev_iterations = "{0:>18}".format(f"{stdev_iterations}")
+    print(f"{mode} | {us_per_iteration} | {avg_iterations} | {stdev_iterations}", end=end)
 
 
 def benchmark_object_creation(iterations: int, class_generator: Callable[[], Any]) -> float:
@@ -180,8 +176,9 @@ def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
     return us_iteration_results
 
 
-def calc_stdev(iterations: List[int]) -> float:
-    return 0 if len(iterations) < 2 else int(stdev(iterations) * 100) / 100
+def calc_stdev_percent(iterations: List[int], avg: int) -> float:
+    deviation = 0 if len(iterations) < 2 else int(stdev(iterations) * 100) / 100
+    return int((deviation / avg * 100) * 100) / 100
 
 
 @click.command()
@@ -194,14 +191,12 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
         if data == Data.all or current_data == data:
-            print(f"\nRun {mode.name} benchmarks with the class: {parameter.data_class.__name__}")
+            print(f"\nruns: {runs}, ms/run: {ms}, benchmarks: {mode.name}, data: {parameter.data_class.__name__}")
             print_row(
-                runs="runs",
-                ms_per_run="ms/run",
-                us_per_iteration="µs/iteration",
                 mode="mode",
+                us_per_iteration="µs/iteration",
                 avg_iterations="avg iterations",
-                stdev_iterations="stdev iterations",
+                stdev_iterations="stdev iterations %",
             )
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
@@ -213,13 +208,13 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
                     def print_results(print_run: int, final: bool) -> None:
                         total_iterations: int = sum(len(x) for x in all_results)
                         total_elapsed_us: int = sum(sum(x) for x in all_results)
+                        avg_iterations: int = int(total_iterations / print_run)
+                        stdev_iterations: float = calc_stdev_percent([len(x) for x in all_results], avg_iterations)
                         print_row(
-                            runs=print_run if final else "current",
-                            ms_per_run=int(mean(sum(x) for x in all_results) / 1000),
-                            us_per_iteration=int(total_elapsed_us / total_iterations),
                             mode=current_mode.name,
-                            avg_iterations=int(total_iterations / print_run),
-                            stdev_iterations=calc_stdev([len(x) for x in all_results]),
+                            us_per_iteration=int(total_elapsed_us / total_iterations),
+                            avg_iterations=avg_iterations,
+                            stdev_iterations=stdev_iterations,
                             end="\n" if final else "\r",
                         )
 
