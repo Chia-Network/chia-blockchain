@@ -23,12 +23,6 @@ from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
     tx = mempool.get_spendbundle(tx_id)
     if tx is None:

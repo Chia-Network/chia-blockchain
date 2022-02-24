@@ -84,6 +84,7 @@ from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert
 from tests.wallet_tools import WalletTool
+from tests.util.socket import find_available_listen_port
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
@@ -150,6 +151,10 @@ class BlockTools:
         self._config["selected_network"] = "testnet0"
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
+
+        # some tests start the daemon, make sure it's on a free port
+        self._config["daemon_port"] = find_available_listen_port("daemon port")
+
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)

@@ -320,13 +320,13 @@ async def fetch_header_blocks_in_range(
         res_h_blocks_task: Optional[asyncio.Task] = peer_request_cache.get_block_request(request_start, request_end)
 
         if res_h_blocks_task is not None:
-            log.info(f"Using cache for: {start}-{end}")
+            log.debug(f"Using cache for: {start}-{end}")
             if res_h_blocks_task.done():
                 res_h_blocks: Optional[RespondHeaderBlocks] = res_h_blocks_task.result()
             else:
                 res_h_blocks = await res_h_blocks_task
         else:
-            log.info(f"Fetching: {start}-{end}")
+            log.debug(f"Fetching: {start}-{end}")
             request_header_blocks = RequestHeaderBlocks(request_start, request_end)
             res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_header_blocks))
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)

@@ -446,7 +446,7 @@ class WalletRpcApi:
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, request["asset_id"]
+                        wallet_state_manager, main_wallet, request["asset_id"], name
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
@@ -680,8 +680,13 @@ class WalletRpcApi:
         sort_key = request.get("sort_key", None)
         reverse = request.get("reverse", False)
 
+        to_address = request.get("to_address", None)
+        to_puzzle_hash: Optional[bytes32] = None
+        if to_address is not None:
+            to_puzzle_hash = decode_puzzle_hash(to_address)
+
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
         )
         return {
             "transactions": [
