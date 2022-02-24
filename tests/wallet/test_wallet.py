@@ -857,7 +857,9 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(0, num_blocks):
+            await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         tx = await wallet.generate_signed_transaction(
             4 * 10 ** 12,
@@ -870,6 +872,7 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         # check that the coin selection only spends the identical coin.
         tx = await wallet_2.generate_signed_transaction(
@@ -886,6 +889,7 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         # check that the knapsack algorithm works.
         tx = await wallet.generate_signed_transaction(
@@ -901,6 +905,7 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await asyncio.sleep(0.2)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
         # check that the find_smallest_coin function works.
         tx = await wallet_2.generate_signed_transaction(
