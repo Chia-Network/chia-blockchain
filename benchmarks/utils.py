@@ -19,6 +19,7 @@ from datetime import datetime
 import aiosqlite
 import click
 import os
+import subprocess
 import sys
 import random
 from blspy import G2Element, G1Element, AugSchemeMPL
@@ -197,3 +198,21 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
     await connection.execute("pragma synchronous=full")
 
     return DBWrapper(connection, db_version)
+
+
+def get_commit_hash() -> str:
+    try:
+        os.chdir(Path(os.path.realpath(__file__)).parent)
+        commit_hash = (
+            subprocess.run(["git", "rev-parse", "--short", "HEAD"], check=True, stdout=subprocess.PIPE)
+            .stdout.decode("utf-8")
+            .strip()
+        )
+    except Exception:
+        sys.exit("Failed to get the commit hash")
+    try:
+        if len(subprocess.run(["git", "status", "-s"], check=True, stdout=subprocess.PIPE).stdout) > 0:
+            raise Exception()
+    except Exception:
+        commit_hash += "-dirty"
+    return commit_hash
