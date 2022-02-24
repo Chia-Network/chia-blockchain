@@ -531,7 +531,8 @@ class DataStore:
                 node_hash = internal_node.hash
 
             if len(nodes) > 0:
-                assert root.node_hash == nodes[-1].hash
+                if root.node_hash != nodes[-1].hash:
+                    raise RuntimeError("Ancestors list didn't produce the root as top result.")
 
             return nodes
 
@@ -718,7 +719,8 @@ class DataStore:
                     ancestors_2: List[InternalNode] = await self.get_ancestors(
                         node_hash=reference_node_hash, tree_id=tree_id, lock=False
                     )
-                    assert ancestors == ancestors_2
+                    if ancestors != ancestors_2:
+                        raise RuntimeError("Ancestors optimized didn't produce the expected result.")
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -727,7 +729,9 @@ class DataStore:
                     left = reference_node_hash
                     right = new_terminal_node_hash
 
-                assert len(ancestors) <= 65
+                if len(ancestors) >= 62:
+                    raise RuntimeError("Tree exceeds max height of 62.")
+
                 # update ancestors after inserting root, to keep table constraints.
                 insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
                 new_generation = root.generation + 1
@@ -790,9 +794,11 @@ class DataStore:
                 ancestors_2: List[InternalNode] = await self.get_ancestors(
                     node_hash=node.hash, tree_id=tree_id, lock=False
                 )
-                assert ancestors == ancestors_2
+                if ancestors != ancestors_2:
+                    raise RuntimeError("Ancestors optimized didn't produce the expected result.")
 
-            assert len(ancestors) <= 65
+            if len(ancestors) > 62:
+                raise RuntimeError("Tree exceeded max height of 62.")
             if len(ancestors) == 0:
                 # the only node is being deleted
                 await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
