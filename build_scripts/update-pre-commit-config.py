@@ -2,10 +2,10 @@ import io
 import os
 import pathlib
 import sys
+from typing import TextIO
 
 import click
 import yaml
-
 
 start_tag = "# START GENERATED"
 end_tag = "# END GENERATED"
@@ -14,7 +14,7 @@ end_tag = "# END GENERATED"
 @click.command()
 @click.option("--pre-commit-yaml", type=click.File(mode="w", encoding="utf-8", atomic=True), required=True)
 @click.option("--fail-on-change/--no-fail-on-change", help="Return a non-zero exit code if the file is modified.")
-def main(pre_commit_yaml, fail_on_change):
+def main(pre_commit_yaml: TextIO, fail_on_change: bool) -> None:
     # for importing setup, not pretty
     sys.path.insert(0, os.getcwd())
     import setup
