@@ -826,7 +826,6 @@ class WalletNode:
             far_behind: bool = (
                 new_peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
             )
-            return
 
             # check if claimed peak is heavier or same as our current peak
             # if we haven't synced fully to this peer sync again
