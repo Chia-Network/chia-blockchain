@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from statistics import stdev
-from time import monotonic
+from time import process_time as clock
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import click
@@ -142,11 +142,11 @@ benchmark_parameter: Dict[Data, BenchmarkParameter] = {
 
 def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
     us_iteration_results: List[int] = []
-    start = monotonic()
-    while int((monotonic() - start) * 1000) < ms_to_run:
-        start_iteration = monotonic()
+    start = clock()
+    while int((clock() - start) * 1000) < ms_to_run:
+        start_iteration = clock()
         cb()
-        stop_iteration = monotonic()
+        stop_iteration = clock()
         us_iteration_results.append(int((stop_iteration - start_iteration) * 1000 * 1000))
     return us_iteration_results
 
