@@ -1,10 +1,10 @@
 import logging
 import random
-from typing import Set, Optional, List, Dict
+from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint128
+from chia.util.ints import uint64, uint128
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
@@ -15,7 +15,7 @@ async def select_coins(
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
     amount: uint128,
-    exclude: List[Coin] = None,
+    exclude: Optional[List[Coin]] = None,
 ) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
@@ -54,7 +54,7 @@ async def select_coins(
     valid_spendable_coins.sort(reverse=True, key=lambda r: r.amount)
 
     # check for exact 1 to 1 coin match.
-    exact_match_coin: Optional[Coin] = check_for_exact_match(valid_spendable_coins, amount)
+    exact_match_coin: Optional[Coin] = check_for_exact_match(valid_spendable_coins, uint64(amount))
     if exact_match_coin:
         log.info(f"selected coin with an exact match: {exact_match_coin}")
         return {exact_match_coin}
@@ -86,7 +86,7 @@ async def select_coins(
 # https://murch.one/wp-content/uploads/2016/11/erhardt2016coinselection.pdf
 
 # we use this to check if one of the coins exactly matches the target.
-def check_for_exact_match(coin_list: List[Coin], target: uint128) -> Optional[Coin]:
+def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coin]:
     for coin in coin_list:
         if coin.amount == target:
             return coin
@@ -113,7 +113,7 @@ def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint128, max_coin_
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
         # reset these variables every loop.
-        selected_coins: Set = set()
+        selected_coins: Set[Coin] = set()
         selected_coins_sum = 0
         n_pass = 0
         target_reached = False
