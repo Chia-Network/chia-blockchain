@@ -69,7 +69,7 @@
     transfer_program_solution
     trade_prices_list_hash
   )
-  (c (list CREATE_COIN_ANNOUNCEMENT trade_prices_list_hash)
+  (c (list CREATE_COIN_ANNOUNCEMENT trade_prices_list_hash new_did)
     (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT new_did new_did_parent new_did_inner_hash new_did_amount) trade_prices_list_hash (f (r SINGLETON_STRUCT))))
       (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 (create_singleton_coin_ID SINGLETON_STRUCT CURRENT_OWNER_DID my_did_parent my_did_inner_hash my_did_amount) trade_prices_list_hash new_did))
         (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH new_did) my_amount (list new_did))
