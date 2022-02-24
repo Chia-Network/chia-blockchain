@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from statistics import mean, stdev
+from statistics import stdev
 from time import monotonic
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
@@ -78,31 +78,6 @@ def print_row(
     avg_iterations = "{0:>14}".format(f"{avg_iterations}")
     stdev_iterations = "{0:>18}".format(f"{stdev_iterations}")
     print(f"{mode} | {us_per_iteration} | {avg_iterations} | {stdev_iterations}", end=end)
-
-
-def benchmark_object_creation(iterations: int, class_generator: Callable[[], Any]) -> float:
-    start = monotonic()
-    obj = class_generator()
-    cls = type(obj)
-    for i in range(iterations):
-        cls(**obj.__dict__)
-    return monotonic() - start
-
-
-def benchmark_conversion(
-    iterations: int,
-    class_generator: Callable[[], Any],
-    conversion_cb: Callable[[Any], Any],
-    preparation_cb: Optional[Callable[[Any], Any]] = None,
-) -> float:
-    obj = class_generator()
-    start = monotonic()
-    prepared_data = obj
-    if preparation_cb is not None:
-        prepared_data = preparation_cb(obj)
-    for i in range(iterations):
-        conversion_cb(prepared_data)
-    return monotonic() - start
 
 
 # The strings in this Enum are by purpose. See benchmark.utils.EnumType.
