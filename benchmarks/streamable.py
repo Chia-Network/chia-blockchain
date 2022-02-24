@@ -163,7 +163,8 @@ def calc_stdev_percent(iterations: List[int], avg: float) -> float:
 @click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
 @click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
 @click.option("-t", "--ms", default=50, help="Milliseconds per run")
-def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
+@click.option("--live/--no-live", default=False, help="Print live results (slower)")
+def run(data: Data, mode: Mode, runs: int, ms: int, live: bool) -> None:
     results: Dict[Data, Dict[Mode, List[List[int]]]] = {}
     for current_data, parameter in benchmark_parameter.items():
         results[current_data] = {}
@@ -217,7 +218,8 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
                                 prepared_obj = current_mode_parameter.preparation_cb(obj)
                             us_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), ms)
                         all_results.append(us_iteration_results)
-                        print_results(current_run, False)
+                        if live:
+                            print_results(current_run, False)
                     assert current_run == runs
                     print_results(runs, True)
 
