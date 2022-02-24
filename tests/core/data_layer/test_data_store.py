@@ -1,6 +1,6 @@
 import itertools
 import logging
-from typing import Awaitable, Callable, Dict, List, Optional, Set
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set
 from random import Random
 import pytest
 
@@ -17,9 +17,10 @@ from chia.data_layer.data_layer_types import (
     ProofOfInclusionLayer,
     Side,
     Status,
+    InternalNode,
+    TerminalNode,
     InsertionData,
     DeletionData,
-    TerminalNode,
     OperationType,
     DiffData,
     DownloadMode,
@@ -36,7 +37,6 @@ from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
     Example,
-    get_terminal_node_for_random_seed,
 )
 
 
@@ -179,9 +179,7 @@ async def test_insert_internal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_internal_node(
-            left_hash=parent.left_hash, right_hash=parent.right_hash, tree_id=tree_id
-        )
+        await data_store._insert_internal_node(left_hash=parent.left_hash, right_hash=parent.right_hash)
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
@@ -201,7 +199,7 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
         before = await cursor.fetchall()
 
     async with data_store.db_wrapper.locked_transaction():
-        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value, tree_id=tree_id)
+        await data_store._insert_terminal_node(key=kv_node.key, value=kv_node.value)
 
     async with data_store.db_wrapper.locked_transaction():
         cursor = await data_store.db.execute("SELECT * FROM node")
@@ -251,6 +249,90 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
         "3ab212e30b0e746d81a993e39f2cb4ba843412d44b402c1117a500d6451309e3",
         "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
     ]
+
+    ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
+    assert ancestors == ancestors_2
+
+
+@pytest.mark.asyncio
+async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) -> None:
+    ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
+    random = Random()
+    random.seed(100, version=2)
+
+    first_insertions = [True, False, True, False, True, True, False, True, False, True, True, False, False, True, False]
+    deleted_all = False
+    node_count = 0
+    for i in range(1000):
+        is_insert = False
+        if i <= 14:
+            is_insert = first_insertions[i]
+        if i > 14 and i <= 25:
+            is_insert = True
+        if i > 25 and i <= 200 and random.randint(0, 4):
+            is_insert = True
+        if i > 200:
+            hint_keys_values = await data_store.get_keys_values_dict(tree_id)
+            if not deleted_all:
+                while node_count > 0:
+                    node_count -= 1
+                    seed = bytes32(b"0" * 32)
+                    node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
+                    assert node_hash is not None
+                    node = await data_store.get_node(node_hash)
+                    assert isinstance(node, TerminalNode)
+                    await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+                deleted_all = True
+                is_insert = True
+            else:
+                assert node_count <= 4
+                if node_count == 0:
+                    is_insert = True
+                elif node_count < 4 and random.randint(0, 2):
+                    is_insert = True
+        key = (i % 200).to_bytes(4, byteorder="big")
+        value = (i % 200).to_bytes(4, byteorder="big")
+        seed = Program.to((key, value)).get_tree_hash()
+        node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
+        if is_insert:
+            node_count += 1
+            side = None if node_hash is None else data_store.get_side_for_seed(seed)
+
+            node_hash = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=node_hash,
+                side=side,
+                use_optimized=False,
+            )
+            if node_hash is not None:
+                generation = await data_store.get_tree_generation(tree_id=tree_id)
+                current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id)
+                ancestors.append((generation, node_hash, current_ancestors))
+        else:
+            node_count -= 1
+            assert node_hash is not None
+            node = await data_store.get_node(node_hash)
+            assert isinstance(node, TerminalNode)
+            await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
+
+    for generation, node_hash, expected_ancestors in ancestors:
+        current_ancestors = await data_store.get_ancestors_optimized(
+            node_hash=node_hash, tree_id=tree_id, generation=generation
+        )
+        assert current_ancestors == expected_ancestors
+
+
+@pytest.mark.asyncio
+async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
+    await add_0123_example(data_store=data_store, tree_id=tree_id)
+    hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
+    hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
+    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
+    with pytest.raises(Exception):
+        await data_store._insert_ancestor_table(hash_1, hash_1, tree_id, 2)
+    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
 
 
 @pytest.mark.asyncio
@@ -305,7 +387,20 @@ async def test_inserting_duplicate_key_fails(
             side=Side.RIGHT,
         )
 
+    hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
+    # TODO: more specific exception
+    with pytest.raises(Exception):
+        await data_store.insert(
+            key=key,
+            value=second_value,
+            tree_id=tree_id,
+            reference_node_hash=first_hash,
+            side=Side.RIGHT,
+            hint_keys_values=hint_keys_values,
+        )
 
+
+@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
     expected = Program.to(
@@ -345,6 +440,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     assert result == expected
 
 
+@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
@@ -391,9 +487,17 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -417,15 +521,23 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -446,16 +558,24 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id)
-    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -479,15 +599,23 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "use_hint",
+    [True, False],
+)
 @pytest.mark.asyncio()
-async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32) -> None:
+async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_id: bytes32, use_hint: bool) -> None:
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
+
+    hint_keys_values = None
+    if use_hint:
+        hint_keys_values = await data_store.get_keys_values_dict(tree_id=tree_id)
 
     expected = Program.to(
         (
@@ -508,8 +636,8 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id)
-    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id)
+    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id, hint_keys_values=hint_keys_values)
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -955,12 +1083,13 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     insertions = 0
     expected_diff: Set[DiffData] = set()
     for i in range(500):
-        node_hash = await get_terminal_node_for_random_seed(data_store, tree_id, random)
+        key = (i + 100).to_bytes(4, byteorder="big")
+        value = (i + 200).to_bytes(4, byteorder="big")
+        seed = Program.to((key, value)).get_tree_hash()
+        node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
-            key = (i + 100).to_bytes(4, byteorder="big")
-            value = (i + 200).to_bytes(4, byteorder="big")
-            side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+            side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
             _ = await data_store.insert(
                 key=key,
