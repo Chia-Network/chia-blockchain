@@ -69,7 +69,7 @@ def print_row(
     *,
     runs: Union[str, int],
     ms_per_run: Union[str, int],
-    ns_per_iteration: Union[str, int],
+    us_per_iteration: Union[str, int],
     mode: str,
     avg_iterations: Union[str, int],
     stdev_iterations: Union[str, float],
@@ -77,11 +77,11 @@ def print_row(
 ) -> None:
     runs = "{0:<10}".format(f"{runs}")
     ms_per_run = "{0:<10}".format(f"{ms_per_run}")
-    ns_per_iteration = "{0:<12}".format(f"{ns_per_iteration}")
+    us_per_iteration = "{0:<12}".format(f"{us_per_iteration}")
     mode = "{0:<10}".format(f"{mode}")
     avg_iterations = "{0:>14}".format(f"{avg_iterations}")
     stdev_iterations = "{0:>13}".format(f"{stdev_iterations}")
-    print(f"{runs} | {ms_per_run} | {ns_per_iteration} | {mode} | {avg_iterations} | {stdev_iterations}", end=end)
+    print(f"{runs} | {ms_per_run} | {us_per_iteration} | {mode} | {avg_iterations} | {stdev_iterations}", end=end)
 
 
 def benchmark_object_creation(iterations: int, class_generator: Callable[[], Any]) -> float:
@@ -170,14 +170,14 @@ benchmark_parameter: Dict[Data, BenchmarkParameter] = {
 
 
 def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
-    ns_iteration_results: List[int] = []
+    us_iteration_results: List[int] = []
     start = monotonic()
     while int((monotonic() - start) * 1000) < ms_to_run:
         start_iteration = monotonic()
         cb()
         stop_iteration = monotonic()
-        ns_iteration_results.append(int((stop_iteration - start_iteration) * 1000 * 1000))
-    return ns_iteration_results
+        us_iteration_results.append(int((stop_iteration - start_iteration) * 1000 * 1000))
+    return us_iteration_results
 
 
 def calc_stdev(iterations: List[int]) -> float:
@@ -198,7 +198,7 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
             print_row(
                 runs="runs",
                 ms_per_run="ms/run",
-                ns_per_iteration="ns/iteration",
+                us_per_iteration="µs/iteration",
                 mode="mode",
                 avg_iterations="avg iterations",
                 stdev_iterations="stdev iterations",
@@ -206,17 +206,17 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
                 if mode == Mode.all or current_mode == mode:
-                    ns_iteration_results: List[int]
+                    us_iteration_results: List[int]
                     all_results: List[List[int]] = results[current_data][current_mode]
                     obj = parameter.object_creation_cb()
 
                     def print_results(print_run: int, final: bool) -> None:
                         total_iterations: int = sum(len(x) for x in all_results)
-                        total_elapsed_ns: int = sum(sum(x) for x in all_results)
+                        total_elapsed_us: int = sum(sum(x) for x in all_results)
                         print_row(
                             runs=print_run if final else "current",
                             ms_per_run=int(mean(sum(x) for x in all_results) / 1000),
-                            ns_per_iteration=int(total_elapsed_ns / total_iterations),
+                            us_per_iteration=int(total_elapsed_us / total_iterations),
                             mode=current_mode.name,
                             avg_iterations=int(total_iterations / print_run),
                             stdev_iterations=calc_stdev([len(x) for x in all_results]),
@@ -229,7 +229,7 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
 
                         if current_mode == Mode.creation:
                             cls = type(obj)
-                            ns_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), ms)
+                            us_iteration_results = run_for_ms(lambda: cls(**obj.__dict__), ms)
                         else:
                             assert current_mode_parameter is not None
                             conversion_cb = current_mode_parameter.conversion_cb
@@ -237,8 +237,8 @@ def run(data: Data, mode: Mode, runs: int, ms: int) -> None:
                             prepared_obj = parameter.object_creation_cb()
                             if current_mode_parameter.preparation_cb is not None:
                                 prepared_obj = current_mode_parameter.preparation_cb(obj)
-                            ns_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), ms)
-                        all_results.append(ns_iteration_results)
+                            us_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), ms)
+                        all_results.append(us_iteration_results)
                         print_results(current_run, False)
                     assert current_run == runs
                     print_results(runs, True)
