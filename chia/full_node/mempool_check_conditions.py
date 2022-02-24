@@ -7,12 +7,11 @@ from clvm.casts import int_from_bytes, int_to_bytes
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.generator import create_generator_args, setup_generator_args
-from chia.types.blockchain_format.program import NIL
 from chia.types.coin_record import CoinRecord
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
 from chia.types.name_puzzle_condition import NPC
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
@@ -187,10 +186,7 @@ def get_name_puzzle_conditions(
 def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes, max_cost: int):
     try:
         block_program = generator.program
-        if not generator.generator_args:
-            block_program_args = [NIL]
-        else:
-            block_program_args = create_generator_args(generator.generator_refs())
+        block_program_args = create_generator_args(generator.generator_refs)
 
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
             max_cost, block_program, block_program_args, coin_name

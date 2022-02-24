@@ -21,7 +21,7 @@ def run_and_get_removals_and_additions(
 
     if block.transactions_generator is not None:
         npc_result = get_name_puzzle_conditions(
-            BlockGenerator(block.transactions_generator, []),
+            BlockGenerator(block.transactions_generator, [], []),
             max_cost,
             cost_per_byte=cost_per_byte,
             mempool_mode=mempool_mode,

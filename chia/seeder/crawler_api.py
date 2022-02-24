@@ -14,7 +14,7 @@ class CrawlerAPI:
         self.crawler = crawler
 
     def _set_state_changed_callback(self, callback: Callable):
-        pass
+        self.crawler.state_changed_callback = callback
 
     def __getattr__(self, attr_name: str):
         async def invoke(*args, **kwargs):

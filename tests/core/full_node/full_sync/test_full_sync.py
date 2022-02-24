@@ -5,6 +5,7 @@ import time
 from typing import List
 
 import pytest
+import pytest_asyncio
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
@@ -28,22 +29,22 @@ log = logging.getLogger(__name__)
 
 
 class TestFullSync:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self, db_version):
         async for _ in setup_two_nodes(test_constants, db_version=db_version):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_nodes(self, db_version):
         async for _ in setup_n_nodes(test_constants, 3, db_version=db_version):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def four_nodes(self, db_version):
         async for _ in setup_n_nodes(test_constants, 4, db_version=db_version):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def five_nodes(self, db_version):
         async for _ in setup_n_nodes(test_constants, 5, db_version=db_version):
             yield _

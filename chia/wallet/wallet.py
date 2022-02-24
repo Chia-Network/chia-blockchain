@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
@@ -85,10 +85,7 @@ class Wallet:
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost_result: uint64 = calculate_cost_of_program(
-                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
-            )
-            self.cost_of_single_tx = cost_result
+            self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
@@ -340,10 +337,9 @@ class Wallet:
             memos = []
         assert memos is not None
         for coin in coins:
-            self.log.info(f"coin from coins: {coin.name()} {coin}")
-            puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             # Only one coin creates outputs
-            if primary_announcement_hash is None and origin_id in (None, coin.name()):
+            if origin_id in (None, coin.name()):
+                origin_id = coin.name()
                 if primaries is None:
                     if amount > 0:
                         primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
@@ -358,6 +354,7 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
+                puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -366,10 +363,23 @@ class Wallet:
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
-            else:
-                assert primary_announcement_hash is not None
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
 
+                spends.append(
+                    CoinSpend(
+                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+                    )
+                )
+                break
+        else:
+            raise ValueError("origin_id is not in the set of selected coins")
+
+        # Process the non-origin coins now that we have the primary announcement hash
+        for coin in coins:
+            if coin.name() == origin_id:
+                continue
+
+            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))

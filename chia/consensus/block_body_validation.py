@@ -11,7 +11,7 @@ from chia.consensus.block_root_validation import validate_block_merkle_roots
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -156,7 +156,7 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 10 minutes into the future
+    # In header validation we check that timestamp is not more that 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
@@ -194,7 +194,7 @@ async def validate_block_body(
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         assert npc_result is not None
-        cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
+        cost = npc_result.cost
         npc_list = npc_result.npc_list
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM

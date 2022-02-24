@@ -14,14 +14,15 @@ on:
       - '**'
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
   build:
     name: Ubuntu core-full_node Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 80
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4

@@ -18,7 +18,7 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, add_auth_key
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     ErrorResponse,
@@ -128,6 +128,17 @@ class Farmer:
         self.started = False
         self.harvester_handshake_task: Optional[asyncio.Task] = None
 
+        # From p2_singleton_puzzle_hash to pool state dict
+        self.pool_state: Dict[bytes32, Dict] = {}
+
+        # From p2_singleton to auth PrivateKey
+        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
+
+        # Last time we updated pool_state based on the config file
+        self.last_config_access_time: uint64 = uint64(0)
+
+        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
+
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if not self.keychain_proxy:
             if self.local_keychain:
@@ -153,6 +164,15 @@ class Farmer:
             log.warning(no_keys_error_str)
             return False
 
+        config = load_config(self._root_path, "config.yaml")
+        if "xch_target_address" not in self.config:
+            self.config = config["farmer"]
+        if "xch_target_address" not in self.pool_config:
+            self.pool_config = config["pool"]
+        if "xch_target_address" not in self.config or "xch_target_address" not in self.pool_config:
+            log.debug("xch_target_address missing in the config")
+            return False
+
         # This is the farmer configuration
         self.farmer_target_encoded = self.config["xch_target_address"]
         self.farmer_target = decode_puzzle_hash(self.farmer_target_encoded)
@@ -171,19 +191,6 @@ class Farmer:
         if len(self.pool_sks_map) == 0:
             log.warning(no_keys_error_str)
             return False
-
-        # The variables below are for use with an actual pool
-
-        # From p2_singleton_puzzle_hash to pool state dict
-        self.pool_state: Dict[bytes32, Dict] = {}
-
-        # From p2_singleton to auth PrivateKey
-        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
-
-        # Last time we updated pool_state based on the config file
-        self.last_config_access_time: uint64 = uint64(0)
-
-        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
         return True
 
@@ -415,6 +422,7 @@ class Farmer:
 
     async def update_pool_state(self):
         config = load_config(self._root_path, "config.yaml")
+
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
@@ -425,6 +433,9 @@ class Farmer:
                 if authentication_sk is None:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
+
+                add_auth_key(self._root_path, pool_config, authentication_sk.get_g1())
+
                 if p2_singleton_puzzle_hash not in self.pool_state:
                     self.pool_state[p2_singleton_puzzle_hash] = {
                         "points_found_since_start": 0,

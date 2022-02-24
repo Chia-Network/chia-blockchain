@@ -100,9 +100,8 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "chia_seeder": "chia_seeder",
-        "chia_seeder_crawler": "chia_seeder_crawler",
-        "chia_seeder_dns": "chia_seeder_dns",
+        "chia_seeder": "start_seeder",
+        "chia_crawler": "start_crawler",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -114,7 +113,6 @@ if getattr(sys, "frozen", False):
         else:
             path = f"{application_path}/{name_map[service_name]}"
             return path
-
 
 else:
     application_path = os.path.dirname(__file__)
@@ -385,6 +383,8 @@ class WebSocketServer:
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
+        # Help diagnose GUI launch issues
+        self.log.debug(f"Keyring status: {response}")
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -398,6 +398,18 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
+
+                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
+                try:
+                    if not Keychain.migration_checked_for_current_version():
+                        self.log.info("Will attempt to migrate legacy keys...")
+                        Keychain.migrate_legacy_keys_silently()
+                        self.log.info("Migration of legacy keys complete.")
+                    else:
+                        self.log.debug("Skipping legacy key migration (previously attempted).")
+                except Exception:
+                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
+
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
@@ -1058,6 +1070,7 @@ class WebSocketServer:
         error = None
         success = False
         testing = False
+        already_running = False
         if "testing" in request:
             testing = request["testing"]
 
@@ -1071,9 +1084,17 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = f"Service {service_command} already running"
+                self.log.info(f"Service {service_command} already running")
+                already_running = True
+        elif len(self.connections.get(service_command, [])) > 0:
+            # If the service was started manually (not launched by the daemon), we should
+            # have a connection to it.
+            self.log.info(f"Service {service_command} already registered")
+            already_running = True
 
-        if error is None:
+        if already_running:
+            success = True
+        elif error is None:
             try:
                 exe_command = service_command
                 if testing is True:
@@ -1108,6 +1129,12 @@ class WebSocketServer:
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
+            if not is_running:
+                # Check if we have a connection to the requested service. This might be the
+                # case if the service was started manually (i.e. not started by the daemon).
+                service_connections = self.connections.get(service_name)
+                if service_connections is not None:
+                    is_running = len(service_connections) > 0
             response = {
                 "success": True,
                 "service_name": service_name,
