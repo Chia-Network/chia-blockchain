@@ -296,7 +296,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
         node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if is_insert:
             node_count += 1
-            side = None if node_hash is None else random.choice([Side.LEFT, Side.RIGHT])
+            side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
             node_hash = await data_store.insert(
                 key=key,
@@ -1089,7 +1089,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
         node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
-            side = None if node_hash is None else Side.LEFT if random.randint(0, 1) == 0 else Side.RIGHT
+            side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
             _ = await data_store.insert(
                 key=key,

@@ -620,6 +620,10 @@ class DataStore:
 
             return node_hash
 
+    def get_side_for_seed(self, seed: bytes32) -> Side:
+        side_seed = bytes(seed)[0]
+        return Side.LEFT if side_seed < 128 else Side.RIGHT
+
     async def autoinsert(
         self,
         key: bytes,
@@ -638,8 +642,7 @@ class DataStore:
             else:
                 seed = Program.to((key, value)).get_tree_hash()
                 reference_node_hash = await self.get_terminal_node_for_seed(tree_id, seed, lock=False)
-                side_seed = bytes(seed)[0]
-                side = Side.LEFT if side_seed < 128 else Side.RIGHT
+                side = self.get_side_for_seed(seed)
 
             return await self.insert(
                 key=key,
