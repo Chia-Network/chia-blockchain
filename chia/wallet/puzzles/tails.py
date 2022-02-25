@@ -104,7 +104,7 @@ class GenesisById(LimitationsProgram):
 
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(
-                CATInfo(tail.get_tree_hash(), tail, wallet.cat_info.lineage_proofs),
+                CATInfo(tail.get_tree_hash(), tail),
                 False,
             )
 

@@ -72,7 +72,6 @@ kwargs = dict(
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
-    setup_requires=["setuptools_scm"],
     extras_require=dict(
         uvloop=["uvloop"],
         dev=dev_dependencies,
@@ -134,7 +133,6 @@ kwargs = dict(
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
-    use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     zip_safe=False,

@@ -51,7 +51,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.transaction_record import TransactionRecord
 
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
-from tests.core.full_node.test_coin_store import get_future_reward_coins
+from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
@@ -125,25 +125,25 @@ async def wallet_nodes():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_four_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(5, 0, {}, starting_port=51000, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(5, 0, {}, db_version=db_version):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=51100, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, starting_port=51200, db_version=2):
+    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mainnet(db_version):
-    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, starting_port=40000, db_version=db_version)
+    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, db_version=db_version)
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]

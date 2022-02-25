@@ -20,6 +20,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia.util.chunks import chunks
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,7 +40,7 @@ from chia.types.weight_proof import (
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.setproctitle import setproctitle
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -601,7 +602,9 @@ class WeightProofHandler:
         log.info(f"validate weight proof peak height {peak_height}")
 
         # TODO: Consider if this can be spun off to a thread as an alternative to
-        #       sprinkling async sleeps around.
+        #       sprinkling async sleeps around.  Also see the corresponding comment
+        #       in the wallet code.
+        #       all instances tagged as: 098faior2ru08d08ufa
 
         # timing reference: start
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
@@ -622,7 +625,7 @@ class WeightProofHandler:
         with ProcessPoolExecutor(
             max_workers=self._num_processes,
             initializer=setproctitle,
-            initargs=("chia_full_node",),
+            initargs=(f"{getproctitle()}_worker",),
         ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
@@ -876,11 +879,6 @@ def handle_end_of_slot(
         None,
         None,
     )
-
-
-def chunks(some_list, chunk_size):
-    chunk_size = max(1, chunk_size)
-    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
 
 
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
