@@ -33,6 +33,7 @@ from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(max_workers=2)
+        self.pool = ProcessPoolExecutor(max_workers=2, initializer=setproctitle, initargs=(f"{getproctitle()}_worker",))
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None

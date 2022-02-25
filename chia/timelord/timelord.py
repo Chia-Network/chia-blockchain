@@ -33,6 +33,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -132,7 +133,11 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
-                self.bluebox_pool = ProcessPoolExecutor(max_workers=workers)
+                self.bluebox_pool = ProcessPoolExecutor(
+                    max_workers=workers,
+                    initializer=setproctitle,
+                    initargs=(f"{getproctitle()}_worker",),
+                )
                 self.main_loop = asyncio.create_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
                 )
