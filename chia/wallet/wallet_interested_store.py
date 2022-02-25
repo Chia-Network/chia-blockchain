@@ -6,6 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 
+
 class WalletInterestedStore:
     """
     Stores coin ids that we are interested in receiving
