@@ -41,12 +41,6 @@ def wallet_height_at_least(wallet_node, h):
 log = getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestSimpleSyncProtocol:
     @pytest_asyncio.fixture(scope="function")
     async def wallet_node_simulator(self):

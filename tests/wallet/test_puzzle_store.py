@@ -13,12 +13,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestPuzzleStore:
     @pytest.mark.asyncio
     async def test_puzzle_store(self):

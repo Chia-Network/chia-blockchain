@@ -33,12 +33,6 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes(db_version):
     async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):

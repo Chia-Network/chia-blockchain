@@ -23,12 +23,6 @@ SMALL_BLOCK_GENERATOR = make_block_generator(1)
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 def large_block_generator(size):
     # make a small block and hash it
     # use this in the name for the cached big block

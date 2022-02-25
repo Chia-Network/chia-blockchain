@@ -73,21 +73,7 @@ def generate_test_spend_bundle(
     return transaction
 
 
-# this is here to avoid this error:
-# ScopeMismatch: You tried to access the 'function' scoped fixture 'event_loop'
-#   with a 'module' scoped request object, involved factories
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-# TODO: this fixture should really be at function scope, to make all tests
-# independent.
-# The reason it isn't is that our simulators can't be destroyed correctly, which
-# means you can't instantiate more than one per process, so this is a hack until
-# that is fixed. For now, our tests are not independent
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def two_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {})
     nodes, _ = await async_gen.__anext__()

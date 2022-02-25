@@ -15,12 +15,6 @@ from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestDIDWallet:
     @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):

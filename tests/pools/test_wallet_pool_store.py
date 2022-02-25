@@ -17,12 +17,6 @@ from chia.util.ints import uint64
 from chia.wallet.wallet_pool_store import WalletPoolStore
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:
     # TODO: address hint error and remove ignore
     #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")

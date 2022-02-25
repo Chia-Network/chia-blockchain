@@ -15,12 +15,6 @@ from tests.wallet_tools import WalletTool
 from tests.setup_nodes import bt
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 log = logging.getLogger(__name__)
 
 

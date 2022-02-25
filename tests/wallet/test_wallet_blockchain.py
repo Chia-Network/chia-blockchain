@@ -17,12 +17,6 @@ from chia.wallet.wallet_blockchain import WalletBlockchain
 from tests.setup_nodes import test_constants, setup_node_and_wallet
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestWalletBlockchain:
     @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):

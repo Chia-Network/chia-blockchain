@@ -12,12 +12,6 @@ from tests.setup_nodes import bt, self_hostname, setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestNodeLoad:
     @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self, db_version):

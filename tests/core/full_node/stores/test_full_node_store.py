@@ -44,12 +44,6 @@ test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32
 bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 log = logging.getLogger(__name__)
 
 

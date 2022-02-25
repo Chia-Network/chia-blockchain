@@ -11,12 +11,6 @@ from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.ints import uint16, uint64
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class AddressManagerTest(AddressManager):
     def __init__(self, make_deterministic=True):
         super().__init__()

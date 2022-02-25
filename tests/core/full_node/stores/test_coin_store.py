@@ -25,12 +25,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 constants = test_constants
 
 WALLET_A = WalletTool(constants)

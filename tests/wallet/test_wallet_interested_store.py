@@ -11,12 +11,6 @@ from chia.util.ints import uint64
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestWalletInterestedStore:
     @pytest.mark.asyncio
     async def test_store(self):

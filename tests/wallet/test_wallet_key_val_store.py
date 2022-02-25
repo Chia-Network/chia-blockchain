@@ -10,12 +10,6 @@ from chia.wallet.key_val_store import KeyValStore
 from tests.setup_nodes import bt
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestWalletKeyValStore:
     @pytest.mark.asyncio
     async def test_store(self):

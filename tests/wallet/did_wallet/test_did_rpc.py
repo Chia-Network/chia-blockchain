@@ -21,12 +21,6 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestDIDWallet:
     @pytest_asyncio.fixture(scope="function")
     async def three_wallet_nodes(self):
