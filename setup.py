@@ -41,12 +41,14 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "build",
     "coverage",
     "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "twine",
     "isort",
     "flake8",
     "mypy",
