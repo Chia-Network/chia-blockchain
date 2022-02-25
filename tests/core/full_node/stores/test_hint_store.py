@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pytest
 from clvm.casts import int_to_bytes

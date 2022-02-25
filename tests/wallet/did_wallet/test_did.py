@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 import pytest_asyncio
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol

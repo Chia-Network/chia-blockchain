@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from secrets import token_bytes
 from typing import Optional
