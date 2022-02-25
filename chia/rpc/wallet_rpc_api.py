@@ -834,8 +834,8 @@ class WalletRpcApi:
         :return: A list of unacknowledged CATs
         """
         assert self.service.wallet_state_manager is not None
-        return await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
-
+        cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
+        return {"unacknowledged_cats": cats}
 
     async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None

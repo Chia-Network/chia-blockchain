@@ -383,6 +383,10 @@ class WalletRpcClient(RpcClient):
         }
         return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
 
+    async def get_unacknowledged_cats(self) -> Dict:
+        response = await self.fetch("cat_get_unacknowledged", {})
+        return response["unacknowledged_cats"]
+
     async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
         request: Dict[str, Any] = {
             "asset_id": asset_id.hex(),

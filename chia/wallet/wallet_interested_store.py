@@ -4,7 +4,7 @@ import aiosqlite
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
-
+from chia.util.ints import uint32
 
 class WalletInterestedStore:
     """
@@ -110,7 +110,7 @@ class WalletInterestedStore:
     async def add_unacknowledged_token(
             self, asset_id: bytes32,
             name: str,
-            first_seen_height: int,
+            first_seen_height: uint32,
             sender_puzzle_hash: bytes32,
             in_transaction: bool = False) -> None:
         """
