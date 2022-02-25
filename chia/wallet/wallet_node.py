@@ -608,8 +608,7 @@ class WalletNode:
         # Ensure the list is sorted
         items = sorted(items_input, key=last_change_height_cs)
 
-        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
-            nonlocal concurrent_tasks_cs_heights
+        async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -638,19 +637,19 @@ class WalletNode:
                             await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
                             if update_finished_height:
-                                if len(concurrent_tasks_cs_heights) == 1:
+                                if len(cs_heights) == 1:
                                     # We have processed all past tasks, so we can increase the height safely
                                     synced_up_to = last_change_height_cs(valid_states[-1]) - 1
                                 else:
                                     # We know we have processed everything before this min height
-                                    synced_up_to = min(concurrent_tasks_cs_heights)
+                                    synced_up_to = min(cs_heights)
                                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
 
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
-                concurrent_tasks_cs_heights.remove(last_change_height_cs(inner_states[0]))  # pylint: disable=E0602
+                cs_heights.remove(last_change_height_cs(inner_states[0]))
 
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
@@ -669,7 +668,7 @@ class WalletNode:
                     self.log.info("Terminating receipt and validation due to shut down request")
                     return False
             concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
-            all_tasks.append(asyncio.create_task(receive_and_validate(states, idx)))
+            all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
             idx += len(states)
 
         await asyncio.gather(*all_tasks)
@@ -748,9 +747,9 @@ class WalletNode:
         else:
             return None
 
-    async def disconnect_and_stop_wpeers(self):
+    async def disconnect_and_stop_wpeers(self) -> None:
         if self.server is None:
-            return False
+            return
 
         # Close connection of non-trusted peers
         if len(self.server.get_full_node_connections()) > 1:
@@ -762,7 +761,7 @@ class WalletNode:
             await self.wallet_peers.ensure_is_closed()
             self.wallet_peers = None
 
-    async def check_for_synced_peer(self, header_block: HeaderBlock, request_time: uint64):
+    async def check_for_synced_trusted_peer(self, header_block: HeaderBlock, request_time: uint64) -> bool:
         if self.server is None:
             return False
         for peer in self.server.get_full_node_connections():
@@ -866,7 +865,7 @@ class WalletNode:
                         await peer.close()
                         return
 
-                    if await self.check_for_synced_peer(header_block, request_time):
+                    if await self.check_for_synced_trusted_peer(header_block, request_time):
                         self.wallet_state_manager.set_sync_mode(False)
                         self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
                         return
