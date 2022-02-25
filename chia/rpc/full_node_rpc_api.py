@@ -67,7 +67,16 @@ class FullNodeRpcApi:
             change_data = {}
 
         payloads = []
-        if change == "new_peak" or change == "sync_mode":
+        if change == "new_transaction":
+            payloads.append(
+                create_payload_dict(
+                    "new_transaction",
+                    change_data,
+                    self.service_name,
+                    "transactions",
+                )
+            )
+        elif change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -86,8 +95,7 @@ class FullNodeRpcApi:
                     "metrics",
                 )
             )
-
-        if change in ("block", "signage_point"):
+        elif change in ("block", "signage_point"):
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads

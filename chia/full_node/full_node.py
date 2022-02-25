@@ -2052,6 +2052,7 @@ class FullNode:
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 self.not_dropped_tx += 1
+                self._state_changed("new_transaction", {"transaction": transaction})
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
