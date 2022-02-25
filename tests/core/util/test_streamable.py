@@ -30,6 +30,58 @@ from chia.util.streamable import (
 from tests.setup_nodes import bt, test_constants
 
 
+def test_int_not_supported() -> None:
+    with raises(NotImplementedError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class TestClassInt(Streamable):
+            a: int
+
+
+def test_float_not_supported() -> None:
+    with raises(NotImplementedError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class TestClassFloat(Streamable):
+            a: float
+
+
+def test_dict_not_suppported() -> None:
+    with raises(NotImplementedError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class TestClassDict(Streamable):
+            a: Dict[str, str]
+
+
+def test_pure_dataclass_not_supported() -> None:
+    @dataclass(frozen=True)
+    class DataClassOnly:
+        a: uint8
+
+    with raises(NotImplementedError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class TestClassDataclass(Streamable):
+            a: DataClassOnly
+
+
+def test_plain_class_not_supported() -> None:
+    class PlainClass:
+        a: uint8
+
+    with raises(NotImplementedError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class TestClassPlain(Streamable):
+            a: PlainClass
+
+
 def test_basic_list():
     a = [1, 2, 3]
     assert is_type_List(type(a))
