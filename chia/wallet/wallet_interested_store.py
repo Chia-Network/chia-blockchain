@@ -110,7 +110,7 @@ class WalletInterestedStore:
     async def add_unacknowledged_token(
             self, asset_id: bytes32,
             name: str,
-            first_seen_height: uint32,
+            first_seen_height: Optional[uint32],
             sender_puzzle_hash: bytes32,
             in_transaction: bool = False) -> None:
         """
@@ -127,7 +127,7 @@ class WalletInterestedStore:
         try:
             cursor = await self.db_connection.execute(
                 "INSERT OR IGNORE INTO unacknowledged_asset_tokens VALUES (?, ?, ?, ?)",
-                (asset_id.hex(), name, first_seen_height, sender_puzzle_hash.hex())
+                (asset_id.hex(), name, first_seen_height if first_seen_height is not None else 0, sender_puzzle_hash.hex())
             )
             await cursor.close()
         finally:
