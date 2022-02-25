@@ -606,8 +606,7 @@ class WalletNode:
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
-        items = items_input.copy()
-        items.sort(key=last_change_height_cs)
+        items = sorted(items_input, key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
             nonlocal concurrent_tasks_cs_heights
