@@ -353,8 +353,7 @@ class TradeManager:
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
             [c.name() for c in non_ephemeral_removals]
         )
-        assert coin_states is not None
-        return not any([cs.spent_height is not None for cs in coin_states])
+        return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
