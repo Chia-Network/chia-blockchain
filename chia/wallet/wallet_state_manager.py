@@ -640,9 +640,10 @@ class WalletStateManager:
         # Input states should already be sorted by cs_height, with reorgs at the beginning
         curr_h = -1
         for c_state in coin_states:
-            if last_change_height_cs(c_state) < curr_h:
+            last_change_height = last_change_height_cs(c_state)
+            if last_change_height < curr_h:
                 raise ValueError("Input coin_states is not sorted properly")
-            curr_h = last_change_height_cs(c_state)
+            curr_h = last_change_height
 
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
