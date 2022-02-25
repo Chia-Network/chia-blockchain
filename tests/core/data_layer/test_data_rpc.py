@@ -515,8 +515,12 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
         assert diff1 in diff_res["diff"]
 
 
+@pytest.mark.parametrize(
+    "use_optimized",
+    [True, False],
+)
 @pytest.mark.asyncio
-async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes) -> None:
+async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes, use_optimized: bool) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -533,6 +537,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
     async for data_layer in init_data_layer(root_path):
+        data_layer.config["use_optimized"] = use_optimized
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -585,7 +590,9 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
 
         root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         expected_res_hash = root_1["root_hashes"][0]["hash"]
-        assert expected_res_hash != bytes32([0] * 32)
+        assert expected_res_hash == bytes32.from_hexstr(
+            "99e0477adc6190be712a04f4ff213ede9679393d3a2a8360bd6e6d185ca5eab0"
+        )
 
         changelist = [{"action": "delete", "key": key_2.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})

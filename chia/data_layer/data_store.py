@@ -716,14 +716,7 @@ class DataStore:
                         node_hash=reference_node_hash, tree_id=tree_id, lock=False
                     )
                 else:
-                    ancestors = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
-                    )
-                    ancestors_2: List[InternalNode] = await self.get_ancestors(
-                        node_hash=reference_node_hash, tree_id=tree_id, lock=False
-                    )
-                    if ancestors != ancestors_2:
-                        raise RuntimeError("Ancestors optimized didn't produce the expected result.")
+                    ancestors = await self.get_ancestors(node_hash=reference_node_hash, tree_id=tree_id, lock=False)
 
                 if side == Side.LEFT:
                     left = new_terminal_node_hash
@@ -793,12 +786,7 @@ class DataStore:
                     node_hash=node.hash, tree_id=tree_id, lock=False
                 )
             else:
-                ancestors = await self.get_ancestors_optimized(node_hash=node.hash, tree_id=tree_id, lock=False)
-                ancestors_2: List[InternalNode] = await self.get_ancestors(
-                    node_hash=node.hash, tree_id=tree_id, lock=False
-                )
-                if ancestors != ancestors_2:
-                    raise RuntimeError("Ancestors optimized didn't produce the expected result.")
+                ancestors = await self.get_ancestors(node_hash=node.hash, tree_id=tree_id, lock=False)
 
             if len(ancestors) > 62:
                 raise RuntimeError("Tree exceeded max height of 62.")
