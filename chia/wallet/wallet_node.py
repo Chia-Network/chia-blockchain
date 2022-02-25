@@ -640,7 +640,7 @@ class WalletNode:
 
                             if update_finished_height:
                                 if len(concurrent_tasks_cs_heights) == 1:
-                                    # We have processed all past tasks so we can
+                                    # We have processed all past tasks, so we can increase the height safely
                                     synced_up_to = last_change_height_cs(valid_states[-1]) - 1
                                 else:
                                     # We know we have processed everything before this min height
