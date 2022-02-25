@@ -574,7 +574,7 @@ class WalletNode:
 
     async def receive_state_from_peer(
         self,
-        items: List[CoinState],
+        items_input: List[CoinState],
         peer: WSChiaConnection,
         fork_height: Optional[uint32] = None,
         height: Optional[uint32] = None,
@@ -583,7 +583,6 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
-        # The items will be sorted in place.
 
         if self.wallet_state_manager is None:
             return False
@@ -607,6 +606,7 @@ class WalletNode:
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
+        items = items_input.copy()
         items.sort(key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int):
@@ -620,7 +620,7 @@ class WalletNode:
                             self.add_state_to_race_cache(header_hash, height, inner_state)
                             self.log.info(f"Added to race cache: {height}, {inner_state}")
                     if trusted:
-                        valid_states = inner_states.copy()
+                        valid_states = inner_states
                     else:
                         valid_states = [
                             inner_state
@@ -641,7 +641,7 @@ class WalletNode:
                             if update_finished_height:
                                 if len(concurrent_tasks_cs_heights) == 1:
                                     # We have processed all past tasks so we can
-                                    synced_up_to = last_change_height_cs(inner_states[-1]) - 1
+                                    synced_up_to = last_change_height_cs(valid_states[-1]) - 1
                                 else:
                                     # We know we have processed everything before this min height
                                     synced_up_to = min(concurrent_tasks_cs_heights)
@@ -867,7 +867,7 @@ class WalletNode:
                         await peer.close()
                         return
 
-                    if self.check_for_synced_peer(header_block, request_time):
+                    if await self.check_for_synced_peer(header_block, request_time):
                         self.wallet_state_manager.set_sync_mode(False)
                         self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
                         return
