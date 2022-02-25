@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import io
 
 from clvm_tools import binutils
@@ -24,8 +24,86 @@ from chia.util.streamable import (
     parse_tuple,
     parse_size_hints,
     parse_str,
+    is_type_List,
+    is_type_SpecificOptional,
 )
 from tests.setup_nodes import bt, test_constants
+
+
+def test_basic_list():
+    a = [1, 2, 3]
+    assert is_type_List(type(a))
+    assert is_type_List(List)
+    assert is_type_List(List[int])
+    assert is_type_List(List[uint8])
+    assert is_type_List(list)
+    assert not is_type_List(Tuple)
+    assert not is_type_List(tuple)
+    assert not is_type_List(dict)
+
+def test_not_lists():
+    assert not is_type_List(Dict)
+
+
+def test_basic_optional():
+    assert is_type_SpecificOptional(Optional[int])
+    assert is_type_SpecificOptional(Optional[Optional[int]])
+    assert not is_type_SpecificOptional(List[int])
+
+
+def test_StrictDataClass():
+    @dataclass(frozen=True)
+    @streamable
+    class TestClass1(Streamable):
+        a: uint8
+        b: str
+
+    good: TestClass1 = TestClass1(24, "!@12")
+    assert TestClass1.__name__ == "TestClass1"
+    assert good
+    assert good.a == 24
+    assert good.b == "!@12"
+    good2 = TestClass1(52, bytes([1, 2, 3]))
+    assert good2.b == str(bytes([1, 2, 3]))
+
+def test_StrictDataClassBad():
+    @dataclass(frozen=True)
+    @streamable
+    class TestClass2(Streamable):
+        a: uint8
+        b = 0
+
+    assert TestClass2(25)
+
+    with raises(TypeError):
+        TestClass2(1, 2)
+
+def test_StrictDataClassLists():
+    @dataclass(frozen=True)
+    @streamable
+    class TestClass(Streamable):
+        a: List[uint8]
+        b: List[List[uint8]]
+
+    assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
+
+    with raises(ValueError):
+        TestClass({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]])
+
+    with raises(ValueError):
+        TestClass([1, 2, 3], [uint8(200), uint8(25)])
+
+def test_StrictDataClassOptional():
+    @dataclass(frozen=True)
+    @streamable
+    class TestClass(Streamable):
+        a: Optional[uint8]
+        b: Optional[uint8]
+        c: Optional[Optional[uint8]]
+        d: Optional[Optional[uint8]]
+
+    good = TestClass(12, None, 13, None)
+    assert good
 
 
 def test_basic():

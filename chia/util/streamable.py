@@ -5,7 +5,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Union, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -14,16 +14,33 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
-from chia.util.type_checking import is_type_List, is_type_SpecificOptional, is_type_Tuple, strictdataclass
 
 if sys.version_info < (3, 8):
 
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
 
+    def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
+        return getattr(t, "__origin__", None)
+
 else:
 
-    from typing import get_args
+    from typing import get_args, get_origin
+
+
+def is_type_List(f_type: Type) -> bool:
+    return get_origin(f_type) == list or f_type == list
+
+
+def is_type_SpecificOptional(f_type) -> bool:
+    """
+    Returns true for types such as Optional[T], but not Optional, or T.
+    """
+    return get_origin(f_type) == Union and get_args(f_type)[1]() is None
+
+
+def is_type_Tuple(f_type: Type) -> bool:
+    return get_origin(f_type) == tuple or f_type == tuple
 
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
@@ -131,9 +148,9 @@ FIELDS_FOR_STREAMABLE_CLASS = {}
 
 def streamable(cls: Any):
     """
-    This is a decorator for class definitions. It applies the strictdataclass decorator,
-    which checks all types at construction. It also defines a simple serialization format,
-    and adds parse, from bytes, stream, and __bytes__ methods.
+    This is a decorator for class definitions. It requires to inherits from `Streamable` class,
+    which validates/parses all types at construction in the ´__post_init__`. It also defines a simple serialization
+    format, and adds parse, from bytes, stream, and __bytes__ methods.
 
     The primitives are:
     * Sized ints serialized in big endian format, e.g. uint64
@@ -177,8 +194,14 @@ def streamable(cls: Any):
     arguments.
     """
 
-    cls1 = strictdataclass(cls)
-    t = type(cls.__name__, (cls1, Streamable), {})
+    class NoTypeChecking:
+        __no_type_check__ = True
+
+    t = dataclasses.dataclass(cls, init=False, frozen=True)  # type: ignore
+    if dataclasses.fields(t) == ():
+        t = type(cls.__name__, (t, NoTypeChecking), {})
+    else:
+        t = type(cls.__name__, (t,), {})
 
     stream_functions = []
     parse_functions = []
@@ -299,6 +322,61 @@ def stream_str(item: Any, f: BinaryIO) -> None:
 
 
 class Streamable:
+    def post_init_parse(self, item: Any, f_name: str, f_type: Type) -> Any:
+        if is_type_List(f_type):
+            collected_list: List = []
+            inner_type: Type = get_args(f_type)[0]
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
+            if not is_type_List(type(item)):
+                raise ValueError(f"Wrong type for {f_name}, need a list.")
+            for el in item:
+                collected_list.append(self.post_init_parse(el, f_name, inner_type))
+            return collected_list
+        if is_type_SpecificOptional(f_type):
+            if item is None:
+                return None
+            else:
+                inner_type: Type = get_args(f_type)[0]  # type: ignore
+                return self.post_init_parse(item, f_name, inner_type)
+        if is_type_Tuple(f_type):
+            collected_list = []
+            if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
+                raise ValueError(f"Wrong type for {f_name}, need a tuple.")
+            if len(item) != len(get_args(f_type)):
+                raise ValueError(f"Wrong number of elements in tuple {f_name}.")
+            for i in range(len(item)):
+                inner_type = get_args(f_type)[i]
+                tuple_item = item[i]
+                collected_list.append(self.post_init_parse(tuple_item, f_name, inner_type))
+            return tuple(collected_list)
+        if not isinstance(item, f_type):
+            try:
+                item = f_type(item)
+            except (TypeError, AttributeError, ValueError):
+                try:
+                    item = f_type.from_bytes(item)
+                except Exception:
+                    item = f_type.from_bytes(bytes(item))
+        if not isinstance(item, f_type):
+            raise ValueError(f"Wrong type for {f_name}")
+        return item
+
+    def __post_init__(self):
+        try:
+            fields = self.__annotations__  # pylint: disable=no-member
+        except Exception:
+            fields = {}
+        data = self.__dict__
+        for (f_name, f_type) in fields.items():
+            if f_name not in data:
+                raise ValueError(f"Field {f_name} not present")
+            try:
+                if not isinstance(data[f_name], f_type):
+                    object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
+            except TypeError:
+                # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
+                object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
+
     @classmethod
     def function_to_parse_one_item(cls, f_type: Type) -> Callable[[BinaryIO], Any]:
         """
