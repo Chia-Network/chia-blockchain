@@ -41,6 +41,7 @@ from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action import WalletAction
@@ -599,14 +600,14 @@ class WalletStateManager:
     ) -> None:
         # TODO: add comment about what this method does
 
-        # Sort by created height, then add the reorg states (created_height is None) to the end
-        created_h_none: List[CoinState] = []
-        for coin_st in coin_states.copy():
-            if coin_st.created_height is None:
-                coin_states.remove(coin_st)
-                created_h_none.append(coin_st)
-        coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
-        coin_states.extend(created_h_none)
+        # Input states should already be sorted by cs_height, with reorgs at the beginning
+        curr_h = -1
+        for c_state in coin_states:
+            last_change_height = last_change_height_cs(c_state)
+            if last_change_height < curr_h:
+                raise ValueError("Input coin_states is not sorted properly")
+            curr_h = last_change_height
+
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()

@@ -281,6 +281,8 @@ def last_change_height_cs(cs: CoinState) -> uint32:
         return cs.spent_height
     if cs.created_height is not None:
         return cs.created_height
+
+    # Reorgs should be processed at the beginning
     return uint32(0)
 
 
