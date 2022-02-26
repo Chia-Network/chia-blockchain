@@ -10,6 +10,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -412,27 +413,15 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        ref_list = full_block.transactions_generator_ref_list
-        tx_info = full_block.transactions_info
-        generator_program = full_block.transactions_generator
-        height = full_block.reward_chain_block.height
+        tx_info: Optional[TransactionsInfo] = full_block.transactions_info
+        generator_program: Optional[SerializedProgram] = full_block.transactions_generator
+        height: uint32 = full_block.reward_chain_block.height
         spends: List[CoinSpend] = []
-        if tx_info and generator_program:
+        if tx_info is not None and generator_program is not None:
             cost = tx_info.cost
-            generator_args: List[SerializedProgram] = []
-            for height in ref_list:
-                ref_header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(height)
-                if ref_header_hash is None:
-                    raise ValueError(f"Block hash {height} not found in chain")
-                ref_block: Optional[FullBlock] = await self.service.block_store.get_full_block(ref_header_hash)
-                if ref_block is None:
-                    raise ValueError(f"Block {ref_header_hash} does not exist")
-                if ref_block.transactions_generator is not None:
-                    generator_args.append(ref_block.transactions_generator)
-
-            if not generator_program:
+            block_generator = await self.service.blockchain.get_block_generator(full_block)
+            if block_generator is None:
                 return {"block_spends": spends}
-            block_generator = BlockGenerator(generator_program, generator_args, [])
 
             if height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
                 # conditions must use integers in canonical encoding (i.e. no redundant
