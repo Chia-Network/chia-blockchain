@@ -184,6 +184,13 @@ class FullNodeRpcClient(RpcClient):
         # TODO: return block records
         return response["block_records"]
 
+    async def get_block_spends(self, header_hash: bytes32) -> List:
+        try:
+            response = await self.fetch("get_block_spends", {"header_hash": header_hash.hex()})
+        except Exception:
+            return []
+        return response["block_spends"]
+
     async def push_tx(self, spend_bundle: SpendBundle):
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 
