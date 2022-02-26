@@ -19,8 +19,8 @@ class Capability(IntEnum):
     BASE = 1  # Base capability just means it supports the chia protocol at mainnet
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Handshake(Streamable):
     network_id: str
     protocol_version: str

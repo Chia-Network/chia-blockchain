@@ -14,23 +14,23 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolDifficulty(Streamable):
     difficulty: uint64
     sub_slot_iters: uint64
     pool_contract_puzzle_hash: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class HarvesterHandshake(Streamable):
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewSignagePointHarvester(Streamable):
     challenge_hash: bytes32
     difficulty: uint64
@@ -40,8 +40,8 @@ class NewSignagePointHarvester(Streamable):
     pool_difficulties: List[PoolDifficulty]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewProofOfSpace(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
@@ -50,8 +50,8 @@ class NewProofOfSpace(Streamable):
     signage_point_index: uint8
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
@@ -59,8 +59,8 @@ class RequestSignatures(Streamable):
     messages: List[bytes32]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
@@ -70,8 +70,8 @@ class RespondSignatures(Streamable):
     message_signatures: List[Tuple[bytes32, G2Element]]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Plot(Streamable):
     filename: str
     size: uint8
@@ -83,14 +83,14 @@ class Plot(Streamable):
     time_modified: uint64
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestPlots(Streamable):
     pass
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondPlots(Streamable):
     plots: List[Plot]
     failed_to_open_filenames: List[str]

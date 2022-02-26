@@ -7,8 +7,8 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NPC(Streamable):
     coin_name: bytes32
     puzzle_hash: bytes32

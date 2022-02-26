@@ -13,8 +13,8 @@ from chia.util.db_wrapper import DBWrapper
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SesCache(Streamable):
     content: List[Tuple[uint32, bytes]]
 

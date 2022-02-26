@@ -10,8 +10,8 @@ from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class FullBlock(Streamable):
     # All the information required to validate a block
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb

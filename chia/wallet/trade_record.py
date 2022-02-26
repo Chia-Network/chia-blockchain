@@ -9,8 +9,8 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class TradeRecord(Streamable):
     """
     Used for storing transaction data and status in wallets.

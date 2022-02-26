@@ -6,8 +6,8 @@ from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NPCResult(Streamable):
     error: Optional[uint16]
     npc_list: List[NPC]
