@@ -106,8 +106,8 @@ def test_basic_optional():
 
 
 def test_StrictDataClass():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass1(Streamable):
         a: uint8
         b: str
@@ -122,8 +122,8 @@ def test_StrictDataClass():
 
 
 def test_StrictDataClassBad():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass2(Streamable):
         a: uint8
         b = 0
@@ -135,8 +135,8 @@ def test_StrictDataClassBad():
 
 
 def test_StrictDataClassLists():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass(Streamable):
         a: List[uint8]
         b: List[List[uint8]]
@@ -151,8 +151,8 @@ def test_StrictDataClassLists():
 
 
 def test_StrictDataClassOptional():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass(Streamable):
         a: Optional[uint8]
         b: Optional[uint8]
@@ -164,8 +164,8 @@ def test_StrictDataClassOptional():
 
 
 def test_basic():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass(Streamable):
         a: uint32
         b: uint32
@@ -182,8 +182,8 @@ def test_basic():
 
 
 def test_variable_size():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass2(Streamable):
         a: uint32
         b: uint32
@@ -194,8 +194,8 @@ def test_variable_size():
 
     with raises(NotImplementedError):
 
-        @dataclass(frozen=True)
         @streamable
+        @dataclass(frozen=True)
         class TestClass3(Streamable):
             a: int
 
@@ -206,8 +206,8 @@ def test_json(bt):
     assert FullBlock.from_json_dict(dict_block) == block
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class OptionalTestClass(Streamable):
     a: Optional[str]
     b: Optional[bool]
@@ -233,13 +233,13 @@ def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[List[Opt
 
 
 def test_recursive_json():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass1(Streamable):
         a: List[uint32]
 
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClass2(Streamable):
         a: uint32
         b: List[Optional[List[TestClass1]]]
@@ -264,8 +264,8 @@ def test_ambiguous_deserialization_optionals():
     with raises(AssertionError):
         SubEpochChallengeSegment.from_bytes(b"\x00\x00\x00\x03\xff\xff\xff\xff")
 
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassOptional(Streamable):
         a: Optional[uint8]
 
@@ -278,8 +278,8 @@ def test_ambiguous_deserialization_optionals():
 
 
 def test_ambiguous_deserialization_int():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassUint(Streamable):
         a: uint32
 
@@ -289,8 +289,8 @@ def test_ambiguous_deserialization_int():
 
 
 def test_ambiguous_deserialization_list():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassList(Streamable):
         a: List[uint8]
 
@@ -300,8 +300,8 @@ def test_ambiguous_deserialization_list():
 
 
 def test_ambiguous_deserialization_tuple():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassTuple(Streamable):
         a: Tuple[uint8, str]
 
@@ -311,8 +311,8 @@ def test_ambiguous_deserialization_tuple():
 
 
 def test_ambiguous_deserialization_str():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassStr(Streamable):
         a: str
 
@@ -322,8 +322,8 @@ def test_ambiguous_deserialization_str():
 
 
 def test_ambiguous_deserialization_bytes():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassBytes(Streamable):
         a: bytes
 
@@ -339,8 +339,8 @@ def test_ambiguous_deserialization_bytes():
 
 
 def test_ambiguous_deserialization_bool():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassBool(Streamable):
         a: bool
 
@@ -353,8 +353,8 @@ def test_ambiguous_deserialization_bool():
 
 
 def test_ambiguous_deserialization_program():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class TestClassProgram(Streamable):
         a: Program
 
@@ -367,8 +367,8 @@ def test_ambiguous_deserialization_program():
 
 
 def test_streamable_empty():
-    @dataclass(frozen=True)
     @streamable
+    @dataclass(frozen=True)
     class A(Streamable):
         pass
 

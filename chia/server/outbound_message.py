@@ -31,8 +31,8 @@ class Delivery(IntEnum):
     SPECIFIC = 6
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Message(Streamable):
     type: uint8  # one of ProtocolMessageTypes
     # message id

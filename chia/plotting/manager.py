@@ -32,16 +32,16 @@ log = logging.getLogger(__name__)
 CURRENT_VERSION: uint16 = uint16(0)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class CacheEntry(Streamable):
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class DiskCache(Streamable):
     version: uint16
     data: List[Tuple[bytes32, CacheEntry]]
