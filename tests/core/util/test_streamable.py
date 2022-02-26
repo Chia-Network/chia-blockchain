@@ -93,6 +93,7 @@ def test_basic_list():
     assert not is_type_List(tuple)
     assert not is_type_List(dict)
 
+
 def test_not_lists():
     assert not is_type_List(Dict)
 
@@ -118,6 +119,7 @@ def test_StrictDataClass():
     good2 = TestClass1(52, bytes([1, 2, 3]))
     assert good2.b == str(bytes([1, 2, 3]))
 
+
 def test_StrictDataClassBad():
     @dataclass(frozen=True)
     @streamable
@@ -129,6 +131,7 @@ def test_StrictDataClassBad():
 
     with raises(TypeError):
         TestClass2(1, 2)
+
 
 def test_StrictDataClassLists():
     @dataclass(frozen=True)
@@ -144,6 +147,7 @@ def test_StrictDataClassLists():
 
     with raises(ValueError):
         TestClass([1, 2, 3], [uint8(200), uint8(25)])
+
 
 def test_StrictDataClassOptional():
     @dataclass(frozen=True)
