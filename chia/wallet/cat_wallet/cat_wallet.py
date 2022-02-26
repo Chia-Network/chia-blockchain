@@ -73,7 +73,7 @@ class CATWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
