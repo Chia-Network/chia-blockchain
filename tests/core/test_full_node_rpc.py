@@ -198,6 +198,8 @@ class TestRpc:
             current_blocks = await self.get_all_full_blocks()
             block_spends = await client.get_block_spends(current_blocks[-1].header_hash)
 
+            print("debugging", block_spends)
+
             assert block_spends == []
 
             assert len(await client.get_connections()) == 0
