@@ -1,12 +1,11 @@
 import asyncio
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Tuple, Set
+from typing import AsyncIterator, Dict, List, Tuple
 import pytest
 
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import DiffData, OperationType
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -516,3 +515,39 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
         assert diff4 in diff_res["diff"]
         assert diff5 in diff_res["diff"]
         assert diff1 in diff_res["diff"]
+
+
+@pytest.mark.asyncio
+async def test_resubmit(one_wallet_node_and_rpc: nodes) -> None:
+    root_path = bt.root_path
+    wallet_node, full_node_api = one_wallet_node_and_rpc
+    num_blocks = 15
+    assert wallet_node.server
+    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    assert wallet_node.wallet_state_manager is not None
+    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await asyncio.sleep(0.5)
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+    await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+    async for data_layer in init_data_layer(root_path):
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        key1 = b"a"
+        value1 = b"\x01\x02"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id1.hex(), "changelist": changelist})
+        root = await data_rpc_api.get_local_root({"id": store_id1.hex()})
+        assert root["submissions"] == 1
+        with pytest.raises(Exception):
+            root = await data_rpc_api.resubmit_root({"id": store_id1.hex()})

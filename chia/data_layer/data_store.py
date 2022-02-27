@@ -215,23 +215,6 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "generation": generation},
             )
 
-    async def get_root_submissions(self, tree_id: bytes32, generation: int) -> Root:
-        async with self.db_wrapper.locked_transaction(lock=True):
-            cursor = await self.db.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id and generation == :generation",
-                {"tree_id": tree_id.hex(), "generation": generation},
-            )
-            row = await cursor.fetchone()
-
-            if row is None:
-                raise Exception(f"unable to find root for id, root: {tree_id.hex()}")
-
-            maybe_extra_result = await cursor.fetchone()
-            if maybe_extra_result is not None:
-                raise Exception(f"multiple roots found for id, root: {tree_id.hex()}")
-
-        return Root.from_row(row=row)
-
     async def check(self) -> None:
         for check in self._checks:
             await check(self)
