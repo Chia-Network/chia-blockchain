@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit
 
 export NODE_OPTIONS="--max-old-space-size=3000"
 

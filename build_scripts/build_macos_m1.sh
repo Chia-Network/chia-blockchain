@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail -o nounset
+set -o errexit -o nounset
 
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined.

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit
 
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit
 
 if [ -z "$VIRTUAL_ENV" ]; then
   echo "This requires the chia python virtual environment."

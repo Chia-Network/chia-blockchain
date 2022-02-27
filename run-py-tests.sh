@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -o errexit -o pipefail
+set -o errexit
 
 python3 -m venv venv
 # shellcheck disable=SC1091
