@@ -155,9 +155,8 @@ if [ ! "$CI" ]; then
 
   if [ "$SUBMODULE_BRANCH" ];
   then
-    git fetch
-    git checkout "$SUBMODULE_BRANCH"
-    git pull
+    git fetch --all
+    git reset --hard "$SUBMODULE_BRANCH"
     echo ""
     echo "Building the GUI with branch $SUBMODULE_BRANCH"
     echo ""
