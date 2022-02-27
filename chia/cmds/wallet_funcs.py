@@ -8,8 +8,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
+from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -133,7 +135,11 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     paginate = args["paginate"]
     if paginate is None:
         paginate = sys.stdout.isatty()
-    txs: List[TransactionRecord] = await wallet_client.get_transactions(wallet_id)
+    offset = args["offset"]
+    limit = args["limit"]
+    txs: List[TransactionRecord] = await wallet_client.get_transactions(
+        wallet_id, start=offset, end=(offset + limit), reverse=True
+    )
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
@@ -152,9 +158,8 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         print(e.args[0])
         return
 
-    offset = args["offset"]
     num_per_screen = 5 if paginate else len(txs)
-    for i in range(offset, len(txs), num_per_screen):
+    for i in range(0, len(txs), num_per_screen):
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
@@ -494,6 +499,10 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
         )
         print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+
+    print(" ")
+    trusted_peers: Dict = config.get("trusted_peers", {})
+    await print_connections(wallet_client, time, NodeType, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:

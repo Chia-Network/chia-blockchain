@@ -58,6 +58,7 @@ py.test tests -v --durations 0
 The [black library](https://black.readthedocs.io/en/stable/) is used as an automatic style formatter to make things easier.
 The [flake8 library](https://readthedocs.org/projects/flake8/) helps ensure consistent style.
 The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
+The [isort library](https://isort.readthedocs.io) is used to sort, group and validate imports in all python files.
 
 If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 

@@ -4,6 +4,7 @@ import asyncio
 import time
 
 import pytest
+import pytest_asyncio
 import logging
 
 from chia.protocols import full_node_protocol
@@ -41,7 +42,7 @@ def event_loop():
 
 
 class TestMempoolPerformance:
-    @pytest.fixture(scope="module")
+    @pytest_asyncio.fixture(scope="module")
     async def wallet_nodes(self):
         key_seed = bt.farmer_master_sk_entropy
         async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):

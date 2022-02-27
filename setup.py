@@ -41,11 +41,14 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "build",
     "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "twine",
+    "isort",
     "flake8",
     "mypy",
     # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
@@ -70,7 +73,6 @@ kwargs = dict(
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
-    setup_requires=["setuptools_scm"],
     extras_require=dict(
         uvloop=["uvloop"],
         dev=dev_dependencies,
@@ -94,7 +96,6 @@ kwargs = dict(
         "chia.protocols",
         "chia.rpc",
         "chia.seeder",
-        "chia.seeder.util",
         "chia.server",
         "chia.simulator",
         "chia.types.blockchain_format",
@@ -119,9 +120,8 @@ kwargs = dict(
             "chia_harvester = chia.server.start_harvester:main",
             "chia_farmer = chia.server.start_farmer:main",
             "chia_introducer = chia.server.start_introducer:main",
-            "chia_seeder = chia.cmds.seeder:main",
-            "chia_seeder_crawler = chia.seeder.start_crawler:main",
-            "chia_seeder_server = chia.seeder.dns_server:main",
+            "chia_crawler = chia.seeder.start_crawler:main",
+            "chia_seeder = chia.seeder.dns_server:main",
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
@@ -134,7 +134,6 @@ kwargs = dict(
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
-    use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     zip_safe=False,

@@ -51,6 +51,7 @@ class TestHintStore:
             coins_for_non_hint = await hint_store.get_coin_ids(not_existing_hint)
             assert coins_for_non_hint == []
 
+    @pytest.mark.asyncio
     async def test_duplicate_coins(self, db_version):
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)

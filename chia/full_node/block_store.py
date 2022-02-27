@@ -7,10 +7,13 @@ import zstd
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
+from chia.util.errors import Err
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
+from chia.util.full_block_utils import generator_from_block
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +55,8 @@ class BlockStore:
             # peak. The "key" field is there to make update statements simple
             await self.db.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
+            # If any of these indices are altered, they should also be altered
+            # in the chia/cmds/db_upgrade.py file
             await self.db.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
 
             # Sub epoch segments for weight proofs
@@ -61,6 +66,8 @@ class BlockStore:
                 "challenge_segments blob)"
             )
 
+            # If any of these indices are altered, they should also be altered
+            # in the chia/cmds/db_upgrade.py file
             await self.db.execute(
                 "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
                 " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
@@ -293,6 +300,64 @@ class BlockStore:
             for row in await cursor.fetchall():
                 ret.append(self.maybe_decompress(row[0]))
             return ret
+
+    async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
+
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
+            return cached.transactions_generator
+
+        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+        async with self.db.execute(formatted_str, (self.maybe_to_hex(header_hash),)) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
+
+            try:
+                return generator_from_block(block_bytes)
+            except Exception as e:
+                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # generator_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return b.transactions_generator
+
+    async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
+        assert self.db_wrapper.db_version == 2
+
+        if len(heights) == 0:
+            return []
+
+        generators: Dict[uint32, SerializedProgram] = {}
+        heights_db = tuple(heights)
+        formatted_str = (
+            f"SELECT block, height from full_blocks "
+            f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights_db) - 1)}?)'
+        )
+        async with self.db.execute(formatted_str, heights_db) as cursor:
+            async for row in cursor:
+                block_bytes = zstd.decompress(row[0])
+
+                try:
+                    gen = generator_from_block(block_bytes)
+                except Exception as e:
+                    log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                    # this is defensive, on the off-chance that
+                    # generator_from_block() fails, fall back to the reliable
+                    # definition of parsing a block
+                    b = FullBlock.from_bytes(block_bytes)
+                    gen = b.transactions_generator
+                if gen is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                generators[uint32(row[1])] = gen
+
+        return [generators[h] for h in heights]
 
     async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
         """
