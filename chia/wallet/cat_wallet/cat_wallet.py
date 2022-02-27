@@ -108,7 +108,7 @@ class CATWallet:
 
         # Change and actual CAT coin
         non_ephemeral_coins: List[Coin] = spend_bundle.not_ephemeral_additions()
-        cc_coin = None
+        cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
             info = await puzzle_store.wallet_info_for_puzzle_hash(c.puzzle_hash)
@@ -116,23 +116,23 @@ class CATWallet:
                 raise ValueError("Internal Error")
             id, wallet_type = info
             if id == self.id():
-                cc_coin = c
+                cat_coin = c
 
-        if cc_coin is None:
+        if cat_coin is None:
             raise ValueError("Internal Error, unable to generate new CAT coin")
-        cc_pid: bytes32 = cc_coin.parent_coin_info
+        cat_pid: bytes32 = cat_coin.parent_coin_info
 
-        cc_record = TransactionRecord(
+        cat_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=(await self.convert_puzzle_hash(cc_coin.puzzle_hash)),
-            amount=uint64(cc_coin.amount),
+            to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
+            amount=uint64(cat_coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,
-            additions=[cc_coin],
-            removals=list(filter(lambda rem: rem.name() == cc_pid, spend_bundle.removals())),
+            additions=[cat_coin],
+            removals=list(filter(lambda rem: rem.name() == cat_pid, spend_bundle.removals())),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -142,7 +142,7 @@ class CATWallet:
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
-        await self.standard_wallet.push_transaction(cc_record)
+        await self.standard_wallet.push_transaction(cat_record)
         return self
 
     @staticmethod
@@ -223,7 +223,7 @@ class CATWallet:
             if lineage is not None:
                 amount = uint64(amount + record.coin.amount)
 
-        self.log.info(f"Confirmed balance for cc wallet {self.id()} is {amount}")
+        self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
@@ -287,9 +287,9 @@ class CATWallet:
 
     async def coin_added(self, coin: Coin, height: uint32):
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"CC wallet has been notified that {coin} was added")
+        self.log.info(f"CAT wallet has been notified that {coin} was added")
 
-        inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+        inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount)
         await self.add_lineage(coin.name(), lineage_proof)
 
@@ -355,8 +355,8 @@ class CATWallet:
 
     def puzzle_for_pk(self, pubkey) -> Program:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pubkey))
-        cc_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
-        return cc_puzzle
+        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
+        return cat_puzzle
 
     async def get_new_cat_puzzle_hash(self):
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
@@ -478,9 +478,9 @@ class CATWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def inner_puzzle_for_cc_puzhash(self, cc_hash: bytes32) -> Program:
+    async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            cc_hash
+            cat_hash
         )
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
@@ -492,7 +492,7 @@ class CATWallet:
         if record is None:
             return puzzle_hash
         else:
-            return (await self.inner_puzzle_for_cc_puzhash(puzzle_hash)).get_tree_hash()
+            return (await self.inner_puzzle_for_cat_puzhash(puzzle_hash)).get_tree_hash()
 
     async def get_lineage_proof_for_coin(self, coin) -> Optional[LineageProof]:
         return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
@@ -607,7 +607,7 @@ class CATWallet:
             limitations_program_reveal = self.cat_info.my_tail
 
         # Loop through the coins we've selected and gather the information we need to spend them
-        spendable_cc_list = []
+        spendable_cat_list = []
         chia_tx = None
         first = True
         announcement: Announcement
@@ -645,10 +645,10 @@ class CATWallet:
                     primaries=[],
                     coin_announcements_to_assert={announcement.name()},
                 )
-            inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+            inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
-            new_spendable_cc = SpendableCAT(
+            new_spendable_cat = SpendableCAT(
                 coin,
                 self.cat_info.limitations_program_hash,
                 inner_puzzle,
@@ -658,9 +658,9 @@ class CATWallet:
                 lineage_proof=lineage_proof,
                 limitations_program_reveal=limitations_program_reveal,
             )
-            spendable_cc_list.append(new_spendable_cc)
+            spendable_cat_list.append(new_spendable_cat)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cc_list)
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         chia_spend_bundle = SpendBundle([], G2Element())
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             chia_spend_bundle = chia_tx.spend_bundle

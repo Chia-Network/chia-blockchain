@@ -71,23 +71,23 @@ class GenesisById(LimitationsProgram):
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        cc_inner: Program = await wallet.get_new_inner_puzzle()
+        cat_inner: Program = await wallet.get_new_inner_puzzle()
         await wallet.add_lineage(origin_id, LineageProof())
         genesis_coin_checker: Program = cls.construct([Program.to(origin_id)])
 
-        minted_cc_puzzle_hash: bytes32 = construct_cat_puzzle(
-            CAT_MOD, genesis_coin_checker.get_tree_hash(), cc_inner
+        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(
+            CAT_MOD, genesis_coin_checker.get_tree_hash(), cat_inner
         ).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
+            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
         )
         assert tx_record.spend_bundle is not None
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, genesis_coin_checker, []]),
             wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}],
+                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
@@ -96,7 +96,7 @@ class GenesisById(LimitationsProgram):
                 SpendableCAT(
                     list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
                     genesis_coin_checker.get_tree_hash(),
-                    cc_inner,
+                    cat_inner,
                     inner_solution,
                     limitations_program_reveal=genesis_coin_checker,
                 )
