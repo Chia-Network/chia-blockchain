@@ -5,7 +5,7 @@ import logging
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, Optional, List
+from typing import Dict, Optional, Iterable, List
 from blspy import G2Element
 
 from clvm.casts import int_to_bytes
