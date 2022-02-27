@@ -166,7 +166,6 @@ class DataLayer:
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
-            return None
         return res
 
     async def resubmit_root(self, store_id: bytes32, fee: uint64) -> None:

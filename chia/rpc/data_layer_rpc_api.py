@@ -173,6 +173,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         res = await self.service.get_local_root(store_id)
+        if res is None:
+            raise Exception(f"Failed to get root for {store_id.hex()}")
         return {"hash": res.node_hash, "submissions": res.submissions}
 
     async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
