@@ -4,7 +4,6 @@ import click
 from chia import __version__
 from chia.cmds.configure import configure_cmd
 from chia.cmds.farm import farm_cmd
-from chia.cmds.get import get_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
@@ -139,7 +138,6 @@ cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
-cli.add_command(get_cmd)
 
 if supports_keyring_passphrase():
     cli.add_command(passphrase_cmd)
