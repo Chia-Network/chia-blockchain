@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
