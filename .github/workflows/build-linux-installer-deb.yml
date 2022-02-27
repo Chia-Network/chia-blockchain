@@ -138,6 +138,10 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
+        which sh
+        ls -l $(which sh)
+        sh --version
+        sh -c 'set --help'
         sh install.sh
 
     - name: Setup Node 16.x
