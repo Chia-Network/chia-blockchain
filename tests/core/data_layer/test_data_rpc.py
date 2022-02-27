@@ -92,7 +92,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
         changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -145,7 +145,7 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes) -> None:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -208,7 +208,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -292,14 +292,14 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
 
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id2 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id2 = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -367,7 +367,7 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -445,7 +445,7 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id1 = bytes32(hexstr_to_bytes(res["id"]))
+        store_id1 = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
@@ -536,7 +536,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)

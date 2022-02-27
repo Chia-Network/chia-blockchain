@@ -382,7 +382,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT DISTINCT tree_id FROM root")
 
-        tree_ids = {bytes32(hexstr_to_bytes(row["tree_id"])) async for row in cursor}
+        tree_ids = {bytes32.from_hexstr(row["tree_id"]) async for row in cursor}
 
         return tree_ids
 

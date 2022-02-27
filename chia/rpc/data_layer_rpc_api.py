@@ -17,7 +17,7 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     #       have to deal with maybe-present attributes or Dict[str, Any] hints.
     reference_node_hash = change.get("reference_node_hash")
     if reference_node_hash is not None:
-        reference_node_hash = bytes32(hexstr_to_bytes(reference_node_hash))
+        reference_node_hash = bytes32.from_hexstr(reference_node_hash)
 
     side = change.get("side")
     if side is not None:
@@ -87,7 +87,7 @@ class DataLayerRpcApi:
         return {"value": hex}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         root_hash = request.get("root_hash")
         if root_hash is not None:
             root_hash = bytes32.from_hexstr(root_hash)
@@ -101,7 +101,7 @@ class DataLayerRpcApi:
         return {"keys_values": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         node_hash = bytes32.from_hexstr(request["hash"])
         if self.service is None:
             raise Exception("Data layer not created")
@@ -115,7 +115,7 @@ class DataLayerRpcApi:
         """
         fee = get_fee(self.service.config, request)
         changelist = [process_change(change) for change in request["changelist"]]
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
@@ -132,7 +132,7 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
         value = hexstr_to_bytes(request["value"])
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
@@ -147,7 +147,7 @@ class DataLayerRpcApi:
         """
         fee = get_fee(self.service.config, request)
         key = hexstr_to_bytes(request["key"])
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
@@ -157,7 +157,7 @@ class DataLayerRpcApi:
 
     async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """get hash of latest tree root"""
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
@@ -168,7 +168,7 @@ class DataLayerRpcApi:
 
     async def get_local_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """get hash of latest tree root saved in our local datastore"""
-        store_id = bytes32(hexstr_to_bytes(request["id"]))
+        store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
         if self.service is None:
             raise Exception("Data layer not created")
