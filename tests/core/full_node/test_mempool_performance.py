@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 class TestMempoolPerformance:
-    @pytest_asyncio.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="module")
     async def wallet_nodes(self):
         key_seed = bt.farmer_master_sk_entropy
         async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
