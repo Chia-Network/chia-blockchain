@@ -57,6 +57,7 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
+        genesis_hash: Optional[bytes32] = None
         if db.db_version == 2:
             async with self.db.db.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                 peak_row = await cursor.fetchone()
@@ -70,6 +71,11 @@ class BlockHeightMap:
                 row = await cursor.fetchone()
                 if row is None:
                     return self
+
+            async with db.db.execute("SELECT header_hash FROM full_blocks WHERE height=0") as cursor:
+                genesis_row = await cursor.fetchone()
+                if genesis_row is not None:
+                    genesis_hash = bytes32(genesis_row[0])
         else:
             async with await db.db.execute(
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary from block_records WHERE is_peak=1"
@@ -78,12 +84,20 @@ class BlockHeightMap:
                 if row is None:
                     return self
 
+            async with db.db.execute("SELECT header_hash FROM block_records WHERE height=0") as cursor:
+                genesis_row = await cursor.fetchone()
+                if genesis_row is not None:
+                    genesis_hash = bytes32.fromhex(genesis_row[0])
         try:
             async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
                 self.__height_to_hash = bytearray(await f.read())
         except Exception:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
+        else:
+            # Make sure the genesis hash from the database matches the one from the cache, drop the caches if not.
+            if genesis_hash is not None and self.__height_to_hash[0:32] != genesis_hash:
+                self.__drop_caches()
 
         try:
             async with aiofiles.open(self.__ses_filename, "rb") as f:
@@ -91,6 +105,11 @@ class BlockHeightMap:
         except Exception:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
+        else:
+            # Make sure the genesis hash from the database matches the one from the cache, drop the caches if not.
+            first_ses = SubEpochSummary.from_bytes(self.__sub_epoch_summaries[self.get_ses_heights()[0]])
+            if genesis_hash is not None and first_ses.prev_subepoch_summary_hash != genesis_hash:
+                self.__drop_caches()
 
         peak: bytes32
         prev_hash: bytes32
@@ -148,6 +167,12 @@ class BlockHeightMap:
 
         await write_file_async(self.__height_to_hash_filename, map_buf)
         await write_file_async(self.__ses_filename, ses_buf)
+
+    def __drop_caches(self):
+        self.__sub_epoch_summaries = {}
+        self.__height_to_hash = bytearray()
+        self.__ses_filename.unlink(True)
+        self.__height_to_hash_filename.unlink(True)
 
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can

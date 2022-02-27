@@ -1,3 +1,5 @@
+import dataclasses
+
 import pytest
 import struct
 from chia.full_node.block_height_map import BlockHeightMap
@@ -7,7 +9,7 @@ from chia.util.db_wrapper import DBWrapper
 from tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from typing import Optional
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint32
 
 # from tests.conftest import tmp_dir
 
@@ -111,6 +113,11 @@ async def setup_chain(
 
     # we only set is_peak=1 for chain_id 0
     await new_block(db, peak_hash, parent_hash, height, chain_id == 0, None)
+
+
+async def force_flush_cache(height_map: BlockHeightMap) -> None:
+    height_map._BlockHeightMap__dirty = 1000  # type: ignore[attr-defined] # ignore because of __ member access
+    await height_map.maybe_flush()
 
 
 class TestBlockHeightMap:
@@ -267,6 +274,48 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
             assert height_map.get_hash(10) == gen_block_hash(100)
+
+    @pytest.mark.parametrize("cache", ["sub_epoch_summaries", "height_to_hash"])
+    @pytest.mark.asyncio
+    async def test_invalid_cache_genesis(self, tmp_dir, db_version, cache: str):
+        test_sub_epoch_summaries: bool = cache == "sub_epoch_summaries"
+        test_height_to_hash: bool = cache == "height_to_hash"
+        assert test_sub_epoch_summaries or test_height_to_hash
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 10, ses_every=2)
+            height_map: BlockHeightMap = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            # The ignores are for the hacky _BlockHeightMap__ member access
+            assert not height_map._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
+            assert not height_map._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            await force_flush_cache(height_map)
+            # The ignores are for the hacky _BlockHeightMap__ member access
+            assert height_map._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
+            assert height_map._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            invalid_genesis_hash: bytes32 = gen_block_hash(10)
+            genesis_height: uint32 = uint32(0)
+            if test_sub_epoch_summaries:
+                first_ses: SubEpochSummary = height_map.get_ses(genesis_height)
+                invalid_ses = dataclasses.replace(first_ses, prev_subepoch_summary_hash=invalid_genesis_hash)
+                # The ignores are for the hacky _BlockHeightMap__ member access
+                height_map._BlockHeightMap__sub_epoch_summaries[genesis_height] = bytes(  # type: ignore[attr-defined]
+                    invalid_ses
+                )
+                assert height_map.get_ses(genesis_height).prev_subepoch_summary_hash == invalid_genesis_hash
+            if test_height_to_hash:
+                genesis_hash: bytes32 = height_map.get_hash(genesis_height)
+                # The ignores are for the hacky _BlockHeightMap__ member access
+                height_map._BlockHeightMap__set_hash(genesis_height, invalid_genesis_hash)  # type: ignore[attr-defined]
+            await force_flush_cache(height_map)
+            height_map_2: BlockHeightMap = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            if test_sub_epoch_summaries:
+                assert height_map_2.get_ses(genesis_height).prev_subepoch_summary_hash != invalid_genesis_hash
+            if test_height_to_hash:
+                assert height_map_2.get_hash(genesis_height) == genesis_hash
+            # The ignores are for the hacky _BlockHeightMap__ member access
+            assert not height_map_2._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
+            assert not height_map_2._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            await force_flush_cache(height_map_2)
 
     @pytest.mark.asyncio
     async def test_update_ses(self, tmp_dir, db_version):
