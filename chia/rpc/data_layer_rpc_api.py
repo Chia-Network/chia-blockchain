@@ -249,10 +249,8 @@ class DataLayerRpcApi:
         fee = get_fee(self.service.config, request)
         if self.service is None:
             raise Exception("Data layer not created")
-        rec = await self.service.resubmit_root(store_id, fee)
-        if rec is None:
-            raise Exception(f"Failed to get root for {store_id.hex()}")
-        return {}
+        transaction_record = await self.service.resubmit_root(store_id, fee)
+        return {"tx_id": transaction_record.name}
 
     async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -169,7 +169,7 @@ class DataLayer:
             self.log.error(f"Failed to get root for {store_id.hex()}")
         return res
 
-    async def resubmit_root(self, store_id: bytes32, fee: uint64) -> None:
+    async def resubmit_root(self, store_id: bytes32, fee: uint64) -> TransactionRecord:
         root = await self.data_store.get_tree_root(tree_id=store_id)
         assert root.node_hash
         root_wallet = await self.wallet_rpc.dl_latest_singleton(store_id)
@@ -177,8 +177,7 @@ class DataLayer:
         if root.node_hash == root_wallet.root:
             raise Exception("local root matches wallet root")
         await self.data_store.increment_submissions(store_id, root.generation)
-        transaction_record = await self.wallet_rpc.dl_update_root(store_id, root.node_hash, fee)
-        assert transaction_record
+        return await self.wallet_rpc.dl_update_root(store_id, root.node_hash, fee)
 
     async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)

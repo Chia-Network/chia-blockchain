@@ -1,11 +1,15 @@
 import asyncio
+from asyncio import Future
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, Dict, List, Tuple, Awaitable
+from unittest.mock import Mock
+
 import pytest
 
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -16,7 +20,9 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
@@ -24,6 +30,47 @@ from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
+
+
+def mock_singleton() -> Awaitable[SingletonRecord]:
+    mock_singleton = SingletonRecord(
+        bytes32([0] * 32),
+        bytes32([0] * 32),
+        bytes32([0] * 32),
+        bytes32([0] * 32),
+        False,
+        uint32(0),
+        LineageProof(None, None, None),
+        uint32(0),
+        uint64(0),
+    )
+    awaitable_res: Future[SingletonRecord] = asyncio.Future()
+    awaitable_res.set_result(mock_singleton)
+    return awaitable_res
+
+
+def mock_tx_record() -> Awaitable[TransactionRecord]:
+    mock_tx = TransactionRecord(
+        uint32(0),
+        uint64(0),
+        bytes32([0] * 32),
+        uint64(0),
+        uint64(0),
+        False,
+        uint32(0),
+        None,
+        [],
+        [],
+        uint32(0),
+        [],
+        bytes32([0] * 32),
+        uint32(0),
+        bytes32([0] * 32),
+        [],
+    )
+    awaitable_res: Future[TransactionRecord] = asyncio.Future()
+    awaitable_res.set_result(mock_tx)
+    return awaitable_res
 
 
 async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
@@ -641,6 +688,9 @@ async def test_resubmit(one_wallet_node_and_rpc: nodes) -> None:
     funds = sum(
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
+
+    wallet_rpc_api = WalletRpcApi(wallet_node)
+
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     async for data_layer in init_data_layer(root_path):
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -655,8 +705,17 @@ async def test_resubmit(one_wallet_node_and_rpc: nodes) -> None:
         key1 = b"a"
         value1 = b"\x01\x02"
         changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
-        res = await data_rpc_api.batch_update({"id": store_id1.hex(), "changelist": changelist})
+        await data_rpc_api.batch_update({"id": store_id1.hex(), "changelist": changelist})
         root = await data_rpc_api.get_local_root({"id": store_id1.hex()})
         assert root["submissions"] == 1
+        singleton = await wallet_rpc_api.dl_latest_singleton({"launcher_id": store_id1.hex()})
+        data_layer.wallet_rpc.dl_latest_singleton = Mock(return_value=mock_singleton())  # type: ignore[assignment]
+        data_layer.wallet_rpc.dl_update_root = Mock(return_value=mock_tx_record())  # type: ignore[assignment]
+        await data_rpc_api.resubmit_root({"id": store_id1.hex()})
+        root = await data_rpc_api.get_local_root({"id": store_id1.hex()})
+        assert root["submissions"] == 2
+        data_layer.wallet_rpc.dl_latest_singleton = Mock(return_value=singleton)  # type: ignore[assignment]
         with pytest.raises(Exception):
             root = await data_rpc_api.resubmit_root({"id": store_id1.hex()})
+        root = await data_rpc_api.get_local_root({"id": store_id1.hex()})
+        assert root["submissions"] == 2
