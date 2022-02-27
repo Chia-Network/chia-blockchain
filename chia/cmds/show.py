@@ -1,7 +1,11 @@
 from typing import Any, Optional, Union
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 import click
+
+from chia.cmds.units import units
+from chia.cmds.wallet_funcs import print_transaction
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 
 
 async def show_async(
@@ -13,13 +17,18 @@ async def show_async(
     remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
+    coins_by_address: str,
+    verbose: bool,
+    offset: int,
+    paginate: bool,
 ) -> None:
-    import aiohttp
     import time
     import traceback
-
     from time import localtime, struct_time
     from typing import List, Optional
+
+    import aiohttp
+
     from chia.consensus.block_record import BlockRecord
     from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.server.outbound_message import NodeType
@@ -265,6 +274,48 @@ async def show_async(
                 )
             else:
                 print("Block with header hash", block_header_hash_by_height, "not found")
+        if coins_by_address != "":
+            import sys
+
+            ph: Optional[bytes32] = None
+            try:
+                from chia.util.bech32m import decode_puzzle_hash
+
+                ph = decode_puzzle_hash(coins_by_address)
+            except ValueError:
+                print("Invalid address")
+            if ph:
+                coin_records: List[CoinRecord] = await client.get_coin_records_by_puzzle_hash(ph)
+                if len(coin_records) == 0:
+                    print("There are no transactions to this address")
+
+                if paginate is None:
+                    paginate = sys.stdout.isatty()
+                address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+                name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
+                mojo_per_unit = units["chia"]
+                num_per_screen = 5 if paginate else len(coin_records)
+
+                for i in range(offset, len(coin_records), num_per_screen):
+                    for j in range(0, num_per_screen):
+                        if i + j >= len(coin_records):
+                            break
+                        print_transaction(
+                            coin_record=coin_records[i + j],
+                            verbose=(verbose > 0),
+                            name=name,
+                            address_prefix=address_prefix,
+                            mojo_per_unit=mojo_per_unit,
+                        )
+                    if i + num_per_screen >= len(coin_records):
+                        return None
+                    print("Press q to quit, or c to continue")
+                    while True:
+                        entered_key = sys.stdin.read(1)
+                        if entered_key == "q":
+                            return None
+                        elif entered_key == "c":
+                            break
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
@@ -309,6 +360,12 @@ async def show_async(
     "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
+@click.option("-address", "--coins-by-address", help="The address to use for the search.", type=str, default="")
+@click.option("-v", "--verbose", help="Show more information (only used in --coins-by-address)", type=int, default=0)
+@click.option("--offset", help="Offset for pagination (only used in --coins-by-address)", type=int, default=0)
+@click.option(
+    "--paginate", help="Paginate output (only used in --coins-by-address)", is_flag=True, type=bool, default=None
+)
 def show_cmd(
     rpc_port: Optional[int],
     wallet_rpc_port: Optional[int],
@@ -319,6 +376,10 @@ def show_cmd(
     remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
+    coins_by_address: str,
+    verbose: bool,
+    offset: int,
+    paginate: bool,
 ) -> None:
     import asyncio
 
@@ -332,5 +393,9 @@ def show_cmd(
             remove_connection,
             block_header_hash_by_height,
             block_by_header_hash,
+            coins_by_address,
+            verbose,
+            offset,
+            paginate,
         )
     )
