@@ -195,12 +195,9 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
-            current_blocks = await self.get_all_full_blocks()
-            block_spends = await client.get_block_spends(current_blocks[-1].header_hash)
+            block_spends = await client.get_block_spends((await full_node_api_1.get_all_full_blocks())[-1].header_hash)
 
-            print("debugging", block_spends)
-
-            assert block_spends == []
+            assert block_spends == spend_bundle.coin_spends
 
             assert len(await client.get_connections()) == 0
 
