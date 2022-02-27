@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+
+set -o errexit -o pipefail
 
 USAGE_TEXT="\
 Usage: $0 [-d]
