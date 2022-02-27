@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## 1.3.0 Beta Chia blockchain 2021-2-10
+## 1.3.0 Beta Chia blockchain 2022-2-10
 
 We at Chia have been working hard to bring all of our new features together into one easy-to-use release. Today, we’re proud to announce the beta release of our 1.3 client. Because this release is still in beta, we recommend that you only install it on non mission-critical systems. If you are running a large farm, you should wait for the full 1.3 release before upgrading. When will the full version of 1.3 be released? Soon.
 
