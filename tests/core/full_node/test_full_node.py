@@ -101,7 +101,18 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest_asyncio.fixture(scope="function")
+# This is an optimization to reduce runtime by reducing setup and teardown on the
+# wallet nodes fixture below.
+# https://github.com/pytest-dev/pytest-asyncio/blob/v0.18.1/pytest_asyncio/plugin.py#L479-L484
+@pytest.fixture(scope="module")
+def event_loop(request: "pytest.FixtureRequest") -> Iterator[asyncio.AbstractEventLoop]:
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="module")
 async def wallet_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
