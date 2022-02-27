@@ -398,7 +398,6 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
         assert history1["root_history"][1]["root_hash"] != bytes32([0] * 32)
         assert history1["root_history"][1]["confirmed"] is True
         assert history1["root_history"][1]["timestamp"] > 0
-        root_hash = history1["root_history"][1]["root_hash"]
         key4 = b"d"
         value4 = b"\x06\x03"
         changelist = [{"action": "insert", "key": key4.hex(), "value": value4.hex()}]
