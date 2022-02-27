@@ -5,7 +5,7 @@ import logging
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, Optional, Iterator, List
+from typing import Dict, Optional, List
 from blspy import G2Element
 
 from clvm.casts import int_to_bytes
@@ -99,17 +99,6 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
-
-
-# This is an optimization to reduce runtime by reducing setup and teardown on the
-# wallet nodes fixture below.
-# https://github.com/pytest-dev/pytest-asyncio/blob/v0.18.1/pytest_asyncio/plugin.py#L479-L484
-@pytest.fixture(scope="module")
-def event_loop(request: "pytest.FixtureRequest") -> Iterator[asyncio.AbstractEventLoop]:
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest_asyncio.fixture(scope="module")
