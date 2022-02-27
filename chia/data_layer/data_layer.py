@@ -68,10 +68,13 @@ class DataLayer:
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
-        self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
             await self.data_layer_server.start()
+        subscriptions = await self.get_subscriptions()
+        for subscription in subscriptions:
+            await self.wallet_rpc.dl_track_new(subscription.tree_id)
+        self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         return True
 
     def _close(self) -> None:
@@ -101,6 +104,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        hint_keys_values = await self.data_store.get_keys_values_dict(tree_id)
         for change in changelist:
             if change["action"] == "insert":
                 key = change["key"]
@@ -108,12 +112,12 @@ class DataLayer:
                 reference_node_hash = change.get("reference_node_hash")
                 side = change.get("side")
                 if reference_node_hash or side:
-                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side)
-                await self.data_store.autoinsert(key, value, tree_id)
+                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values)
+                await self.data_store.autoinsert(key, value, tree_id, hint_keys_values)
             else:
                 assert change["action"] == "delete"
                 key = change["key"]
-                await self.data_store.delete(key, tree_id)
+                await self.data_store.delete(key, tree_id, hint_keys_values)
 
         await self.data_store.get_tree_root(tree_id)
         root = await self.data_store.get_tree_root(tree_id)

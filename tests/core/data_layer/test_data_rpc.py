@@ -513,3 +513,115 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
         assert diff4 in diff_res["diff"]
         assert diff5 in diff_res["diff"]
         assert diff1 in diff_res["diff"]
+
+
+@pytest.mark.asyncio
+async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes) -> None:
+    root_path = bt.root_path
+    wallet_node, full_node_api = one_wallet_node_and_rpc
+    num_blocks = 15
+    assert wallet_node.server
+    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    assert wallet_node.wallet_state_manager is not None
+    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await asyncio.sleep(0.5)
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+    await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+    wallet_rpc_api = WalletRpcApi(wallet_node)
+    async for data_layer in init_data_layer(root_path):
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        assert res is not None
+        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+
+        key = b"a"
+        value = b"\x00\x01"
+        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec0 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
+
+        key_2 = b"b"
+        value_2 = b"\x00\x01"
+        changelist = [{"action": "insert", "key": key_2.hex(), "value": value_2.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec1 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec1)
+
+        key_3 = b"c"
+        value_3 = b"\x00\x01"
+        changelist = [{"action": "insert", "key": key_3.hex(), "value": value_3.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec2 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec2)
+
+        changelist = [{"action": "delete", "key": key_3.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec3 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec3)
+
+        root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        expected_res_hash = root_1["root_hashes"][0]["hash"]
+        assert expected_res_hash != bytes32([0] * 32)
+
+        changelist = [{"action": "delete", "key": key_2.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec4 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec4)
+
+        changelist = [{"action": "delete", "key": key.hex()}]
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec5 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec5)
+
+        root_2 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        hash_2 = root_2["root_hashes"][0]["hash"]
+        assert hash_2 == bytes32([0] * 32)
+
+        changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist.append({"action": "insert", "key": key_2.hex(), "value": value_2.hex()})
+        changelist.append({"action": "insert", "key": key_3.hex(), "value": value_3.hex()})
+        changelist.append({"action": "delete", "key": key_3.hex()})
+
+        res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+        update_tx_rec6 = res["tx_id"]
+        await asyncio.sleep(1)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.2)
+        await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec6)
+
+        root_3 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
+        batch_hash = root_3["root_hashes"][0]["hash"]
+        assert batch_hash == expected_res_hash
