@@ -6,6 +6,7 @@ import pytest
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_store import NONE_BYTES
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -119,8 +120,8 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
             val = await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        assert wallet_root["hash"] == bytes32([0] * 32)
-        assert local_root["hash"] == None
+        assert wallet_root["hash"] == NONE_BYTES
+        assert local_root["hash"] == NONE_BYTES
 
 
 @pytest.mark.asyncio
