@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import pytest_asyncio
 import time
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
@@ -11,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -19,34 +21,28 @@ from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestWalletSimulator:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node_100_pk(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}, True):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_sim_two_wallets(self):
         async for _ in setup_simulators_and_wallets(3, 2, {}, True):
             yield _
@@ -66,7 +62,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
 
@@ -122,8 +118,8 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id: server_1.node_id}
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -178,10 +174,11 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
+            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await asyncio.sleep(5)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -189,7 +186,7 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(25, wallet.get_confirmed_balance, funds)
 
         await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(num_blocks + 6), 32 * b"0"))
 
@@ -226,7 +223,12 @@ class TestWalletSimulator:
 
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
         if trusted:
-            wallet_0.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
+            wallet_0.config["trusted_peers"] = {
+                server_0.node_id.hex(): server_0.node_id.hex(),
+                server_1.node_id.hex(): server_1.node_id.hex(),
+                server_2.node_id.hex(): server_2.node_id.hex(),
+            }
+
         else:
             wallet_0.config["trusted_peers"] = {}
 
@@ -281,8 +283,8 @@ class TestWalletSimulator:
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
         ph = await wallet_0.get_new_puzzlehash()
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
-            wallet_node_1.config["trusted_peers"] = {server_0.node_id: server_0.node_id}
+            wallet_node_0.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
+            wallet_node_1.config["trusted_peers"] = {server_0.node_id.hex(): server_0.node_id.hex()}
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
@@ -398,10 +400,10 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
             wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -465,10 +467,10 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
             wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -485,8 +487,8 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
         primaries = []
-        for i in range(0, 600):
-            primaries.append({"puzzlehash": ph, "amount": 100000000 + i})
+        for i in range(0, 60):
+            primaries.append({"puzzlehash": ph, "amount": 1000000000 + i})
 
         tx_split_coins = await wallet.generate_signed_transaction(1, ph, 0, primaries=primaries)
 
@@ -561,10 +563,10 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
             wallet_node_2.config["trusted_peers"] = {
-                full_node_1.full_node.server.node_id: full_node_1.full_node.server.node_id
+                full_node_1.full_node.server.node_id.hex(): full_node_1.full_node.server.node_id.hex()
             }
         else:
             wallet_node.config["trusted_peers"] = {}
@@ -617,7 +619,7 @@ class TestWalletSimulator:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
-            memos=list(stolen_sb.get_memos().items()),
+            memos=list(compute_memos(stolen_sb).items()),
         )
         await wallet.push_transaction(stolen_tx)
 
@@ -650,8 +652,8 @@ class TestWalletSimulator:
         ph = await wallet.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
-            wallet_node_2.config["trusted_peers"] = {fn_server.node_id: fn_server.node_id}
+            wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
@@ -705,8 +707,8 @@ class TestWalletSimulator:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
         # By this point, the transaction should be confirmed
-        print(await wallet.get_confirmed_balance())
         await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
         tx_record = await wallet_node.wallet_state_manager.tx_store.get_transaction_record(tx.name)
@@ -727,7 +729,7 @@ class TestWalletSimulator:
 
     @pytest.mark.parametrize(
         "trusted",
-        [True, False],
+        [False],
     )
     @pytest.mark.asyncio
     async def test_address_sliding_window(self, wallet_node_100_pk, trusted):
@@ -756,21 +758,75 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[114]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        await time_out_assert(5, wallet.get_confirmed_balance, 2 * 10 ** 12)
+        await time_out_assert(15, wallet.get_confirmed_balance, 2 * 10 ** 12)
 
-        # TODO: fix after merging new wallet. These 210 and 114 should be found
-        # TODO: This is fixed in trusted mode, needs to work in untrusted too.
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[50]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        if trusted:
-            await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
-        else:
-            await time_out_assert(15, wallet.get_confirmed_balance, 4 * 10 ** 12)
+
+        await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_wallet_transaction_options(self, two_wallet_nodes, trusted):
+        num_blocks = 5
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
         if trusted:
-            await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
         else:
-            await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 1)
+            ]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+
+        AMOUNT_TO_SEND = 4000000000000
+        coins = list(await wallet.select_coins(AMOUNT_TO_SEND))
+
+        tx = await wallet.generate_signed_transaction(
+            AMOUNT_TO_SEND,
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            0,
+            coins=coins,
+            origin_id=coins[2].name(),
+        )
+        paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
+        assert paid_coin.parent_coin_info == coins[2].name()
+        await wallet.push_transaction(tx)
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)

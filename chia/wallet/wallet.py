@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
@@ -40,6 +40,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.util.compute_memos import compute_memos
 
 
 class Wallet:
@@ -83,10 +84,7 @@ class Wallet:
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost_result: uint64 = calculate_cost_of_program(
-                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
-            )
-            self.cost_of_single_tx = cost_result
+            self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
@@ -409,14 +407,14 @@ class Wallet:
                 continue
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
+            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
                 )
             )
 
-        self.log.info(f"Spends is {spends}")
+        self.log.debug(f"Spends is {spends}")
         return spends
 
     async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
@@ -502,7 +500,7 @@ class Wallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:

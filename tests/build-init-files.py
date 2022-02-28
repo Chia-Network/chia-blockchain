@@ -23,6 +23,9 @@ log_levels = {
 }
 
 
+ignores = {"__pycache__", ".pytest_cache"}
+
+
 @click.command()
 @click.option(
     "-r", "--root", "root_str", type=click.Path(dir_okay=True, file_okay=False, resolve_path=True), default="."
@@ -35,14 +38,14 @@ def command(verbose, root_str):
     stream_handler = logging.StreamHandler()
     logger.addHandler(stream_handler)
 
-    tree_roots = ["chia", "tests"]
+    tree_roots = ["benchmarks", "build_scripts", "chia", "tests", "tools"]
     failed = False
     root = pathlib.Path(root_str).resolve()
     directories = sorted(
         path
         for tree_root in tree_roots
         for path in root.joinpath(tree_root).rglob("**/")
-        if "__pycache__" not in path.parts
+        if all(part not in ignores for part in path.parts)
     )
 
     for path in directories:

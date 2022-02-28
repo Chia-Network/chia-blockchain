@@ -7,10 +7,13 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from time import time
+from chia.util.chunks import chunks
+import time
 import logging
 
 log = logging.getLogger(__name__)
+
+MAX_SQLITE_PARAMETERS = 900
 
 
 class CoinStore:
@@ -114,7 +117,7 @@ class CoinStore:
         Returns a list of the CoinRecords that were added by this block
         """
 
-        start = time()
+        start = time.monotonic()
 
         additions = []
 
@@ -146,10 +149,10 @@ class CoinStore:
         await self._add_coin_records(additions)
         await self._set_spent(tx_removals, height)
 
-        end = time()
+        end = time.monotonic()
         log.log(
             logging.WARNING if end - start > 10 else logging.DEBUG,
-            f"It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
+            f"Height {height}: It took {end - start:0.2f}s to apply {len(tx_additions)} additions and "
             + f"{len(tx_removals)} removals to the coin store. Make sure "
             + "blockchain database is on a fast drive",
         )
@@ -305,31 +308,31 @@ class CoinStore:
         self,
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(puzzle_hashes) == 0:
             return []
 
         coins = set()
-        puzzle_hashes_db: Tuple[Any, ...]
-        if self.db_wrapper.db_version == 2:
-            puzzle_hashes_db = tuple(puzzle_hashes)
-        else:
-            puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
-        async with self.coin_record_db.execute(
-            f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-            f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
-            f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            puzzle_hashes_db + (start_height, end_height),
-        ) as cursor:
+        for puzzles in chunks(puzzle_hashes, MAX_SQLITE_PARAMETERS):
+            puzzle_hashes_db: Tuple[Any, ...]
+            if self.db_wrapper.db_version == 2:
+                puzzle_hashes_db = tuple(puzzles)
+            else:
+                puzzle_hashes_db = tuple([ph.hex() for ph in puzzles])
+            async with self.coin_record_db.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
+                f'WHERE puzzle_hash in ({"?," * (len(puzzles) - 1)}?) '
+                f"AND (confirmed_index>=? OR spent_index>=?)"
+                f"{'' if include_spent_coins else 'AND spent_index=0'}",
+                puzzle_hashes_db + (min_height, min_height),
+            ) as cursor:
 
-            for row in await cursor.fetchall():
-                coins.add(self.row_to_coin_state(row))
+                async for row in cursor:
+                    coins.add(self.row_to_coin_state(row))
 
-            return list(coins)
+        return list(coins)
 
     async def get_coin_records_by_parent_ids(
         self,
@@ -342,51 +345,51 @@ class CoinStore:
             return []
 
         coins = set()
-        parent_ids_db: Tuple[Any, ...]
-        if self.db_wrapper.db_version == 2:
-            parent_ids_db = tuple(parent_ids)
-        else:
-            parent_ids_db = tuple([pid.hex() for pid in parent_ids])
-        async with self.coin_record_db.execute(
-            f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-            f'coin_parent, amount, timestamp FROM coin_record WHERE coin_parent in ({"?," * (len(parent_ids) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            parent_ids_db + (start_height, end_height),
-        ) as cursor:
+        for ids in chunks(parent_ids, MAX_SQLITE_PARAMETERS):
+            parent_ids_db: Tuple[Any, ...]
+            if self.db_wrapper.db_version == 2:
+                parent_ids_db = tuple(ids)
+            else:
+                parent_ids_db = tuple([pid.hex() for pid in ids])
+            async with self.coin_record_db.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f'coin_parent, amount, timestamp FROM coin_record WHERE coin_parent in ({"?," * (len(ids) - 1)}?) '
+                f"AND confirmed_index>=? AND confirmed_index<? "
+                f"{'' if include_spent_coins else 'AND spent_index=0'}",
+                parent_ids_db + (start_height, end_height),
+            ) as cursor:
 
-            for row in await cursor.fetchall():
-                coin = self.row_to_coin(row)
-                coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
-            return list(coins)
+                async for row in cursor:
+                    coin = self.row_to_coin(row)
+                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+        return list(coins)
 
-    async def get_coin_state_by_ids(
+    async def get_coin_states_by_ids(
         self,
         include_spent_coins: bool,
         coin_ids: List[bytes32],
-        start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        min_height: uint32 = uint32(0),
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
             return []
 
         coins = set()
-        coin_ids_db: Tuple[Any, ...]
-        if self.db_wrapper.db_version == 2:
-            coin_ids_db = tuple(coin_ids)
-        else:
-            coin_ids_db = tuple([pid.hex() for pid in coin_ids])
-        async with self.coin_record_db.execute(
-            f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-            f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(coin_ids) - 1)}?) '
-            f"AND confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent_index=0'}",
-            coin_ids_db + (start_height, end_height),
-        ) as cursor:
-
-            for row in await cursor.fetchall():
-                coins.add(self.row_to_coin_state(row))
-            return list(coins)
+        for ids in chunks(coin_ids, MAX_SQLITE_PARAMETERS):
+            coin_ids_db: Tuple[Any, ...]
+            if self.db_wrapper.db_version == 2:
+                coin_ids_db = tuple(ids)
+            else:
+                coin_ids_db = tuple([pid.hex() for pid in ids])
+            async with self.coin_record_db.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(ids) - 1)}?) '
+                f"AND (confirmed_index>=? OR spent_index>=?)"
+                f"{'' if include_spent_coins else 'AND spent_index=0'}",
+                coin_ids_db + (min_height, min_height),
+            ) as cursor:
+                async for row in cursor:
+                    coins.add(self.row_to_coin_state(row))
+        return list(coins)
 
     async def rollback_to_block(self, block_index: int) -> List[CoinRecord]:
         """

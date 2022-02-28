@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 import pytest
+import pytest_asyncio
 
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.outbound_message import NodeType
@@ -19,11 +20,13 @@ from tests.setup_nodes import (
     setup_simulators_and_wallets,
     setup_timelord,
 )
+from tests.util.socket import find_available_listen_port
 
 
-async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context) -> bool:
+async def establish_connection(server: ChiaServer, ssl_context) -> bool:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
+    dummy_port = 5  # this does not matter
     try:
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
@@ -51,24 +54,29 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
 
 
 class TestSSL:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def harvester_farmer(self):
         async for _ in setup_farmer_harvester(test_constants):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def introducer(self):
-        async for _ in setup_introducer(21233):
+        introducer_port = find_available_listen_port("introducer")
+        async for _ in setup_introducer(introducer_port):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def timelord(self):
-        async for _ in setup_timelord(21236, 21237, False, test_constants, bt):
+        timelord_port = find_available_listen_port("timelord")
+        node_port = find_available_listen_port("node")
+        rpc_port = find_available_listen_port("rpc")
+        vdf_port = find_available_listen_port("vdf")
+        async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
             yield _
 
     @pytest.mark.asyncio
@@ -99,7 +107,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(farmer_server, 12312, ssl_context)
+        connected = await establish_connection(farmer_server, ssl_context)
         assert connected is True
 
         # Create not authenticated cert
@@ -111,12 +119,12 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             farmer_server.chia_ca_crt_path, farmer_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(farmer_server, 12312, ssl_context)
+        connected = await establish_connection(farmer_server, ssl_context)
         assert connected is False
         ssl_context = ssl_context_for_client(
             farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(farmer_server, 12312, ssl_context)
+        connected = await establish_connection(farmer_server, ssl_context)
         assert connected is False
 
     @pytest.mark.asyncio
@@ -137,7 +145,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             full_node_server.chia_ca_crt_path, full_node_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(full_node_server, 12312, ssl_context)
+        connected = await establish_connection(full_node_server, ssl_context)
         assert connected is True
 
     @pytest.mark.asyncio
@@ -154,7 +162,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             wallet_server.chia_ca_crt_path, wallet_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(wallet_server, 12312, ssl_context)
+        connected = await establish_connection(wallet_server, ssl_context)
         assert connected is False
 
         # Not even signed by private cert
@@ -169,7 +177,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             wallet_server.ca_private_crt_path, wallet_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(wallet_server, 12312, ssl_context)
+        connected = await establish_connection(wallet_server, ssl_context)
         assert connected is False
 
     @pytest.mark.asyncio
@@ -189,7 +197,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             harvester_server.chia_ca_crt_path, harvester_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(harvester_server, 12312, ssl_context)
+        connected = await establish_connection(harvester_server, ssl_context)
         assert connected is False
 
         # Not even signed by private cert
@@ -204,7 +212,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             harvester_server.ca_private_crt_path, harvester_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(harvester_server, 12312, ssl_context)
+        connected = await establish_connection(harvester_server, ssl_context)
         assert connected is False
 
     @pytest.mark.asyncio
@@ -223,7 +231,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             introducer_server.chia_ca_crt_path, introducer_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(introducer_server, 12312, ssl_context)
+        connected = await establish_connection(introducer_server, ssl_context)
         assert connected is True
 
     @pytest.mark.asyncio
@@ -242,7 +250,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             timelord_server.chia_ca_crt_path, timelord_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(timelord_server, 12312, ssl_context)
+        connected = await establish_connection(timelord_server, ssl_context)
         assert connected is False
 
         # Not even signed by private cert
@@ -257,5 +265,5 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             timelord_server.ca_private_crt_path, timelord_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(timelord_server, 12312, ssl_context)
+        connected = await establish_connection(timelord_server, ssl_context)
         assert connected is False

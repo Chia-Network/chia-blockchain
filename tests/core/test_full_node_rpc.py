@@ -3,6 +3,7 @@ import logging
 from typing import List
 
 import pytest
+import pytest_asyncio
 from blspy import AugSchemeMPL
 
 from chia.consensus.pot_iterations import is_overflow_block
@@ -18,15 +19,17 @@ from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
+from tests.util.socket import find_available_listen_port
 
 
 class TestRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_nodes(self):
         async for _ in setup_simulators_and_wallets(2, 0, {}):
             yield _
@@ -34,7 +37,7 @@ class TestRpc:
     @pytest.mark.asyncio
     async def test1(self, two_nodes):
         num_blocks = 5
-        test_rpc_port = uint16(21522)
+        test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
@@ -229,7 +232,7 @@ class TestRpc:
 
     @pytest.mark.asyncio
     async def test_signage_points(self, two_nodes, empty_blockchain):
-        test_rpc_port = uint16(21522)
+        test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
@@ -283,7 +286,7 @@ class TestRpc:
             second_blockchain = empty_blockchain
 
             for block in blocks:
-                await second_blockchain.receive_block(block)
+                await _validate_and_add_block(second_blockchain, block)
 
             # Creates a signage point based on the last block
             peak_2 = second_blockchain.get_peak()

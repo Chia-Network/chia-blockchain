@@ -3,12 +3,12 @@ from setuptools import setup
 dependencies = [
     "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.8",  # Signature library
-    "chiavdf==1.0.3",  # timelord and vdf verification
-    "chiabip158==1.0",  # bip158-style wallet filters
-    "chiapos==1.0.7",  # proof of space
+    "blspy==1.0.9",  # Signature library
+    "chiavdf==1.0.5",  # timelord and vdf verification
+    "chiabip158==1.1",  # bip158-style wallet filters
+    "chiapos==1.0.9",  # proof of space
     "clvm==0.9.7",
-    "clvm_rs==0.1.17",
+    "clvm_rs==0.1.19",
     "clvm_tools==0.4.3",
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -41,11 +41,14 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "build",
     "pre-commit",
     "pytest",
     "pytest-asyncio",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "twine",
+    "isort",
     "flake8",
     "mypy",
     # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
@@ -94,7 +97,6 @@ kwargs = dict(
         "chia.protocols",
         "chia.rpc",
         "chia.seeder",
-        "chia.seeder.util",
         "chia.server",
         "chia.simulator",
         "chia.types.blockchain_format",
@@ -121,9 +123,8 @@ kwargs = dict(
             "chia_harvester = chia.server.start_harvester:main",
             "chia_farmer = chia.server.start_farmer:main",
             "chia_introducer = chia.server.start_introducer:main",
-            "chia_seeder = chia.cmds.seeder:main",
-            "chia_seeder_crawler = chia.seeder.start_crawler:main",
-            "chia_seeder_server = chia.seeder.dns_server:main",
+            "chia_crawler = chia.seeder.start_crawler:main",
+            "chia_seeder = chia.seeder.dns_server:main",
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
