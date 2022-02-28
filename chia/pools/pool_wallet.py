@@ -271,9 +271,13 @@ class PoolWallet:
         spent_coin_name: bytes32 = tip_coin.name()
 
         if spent_coin_name != new_state.coin.name():
-            self.log.warning(
-                f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
-            )
+            history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
+            if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
+                self.log.info(f"Already have state transition: {new_state.coin.name()}")
+            else:
+                self.log.warning(
+                    f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+                )
             return False
 
         await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)

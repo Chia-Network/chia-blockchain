@@ -347,7 +347,7 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, post_farmer_payload.get_hash())
         post_farmer_request = PostFarmerRequest(post_farmer_payload, signature)
-
+        self.log.debug(f"POST /farmer request {post_farmer_request}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -387,7 +387,7 @@ class Farmer:
         assert owner_sk.get_g1() == pool_config.owner_public_key
         signature: G2Element = AugSchemeMPL.sign(owner_sk, put_farmer_payload.get_hash())
         put_farmer_request = PutFarmerRequest(put_farmer_payload, signature)
-
+        self.log.debug(f"PUT /farmer request {put_farmer_request}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.put(
@@ -476,13 +476,13 @@ class Farmer:
                 if time.time() >= pool_state["next_farmer_update"]:
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
-                    async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[bool]]:
+                    async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(
                             pool_config, authentication_token_timeout, authentication_sk
                         )
                         farmer_response: Optional[GetFarmerResponse] = None
-                        farmer_known: Optional[bool] = None
+                        error_code_response: Optional[PoolErrorCode] = None
                         if response is not None:
                             if "error_code" not in response:
                                 farmer_response = GetFarmerResponse.from_json_dict(response)
@@ -491,17 +491,23 @@ class Farmer:
                                     pool_state["current_points"] = farmer_response.current_points
                                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                             else:
-                                farmer_known = response["error_code"] != PoolErrorCode.FARMER_NOT_KNOWN.value
+                                try:
+                                    error_code_response = PoolErrorCode(response["error_code"])
+                                except ValueError:
+                                    self.log.error(
+                                        f"Invalid error code received from the pool: {response['error_code']}"
+                                    )
+
                                 self.log.error(
                                     "update_pool_farmer_info failed: "
                                     f"{response['error_code']}, {response['error_message']}"
                                 )
 
-                        return farmer_response, farmer_known
+                        return farmer_response, error_code_response
 
                     if authentication_token_timeout is not None:
-                        farmer_info, farmer_is_known = await update_pool_farmer_info()
-                        if farmer_info is None and farmer_is_known is not None and not farmer_is_known:
+                        farmer_info, error_code = await update_pool_farmer_info()
+                        if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
                             owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
@@ -520,11 +526,13 @@ class Farmer:
                                 if farmer_info is None and not farmer_is_known:
                                     self.log.error("Failed to update farmer info after POST /farmer.")
 
-                        # Update the payout instructions on the pool if required
-                        if (
+                        # Update the farmer information on the pool if the payout instructions changed or if the
+                        # signature is invalid (latter to make sure the pool has the correct authentication public key).
+                        payout_instructions_update_required: bool = (
                             farmer_info is not None
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
-                        ):
+                        )
+                        if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
                             owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )

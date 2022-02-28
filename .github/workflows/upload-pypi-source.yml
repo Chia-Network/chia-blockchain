@@ -62,7 +62,6 @@ jobs:
 
     - name: Build source distribution
       run: |
-        pip install build
         python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
@@ -70,9 +69,6 @@ jobs:
       with:
         name: dist
         path: ./dist
-
-    - name: Install twine
-      run: pip install twine
 
     - name: Publish distribution to Test PyPI
       if: steps.check_secrets.outputs.HAS_SECRET
