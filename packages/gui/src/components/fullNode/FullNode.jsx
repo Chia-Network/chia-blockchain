@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import moment from 'moment';
 import { get } from 'lodash';
 import {
   FormatLargeNumber,
@@ -15,7 +16,6 @@ import { useGetLatestBlocksQuery, useGetUnfinishedBlockHeadersQuery } from '@chi
 import { useNavigate } from 'react-router-dom';
 import { Box, Tooltip, Typography } from '@material-ui/core';
 // import HelpIcon from '@material-ui/icons/Help';
-import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import FullNodeBlockSearch from './FullNodeBlockSearch';
 import FullNodeCards from './card/FullNodeCards';
@@ -85,7 +85,7 @@ const cols = [
         ? row.timestamp
         : get(row, 'foliageTransactionBlock.timestamp');
 
-      return timestamp ? unix_to_short_date(Number.parseInt(timestamp)) : '';
+      return timestamp ? moment(timestamp * 1000).format('LLL') : '';
     },
     title: <Trans>Time Created</Trans>,
   },
