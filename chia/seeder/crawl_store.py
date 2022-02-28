@@ -359,6 +359,8 @@ class CrawlStore:
             record = self.host_to_records[host]
             if record.version == "undefined":
                 continue
+            if record.handshake_time < time.time() - 5 * 24 * 3600:
+                continue
             versions[host] = record.version
             handshake[host] = record.handshake_time
 
