@@ -137,17 +137,13 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Arch Linux."
     case $(uname -m) in
       x86_64|aarch64)
-        if ! command -v python3.9 >/dev/null 2>&1; then
-          echo "Python <= 3.9.10 is required. Please see https://wiki.archlinux.org/title/python#Old_versions for support."
-          exit 1
-        fi
+        sudo pacman ${PACMAN_AUTOMATED} -S --needed git
         ;;
       *)
         echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
         exit 1
         ;;
     esac
-    sudo pacman ${PACMAN_AUTOMATED} -S --needed git
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
@@ -191,8 +187,12 @@ find_python() {
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
           if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.9"
+            echo "Chia requires Python version <= 3.9.10"
             echo "Current Python version = $PY3_VERSION"
+            # If Arch, direct to Arch Wiki
+            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support."
+            fi
             exit 1
           fi
         fi
