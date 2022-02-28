@@ -119,7 +119,6 @@ class DataLayer:
                 key = change["key"]
                 await self.data_store.delete(key, tree_id, hint_keys_values)
 
-        await self.data_store.get_tree_root(tree_id)
         root = await self.data_store.get_tree_root(tree_id)
         # todo return empty node hash from get_tree_root
         if root.node_hash is not None:

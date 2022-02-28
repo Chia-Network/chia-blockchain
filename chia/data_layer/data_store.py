@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import aiosqlite
 from collections import defaultdict
@@ -40,6 +41,8 @@ log = logging.getLogger(__name__)
 
 # TODO: review exceptions for values that shouldn't be displayed
 # TODO: pick exception types other than Exception
+
+NONE_BYTES: bytes32 = bytes32([0] * 32)
 
 
 @dataclass
@@ -374,7 +377,7 @@ class DataStore:
 
     async def table_is_empty(self, tree_id: bytes32, *, lock: bool = True) -> bool:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            tree_root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            tree_root = await self._get_tree_root(tree_id=tree_id, lock=False)
 
         return tree_root.node_hash is None
 
@@ -400,6 +403,14 @@ class DataStore:
         return generation
 
     async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
+        root = await self._get_tree_root(tree_id=tree_id, generation=generation, lock=lock)
+        dataclasses.replace(
+            root,
+            node_hash=NONE_BYTES,
+        )
+        return root
+
+    async def _get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
@@ -464,7 +475,7 @@ class DataStore:
 
     async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            root = await self._get_tree_root(tree_id=tree_id, lock=False)
             if root.node_hash is None:
                 raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
             cursor = await self.db.execute(
@@ -505,7 +516,7 @@ class DataStore:
             nodes = []
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
-            root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
+            root = await self._get_tree_root(tree_id=tree_id, generation=generation, lock=False)
             if root.node_hash is None:
                 return []
 
@@ -541,7 +552,7 @@ class DataStore:
     ) -> List[TerminalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if root_hash is None:
-                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root = await self._get_tree_root(tree_id=tree_id, lock=False)
                 root_hash = root.node_hash
             cursor = await self.db.execute(
                 """
@@ -603,7 +614,7 @@ class DataStore:
     ) -> Optional[bytes32]:
         path = int.from_bytes(seed, byteorder="big")
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id, lock=False)
+            root = await self._get_tree_root(tree_id, lock=False)
             if root is None or root.node_hash is None:
                 return None
             node_hash = root.node_hash
@@ -675,7 +686,7 @@ class DataStore:
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            root = await self._get_tree_root(tree_id=tree_id, lock=False)
 
             if not was_empty:
                 if hint_keys_values is None:
@@ -866,7 +877,7 @@ class DataStore:
 
     async def get_tree_as_program(self, tree_id: bytes32, *, lock: bool = True) -> Program:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            root = await self._get_tree_root(tree_id=tree_id, lock=False)
             # TODO: consider actual proper behavior
             assert root.node_hash is not None
             root_node = await self.get_node(node_hash=root.node_hash, lock=False)
