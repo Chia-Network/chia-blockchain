@@ -48,7 +48,7 @@ pytestmark = pytest.mark.data_layer
 
 table_columns: Dict[str, List[str]] = {
     "node": ["hash", "node_type", "left", "right", "key", "value"],
-    "root": ["tree_id", "generation", "node_hash", "status"],
+    "root": ["tree_id", "generation", "node_hash", "status", "submissions"],
 }
 
 
