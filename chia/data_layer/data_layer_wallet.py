@@ -668,10 +668,10 @@ class DataLayerWallet:
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
-        solution: Program = parent_spend.solution.to_program()
+        puzzle = parent_spend.puzzle_reveal
+        solution = parent_spend.solution
 
-        matched, curried_args = match_dl_singleton(puzzle)
+        matched, curried_args = match_dl_singleton(puzzle.to_program())
         if matched:
             self.log.info(f"DL singleton removed: {parent_spend.coin}")
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
@@ -694,7 +694,9 @@ class DataLayerWallet:
             root: bytes32
             inner_puzzle_hash: bytes32
 
-            conditions = puzzle.run(solution).as_python()
+            conditions = puzzle.run_with_cost(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, solution)[
+                1
+            ].as_python()
             found_singleton: bool = False
             for condition in conditions:
                 if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
