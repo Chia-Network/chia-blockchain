@@ -131,7 +131,7 @@ class DataLayer:
         new_root_wallet = await self.wallet_rpc.dl_latest_singleton(tree_id)
         assert new_root_wallet
         await self.data_store.increment_submissions(tree_id, root.generation)
-        if root.node_hash != new_root_wallet.root:
+        if node_hash != new_root_wallet.root:
             raise Exception("local root does not match wallet")
         assert transaction_record
         # todo register callback to change status in data store
