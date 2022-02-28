@@ -1,4 +1,3 @@
-import dataclasses
 import logging
 import aiosqlite
 from collections import defaultdict
@@ -404,11 +403,10 @@ class DataStore:
 
     async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
         root = await self._get_tree_root(tree_id=tree_id, generation=generation, lock=lock)
-        dataclasses.replace(
+        return replace(
             root,
             node_hash=NONE_BYTES,
         )
-        return root
 
     async def _get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None, *, lock: bool = True) -> Root:
         async with self.db_wrapper.locked_transaction(lock=lock):
