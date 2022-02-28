@@ -8,14 +8,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
-from chia.cmds.show import print_connections
+from chia.cmds.show import print_coins_transactions, print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
@@ -24,43 +22,6 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-
-
-def print_transaction(
-    verbose: bool,
-    name,
-    address_prefix: str,
-    mojo_per_unit: int,
-    tx_record: Optional[TransactionRecord] = None,
-    coin_record: Optional[CoinRecord] = None,
-) -> None:
-    if tx_record:
-        if verbose:
-            print(tx_record)
-        else:
-            chia_amount = Decimal(int(tx_record.amount)) / mojo_per_unit
-            to_address = encode_puzzle_hash(tx_record.to_puzzle_hash, address_prefix)
-            print(f"Transaction {tx_record.name}")
-            print(
-                "Status: "
-                f"{'Confirmed' if tx_record.confirmed else ('In mempool' if tx_record.is_in_mempool() else 'Pending')}"
-            )
-            print(f"Amount {'sent' if tx_record.sent else 'received'}: {chia_amount} {name}")
-            print(f"To address: {to_address}")
-            print("Created at:", datetime.fromtimestamp(tx_record.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
-            print("")
-    elif coin_record:
-        if verbose:
-            print(coin_record)
-        else:
-            chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
-            to_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
-            print(f"Coin {coin_record.name}")
-            print(f"Status: {'Confirmed' if coin_record.confirmed_block_index != 0 else 'Pending'}")
-            print(f"Amount {'sent'}: {chia_amount} {name}")
-            print(f"To address: {to_address}")
-            print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
-            print("")
 
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
@@ -121,7 +82,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
         print(e.args[0])
         return
 
-    print_transaction(
+    print_coins_transactions(
         tx_record=tx,
         verbose=(args["verbose"] > 0),
         name=name,
@@ -163,7 +124,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
-            print_transaction(
+            print_coins_transactions(
                 tx_record=txs[i + j],
                 verbose=(args["verbose"] > 0),
                 name=name,
@@ -474,7 +435,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
 
 
 def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount/scale} {address_prefix} "
+    ret = f"{amount / scale} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
@@ -520,7 +481,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     else:
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")

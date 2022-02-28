@@ -1,12 +1,52 @@
+from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict, Optional, Union
 
 import click
 
 from chia.cmds.units import units
-from chia.cmds.wallet_funcs import print_transaction
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.network import is_trusted_inner
+from chia.wallet.transaction_record import TransactionRecord
+
+
+def print_coins_transactions(
+    verbose: bool,
+    name,
+    address_prefix: str,
+    mojo_per_unit: int,
+    tx_record: Optional[TransactionRecord] = None,
+    coin_record: Optional[CoinRecord] = None,
+) -> None:
+    if tx_record:
+        if verbose:
+            print(tx_record)
+        else:
+            chia_amount = Decimal(int(tx_record.amount)) / mojo_per_unit
+            to_address = encode_puzzle_hash(tx_record.to_puzzle_hash, address_prefix)
+            print(f"Transaction {tx_record.name}")
+            print(
+                "Status: "
+                f"{'Confirmed' if tx_record.confirmed else ('In mempool' if tx_record.is_in_mempool() else 'Pending')}"
+            )
+            print(f"Amount {'sent' if tx_record.sent else 'received'}: {chia_amount} {name}")
+            print(f"To address: {to_address}")
+            print("Created at:", datetime.fromtimestamp(tx_record.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+            print("")
+    elif coin_record:
+        if verbose:
+            print(coin_record)
+        else:
+            chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
+            to_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
+            print(f"Coin {coin_record.name}")
+            print(f"Status: {'Confirmed' if coin_record.confirmed_block_index != 0 else 'Pending'}")
+            print(f"Amount {'sent'}: {chia_amount} {name}")
+            print(f"To address: {to_address}")
+            print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
+            print("")
 
 
 async def print_connections(client, time, NodeType, trusted_peers: Dict):
@@ -308,7 +348,7 @@ async def show_async(
                     for j in range(0, num_per_screen):
                         if i + j >= len(coin_records):
                             break
-                        print_transaction(
+                        print_coins_transactions(
                             coin_record=coin_records[i + j],
                             verbose=(verbose > 0),
                             name=name,
