@@ -242,7 +242,7 @@ export default function WalletHistory(props: Props) {
         <TableControlled
           cols={cols}
           rows={transactions}
-          rowsPerPageOptions={[5, 10, 25, 50, 100, { value: -1, label: <Trans>All</Trans> }]}
+          rowsPerPageOptions={[5, 10, 25, 50, 100]}
           page={page}
           rowsPerPage={rowsPerPage}
           count={count}
