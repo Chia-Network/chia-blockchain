@@ -1,13 +1,13 @@
 import pytest
 import pytest_asyncio
 import aiosqlite
-import tempfile
 import random
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
 
 from tests.setup_nodes import test_constants
+from tests.util.temp_file import TempFile
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
@@ -18,19 +18,6 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
-
-
-class TempFile:
-    def __init__(self):
-        self.path = Path(tempfile.NamedTemporaryFile().name)
-
-    def __enter__(self) -> Path:
-        if self.path.exists():
-            self.path.unlink()
-        return self.path
-
-    def __exit__(self, exc_t, exc_v, exc_tb):
-        self.path.unlink()
 
 
 def rand_bytes(num) -> bytes:

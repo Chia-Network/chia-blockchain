@@ -41,6 +41,7 @@ from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action import WalletAction
@@ -58,13 +59,6 @@ from chia.wallet.wallet_user_store import WalletUserStore
 from chia.server.server import ChiaServer
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
-
-
-def get_balance_from_coin_records(coin_records: Set[WalletCoinRecord]) -> uint128:
-    amount: uint128 = uint128(0)
-    for record in coin_records:
-        amount = uint128(amount + record.coin.amount)
-    return uint128(amount)
 
 
 class WalletStateManager:
@@ -494,14 +488,6 @@ class WalletStateManager:
 
         return False
 
-    async def get_confirmed_balance_for_wallet_already_locked(self, wallet_id: int) -> uint128:
-        # This is a workaround to be able to call la locking operation when already locked
-        # for example, in the create method of DID wallet
-        if self.lock.locked() is False:
-            raise AssertionError("expected wallet_state_manager to be locked")
-        unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        return get_balance_from_coin_records(unspent_coin_records)
-
     async def get_confirmed_balance_for_wallet(
         self,
         wallet_id: int,
@@ -513,13 +499,10 @@ class WalletStateManager:
         # lock only if unspent_coin_records is None
         if unspent_coin_records is None:
             unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
-        amount: uint128 = uint128(0)
-        for record in unspent_coin_records:
-            amount = uint128(amount + record.coin.amount)
-        return uint128(amount)
+        return uint128(sum(cr.coin.amount for cr in unspent_coin_records))
 
     async def get_unconfirmed_balance(
-        self, wallet_id, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
+        self, wallet_id: int, unspent_coin_records: Optional[Set[WalletCoinRecord]] = None
     ) -> uint128:
         """
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
@@ -527,42 +510,23 @@ class WalletStateManager:
         """
         # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
         # and this method is called only for the unspent_coin_records==None case.
-        confirmed_amount = await self.get_confirmed_balance_for_wallet(wallet_id, unspent_coin_records)
-        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
+        if unspent_coin_records is None:
+            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
-    async def get_unconfirmed_balance_already_locked(self, wallet_id) -> uint128:
-        confirmed_amount = await self.get_confirmed_balance_for_wallet_already_locked(wallet_id)
-        return await self._get_unconfirmed_balance(wallet_id, confirmed_amount)
-
-    async def _get_unconfirmed_balance(self, wallet_id, confirmed: uint128) -> uint128:
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        removal_amount: int = 0
-        addition_amount: int = 0
+        all_unspent_coins: Set[Coin] = {cr.coin for cr in unspent_coin_records}
 
         for record in unconfirmed_tx:
-            for removal in record.removals:
-                if await self.does_coin_belong_to_wallet(removal, wallet_id):
-                    removal_amount += removal.amount
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id):
-                    addition_amount += addition.amount
+                    all_unspent_coins.add(addition)
 
-        result = (confirmed + addition_amount) - removal_amount
-        return uint128(result)
+            for removal in record.removals:
+                if await self.does_coin_belong_to_wallet(removal, wallet_id) and removal in all_unspent_coins:
+                    all_unspent_coins.remove(removal)
 
-    async def unconfirmed_additions_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
-        """
-        Returns change coins for the wallet_id.
-        (Unconfirmed addition transactions that have not been confirmed yet.)
-        """
-        additions: Dict[bytes32, Coin] = {}
-        unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
-        for record in unconfirmed_tx:
-            for coin in record.additions:
-                if await self.is_addition_relevant(coin):
-                    additions[coin.name()] = coin
-        return additions
+        return uint128(sum(coin.amount for coin in all_unspent_coins))
 
     async def unconfirmed_removals_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
         """
@@ -636,14 +600,14 @@ class WalletStateManager:
     ) -> None:
         # TODO: add comment about what this method does
 
-        # Sort by created height, then add the reorg states (created_height is None) to the end
-        created_h_none: List[CoinState] = []
-        for coin_st in coin_states.copy():
-            if coin_st.created_height is None:
-                coin_states.remove(coin_st)
-                created_h_none.append(coin_st)
-        coin_states.sort(key=lambda x: x.created_height, reverse=False)  # type: ignore
-        coin_states.extend(created_h_none)
+        # Input states should already be sorted by cs_height, with reorgs at the beginning
+        curr_h = -1
+        for c_state in coin_states:
+            last_change_height = last_change_height_cs(c_state)
+            if last_change_height < curr_h:
+                raise ValueError("Input coin_states is not sorted properly")
+            curr_h = last_change_height
+
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
