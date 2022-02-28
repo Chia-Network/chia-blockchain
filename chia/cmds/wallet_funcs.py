@@ -516,39 +516,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
         log_in_response = await wallet_client.log_in(fingerprint)
 
     if log_in_response["success"] is False:
-        if log_in_response["error"] == "not_initialized":
-            use_cloud = True
-            if "backup_path" in log_in_response:
-                path = log_in_response["backup_path"]
-                print(f"Backup file from backup.chia.net downloaded and written to: {path}")
-                val = input("Do you want to use this file to restore from backup? (Y/N) ")
-                if val.lower() == "y":
-                    log_in_response = await wallet_client.log_in_and_restore(fingerprint, path)
-                else:
-                    use_cloud = False
-
-            if "backup_path" not in log_in_response or use_cloud is False:
-                if use_cloud is True:
-                    val = input(
-                        "No online backup file found,\n Press S to skip restore from backup"
-                        "\n Press F to use your own backup file: "
-                    )
-                else:
-                    val = input(
-                        "Cloud backup declined,\n Press S to skip restore from backup"
-                        "\n Press F to use your own backup file: "
-                    )
-
-                if val.lower() == "s":
-                    log_in_response = await wallet_client.log_in_and_skip(fingerprint)
-                elif val.lower() == "f":
-                    val = input("Please provide the full path to your backup file: ")
-                    log_in_response = await wallet_client.log_in_and_restore(fingerprint, val)
-
-    if "success" not in log_in_response or log_in_response["success"] is False:
-        if "error" in log_in_response:
-            error = log_in_response["error"]
-            print(f"Error: {log_in_response[error]}")
+        print(f"Login failed: {log_in_response}")
         return None
     return wallet_client, fingerprint
 

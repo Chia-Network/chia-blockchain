@@ -585,7 +585,7 @@ class TestWalletRpc:
             pks = await client.get_public_keys()
             assert len(pks) == 2
 
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
 
@@ -620,7 +620,7 @@ class TestWalletRpc:
             assert sk_dict["used_for_pool_rewards"] is False
 
             await client.delete_key(pks[0])
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             assert len(await client.get_public_keys()) == 1
 
             assert not (await client.get_sync_status())
