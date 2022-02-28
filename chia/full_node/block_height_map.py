@@ -27,35 +27,35 @@ class BlockHeightMap:
 
     # Defines the path from genesis to the peak, no orphan blocks
     # this buffer contains all block hashes that are part of the current peak
-    # ordered by height. i.e. __height_to_hash[0..32] is the genesis hash
-    # __height_to_hash[32..64] is the hash for height 1 and so on
-    __height_to_hash: bytearray
+    # ordered by height. i.e. _height_to_hash[0..32] is the genesis hash
+    # _height_to_hash[32..64] is the hash for height 1 and so on
+    _height_to_hash: bytearray
 
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
     # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
     # The value is a serialized SubEpochSummary object
-    __sub_epoch_summaries: Dict[uint32, bytes]
+    _sub_epoch_summaries: Dict[uint32, bytes]
 
     # count how many blocks have been added since the cache was last written to
     # disk
-    __dirty: int
+    _dirty: int
 
     # the file we're saving the height-to-hash cache to
-    __height_to_hash_filename: Path
+    _height_to_hash_filename: Path
 
     # the file we're saving the sub epoch summary cache to
-    __ses_filename: Path
+    _ses_filename: Path
 
     @classmethod
     async def create(cls, blockchain_dir: Path, db: DBWrapper) -> "BlockHeightMap":
         self = BlockHeightMap()
         self.db = db
 
-        self.__dirty = 0
-        self.__height_to_hash = bytearray()
-        self.__sub_epoch_summaries = {}
-        self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
-        self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
+        self._dirty = 0
+        self._height_to_hash = bytearray()
+        self._sub_epoch_summaries = {}
+        self._height_to_hash_filename = blockchain_dir / "height-to-hash"
+        self._ses_filename = blockchain_dir / "sub-epoch-summaries"
 
         genesis_hash: Optional[bytes32] = None
         if db.db_version == 2:
@@ -89,27 +89,27 @@ class BlockHeightMap:
                 if genesis_row is not None:
                     genesis_hash = bytes32.fromhex(genesis_row[0])
         try:
-            async with aiofiles.open(self.__height_to_hash_filename, "rb") as f:
-                self.__height_to_hash = bytearray(await f.read())
+            async with aiofiles.open(self._height_to_hash_filename, "rb") as f:
+                self._height_to_hash = bytearray(await f.read())
         except Exception:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
         else:
             # Make sure the genesis hash from the database matches the one from the cache, drop the caches if not.
-            if genesis_hash is not None and self.__height_to_hash[0:32] != genesis_hash:
-                self.__drop_caches()
+            if genesis_hash is not None and self._height_to_hash[0:32] != genesis_hash:
+                self._drop_caches()
 
         try:
-            async with aiofiles.open(self.__ses_filename, "rb") as f:
-                self.__sub_epoch_summaries = {k: v for (k, v) in SesCache.from_bytes(await f.read()).content}
+            async with aiofiles.open(self._ses_filename, "rb") as f:
+                self._sub_epoch_summaries = {k: v for (k, v) in SesCache.from_bytes(await f.read()).content}
         except Exception:
             # it's OK if this file doesn't exist, we can rebuild it
             pass
         else:
             # Make sure the genesis hash from the database matches the one from the cache, drop the caches if not.
-            first_ses = SubEpochSummary.from_bytes(self.__sub_epoch_summaries[self.get_ses_heights()[0]])
+            first_ses = SubEpochSummary.from_bytes(self._sub_epoch_summaries[self.get_ses_heights()[0]])
             if genesis_hash is not None and first_ses.prev_subepoch_summary_hash != genesis_hash:
-                self.__drop_caches()
+                self._drop_caches()
 
         peak: bytes32
         prev_hash: bytes32
@@ -124,19 +124,19 @@ class BlockHeightMap:
         # allocate memory for height to hash map
         # this may also truncate it, if thie file on disk had an invalid size
         new_size = (height + 1) * 32
-        size = len(self.__height_to_hash)
+        size = len(self._height_to_hash)
         if size > new_size:
-            del self.__height_to_hash[new_size:]
+            del self._height_to_hash[new_size:]
         else:
-            self.__height_to_hash += bytearray([0] * (new_size - size))
+            self._height_to_hash += bytearray([0] * (new_size - size))
 
         # if the peak hash is already in the height-to-hash map, we don't need
         # to load anything more from the DB
         if self.get_hash(height) != peak:
-            self.__set_hash(height, peak)
+            self._set_hash(height, peak)
 
             if row[3] is not None:
-                self.__sub_epoch_summaries[height] = row[3]
+                self._sub_epoch_summaries[height] = row[3]
 
             # prepopulate the height -> hash mapping
             await self._load_blocks_from(height, prev_hash)
@@ -149,30 +149,30 @@ class BlockHeightMap:
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
         idx = height * 32
-        assert idx <= len(self.__height_to_hash)
-        self.__height_to_hash[idx : idx + 32] = header_hash
+        assert idx <= len(self._height_to_hash)
+        self._height_to_hash[idx : idx + 32] = header_hash
         if ses is not None:
-            self.__sub_epoch_summaries[height] = bytes(ses)
+            self._sub_epoch_summaries[height] = bytes(ses)
 
     async def maybe_flush(self):
-        if self.__dirty < 1000:
+        if self._dirty < 1000:
             return
 
-        assert (len(self.__height_to_hash) % 32) == 0
-        map_buf = self.__height_to_hash.copy()
+        assert (len(self._height_to_hash) % 32) == 0
+        map_buf = self._height_to_hash.copy()
 
-        ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
+        ses_buf = bytes(SesCache([(k, v) for (k, v) in self._sub_epoch_summaries.items()]))
 
-        self.__dirty = 0
+        self._dirty = 0
 
-        await write_file_async(self.__height_to_hash_filename, map_buf)
-        await write_file_async(self.__ses_filename, ses_buf)
+        await write_file_async(self._height_to_hash_filename, map_buf)
+        await write_file_async(self._ses_filename, ses_buf)
 
-    def __drop_caches(self):
-        self.__sub_epoch_summaries = {}
-        self.__height_to_hash = bytearray()
-        self.__ses_filename.unlink(True)
-        self.__height_to_hash_filename.unlink(True)
+    def _drop_caches(self):
+        self._sub_epoch_summaries = {}
+        self._height_to_hash = bytearray()
+        self._ses_filename.unlink(True)
+        self._height_to_hash_filename.unlink(True)
 
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
@@ -214,39 +214,39 @@ class BlockHeightMap:
 
                     if (
                         self.get_hash(height) == prev_hash
-                        and height in self.__sub_epoch_summaries
-                        and self.__sub_epoch_summaries[height] == entry[2]
+                        and height in self._sub_epoch_summaries
+                        and self._sub_epoch_summaries[height] == entry[2]
                     ):
                         return
-                    self.__sub_epoch_summaries[height] = entry[2]
-                self.__set_hash(height, prev_hash)
+                    self._sub_epoch_summaries[height] = entry[2]
+                self._set_hash(height, prev_hash)
                 prev_hash = entry[1]
 
-    def __set_hash(self, height: int, block_hash: bytes32):
+    def _set_hash(self, height: int, block_hash: bytes32):
         idx = height * 32
-        self.__height_to_hash[idx : idx + 32] = block_hash
-        self.__dirty += 1
+        self._height_to_hash[idx : idx + 32] = block_hash
+        self._dirty += 1
 
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
-        assert idx + 32 <= len(self.__height_to_hash)
-        return bytes32(self.__height_to_hash[idx : idx + 32])
+        assert idx + 32 <= len(self._height_to_hash)
+        return bytes32(self._height_to_hash[idx : idx + 32])
 
     def contains_height(self, height: uint32) -> bool:
-        return height * 32 < len(self.__height_to_hash)
+        return height * 32 < len(self._height_to_hash)
 
     def rollback(self, fork_height: int):
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
-        for ses_included_height in self.__sub_epoch_summaries.keys():
+        for ses_included_height in self._sub_epoch_summaries.keys():
             if ses_included_height > fork_height:
                 heights_to_delete.append(ses_included_height)
         for height in heights_to_delete:
-            del self.__sub_epoch_summaries[height]
+            del self._sub_epoch_summaries[height]
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
-        return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
+        return SubEpochSummary.from_bytes(self._sub_epoch_summaries[height])
 
     def get_ses_heights(self) -> List[uint32]:
-        return sorted(self.__sub_epoch_summaries.keys())
+        return sorted(self._sub_epoch_summaries.keys())

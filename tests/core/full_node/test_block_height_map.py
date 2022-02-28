@@ -116,7 +116,7 @@ async def setup_chain(
 
 
 async def force_flush_cache(height_map: BlockHeightMap) -> None:
-    height_map._BlockHeightMap__dirty = 1000  # type: ignore[attr-defined] # ignore because of __ member access
+    height_map._dirty = 1000
     await height_map.maybe_flush()
 
 
@@ -285,36 +285,29 @@ class TestBlockHeightMap:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10, ses_every=2)
             height_map: BlockHeightMap = await BlockHeightMap.create(tmp_dir, db_wrapper)
-            # The ignores are for the hacky _BlockHeightMap__ member access
-            assert not height_map._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
-            assert not height_map._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            assert not height_map._ses_filename.exists()
+            assert not height_map._height_to_hash_filename.exists()
             await force_flush_cache(height_map)
-            # The ignores are for the hacky _BlockHeightMap__ member access
-            assert height_map._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
-            assert height_map._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            assert height_map._ses_filename.exists()
+            assert height_map._height_to_hash_filename.exists()
             invalid_genesis_hash: bytes32 = gen_block_hash(10)
             genesis_height: uint32 = uint32(0)
             if test_sub_epoch_summaries:
                 first_ses: SubEpochSummary = height_map.get_ses(genesis_height)
                 invalid_ses = dataclasses.replace(first_ses, prev_subepoch_summary_hash=invalid_genesis_hash)
-                # The ignores are for the hacky _BlockHeightMap__ member access
-                height_map._BlockHeightMap__sub_epoch_summaries[genesis_height] = bytes(  # type: ignore[attr-defined]
-                    invalid_ses
-                )
+                height_map._sub_epoch_summaries[genesis_height] = bytes(invalid_ses)
                 assert height_map.get_ses(genesis_height).prev_subepoch_summary_hash == invalid_genesis_hash
             if test_height_to_hash:
                 genesis_hash: bytes32 = height_map.get_hash(genesis_height)
-                # The ignores are for the hacky _BlockHeightMap__ member access
-                height_map._BlockHeightMap__set_hash(genesis_height, invalid_genesis_hash)  # type: ignore[attr-defined]
+                height_map._set_hash(genesis_height, invalid_genesis_hash)
             await force_flush_cache(height_map)
             height_map_2: BlockHeightMap = await BlockHeightMap.create(tmp_dir, db_wrapper)
             if test_sub_epoch_summaries:
                 assert height_map_2.get_ses(genesis_height).prev_subepoch_summary_hash != invalid_genesis_hash
             if test_height_to_hash:
                 assert height_map_2.get_hash(genesis_height) == genesis_hash
-            # The ignores are for the hacky _BlockHeightMap__ member access
-            assert not height_map_2._BlockHeightMap__ses_filename.exists()  # type: ignore[attr-defined]
-            assert not height_map_2._BlockHeightMap__height_to_hash_filename.exists()  # type: ignore[attr-defined]
+            assert not height_map_2._ses_filename.exists()
+            assert not height_map_2._height_to_hash_filename.exists()
             await force_flush_cache(height_map_2)
 
     @pytest.mark.asyncio
