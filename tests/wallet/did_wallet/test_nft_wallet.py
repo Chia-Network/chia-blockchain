@@ -1,11 +1,16 @@
 import asyncio
 import pytest
+from typing import List
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.full_node.mempool_manager import MempoolManager
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.transaction_record import TransactionRecord
 # from chia.types.blockchain_format.program import Program
 # from blspy import AugSchemeMPL
 # from chia.types.spend_bundle import SpendBundle
@@ -19,6 +24,13 @@ from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
+
+
+async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
+    tx = mempool.get_spendbundle(tx_id)
+    if tx is None:
+        return False
+    return True
 
 
 class TestNFTWallet:
@@ -52,7 +64,7 @@ class TestNFTWallet:
         [True],
     )
     @pytest.mark.asyncio
-    async def test_nft_wallet_creation(self, three_wallet_nodes, trusted):
+    async def test_nft_wallet_trade_chia_and_cat(self, three_wallet_nodes, trusted):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -154,6 +166,32 @@ class TestNFTWallet:
 
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 201)
+
+        async with wallet_node_1.wallet_state_manager.lock:
+            cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node_1.wallet_state_manager, wallet_1, {"identifier": "genesis_by_id"}, uint64(100)
+            )
+        tx_queue: List[TransactionRecord] = await wallet_node_1.wallet_state_manager.tx_store.get_not_sent()
+        tx_record = tx_queue[0]
+        await time_out_assert(
+            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
+        )
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cat_wallet_1.get_confirmed_balance, 100)
+        await time_out_assert(15, cat_wallet_1.get_unconfirmed_balance, 100)
+
+        assert cat_wallet_1.cat_info.limitations_program_hash is not None
+        asset_id = cat_wallet_1.get_asset_id()
+
+        cat_wallet_0: CATWallet = await CATWallet.create_wallet_for_cat(
+            wallet_node_0.wallet_state_manager, wallet_0, asset_id
+        )
+
+        assert cat_wallet_1.cat_info.limitations_program_hash == cat_wallet_0.cat_info.limitations_program_hash
+
         nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
             wallet_node_1.wallet_state_manager, wallet_1, did_wallet_1.id()
         )
@@ -164,7 +202,7 @@ class TestNFTWallet:
         # new_did_amount,
         # trade_price_list,
         did_coin_threeple = await did_wallet_1.get_info_for_recovery()
-        trade_price_list = [[10]]
+        trade_price_list = [[10], [20, bytes.fromhex(asset_id)]]
 
         sb = await nft_wallet_0.transfer_nft(
             coins[0],
@@ -177,6 +215,9 @@ class TestNFTWallet:
         assert sb is not None
 
         full_sb = await nft_wallet_1.receive_nft(sb)
+        # from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+        # debug_spend_bundle(full_sb)
+        breakpoint()
         await asyncio.sleep(3)
 
         for i in range(1, num_blocks):

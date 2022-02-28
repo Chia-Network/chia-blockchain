@@ -41,6 +41,14 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
         return False, iter(())
 
 
+def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
+    mod, curried_args = puzzle.uncurry()
+    if mod == CAT_MOD:
+        return curried_args.rest().rest().first()
+    else:
+        raise ValueError("Not a CAT puzzle")
+
+
 def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
     """
     Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.

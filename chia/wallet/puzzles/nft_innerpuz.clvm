@@ -75,7 +75,7 @@
         (c (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT NFT_TRANSFER_PROGRAM_HASH new_did) my_amount (list new_did))
           (c (list ASSERT_MY_AMOUNT my_amount)
             (if (= (sha256tree1 transfer_program_reveal) NFT_TRANSFER_PROGRAM_HASH)
-              (a transfer_program_reveal (list CURRENT_OWNER_DID new_did trade_prices_list transfer_program_solution))
+              (a transfer_program_reveal (list CURRENT_OWNER_DID new_did trade_prices_list (f (r SINGLETON_STRUCT)) transfer_program_solution))
               (x)
             )
           )

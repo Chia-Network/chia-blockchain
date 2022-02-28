@@ -1,4 +1,4 @@
-(mod ((ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE URI SETTLEMENT_MOD_HASH CAT_MOD_HASH) current_owner new_owner trade_price_list solution)
+(mod ((ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE URI SETTLEMENT_MOD_HASH CAT_MOD_HASH) current_owner new_owner trade_price_list my_nft_id solution)
 
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
@@ -10,8 +10,9 @@
 
     (defun-inline cat_settlement_puzzle_hash (CAT_MOD_HASH tail_hash SETTLEMENT_MOD_HASH)
       (puzzle-hash-of-curried-function CAT_MOD_HASH
+                                       SETTLEMENT_MOD_HASH
                                        (sha256 ONE tail_hash)
-                                       (sha256 ONE SETTLEMENT_MOD_HASH)
+                                       (sha256 ONE CAT_MOD_HASH)
       )
     )
 
@@ -19,19 +20,26 @@
       (f (divmod (* amount percentage) HUNDRED))
     )
 
-    (defun extract_trade_price_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id)
+    (defun sha256tree1 (TREE)
+          (if (l TREE)
+              (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+              (sha256 ONE TREE)
+          )
+    )
+
+    (defun extract_trade_price_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_price_list my_nft_id)
       (if trade_price_list
         (c
           (if (r (f trade_price_list))
-              (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_price_list))) SETTLEMENT_MOD_HASH) ROYALTY_ADDRESS (calculate_percentage (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE)))
+              (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_price_list))) SETTLEMENT_MOD_HASH) (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE)))))))
               (list CREATE_COIN ROYALTY_ADDRESS (calculate_percentage (f (f trade_price_list)) TRADE_PRICE_PERCENTAGE))
           )
-          (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE (r trade_price_list))
+          (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_price_list) my_nft_id)
         )
         ()
       )
     )
 
-    ; the compiler optimises out the below (r c URI (...)) I'm leaving it in to illustrate that URI should be curried in
-    (r (c URI (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE trade_price_list my_id)))
+    ; main
+    (r (c URI (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_price_list my_nft_id)))
 )

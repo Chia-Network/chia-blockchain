@@ -3,6 +3,7 @@ from chia.util.ints import uint64
 from chia.types.blockchain_format.program import Program
 from typing import Tuple, Iterator, Optional
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
@@ -12,6 +13,7 @@ LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 def create_nft_layer_puzzle(
@@ -32,7 +34,7 @@ def create_full_puzzle(singleton_id, current_owner_did, nft_transfer_program_has
 
 
 def create_transfer_puzzle(uri, percentage, backpayment_address):
-    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, uri]))
+    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, uri, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]))
     return ret
 
 
@@ -76,17 +78,28 @@ def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     return None
 
 
-# def get_backpayment_amount_from_inner_solution(solution: Program) -> uint64:
-#     try:
-#         transfer_prog = get_transfer_program_from_inner_solution(solution)
-#         mod, curried_args = transfer_prog.uncurry()
-#         assert mod == NFT_TRANSFER_PROGRAM
-#         percentage = curried_args.first().rest().first().as_int()
-#         amount = (get_trade_price_from_inner_solution(solution) * percentage) // 100
-#         return uint64(amount)
-#     except Exception:
-#         return None
-#     return None
+def get_royalty_address_from_inner_solution(solution: Program) -> Program:
+    try:
+        transfer_prog = get_transfer_program_from_inner_solution(solution)
+        mod, curried_args = transfer_prog.uncurry()
+        assert mod == NFT_TRANSFER_PROGRAM
+        royalty_address = curried_args.first().first().as_atom()
+        return royalty_address
+    except Exception:
+        return None
+    return None
+
+
+def get_percentage_from_inner_solution(solution: Program) -> uint64:
+    try:
+        transfer_prog = get_transfer_program_from_inner_solution(solution)
+        mod, curried_args = transfer_prog.uncurry()
+        assert mod == NFT_TRANSFER_PROGRAM
+        percentage = curried_args.first().rest().first().as_int()
+        return percentage
+    except Exception:
+        return None
+    return None
 
 
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:

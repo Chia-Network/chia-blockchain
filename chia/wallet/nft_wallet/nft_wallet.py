@@ -24,6 +24,17 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
+from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    SpendableCAT,
+    construct_cat_puzzle,
+    match_cat_puzzle,
+    get_innerpuzzle_from_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
+)
+
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 @dataclass(frozen=True)
@@ -442,7 +453,6 @@ class NFTWallet:
                 innersol,
             ]
         )
-        # breakpoint()
         list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
@@ -455,10 +465,11 @@ class NFTWallet:
         #breakpoint()
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
-                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(
-                    Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-                )
+                inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
+                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
                 nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+                royalty_address = nft_puzzles.get_royalty_address_from_inner_solution(inner_sol)
+                royalty_percentage = nft_puzzles.get_percentage_from_inner_solution(inner_sol)
 
         assert trade_price_list_discovered is not None
         assert nft_id is not None
@@ -486,18 +497,56 @@ class NFTWallet:
             await self.standard_wallet.push_transaction(nft_record)
 
         backpayment_amount = 0
-        for pair in trade_price_list_discovered.as_python():
-            if len(pair) == 1:
-                backpayment_amount += Program.from_bytes(pair[0]).as_int()
+        sb_list = [sending_sb]
+        spend_list = []
+        for pair in trade_price_list_discovered.as_iter():
+            if len(pair.as_python()) == 1:
+                backpayment_amount += pair.first().as_int()
+            elif len(pair.as_python()) >= 2:
+                asset_id = pair.rest().first().as_atom()
+                amount = (pair.first().as_int() * royalty_percentage) // 100
+                cat_wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                assert cat_wallet is not None  # TODO: catch this neater, maybe
+                settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, asset_id, OFFER_MOD).get_tree_hash()
+                cat_tx_list = await cat_wallet.generate_signed_transaction([amount], [OFFER_MOD.get_tree_hash()])
+                cat_sb = cat_tx_list[0].spend_bundle
+                sb_list.append(cat_sb)
+                coin = None
+                spendable_cc_list = []
+                # breakpoint()
+                # Generate the spend of the royalty amount
+                # TODO: refactor this out of the NFTWallet
+                for coin in cat_sb.additions():
+                    if coin.puzzle_hash == settlement_ph:
+                        nonce = nft_id
+                        for cs in cat_sb.coin_spends:
+                            if cs.coin.name() == coin.parent_coin_info:
+                                cat_inner: Program = get_innerpuzzle_from_puzzle(cs.puzzle_reveal)
+                                new_spendable_cc = SpendableCAT(
+                                    coin,
+                                    asset_id,
+                                    OFFER_MOD,
+                                    Program.to([(nonce, [[royalty_address, amount]])]),
+                                    lineage_proof=LineageProof(cs.coin.parent_coin_info, cat_inner.get_tree_hash(), cs.coin.amount),
+                                )
+                                spendable_cc_list.append(new_spendable_cc)
+                                break
 
+                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cc_list)
+                sb_list.append(cat_spend_bundle)
+                # spend_list.append(CoinSpend(coin, construct_cat_puzzle(CAT_MOD, asset_id, OFFER_MOD), ))
+        # offers_sb = SpendBundle(spend_list, AugSchemeMPL.aggregate([]))
+        # sb_list.append(offers_sb)
+        # breakpoint()
         messages = [(1, trade_price_list_discovered.get_tree_hash() + bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
-
+        sb_list.append(message_sb)
         relative_amount = (fee + backpayment_amount) * -1
         standard_sb = await self.standard_wallet.create_spend_bundle_relative_chia(relative_amount)
-        full_spend = SpendBundle.aggregate([message_sb, sending_sb, standard_sb])
+        sb_list.append(standard_sb)
+        full_spend = SpendBundle.aggregate(sb_list)
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
