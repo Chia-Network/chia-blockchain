@@ -47,13 +47,6 @@
      )
   )
 
-  ; assembles information from the solution to create our own full ID including asserting our parent is a singleton
-  (defun-inline create_my_ID (SINGLETON_STRUCT full_puzzle_hash parent_parent parent_inner_puzzle_hash parent_amount my_amount)
-    (sha256 (sha256 parent_parent (calculate_full_puzzle_hash SINGLETON_STRUCT parent_inner_puzzle_hash) parent_amount)
-            full_puzzle_hash
-            my_amount)
-  )
-
   ;; take a boolean and a non-empty list of conditions
   ;; strip off the first condition if a boolean is set
   ;; this is used to remove `(CREATE_COIN xxx -113)`
@@ -121,53 +114,43 @@
       )
    )
 
-  ; this final stager asserts our ID
-  ; it also runs the innerpuz with the innersolution with the "truths" added
-  ; it then passes that output conditions from the innerpuz to the morph conditions function
-  (defun-inline stager_three (SINGLETON_STRUCT my_id INNER_PUZZLE inner_solution)
-    (c (list ASSERT_MY_COIN_ID my_id) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE inner_solution) 0))
-  )
-
-  ; this checks whether we are an eve spend or not and calculates our full coin ID appropriately and passes it on to the final stager
-  ; if we are the eve spend it also adds the additional checks that our parent's puzzle is the standard launcher format and that out parent ID is the same as our singleton ID
-
-  (defun-inline stager_two (SINGLETON_STRUCT lineage_proof full_puzhash my_amount INNER_PUZZLE inner_solution)
-    (stager_three
-      SINGLETON_STRUCT
-      (if (is_not_eve_proof lineage_proof)
-          (create_my_ID
-            SINGLETON_STRUCT
-            full_puzhash
-            (parent_info_for_lineage_proof lineage_proof)
-            (puzzle_hash_for_lineage_proof lineage_proof)
-            (amount_for_lineage_proof lineage_proof)
-            my_amount
-          )
-          (if (=
-                (launcher_id_for_singleton_struct SINGLETON_STRUCT)
-                (sha256 (parent_info_for_eve_proof lineage_proof) (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT) (amount_for_eve_proof lineage_proof))
-              )
-              (sha256 (launcher_id_for_singleton_struct SINGLETON_STRUCT) full_puzhash my_amount)
-              (x)
-          )
-      )
-      INNER_PUZZLE
-      inner_solution
+ ; assert that either the lineage proof is for a parent singleton, or, if it's for the launcher, verify it matched our launcher ID
+ ; then return a condition asserting it actually is our parent ID
+ (defun verify_lineage_proof (SINGLETON_STRUCT parent_id is_not_launcher)
+    (assert (any is_not_launcher (= parent_id (launcher_id_for_singleton_struct SINGLETON_STRUCT)))
+      ; then
+      (list ASSERT_MY_PARENT_ID parent_id)
     )
-  )
-
-  ; this calculates our current full puzzle hash and passes it to stager two
-  (defun-inline stager_one (SINGLETON_STRUCT lineage_proof my_innerpuzhash my_amount INNER_PUZZLE inner_solution)
-    (stager_two SINGLETON_STRUCT lineage_proof (calculate_full_puzzle_hash SINGLETON_STRUCT my_innerpuzhash) my_amount INNER_PUZZLE inner_solution)
-  )
-
+ )
 
   ; main
 
   ; if our value is not an odd amount then we are invalid
-  ; this calculates my_innerpuzhash and passes all values to stager_one
-  (if (logand my_amount ONE)
-    (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
-    (x)
+  (assert (logand my_amount ONE)
+    ; then
+    (c
+      (list ASSERT_MY_AMOUNT my_amount)
+      (c
+        ; Verify the lineage proof by asserting our parent's ID
+        (verify_lineage_proof
+          SINGLETON_STRUCT
+          ; calculate our parent's ID
+          (sha256
+            (parent_info_for_lineage_proof lineage_proof)
+            (if (is_not_eve_proof lineage_proof)  ; The PH calculation changes based on the lineage proof
+              (calculate_full_puzzle_hash SINGLETON_STRUCT (puzzle_hash_for_lineage_proof lineage_proof))  ; wrap the innerpuz in a singleton
+              (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT) ; Use the static launcher puzzle hash
+            )
+            (if (is_not_eve_proof lineage_proof)  ; The position of "amount" changes based on the type on lineage proof
+              (amount_for_lineage_proof lineage_proof)
+              (amount_for_eve_proof lineage_proof)
+            )
+          )
+          (is_not_eve_proof lineage_proof)
+        )
+        ; finally check all of the conditions for a single odd output to wrap
+        (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (a INNER_PUZZLE inner_solution) 0)
+      )
+    )
   )
 )
