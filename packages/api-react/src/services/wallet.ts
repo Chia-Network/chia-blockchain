@@ -175,17 +175,17 @@ export const walletApi = apiWithTag.injectEndpoints({
       walletId: number;
       poolUrl: string;
       relativeLockHeight: number;
-      targetPuzzlehash?: string;
+      targetPuzzleHash?: string;
       fee?: string;
     }>({
-      query: ({ walletId, poolUrl, relativeLockHeight, targetPuzzlehash, fee }) => ({
+      query: ({ walletId, poolUrl, relativeLockHeight, targetPuzzleHash, fee }) => ({
         command: 'pwJoinPool',
         service: Wallet,
         args: [
           walletId,
           poolUrl,
           relativeLockHeight,
-          targetPuzzlehash,
+          targetPuzzleHash,
           fee,
         ],
       }),
