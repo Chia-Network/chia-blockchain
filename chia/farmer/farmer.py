@@ -317,9 +317,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"GET /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"GET /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -357,9 +359,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"POST /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"POST /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -397,9 +401,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"PUT /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"PUT /farmer response: {response}")
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
