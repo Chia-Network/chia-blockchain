@@ -1,12 +1,13 @@
 import pytest
+import pytest_asyncio
 import aiosqlite
-import tempfile
 import random
 import asyncio
 from pathlib import Path
 from typing import List, Tuple
 
 from tests.setup_nodes import test_constants
+from tests.util.temp_file import TempFile
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
@@ -19,19 +20,6 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 
 
-class TempFile:
-    def __init__(self):
-        self.path = Path(tempfile.NamedTemporaryFile().name)
-
-    def __enter__(self) -> Path:
-        if self.path.exists():
-            self.path.unlink()
-        return self.path
-
-    def __exit__(self, exc_t, exc_v, exc_tb):
-        self.path.unlink()
-
-
 def rand_bytes(num) -> bytes:
     ret = bytearray(num)
     for i in range(num):
@@ -39,7 +27,7 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
@@ -102,7 +90,7 @@ class TestDbUpgrade:
                     assert err is None
 
             # now, convert v1 in_file to v2 out_file
-            await convert_v1_to_v2(in_file, out_file)
+            convert_v1_to_v2(in_file, out_file)
 
             async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
 

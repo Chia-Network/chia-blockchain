@@ -160,6 +160,10 @@ if [ "$(uname)" = "Linux" ]; then
     if ! command -v python3.9 >/dev/null 2>&1; then
       install_python3_and_sqlite3_from_source_with_yum
     fi
+  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
+    echo "Installing on Rocky."
+    # TODO: make this smarter about getting the latest version
+    sudo yum install --assumeyes python39
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
@@ -220,7 +224,7 @@ echo "Python version is $INSTALL_PYTHON_VERSION"
 SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
 SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
 SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
-echo "SQLite version of the Python is ${SQLITE_VERSION}"
+echo "SQLite version for Python is ${SQLITE_VERSION}"
 if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
   echo "Only sqlite>=3.8 is supported"
   exit 1

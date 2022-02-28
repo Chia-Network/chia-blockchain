@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
@@ -158,6 +159,15 @@ class WalletRpcApi:
             peers_close_task: Optional[asyncio.Task] = await self.service._await_closed()
             if peers_close_task is not None:
                 await peers_close_task
+
+    async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
+        assert self.service.wallet_state_manager is not None
+        return dataclasses.replace(
+            tx,
+            to_puzzle_hash=(
+                await self.service.wallet_state_manager.convert_puzzle_hash(tx.wallet_id, tx.to_puzzle_hash)
+            ),
+        )
 
     ##########################################################################################
     # Key management
@@ -373,7 +383,7 @@ class WalletRpcApi:
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-        height = self.service.wallet_state_manager.blockchain.get_peak_height()
+        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         return {"height": height}
 
     async def get_network_info(self, request: Dict):
@@ -436,7 +446,7 @@ class WalletRpcApi:
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, request["asset_id"]
+                        wallet_state_manager, main_wallet, request["asset_id"], name
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
@@ -656,7 +666,7 @@ class WalletRpcApi:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
-            "transaction": tr.to_json_dict_convenience(self.service.config),
+            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
 
@@ -670,11 +680,19 @@ class WalletRpcApi:
         sort_key = request.get("sort_key", None)
         reverse = request.get("reverse", False)
 
+        to_address = request.get("to_address", None)
+        to_puzzle_hash: Optional[bytes32] = None
+        if to_address is not None:
+            to_puzzle_hash = decode_puzzle_hash(to_address)
+
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse
+            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
         )
         return {
-            "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
+            "transactions": [
+                (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+                for tr in transactions
+            ],
             "wallet_id": wallet_id,
         }
 
@@ -826,7 +844,7 @@ class WalletRpcApi:
         memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+        if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         if "fee" in request:
@@ -1321,8 +1339,8 @@ class WalletRpcApi:
             uint32(request["relative_lock_height"]),
         )
         async with self.service.wallet_state_manager.lock:
-            total_fee, tx = await wallet.join_pool(new_target_state, fee)
-            return {"total_fee": total_fee, "transaction": tx}
+            total_fee, tx, fee_tx = await wallet.join_pool(new_target_state, fee)
+            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
 
     async def pw_self_pool(self, request) -> Dict:
         if self.service.wallet_state_manager is None:
@@ -1338,8 +1356,8 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         async with self.service.wallet_state_manager.lock:
-            total_fee, tx = await wallet.self_pool(fee)  # total_fee: uint64, tx: TransactionRecord
-            return {"total_fee": total_fee, "transaction": tx}
+            total_fee, tx, fee_tx = await wallet.self_pool(fee)
+            return {"total_fee": total_fee, "transaction": tx, "fee_transaction": fee_tx}
 
     async def pw_absorb_rewards(self, request) -> Dict:
         """Perform a sweep of the p2_singleton rewards controlled by the pool wallet singleton"""
@@ -1352,9 +1370,9 @@ class WalletRpcApi:
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         async with self.service.wallet_state_manager.lock:
-            transaction: TransactionRecord = await wallet.claim_pool_rewards(fee)
+            transaction, fee_tx = await wallet.claim_pool_rewards(fee)
             state: PoolWalletInfo = await wallet.get_current_state()
-        return {"state": state.to_json_dict(), "transaction": transaction}
+        return {"state": state.to_json_dict(), "transaction": transaction, "fee_transaction": fee_tx}
 
     async def pw_status(self, request) -> Dict:
         """Return the complete state of the Pool wallet with id `request["wallet_id"]`"""

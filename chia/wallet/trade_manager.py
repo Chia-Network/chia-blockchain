@@ -81,7 +81,7 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, coin_state: CoinState):
+    async def coins_of_interest_farmed(self, coin_state: CoinState, fork_height: Optional[uint32]):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -110,7 +110,7 @@ class TradeManager:
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids)
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids, fork_height)
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
@@ -353,8 +353,7 @@ class TradeManager:
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
             [c.name() for c in non_ephemeral_removals]
         )
-        assert coin_states is not None
-        return not any([cs.spent_height is not None for cs in coin_states])
+        return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
