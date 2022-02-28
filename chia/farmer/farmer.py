@@ -374,7 +374,7 @@ class Farmer:
 
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> Optional[Dict]:
+    ) -> None:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
@@ -400,7 +400,6 @@ class Farmer:
                         self.log.info(f"PUT /farmer response: {response}")
                         if "error_code" in response:
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
-                        return response
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -410,7 +409,6 @@ class Farmer:
             self.handle_failed_pool_response(
                 pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
             )
-        return None
 
     def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
         if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
@@ -498,11 +496,6 @@ class Farmer:
                                         f"Invalid error code received from the pool: {response['error_code']}"
                                     )
 
-                                self.log.error(
-                                    "update_pool_farmer_info failed: "
-                                    f"{response['error_code']}, {response['error_message']}"
-                                )
-
                         return farmer_response, error_code_response
 
                     if authentication_token_timeout is not None:
@@ -537,29 +530,9 @@ class Farmer:
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
-                            put_farmer_response_dict = await self._pool_put_farmer(
+                            await self._pool_put_farmer(
                                 pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
-                            try:
-                                # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
-                                #     put_farmer_response_dict
-                                # )
-                                # if put_farmer_response.payout_instructions:
-                                #     self.log.info(
-                                #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                #     )
-                                # TODO: Fix Streamable implementation and recover the above.
-                                if put_farmer_response_dict["payout_instructions"]:
-                                    self.log.info(
-                                        f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                    )
-                                else:
-                                    raise Exception
-                            except Exception:
-                                self.log.error(
-                                    f"Failed to update farmer information on the pool {pool_config.pool_url}"
-                                )
-
                     else:
                         self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
