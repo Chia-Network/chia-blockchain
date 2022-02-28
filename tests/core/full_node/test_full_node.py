@@ -1079,7 +1079,7 @@ class TestFullNodeProtocol:
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
         blocks_new = bt.get_consecutive_blocks(
-            3,
+            2,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=cb_ph,
@@ -1089,11 +1089,10 @@ class TestFullNodeProtocol:
         while incoming_queue.qsize() > 0:
             await incoming_queue.get()
 
-        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-3]), peer)
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-2]), peer)
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks_new[-1]), peer)
 
-        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 3))
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 2))
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
             100000000000000,
@@ -1115,7 +1114,7 @@ class TestFullNodeProtocol:
         blocks = await full_node_1.get_all_full_blocks()
 
         blocks = bt.get_consecutive_blocks(
-            3,
+            2,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
