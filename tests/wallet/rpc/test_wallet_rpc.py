@@ -475,7 +475,7 @@ class TestWalletRpc:
             offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
 
             summary = await client.get_offer_summary(offer)
-            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
+            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
 
             assert await client.check_offer_validity(offer)
 
