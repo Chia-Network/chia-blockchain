@@ -7,6 +7,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
+from clvm.casts import int_from_bytes
 
 from chia.util import cached_bls
 from chia.consensus.block_record import BlockRecord
@@ -27,12 +28,12 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.cached_bls import LOCAL_CACHE
-from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(max_workers=2)
+        self.pool = ProcessPoolExecutor(max_workers=2, initializer=setproctitle, initargs=(f"{getproctitle()}_worker",))
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
@@ -304,7 +305,7 @@ class MempoolManager:
         for add in additions:
             additions_dict[add.name()] = add
 
-        addition_amount = uint64(0)
+        addition_amount: int = 0
         # Check additions for max coin amount
         for coin in additions:
             if coin.amount < 0:
@@ -319,7 +320,7 @@ class MempoolManager:
                     MempoolInclusionStatus.FAILED,
                     Err.COIN_AMOUNT_EXCEEDS_MAXIMUM,
                 )
-            addition_amount = uint64(addition_amount + coin.amount)
+            addition_amount = addition_amount + coin.amount
         # Check for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
@@ -335,8 +336,7 @@ class MempoolManager:
             return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
-        removal_coin_dict: Dict[bytes32, Coin] = {}
-        removal_amount = uint64(0)
+        removal_amount: int = 0
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
@@ -359,11 +359,10 @@ class MempoolManager:
                 )
 
             assert removal_record is not None
-            removal_amount = uint64(removal_amount + removal_record.coin.amount)
+            removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
-            removal_coin_dict[name] = removal_record.coin
 
-        removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
+        removals: List[Coin] = [record.coin for record in removal_record_dict.values()]
 
         if addition_amount > removal_amount:
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
@@ -400,7 +399,6 @@ class MempoolManager:
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this spendbundle has a higher fee per cost than all others
-        tmp_error: Optional[Err] = None
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
@@ -419,9 +417,6 @@ class MempoolManager:
 
         elif fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
-
-        if tmp_error:
-            return None, MempoolInclusionStatus.FAILED, tmp_error
 
         # Verify conditions, create hash_key list for aggsig check
         error: Optional[Err] = None
@@ -486,7 +481,7 @@ class MempoolManager:
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
-            if record.spent == 1:
+            if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
             if removal.name() in self.mempool.removals:

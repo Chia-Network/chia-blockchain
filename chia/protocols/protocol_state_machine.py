@@ -30,6 +30,7 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_signage_point_or_end_of_sub_slot: [pmt.respond_signage_point, pmt.respond_end_of_sub_slot],
     pmt.request_compact_vdf: [pmt.respond_compact_vdf],
     pmt.request_peers: [pmt.respond_peers],
+    pmt.request_header_blocks: [pmt.respond_header_blocks, pmt.reject_header_blocks],
 }
 
 

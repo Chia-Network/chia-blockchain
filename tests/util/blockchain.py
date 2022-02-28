@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 import aiosqlite
+import tempfile
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
@@ -16,15 +17,12 @@ from chia.util.path import mkdir
 
 from tests.setup_nodes import bt
 
-blockchain_db_counter: int = 0
-
 
 async def create_blockchain(constants: ConsensusConstants, db_version: int):
-    global blockchain_db_counter
-    db_path = Path(f"blockchain_test-{blockchain_db_counter}.db")
+    db_path = Path(tempfile.NamedTemporaryFile().name)
+
     if db_path.exists():
         db_path.unlink()
-    blockchain_db_counter += 1
     connection = await aiosqlite.connect(db_path)
     wrapper = DBWrapper(connection, db_version)
     coin_store = await CoinStore.create(wrapper)
