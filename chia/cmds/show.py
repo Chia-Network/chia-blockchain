@@ -355,15 +355,16 @@ async def show_async(
                             address_prefix=address_prefix,
                             mojo_per_unit=mojo_per_unit,
                         )
-                    if i + num_per_screen >= len(coin_records):
-                        return None
-                    print("Press q to quit, or c to continue")
-                    while True:
-                        entered_key = sys.stdin.read(1)
-                        if entered_key == "q":
-                            return None
-                        elif entered_key == "c":
-                            break
+                    if i + num_per_screen <= len(coin_records):
+                        print("Press q to quit, or c to continue")
+                        while True:
+                            entered_key = sys.stdin.read(1)
+                            if entered_key == "q":
+                                client.close()
+                                await client.await_closed()
+                                return None
+                            elif entered_key == "c":
+                                break
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
