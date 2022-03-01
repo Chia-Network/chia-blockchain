@@ -256,24 +256,28 @@ def streamable(cls: Any):
     class Example(Streamable):
         ...
 
-    The order how the decorator are applied and the inheritance from Stremable are forced. The explicit inheritance is
+    The order how the decorator are applied and the inheritance from Streamable are forced. The explicit inheritance is
     required because mypy doesn't analyse the type returned by decorators, so we can't just inherit from inside the
     decorator. The dataclass decorator is required to fetch type hints, let mypy validate constructor calls and restrict
     direct modification of objects by `frozen=True`.
     """
 
+    correct_usage_string: str = (
+        "Correct usage is:\n\n@streamable\n@dataclass(frozen=True)\nclass Example(Streamable):\n\t..."
+    )
+
     if not dataclasses.is_dataclass(cls):
-        raise SyntaxError("@dataclass(frozen=True) required before streamable")
+        raise SyntaxError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
 
     try:
         object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
     except dataclasses.FrozenInstanceError:
         pass
     else:
-        raise SyntaxError("dataclass needs to be frozen like: @dataclass(frozen=True)")
+        raise SyntaxError(f"dataclass needs to be frozen. {correct_usage_string}")
 
     if not issubclass(cls, Streamable):
-        raise SyntaxError(f"Streamable inheritance required for {cls}")
+        raise SyntaxError(f"Streamable inheritance required. {correct_usage_string}")
 
     stream_functions = []
     parse_functions = []
