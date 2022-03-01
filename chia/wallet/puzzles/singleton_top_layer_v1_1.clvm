@@ -73,7 +73,7 @@
   ;; Returns a (bool . bool)
   (defun odd_cons_m113 (output_amount)
     (c
-      (= (logand output_amount ONE) ONE) ;; is it odd?
+      (logand output_amount ONE) ;; is it odd?
       (= output_amount -113) ;; is it the escape value?
     )
   )
