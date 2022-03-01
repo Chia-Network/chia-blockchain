@@ -106,7 +106,7 @@ export default function About(props: Props) {
       </head>
       <body>
         <GlobalStyle />
-        <StyledLink href={url}>
+        <StyledLink href={url} target="_blank">
           <StyledLogoContainer>
             <img src={icon} />
           </StyledLogoContainer>
