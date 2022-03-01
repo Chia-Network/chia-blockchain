@@ -13,6 +13,7 @@ from chia.types.blockchain_format.slots import ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
+from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 
 
@@ -63,7 +64,8 @@ def block_to_block_record(
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
-        assert ses.get_hash() == found_ses_hash
+        if ses.get_hash() != found_ses_hash:
+            raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
 
     prev_transaction_block_height = uint32(0)
     curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)

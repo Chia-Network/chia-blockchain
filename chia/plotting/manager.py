@@ -18,8 +18,6 @@ from chia.plotting.util import (
     PlotRefreshEvents,
     get_plot_filenames,
     parse_plot_info,
-    stream_plot_info_pk,
-    stream_plot_info_ph,
 )
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import uint16
@@ -125,7 +123,6 @@ class PlotManager:
     pool_public_keys: List[G1Element]
     cache: Cache
     match_str: Optional[str]
-    show_memo: bool
     open_no_key_filenames: bool
     last_refresh_time: float
     refresh_parameter: PlotsRefreshParameter
@@ -140,7 +137,6 @@ class PlotManager:
         root_path: Path,
         refresh_callback: Callable,
         match_str: Optional[str] = None,
-        show_memo: bool = False,
         open_no_key_filenames: bool = False,
         refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(),
     ):
@@ -154,7 +150,6 @@ class PlotManager:
         self.pool_public_keys = []
         self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
         self.match_str = match_str
-        self.show_memo = show_memo
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
         self.refresh_parameter = refresh_parameter
@@ -240,22 +235,19 @@ class PlotManager:
                 self._refresh_callback(PlotRefreshEvents.started, PlotRefreshResult(remaining=total_size))
 
                 # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
-                def plot_removed(test_path: Path):
-                    return not test_path.exists() or test_path.parent not in plot_directories
-
                 for path in list(self.failed_to_open_filenames.keys()):
-                    if plot_removed(path):
+                    if path not in plot_paths:
                         del self.failed_to_open_filenames[path]
 
                 for path in self.no_key_filenames.copy():
-                    if plot_removed(path):
+                    if path not in plot_paths:
                         self.no_key_filenames.remove(path)
 
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
                     loaded_plot = Path(loaded_path) / Path(plot_filename)
-                    if plot_removed(loaded_plot):
+                    if loaded_plot not in plot_paths:
                         filenames_to_remove.append(plot_filename)
                         if loaded_plot in self.plots:
                             del self.plots[loaded_plot]
@@ -266,7 +258,7 @@ class PlotManager:
                     paths_to_remove: List[str] = []
                     for path in duplicated_paths:
                         loaded_plot = Path(path) / Path(plot_filename)
-                        if plot_removed(loaded_plot):
+                        if loaded_plot not in plot_paths:
                             paths_to_remove.append(path)
                             total_result.removed.append(loaded_plot)
                     for path in paths_to_remove:
@@ -444,16 +436,6 @@ class PlotManager:
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
             log.info(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}")
-
-            if self.show_memo:
-                plot_memo: bytes32
-                if pool_contract_puzzle_hash is None:
-                    plot_memo = stream_plot_info_pk(pool_public_key, farmer_public_key, local_master_sk)
-                else:
-                    plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, local_master_sk)
-                plot_memo_str: str = plot_memo.hex()
-                log.info(f"Memo: {plot_memo_str}")
-
             return new_plot_info
 
         with self, ThreadPoolExecutor() as executor:

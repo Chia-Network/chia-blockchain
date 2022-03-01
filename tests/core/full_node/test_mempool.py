@@ -26,7 +26,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
@@ -36,12 +36,14 @@ from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
 
 from chia.util.recursive_replace import recursive_replace
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.program import SerializedProgram
 from clvm_tools import binutils
 from chia.types.generator_types import BlockGenerator
@@ -76,6 +78,14 @@ def event_loop():
     yield loop
 
 
+# TODO: this fixture should really be at function scope, to make all tests
+# independent. Right now, TestMempool::test_basic_mempool initializes these
+# nodes, and the remaining tests just build on top of them. This means
+# test_basic_mempool must alwasy be run in order to have most of the other tests
+# pass.
+# The reason for this is that our simulators can't be destroyed correctly, which
+# means you can't instantiate more than one per process, so this is a hack until
+# that is fixed. For now, our tests are not independent
 @pytest.fixture(scope="module")
 async def two_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {})
@@ -245,6 +255,63 @@ class TestMempoolManager:
             spend_bundle,
             spend_bundle.name(),
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode,lock_value,expected",
+        [
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, MempoolInclusionStatus.FAILED),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, MempoolInclusionStatus.SUCCESS),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING),
+            # the absolute height and seconds tests require fresh full nodes to
+            # run the test on. Right now, we just launch two simulations and all
+            # tests use the same ones. See comment at the two_nodes fixture
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.PENDING),
+            # (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.PENDING),
+            # genesis timestamp is 10000 and each block is 10 seconds
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, MempoolInclusionStatus.SUCCESS),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, MempoolInclusionStatus.FAILED),
+            # (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, MempoolInclusionStatus.FAILED),
+        ],
+    )
+    async def test_ephemeral_timelock(self, two_nodes, opcode, lock_value, expected):
+        def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
+
+            conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+            tx1 = WALLET_A.generate_signed_transaction(
+                uint64(1000000), WALLET_A.get_new_puzzlehash(), coin_2, conditions.copy(), uint64(0)
+            )
+
+            ephemeral_coin: Coin = tx1.additions()[0]
+            tx2 = WALLET_A.generate_signed_transaction(
+                uint64(1000000), WALLET_A.get_new_puzzlehash(), ephemeral_coin, conditions.copy(), uint64(0)
+            )
+
+            bundle = SpendBundle.aggregate([tx1, tx2])
+            return bundle
+
+        full_node_1, _, server_1, _ = two_nodes
+        blocks, bundle, status, err = await self.condition_tester2(two_nodes, test_fun)
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+
+        print(f"status: {status}")
+        print(f"error: {err}")
+
+        assert status == expected
+        if expected == MempoolInclusionStatus.SUCCESS:
+            assert mempool_bundle is bundle
+            assert err is None
+        else:
+            assert mempool_bundle is None
+            assert err is not None
 
     # this test makes sure that one spend successfully asserts the announce from
     # another spend, even though the assert condition is duplicated 100 times
@@ -526,7 +593,7 @@ class TestMempoolManager:
         bundle = test_fun(coin_1, coin_2)
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        status, err = await respond_transaction(full_node_1, tx1, peer)
+        status, err = await respond_transaction(full_node_1, tx1, peer, test=True)
 
         return blocks, bundle, status, err
 
@@ -1004,10 +1071,10 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=bundle
         )
         try:
-            await full_node_1.full_node.blockchain.receive_block(blocks[-1])
+            await _validate_and_add_block(full_node_1.full_node.blockchain, blocks[-1])
             assert False
-        except AssertionError:
-            pass
+        except AssertionError as e:
+            assert e.args[0] == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
 
     # ensure an assert coin announcement is rejected if it doesn't match the
     # create announcement
@@ -1277,7 +1344,9 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
         assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
-        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, blocks[-1], expected_error=Err.RESERVE_FEE_CONDITION_FAILED
+        )
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_fee_too_large(self, two_nodes):
@@ -1291,7 +1360,9 @@ class TestMempoolManager:
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=spend_bundle1
         )
         assert full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name()) is None
-        assert (await full_node_1.full_node.blockchain.receive_block(blocks[-1]))[1] == Err.RESERVE_FEE_CONDITION_FAILED
+        await _validate_and_add_block(
+            full_node_1.full_node.blockchain, blocks[-1], expected_error=Err.RESERVE_FEE_CONDITION_FAILED
+        )
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
@@ -1691,6 +1762,7 @@ def generator_condition_tester(
     mempool_mode: bool = False,
     quote: bool = True,
     max_cost: int = MAX_BLOCK_COST_CLVM,
+    height: uint32,
 ) -> NPCResult:
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} 123 (() (q . ())))))"  # noqa
     print(f"program: {prg}")
@@ -1698,18 +1770,18 @@ def generator_condition_tester(
     generator = BlockGenerator(program, [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
-        generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode
+        generator, max_cost, cost_per_byte=COST_PER_BYTE, mempool_mode=mempool_mode, height=height
     )
     return npc_result
 
 
 class TestGeneratorConditions:
-    def test_invalid_condition_args_terminator(self):
+    def test_invalid_condition_args_terminator(self, softfork_height):
 
         # note how the condition argument list isn't correctly terminated with a
         # NIL atom. This is allowed, and all arguments beyond the ones we look
         # at are ignored, including the termination of the list
-        npc_result = generator_condition_tester("(80 50 . 1)")
+        npc_result = generator_condition_tester("(80 50 . 1)", height=softfork_height)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode(bytes([80]))
@@ -1719,11 +1791,31 @@ class TestGeneratorConditions:
         c = npc_result.npc_list[0].conditions[0][1][0]
         assert c == ConditionWithArgs(opcode=ConditionOpcode.ASSERT_SECONDS_RELATIVE, vars=[bytes([50])])
 
-    def test_invalid_condition_list_terminator(self):
+    @pytest.mark.parametrize(
+        "mempool,height,operand,expected",
+        [
+            (True, 0, -1, Err.GENERATOR_RUNTIME_ERROR.value),
+            (False, 1000000, -1, None),
+            (False, 2000000, -1, Err.GENERATOR_RUNTIME_ERROR.value),
+            (True, 0, 1, None),
+            (False, 1000000, 1, None),
+            (False, 2000000, 1, None),
+        ],
+    )
+    def test_div(self, mempool, height, operand, expected):
+
+        # op_div is disallowed on negative numbers in the mempool, and after the
+        # softfork
+        npc_result = generator_condition_tester(
+            f"(c (c (q . 80) (c (/ (q . 50) (q . {operand})) ())) ())", quote=False, mempool_mode=mempool, height=height
+        )
+        assert npc_result.error == expected
+
+    def test_invalid_condition_list_terminator(self, softfork_height):
 
         # note how the list of conditions isn't correctly terminated with a
         # NIL atom. This is a failure
-        npc_result = generator_condition_tester("(80 50) . 3")
+        npc_result = generator_condition_tester("(80 50) . 3", height=softfork_height)
         assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
 
     @pytest.mark.parametrize(
@@ -1735,10 +1827,12 @@ class TestGeneratorConditions:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_height_time_conditions(self, opcode):
+    def test_duplicate_height_time_conditions(self, opcode, softfork_height):
         # even though the generator outputs multiple conditions, we only
         # need to return the highest one (i.e. most strict)
-        npc_result = generator_condition_tester(" ".join([f"({opcode.value[0]} {i})" for i in range(50, 101)]))
+        npc_result = generator_condition_tester(
+            " ".join([f"({opcode.value[0]} {i})" for i in range(50, 101)]), height=softfork_height
+        )
         print(npc_result)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
@@ -1756,11 +1850,11 @@ class TestGeneratorConditions:
             ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT,
         ],
     )
-    def test_just_announcement(self, opcode):
+    def test_just_announcement(self, opcode, softfork_height):
         message = "a" * 1024
         # announcements are validated on the Rust side and never returned
         # back. They are either satisified or cause an immediate failure
-        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50)
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50, height=softfork_height)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         # create-announcements and assert-announcements are dropped once
@@ -1774,23 +1868,23 @@ class TestGeneratorConditions:
             ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
         ],
     )
-    def test_assert_announcement_fail(self, opcode):
+    def test_assert_announcement_fail(self, opcode, softfork_height):
         message = "a" * 1024
         # announcements are validated on the Rust side and never returned
         # back. They ar either satisified or cause an immediate failure
         # in this test we just assert announcements, we never make them, so
         # these should fail
-        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ')
+        npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ', height=softfork_height)
         print(npc_result)
         assert npc_result.error == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.value
         assert npc_result.npc_list == []
 
-    def test_multiple_reserve_fee(self):
+    def test_multiple_reserve_fee(self, softfork_height):
         # RESERVE_FEE
         cond = 52
         # even though the generator outputs 3 conditions, we only need to return one copy
         # with all the fees accumulated
-        npc_result = generator_condition_tester(f"({cond} 100) " * 3)
+        npc_result = generator_condition_tester(f"({cond} 100) " * 3, height=softfork_height)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode(bytes([cond]))
@@ -1804,53 +1898,61 @@ class TestGeneratorConditions:
         assert reserve_fee == 300
         assert len(npc_result.npc_list[0].conditions[0][1]) == 1
 
-    def test_duplicate_outputs(self):
+    def test_duplicate_outputs(self, softfork_height):
         # CREATE_COIN
         # creating multiple coins with the same properties (same parent, same
         # target puzzle hash and same amount) is not allowed. That's a consensus
         # failure.
         puzzle_hash = "abababababababababababababababab"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2)
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2, height=softfork_height)
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
         assert npc_result.npc_list == []
 
-    def test_create_coin_cost(self):
+    def test_create_coin_cost(self, softfork_height):
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
         # this max cost is exactly enough for the create coin condition
         npc_result = generator_condition_tester(
-            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000
+            f'(51 "{puzzle_hash}" 10) ',
+            max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value,
+            height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.clvm_cost == 20470
+        assert npc_result.cost == 20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
         assert len(npc_result.npc_list) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'(51 "{puzzle_hash}" 10) ', max_cost=20470 + 95 * COST_PER_BYTE + 1800000 - 1
+            f'(51 "{puzzle_hash}" 10) ',
+            max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1,
+            height=softfork_height,
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
 
-    def test_agg_sig_cost(self):
+    def test_agg_sig_cost(self, softfork_height):
         # AGG_SIG_ME
         pubkey = "abababababababababababababababababababababababab"
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000
+            f'(49 "{pubkey}" "foobar") ',
+            max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value,
+            height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.clvm_cost == 20512
+        assert npc_result.cost == 20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
         assert len(npc_result.npc_list) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ', max_cost=20512 + 117 * COST_PER_BYTE + 1200000 - 1
+            f'(49 "{pubkey}" "foobar") ',
+            max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value - 1,
+            height=softfork_height,
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
 
-    def test_create_coin_different_parent(self):
+    def test_create_coin_different_parent(self, softfork_height):
 
         # if the coins we create have different parents, they are never
         # considered duplicate, even when they have the same puzzle hash and
@@ -1863,7 +1965,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False
+            generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 2
@@ -1876,12 +1978,14 @@ class TestGeneratorConditions:
                 )
             ]
 
-    def test_create_coin_different_puzzhash(self):
+    def test_create_coin_different_puzzhash(self, softfork_height):
         # CREATE_COIN
         # coins with different puzzle hashes are not considered duplicate
         puzzle_hash_1 = "abababababababababababababababab"
         puzzle_hash_2 = "cbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcb"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5) (51 "{puzzle_hash_2}" 5)')
+        npc_result = generator_condition_tester(
+            f'(51 "{puzzle_hash_1}" 5) (51 "{puzzle_hash_2}" 5)', height=softfork_height
+        )
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
@@ -1894,11 +1998,13 @@ class TestGeneratorConditions:
             in npc_result.npc_list[0].conditions[0][1]
         )
 
-    def test_create_coin_different_amounts(self):
+    def test_create_coin_different_amounts(self, softfork_height):
         # CREATE_COIN
         # coins with different amounts are not considered duplicate
         puzzle_hash = "abababababababababababababababab"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 5) (51 "{puzzle_hash}" 4)')
+        npc_result = generator_condition_tester(
+            f'(51 "{puzzle_hash}" 5) (51 "{puzzle_hash}" 4)', height=softfork_height
+        )
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
@@ -1911,11 +2017,11 @@ class TestGeneratorConditions:
             in npc_result.npc_list[0].conditions[0][1]
         )
 
-    def test_create_coin_with_hint(self):
+    def test_create_coin_with_hint(self, softfork_height):
         # CREATE_COIN
         puzzle_hash_1 = "abababababababababababababababab"
         hint = "12341234123412341234213421341234"
-        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))')
+        npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))', height=softfork_height)
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
         opcode = ConditionOpcode.CREATE_COIN
@@ -1924,14 +2030,18 @@ class TestGeneratorConditions:
         )
 
     @pytest.mark.parametrize(
-        "mempool_mode",
-        [True, False],
+        "mempool,height",
+        [
+            (True, None),
+            (False, 1000000),
+            (False, 2000000),
+        ],
     )
-    def test_unknown_condition(self, mempool_mode):
+    def test_unknown_condition(self, mempool, height):
         for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, mempool_mode=mempool_mode)
+            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=height)
             print(npc_result)
-            if mempool_mode:
+            if mempool:
                 assert npc_result.error == Err.INVALID_CONDITION.value
                 assert npc_result.npc_list == []
             else:
@@ -2033,6 +2143,22 @@ CREATE_COIN = '(a (q 2 2 (c 2 (c (q 51 "abababababababababababababababab" 1) (c 
 CREATE_UNIQUE_COINS = '(a (q 2 6 (c 2 (c (q 51 "abababababababababababababababab") (c 5 ())))) (c (q (a (i 5 (q 4 9 (a 4 (c 2 (c 13 (c 11 ()))))) (q 4 11 ())) 1) 2 (i 11 (q 4 (a 4 (c 2 (c 5 (c 11 ())))) (a 6 (c 2 (c 5 (c (- 11 (q . 1)) ()))))) ()) 1) (q {num})))'  # noqa
 
 
+# some of the malicious tests will fail post soft-fork, this function helps test
+# the specific error to expect
+def error_for_condition(cond: ConditionOpcode) -> int:
+    if cond == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+        return Err.ASSERT_HEIGHT_ABSOLUTE_FAILED.value
+    if cond == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+        return Err.ASSERT_HEIGHT_RELATIVE_FAILED.value
+    if cond == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+        return Err.ASSERT_SECONDS_ABSOLUTE_FAILED.value
+    if cond == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+        return Err.ASSERT_SECONDS_RELATIVE_FAILED.value
+    if cond == ConditionOpcode.RESERVE_FEE:
+        return Err.RESERVE_FEE_CONDITION_FAILED.value
+    assert False
+
+
 class TestMaliciousGenerators:
 
     # TODO: create a lot of announcements. The messages can be made different by
@@ -2049,19 +2175,22 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_ladder(self, opcode):
+    def test_duplicate_large_integer_ladder(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
-        assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert npc_result.npc_list[0].conditions == [
-            (
-                opcode,
-                [ConditionWithArgs(opcode, [int_to_bytes(28)])],
-            )
-        ]
+        if softfork_height >= 2000000:
+            assert npc_result.error == error_for_condition(opcode)
+        else:
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            assert npc_result.npc_list[0].conditions == [
+                (
+                    opcode,
+                    [ConditionWithArgs(opcode, [int_to_bytes(28)])],
+                )
+            ]
         assert run_time < 1.5
         print(f"run time:{run_time}")
 
@@ -2074,19 +2203,22 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer(self, opcode):
+    def test_duplicate_large_integer(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
-        assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert npc_result.npc_list[0].conditions == [
-            (
-                opcode,
-                [ConditionWithArgs(opcode, [bytes([100])])],
-            )
-        ]
+        if softfork_height >= 2000000:
+            assert npc_result.error == error_for_condition(opcode)
+        else:
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            assert npc_result.npc_list[0].conditions == [
+                (
+                    opcode,
+                    [ConditionWithArgs(opcode, [bytes([100])])],
+                )
+            ]
         assert run_time < 2.5
         print(f"run time:{run_time}")
 
@@ -2099,19 +2231,22 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_substr(self, opcode):
+    def test_duplicate_large_integer_substr(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
-        assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert npc_result.npc_list[0].conditions == [
-            (
-                opcode,
-                [ConditionWithArgs(opcode, [bytes([100])])],
-            )
-        ]
+        if softfork_height >= 2000000:
+            assert npc_result.error == error_for_condition(opcode)
+        else:
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            assert npc_result.npc_list[0].conditions == [
+                (
+                    opcode,
+                    [ConditionWithArgs(opcode, [bytes([100])])],
+                )
+            ]
         assert run_time < 3
         print(f"run time:{run_time}")
 
@@ -2124,18 +2259,21 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_substr_tail(self, opcode):
+    def test_duplicate_large_integer_substr_tail(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_SUBSTR_TAIL_COND.format(
             opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
         )
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
-        assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
+        if softfork_height >= 2000000:
+            assert npc_result.error == error_for_condition(opcode)
+        else:
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
 
-        print(npc_result.npc_list[0].conditions[0][1])
-        assert ConditionWithArgs(opcode, [int_to_bytes(0xFFFFFFFF)]) in npc_result.npc_list[0].conditions[0][1]
+            print(npc_result.npc_list[0].conditions[0][1])
+            assert ConditionWithArgs(opcode, [int_to_bytes(0xFFFFFFFF)]) in npc_result.npc_list[0].conditions[0][1]
         assert run_time < 1
         print(f"run time:{run_time}")
 
@@ -2148,10 +2286,10 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_negative(self, opcode):
+    def test_duplicate_large_integer_negative(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
@@ -2159,28 +2297,31 @@ class TestMaliciousGenerators:
         assert run_time < 2
         print(f"run time:{run_time}")
 
-    def test_duplicate_reserve_fee(self):
+    def test_duplicate_reserve_fee(self, softfork_height):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
-        assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert npc_result.npc_list[0].conditions == [
-            (
-                opcode.value,
-                [ConditionWithArgs(opcode, [int_to_bytes(100 * 280000)])],
-            )
-        ]
+        if softfork_height >= 2000000:
+            assert npc_result.error == error_for_condition(opcode)
+        else:
+            assert npc_result.error is None
+            assert len(npc_result.npc_list) == 1
+            assert npc_result.npc_list[0].conditions == [
+                (
+                    opcode.value,
+                    [ConditionWithArgs(opcode, [int_to_bytes(100 * 280000)])],
+                )
+            ]
         assert run_time < 2
         print(f"run time:{run_time}")
 
-    def test_duplicate_reserve_fee_negative(self):
+    def test_duplicate_reserve_fee_negative(self, softfork_height):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         # RESERVE_FEE conditions fail unconditionally if they have a negative
         # amount
@@ -2192,10 +2333,10 @@ class TestMaliciousGenerators:
     @pytest.mark.parametrize(
         "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     )
-    def test_duplicate_coin_announces(self, opcode):
+    def test_duplicate_coin_announces(self, opcode, softfork_height):
         condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1
@@ -2205,28 +2346,28 @@ class TestMaliciousGenerators:
         assert run_time < 21
         print(f"run time:{run_time}")
 
-    def test_create_coin_duplicates(self):
+    def test_create_coin_duplicates(self, softfork_height):
         # CREATE_COIN
         # this program will emit 6000 identical CREATE_COIN conditions. However,
         # we'll just end up looking at two of them, and fail at the first
         # duplicate
         condition = CREATE_COIN.format(num=600000)
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
         assert len(npc_result.npc_list) == 0
         assert run_time < 2
         print(f"run time:{run_time}")
 
-    def test_many_create_coin(self):
+    def test_many_create_coin(self, softfork_height):
         # CREATE_COIN
         # this program will emit many CREATE_COIN conditions, all with different
         # amounts.
         # the number 6095 was chosen carefully to not exceed the maximum cost
         condition = CREATE_UNIQUE_COINS.format(num=6094)
         start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False)
+        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
         assert len(npc_result.npc_list) == 1

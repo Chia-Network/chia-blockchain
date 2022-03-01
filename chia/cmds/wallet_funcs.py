@@ -1,4 +1,5 @@
 import asyncio
+import pathlib
 import sys
 import time
 from datetime import datetime
@@ -14,7 +15,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -76,11 +79,16 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args["id"]
+    wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
+    memo = args["memo"]
+    if memo is None:
+        memos = None
+    else:
+        memos = [memo]
 
     if not override and check_unusual_transaction(amount, fee):
         print(
@@ -88,15 +96,35 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             f"Pass in --override if you are sure you mean to do this."
         )
         return
-    print("Submitting transaction...")
-    final_amount = uint64(int(amount * units["chia"]))
+
+    summaries_response = await wallet_client.get_wallets()
+    final_amount: Optional[uint64] = None
     final_fee = uint64(int(fee * units["chia"]))
-    res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee)
+    for summary in summaries_response:
+        if wallet_id == int(summary["id"]):
+            typ: WalletType = WalletType(summary["type"])
+            if typ == WalletType.STANDARD_WALLET:
+                final_amount = uint64(int(amount * units["chia"]))
+                print("Submitting transaction...")
+                res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
+                break
+            elif typ == WalletType.CAT:
+                final_amount = uint64(int(amount * units["cat"]))
+                print("Submitting transaction...")
+                res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
+                break
+            else:
+                print("Only standard wallet and CAT wallets are supported")
+                return
+    if final_amount is None:
+        print(f"Wallet id: {wallet_id} not found.")
+        return
+
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
         await asyncio.sleep(0.1)
-        tx = await wallet_client.get_transaction(wallet_id, tx_id)
+        tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
             print(f"Transaction submitted to nodes: {tx.sent_to}")
             print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
@@ -118,9 +146,196 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 
+async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    asset_id = args["asset_id"]
+    token_name = args["token_name"]
+    try:
+        asset_id_bytes: bytes32 = bytes32.from_hexstr(asset_id)
+        existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id_bytes)
+        if existing_info is None or existing_info[0] is None:
+            response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
+            wallet_id = response["wallet_id"]
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
+        else:
+            wallet_id, old_name = existing_info
+            await wallet_client.set_cat_name(wallet_id, token_name)
+            print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
+    except ValueError as e:
+        if "fromhex()" in str(e):
+            print(f"{asset_id} is not a valid Asset ID")
+        else:
+            raise e
+
+
+async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    offers: List[str] = args["offers"]
+    requests: List[str] = args["requests"]
+    filepath: str = args["filepath"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+
+    if [] in [offers, requests]:
+        print("Not creating offer: Must be offering and requesting at least one asset")
+    else:
+        offer_dict: Dict[uint32, int] = {}
+        printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
+        for item in [*offers, *requests]:
+            wallet_id, amount = tuple(item.split(":")[0:2])
+            if int(wallet_id) == 1:
+                name: str = "XCH"
+                unit: int = units["chia"]
+            else:
+                name = await wallet_client.get_cat_name(wallet_id)
+                unit = units["cat"]
+            multiplier: int = -1 if item in offers else 1
+            printable_dict[name] = (amount, unit, multiplier)
+            if uint32(int(wallet_id)) in offer_dict:
+                print("Not creating offer: Cannot offer and request the same asset in a trade")
+                break
+            else:
+                offer_dict[uint32(int(wallet_id))] = int(Decimal(amount) * unit) * multiplier
+        else:
+            print("Creating Offer")
+            print("--------------")
+            print()
+            print("OFFERING:")
+            for name, info in printable_dict.items():
+                amount, unit, multiplier = info
+                if multiplier < 0:
+                    print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
+            print("REQUESTING:")
+            for name, info in printable_dict.items():
+                amount, unit, multiplier = info
+                if multiplier > 0:
+                    print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
+
+            confirmation = input("Confirm (y/n): ")
+            if confirmation not in ["y", "yes"]:
+                print("Not creating offer...")
+            else:
+                offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict, fee=fee)
+                if offer is not None:
+                    with open(pathlib.Path(filepath), "w") as file:
+                        file.write(offer.to_bech32())
+                    print(f"Created offer with ID {trade_record.trade_id}")
+                    print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view status")
+                else:
+                    print("Error creating offer")
+
+
+def timestamp_to_time(timestamp):
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
+
+async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
+    for asset_id, amount in sum_dict.items():
+        if asset_id == "xch":
+            wid: str = "1"
+            name: str = "XCH"
+            unit: int = units["chia"]
+        else:
+            result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
+            wid = "Unknown"
+            name = asset_id
+            unit = units["cat"]
+            if result is not None:
+                wid = str(result[0])
+                name = result[1]
+        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)")
+
+
+async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
+    print()
+    print(f"Record with id: {record.trade_id}")
+    print("---------------")
+    print(f"Created at: {timestamp_to_time(record.created_at_time)}")
+    print(f"Confirmed at: {record.confirmed_at_index}")
+    print(f"Accepted at: {timestamp_to_time(record.accepted_at_time) if record.accepted_at_time else 'N/A'}")
+    print(f"Status: {TradeStatus(record.status).name}")
+    if summaries:
+        print("Summary:")
+        offer = Offer.from_bytes(record.offer)
+        offered, requested = offer.summary()
+        print("  OFFERED:")
+        await print_offer_summary(wallet_client, offered)
+        print("  REQUESTED:")
+        await print_offer_summary(wallet_client, requested)
+        print("Pending Balances:")
+        await print_offer_summary(wallet_client, offer.get_pending_amounts())
+        print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+    print("---------------")
+
+
+async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    id, filepath, all, summaries = tuple(list(args.values())[0:4])
+    file_contents: bool = (filepath is not None) or summaries
+    if id is None:
+        records = await wallet_client.get_all_offers(file_contents=file_contents)
+    else:
+        records = [await wallet_client.get_offer(bytes32.from_hexstr(id), file_contents)]
+        if filepath is not None:
+            with open(pathlib.Path(filepath), "w") as file:
+                file.write(Offer.from_bytes(records[0].offer).to_bech32())
+                file.close()
+
+    for record in records:
+        if "PENDING" in TradeStatus(record.status).name or all or id is not None:
+            await print_trade_record(record, wallet_client, summaries=summaries)
+
+
+async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    if "." in args["file"]:
+        filepath = pathlib.Path(args["file"])
+        with open(filepath, "r") as file:
+            offer_hex: str = file.read()
+            file.close()
+    else:
+        offer_hex = args["file"]
+
+    examine_only: bool = args["examine_only"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+
+    try:
+        offer = Offer.from_bech32(offer_hex)
+    except ValueError:
+        print("Please enter a valid offer file or hex blob")
+        return
+
+    offered, requested = offer.summary()
+    print("Summary:")
+    print("  OFFERED:")
+    await print_offer_summary(wallet_client, offered)
+    print("  REQUESTED:")
+    await print_offer_summary(wallet_client, requested)
+    print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+
+    if not examine_only:
+        confirmation = input("Would you like to take this offer? (y/n): ")
+        if confirmation in ["y", "yes"]:
+            trade_record = await wallet_client.take_offer(offer, fee=fee)
+            print(f"Accepted offer with ID {trade_record.trade_id}")
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
+
+
+async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    id = bytes32.from_hexstr(args["id"])
+    secure: bool = not args["insecure"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+
+    trade_record = await wallet_client.get_offer(id, file_contents=True)
+    await print_trade_record(trade_record, wallet_client, summaries=True)
+
+    confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
+    if confirmation in ["y", "yes"]:
+        await wallet_client.cancel_offer(id, secure=secure, fee=fee)
+        print(f"Cancelled offer with ID {trade_record.trade_id}")
+        if secure:
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
+
+
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
-        return "", units["colouredcoin"]
+        return "", units["cat"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
         return address_prefix, units["chia"]
     return "", units["mojo"]

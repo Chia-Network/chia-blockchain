@@ -12,6 +12,7 @@ from chia.util.clvm import int_to_bytes
 from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.consensus.condition_costs import ConditionCost
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
@@ -93,16 +94,20 @@ class TestROM:
         assert cost == EXPECTED_ABBREVIATED_COST
         assert r.as_bin().hex() == EXPECTED_OUTPUT
 
-    def test_get_name_puzzle_conditions(self):
+    def test_get_name_puzzle_conditions(self, softfork_height):
         # this tests that extra block or coin data doesn't confuse `get_name_puzzle_conditions`
 
         gen = block_generator()
         cost, r = run_generator_unsafe(gen, max_cost=MAX_COST)
         print(r)
 
-        npc_result = get_name_puzzle_conditions(gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False)
+        npc_result = get_name_puzzle_conditions(
+            gen, max_cost=MAX_COST, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
+        )
         assert npc_result.error is None
-        assert npc_result.clvm_cost == EXPECTED_COST
+        assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
+            len(bytes(gen.program)) * COST_PER_BYTE
+        )
         cond_1 = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bytes([0] * 31 + [1]), int_to_bytes(500)])
         CONDITIONS = [
             (ConditionOpcode.CREATE_COIN, [cond_1]),

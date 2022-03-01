@@ -9,6 +9,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
 from tests.setup_nodes import bt, test_constants
 
@@ -40,7 +41,7 @@ class TestBlockStore:
 
             # Save/get block
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 block_record = bc.block_record(block.header_hash)
                 block_record_hh = block_record.header_hash
                 await store.add_full_block(block.header_hash, block, block_record)
@@ -77,7 +78,7 @@ class TestBlockStore:
             bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
             block_records = []
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 block_records.append(bc.block_record(block.header_hash))
             tasks = []
 
@@ -108,7 +109,7 @@ class TestBlockStore:
             # insert all blocks
             count = 0
             for block in blocks:
-                await bc.receive_block(block)
+                await _validate_and_add_block(bc, block)
                 count += 1
                 ret = await block_store.get_random_not_compactified(count)
                 assert len(ret) == count
@@ -135,3 +136,41 @@ class TestBlockStore:
                     assert len(rows) == 1
                     assert rows[0][0] == (count <= 5)
                 count += 1
+
+    @pytest.mark.asyncio
+    async def test_count_compactified_blocks(self, tmp_dir, db_version):
+        blocks = bt.get_consecutive_blocks(10)
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+            block_store = await BlockStore.create(db_wrapper)
+            hint_store = await HintStore.create(db_wrapper)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
+
+            count = await block_store.count_compactified_blocks()
+            assert count == 0
+
+            for block in blocks:
+                await _validate_and_add_block(bc, block)
+
+            count = await block_store.count_compactified_blocks()
+            assert count == 0
+
+    @pytest.mark.asyncio
+    async def test_count_uncompactified_blocks(self, tmp_dir, db_version):
+        blocks = bt.get_consecutive_blocks(10)
+
+        async with DBConnection(db_version) as db_wrapper:
+            coin_store = await CoinStore.create(db_wrapper)
+            block_store = await BlockStore.create(db_wrapper)
+            hint_store = await HintStore.create(db_wrapper)
+            bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, tmp_dir, 2)
+
+            count = await block_store.count_uncompactified_blocks()
+            assert count == 0
+
+            for block in blocks:
+                await _validate_and_add_block(bc, block)
+
+            count = await block_store.count_uncompactified_blocks()
+            assert count == 10

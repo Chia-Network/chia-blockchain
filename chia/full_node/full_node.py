@@ -183,7 +183,7 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
-        reserved_cores = self.config.get("reserved_cores", 2)
+        reserved_cores = self.config.get("reserved_cores", 0)
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
         )
@@ -329,9 +329,9 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Dict[str, Any] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     async def short_sync_batch(self, peer: ws.WSChiaConnection, start_height: uint32, target_height: uint32) -> bool:
         """
@@ -1045,17 +1045,17 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, False, fork_height, ([], {})
 
+        # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
+        # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.time()
-        pre_validation_results: Optional[
-            List[PreValidationResult]
-        ] = await self.blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate, {}, wp_summaries=wp_summaries)
+        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
+            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+        )
         pre_validate_end = time.time()
         if pre_validate_end - pre_validate_start > 10:
             self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
         else:
             self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        if pre_validation_results is None:
-            return False, False, None, ([], {})
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1411,6 +1411,8 @@ class FullNode:
                 and unf_block.transactions_generator is not None
                 and unf_block.foliage_transaction_block == block.foliage_transaction_block
             ):
+                # We checked that the transaction block is the same, therefore all transactions and the signature
+                # must be identical in the unfinished and finished blocks. We can therefore use the cache.
                 pre_validation_result = self.full_node_store.get_unfinished_block_result(unfinished_rh)
                 assert pre_validation_result is not None
                 block = dataclasses.replace(
@@ -1455,11 +1457,16 @@ class FullNode:
             npc_results = {}
             if pre_validation_result is not None and pre_validation_result.npc_result is not None:
                 npc_results[block.height] = pre_validation_result.npc_result
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing([block], npc_results)
+
+            # Don't validate signatures because we want to validate them in the main thread later, since we have a
+            # cache available
+            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+                [block], npc_results, validate_signatures=False
+            )
             added: Optional[ReceiveBlockResult] = None
             pre_validation_time = time.time() - validation_start
             try:
-                if pre_validation_results is None:
+                if len(pre_validation_results) < 1:
                     raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
                 if pre_validation_results[0].error is not None:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
@@ -1559,7 +1566,31 @@ class FullNode:
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
-        self._state_changed("block")
+
+        state_changed_data: Dict[str, Any] = {
+            "transaction_block": False,
+            "k_size": block.reward_chain_block.proof_of_space.size,
+            "header_hash": block.header_hash,
+            "height": block.height,
+        }
+
+        if block.transactions_info is not None:
+            state_changed_data["transaction_block"] = True
+            state_changed_data["block_cost"] = block.transactions_info.cost
+            state_changed_data["block_fees"] = block.transactions_info.fees
+
+        if block.foliage_transaction_block is not None:
+            state_changed_data["timestamp"] = block.foliage_transaction_block.timestamp
+
+        if block.transactions_generator is not None:
+            state_changed_data["transaction_generator_size_bytes"] = len(bytes(block.transactions_generator))
+
+        state_changed_data["transaction_generator_ref_list"] = block.transactions_generator_ref_list
+        if added is not None:
+            state_changed_data["receive_block_result"] = added.value
+
+        self._state_changed("block", state_changed_data)
+
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
@@ -1644,7 +1675,8 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
+            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
@@ -1664,6 +1696,9 @@ class FullNode:
                     return
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.time() - validation_start
+
+        # respond_block will later use the cache (validated_signature=True)
+        validate_result = dataclasses.replace(validate_result, validated_signature=True)
 
         assert validate_result.required_iters is not None
 
@@ -1753,6 +1788,7 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
         self._state_changed("unfinished_block")
 
     async def new_infusion_point_vdf(
