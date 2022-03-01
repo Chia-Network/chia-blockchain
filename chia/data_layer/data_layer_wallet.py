@@ -147,7 +147,7 @@ class DataLayerWallet:
         return True, inner_puzhash
 
     async def get_launcher_coin_state(self, launcher_id: bytes32) -> CoinState:
-        coin_states: List[CoinState] = await self.wallet_state_manager.get_coin_state([launcher_id])
+        coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state([launcher_id])
 
         if len(coin_states) == 0:
             raise ValueError(f"Launcher ID {launcher_id} is not a valid coin")
