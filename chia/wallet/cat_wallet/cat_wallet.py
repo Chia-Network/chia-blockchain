@@ -315,7 +315,9 @@ class CATWallet:
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
             if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.get_coin_state([coin_name])
+                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin_name]
+                )
                 if coin_states is not None:
                     parent_coin = coin_states[0].coin
             if coin_record is not None:

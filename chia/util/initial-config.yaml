@@ -382,6 +382,9 @@ full_node:
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
 
+  # Number of coin_ids | puzzle hashes that node will let wallets subscribe to
+  max_subscribe_items: 200000
+
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers:
@@ -500,6 +503,10 @@ wallet:
     trusted_node_1: "config/ssl/full_node/public_full_node.crt"
 
   short_sync_blocks_behind_threshold: 20
+
+  # wallet overrides for limits
+  inbound_rate_limit_percent: 100
+  outbound_rate_limit_percent: 60
 
 data_layer:
   # TODO: consider name
