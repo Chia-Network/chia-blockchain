@@ -19,7 +19,6 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
-from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.full_node.weight_proof import chunks
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
