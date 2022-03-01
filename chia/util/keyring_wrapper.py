@@ -423,7 +423,7 @@ class KeyringWrapper:
             if user is not None:
                 passphrase = self.get_passphrase(service, user)
 
-            if passphrase is not None:
+            if passphrase is not None and user is not None:
                 user_passphrase_pairs.append((user, passphrase))
 
             index += 1
