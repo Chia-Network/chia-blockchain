@@ -6,7 +6,6 @@ import aiosqlite as aiosqlite
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 
 
