@@ -811,7 +811,7 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
-    async def select_coins(self, request) -> Dict[str, Any]:
+    async def select_coins(self, request) -> Dict[str, List[Dict]]:
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:

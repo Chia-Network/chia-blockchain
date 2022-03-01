@@ -221,7 +221,7 @@ class WalletRpcClient(RpcClient):
 
     async def select_coins(self, *, amount: Union[int, uint64], wallet_id: Union[int, uint32]) -> List[Coin]:
         request = {"amount": amount, "wallet_id": wallet_id}
-        response: Dict[str, Any] = await self.fetch("select_coins", request)
+        response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
 
     # DID wallet
