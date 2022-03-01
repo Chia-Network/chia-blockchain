@@ -148,78 +148,50 @@ FIELDS_FOR_STREAMABLE_CLASS = {}
 
 def streamable(cls: Any):
     """
-    This is a decorator for class definitions. It requires to inherits from `Streamable` class,
-    which validates/parses all types at construction in the ´__post_init__`. It also defines a simple serialization
-    format, and adds parse, from bytes, stream, and __bytes__ methods.
+    This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
+    (de)serialization methods for all members of the class. The correct usage is:
 
-    The primitives are:
-    * Sized ints serialized in big endian format, e.g. uint64
-    * Sized bytes serialized in big endian format, e.g. bytes32
-    * BLS public keys serialized in bls format (48 bytes)
-    * BLS signatures serialized in bls format (96 bytes)
-    * bool serialized into 1 byte (0x01 or 0x00)
-    * bytes serialized as a 4 byte size prefix and then the bytes.
-    * ConditionOpcode is serialized as a 1 byte value.
-    * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
+    @streamable
+    @dataclass(frozen=True)
+    class Example(Streamable):
+        pass
 
-    An item is one of:
-    * primitive
-    * Tuple[item1, .. itemx]
-    * List[item1, .. itemx]
-    * Optional[item]
-    * Custom item
-
-    A streamable must be a Tuple at the root level (although a dataclass is used here instead).
-    Iters are serialized in the following way:
-
-    1. A tuple of x items is serialized by appending the serialization of each item.
-    2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
-    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the
-       serialization of the item.
-    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is
-       a CLVM program.
-
-    All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
-    be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
-    whereas uint32 can be.
-
-    Furthermore, a get_hash() member is added, which performs a serialization and a sha256.
-
-    This class is used for deterministic serialization and hashing, for consensus critical
-    objects such as the block header.
-
-    Make sure to use the Streamable class as a parent class when using the streamable decorator,
-    as it will allow linters to recognize the methods that are added by the decorator. Also,
-    use the @dataclass(frozen=True) decorator as well, for linters to recognize constructor
-    arguments.
+    The order how the decorator are applied and the inheritance from Stremable are forced. The explicit inheritance is
+    required because mypy doesn't analyse the type returned by decorators, so we can't just inherit from inside the
+    decorator. The dataclass decorator is required to fetch type hints, let mypy validate constructor calls and restrict
+    direct modification of objects by `frozen=True`.
     """
 
-    class NoTypeChecking:
-        __no_type_check__ = True
+    if not dataclasses.is_dataclass(cls):
+        raise SyntaxError("@dataclass(frozen=True) required before streamable")
 
-    t = dataclasses.dataclass(cls, init=False, frozen=True)  # type: ignore
-    if dataclasses.fields(t) == ():
-        t = type(cls.__name__, (t, NoTypeChecking), {})
+    try:
+        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
+    except dataclasses.FrozenInstanceError:
+        pass
     else:
-        t = type(cls.__name__, (t,), {})
+        raise SyntaxError("dataclass needs to be frozen like: @dataclass(frozen=True)")
+
+    if not issubclass(cls, Streamable):
+        raise SyntaxError(f"Streamable inheritance required for {cls}")
 
     stream_functions = []
     parse_functions = []
     try:
-        hints = get_type_hints(t)
-        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(t)}
+        hints = get_type_hints(cls)
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(cls)}
     except Exception:
         fields = {}
 
-    FIELDS_FOR_STREAMABLE_CLASS[t] = fields
+    FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
 
     for _, f_type in fields.items():
         stream_functions.append(cls.function_to_stream_one_item(f_type))
         parse_functions.append(cls.function_to_parse_one_item(f_type))
 
-    STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = stream_functions
-    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
-    return t
+    STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
+    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
+    return cls
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -322,6 +294,50 @@ def stream_str(item: Any, f: BinaryIO) -> None:
 
 
 class Streamable:
+    """
+    This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
+    validates and parses all fields at construction in ´__post_init__` to make sure all fields have the correct type
+    and can be streamed/parsed properly.
+
+    The available primitives are:
+    * Sized ints serialized in big endian format, e.g. uint64
+    * Sized bytes serialized in big endian format, e.g. bytes32
+    * BLS public keys serialized in bls format (48 bytes)
+    * BLS signatures serialized in bls format (96 bytes)
+    * bool serialized into 1 byte (0x01 or 0x00)
+    * bytes serialized as a 4 byte size prefix and then the bytes.
+    * ConditionOpcode is serialized as a 1 byte value.
+    * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
+
+    An item is one of:
+    * primitive
+    * Tuple[item1, .. itemx]
+    * List[item1, .. itemx]
+    * Optional[item]
+    * Custom item
+
+    A streamable must be a Tuple at the root level (although a dataclass is used here instead).
+    Iters are serialized in the following way:
+
+    1. A tuple of x items is serialized by appending the serialization of each item.
+    2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
+    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the
+       serialization of the item.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is
+       a CLVM program.
+
+    All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
+    be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
+    whereas uint32 can be.
+
+    Furthermore, a get_hash() member is added, which performs a serialization and a sha256.
+
+    This class is used for deterministic serialization and hashing, for consensus critical
+    objects such as the block header.
+
+    Make sure to use the streamable decorator when inheriting from the Streamable class to prepare the streaming caches.
+    """
+
     def post_init_parse(self, item: Any, f_name: str, f_type: Type) -> Any:
         if is_type_List(f_type):
             collected_list: List = []
