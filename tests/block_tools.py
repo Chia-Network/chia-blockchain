@@ -2012,11 +2012,19 @@ def create_test_unfinished_block(
     )
 
 
+# Remove these counters when `create_block_tools` and `create_block_tools_async` are removed
 create_block_tools_async_count = 0
 create_block_tools_count = 0
 
+# Note: tests that still use `create_block_tools` and `create_block_tools_async` should probably be
+# moved to the bt fixture in conftest.py. Take special care to find out if the users of these functions
+# need different BlockTools instances
 
-# xxx do the callers need different instances?
+# All tests need different root directories containing different config.yaml files.
+# The daemon's listen port is configured in the config.yaml, and the only way a test can control which
+# listen port it uses is to write it to the config file.
+
+
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
