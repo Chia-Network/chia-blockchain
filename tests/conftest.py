@@ -1,20 +1,16 @@
+# flake8: noqa E402 # See imports after multiprocessing.set_start_method
 import multiprocessing
 import pytest
 import pytest_asyncio
 import tempfile
+
+# Set spawn after stdlib imports, but before other imports
+multiprocessing.set_start_method("spawn")
+
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.block_tools import BlockTools, test_constants, create_block_tools
 from tests.util.keyring import TempKeyring
-
-
-def cleanup_keyring(keyring: TempKeyring):
-    keyring.cleanup()
-
-
-# temp_keyring = TempKeyring(populate=True)
-# keychain = temp_keyring.get_keychain()
-# atexit.register(cleanup_keyring, temp_keyring)  # Attempt to clean up the temp keychain
 
 
 @pytest.fixture(scope="session")
@@ -35,9 +31,6 @@ def bt(get_keychain) -> BlockTools:
 @pytest.fixture(scope="session")
 def self_hostname(bt):
     return bt.config["self_hostname"]
-
-
-multiprocessing.set_start_method("spawn")
 
 
 # NOTE:
