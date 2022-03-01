@@ -262,18 +262,22 @@ def streamable(cls: Any):
     direct modification of objects by `frozen=True`.
     """
 
+    correct_usage_string: str = (
+        "Correct usage is:\n\n@streamable\n@dataclass(frozen=True)\nclass Example(Streamable):\n\t..."
+    )
+
     if not dataclasses.is_dataclass(cls):
-        raise SyntaxError("@dataclass(frozen=True) required before streamable")
+        raise SyntaxError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
 
     try:
         object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
     except dataclasses.FrozenInstanceError:
         pass
     else:
-        raise SyntaxError("dataclass needs to be frozen like: @dataclass(frozen=True)")
+        raise SyntaxError(f"dataclass needs to be frozen. {correct_usage_string}")
 
     if not issubclass(cls, Streamable):
-        raise SyntaxError(f"Streamable inheritance required for {cls}")
+        raise SyntaxError(f"Streamable inheritance required. {correct_usage_string}")
 
     stream_functions = []
     parse_functions = []
