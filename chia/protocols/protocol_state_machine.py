@@ -27,6 +27,7 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_block: [pmt.respond_block, pmt.reject_block],
     pmt.request_blocks: [pmt.respond_blocks, pmt.reject_blocks],
     pmt.request_unfinished_block: [pmt.respond_unfinished_block],
+    pmt.request_block_header: [pmt.respond_block_header, pmt.reject_header_request],
     pmt.request_signage_point_or_end_of_sub_slot: [pmt.respond_signage_point, pmt.respond_end_of_sub_slot],
     pmt.request_compact_vdf: [pmt.respond_compact_vdf],
     pmt.request_peers: [pmt.respond_peers],
