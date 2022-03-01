@@ -266,7 +266,7 @@ class Wallet:
         sum_value = 0
         used_coins: Set = set()
 
-        # Use older coins first
+        # Use largest coins first
         unspent.sort(reverse=True, key=lambda r: r.coin.amount)
 
         # Try to use coins from the store, if there isn't enough of "unused"
