@@ -59,7 +59,7 @@ import Websocket from 'ws'; // or read this value from electron main application
 import { store, api } from '@chia/api-react';
 import PublicKeys from './PublicKeys';
 
-// prepare api 
+// prepare api
 api.initializeConfig({
   url: 'wss://127.0.0.1:54000',
   cert: fs.readFileSync(certPath).toString(), // or read this value from electron main application
