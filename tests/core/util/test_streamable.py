@@ -65,11 +65,6 @@ class TestStreamable(unittest.TestCase):
             class TestClass3(Streamable):
                 a: int
 
-    def test_json(self, bt):
-        block = bt.create_genesis_block(test_constants, bytes32([0] * 32), uint64(0))
-        dict_block = block.to_json_dict()
-        assert FullBlock.from_json_dict(dict_block) == block
-
     def test_recursive_json(self):
         @dataclass(frozen=True)
         @streamable
