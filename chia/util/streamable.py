@@ -28,21 +28,6 @@ else:
     from typing import get_args, get_origin
 
 
-def is_type_List(f_type: Type) -> bool:
-    return get_origin(f_type) == list or f_type == list
-
-
-def is_type_SpecificOptional(f_type) -> bool:
-    """
-    Returns true for types such as Optional[T], but not Optional, or T.
-    """
-    return get_origin(f_type) == Union and get_args(f_type)[1]() is None
-
-
-def is_type_Tuple(f_type: Type) -> bool:
-    return get_origin(f_type) == tuple or f_type == tuple
-
-
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
 # TODO: Remove hack, this allows streaming these objects from binary
@@ -63,6 +48,27 @@ unhashable_types = [
 big_ints = [uint64, int64, uint128, int512]
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
+
+
+# Caches to store the fields and (de)serialization methods for all available streamable classes.
+FIELDS_FOR_STREAMABLE_CLASS = {}
+STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+
+
+def is_type_List(f_type: Type) -> bool:
+    return get_origin(f_type) == list or f_type == list
+
+
+def is_type_SpecificOptional(f_type) -> bool:
+    """
+    Returns true for types such as Optional[T], but not Optional, or T.
+    """
+    return get_origin(f_type) == Union and get_args(f_type)[1]() is None
+
+
+def is_type_Tuple(f_type: Type) -> bool:
+    return get_origin(f_type) == tuple or f_type == tuple
 
 
 def dataclass_from_dict(klass, d):
@@ -139,59 +145,6 @@ def recurse_jsonify(d):
             if isinstance(value, int) and type(value) in big_ints:
                 d[key] = int(value)
     return d
-
-
-STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
-PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
-FIELDS_FOR_STREAMABLE_CLASS = {}
-
-
-def streamable(cls: Any):
-    """
-    This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
-    (de)serialization methods for all members of the class. The correct usage is:
-
-    @streamable
-    @dataclass(frozen=True)
-    class Example(Streamable):
-        pass
-
-    The order how the decorator are applied and the inheritance from Stremable are forced. The explicit inheritance is
-    required because mypy doesn't analyse the type returned by decorators, so we can't just inherit from inside the
-    decorator. The dataclass decorator is required to fetch type hints, let mypy validate constructor calls and restrict
-    direct modification of objects by `frozen=True`.
-    """
-
-    if not dataclasses.is_dataclass(cls):
-        raise SyntaxError("@dataclass(frozen=True) required before streamable")
-
-    try:
-        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
-    except dataclasses.FrozenInstanceError:
-        pass
-    else:
-        raise SyntaxError("dataclass needs to be frozen like: @dataclass(frozen=True)")
-
-    if not issubclass(cls, Streamable):
-        raise SyntaxError(f"Streamable inheritance required for {cls}")
-
-    stream_functions = []
-    parse_functions = []
-    try:
-        hints = get_type_hints(cls)
-        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(cls)}
-    except Exception:
-        fields = {}
-
-    FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
-
-    for _, f_type in fields.items():
-        stream_functions.append(cls.function_to_stream_one_item(f_type))
-        parse_functions.append(cls.function_to_parse_one_item(f_type))
-
-    STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
-    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
-    return cls
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -291,6 +244,54 @@ def stream_str(item: Any, f: BinaryIO) -> None:
     str_bytes = item.encode("utf-8")
     write_uint32(f, uint32(len(str_bytes)))
     f.write(str_bytes)
+
+
+def streamable(cls: Any):
+    """
+    This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
+    (de)serialization methods for all members of the class. The correct usage is:
+
+    @streamable
+    @dataclass(frozen=True)
+    class Example(Streamable):
+        ...
+
+    The order how the decorator are applied and the inheritance from Stremable are forced. The explicit inheritance is
+    required because mypy doesn't analyse the type returned by decorators, so we can't just inherit from inside the
+    decorator. The dataclass decorator is required to fetch type hints, let mypy validate constructor calls and restrict
+    direct modification of objects by `frozen=True`.
+    """
+
+    if not dataclasses.is_dataclass(cls):
+        raise SyntaxError("@dataclass(frozen=True) required before streamable")
+
+    try:
+        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
+    except dataclasses.FrozenInstanceError:
+        pass
+    else:
+        raise SyntaxError("dataclass needs to be frozen like: @dataclass(frozen=True)")
+
+    if not issubclass(cls, Streamable):
+        raise SyntaxError(f"Streamable inheritance required for {cls}")
+
+    stream_functions = []
+    parse_functions = []
+    try:
+        hints = get_type_hints(cls)
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(cls)}
+    except Exception:
+        fields = {}
+
+    FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
+
+    for _, f_type in fields.items():
+        stream_functions.append(cls.function_to_stream_one_item(f_type))
+        parse_functions.append(cls.function_to_parse_one_item(f_type))
+
+    STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
+    PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
+    return cls
 
 
 class Streamable:
