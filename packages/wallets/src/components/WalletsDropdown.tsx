@@ -13,7 +13,7 @@ function getPrimaryTitle(wallet: Wallet): string {
     case WalletType.STANDARD_WALLET:
       return 'Chia';
     default:
-      wallet.name;
+      return wallet.name;
   }
 }
 
