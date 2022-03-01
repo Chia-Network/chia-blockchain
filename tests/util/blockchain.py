@@ -32,7 +32,6 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
     return bc1, connection, db_path
 
 
-# @pytest.fixture(scope="module")
 def persistent_blocks(
     num_of_blocks: int,
     db_name: str,
@@ -78,7 +77,6 @@ def persistent_blocks(
     )
 
 
-# @pytest.fixture(scope="module")
 def new_test_db(
     path: Path,
     num_of_blocks: int,
