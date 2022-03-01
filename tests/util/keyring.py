@@ -166,7 +166,6 @@ class TempKeyring:
 
         keychain = Keychain(user=user, service=service)
         keychain.keyring_wrapper = KeyringWrapper.create(keys_root_path=Path(temp_dir))
-        # keychain.keyring_wrapper = KeyringWrapper(keys_root_path=Path(temp_dir))
 
         # Stash the temp_dir in the keychain instance
         keychain._temp_dir = temp_dir  # type: ignore
