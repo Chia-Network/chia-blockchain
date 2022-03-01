@@ -522,3 +522,42 @@ def test_parse_str():
     # EOF off by one
     with raises(AssertionError):
         parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
+
+
+def test_wrong_decorator_order():
+
+    with raises(SyntaxError):
+
+        @dataclass(frozen=True)
+        @streamable
+        class WrongDecoratorOrder(Streamable):
+            pass
+
+
+def test_dataclass_not_frozen():
+
+    with raises(SyntaxError):
+
+        @streamable
+        @dataclass(frozen=False)
+        class DataclassNotFrozen(Streamable):
+            pass
+
+
+def test_dataclass_missing():
+
+    with raises(SyntaxError):
+
+        @streamable
+        class DataclassMissing(Streamable):
+            pass
+
+
+def test_streamable_inheritance_missing():
+
+    with raises(SyntaxError):
+
+        @streamable
+        @dataclass(frozen=True)
+        class StreamableInheritanceMissing:
+            pass
