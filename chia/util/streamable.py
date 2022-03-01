@@ -5,7 +5,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Union, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
