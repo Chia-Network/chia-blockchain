@@ -15,6 +15,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -215,7 +216,7 @@ class DLOWallet:
             spend_bundle=sb,
             additions=list(sb.additions()),
             removals=list(sb.removals()),
-            memos=list(sb.get_memos().items()),
+            memos=list(compute_memos(sb).items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,

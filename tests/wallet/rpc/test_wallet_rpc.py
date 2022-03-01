@@ -27,9 +27,11 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.compute_memos import compute_memos
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
 
@@ -246,7 +248,7 @@ class TestWalletRpc:
             assert len(tx_res.additions) == 2  # The output and the change
             assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
 
-            push_res = await client_node.push_tx(tx_res.spend_bundle)
+            push_res = await client.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             assert (await client.get_wallet_balance("1"))[
                 "confirmed_wallet_balance"
@@ -292,7 +294,7 @@ class TestWalletRpc:
                         addition.parent_coin_info, cr.confirmed_block_index
                     )
                     sb: SpendBundle = SpendBundle([spend], G2Element())
-                    assert sb.get_memos() == {addition.name(): [b"hhh"]}
+                    assert compute_memos(sb) == {addition.name(): [b"hhh"]}
                     found = True
             assert found
 
@@ -363,12 +365,16 @@ class TestWalletRpc:
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", send_tx_res.name)
             assert tx_confirmed.confirmed
-            assert len(tx_confirmed.get_memos()) == 2
-            print(tx_confirmed.get_memos())
-            assert [b"FiMemo"] in tx_confirmed.get_memos().values()
-            assert [b"SeMemo"] in tx_confirmed.get_memos().values()
-            assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
-            assert list(tx_confirmed.get_memos().keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            if isinstance(tx_confirmed, SpendBundle):
+                memos = compute_memos(tx_confirmed)
+            else:
+                memos = tx_confirmed.get_memos()
+            assert len(memos) == 2
+            print(memos)
+            assert [b"FiMemo"] in memos.values()
+            assert [b"SeMemo"] in memos.values()
+            assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+            assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
             ##############
             # CATS       #
@@ -394,6 +400,10 @@ class TestWalletRpc:
             assert name == "My cat"
             should_be_none = await client.cat_asset_id_to_name(bytes([0] * 32))
             assert should_be_none is None
+            verified_asset_id = next(iter(DEFAULT_CATS.items()))[1]["asset_id"]
+            should_be_none, name = await client.cat_asset_id_to_name(bytes.fromhex(verified_asset_id))
+            assert should_be_none is None
+            assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
             await asyncio.sleep(1)
             for i in range(0, 5):

@@ -260,7 +260,7 @@ def init(
     root_path: Path,
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
-    experimental_v2_db: bool = False,
+    v1_db: bool = False,
 ):
     if create_certs is not None:
         if root_path.exists():
@@ -282,7 +282,7 @@ def init(
                     root_path,
                     fix_ssl_permissions=fix_ssl_permissions,
                     testnet=testnet,
-                    experimental_v2_db=experimental_v2_db,
+                    v1_db=v1_db,
                 )
                 == 0
                 and root_path.exists()
@@ -292,9 +292,7 @@ def init(
             print(f"** {root_path} was not created. Exiting **")
             return -1
     else:
-        return chia_init(
-            root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, experimental_v2_db=experimental_v2_db
-        )
+        return chia_init(root_path, fix_ssl_permissions=fix_ssl_permissions, testnet=testnet, v1_db=v1_db)
 
 
 def chia_version_number() -> Tuple[str, str, str, str]:
@@ -362,7 +360,7 @@ def chia_init(
     should_check_keys: bool = True,
     fix_ssl_permissions: bool = False,
     testnet: bool = False,
-    experimental_v2_db: bool = False,
+    v1_db: bool = False,
 ):
     """
     Standard first run initialization or migration steps. Handles config creation,
@@ -400,8 +398,16 @@ def chia_init(
         fix_ssl(root_path)
     if should_check_keys:
         check_keys(root_path)
-    if experimental_v2_db:
-        config: Dict = load_config(root_path, "config.yaml")["full_node"]
+
+    config: Dict
+    if v1_db:
+        config = load_config(root_path, "config.yaml")
+        db_pattern = config["database_path"]
+        new_db_path = db_pattern.replace("_v2_", "_v1_")
+        config["full_node"]["database_path"] = new_db_path
+        save_config(root_path, "config.yaml", config)
+    else:
+        config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         db_path = path_from_root(root_path, db_path_replaced)
         mkdir(db_path.parent)

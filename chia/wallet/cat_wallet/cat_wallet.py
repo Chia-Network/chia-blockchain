@@ -46,6 +46,7 @@ from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.util.compute_memos import compute_memos
 
 
 # This should probably not live in this file but it's for experimental right now
@@ -720,7 +721,7 @@ class CATWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
-                memos=list(spend_bundle.get_memos().items()),
+                memos=list(compute_memos(spend_bundle).items()),
             )
         ]
 

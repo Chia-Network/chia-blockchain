@@ -32,6 +32,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
@@ -383,7 +384,7 @@ class DataLayerWallet:
             spend_bundle=full_spend,
             additions=full_spend.additions(),
             removals=full_spend.removals(),
-            memos=list(full_spend.get_memos().items()),
+            memos=list(compute_memos(full_spend).items()),
             wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
             sent_to=[],
             trade_id=None,
@@ -502,7 +503,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
@@ -591,7 +592,7 @@ class DataLayerWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
