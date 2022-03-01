@@ -207,10 +207,6 @@ class KeyringWrapper:
         return KeyringWrapper.__shared_instance
 
     @staticmethod
-    def set_shared_instance(instance: "KeyringWrapper"):
-        KeyringWrapper.__shared_instance = instance
-
-    @staticmethod
     def cleanup_shared_instance():
         if KeyringWrapper.__shared_instance is not None:
             KeyringWrapper.__shared_instance.cleanup_keyring()
