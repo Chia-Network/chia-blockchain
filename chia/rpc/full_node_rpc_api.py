@@ -24,7 +24,7 @@ class FullNodeRpcApi:
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
             # Blockchain
             "/get_blockchain_state": self.get_blockchain_state,

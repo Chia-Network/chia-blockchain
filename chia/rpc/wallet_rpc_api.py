@@ -52,7 +52,7 @@ class WalletRpcApi:
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
             # Key management
             "/log_in": self.log_in,
