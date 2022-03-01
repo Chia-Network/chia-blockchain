@@ -65,18 +65,19 @@ type OfferCancellationOptions = {
 };
 
 type ConfirmOfferCancellationProps = {
+  canCancelWithTransaction: boolean;
   onClose: (value: any) => void;
   open: boolean;
 };
 
 function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
-  const { onClose, open } = props;
+  const { canCancelWithTransaction, onClose, open } = props;
   const methods = useForm({
     defaultValues: {
       fee: '',
     }
   });
-  const [cancelWithTransaction, setCancelWithTransaction] = useState<boolean>(true);
+  const [cancelWithTransaction, setCancelWithTransaction] = useState<boolean>(canCancelWithTransaction);
 
   function handleCancel() {
     onClose([false]);
@@ -109,45 +110,49 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
                   Are you sure you want to cancel your offer?
                 </Trans>
               </Typography>
-              <Typography variant="body1">
-                <Trans>
-                  If you have already shared your offer file,
-                  you may need to submit a transaction to cancel
-                  the pending offer. Click "Cancel on blockchain"
-                  to submit a cancellation transaction.
-                </Trans>
-              </Typography>
-              <Flex flexDirection="row" gap={3}>
-                <Grid container>
-                  <Grid xs={6} item>
-                    <FormControlLabel
-                      control={<Checkbox name="cancelWithTransaction" checked={cancelWithTransaction} onChange={(event) => setCancelWithTransaction(event.target.checked)} />}
-                      label={
-                        <>
-                          <Trans>Cancel on blockchain</Trans>{' '}
-                          <TooltipIcon>
-                            <Trans>
-                              Creates and submits a transaction on the blockchain that cancels the offer
-                            </Trans>
-                          </TooltipIcon>
-                        </>
-                      }
-                    />
-                  </Grid>
-                  {cancelWithTransaction && (
-                    <Grid xs={6} item>
-                      <Fee
-                        id="filled-secondary"
-                        variant="filled"
-                        name="fee"
-                        color="secondary"
-                        label={<Trans>Fee</Trans>}
-                        fullWidth
-                      />
+              {canCancelWithTransaction && (
+                <>
+                  <Typography variant="body1">
+                    <Trans>
+                      If you have already shared your offer file,
+                      you may need to submit a transaction to cancel
+                      the pending offer. Click "Cancel on blockchain"
+                      to submit a cancellation transaction.
+                    </Trans>
+                  </Typography>
+                  <Flex flexDirection="row" gap={3}>
+                    <Grid container>
+                      <Grid xs={6} item>
+                        <FormControlLabel
+                          control={<Checkbox name="cancelWithTransaction" checked={cancelWithTransaction} onChange={(event) => setCancelWithTransaction(event.target.checked)} />}
+                          label={
+                            <>
+                              <Trans>Cancel on blockchain</Trans>{' '}
+                              <TooltipIcon>
+                                <Trans>
+                                  Creates and submits a transaction on the blockchain that cancels the offer
+                                </Trans>
+                              </TooltipIcon>
+                            </>
+                          }
+                        />
+                      </Grid>
+                      {cancelWithTransaction && (
+                        <Grid xs={6} item>
+                          <Fee
+                            id="filled-secondary"
+                            variant="filled"
+                            name="fee"
+                            color="secondary"
+                            label={<Trans>Fee</Trans>}
+                            fullWidth
+                          />
+                        </Grid>
+                      )}
                     </Grid>
-                  )}
-                </Grid>
-              </Flex>
+                  </Flex>
+                </>
+              )}
             </Flex>
           </Form>
         </DialogContentText>
@@ -176,6 +181,7 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
 }
 
 ConfirmOfferCancellation.defaultProps = {
+  canCancelWithTransaction: true,
   onClose: () => {},
   open: true,
 };
@@ -232,13 +238,17 @@ function OfferList(props: OfferListProps) {
     }
   }
 
-  async function handleCancelOffer(tradeId: string) {
+  async function handleCancelOffer(tradeId: string, canCancelWithTransaction: boolean) {
     const [cancelConfirmed, cancellationOptions] = await openDialog(
-      <ConfirmOfferCancellation />
+      <ConfirmOfferCancellation
+        canCancelWithTransaction={canCancelWithTransaction}
+      />
     );
 
     if (cancelConfirmed === true) {
-      await cancelOffer({ tradeId, secure: cancellationOptions.cancelWithTransaction, fee: cancellationOptions.cancellationFee });
+      const secure = canCancelWithTransaction ? cancellationOptions.cancelWithTransaction : false;
+      const fee = canCancelWithTransaction ? cancellationOptions.cancellationFee : 0;
+      await cancelOffer({ tradeId, secure: secure, fee: fee });
     }
   }
 
@@ -342,8 +352,9 @@ function OfferList(props: OfferListProps) {
           const { tradeId, status } = row;
           const canExport = status === OfferState.PENDING_ACCEPT; // implies isMyOffer === true
           const canDisplayData = status === OfferState.PENDING_ACCEPT;
-          const canCancel = status === OfferState.PENDING_ACCEPT;
+          const canCancel = status === OfferState.PENDING_ACCEPT || status === OfferState.PENDING_CONFIRM;
           const canShare = status === OfferState.PENDING_ACCEPT;
+          const canCancelWithTransaction = canCancel && status === OfferState.PENDING_ACCEPT;
 
           return (
             <Flex flexDirection="row" justifyContent="center" gap={0}>
@@ -411,7 +422,7 @@ function OfferList(props: OfferListProps) {
                         <MenuItem
                           onClick={() => {
                             onClose();
-                            handleCancelOffer(tradeId);
+                            handleCancelOffer(tradeId, canCancelWithTransaction);
                           }}
                         >
                           <ListItemIcon>
