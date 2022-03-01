@@ -1,8 +1,8 @@
+import io
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-import io
-import pytest
 
+import pytest
 from clvm_tools import binutils
 from pytest import raises
 
@@ -16,18 +16,18 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
     DefinitionError,
     Streamable,
-    streamable,
-    parse_bool,
-    parse_uint32,
-    write_uint32,
-    parse_optional,
-    parse_bytes,
-    parse_list,
-    parse_tuple,
-    parse_size_hints,
-    parse_str,
     is_type_List,
     is_type_SpecificOptional,
+    parse_bool,
+    parse_bytes,
+    parse_list,
+    parse_optional,
+    parse_size_hints,
+    parse_str,
+    parse_tuple,
+    parse_uint32,
+    streamable,
+    write_uint32,
 )
 from tests.setup_nodes import test_constants
 
