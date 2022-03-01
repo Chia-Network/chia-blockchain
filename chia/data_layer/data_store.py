@@ -361,9 +361,7 @@ class DataStore:
     async def _check_ancestors_table(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM root")
-            roots = []
-            async for row in cursor:
-                roots.append(Root.from_row(row=row))
+            roots = [Root.from_row(row=row) async for row in cursor]
 
             for root in roots:
                 if root.node_hash is None:
@@ -388,6 +386,7 @@ class DataStore:
                                 },
                             )
                             row = await cursor.fetchone()
+                            assert row is not None
                             assert row["ancestor"] == node.hash.hex()
 
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
