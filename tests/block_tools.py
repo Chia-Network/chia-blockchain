@@ -2033,7 +2033,6 @@ async def create_block_tools_async(
     return bt
 
 
-# xxx redirect to the fixture
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,

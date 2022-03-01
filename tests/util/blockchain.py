@@ -17,7 +17,6 @@ from chia.util.path import mkdir
 from tests.block_tools import BlockTools
 
 
-
 async def create_blockchain(constants: ConsensusConstants, db_version: int):
     db_path = Path(tempfile.NamedTemporaryFile().name)
 

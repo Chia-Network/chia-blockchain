@@ -53,7 +53,7 @@ class TestWalletRpc:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_rpc(self, two_wallet_nodes, trusted, bt):
+    async def test_wallet_rpc(self, two_wallet_nodes, trusted, bt, self_hostname):
         test_rpc_port = find_available_listen_port()
         test_rpc_port_2 = find_available_listen_port()
         test_rpc_port_node = find_available_listen_port()

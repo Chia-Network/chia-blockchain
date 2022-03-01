@@ -768,7 +768,7 @@ class TestMempoolManager:
     async def test_correct_my_id(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -782,7 +782,7 @@ class TestMempoolManager:
     async def test_my_id_garbage(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the argument list is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name(), b"garbage"])
         dic = {cvp.opcode: [cvp]}
@@ -797,8 +797,8 @@ class TestMempoolManager:
     async def test_invalid_my_id(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
-        coin_2 = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
+        coin_2 = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1483,10 +1483,10 @@ class TestMempoolManager:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
-        #coin = list(blocks[-1].get_included_reward_coins())[0]
-        #spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
-        coin = await next_block(full_node_1, WALLET_A, bt)
-        spend_bundle1 = generate_test_spend_bundle(coin)
+        # coin = list(blocks[-1].get_included_reward_coins())[0]
+        # spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
+        coin = await next_block(full_node_1, wallet_a, bt)
+        spend_bundle1 = generate_test_spend_bundle(wallet_a, coin)
 
         assert spend_bundle1 is not None
 
@@ -1502,7 +1502,7 @@ class TestMempoolManager:
 
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle_combined)
 
-        peer = await connect_and_get_peer(server_1, server_2)
+        peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
         status, err = await respond_transaction(full_node_1, tx, peer)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle_combined.name())
@@ -1530,7 +1530,7 @@ class TestMempoolManager:
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + 3)
 
         coin = await next_block(full_node_1, wallet_a, bt)
-        #coin = list(blocks[-1].get_included_reward_coins())[0]
+        # coin = list(blocks[-1].get_included_reward_coins())[0]
         spend_bundle_0 = generate_test_spend_bundle(wallet_a, coin)
         unsigned: List[CoinSpend] = spend_bundle_0.coin_spends
 
@@ -1562,7 +1562,7 @@ class TestMempoolManager:
     async def test_correct_my_parent(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1577,7 +1577,7 @@ class TestMempoolManager:
     async def test_my_parent_garbage(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info, b"garbage"])
         dic = {cvp.opcode: [cvp]}
@@ -1608,8 +1608,8 @@ class TestMempoolManager:
     async def test_invalid_my_parent(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
-        coin_2 = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
+        coin_2 = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin_2.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1624,7 +1624,7 @@ class TestMempoolManager:
     async def test_correct_my_puzhash(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [coin.puzzle_hash])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1639,7 +1639,7 @@ class TestMempoolManager:
     async def test_my_puzhash_garbage(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [coin.puzzle_hash, b"garbage"])
         dic = {cvp.opcode: [cvp]}
@@ -1670,7 +1670,7 @@ class TestMempoolManager:
     async def test_invalid_my_puzhash(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [Program.to([]).get_tree_hash()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1685,7 +1685,7 @@ class TestMempoolManager:
     async def test_correct_my_amount(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes, wallet_a, dic, coin=coin)
@@ -1700,7 +1700,7 @@ class TestMempoolManager:
     async def test_my_amount_garbage(self, bt, two_nodes, wallet_a):
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        coin = await next_block(full_node_1, WALLET_A, bt)
+        coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount), b"garbage"])
         dic = {cvp.opcode: [cvp]}

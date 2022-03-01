@@ -220,7 +220,7 @@ async def test_farmer_reward_target_endpoints(bt, environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_get_pool_state(environment):
+async def test_farmer_get_pool_state(environment, self_hostname):
     (
         farmer_service,
         farmer_rpc_api,

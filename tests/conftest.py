@@ -1,30 +1,35 @@
 import multiprocessing
-import atexit
 import pytest
 import pytest_asyncio
 import tempfile
 from pathlib import Path
-from chia.consensus.constants import ConsensusConstants
+from chia.util.keyring_wrapper import KeyringWrapper
 from tests.block_tools import BlockTools, test_constants, create_block_tools
 from tests.util.keyring import TempKeyring
-from typing import Tuple
 
 
 def cleanup_keyring(keyring: TempKeyring):
     keyring.cleanup()
 
 
-temp_keyring = TempKeyring(populate=True)
-keychain = temp_keyring.get_keychain()
-atexit.register(cleanup_keyring, temp_keyring)  # Attempt to clean up the temp keychain
+# temp_keyring = TempKeyring(populate=True)
+# keychain = temp_keyring.get_keychain()
+# atexit.register(cleanup_keyring, temp_keyring)  # Attempt to clean up the temp keychain
+
+
+@pytest.fixture(scope="session")
+def get_keychain():
+    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
 
 
 @pytest.fixture(scope="session", name="bt")
-def bt() -> BlockTools:
-    _shared_block_tools = create_block_tools(constants=test_constants, keychain=keychain)
+def bt(get_keychain) -> BlockTools:
+    k = get_keychain
+    # Note that this changes a lot of state - disk, DB, ports, process creation ...
+    _shared_block_tools = create_block_tools(constants=test_constants, keychain=k)
     return _shared_block_tools
-    # yield _shared_block_tools
-    # _shared_block_tools.cleanup()
 
 
 @pytest.fixture(scope="session")
@@ -32,48 +37,17 @@ def self_hostname(bt):
     return bt.config["self_hostname"]
 
 
-def setup_shared_block_tools_and_keyring(
-    consensus_constants: ConsensusConstants = test_constants,
-) -> Tuple[BlockTools, TempKeyring]:
-    temp_keyring = TempKeyring(populate=True)
-    bt = create_block_tools(constants=consensus_constants, keychain=temp_keyring.get_keychain())
-    return bt, temp_keyring
-
-
-
-# @pytest.fixture(scope="module")
-# def shared_block_tools(cleanup_shared_block_tools) -> BlockTools:
-#    """
-#    This fixture is run once per module and is used to create the shared block tools
-#    for all tests in the module.
-#    """
-#    b_tools, keyring = setup_shared_block_tools_and_keyring()
-#    shared_block_tools_helper = BlockToolsFixtureHelper(b_tools, keyring)
-#    yield shared_block_tools_helper.block_tools
-#    shared_block_tools_helper.cleanup()
-
-'''
-@pytest.fixture(scope="module")
-def wallet_a(shared_block_tools, cleanup_shared_wallet_tool) -> WalletTool:
-    """
-    This fixture is run once per module and is used to create the shared wallet tool
-    for all tests in the module.
-    """
-    return shared_block_tools.wallet_tool
-'''
-
 multiprocessing.set_start_method("spawn")
 
 
-# TODO: tests.setup_nodes (which is also imported by tests.util.blockchain) creates a
-#       global BlockTools at tests.setup_nodes.bt.  This results in an attempt to create
+# NOTE:
+#       Note that the bt fixture results in an attempt to create
 #       the chia root directory which the build scripts symlink to a sometimes-not-there
 #       directory.  When not there Python complains since, well, the symlink is a file
-#       not a directory and also not pointing to a directory.  In those same cases,
-#       these fixtures are not used.  It would be good to refactor that global state
-#       creation, including the filesystem modification, away from the import but
-#       that seems like a separate step and until then locating the imports in the
-#       fixtures avoids the issue.
+#       not a directory and also not pointing to a directory.
+#
+#       Now that we have removed the global at tests.setup_nodes.bt, we should can move the imports out of
+#       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])

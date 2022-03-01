@@ -21,7 +21,7 @@ from tests.setup_nodes import (
 from tests.util.socket import find_available_listen_port
 
 
-async def establish_connection(server: ChiaServer, ssl_context) -> bool:
+async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> bool:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     dummy_port = 5  # this does not matter
@@ -63,7 +63,7 @@ class TestSSL:
             yield _
 
     @pytest_asyncio.fixture(scope="function")
-    async def introducer(self):
+    async def introducer(self, bt):
         introducer_port = find_available_listen_port("introducer")
         async for _ in setup_introducer(bt, introducer_port):
             yield _

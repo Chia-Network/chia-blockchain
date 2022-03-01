@@ -47,7 +47,7 @@ class TestDaemon:
         return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
 
     @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools(self, get_temp_keyring):  # xxx
+    async def get_b_tools(self, get_temp_keyring):
         local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
         new_config = local_b_tools._config
         local_b_tools.change_config(new_config)
