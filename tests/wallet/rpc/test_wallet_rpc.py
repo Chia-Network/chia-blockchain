@@ -165,6 +165,9 @@ class TestWalletRpc:
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
 
+            async def eventual_balance_det(c, wallet_id: str):
+                return (await c.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
+
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", transaction_id)
             assert tx_confirmed.confirmed
@@ -410,8 +413,8 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            await time_out_assert(10, eventual_balance_det, 20, client, cat_0_id)
             bal_0 = await client.get_wallet_balance(cat_0_id)
-            assert bal_0["confirmed_wallet_balance"] == 20
             assert bal_0["pending_coin_removal_count"] == 0
             assert bal_0["unspent_coin_count"] == 1
 
@@ -441,11 +444,8 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
-            bal_0 = await client.get_wallet_balance(cat_0_id)
-            bal_1 = await client_2.get_wallet_balance(cat_1_id)
-
-            assert bal_0["confirmed_wallet_balance"] == 16
-            assert bal_1["confirmed_wallet_balance"] == 4
+            await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
+            await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)
 
             ##########
             # Offers #
@@ -492,28 +492,36 @@ class TestWalletRpc:
                 await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
                 await asyncio.sleep(0.5)
 
+            async def is_trade_confirmed(client, trade) -> bool:
+                trade_record = await client.get_offer(trade.name())
+                return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
+
+            await time_out_assert(15, is_trade_confirmed, True, client, offer)
+
             # Test trade sorting
             def only_ids(trades):
                 return [t.trade_id for t in trades]
 
             trade_record = await client.get_offer(offer.name())
-            all_offers = await client.get_all_offers()  # confirmed at index descending
+            all_offers = await client.get_all_offers(include_completed=True)  # confirmed at index descending
             assert len(all_offers) == 2
             assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
-            all_offers = await client.get_all_offers(reverse=True)  # confirmed at index ascending
+            all_offers = await client.get_all_offers(
+                include_completed=True, reverse=True
+            )  # confirmed at index ascending
             assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-            all_offers = await client.get_all_offers(sort_key="RELEVANCE")  # most relevant
+            all_offers = await client.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
             assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-            all_offers = await client.get_all_offers(sort_key="RELEVANCE", reverse=True)  # least relevant
+            all_offers = await client.get_all_offers(
+                include_completed=True, sort_key="RELEVANCE", reverse=True
+            )  # least relevant
             assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
             # Test pagination
-            all_offers = await client.get_all_offers(start=0, end=1)
+            all_offers = await client.get_all_offers(include_completed=True, start=0, end=1)
             assert len(all_offers) == 1
-            all_offers = await client.get_all_offers(start=-1, end=1)
-            assert len(all_offers) == 1
-            all_offers = await client.get_all_offers(start=50)
+            all_offers = await client.get_all_offers(include_completed=True, start=50)
             assert len(all_offers) == 0
-            all_offers = await client.get_all_offers(start=0, end=50)
+            all_offers = await client.get_all_offers(include_completed=True, start=0, end=50)
             assert len(all_offers) == 2
 
             # Keys and addresses
