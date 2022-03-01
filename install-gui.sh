@@ -92,8 +92,8 @@ patch_inconsistent_npm_issue(){
   if [ ! -d "$node_module_dir" ]; then
     mkdir "$node_module_dir"
   fi
-  if [ ! -d "{$node_module_dir}/.bin" ]; then
-    mkdir "{$node_module_dir}/.bin"
+  if [ ! -d "${node_module_dir}/.bin" ]; then
+    mkdir "${node_module_dir}/.bin"
   fi
   if [ -e "${node_module_dir}/.bin/npm" ]; then
     rm -f "${node_module_dir}/.bin/npm"
