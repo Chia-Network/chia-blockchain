@@ -584,11 +584,10 @@ class TestFullNodeProtocol:
 
         # First get two blocks in the same sub slot
         blocks = await full_node_1.get_all_full_blocks()
-        saved_seed = b""
+
         for i in range(0, 9999999):
             blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, skip_slots=1, seed=i.to_bytes(4, "big"))
             if len(blocks[-1].finished_sub_slots) == 0:
-                saved_seed = i.to_bytes(4, "big")
                 break
 
         # Then create a fork after the first block.
@@ -622,7 +621,6 @@ class TestFullNodeProtocol:
 
         # First get two blocks in the same sub slot
         blocks = await full_node_1.get_all_full_blocks()
-        saved_seed = b""
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
 
         await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
@@ -869,8 +867,6 @@ class TestFullNodeProtocol:
         fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspent coins that we can use
         puzzle_hashes = []
-
-        block_buffer_count = full_node_1.full_node.constants.MEMPOOL_BLOCK_BUFFER
 
         # Makes a bunch of coins
         for i in range(5):
