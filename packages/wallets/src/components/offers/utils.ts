@@ -1,4 +1,5 @@
-import { WalletType, type OfferSummaryRecord } from '@chia/api';
+import { WalletType } from '@chia/api';
+import type { OfferSummaryRecord } from '@chia/api';
 import {
   mojoToChiaLocaleString,
   mojoToCATLocaleString,
