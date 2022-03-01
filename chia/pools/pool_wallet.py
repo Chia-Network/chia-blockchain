@@ -237,7 +237,7 @@ class PoolWallet:
         payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
         if len(payout_instructions) == 0:
-            self.log.info(f"Missing payout_instructions for {current_state.launcher_id}. Generating new puzzle hash...")
+            self.log.info("New config entry, generating new puzzle hash...")
             payout_instructions = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
             self.log.info(f"Generated payout_instructions puzzle hash: {payout_instructions}")
 
