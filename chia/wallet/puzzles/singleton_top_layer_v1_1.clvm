@@ -34,6 +34,15 @@
       )
     )
 
+    (defmacro and ARGS
+        (if ARGS
+            (qq (if (unquote (f ARGS))
+                (unquote (c and (r ARGS)))
+                ()
+                ))
+            1)
+    )
+
     (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
     (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
     (defun-inline launcher_puzzle_hash_for_singleton_struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
@@ -47,35 +56,8 @@
      )
   )
 
-  ;; take a boolean and a non-empty list of conditions
-  ;; strip off the first condition if a boolean is set
-  ;; this is used to remove `(CREATE_COIN xxx -113)`
-  ;; pretty sneaky, eh?
-  (defun strip_first_condition_if (boolean condition_list)
-    (if boolean
-      (r condition_list)
-      condition_list
-    )
-  )
-
   (defun-inline morph_condition (condition SINGLETON_STRUCT)
     (c (f condition) (c (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r condition))) (r (r condition))))
-  )
-
-  ;; return the value of the coin created if this is a `CREATE_COIN` condition, or 0 otherwise
-  (defun-inline created_coin_value_or_0 (condition)
-    (if (= (f condition) CREATE_COIN)
-        (f (r (r condition)))
-        0
-    )
-  )
-
-  ;; Returns a (bool . bool)
-  (defun odd_cons_m113 (output_amount)
-    (c
-      (logand output_amount ONE) ;; is it odd?
-      (= output_amount -113) ;; is it the escape value?
-    )
   )
 
   ; Assert exactly one output with odd value exists - ignore it if value is -113
@@ -89,29 +71,22 @@
 
   (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
     (if conditions
-        (morph_next_condition SINGLETON_STRUCT conditions has_odd_output_been_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
-          (if has_odd_output_been_found
-              0
-              (x)  ;; no odd output found
-          )
+        ; check if it's an odd create coin
+        (if (and (= (f (f conditions)) CREATE_COIN) (logand (f (r (r (f conditions)))) ONE))
+            ; check that we haven't already found one
+            (assert (not has_odd_output_been_found)
+              ; then
+              (if (= (f (r (r (f conditions)))) -113)
+                  ; If it's the melt condition we don't bother prepending this condition
+                  (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) ONE)
+                  ; If it isn't the melt condition, we morph it and prepend it
+                  (c (morph_condition (f conditions) SINGLETON_STRUCT) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) ONE))
+              )
+            )
+            (c (f conditions) (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) has_odd_output_been_found))
         )
-   )
-
-   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `is_output_m113`
-   ;; precalculated
-   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . is_output_m113))
-       (assert
-          (not (all is_output_odd has_odd_output_been_found))
-          (strip_first_condition_if
-             is_output_m113
-             (c (if is_output_odd
-                    (morph_condition (f conditions) SINGLETON_STRUCT)
-                    (f conditions)
-                )
-                (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any is_output_odd has_odd_output_been_found))
-             )
-          )
-      )
+        (assert has_odd_output_been_found ())
+    )
    )
 
  ; assert that either the lineage proof is for a parent singleton, or, if it's for the launcher, verify it matched our launcher ID
