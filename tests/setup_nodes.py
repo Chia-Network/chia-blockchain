@@ -217,7 +217,6 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(
-    # xxx port, rpc_port, farmer_port, consensus_constants: ConsensusConstants, b_tools, start_service: bool = True
     b_tools: BlockTools,
     self_hostname: str,
     port,
@@ -227,7 +226,7 @@ async def setup_harvester(
     start_service: bool = True,
 ):
 
-    config = bt.config["harvester"]
+    config = b_tools.config["harvester"]
     config["port"] = port
     config["rpc_port"] = rpc_port
     kwargs = service_kwargs_for_harvester(b_tools.root_path, config, consensus_constants)
@@ -552,8 +551,23 @@ async def setup_farmer_harvester(bt: BlockTools, consensus_constants: ConsensusC
     harvester_port = find_available_listen_port("harvester")
     harvester_rpc_port = find_available_listen_port("harvester rpc")
     node_iters = [
-        setup_harvester(bt, bt.config["self_hostname"],harvester_port, harvester_rpc_port, farmer_port, consensus_constants, start_services),
-        setup_farmer(bt, bt.config["self_hostname"],farmer_port, farmer_rpc_port, consensus_constants, start_service=start_services),
+        setup_harvester(
+            bt,
+            bt.config["self_hostname"],
+            harvester_port,
+            harvester_rpc_port,
+            farmer_port,
+            consensus_constants,
+            start_services,
+        ),
+        setup_farmer(
+            bt,
+            bt.config["self_hostname"],
+            farmer_port,
+            farmer_rpc_port,
+            consensus_constants,
+            start_service=start_services,
+        ),
     ]
 
     harvester_service = await node_iters[0].__anext__()
@@ -595,12 +609,26 @@ async def setup_full_system(
 
         node_iters = [
             setup_introducer(shared_b_tools, introducer_port),
-            setup_harvester(shared_b_tools, shared_b_tools.config["self_hostname"], harvester_port, harvester_rpc_port, farmer_port, consensus_constants),
+            setup_harvester(
+                shared_b_tools,
+                shared_b_tools.config["self_hostname"],
+                harvester_port,
+                harvester_rpc_port,
+                farmer_port,
+                consensus_constants,
+            ),
             setup_farmer(
-                shared_b_tools, shared_b_tools.config["self_hostname"], farmer_port, farmer_rpc_port, consensus_constants, uint16(node1_port)
+                shared_b_tools,
+                shared_b_tools.config["self_hostname"],
+                farmer_port,
+                farmer_rpc_port,
+                consensus_constants,
+                uint16(node1_port),
             ),
             setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
-            setup_timelord(timelord2_port, node1_port, timelord2_rpc_port, vdf1_port, False, consensus_constants, b_tools),
+            setup_timelord(
+                timelord2_port, node1_port, timelord2_rpc_port, vdf1_port, False, consensus_constants, b_tools
+            ),
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",

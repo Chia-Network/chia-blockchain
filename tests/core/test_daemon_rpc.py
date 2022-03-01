@@ -1,5 +1,3 @@
-# flake8: noqa: F821
-# pylint: disable=E0602
 import pytest
 import pytest_asyncio
 
