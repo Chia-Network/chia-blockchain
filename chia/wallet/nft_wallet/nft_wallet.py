@@ -543,6 +543,8 @@ class NFTWallet:
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         sb_list.append(message_sb)
+        if backpayment_amount % 2 != 1:
+            backpayment_amount += 1
         relative_amount = (fee + backpayment_amount) * -1
         standard_sb = await self.standard_wallet.create_spend_bundle_relative_chia(relative_amount)
         sb_list.append(standard_sb)
