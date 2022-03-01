@@ -981,11 +981,11 @@ class DataStore:
         lock: bool = True,
         num_nodes: int = 1000000000,
     ) -> List[Node]:
-        ancestors = await self.get_ancestors(node_hash, tree_id, lock=lock)
-        path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
-        # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
-        # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
         if not get_subtree_only:
+            ancestors = await self.get_ancestors(node_hash, tree_id, lock=lock)
+            path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
+            # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
+            # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
             stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
         else:
             stack = []
