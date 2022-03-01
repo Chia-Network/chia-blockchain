@@ -1,11 +1,25 @@
+import random
 import socket
+from typing import Set
+
+recent_ports: Set[int] = set()
 
 
 def find_available_listen_port(name: str = "free") -> int:
-    s = socket.socket()
-    s.bind(("127.0.0.1", 0))
-    addr = s.getsockname()
-    assert addr[1] > 0
-    s.close()
-    print(f"{name} port: {addr[1]}")
-    return int(addr[1])
+    global recent_ports
+
+    while True:
+        port = random.randint(2000, 65535)
+        if port in recent_ports:
+            continue
+
+        s = socket.socket()
+        try:
+            s.bind(("127.0.0.1", port))
+        except BaseException:
+            s.close()
+            continue
+        s.close()
+        recent_ports.add(port)
+        print(f"{name} port: {port}")
+        return port
