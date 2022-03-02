@@ -51,27 +51,27 @@ _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
-FIELDS_FOR_STREAMABLE_CLASS = {}
-STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
-PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[Any], Dict[str, Type[Any]]] = {}
+STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any, BinaryIO], Any]]] = {}
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any], Any]]] = {}
 
 
-def is_type_List(f_type: Type) -> bool:
+def is_type_List(f_type: Type[Any]) -> bool:
     return get_origin(f_type) == list or f_type == list
 
 
-def is_type_SpecificOptional(f_type) -> bool:
+def is_type_SpecificOptional(f_type: Type[Any]) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
     return get_origin(f_type) == Union and get_args(f_type)[1]() is None
 
 
-def is_type_Tuple(f_type: Type) -> bool:
+def is_type_Tuple(f_type: Type[Any]) -> bool:
     return get_origin(f_type) == tuple or f_type == tuple
 
 
-def dataclass_from_dict(klass, d):
+def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
     """
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
@@ -91,7 +91,8 @@ def dataclass_from_dict(klass, d):
         return tuple(klass_properties)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
-        fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
+        hints = get_type_hints(klass)
+        fieldtypes = {f.name: hints.get(f.name, f.type) for f in dataclasses.fields(klass)}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
     elif is_type_List(klass):
         # Type is a list, data is a list
@@ -107,7 +108,7 @@ def dataclass_from_dict(klass, d):
         return klass(d)
 
 
-def recurse_jsonify(d):
+def recurse_jsonify(d: Any) -> Any:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
@@ -164,7 +165,7 @@ def parse_uint32(f: BinaryIO, byteorder: Literal["little", "big"] = "big") -> ui
     return uint32(int.from_bytes(size_bytes, byteorder))
 
 
-def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"] = "big"):
+def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"] = "big") -> None:
     f.write(value.to_bytes(4, byteorder))
 
 
@@ -187,7 +188,7 @@ def parse_bytes(f: BinaryIO) -> bytes:
 
 
 def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> List[Any]:
-    full_list: List = []
+    full_list: List[Any] = []
     # wjb assert inner_type != get_args(List)[0]
     list_size = parse_uint32(f)
     for list_index in range(list_size):
@@ -196,13 +197,13 @@ def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Li
 
 
 def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[Callable[[BinaryIO], Any]]) -> Tuple[Any, ...]:
-    full_list = []
+    full_list: List[Any] = []
     for parse_f in list_parse_inner_type_f:
         full_list.append(parse_f(f))
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type, bytes_to_read: int) -> Any:
+def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
     return f_type.from_bytes(bytes_read)
@@ -246,7 +247,7 @@ def stream_str(item: Any, f: BinaryIO) -> None:
     f.write(str_bytes)
 
 
-def streamable(cls: Any):
+def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     """
     This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
     (de)serialization methods for all members of the class. The correct usage is:
@@ -270,7 +271,9 @@ def streamable(cls: Any):
         raise SyntaxError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
 
     try:
-        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
+        # Ignore mypy here because we especially want to access a not available member to test if
+        # the dataclass is frozen.
+        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None  # type: ignore[attr-defined]
     except dataclasses.FrozenInstanceError:
         pass
     else:
@@ -343,10 +346,10 @@ class Streamable:
     Make sure to use the streamable decorator when inheriting from the Streamable class to prepare the streaming caches.
     """
 
-    def post_init_parse(self, item: Any, f_name: str, f_type: Type) -> Any:
+    def post_init_parse(self, item: Any, f_name: str, f_type: Type[Any]) -> Any:
         if is_type_List(f_type):
-            collected_list: List = []
-            inner_type: Type = get_args(f_type)[0]
+            collected_list: List[Any] = []
+            inner_type: Type[Any] = get_args(f_type)[0]
             # wjb assert inner_type != get_args(List)[0]  # type: ignore
             if not is_type_List(type(item)):
                 raise ValueError(f"Wrong type for {f_name}, need a list.")
@@ -382,7 +385,7 @@ class Streamable:
             raise ValueError(f"Wrong type for {f_name}")
         return item
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         try:
             fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
@@ -399,12 +402,12 @@ class Streamable:
                 object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
 
     @classmethod
-    def function_to_parse_one_item(cls, f_type: Type) -> Callable[[BinaryIO], Any]:
+    def function_to_parse_one_item(cls, f_type: Type[Any]) -> Callable[[BinaryIO], Any]:
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
         """
-        inner_type: Type
+        inner_type: Type[Any]
         if f_type is bool:
             return parse_bool
         if is_type_SpecificOptional(f_type):
@@ -412,7 +415,7 @@ class Streamable:
             parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_optional(f, parse_inner_type_f)
         if hasattr(f_type, "parse"):
-            return f_type.parse
+            return lambda f: f_type.parse(f)
         if f_type == bytes:
             return parse_bytes
         if is_type_List(f_type):
@@ -435,7 +438,7 @@ class Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: _T_Streamable = object.__new__(cls)
         fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
-        values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        values: Iterator[Callable[[Any], Any]] = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
 
@@ -447,8 +450,8 @@ class Streamable:
         return obj
 
     @classmethod
-    def function_to_stream_one_item(cls, f_type: Type) -> Callable[[Any, BinaryIO], Any]:
-        inner_type: Type
+    def function_to_stream_one_item(cls, f_type: Type[Any]) -> Callable[[Any, BinaryIO], Any]:
+        inner_type: Type[Any]
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
             stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
@@ -509,9 +512,10 @@ class Streamable:
     def __repr__(self: Any) -> str:
         return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
 
-    def to_json_dict(self) -> Dict:
-        return recurse_jsonify(dataclasses.asdict(self))
+    def to_json_dict(self) -> Dict[str, Any]:
+        # TODO, Remove the ignore, maybe use a wrapper with the correct type for recurse_jsonify?
+        return recurse_jsonify(dataclasses.asdict(self))  # type:ignore[no-any-return]
 
     @classmethod
-    def from_json_dict(cls: Any, json_dict: Dict) -> Any:
+    def from_json_dict(cls: Any, json_dict: Dict[str, Any]) -> Any:
         return dataclass_from_dict(cls, json_dict)
