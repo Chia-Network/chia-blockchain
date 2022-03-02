@@ -8,6 +8,7 @@ daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 inbound_rate_limit_percent: 100
 outbound_rate_limit_percent: 30
+multiprocessing_start_method: &multiprocessing_start_method default
 
 network_overrides: &network_overrides
   constants:
@@ -229,6 +230,8 @@ farmer:
 
   pool_public_keys: []
 
+  multiprocessing_start_method: *multiprocessing_start_method
+
   # Replace this with a real puzzle hash
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 
@@ -305,6 +308,8 @@ timelord:
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
 
+  multiprocessing_start_method: *multiprocessing_start_method
+
   start_rpc_server: True
   rpc_port: 8557
 
@@ -339,6 +344,8 @@ full_node:
   # simulator_peer_db_path is deprecated and has been replaced by simulator_peers_file_path
   simulator_peer_db_path: sim_db/peer_table_node.sqlite
   simulator_peers_file_path: sim_db/peer_table_node.dat
+
+  multiprocessing_start_method: *multiprocessing_start_method
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -483,6 +490,8 @@ wallet:
   full_node_peer:
     host: *self_hostname
     port: 8444
+
+  multiprocessing_start_method: *multiprocessing_start_method
 
   testing: False
   # v2 used by the light wallet sync protocol

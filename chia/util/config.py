@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import shutil
 import sys
@@ -7,6 +8,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import pkg_resources
 import yaml
+from typing_extensions import Literal
 
 from chia.util.path import mkdir
 
@@ -162,3 +164,30 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         return val
     else:
         raise KeyError(f"value not found for key: {key}")
+
+
+start_methods: Dict[str, Optional[str]] = {
+    "default": None,
+    "fork": "fork",
+    "fork_server": "fork_server",
+    "spawn": "spawn",
+}
+
+
+def process_config_start_method(
+    method: object, log=logging.Logger
+) -> Union[None, Literal["fork"], Literal["fork_server"], Literal["spawn"]]:
+    sentinel = object()
+    # TODO: I am aware that some objects may not be in the dict, that is why I am
+    #       providing .get() with a default.
+    processed_method = start_methods.get(method, sentinel)  # type: ignore[call-overload]
+
+    if method is sentinel:
+        start_methods_string = ", ".join(start_methods.keys())
+        log.warning(
+            f"Using default multiprocessing start method, configured start method {method!r} not available in:"
+            f" {start_methods_string}"
+        )
+        return None
+
+    return processed_method
