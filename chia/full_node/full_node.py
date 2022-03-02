@@ -3,6 +3,7 @@ import contextlib
 import dataclasses
 import logging
 import multiprocessing
+from multiprocessing.context import BaseContext
 import random
 import time
 import traceback
@@ -96,6 +97,7 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
+    multiprocessing_start_context: Optional[BaseContext]
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
@@ -127,11 +129,7 @@ class FullNode:
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
 
-        multiprocessing_start_method = process_config_start_method(
-            method=self.config.get("multiprocessing_start_method"),
-            log=self.log,
-        )
-        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        self.multiprocessing_context = None
 
         # Used for metrics
         self.dropped_tx: Set[bytes32] = set()
@@ -192,6 +190,11 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
+        multiprocessing_start_method = process_config_start_method(
+            method=self.config.get("multiprocessing_start_method"),
+            log=self.log,
+        )
+        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.blockchain = await Blockchain.create(
             coin_store=self.coin_store,
             block_store=self.block_store,

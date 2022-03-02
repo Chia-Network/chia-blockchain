@@ -230,8 +230,6 @@ farmer:
 
   pool_public_keys: []
 
-  multiprocessing_start_method: *multiprocessing_start_method
-
   # Replace this with a real puzzle hash
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 

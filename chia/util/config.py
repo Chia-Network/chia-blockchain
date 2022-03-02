@@ -185,7 +185,7 @@ def process_config_start_method(
     processed_method = start_methods.get(method, sentinel)  # type: ignore[call-overload]
 
     if processed_method is sentinel:
-        start_methods_string = ", ".join(start_methods.keys())
+        start_methods_string = ", ".join(str(option) for option in start_methods.keys())
         log.warning(
             f"Using default multiprocessing start method, configured start method {method!r} not available in:"
             f" {start_methods_string}"
