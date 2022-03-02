@@ -166,7 +166,8 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         raise KeyError(f"value not found for key: {key}")
 
 
-start_methods: Dict[str, Optional[str]] = {
+start_methods: Dict[Optional[str], Optional[str]] = {
+    None: None,
     "default": None,
     "fork": "fork",
     "forkserver": "forkserver",
@@ -175,19 +176,22 @@ start_methods: Dict[str, Optional[str]] = {
 
 
 def process_config_start_method(
-    method: object, log=logging.Logger
+    method: object,
+    log=logging.Logger,
 ) -> Union[None, Literal["fork"], Literal["fork_server"], Literal["spawn"]]:
     sentinel = object()
     # TODO: I am aware that some objects may not be in the dict, that is why I am
     #       providing .get() with a default.
     processed_method = start_methods.get(method, sentinel)  # type: ignore[call-overload]
 
-    if method is sentinel:
+    if processed_method is sentinel:
         start_methods_string = ", ".join(start_methods.keys())
         log.warning(
             f"Using default multiprocessing start method, configured start method {method!r} not available in:"
             f" {start_methods_string}"
         )
         return None
+
+    log.info(f"Chosen multiprocessing start method: {processed_method}")
 
     return processed_method
