@@ -229,7 +229,7 @@ class PoolWallet:
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
 
-    async def update_pool_config(self):
+    async def update_pool_config(self) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
