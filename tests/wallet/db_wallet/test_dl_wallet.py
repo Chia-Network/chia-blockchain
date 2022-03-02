@@ -372,9 +372,7 @@ class TestDLWallet:
         for tx in update_txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        for i in range(0, 4):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        await full_node_api.process_transaction_records(records=[*report_txs, *update_txs])
 
         async def is_singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32, generation: int) -> bool:
             latest = await wallet.get_latest_singleton(launcher_id)
@@ -385,7 +383,7 @@ class TestDLWallet:
         next_generation = current_record.generation + 2
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
 
-        for i in range(0, 4):
+        for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
             await asyncio.sleep(0.5)
 
@@ -430,9 +428,7 @@ class TestDLWallet:
         for tx in update_txs_0:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        for i in range(0, 4):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        await full_node_api.process_transaction_records(records=update_txs_0)
 
         next_generation += 1
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
