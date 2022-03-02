@@ -169,7 +169,7 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
 start_methods: Dict[str, Optional[str]] = {
     "default": None,
     "fork": "fork",
-    "fork_server": "fork_server",
+    "forkserver": "forkserver",
     "spawn": "spawn",
 }
 
