@@ -83,7 +83,7 @@ class MempoolManager:
         self,
         coin_store: CoinStore,
         consensus_constants: ConsensusConstants,
-        multiprocessing_context: BaseContext,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
