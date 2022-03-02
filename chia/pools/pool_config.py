@@ -73,7 +73,7 @@ def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1El
                 ):
                     auth_key_hex = bytes(auth_key).hex()
                     if pool_config_dict.get("authentication_public_key", "") != auth_key_hex:
-                        pool_config_dict["authentication_public_key"] = bytes(auth_key).hex()
+                        pool_config_dict["authentication_public_key"] = auth_key_hex
                         updated = True
             except Exception as e:
                 log.error(f"Exception updating config: {pool_config_dict} {e}")
