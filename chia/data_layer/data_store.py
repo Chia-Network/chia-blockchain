@@ -10,6 +10,7 @@ from chia.data_layer.data_layer_errors import (
     NodeHashError,
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
+    AncestorTableError,
 )
 from chia.data_layer.data_layer_types import (
     InternalNode,
@@ -362,6 +363,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT * FROM root")
             roots = [Root.from_row(row=row) async for row in cursor]
+            hashes: List[bytes32] = []
 
             for root in roots:
                 if root.node_hash is None:
@@ -386,8 +388,11 @@ class DataStore:
                                 },
                             )
                             row = await cursor.fetchone()
-                            assert row is not None
-                            assert row["ancestor"] == node.hash.hex()
+                            if row is None or row["ancestor"] != node.hash.hex():
+                                hashes.append(child_hash)
+
+            if len(hashes) > 0:
+                raise AncestorTableError(node_hashes=hashes)
 
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
         _check_internal_key_value_are_null,

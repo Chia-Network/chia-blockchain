@@ -59,3 +59,13 @@ class NodeHashError(IntegrityError):
                 bytes_objects=node_hashes,
             )
         )
+
+
+class AncestorTableError(IntegrityError):
+    def __init__(self, node_hashes: List[bytes32]) -> None:
+        super().__init__(
+            build_message_with_hashes(
+                message="Found nodes with wrong ancestor:",
+                bytes_objects=node_hashes,
+            )
+        )
