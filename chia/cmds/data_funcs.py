@@ -189,3 +189,14 @@ async def get_root_history_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def validate_data_cmd(rpc_port: Optional[int]) -> None:
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.validate_data()
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

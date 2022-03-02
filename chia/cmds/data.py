@@ -235,3 +235,13 @@ def get_root_history(
     from chia.cmds.data_funcs import get_root_history_cmd
 
     run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.command("validate", short_help="Run integrity checks for data layer db.")
+@create_rpc_port_option()
+def validate(
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import validate_data_cmd
+
+    run(validate_data_cmd(rpc_port=data_rpc_port))

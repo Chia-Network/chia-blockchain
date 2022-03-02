@@ -66,6 +66,7 @@ class DataLayerRpcApi:
             "/unsubscribe": self.unsubscribe,
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
+            "/validate_data": self.validate_data,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -258,3 +259,12 @@ class DataLayerRpcApi:
         for rec in records:
             res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
         return {"diff": res}
+
+    async def validate_data(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Check if the data is valid.
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        await self.service.validate_data()
+        return {"valid": True}
