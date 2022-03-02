@@ -384,7 +384,7 @@ class Streamable:
 
     def __post_init__(self):
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
             fields = {}
         data = self.__dict__
