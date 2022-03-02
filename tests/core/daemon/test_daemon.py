@@ -282,7 +282,7 @@ class TestDaemon:
 
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
-                "wss://127.0.0.1:55401",
+                f"wss://127.0.0.1:{local_b_tools._config['daemon_port']}",
                 autoclose=True,
                 autoping=True,
                 heartbeat=60,
