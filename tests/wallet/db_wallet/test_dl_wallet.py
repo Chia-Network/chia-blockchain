@@ -439,8 +439,8 @@ class TestDLWallet:
         latest = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert latest is not None
         assert latest.root == bytes32([1] * 32)
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 2000000000001)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 2000000000001)
+        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 4000000000001)
+        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 4000000000001)
         assert (
             len(
                 await dl_wallet_0.get_history(
