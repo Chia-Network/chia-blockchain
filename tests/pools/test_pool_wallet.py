@@ -50,7 +50,11 @@ class MockPoolWalletInfo:
 
 @pytest.mark.asyncio
 async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
-    updated_configs: Optional[List[MockPoolWalletConfig]] = None
+    """
+    Test that PoolWallet can create a new pool config
+    """
+
+    updated_configs: List[MockPoolWalletConfig] = []
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -89,14 +93,17 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
+    # Create an empty PoolWallet and populate only the required fields
     wallet = PoolWallet()
+    # We need a standard wallet to provide a puzzlehash
     wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
+    # We need a wallet state manager to hold a root_path member
     wallet.wallet_state_manager = MockWalletStateManager()
+    # We need a log object, but we don't care about how it's used
     wallet.log = MagicMock()
 
     await wallet.update_pool_config()
 
-    assert updated_configs is not None
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
     assert updated_configs[0].pool_url == pool_url
@@ -108,7 +115,11 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any) -> None:
-    updated_configs: Optional[List[MockPoolWalletConfig]] = None
+    """
+    Test that PoolWallet will retain existing payout_instructions when updating the pool config.
+    """
+
+    updated_configs: List[MockPoolWalletConfig] = []
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -165,14 +176,17 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
 
     monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
 
+    # Create an empty PoolWallet and populate only the required fields
     wallet = PoolWallet()
+    # We need a standard wallet to provide a puzzlehash
     wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
+    # We need a wallet state manager to hold a root_path member
     wallet.wallet_state_manager = MockWalletStateManager()
+    # We need a log object, but we don't care about how it's used
     wallet.log = MagicMock()
 
     await wallet.update_pool_config()
 
-    assert updated_configs is not None
     assert len(updated_configs) == 1
     assert updated_configs[0].launcher_id == launcher_id
     assert updated_configs[0].pool_url == pool_url
