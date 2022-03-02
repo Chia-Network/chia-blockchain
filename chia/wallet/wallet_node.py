@@ -681,10 +681,10 @@ class WalletNode:
                 all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
             idx += len(states)
 
-        still_connected = peer.peer_node_id in self.server.all_connections
+        still_connected = self.server is not None and peer.peer_node_id in self.server.all_connections
         await asyncio.gather(*all_tasks)
         await self.update_ui()
-        return still_connected and peer.peer_node_id in self.server.all_connections
+        return still_connected and self.server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
         assert self.wallet_state_manager is not None
