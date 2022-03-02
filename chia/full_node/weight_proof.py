@@ -61,7 +61,7 @@ class WeightProofHandler:
         self,
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
-        multiprocessing_context: BaseContext,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         self.tip: Optional[bytes32] = None
         self.proof: Optional[WeightProof] = None
