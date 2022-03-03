@@ -859,7 +859,7 @@ class WalletStateManager:
                         child.coin.name(),
                         [launcher_spend],
                         child.spent_height,
-                        False,
+                        True,
                         "pool_wallet",
                     )
                     coin_added = launcher_spend.additions()[0]
@@ -1019,7 +1019,7 @@ class WalletStateManager:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 
-        await self.create_more_puzzle_hashes()
+        await self.create_more_puzzle_hashes(in_transaction=True)
         return coin_record_1
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
@@ -1142,10 +1142,10 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True):
+    async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet
         if create_puzzle_hashes:
-            await self.create_more_puzzle_hashes()
+            await self.create_more_puzzle_hashes(in_transaction=in_transaction)
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:

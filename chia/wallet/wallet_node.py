@@ -634,9 +634,9 @@ class WalletNode:
                             if self.wallet_state_manager is None:
                                 return
                             try:
+                                await self.wallet_state_manager.db_wrapper.commit_transaction()
                                 await self.wallet_state_manager.db_wrapper.begin_transaction()
                                 await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
-                                await self.wallet_state_manager.db_wrapper.commit_transaction()
 
                                 if update_finished_height:
                                     if len(cs_heights) == 1:
@@ -646,6 +646,8 @@ class WalletNode:
                                         # We know we have processed everything before this min height
                                         synced_up_to = min(cs_heights) - 1
                                     await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
+                                await self.wallet_state_manager.db_wrapper.commit_transaction()
+
                             except Exception as e:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -671,22 +673,25 @@ class WalletNode:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
             if trusted:
-                try:
-                    self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                    await self.wallet_state_manager.db_wrapper.begin_transaction()
-                    await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
-                    await self.wallet_state_manager.db_wrapper.commit_transaction()
-                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                        last_change_height_cs(states[-1]) - 1
-                    )
-                except Exception as e:
-                    await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                    await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                    await self.wallet_state_manager.tx_store.rebuild_tx_cache()
-                    await self.wallet_state_manager.pool_store.rebuild_cache()
-                    tb = traceback.format_exc()
-                    self.log.error(f"Error adding states.. {e} {tb}")
-                    return False
+                async with self.new_state_lock:
+                    async with self.wallet_state_manager.db_wrapper.lock:
+                        try:
+                            self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                            await self.wallet_state_manager.db_wrapper.commit_transaction()
+                            await self.wallet_state_manager.db_wrapper.begin_transaction()
+                            await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                            await self.wallet_state_manager.db_wrapper.commit_transaction()
+                            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
+                                last_change_height_cs(states[-1]) - 1
+                            )
+                        except Exception as e:
+                            await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                            await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                            await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                            await self.wallet_state_manager.pool_store.rebuild_cache()
+                            tb = traceback.format_exc()
+                            self.log.error(f"Error adding states.. {e} {tb}")
+                            return False
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)

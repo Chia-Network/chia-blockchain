@@ -186,7 +186,7 @@ class WalletBlockchain(BlockchainInterface):
 
     async def set_finished_sync_up_to(self, height: int):
         if height > await self.get_finished_sync_up_to():
-            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height))
+            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height), True)
             await self.clean_block_records()
 
     async def get_finished_sync_up_to(self):
