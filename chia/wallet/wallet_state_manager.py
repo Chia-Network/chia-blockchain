@@ -156,10 +156,7 @@ class WalletStateManager:
         self.sync_mode = False
         self.sync_target = uint32(0)
         self.finished_sync_up_to = uint32(0)
-        multiprocessing_start_method = process_config_start_method(
-            method=self.config.get("multiprocessing_start_method"),
-            log=self.log,
-        )
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.weight_proof_handler = WalletWeightProofHandler(
             constants=self.constants,

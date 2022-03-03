@@ -166,8 +166,7 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         raise KeyError(f"value not found for key: {key}")
 
 
-start_methods: Dict[Optional[str], Optional[str]] = {
-    None: None,
+start_methods: Dict[str, Optional[Literal["fork", "forkserver", "spawn"]]] = {
     "default": None,
     "fork": "fork",
     "forkserver": "forkserver",
@@ -176,18 +175,21 @@ start_methods: Dict[Optional[str], Optional[str]] = {
 
 
 def process_config_start_method(
-    method: object,
+    config: Dict[str, Any],
     log=logging.Logger,
-) -> Union[None, Literal["fork"], Literal["fork_server"], Literal["spawn"]]:
-    sentinel = object()
-    # TODO: I am aware that some objects may not be in the dict, that is why I am
-    #       providing .get() with a default.
-    processed_method = start_methods.get(method, sentinel)  # type: ignore[call-overload]
+) -> Optional[Literal["fork", "forkserver", "spawn"]]:
+    from_config = config.get("multiprocessing_start_method")
 
-    if processed_method is sentinel:
-        start_methods_string = ", ".join(str(option) for option in start_methods.keys())
+    # handle not only the key being missing, but also set to None
+    if from_config is None:
+        from_config = "default"
+
+    processed_method = start_methods[from_config]
+
+    if processed_method is None:
+        start_methods_string = ", ".join(option for option in start_methods.keys())
         log.warning(
-            f"Using default multiprocessing start method, configured start method {method!r} not available in:"
+            f"Using default multiprocessing start method, configured start method {from_config!r} not available in:"
             f" {start_methods_string}"
         )
         return None

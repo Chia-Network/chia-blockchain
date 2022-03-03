@@ -102,10 +102,7 @@ class Timelord:
         # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
         self.num_resets: int = 0
 
-        multiprocessing_start_method = process_config_start_method(
-            method=self.config.get("multiprocessing_start_method"),
-            log=log,
-        )
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
 
         self.process_communication_tasks: List[asyncio.Task] = []

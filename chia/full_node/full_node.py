@@ -190,10 +190,7 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
-        multiprocessing_start_method = process_config_start_method(
-            method=self.config.get("multiprocessing_start_method"),
-            log=self.log,
-        )
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.blockchain = await Blockchain.create(
             coin_store=self.coin_store,
