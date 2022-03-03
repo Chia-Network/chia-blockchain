@@ -97,7 +97,6 @@ class WalletNode:
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
-    new_state_lock: Optional[asyncio.Lock]
 
     def __init__(
         self,
@@ -120,7 +119,6 @@ class WalletNode:
         self.proof_hashes: List = []
         self.state_changed_callback = None
         self.wallet_state_manager = None
-        self.new_state_lock = None
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
@@ -591,8 +589,6 @@ class WalletNode:
         # TODO: optimize fetching
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
-        if self.new_state_lock is None:
-            self.new_state_lock = asyncio.Lock()
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
@@ -626,7 +622,6 @@ class WalletNode:
                         if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
                     ]
                     if len(valid_states) > 0:
-                        assert self.new_state_lock is not None
                         async with self.wallet_state_manager.db_wrapper.lock:
                             self.log.info(
                                 f"new coin state received ({inner_idx_start}-"
@@ -646,7 +641,9 @@ class WalletNode:
                                     else:
                                         # We know we have processed everything before this min height
                                         synced_up_to = min(cs_heights) - 1
-                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
+                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
+                                        synced_up_to, in_transaction=True
+                                    )
                                 await self.wallet_state_manager.db_wrapper.commit_transaction()
 
                             except Exception as e:
@@ -682,7 +679,7 @@ class WalletNode:
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                            last_change_height_cs(states[-1]) - 1
+                            last_change_height_cs(states[-1]) - 1, in_transaction=True
                         )
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
