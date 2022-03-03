@@ -219,7 +219,7 @@ class TradeManager:
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=new_ph,
                     amount=coin.amount,
-                    fee_amount=fee_to_pay,
+                    fee_amount=fee,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=None,
@@ -235,7 +235,7 @@ class TradeManager:
             )
 
         for tx in all_txs:
-            await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
+            await self.wallet_state_manager.add_pending_transaction(tx_record=dataclasses.replace(tx, fee_amount=fee))
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
 
