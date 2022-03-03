@@ -6,13 +6,13 @@ function getContents(opts) {
     return [
         {
             x: 466,
-            y: 344,
+            y: 280,
             type: 'link',
             path: '/Applications',
         },
         {
             x: 192,
-            y: 344,
+            y: 280,
             type: 'file',
             path: opts.appPath,
         }
