@@ -49,7 +49,7 @@ class WeightProofHandlerV2:
 
     LAMBDA_L = 100
     C = 0.5
-    MAX_SAMPLES = 20
+    MAX_SAMPLES = 140
 
     def __init__(
         self,
@@ -742,8 +742,7 @@ def compress_segments(
     full_segment_index, segments: List[SubEpochChallengeSegmentV2]
 ) -> List[SubEpochChallengeSegmentV2]:
     compressed_segments = []
-    compressed_segments.append(segments[0])
-    for idx, segment in enumerate(segments[1:]):
+    for idx, segment in enumerate(segments):
         if idx != full_segment_index:
             # remove all redundant values
             segment = compress_segment(segment)
@@ -754,11 +753,15 @@ def compress_segments(
 def compress_segment(segment: SubEpochChallengeSegmentV2) -> SubEpochChallengeSegmentV2:
     # find challenge slot
     comp_seg = SubEpochChallengeSegmentV2(segment.sub_epoch_n, [], segment.rc_slot_end_info, segment.cc_slot_end_info)
-    for slot in segment.sub_slot_data:
-        comp_seg.sub_slot_data.append(slot)
-        if slot.is_challenge():
-            break
-    return segment
+    for subslot_data in segment.sub_slot_data:
+        new_slot = dataclasses.replace(
+        subslot_data,
+            cc_signage_point=None,
+            cc_infusion_point=None,
+            cc_slot_end=None,
+        )
+        comp_seg.sub_slot_data.append(new_slot)
+    return comp_seg
 
 
 # ///////////////////////

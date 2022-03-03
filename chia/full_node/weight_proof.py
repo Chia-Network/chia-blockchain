@@ -833,27 +833,6 @@ def handle_end_of_slot(
     )
 
 
-def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
-    compressed_segments = []
-    compressed_segments.append(segments[0])
-    for idx, segment in enumerate(segments[1:]):
-        if idx != full_segment_index:
-            # remove all redundant values
-            segment = compress_segment(segment)
-        compressed_segments.append(segment)
-    return compressed_segments
-
-
-def compress_segment(segment: SubEpochChallengeSegment) -> SubEpochChallengeSegment:
-    # find challenge slot
-    comp_seg = SubEpochChallengeSegment(segment.sub_epoch_n, [], segment.rc_slot_end_info)
-    for slot in segment.sub_slots:
-        comp_seg.sub_slots.append(slot)
-        if slot.is_challenge():
-            break
-    return segment
-
-
 # wp validation methods
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
