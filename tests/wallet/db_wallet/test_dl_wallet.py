@@ -432,13 +432,17 @@ class TestDLWallet:
 
         await asyncio.wait_for(full_node_api.process_transaction_records(records=update_txs_1), timeout=15)
 
+        async def does_singleton_have_root(wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
+            latest_singleton = await wallet.get_latest_singleton(lid)
+            if latest_singleton is None:
+                return False
+            return latest_singleton.root == root
+
         funds -= 2000000000000
 
         next_generation += 1
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
-        latest = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert latest is not None
-        assert latest.root == bytes32([1] * 32)
+        await time_out_assert(15, does_singleton_have_root, True, dl_wallet_0, launcher_id, bytes32([1] * 32))
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
         assert (
