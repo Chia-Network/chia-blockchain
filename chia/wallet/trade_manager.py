@@ -212,6 +212,28 @@ class TradeManager:
                 all_txs.append(tx)
             fee_to_pay = uint64(0)
 
+            cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
+            all_txs.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=new_ph,
+                    amount=coin.amount,
+                    fee_amount=fee_to_pay,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[cancellation_addition],
+                    removals=[coin],
+                    wallet_id=wallet.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=cancellation_addition.name(),
+                    memos=[],
+                )
+            )
+
         for tx in all_txs:
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
