@@ -674,24 +674,23 @@ class WalletNode:
                 return False
             if trusted:
                 async with self.new_state_lock:
-                    async with self.wallet_state_manager.db_wrapper.lock:
-                        try:
-                            self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                            await self.wallet_state_manager.db_wrapper.commit_transaction()
-                            await self.wallet_state_manager.db_wrapper.begin_transaction()
-                            await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
-                            await self.wallet_state_manager.db_wrapper.commit_transaction()
-                            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                                last_change_height_cs(states[-1]) - 1
-                            )
-                        except Exception as e:
-                            await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                            await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                            await self.wallet_state_manager.tx_store.rebuild_tx_cache()
-                            await self.wallet_state_manager.pool_store.rebuild_cache()
-                            tb = traceback.format_exc()
-                            self.log.error(f"Error adding states.. {e} {tb}")
-                            return False
+                    try:
+                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        await self.wallet_state_manager.db_wrapper.begin_transaction()
+                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
+                            last_change_height_cs(states[-1]) - 1
+                        )
+                    except Exception as e:
+                        await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                        await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                        await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                        await self.wallet_state_manager.pool_store.rebuild_cache()
+                        tb = traceback.format_exc()
+                        self.log.error(f"Error adding states.. {e} {tb}")
+                        return False
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)
