@@ -2,6 +2,7 @@ import asyncio
 import collections
 import dataclasses
 import logging
+from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Set, Tuple
@@ -78,7 +79,12 @@ def validate_clvm_and_signature(
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+    def __init__(
+        self,
+        coin_store: CoinStore,
+        consensus_constants: ConsensusConstants,
+        multiprocessing_context: Optional[BaseContext] = None,
+    ):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
@@ -99,7 +105,12 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(max_workers=2, initializer=setproctitle, initargs=(f"{getproctitle()}_worker",))
+        self.pool = ProcessPoolExecutor(
+            max_workers=2,
+            mp_context=multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None

@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import shutil
 import sys
@@ -7,6 +8,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import pkg_resources
 import yaml
+from typing_extensions import Literal
 
 from chia.util.path import mkdir
 
@@ -162,3 +164,36 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         return val
     else:
         raise KeyError(f"value not found for key: {key}")
+
+
+start_methods: Dict[str, Optional[Literal["fork", "forkserver", "spawn"]]] = {
+    "default": None,
+    "fork": "fork",
+    "forkserver": "forkserver",
+    "spawn": "spawn",
+}
+
+
+def process_config_start_method(
+    config: Dict[str, Any],
+    log=logging.Logger,
+) -> Optional[Literal["fork", "forkserver", "spawn"]]:
+    from_config = config.get("multiprocessing_start_method")
+
+    # handle not only the key being missing, but also set to None
+    if from_config is None:
+        from_config = "default"
+
+    processed_method = start_methods[from_config]
+
+    if processed_method is None:
+        start_methods_string = ", ".join(option for option in start_methods.keys())
+        log.warning(
+            f"Using default multiprocessing start method, configured start method {from_config!r} not available in:"
+            f" {start_methods_string}"
+        )
+        return None
+
+    log.info(f"Chosen multiprocessing start method: {processed_method}")
+
+    return processed_method
