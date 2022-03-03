@@ -519,7 +519,7 @@ data_layer:
   host_ip: 0.0.0.0
   host_port: 8575
   # Switch this to True if we want to run the server.
-  run_server: False
+  run_server: True
   # Data for running a data layer client.
   fetch_data_interval: 60
   selected_network: *selected_network
