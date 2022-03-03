@@ -422,10 +422,10 @@ class TradeStore:
         return records
 
     async def rollback_to_block(self, block_index):
-
-        # Delete from storage
-        cursor = await self.db_connection.execute(
-            "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.lock:
+            # Delete from storage
+            cursor = await self.db_connection.execute(
+                "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
+            )
+            await cursor.close()
+            await self.db_connection.commit()

@@ -611,6 +611,7 @@ class WalletNode:
         items = sorted(items_input, key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
+            assert self.wallet_state_manager is not None
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -626,7 +627,7 @@ class WalletNode:
                     ]
                     if len(valid_states) > 0:
                         assert self.new_state_lock is not None
-                        async with self.new_state_lock:
+                        async with self.wallet_state_manager.db_wrapper.lock:
                             self.log.info(
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
@@ -673,7 +674,7 @@ class WalletNode:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
             if trusted:
-                async with self.new_state_lock:
+                async with self.wallet_state_manager.db_wrapper.lock:
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
