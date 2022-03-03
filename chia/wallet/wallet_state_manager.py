@@ -720,7 +720,7 @@ class WalletStateManager:
                             name=bytes32(token_bytes()),
                             memos=[],
                         )
-                        await self.tx_store.add_transaction_record(tx_record, False)
+                        await self.tx_store.add_transaction_record(tx_record, True)
 
                     children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
                     assert children is not None
@@ -775,7 +775,7 @@ class WalletStateManager:
                                 memos=[],
                             )
 
-                            await self.tx_store.add_transaction_record(tx_record, False)
+                            await self.tx_store.add_transaction_record(tx_record, True)
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
                     rem_tx_records: List[TransactionRecord] = []
@@ -1179,9 +1179,6 @@ class WalletStateManager:
     ):
         await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data, in_transaction)
         self.tx_pending_changed()
-
-    async def set_action_done(self, action_id: int):
-        await self.action_store.action_done(action_id)
 
     async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
 

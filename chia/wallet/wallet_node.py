@@ -597,6 +597,7 @@ class WalletNode:
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
             await self.wallet_state_manager.reorg_rollback(fork_height)
+            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
         if fork_height is not None:
             cache.clear_after_height(fork_height)
@@ -632,17 +633,26 @@ class WalletNode:
                             )
                             if self.wallet_state_manager is None:
                                 return
-                            await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
+                            try:
+                                await self.wallet_state_manager.db_wrapper.begin_transaction()
+                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
+                                await self.wallet_state_manager.db_wrapper.commit_transaction()
 
-                            if update_finished_height:
-                                if len(cs_heights) == 1:
-                                    # We have processed all past tasks, so we can increase the height safely
-                                    synced_up_to = last_change_height_cs(valid_states[-1]) - 1
-                                else:
-                                    # We know we have processed everything before this min height
-                                    synced_up_to = min(cs_heights)
-                                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
-
+                                if update_finished_height:
+                                    if len(cs_heights) == 1:
+                                        # We have processed all past tasks, so we can increase the height safely
+                                        synced_up_to = last_change_height_cs(valid_states[-1]) - 1
+                                    else:
+                                        # We know we have processed everything before this min height
+                                        synced_up_to = min(cs_heights) - 1
+                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
+                            except Exception as e:
+                                tb = traceback.format_exc()
+                                self.log.error(f"Exception while adding state: {e} {tb}")
+                                await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                                await self.wallet_state_manager.pool_store.rebuild_cache()
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -663,11 +673,17 @@ class WalletNode:
             if trusted:
                 try:
                     self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                    await self.wallet_state_manager.db_wrapper.begin_transaction()
                     await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                    await self.wallet_state_manager.db_wrapper.commit_transaction()
                     await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                         last_change_height_cs(states[-1]) - 1
                     )
                 except Exception as e:
+                    await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                    await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                    await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                    await self.wallet_state_manager.pool_store.rebuild_cache()
                     tb = traceback.format_exc()
                     self.log.error(f"Error adding states.. {e} {tb}")
                     return False
