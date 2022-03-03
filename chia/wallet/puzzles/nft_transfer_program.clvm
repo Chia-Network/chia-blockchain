@@ -1,4 +1,4 @@
-(mod ((ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE URI SETTLEMENT_MOD_HASH CAT_MOD_HASH) current_owner new_owner trade_price_list my_nft_id solution)
+(mod ((ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH) current_owner new_owner trade_price_list my_nft_id solution)
 
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
@@ -45,5 +45,5 @@
     )
 
     ; main
-    (r (c URI (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_price_list my_nft_id)))
+    (r (c METADATA (extract_trade_price_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_price_list my_nft_id)))
 )

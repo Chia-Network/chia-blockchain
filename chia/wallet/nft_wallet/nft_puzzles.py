@@ -1,3 +1,4 @@
+from typing import List
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.types.blockchain_format.program import Program
@@ -97,6 +98,32 @@ def get_percentage_from_inner_solution(solution: Program) -> uint64:
         assert mod == NFT_TRANSFER_PROGRAM
         percentage = curried_args.first().rest().first().as_int()
         return percentage
+    except Exception:
+        return None
+    return None
+
+
+def get_metadata_from_transfer_program(transfer_prog: Program) -> Program:
+    try:
+        mod, curried_args = transfer_prog.uncurry()
+        assert mod == NFT_TRANSFER_PROGRAM
+        metadata = curried_args.first().rest().rest().first()
+        return metadata
+    except Exception:
+        return None
+    return None
+
+
+def get_uri_list_from_transfer_program(transfer_prog: Program) -> List[str]:
+    try:
+        uri_list = []
+        metadata = get_metadata_from_transfer_program(transfer_prog)
+        assert metadata is not None
+        for kv_pair in metadata.as_iter():
+            if kv_pair.first().as_atom() == b'u':
+                for uri in kv_pair.rest().as_iter():
+                    uri_list.append(uri.as_atom())
+        return uri_list
     except Exception:
         return None
     return None
