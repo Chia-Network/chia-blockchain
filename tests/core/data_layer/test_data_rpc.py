@@ -22,6 +22,7 @@ from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
+from chia.util.config import save_config
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -30,6 +31,9 @@ nodes = Tuple[WalletNode, FullNodeSimulator]
 async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
     test_rpc_port = uint16(21529)
     config = bt.config
+    # TODO: running the data server causes the RPC tests to hang at the end
+    config["data_layer"]["run_server"] = False
+    save_config(root_path, "config.yaml", config)
     kwargs = service_kwargs_for_data_layer(root_path, config, test_rpc_port)
     kwargs.update(parse_cli_args=False)
     service = Service(**kwargs)
