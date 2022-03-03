@@ -408,7 +408,9 @@ class TestDLWallet:
             assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
-        update_txs_1 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([1] * 32))
+        update_txs_1 = await dl_wallet_0.create_update_state_spend(
+            launcher_id, bytes32([1] * 32), fee=uint64(2000000000000)
+        )
         record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_1 is not None
         for tx in update_txs_1:
@@ -420,9 +422,7 @@ class TestDLWallet:
         for tx in update_txs_1:
             await wallet_node_0.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
 
-        update_txs_0 = await dl_wallet_0.create_update_state_spend(
-            launcher_id, bytes32([2] * 32), fee=uint64(2000000000000)
-        )
+        update_txs_0 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32))
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert record_0 != record_1
@@ -439,8 +439,8 @@ class TestDLWallet:
         latest = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert latest is not None
         assert latest.root == bytes32([1] * 32)
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 2000000000001)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 2000000000001)
+        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 4000000000001)
+        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 4000000000001)
         assert (
             len(
                 await dl_wallet_0.get_history(
