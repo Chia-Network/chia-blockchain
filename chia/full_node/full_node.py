@@ -129,6 +129,8 @@ class FullNode:
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
 
+        # TODO: Logging isn't setup yet so the log entries related to parsing the
+        #       config would end up on stdout if handled here.
         self.multiprocessing_context = None
 
         # Used for metrics
