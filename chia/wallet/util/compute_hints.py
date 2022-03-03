@@ -14,9 +14,7 @@ def compute_coin_hints(cs: CoinSpend) -> List[bytes32]:
         condition = condition_data[0]
         args = condition_data[1:]
         if condition == ConditionOpcode.CREATE_COIN and len(args) > 2:
-            if isinstance(args[2], bytes):
-                h_list.append(bytes32(args[2]))
-            elif isinstance(args[2], list):
+            if isinstance(args[2], list):
                 if isinstance(args[2][0], bytes):
                     h_list.append(bytes32(args[2][0]))
     return h_list
