@@ -461,20 +461,31 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
+    is_synced: bool = await wallet_client.get_synced()
+    is_syncing: bool = await wallet_client.get_sync_status()
+
     print(f"Wallet height: {await wallet_client.get_height_info()}")
-    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-    print(f"Balances, fingerprint: {fingerprint}")
-    for summary in summaries_response:
-        wallet_id = summary["id"]
-        balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"]))
-        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-        print(
-            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
-        )
-        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+    if is_syncing:
+        print("Sync status: Syncing...")
+    elif is_synced:
+        print("Sync status: Synced")
+    else:
+        print("Sync status: Not synced")
+
+    if not is_syncing and is_synced:
+        print(f"Balances, fingerprint: {fingerprint}")
+        for summary in summaries_response:
+            wallet_id = summary["id"]
+            balances = await wallet_client.get_wallet_balance(wallet_id)
+            typ = WalletType(int(summary["type"]))
+            address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+            print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
+            print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
+            print(
+                f"   -Pending Total Balance: "
+                f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+            )
+            print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
     print(" ")
     trusted_peers: Dict = config.get("trusted_peers", {})
