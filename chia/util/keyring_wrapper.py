@@ -219,7 +219,7 @@ class KeyringWrapper:
         self.keyring = None
 
     @staticmethod
-    def get_legacy_instance():
+    def get_legacy_instance() -> Optional["KeyringWrapper"]:
         return KeyringWrapper.create(force_legacy=True)
 
     def get_keyring(self):
