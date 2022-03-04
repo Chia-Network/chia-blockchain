@@ -166,8 +166,11 @@ def traverse_dict(d: Dict, key_path: str) -> Any:
         raise KeyError(f"value not found for key: {key}")
 
 
-start_methods: Dict[str, Optional[Literal["fork", "forkserver", "spawn"]]] = {
+method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
+method_values = Optional[Literal["fork", "forkserver", "spawn"]]
+start_methods: Dict[method_strings, method_values] = {
     "default": None,
+    "python_default": None,
     "fork": "fork",
     "forkserver": "forkserver",
     "spawn": "spawn",
@@ -177,23 +180,23 @@ start_methods: Dict[str, Optional[Literal["fork", "forkserver", "spawn"]]] = {
 def process_config_start_method(
     config: Dict[str, Any],
     log=logging.Logger,
-) -> Optional[Literal["fork", "forkserver", "spawn"]]:
-    from_config = config.get("multiprocessing_start_method")
+) -> method_values:
+    from_config: object = config.get("multiprocessing_start_method")
 
-    # handle not only the key being missing, but also set to None
+    choice: method_strings
     if from_config is None:
-        from_config = "default"
-
-    processed_method = start_methods[from_config]
-
-    if processed_method is None:
+        # handle not only the key being missing, but also set to None
+        choice = "default"
+    elif from_config not in start_methods.keys():
         start_methods_string = ", ".join(option for option in start_methods.keys())
-        log.warning(
-            f"Using default multiprocessing start method, configured start method {from_config!r} not available in:"
-            f" {start_methods_string}"
-        )
-        return None
+        log.warning(f"Configured start method {from_config!r} not available in: {start_methods_string}")
+        choice = "default"
+    else:
+        # mypy doesn't realize that by the time we get here from_config must be one of
+        # the keys in `start_methods` due to the above `not in` condition.
+        choice = from_config  # type: ignore[assignment]
 
-    log.info(f"Chosen multiprocessing start method: {processed_method}")
+    processed_method = start_methods[choice]
+    log.info(f"Selected multiprocessing start method: {choice}")
 
     return processed_method
