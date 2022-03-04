@@ -280,7 +280,7 @@ class PoolWallet:
                 )
             return False
 
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height, True)
         tip_spend = (await self.get_tip())[1]
         self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
@@ -350,12 +350,16 @@ class PoolWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
+        await self.wallet_state_manager.pool_store.add_spend(
+            self.wallet_id, launcher_spend, block_height, in_transaction
+        )
         await self.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], False)
+        await self.wallet_state_manager.add_new_wallet(
+            self, self.wallet_info.id, create_puzzle_hashes=False, in_transaction=in_transaction
+        )
+        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], in_transaction)
         return self
 
     @staticmethod
