@@ -607,7 +607,7 @@ class WalletStateManager:
                 else:
                     # Found unacknowledged CAT, save it in the database. Use "Unknown" as the name for now.
                     await self.interested_store.add_unacknowledged_token(
-                        asset_id, "Unknown", parent_coin_state.spent_height, parent_coin_state.coin.puzzle_hash
+                        asset_id, CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()), parent_coin_state.spent_height, parent_coin_state.coin.puzzle_hash
                     )
 
         return wallet_id, wallet_type
