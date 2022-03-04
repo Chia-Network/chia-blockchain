@@ -169,7 +169,7 @@ class WebSocketServer:
                 try:
                     # Daemon is internal connections, so override to TLS1.3 only
                     self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
-                except Exception:
+                except ValueError:
                     self.log.warning(
                         (
                             "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
