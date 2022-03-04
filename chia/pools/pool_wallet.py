@@ -499,6 +499,17 @@ class PoolWallet:
         )
         return fee_tx
 
+    async def publish_transactions(self, travel_tx: TransactionRecord, fee_tx: Optional[TransactionRecord]):
+        # We create two transaction records, one for the pool wallet to keep track of the travel TX, and another
+        # for the standard wallet to keep track of the fee. However, we will only submit the first one to the
+        # blockchain, and this one has the fee inside it as well.
+        # The fee tx, if present, will be added to the DB with no spend_bundle set, which has the effect that it
+        # will not be sent to full nodes.
+
+        await self.wallet_state_manager.add_pending_transaction(travel_tx)
+        if fee_tx is not None:
+            await self.wallet_state_manager.add_pending_transaction(dataclasses.replace(fee_tx, spend_bundle=None))
+
     async def generate_travel_transactions(self, fee: uint64) -> Tuple[TransactionRecord, Optional[TransactionRecord]]:
         # target_state is contained within pool_wallet_state
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
@@ -579,8 +590,6 @@ class PoolWallet:
         if fee > 0:
             fee_tx = await self.generate_fee_transaction(fee)
             signed_spend_bundle = SpendBundle.aggregate([signed_spend_bundle, fee_tx.spend_bundle])
-            fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(fee_tx)
 
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -601,7 +610,7 @@ class PoolWallet:
             name=signed_spend_bundle.name(),
         )
 
-        await self.wallet_state_manager.add_pending_transaction(tx_record)
+        await self.publish_transactions(tx_record, fee_tx)
         return tx_record, fee_tx
 
     @staticmethod
@@ -834,8 +843,6 @@ class PoolWallet:
             absorb_announce = Announcement(current_coin_record.coin.name(), b"$")
             fee_tx = await self.generate_fee_transaction(fee, coin_announcements=[absorb_announce])
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
-            fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(fee_tx)
 
         assert full_spend.fees() == fee
         current_time = uint64(int(time.time()))
@@ -859,7 +866,7 @@ class PoolWallet:
             name=full_spend.name(),
         )
 
-        await self.wallet_state_manager.add_pending_transaction(absorb_transaction)
+        await self.publish_transactions(absorb_transaction, fee_tx)
         return absorb_transaction, fee_tx
 
     async def new_peak(self, peak_height: uint64) -> None:
