@@ -258,11 +258,16 @@ class Service:
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
 
+        self._log.info("Awaited close")
         if self.upnp is not None:
+            self._log.info("Awaiting UPNP")
             # this is a blocking call, waiting for the UPnP thread to exit
             self.upnp.shutdown()
+            self._log.info("awaited UPNP")
 
+        self._log.info("Awaiting more1")
         self._did_start = False
+        self._log.info("Awaiting more2")
         self._is_stopping.clear()
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 

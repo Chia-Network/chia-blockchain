@@ -40,6 +40,8 @@ temp_keyring = TempKeyring(populate=True)
 keychain = temp_keyring.get_keychain()
 atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="session")
 def bt() -> BlockTools:
@@ -58,10 +60,15 @@ def constants_for_dic(dic):
 
 async def _teardown_nodes(node_aiters: List) -> None:
     awaitables = [node_iter.__anext__() for node_iter in node_aiters]
+    i = 0
     for sublist_awaitable in asyncio.as_completed(awaitables):
+        log.warning(f"Tearing down: {i}")
+        i += 1
         try:
             await sublist_awaitable
+            log.warning("Finished")
         except StopAsyncIteration:
+            log.warning("Threw")
             pass
 
 
@@ -81,7 +88,9 @@ async def setup_daemon(btools: BlockTools):
 
     yield ws_server
 
+    log.warning("SHUTTING DOWN DAEMON")
     await ws_server.stop()
+    log.warning("SHUT DOWN DAEMON SUCCESFULLY")
 
 
 async def setup_full_node(
@@ -154,6 +163,7 @@ async def setup_full_node(
     await service.wait_closed()
     if db_path.exists():
         db_path.unlink()
+    log.warning(f"SHUT DOWN FULL NODE {port} SUCCESFULLY")
 
 
 # Note: convert these setup functions to fixtures, or push it one layer up,
@@ -226,6 +236,7 @@ async def setup_wallet_node(
         if db_path.exists():
             db_path.unlink()
         keychain.delete_all_keys()
+        log.warning(f"SHUT DOWN wallet")
 
 
 async def setup_harvester(
@@ -260,6 +271,7 @@ async def setup_harvester(
 
     service.stop()
     await service.wait_closed()
+    log.warning(f"SHUT DOWN harvester")
 
 
 async def setup_farmer(
@@ -304,6 +316,7 @@ async def setup_farmer(
 
     service.stop()
     await service.wait_closed()
+    log.warning(f"SHUT DOWN farmer")
 
 
 async def setup_introducer(bt: BlockTools, port):
@@ -326,6 +339,7 @@ async def setup_introducer(bt: BlockTools, port):
 
     service.stop()
     await service.wait_closed()
+    log.warning(f"SHUT DOWN introducer")
 
 
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
@@ -338,7 +352,9 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
     yield vdf_task_1
+    log.warning(f"Shutting down VDF client1 {port}")
     await kill_processes()
+    log.warning(f"Shutting down VDF client2 {port}")
 
 
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
@@ -355,6 +371,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
     yield vdf_task_1, vdf_task_2, vdf_task_3
 
     await kill_processes()
+    log.warning(f"SHUT DOWN vdf clients")
 
 
 async def setup_timelord(
@@ -384,6 +401,7 @@ async def setup_timelord(
 
     service.stop()
     await service.wait_closed()
+    log.warning(f"SHUT DOWN timelord")
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):
@@ -677,11 +695,7 @@ async def setup_full_system(
             setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
             setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
         ]
-
-        if connect_to_daemon_port:
-            node_iters.append(setup_daemon(btools=b_tools))
-            daemon1 = await node_iters[9].__anext__()
-
+        log.warning(f"FUll node: {node1_port} {rpc1_port}, second node: {node2_port} {rpc2_port}")
         introducer, introducer_server = await node_iters[0].__anext__()
         harvester_service = await node_iters[1].__anext__()
         harvester = harvester_service._node
@@ -700,6 +714,10 @@ async def setup_full_system(
         node_api_2 = await node_iters[6].__anext__()
         vdf_sanitizer = await node_iters[7].__anext__()
         sanitizer, sanitizer_server = await node_iters[8].__anext__()
+
+        if connect_to_daemon_port:
+            node_iters.append(setup_daemon(btools=b_tools))
+            daemon1 = await node_iters[9].__anext__()
 
         ret = (
             node_api_1,

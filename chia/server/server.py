@@ -744,14 +744,18 @@ class ChiaServer:
             self.gc_task = None
 
     async def await_closed(self) -> None:
-        self.log.debug("Await Closed")
+        self.log.info(f"Await Closed1 {self._port}")
         await self.shut_down_event.wait()
+        self.log.info(f"Await Closed2 {self._port}")
         if self.connection_close_task is not None:
             await self.connection_close_task
+        self.log.info(f"Await Closed3 {self._port}")
         if self.app_shut_down_task is not None:
             await self.app_shut_down_task
+        self.log.info(f"Await Closed4 {self._port}")
         if self.site_shutdown_task is not None:
             await self.site_shutdown_task
+        self.log.info(f"Await Closed5 {self._port}")
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None

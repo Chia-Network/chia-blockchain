@@ -263,8 +263,10 @@ class RpcServer:
 
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
+            self.log.warning(f"Retrying to connect to daemon.. {daemon_port}")
             try:
                 if self.shut_down:
+                    self.log.warning(f"Shutting down.... {daemon_port}")
                     break
                 async with aiohttp.ClientSession() as session:
                     async with session.ws_connect(
@@ -317,6 +319,8 @@ async def start_rpc_server(
         await rpc_server.stop()
         await runner.cleanup()
         if connect_to_daemon:
+            rpc_server.log.warning(f"Awaiting daemon connection {rpc_port}")
             await daemon_connection
+            rpc_server.log.warning(f"Awaited daemon connection {rpc_port}")
 
     return cleanup

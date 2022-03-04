@@ -197,11 +197,18 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
+        self.log.warning("daemon stop 1")
         self.shut_down = True
+        self.log.warning("daemon stop 2")
         self.cancel_task_safe(self.ping_job)
+        self.log.warning("daemon stop 3")
         await self.exit()
+        self.log.warning("daemon stop 4")
         if self.websocket_server is not None:
+            self.log.warning("daemon stop 5")
             self.websocket_server.close()
+            self.log.warning("daemon stop 6")
+        self.log.warning("daemon stop 7")
         return {"success": True}
 
     async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
