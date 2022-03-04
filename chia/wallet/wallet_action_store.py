@@ -11,7 +11,7 @@ from chia.wallet.wallet_action import WalletAction
 class WalletActionStore:
     """
     WalletActionStore keeps track of all wallet actions that require persistence.
-    Used by Colored coins, Atomic swaps, Rate Limited, and Authorized payee wallets
+    Used by CATs, Atomic swaps, Rate Limited, and Authorized payee wallets
     """
 
     db_connection: aiosqlite.Connection
