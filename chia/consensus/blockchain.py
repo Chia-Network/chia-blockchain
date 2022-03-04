@@ -5,6 +5,7 @@ import multiprocessing
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -105,6 +106,7 @@ class Blockchain(BlockchainInterface):
         hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -120,6 +122,7 @@ class Blockchain(BlockchainInterface):
         num_workers = max(cpu_count - reserved_cores, 1)
         self.pool = ProcessPoolExecutor(
             max_workers=num_workers,
+            mp_context=multiprocessing_context,
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )
