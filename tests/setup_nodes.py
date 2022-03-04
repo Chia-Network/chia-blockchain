@@ -38,7 +38,9 @@ keychain = temp_keyring.get_keychain()
 atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
 bt = create_block_tools(constants=test_constants, keychain=keychain)
 
-self_hostname = bt.config["self_hostname"]
+# if you have a system that has an unusual hostname for localhost and you want
+# to run the tests, change this constant
+self_hostname = "localhost"
 
 
 def constants_for_dic(dic):
