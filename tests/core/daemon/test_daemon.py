@@ -1,3 +1,10 @@
+import aiohttp
+import asyncio
+import json
+import logging
+import pytest
+import pytest_asyncio
+
 from chia.daemon.server import WebSocketServer
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
@@ -6,20 +13,37 @@ from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_daemon, setup_full_system
+from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.time_out_assert import time_out_assert_custom_interval, time_out_assert
 from tests.util.keyring import TempKeyring
-
-import asyncio
-import json
-
-import aiohttp
-import pytest
-import pytest_asyncio
+from tests.util.socket import find_available_listen_port
 
 
 class TestDaemon:
+    @pytest_asyncio.fixture(scope="function")
+    async def get_temp_keyring(self):
+        with TempKeyring() as keychain:
+            yield keychain
+
+    @pytest_asyncio.fixture(scope="function")
+    async def get_b_tools_1(self, get_temp_keyring):
+        return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+
+    @pytest_asyncio.fixture(scope="function")
+    async def get_b_tools(self, get_temp_keyring):
+        daemon_port = find_available_listen_port("daemon")
+        local_b_tools = await create_block_tools_async(
+            constants=test_constants_modified, keychain=get_temp_keyring, daemon_port=daemon_port
+        )
+        new_config = local_b_tools._config
+        local_b_tools.change_config(new_config)
+        return local_b_tools
+
+    @pytest_asyncio.fixture(scope="function")
+    async def get_daemon_with_temp_keyring(self, get_b_tools):
+        async for daemon in setup_daemon(btools=get_b_tools):
+            yield get_b_tools, daemon
 
     # TODO: Ideally, the db_version should be the (parameterized) db_version
     # fixture, to test all versions of the database schema. This doesn't work
@@ -32,34 +56,13 @@ class TestDaemon:
             bt,
             b_tools=get_b_tools,
             b_tools_1=get_b_tools_1,
-            connect_to_daemon=True,
+            connect_to_daemon_port=get_b_tools._config["daemon_port"],
             db_version=1,
         ):
             yield _
 
-    @pytest_asyncio.fixture(scope="function")
-    async def get_temp_keyring(self):
-        with TempKeyring() as keychain:
-            yield keychain
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools_1(self, get_temp_keyring):
-        return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools(self, get_temp_keyring):
-        local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-        new_config = local_b_tools._config
-        local_b_tools.change_config(new_config)
-        return local_b_tools
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_daemon_with_temp_keyring(self, get_b_tools):
-        async for daemon in setup_daemon(btools=get_b_tools):
-            yield get_b_tools, daemon
-
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools, self_hostname):
+    async def test_daemon_simulation(self, simulation, bt, get_b_tools, get_b_tools_1):
         node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
         node2_port = node2.full_node.config["port"]
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
@@ -70,16 +73,18 @@ class TestDaemon:
 
         await time_out_assert_custom_interval(60, 1, num_connections, 1)
 
-        await time_out_assert(1500, node_height_at_least, True, node2, 1)
-        session = aiohttp.ClientSession()
-        ssl_context = get_b_tools.get_daemon_ssl_context()
+        await time_out_assert(30, node_height_at_least, True, node2, 1)
 
+        session = aiohttp.ClientSession()
+
+        log = logging.getLogger()
+        log.warning(f"Connecting to daemon on port {daemon1.daemon_port}")
         ws = await session.ws_connect(
             f"wss://127.0.0.1:{daemon1.daemon_port}",
             autoclose=True,
             autoping=True,
             heartbeat=60,
-            ssl_context=ssl_context,
+            ssl_context=get_b_tools.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         )
         service_name = "test_service_name"

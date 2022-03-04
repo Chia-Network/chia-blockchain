@@ -15,16 +15,15 @@ from tests.util.keyring import TempKeyring
 
 @pytest.fixture(scope="session")
 def get_keychain():
-    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+    with TempKeyring() as keychain:
         yield keychain
         KeyringWrapper.cleanup_shared_instance()
 
 
 @pytest.fixture(scope="session", name="bt")
 def bt(get_keychain) -> BlockTools:
-    k = get_keychain
-    # Note that this changes a lot of state - disk, DB, ports, process creation ...
-    _shared_block_tools = create_block_tools(constants=test_constants, keychain=k)
+    # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
+    _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
     return _shared_block_tools
 
 
@@ -34,12 +33,11 @@ def self_hostname(bt):
 
 
 # NOTE:
-#       Note that the bt fixture results in an attempt to create
-#       the chia root directory which the build scripts symlink to a sometimes-not-there
-#       directory.  When not there Python complains since, well, the symlink is a file
-#       not a directory and also not pointing to a directory.
+#       Instantiating the bt fixture results in an attempt to create the chia root directory
+#       which the build scripts symlink to a sometimes-not-there directory.
+#       When not there, Python complains since, well, the symlink is not a directory nor points to a directory.
 #
-#       Now that we have removed the global at tests.setup_nodes.bt, we should can move the imports out of
+#       Now that we have removed the global at tests.setup_nodes.bt, we can move the imports out of
 #       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
