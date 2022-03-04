@@ -72,7 +72,7 @@ class GenesisById(LimitationsProgram):
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
-        await wallet.add_lineage(origin_id, LineageProof())
+        await wallet.add_lineage(origin_id, LineageProof(), False)
         tail: Program = cls.construct([Program.to(origin_id)])
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
