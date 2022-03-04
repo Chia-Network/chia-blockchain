@@ -437,8 +437,8 @@ class TestWalletRpc:
             res = await client_2.create_wallet_for_existing_cat(asset_id)
             assert res["success"]
             cat_1_id = res["wallet_id"]
-            colour_1 = bytes.fromhex(res["asset_id"])
-            assert colour_1 == asset_id
+            cat_1_asset_id = bytes.fromhex(res["asset_id"])
+            assert cat_1_asset_id == asset_id
 
             await asyncio.sleep(1)
             for i in range(0, 5):

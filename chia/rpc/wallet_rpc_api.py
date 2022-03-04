@@ -86,7 +86,7 @@ class WalletRpcApi:
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
-            # Coloured coins and trading
+            # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
@@ -811,7 +811,7 @@ class WalletRpcApi:
                 return {}
 
     ##########################################################################################
-    # Coloured Coins and Trading
+    # CATs and Trading
     ##########################################################################################
 
     async def get_cat_list(self, request):
