@@ -301,6 +301,7 @@ class ChiaServer:
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 close_event,
+                trusted=self._is_trusted(request.remote, peer_id),
             )
             handshake = await connection.perform_handshake(
                 self._network_id,
@@ -455,6 +456,7 @@ class ChiaServer:
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 session=session,
+                trusted=self._is_trusted(target_node.host, peer_id),
             )
             handshake = await connection.perform_handshake(
                 self._network_id,
@@ -800,18 +802,26 @@ class ChiaServer:
             return inbound_count < self.config["max_inbound_timelord"]
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, config: Dict) -> bool:
-        full_node_peer = config["full_node_peer"]
-        if peer.peer_host == full_node_peer.get("host", None) or (
-            is_localhost(full_node_peer.get("host", None)) and peer.peer_host == "localhost"
+    def _is_trusted(self, host, node_id):
+        if self._local_type == NodeType.WALLET:
+            trusted_peer = self.config["full_node_peer"]
+        elif self._local_type == NodeType.FULL_NODE:
+            trusted_peer = self.config["wallet_peer"]
+        else:
+            return False
+        if host == trusted_peer.get("host", None) or (
+            is_localhost(trusted_peer.get("host", None)) and host == "localhost"
         ):
-            pinned_node_id = full_node_peer.get("node_id", None)
+            pinned_node_id = trusted_peer.get("node_id", None)
             # If node id is not pinned, we skip node id valdiation
             if pinned_node_id == "" or pinned_node_id is None:
                 return True
             else:
-                if pinned_node_id == peer.peer_node_id.hex():
+                if pinned_node_id == node_id.hex():
                     return True
                 else:
                     return False
         return False
+
+    def is_trusted_peer(self, peer: WSChiaConnection) -> bool:
+        return self._is_trusted(peer.peer_host, peer.peer_node_id)

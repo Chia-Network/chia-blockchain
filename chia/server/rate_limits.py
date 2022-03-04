@@ -121,8 +121,9 @@ class RateLimiter:
     percentage_of_limit: int
     non_tx_message_counts: int = 0
     non_tx_cumulative_size: int = 0
+    trusted: bool
 
-    def __init__(self, incoming: bool, reset_seconds=60, percentage_of_limit=100):
+    def __init__(self, incoming: bool, reset_seconds=60, percentage_of_limit=100, trusted=False):
         """
         The incoming parameter affects whether counters are incremented
         unconditionally or not. For incoming messages, the counters are always
@@ -138,6 +139,7 @@ class RateLimiter:
         self.percentage_of_limit = percentage_of_limit
         self.non_tx_message_counts = 0
         self.non_tx_cumulative_size = 0
+        self.trusted = trusted
 
     def process_msg_and_check(self, message: Message) -> bool:
         """
@@ -165,7 +167,8 @@ class RateLimiter:
 
         ret: bool = False
         try:
-
+            if self.trusted:
+                return True
             limits = DEFAULT_SETTINGS
             if message_type in rate_limits_tx:
                 limits = rate_limits_tx[message_type]

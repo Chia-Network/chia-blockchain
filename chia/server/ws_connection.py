@@ -48,6 +48,7 @@ class WSChiaConnection:
         outbound_rate_limit_percent: int,
         close_event=None,
         session=None,
+        trusted=False,
     ):
         # Local properties
         self.ws: Any = ws
@@ -102,8 +103,12 @@ class WSChiaConnection:
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
-        self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
-        self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
+        self.outbound_rate_limiter = RateLimiter(
+            incoming=False, percentage_of_limit=outbound_rate_limit_percent, trusted=trusted
+        )
+        self.inbound_rate_limiter = RateLimiter(
+            incoming=True, percentage_of_limit=inbound_rate_limit_percent, trusted=trusted
+        )
 
         # Used by the Chia Seeder.
         self.version = None

@@ -760,7 +760,7 @@ class WalletNode:
 
     def is_trusted(self, peer) -> bool:
         assert self.server is not None
-        return self.server.is_trusted_peer(peer, self.config)
+        return self.server.is_trusted_peer(peer)
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant

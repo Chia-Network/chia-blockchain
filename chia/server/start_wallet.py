@@ -30,11 +30,7 @@ def service_kwargs_for_wallet(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
-    if "trusted_peers" not in config:
-        full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
-        trusted_peer = full_node_config["ssl"]["public_crt"]
-        config["trusted_peers"] = {}
-        config["trusted_peers"]["local_node"] = trusted_peer
+
     if "short_sync_blocks_behind_threshold" not in config:
         config["short_sync_blocks_behind_threshold"] = 20
     node = WalletNode(
