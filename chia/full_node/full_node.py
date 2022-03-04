@@ -1414,7 +1414,7 @@ class FullNode:
         self,
         respond_block: full_node_protocol.RespondBlock,
         peer: Optional[ws.WSChiaConnection] = None,
-        raise_if_not_added: bool = False,
+        raise_on_disconnected: bool = False,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -1527,8 +1527,6 @@ class FullNode:
                     ):
                         self.full_node_store.previous_generator = None
 
-                if raise_if_not_added and added != ReceiveBlockResult.NEW_PEAK:
-                    raise RuntimeError(f"Expected block to be added, received {added}")
                 if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                     return None
                 elif added == ReceiveBlockResult.INVALID_BLOCK:
@@ -1538,6 +1536,8 @@ class FullNode:
 
                 elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     self.log.info(f"Disconnected block {header_hash} at height {block.height}")
+                    if raise_on_disconnected:
+                        raise RuntimeError("Expected block to be added, received disconnected block.")
                     return None
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
@@ -1921,7 +1921,7 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.respond_block(full_node_protocol.RespondBlock(block), raise_if_not_added=True)
+            await self.respond_block(full_node_protocol.RespondBlock(block), raise_on_disconnected=True)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:
