@@ -369,6 +369,9 @@ class TestDLWallet:
 
         for tx in report_txs:
             await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
+
+        await asyncio.wait_for(full_node_api.wait_transaction_records_entered_mempool(records=report_txs), timeout=15)
+
         for tx in update_txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
