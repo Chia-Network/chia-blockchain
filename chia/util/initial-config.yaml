@@ -528,3 +528,7 @@ wallet:
 
   # timeout for weight proof request
   weight_proof_timeout: *weight_proof_timeout
+
+  # if an unknown CAT belonging to us is seen, a wallet will be automatically created
+  # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
+  automatically_add_unknown_cats: False
