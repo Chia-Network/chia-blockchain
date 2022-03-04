@@ -817,7 +817,7 @@ class WalletStateManager:
                                 record.wallet_type,
                             )
                             await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
-                            await self.add_interested_coin_ids([new_singleton_coin.name()], True)
+                            await self.add_interested_coin_ids([new_singleton_coin.name()], False)
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
                                 [new_singleton_coin.name()], fork_height, peer
                             )
@@ -867,7 +867,7 @@ class WalletStateManager:
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
-                    await self.add_interested_coin_ids([coin_added.name()], True)
+                    await self.add_interested_coin_ids([coin_added.name()], False)
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
