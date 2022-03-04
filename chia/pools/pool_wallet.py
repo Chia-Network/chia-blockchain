@@ -572,14 +572,14 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        fee_tx = None
-        if fee > 0:
-            fee_tx = await self.generate_fee_transaction(fee)
-
         signed_spend_bundle = await self.sign(outgoing_coin_spend)
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
         assert signed_spend_bundle is not None
+        fee_tx = None
+        if fee > 0:
+            fee_tx = await self.generate_fee_transaction(fee)
+            signed_spend_bundle = SpendBundle.aggregate([signed_spend_bundle, fee_tx.spend_bundle])
 
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),

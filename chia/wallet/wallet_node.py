@@ -860,6 +860,11 @@ class WalletNode:
             if (
                 peer.peer_node_id not in self.synced_peers or far_behind
             ) and new_peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                if await self.check_for_synced_trusted_peer(header_block, request_time):
+                    self.wallet_state_manager.set_sync_mode(False)
+                    self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
+                    return
+
                 syncing = False
                 if far_behind or len(self.synced_peers) == 0:
                     syncing = True
