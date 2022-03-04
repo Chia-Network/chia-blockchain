@@ -47,8 +47,8 @@ def compile_clvm(full_path, output, search_paths=[]):
             m.update(open(f).read().strip().encode("utf8"))
             return m.hexdigest()
 
-        orig = '%s.orig' % output
-        
+        orig = "%s.orig" % output
+
         compile_clvm_py(full_path, orig, search_paths=search_paths)
         orig256 = sha256file(orig)
         rs256 = sha256file(output)
@@ -61,7 +61,7 @@ def compile_clvm(full_path, output, search_paths=[]):
             assert orig256 == rs256
         else:
             print("Compilation match %s: %s\n" % (full_path, orig256))
-    
+
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
