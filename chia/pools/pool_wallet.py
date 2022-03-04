@@ -712,7 +712,10 @@ class PoolWallet:
         if current_state.current.state == LEAVING_POOL:
             history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
             last_height: uint32 = history[-1][0]
-            if self.wallet_state_manager.get_peak().height <= last_height + current_state.current.relative_lock_height:
+            if (
+                self.wallet_state_manager.blockchain.get_peak_height()
+                <= last_height + current_state.current.relative_lock_height
+            ):
                 raise ValueError(
                     f"Cannot join a pool until height {last_height + current_state.current.relative_lock_height}"
                 )
@@ -745,7 +748,10 @@ class PoolWallet:
             total_fee = fee
             history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
             last_height: uint32 = history[-1][0]
-            if self.wallet_state_manager.get_peak().height <= last_height + current_state.current.relative_lock_height:
+            if (
+                self.wallet_state_manager.blockchain.get_peak_height()
+                <= last_height + current_state.current.relative_lock_height
+            ):
                 raise ValueError(
                     f"Cannot self pool until height {last_height + current_state.current.relative_lock_height}"
                 )

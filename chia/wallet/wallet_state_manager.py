@@ -863,6 +863,7 @@ class WalletStateManager:
                         "pool_wallet",
                     )
                     coin_added = launcher_spend.additions()[0]
+                    assert len(launcher_spend.additions()) == 1
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
