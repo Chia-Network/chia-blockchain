@@ -841,17 +841,17 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         peer = list(wallet_node.server.all_connections.values())[0]
 
-        wallet_node.server.config["full_node_peer"] = {"host": "127.0.0.1"}
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
         assert wallet_node.is_trusted(peer)
 
-        wallet_node.server.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex()}
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex()}
         assert wallet_node.is_trusted(peer)
 
-        wallet_node.server.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex() + "typo"}
+        wallet_node.config["full_node_peer"] = {"host": "127.0.0.1", "node_id": peer.peer_node_id.hex() + "typo"}
         assert not wallet_node.is_trusted(peer)
 
-        wallet_node.server.config["full_node_peer"] = {"host": "1.1.1.1"}
+        wallet_node.config["full_node_peer"] = {"host": "1.1.1.1"}
         assert not wallet_node.is_trusted(peer)
 
-        wallet_node.server.config["full_node_peer"] = {"host": "1.2.3.4"}
+        wallet_node.config["full_node_peer"] = {"host": "1.2.3.4"}
         assert not wallet_node.is_trusted(peer)

@@ -426,8 +426,7 @@ full_node:
       port: 8444
   wallet_peer:
     host: *self_hostname
-    node_id: ""
-
+    port: 8449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
