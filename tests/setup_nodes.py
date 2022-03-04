@@ -112,7 +112,7 @@ async def setup_full_node(
     config = local_bt.config["full_node"]
 
     connect_to_daemon = False
-    if connect_to_daemon_port:
+    if connect_to_daemon_port is not None:
         config["daemon_port"] = connect_to_daemon_port
         connect_to_daemon = True
 
@@ -513,7 +513,6 @@ async def setup_simulators_and_wallets(
             port = find_available_listen_port(f"node{index}")
             rpc_port = find_available_listen_port(f"node{index} rpc")
             db_name = f"blockchain_test_{port}.db"
-            # TODO convert this bt_tools variable to a passed-in variable
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1
             )  # block tools modifies constants
