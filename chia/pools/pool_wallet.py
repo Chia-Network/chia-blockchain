@@ -229,16 +229,16 @@ class PoolWallet:
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
         return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
 
-    async def update_pool_config(self, make_new_authentication_key: bool):
+    async def update_pool_config(self) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
         pool_config_list: List[PoolWalletConfig] = load_pool_config(self.wallet_state_manager.root_path)
         pool_config_dict: Dict[bytes32, PoolWalletConfig] = {c.launcher_id: c for c in pool_config_list}
         existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
+        payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
-        if make_new_authentication_key or existing_config is None:
-            payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
-        else:
-            payout_instructions = existing_config.payout_instructions
+        if len(payout_instructions) == 0:
+            payout_instructions = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
+            self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
             current_state.launcher_id,
@@ -271,12 +271,16 @@ class PoolWallet:
         spent_coin_name: bytes32 = tip_coin.name()
 
         if spent_coin_name != new_state.coin.name():
-            self.log.warning(
-                f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
-            )
+            history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
+            if new_state.coin.name() in [sp.coin.name() for _, sp in history]:
+                self.log.info(f"Already have state transition: {new_state.coin.name()}")
+            else:
+                self.log.warning(
+                    f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+                )
             return False
 
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height, True)
         tip_spend = (await self.get_tip())[1]
         self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
@@ -289,7 +293,7 @@ class PoolWallet:
                     self.next_transaction_fee = uint64(0)
                 break
 
-        await self.update_pool_config(False)
+        await self.update_pool_config()
         return True
 
     async def rewind(self, block_height: int) -> bool:
@@ -308,7 +312,7 @@ class PoolWallet:
                 return True
             else:
                 if await self.get_current_state() != prev_state:
-                    await self.update_pool_config(False)
+                    await self.update_pool_config()
                 return False
         except Exception as e:
             self.log.error(f"Exception rewinding: {e}")
@@ -346,12 +350,16 @@ class PoolWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
-        await self.update_pool_config(True)
+        await self.wallet_state_manager.pool_store.add_spend(
+            self.wallet_id, launcher_spend, block_height, in_transaction
+        )
+        await self.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], False)
+        await self.wallet_state_manager.add_new_wallet(
+            self, self.wallet_info.id, create_puzzle_hashes=False, in_transaction=in_transaction
+        )
+        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], in_transaction)
         return self
 
     @staticmethod

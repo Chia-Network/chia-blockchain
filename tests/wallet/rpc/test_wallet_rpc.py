@@ -23,12 +23,13 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -36,6 +37,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +54,9 @@ class TestWalletRpc:
     )
     @pytest.mark.asyncio
     async def test_wallet_rpc(self, two_wallet_nodes, trusted):
-        test_rpc_port = uint16(21529)
-        test_rpc_port_2 = uint16(21536)
-        test_rpc_port_node = uint16(21530)
+        test_rpc_port = find_available_listen_port()
+        test_rpc_port_2 = find_available_listen_port()
+        test_rpc_port_node = find_available_listen_port()
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -66,8 +68,8 @@ class TestWalletRpc:
         ph = await wallet.get_new_puzzlehash()
         ph_2 = await wallet_2.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         if trusted:
             wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -382,6 +384,17 @@ class TestWalletRpc:
             assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
             assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
 
+            # Test get_transactions to address
+            ph_by_addr = await wallet.get_new_puzzlehash()
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "xch"))
+            await client.farm_block(encode_puzzle_hash(ph_by_addr, "xch"))
+            await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+            tx_for_address = await wallet_rpc_api.get_transactions(
+                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "xch")}
+            )
+            assert len(tx_for_address["transactions"]) == 1
+            assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
+
             ##############
             # CATS       #
             ##############
@@ -398,7 +411,9 @@ class TestWalletRpc:
             assert bal_0["pending_coin_removal_count"] == 1
             col = await client.get_cat_asset_id(cat_0_id)
             assert col == asset_id
-            assert (await client.get_cat_name(cat_0_id)) == "CAT Wallet"
+            assert (await client.get_cat_name(cat_0_id)) == CATWallet.default_wallet_name_for_unknown_cat(
+                asset_id.hex()
+            )
             await client.set_cat_name(cat_0_id, "My cat")
             assert (await client.get_cat_name(cat_0_id)) == "My cat"
             wid, name = await client.cat_asset_id_to_name(col)
@@ -425,8 +440,8 @@ class TestWalletRpc:
             res = await client_2.create_wallet_for_existing_cat(asset_id)
             assert res["success"]
             cat_1_id = res["wallet_id"]
-            colour_1 = bytes.fromhex(res["asset_id"])
-            assert colour_1 == asset_id
+            cat_1_asset_id = bytes.fromhex(res["asset_id"])
+            assert cat_1_asset_id == asset_id
 
             await asyncio.sleep(1)
             for i in range(0, 5):
@@ -469,7 +484,7 @@ class TestWalletRpc:
             offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
 
             summary = await client.get_offer_summary(offer)
-            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
+            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
 
             assert await client.check_offer_validity(offer)
 
@@ -579,7 +594,7 @@ class TestWalletRpc:
             pks = await client.get_public_keys()
             assert len(pks) == 2
 
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
 
@@ -614,7 +629,7 @@ class TestWalletRpc:
             assert sk_dict["used_for_pool_rewards"] is False
 
             await client.delete_key(pks[0])
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             assert len(await client.get_public_keys()) == 1
 
             assert not (await client.get_sync_status())

@@ -40,9 +40,12 @@ async def print_connections(client, time, NodeType, trusted_peers: Dict):
                 f"\n                                                 "
             )
             if peak_height is not None:
-                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}    -Trusted: {trusted}"
+                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
             else:
-                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}     -Trusted: {trusted}"
+                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}"
+            # Only show when Trusted is True
+            if trusted:
+                con_str += f"    -Trusted: {trusted}"
         else:
             con_str = (
                 f"{NodeType(con['type']).name:9} {host:38} "
