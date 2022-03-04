@@ -13,7 +13,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class DaemonProxy:
-    def __init__(self, uri: str, ssl_context: Optional[ssl.SSLContext]):
+    def __init__(self, uri: str, ssl_context: ssl.SSLContext):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
         self.response_dict: Dict[str, Any] = {}
@@ -124,7 +124,7 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: Optional[ssl.SSLContext]) -> DaemonProxy:
+async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: ssl.SSLContext) -> DaemonProxy:
     """
     Connect to the local daemon.
     """
