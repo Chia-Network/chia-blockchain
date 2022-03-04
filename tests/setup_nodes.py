@@ -1,5 +1,7 @@
 import atexit
 import logging
+import sys
+import traceback
 
 import pytest
 import asyncio
@@ -62,13 +64,10 @@ async def _teardown_nodes(node_aiters: List) -> None:
     awaitables = [node_iter.__anext__() for node_iter in node_aiters]
     i = 0
     for sublist_awaitable in asyncio.as_completed(awaitables):
-        log.warning(f"Tearing down: {i}")
         i += 1
         try:
             await sublist_awaitable
-            log.warning("Finished")
         except StopAsyncIteration:
-            log.warning("Threw")
             pass
 
 
@@ -88,9 +87,7 @@ async def setup_daemon(btools: BlockTools):
 
     yield ws_server
 
-    log.warning("SHUTTING DOWN DAEMON")
     await ws_server.stop()
-    log.warning("SHUT DOWN DAEMON SUCCESFULLY")
 
 
 async def setup_full_node(
@@ -123,8 +120,6 @@ async def setup_full_node(
     connect_to_daemon = False
     if connect_to_daemon_port:
         config["daemon_port"] = connect_to_daemon_port
-        log = logging.getLogger()
-        log.warning(f"setup_full_node: connect_to_daemon port {config['daemon_port']}")
         connect_to_daemon = True
 
     config["database_path"] = db_name
@@ -163,7 +158,6 @@ async def setup_full_node(
     await service.wait_closed()
     if db_path.exists():
         db_path.unlink()
-    log.warning(f"SHUT DOWN FULL NODE {port} SUCCESFULLY")
 
 
 # Note: convert these setup functions to fixtures, or push it one layer up,
@@ -236,7 +230,6 @@ async def setup_wallet_node(
         if db_path.exists():
             db_path.unlink()
         keychain.delete_all_keys()
-        log.warning(f"SHUT DOWN wallet")
 
 
 async def setup_harvester(
@@ -271,7 +264,6 @@ async def setup_harvester(
 
     service.stop()
     await service.wait_closed()
-    log.warning(f"SHUT DOWN harvester")
 
 
 async def setup_farmer(
@@ -316,7 +308,6 @@ async def setup_farmer(
 
     service.stop()
     await service.wait_closed()
-    log.warning(f"SHUT DOWN farmer")
 
 
 async def setup_introducer(bt: BlockTools, port):
@@ -339,7 +330,6 @@ async def setup_introducer(bt: BlockTools, port):
 
     service.stop()
     await service.wait_closed()
-    log.warning(f"SHUT DOWN introducer")
 
 
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
@@ -352,9 +342,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
     yield vdf_task_1
-    log.warning(f"Shutting down VDF client1 {port}")
     await kill_processes()
-    log.warning(f"Shutting down VDF client2 {port}")
 
 
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
@@ -371,7 +359,6 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
     yield vdf_task_1, vdf_task_2, vdf_task_3
 
     await kill_processes()
-    log.warning(f"SHUT DOWN vdf clients")
 
 
 async def setup_timelord(
@@ -401,7 +388,6 @@ async def setup_timelord(
 
     service.stop()
     await service.wait_closed()
-    log.warning(f"SHUT DOWN timelord")
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):
@@ -695,7 +681,6 @@ async def setup_full_system(
             setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
             setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
         ]
-        log.warning(f"FUll node: {node1_port} {rpc1_port}, second node: {node2_port} {rpc2_port}")
         introducer, introducer_server = await node_iters[0].__anext__()
         harvester_service = await node_iters[1].__anext__()
         harvester = harvester_service._node
@@ -738,5 +723,13 @@ async def setup_full_system(
             yield ret + (daemon1,)
         else:
             yield ret
-
-        await _teardown_nodes(node_iters)
+        try:
+            await _teardown_nodes(node_iters[:-1])
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(f"Excption {e} {tb}", file=sys.stdout)
+            logging.getLogger(__name__).error(f"Exception: {e} {tb}")
+        try:
+            await node_iters[-1].__anext__()
+        except StopAsyncIteration:
+            pass

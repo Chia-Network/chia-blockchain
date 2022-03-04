@@ -43,6 +43,7 @@ class RpcServer:
 
     async def stop(self):
         self.shut_down = True
+        self.log.warning(f"rpc_server.stop: {self.websocket}")
         if self.websocket is not None:
             await self.websocket.close()
 
@@ -250,7 +251,7 @@ class RpcServer:
                 self.log.debug("Pong received")
             else:
                 if msg.type == aiohttp.WSMsgType.CLOSE:
-                    self.log.debug("Closing RPC websocket")
+                    self.log.warning("Closing RPC websocket")
                     await ws.close()
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     self.log.error("Error during receive %s" % ws.exception())
@@ -258,8 +259,9 @@ class RpcServer:
                     pass
 
                 break
-
+        self.log.error("Broke from connection_loop")
         await ws.close()
+        self.log.error("Closed ws")
 
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
@@ -279,12 +281,14 @@ class RpcServer:
                     ) as ws:
                         self.websocket = ws
                         await self.connection(ws)
+                        self.log.warning("Finished closing ws")
                     self.websocket = None
             except aiohttp.ClientConnectorError:
                 self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
+            self.log.warning("start sleep")
             await asyncio.sleep(2)
 
 
@@ -320,6 +324,7 @@ async def start_rpc_server(
         await runner.cleanup()
         if connect_to_daemon:
             rpc_server.log.warning(f"Awaiting daemon connection {rpc_port}")
+            rpc_server.log.warning(f"Daemon connection: {daemon_connection} {daemon_connection.done()}")
             await daemon_connection
             rpc_server.log.warning(f"Awaited daemon connection {rpc_port}")
 

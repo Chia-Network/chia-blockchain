@@ -160,6 +160,7 @@ class FullNode:
         await self.connection.execute("pragma journal_mode=wal")
 
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.warning(f"Opening DB: {self.db_path}")
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
         await self.connection.execute("pragma synchronous={}".format(db_sync))
 
@@ -733,16 +734,22 @@ class FullNode:
         cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
+        self.log.warning("Full node _await_closed 11")
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
+        self.log.warning("Full node _await_closed 12")
         await self.connection.close()
+        self.log.warning("Full node _await_closed 13")
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
+        self.log.warning("Full node _await_closed 14")
         if hasattr(self, "_blockchain_lock_queue"):
             await self._blockchain_lock_queue.await_closed()
+        self.log.warning("Full node _await_closed 15")
         if self._sync_task is not None:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._sync_task
+        self.log.warning("Full node _await_closed 16")
 
     async def _sync(self):
         """
