@@ -156,18 +156,28 @@ class WebSocketServer:
     async def start(self):
         self.log.info("Starting Daemon Server")
 
-        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+        if not ssl.HAS_TLSv1_3:
             self.log.warning(
                 (
-                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
                     "A future version of Chia will require TLS1.3."
                 ),
                 ssl.OPENSSL_VERSION,
             )
         else:
             if self.ssl_context is not None:
-                # Daemon is internal connections, so override to TLS1.3 only
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+                try:
+                    # Daemon is internal connections, so override to TLS1.3 only
+                    self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+                except Exception:
+                    self.log.warning(
+                        (
+                            "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
+                            "A future version of Chia will require TLS1.3."
+                        ),
+                        ssl.OPENSSL_VERSION,
+                    )
+                    self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
 
         def master_close_cb():
             asyncio.create_task(self.stop())
