@@ -165,9 +165,8 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
         else:
-            if self.ssl_context is not None:
-                # Daemon is internal connections, so override to TLS1.3 only
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+            # Daemon is internal connections, so override to TLS1.3 only
+            self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())
