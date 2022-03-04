@@ -27,6 +27,8 @@ MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"
 LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
 OSPassphraseStore = Union[MacKeyring, WinKeyring]
 
+_T_KeyringWrapper = TypeVar("_T_KeyringWrapper", bound="KeyringWrapper")
+
 
 def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
     if platform == "darwin":
@@ -79,9 +81,6 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
         )
         return True
     return False
-
-
-_T_KeyringWrapper = TypeVar("_T_KeyringWrapper", bound="KeyringWrapper")
 
 
 class KeyringWrapper:
