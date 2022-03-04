@@ -386,11 +386,19 @@ class TestDLWallet:
         next_generation = current_record.generation + 2
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
 
-        for i in range(0, 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        async def farm_until_confirmed():
+            while True:
+                for i in range(0, 2):
+                    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+                    await asyncio.sleep(0.5)
+                try:
+                    assert await is_singleton_confirmed(dl_wallet_0, launcher_id)
+                    return
+                except AssertionError:
+                    continue
 
-        await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
+        await asyncio.wait_for(farm_until_confirmed(), timeout=15)
+
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_1, launcher_id, next_generation)
         latest = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert latest is not None
