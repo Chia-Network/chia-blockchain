@@ -120,12 +120,15 @@ class Wallet:
         return spendable
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
+        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
+        )
         addition_amount = 0
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
-                self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                if record.spend_bundle is not None:
+                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
                 continue
             our_spend = False
             for coin in record.removals:
