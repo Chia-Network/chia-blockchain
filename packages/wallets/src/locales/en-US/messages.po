@@ -187,8 +187,8 @@ msgstr "Address / Puzzle hash"
 #~ msgstr "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
 
 #: src/components/WalletHistory.tsx:245
-msgid "All"
-msgstr "All"
+#~ msgid "All"
+#~ msgstr "All"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 #~ msgid "Alternate tmpdir/tmpdir2"
@@ -197,7 +197,7 @@ msgstr "All"
 #: src/components/WalletHistory.tsx:163
 #: src/components/WalletSend.tsx:161
 #: src/components/cat/WalletCATSend.tsx:205
-#: src/components/offers/OfferEditorConditionsPanel.tsx:104
+#: src/components/offers/OfferEditorConditionsPanel.tsx:112
 #: src/components/offers/OfferViewer.tsx:226
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
@@ -219,7 +219,7 @@ msgstr "Amount exceeds spendable balance"
 msgid "Amount must be an even amount."
 msgstr "Amount must be an even amount."
 
-#: src/components/offers/OfferManager.tsx:89
+#: src/components/offers/OfferManager.tsx:109
 msgid "Are you sure you want to cancel your offer?"
 msgstr "Are you sure you want to cancel your offer?"
 
@@ -291,7 +291,7 @@ msgstr "Balance"
 #~ msgid "Base Farmer Reward Amount"
 #~ msgstr "Base Farmer Reward Amount"
 
-#: src/components/offers/OfferShareDialog.tsx:734
+#: src/components/offers/OfferShareDialog.tsx:765
 msgid "Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must first join the {KeybaseTeamName} team. Please note that it might take a few moments to join the channel."
 msgstr "Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must first join the {KeybaseTeamName} team. Please note that it might take a few moments to join the channel."
 
@@ -369,8 +369,8 @@ msgstr "Before posting an offer in Keybase to the #{KeybaseChannelName} channel,
 #~ msgstr "Buy"
 
 #: src/constants/WalletName.ts:23
-msgid "CAT Wallet"
-msgstr "CAT Wallet"
+#~ msgid "CAT Wallet"
+#~ msgstr "CAT Wallet"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -386,16 +386,17 @@ msgstr "CAT Wallet"
 
 #: src/components/WalletRenameDialog.tsx:91
 #: src/components/offers/OfferDataEntryDialog.tsx:69
-#: src/components/offers/OfferShareDialog.tsx:398
-#: src/components/offers/OfferShareDialog.tsx:527
-#: src/components/offers/OfferShareDialog.tsx:767
+#: src/components/offers/OfferShareDialog.tsx:429
+#: src/components/offers/OfferShareDialog.tsx:558
+#: src/components/offers/OfferShareDialog.tsx:798
+#: src/components/offers/OfferShareDialog.tsx:913
 #: src/components/offers/OfferViewer.tsx:292
 msgid "Cancel"
 msgstr "Cancel"
 
-#: src/components/offers/OfferManager.tsx:388
-#: src/components/offers/OfferManager.tsx:196
-#: src/components/offers/OfferManager.tsx:197
+#: src/components/offers/OfferManager.tsx:103
+#: src/components/offers/OfferManager.tsx:175
+#: src/components/offers/OfferManager.tsx:432
 msgid "Cancel Offer"
 msgstr "Cancel Offer"
 
@@ -403,7 +404,7 @@ msgstr "Cancel Offer"
 #~ msgid "Cancel and Spend"
 #~ msgstr "Cancel and Spend"
 
-#: src/components/offers/OfferManager.tsx:108
+#: src/components/offers/OfferManager.tsx:130
 msgid "Cancel on blockchain"
 msgstr "Cancel on blockchain"
 
@@ -449,6 +450,7 @@ msgstr "Cannot send chia to coloured address. Please enter a chia address."
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
+#: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
 msgstr "Chia Asset Token"
 
@@ -477,11 +479,12 @@ msgstr "Chia Wallet"
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
 
-#: src/components/offers/OfferManager.tsx:199
-#: src/components/offers/OfferShareDialog.tsx:349
-#: src/components/offers/OfferShareDialog.tsx:492
-#: src/components/offers/OfferShareDialog.tsx:696
-#: src/components/offers/OfferShareDialog.tsx:880
+#: src/components/offers/OfferManager.tsx:168
+#: src/components/offers/OfferShareDialog.tsx:380
+#: src/components/offers/OfferShareDialog.tsx:523
+#: src/components/offers/OfferShareDialog.tsx:727
+#: src/components/offers/OfferShareDialog.tsx:877
+#: src/components/offers/OfferShareDialog.tsx:1039
 msgid "Close"
 msgstr "Close"
 
@@ -707,11 +710,11 @@ msgstr "Create Transaction"
 #~ msgstr "Create admin wallet"
 
 #: src/components/offers/OfferEditor.tsx:227
-#: src/components/offers/OfferManager.tsx:484
+#: src/components/offers/OfferManager.tsx:528
 msgid "Create an Offer"
 msgstr "Create an Offer"
 
-#: src/components/offers/OfferManager.tsx:479
+#: src/components/offers/OfferManager.tsx:523
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 msgstr "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 
@@ -747,7 +750,7 @@ msgstr "Create custom CAT Wallet"
 #~ msgid "Created by us:"
 #~ msgstr "Created by us:"
 
-#: src/components/offers/OfferManager.tsx:110
+#: src/components/offers/OfferManager.tsx:132
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
 msgstr "Creates and submits a transaction on the blockchain that cancels the offer"
 
@@ -759,7 +762,7 @@ msgstr "Creates and submits a transaction on the blockchain that cancels the off
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr "Creating Plot NFT for Self Pooling"
 
-#: src/components/offers/OfferManager.tsx:305
+#: src/components/offers/OfferManager.tsx:348
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
 msgstr "Creation Date"
@@ -909,7 +912,7 @@ msgstr "Details"
 #~ msgid "Disconnect"
 #~ msgstr "Disconnect"
 
-#: src/components/offers/OfferManager.tsx:358
+#: src/components/offers/OfferManager.tsx:402
 msgid "Display Offer Data"
 msgstr "Display Offer Data"
 
@@ -922,7 +925,7 @@ msgstr "Distributed Identity"
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/offers/OfferShareDialog.tsx:868
+#: src/components/offers/OfferShareDialog.tsx:1028
 msgid "Do not show this dialog again"
 msgstr "Do not show this dialog again"
 
@@ -1029,8 +1032,8 @@ msgstr "Error the entered address appears to be for a different colour."
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:231
-#: src/components/offers/OfferShareDialog.tsx:231
+#: src/components/offers/OfferShareDialog.tsx:232
+#: src/components/offers/OfferShareDialog.tsx:232
 msgid "Failed to execute Keybase command: {stderr}"
 msgstr "Failed to execute Keybase command: {stderr}"
 
@@ -1125,7 +1128,7 @@ msgstr "Farm"
 #: src/components/cat/WalletCATSend.tsx:218
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
-#: src/components/offers/OfferManager.tsx:125
+#: src/components/offers/OfferManager.tsx:147
 #: src/components/offers/OfferViewer.tsx:469
 #: src/components/rateLimited/WalletRateLimited.jsx:732
 msgid "Fee"
@@ -1206,10 +1209,14 @@ msgstr "Filename"
 #~ msgid "Get Pool Login Link"
 #~ msgstr "Get Pool Login Link"
 
-#: src/components/offers/OfferShareDialog.tsx:689
-#: src/components/offers/OfferShareDialog.tsx:758
+#: src/components/offers/OfferShareDialog.tsx:720
+#: src/components/offers/OfferShareDialog.tsx:789
 msgid "Go to #{KeybaseChannelName}"
 msgstr "Go to #{KeybaseChannelName}"
+
+#: src/components/offers/OfferShareDialog.tsx:874
+msgid "Go to Offerpool"
+msgstr "Go to Offerpool"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "Grid view"
@@ -1227,7 +1234,7 @@ msgstr "HD or Hierarchical Deterministic keys are a type of public key/private k
 #~ msgid "Harvester Plots"
 #~ msgstr "Harvester Plots"
 
-#: src/components/offers/OfferShareDialog.tsx:462
+#: src/components/offers/OfferShareDialog.tsx:493
 msgid "Hashgreen DEX URL"
 msgstr "Hashgreen DEX URL"
 
@@ -1283,11 +1290,11 @@ msgstr "IP address"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "If none selected, then it will default to the temporary directory."
 
-#: src/components/offers/OfferShareDialog.tsx:384
+#: src/components/offers/OfferShareDialog.tsx:415
 msgid "If selected, your offer will be not be shared publicly."
 msgstr "If selected, your offer will be not be shared publicly."
 
-#: src/components/offers/OfferManager.tsx:94
+#: src/components/offers/OfferManager.tsx:116
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 msgstr "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 
@@ -1307,13 +1314,14 @@ msgstr "Import Wallet from Mnemonics"
 #~ msgid "In Progress"
 #~ msgstr "In Progress"
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:232
+#: src/components/offers/OfferEditorConditionsPanel.tsx:242
 #: src/components/offers/OfferViewer.tsx:454
 msgid "In exchange for"
 msgstr "In exchange for"
 
-#: src/components/offers/OfferShareDialog.tsx:373
-#: src/components/offers/OfferShareDialog.tsx:516
+#: src/components/offers/OfferShareDialog.tsx:404
+#: src/components/offers/OfferShareDialog.tsx:547
+#: src/components/offers/OfferShareDialog.tsx:901
 msgid "In exchange for:"
 msgstr "In exchange for:"
 
@@ -1350,7 +1358,7 @@ msgstr "Initial Amount"
 msgid "Initialize a Rate Limited User Wallet:"
 msgstr "Initialize a Rate Limited User Wallet:"
 
-#: src/components/offers/OfferShareDialog.tsx:729
+#: src/components/offers/OfferShareDialog.tsx:760
 msgid "Install Keybase"
 msgstr "Install Keybase"
 
@@ -1405,7 +1413,7 @@ msgstr "Interval"
 #~ msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 #~ msgstr "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 
-#: src/components/offers/OfferShareDialog.tsx:747
+#: src/components/offers/OfferShareDialog.tsx:778
 msgid "Join {KeybaseTeamName}"
 msgstr "Join {KeybaseTeamName}"
 
@@ -1413,11 +1421,11 @@ msgstr "Join {KeybaseTeamName}"
 #~ msgid "K-Size"
 #~ msgstr "K-Size"
 
-#: src/components/offers/OfferShareDialog.tsx:629
+#: src/components/offers/OfferShareDialog.tsx:660
 msgid "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
 msgstr "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
 
-#: src/components/offers/OfferShareDialog.tsx:718
+#: src/components/offers/OfferShareDialog.tsx:749
 msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {KeybaseTeamName} team, you must first have Keybase installed."
 msgstr "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {KeybaseTeamName} team, you must first have Keybase installed."
 
@@ -1545,7 +1553,7 @@ msgstr "List of connections is empty"
 #~ msgstr "Manage Farming Rewards"
 
 #: src/components/WalletHeader.tsx:85
-#: src/components/offers/OfferManager.tsx:471
+#: src/components/offers/OfferManager.tsx:515
 msgid "Manage Offers"
 msgstr "Manage Offers"
 
@@ -1669,7 +1677,7 @@ msgstr "Nickname"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "No blocks farmed yet"
 
-#: src/components/offers/OfferManager.tsx:424
+#: src/components/offers/OfferManager.tsx:468
 msgid "No current offers"
 msgstr "No current offers"
 
@@ -1706,7 +1714,7 @@ msgstr "Node ID"
 msgid "Not Available"
 msgstr "Not Available"
 
-#: src/components/WalletStatus.tsx:32
+#: src/components/WalletStatus.tsx:34
 msgid "Not Synced"
 msgstr "Not Synced"
 
@@ -1777,9 +1785,10 @@ msgstr "Offer Data"
 msgid "Offer Identifier"
 msgstr "Offer Identifier"
 
-#: src/components/offers/OfferShareDialog.tsx:314
-#: src/components/offers/OfferShareDialog.tsx:457
-#: src/components/offers/OfferShareDialog.tsx:676
+#: src/components/offers/OfferShareDialog.tsx:345
+#: src/components/offers/OfferShareDialog.tsx:488
+#: src/components/offers/OfferShareDialog.tsx:707
+#: src/components/offers/OfferShareDialog.tsx:857
 msgid "Offer Shared"
 msgstr "Offer Shared"
 
@@ -1787,11 +1796,11 @@ msgstr "Offer Shared"
 msgid "Offer has been accepted and is awaiting confirmation."
 msgstr "Offer has been accepted and is awaiting confirmation."
 
-#: src/components/offers/OfferShareDialog.tsx:319
+#: src/components/offers/OfferShareDialog.tsx:350
 msgid "OfferBin URL"
 msgstr "OfferBin URL"
 
-#: src/components/offers/OfferManager.tsx:266
+#: src/components/offers/OfferManager.tsx:309
 msgid "Offered"
 msgstr "Offered"
 
@@ -1799,11 +1808,11 @@ msgstr "Offered"
 #~ msgid "Offers Created"
 #~ msgstr "Offers Created"
 
-#: src/components/offers/OfferManager.tsx:498
+#: src/components/offers/OfferManager.tsx:542
 msgid "Offers you accepted"
 msgstr "Offers you accepted"
 
-#: src/components/offers/OfferManager.tsx:493
+#: src/components/offers/OfferManager.tsx:537
 msgid "Offers you created"
 msgstr "Offers you created"
 
@@ -1906,17 +1915,17 @@ msgstr "Paste Offer Data"
 msgid "Pending"
 msgstr "Pending"
 
-#: src/components/card/WalletCardPendingBalance.tsx:37
+#: src/components/card/WalletCardPendingBalance.tsx:39
 #: src/components/rateLimited/WalletRateLimited.jsx:572
 msgid "Pending Balance"
 msgstr "Pending Balance"
 
-#: src/components/card/WalletCardPendingChange.tsx:38
+#: src/components/card/WalletCardPendingChange.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:577
 msgid "Pending Change"
 msgstr "Pending Change"
 
-#: src/components/card/WalletCardPendingTotalBalance.tsx:38
+#: src/components/card/WalletCardPendingTotalBalance.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:567
 msgid "Pending Total Balance"
 msgstr "Pending Total Balance"
@@ -2467,7 +2476,7 @@ msgstr "Rename Wallet"
 #~ msgid "Report an Issue..."
 #~ msgstr "Report an Issue..."
 
-#: src/components/offers/OfferManager.tsx:289
+#: src/components/offers/OfferManager.tsx:332
 msgid "Requested"
 msgstr "Requested"
 
@@ -2504,7 +2513,7 @@ msgstr "Save"
 msgid "Save Offer"
 msgstr "Save Offer"
 
-#: src/components/offers/OfferManager.tsx:373
+#: src/components/offers/OfferManager.tsx:417
 msgid "Save Offer File"
 msgstr "Save Offer File"
 
@@ -2645,32 +2654,37 @@ msgstr "Send your pubkey to your Rate Limited Wallet admin:"
 #~ msgid "Settings"
 #~ msgstr "Settings"
 
-#: src/components/offers/OfferManager.tsx:319
-#: src/components/offers/OfferShareDialog.tsx:406
-#: src/components/offers/OfferShareDialog.tsx:535
-#: src/components/offers/OfferShareDialog.tsx:775
+#: src/components/offers/OfferManager.tsx:363
+#: src/components/offers/OfferShareDialog.tsx:437
+#: src/components/offers/OfferShareDialog.tsx:566
+#: src/components/offers/OfferShareDialog.tsx:806
+#: src/components/offers/OfferShareDialog.tsx:921
 msgid "Share"
 msgstr "Share"
 
-#: src/components/offers/OfferShareDialog.tsx:831
+#: src/components/offers/OfferShareDialog.tsx:983
 msgid "Share Offer"
 msgstr "Share Offer"
 
-#: src/components/offers/OfferShareDialog.tsx:382
+#: src/components/offers/OfferShareDialog.tsx:413
 msgid "Share Privately"
 msgstr "Share Privately"
 
-#: src/components/offers/OfferShareDialog.tsx:509
+#: src/components/offers/OfferShareDialog.tsx:540
 msgid "Share on Hashgreen DEX"
 msgstr "Share on Hashgreen DEX"
 
-#: src/components/offers/OfferShareDialog.tsx:713
+#: src/components/offers/OfferShareDialog.tsx:744
 msgid "Share on Keybase"
 msgstr "Share on Keybase"
 
-#: src/components/offers/OfferShareDialog.tsx:366
+#: src/components/offers/OfferShareDialog.tsx:397
 msgid "Share on OfferBin"
 msgstr "Share on OfferBin"
+
+#: src/components/offers/OfferShareDialog.tsx:894
+msgid "Share on offerpool"
+msgstr "Share on offerpool"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
@@ -2680,7 +2694,7 @@ msgstr "Share on OfferBin"
 msgid "Show Asset Id"
 msgstr "Show Asset Id"
 
-#: src/components/offers/OfferManager.tsx:344
+#: src/components/offers/OfferManager.tsx:388
 msgid "Show Details"
 msgstr "Show Details"
 
@@ -2742,7 +2756,7 @@ msgstr "Spendable Amount"
 msgid "Spendable Amount Per Interval"
 msgstr "Spendable Amount per Interval"
 
-#: src/components/card/WalletCardSpendableBalance.tsx:38
+#: src/components/card/WalletCardSpendableBalance.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:547
 msgid "Spendable Balance"
 msgstr "Spendable Balance"
@@ -2774,7 +2788,7 @@ msgstr "Standard Wallet"
 #~ msgstr "State"
 
 #: src/components/WalletStatusCard.tsx:22
-#: src/components/offers/OfferManager.tsx:243
+#: src/components/offers/OfferManager.tsx:286
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
 msgstr "Status"
@@ -2830,11 +2844,11 @@ msgstr "Success"
 msgid "Summary"
 msgstr "Summary"
 
-#: src/components/WalletStatus.tsx:37
+#: src/components/WalletStatus.tsx:39
 msgid "Synced"
 msgstr "Synced"
 
-#: src/components/WalletStatus.tsx:42
+#: src/components/WalletStatus.tsx:44
 msgid "Syncing"
 msgstr "Syncing"
 
@@ -3093,7 +3107,7 @@ msgstr "Token has empty asset id"
 msgid "Token has empty name"
 msgstr "Token has empty name"
 
-#: src/components/card/WalletCardTotalBalance.tsx:46
+#: src/components/card/WalletCardTotalBalance.tsx:48
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Total Balance"
@@ -3179,11 +3193,11 @@ msgstr "Transactions"
 #~ msgid "Unable to create plot NFT"
 #~ msgstr "Unable to create plot NFT"
 
-#: src/components/offers/OfferShareDialog.tsx:642
+#: src/components/offers/OfferShareDialog.tsx:673
 msgid "Unable to open Keybase. Install Keybase from https://keybase.io"
 msgstr "Unable to open Keybase. Install Keybase from https://keybase.io"
 
-#: src/components/offers/OfferShareDialog.tsx:565
+#: src/components/offers/OfferShareDialog.tsx:596
 msgid "Unable to open browser. Install Keybase from https://keybase.io"
 msgstr "Unable to open browser. Install Keybase from https://keybase.io"
 
@@ -3204,8 +3218,8 @@ msgstr "Unable to open browser. Install Keybase from https://keybase.io"
 #~ msgid "Unknown"
 #~ msgstr "Unknown"
 
-#: src/components/offers/OfferManager.tsx:250
-#: src/components/offers/OfferManager.tsx:273
+#: src/components/offers/OfferManager.tsx:293
+#: src/components/offers/OfferManager.tsx:316
 #: src/components/offers/OfferSummaryRow.tsx:66
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
@@ -3271,15 +3285,15 @@ msgstr "User Pubkey"
 #~ msgstr "View Pool Login Link"
 
 #: src/components/offers/OfferImport.tsx:153
-#: src/components/offers/OfferManager.tsx:487
+#: src/components/offers/OfferManager.tsx:531
 msgid "View an Offer"
 msgstr "View an Offer"
 
-#: src/components/offers/OfferShareDialog.tsx:481
+#: src/components/offers/OfferShareDialog.tsx:512
 msgid "View on Hashgreen DEX"
 msgstr "View on Hashgreen DEX"
 
-#: src/components/offers/OfferShareDialog.tsx:338
+#: src/components/offers/OfferShareDialog.tsx:369
 msgid "View on OfferBin"
 msgstr "View on OfferBin"
 
@@ -3504,7 +3518,7 @@ msgstr "You created this offer"
 #~ msgid "You need {currencyCode} to join a pool."
 #~ msgstr "You need {currencyCode} to join a pool."
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:231
+#: src/components/offers/OfferEditorConditionsPanel.tsx:241
 msgid "You will offer"
 msgstr "You will offer"
 
@@ -3560,12 +3574,13 @@ msgstr "Your DID requires at least {dids_num_req} attestation file{0} for recove
 #~ msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
 #~ msgstr "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
 
-#: src/components/offers/OfferShareDialog.tsx:680
+#: src/components/offers/OfferShareDialog.tsx:711
 msgid "Your offer has been successfully posted to Keybase."
 msgstr "Your offer has been successfully posted to Keybase."
 
-#: src/components/offers/OfferShareDialog.tsx:372
-#: src/components/offers/OfferShareDialog.tsx:515
+#: src/components/offers/OfferShareDialog.tsx:403
+#: src/components/offers/OfferShareDialog.tsx:546
+#: src/components/offers/OfferShareDialog.tsx:900
 msgid "Your offer:"
 msgstr "Your offer:"
 
@@ -3631,9 +3646,9 @@ msgstr "syncing"
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 
-#: src/components/offers/OfferAssetSelector.tsx:137
-#~ msgid "{0}"
-#~ msgstr "{0}"
+#: src/components/offers/OfferShareDialog.tsx:861
+msgid "{0}"
+msgstr "{0}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"

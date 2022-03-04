@@ -62,18 +62,18 @@ msgstr "Комбайн - это служба, работающая на маши
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:507
-#: src/electron/main.tsx:594
+#: src/electron/main.tsx:513
+#: src/electron/main.tsx:600
 msgid "About Chia Blockchain"
 msgstr "О программе Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:74
-msgid "Accept"
-msgstr "Принять"
+#~ msgid "Accept"
+#~ msgstr "Принять"
 
 #: src/components/trading/TradingOverview.jsx:227
-msgid "Accepted at time:"
-msgstr "Принято в:"
+#~ msgid "Accepted at time:"
+#~ msgstr "Принято в:"
 
 #: src/components/plot/PlotsFailed.tsx:18
 #: src/components/plot/PlotsNotFound.tsx:18
@@ -89,8 +89,8 @@ msgid "Actions"
 msgstr "Действия"
 
 #: src/components/trading/CreateOffer.jsx:202
-msgid "Add"
-msgstr "Добавить"
+#~ msgid "Add"
+#~ msgstr "Добавить"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:877
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:208
@@ -111,7 +111,7 @@ msgstr "Добавить участок в очередь"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:45
 #: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:175
+#: src/components/plot/add/PlotAddForm.tsx:178
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -155,8 +155,8 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:197
 #: src/components/trading/TradesTable.tsx:19
-msgid "Amount"
-msgstr "Количество"
+#~ msgid "Amount"
+#~ msgstr "Количество"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:581
 #~ msgid "Amount ({cc_unit})"
@@ -183,9 +183,13 @@ msgstr "Вы действительно хотите удалить неподт
 msgid "Are you sure you want to disconnect?"
 msgstr "Вы уверены, что хотите отключиться?"
 
+#: src/electron/main.tsx:268
+msgid "Are you sure you want to quit?"
+msgstr ""
+
 #: src/electron/main.tsx:262
-msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
+#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+#~ msgstr "Вы уверены, что хотите выйти? Засеивание и фарминг будут остановлены."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -227,7 +231,7 @@ msgstr "Базовая сумма вознаграждения фермера"
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "Ниже приведены значения испытаний для блоков. У вас может быть или не быть доказательств наличия места (proof of space) для этих испытаний. Эти блоки еще не содержат подтверждений времени (proof of time)."
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:14
 msgid "Best estimate over last 24 hours"
 msgstr "Лучшая калькуляция за последние 24 часа"
 
@@ -243,7 +247,7 @@ msgstr "Лучшая калькуляция за последние 24 часа"
 msgid "Block"
 msgstr "Блок"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:30
 msgid "Block Rewards"
 msgstr ""
 
@@ -292,8 +296,8 @@ msgstr "Но в настоящий момент выполняется фарм�
 #: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
-msgid "Buy"
-msgstr "Покупка"
+#~ msgid "Buy"
+#~ msgstr "Покупка"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -317,15 +321,12 @@ msgstr "Покупка"
 #: src/components/settings/ChangePassphrasePrompt.tsx:224
 #: src/components/settings/RemovePassphrasePrompt.tsx:138
 #: src/components/settings/SetPassphrasePrompt.tsx:207
-#: src/components/trading/CreateOffer.jsx:140
-#: src/components/trading/TradingOverview.jsx:399
-#: src/components/trading/ViewOffer.jsx:71
 msgid "Cancel"
 msgstr "Отмена"
 
 #: src/components/trading/TradingOverview.jsx:388
-msgid "Cancel and Spend"
-msgstr "Отменить и отправить"
+#~ msgid "Cancel and Spend"
+#~ msgstr "Отменить и отправить"
 
 #: src/components/plot/PlotsNotFound.tsx:36
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -345,7 +346,7 @@ msgstr "Изменить"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:232
 #: src/components/settings/Settings.tsx:160
-#: src/components/settings/SettingsPanel.tsx:166
+#: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
 msgstr ""
 
@@ -355,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Сменить пул"
 
-#: src/electron/main.tsx:486
+#: src/electron/main.tsx:492
 msgid "Chat on KeyBase"
 msgstr "Чат в KeyBase"
 
-#: src/electron/main.tsx:504
+#: src/electron/main.tsx:510
 msgid "Chia"
 msgstr "Чиа"
 
-#: src/electron/main.tsx:443
+#: src/electron/main.tsx:449
 msgid "Chia Blockchain Wiki"
 msgstr ""
 "Блокчейн Chia на Wiki                           Chia coin\n"
@@ -590,13 +591,13 @@ msgstr ""
 #~ msgstr "Название токена"
 
 #: src/components/trading/TradingOverview.jsx:365
-msgid "Coins:"
-msgstr "Монет:"
+#~ msgid "Coins:"
+#~ msgstr "Монет:"
 
 #: src/components/trading/CreateOffer.jsx:173
 #: src/components/trading/TradesTable.tsx:23
-msgid "Colour"
-msgstr "Цвет"
+#~ msgid "Colour"
+#~ msgstr "Цвет"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:223
 #~ msgid "Colour Info"
@@ -619,7 +620,7 @@ msgstr "Цвет"
 #~ msgstr "Настройки Цветной Монеты"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:266
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Подтвердить"
@@ -643,8 +644,8 @@ msgid "Confirmation"
 msgstr "Подтверждение"
 
 #: src/components/trading/TradingOverview.jsx:200
-msgid "Confirmed at block:"
-msgstr "Подтверждено на блоке:"
+#~ msgid "Confirmed at block:"
+#~ msgstr "Подтверждено на блоке:"
 
 #: src/components/_wallet_old/WalletHistory.tsx:51
 #~ msgid "Confirmed at height {0}"
@@ -693,7 +694,7 @@ msgstr "Тип подключения"
 msgid "Connections"
 msgstr "Подключения"
 
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:473
 msgid "Contribute on GitHub"
 msgstr "Сотрудничать на GitHub"
 
@@ -713,7 +714,7 @@ msgstr "Сотрудничать на GitHub"
 #~ msgstr "Скопировать в буфер обмена"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:195
+#: src/components/plot/add/PlotAddForm.tsx:198
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Создать"
@@ -739,8 +740,8 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:45
-msgid "Create Offer"
-msgstr "Создать Предложение"
+#~ msgid "Create Offer"
+#~ msgstr "Создать Предложение"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -759,8 +760,8 @@ msgstr "Создать Предложение"
 #~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:136
-msgid "Create Trade Offer"
-msgstr "Создать торговое предложение"
+#~ msgid "Create Trade Offer"
+#~ msgstr "Создать торговое предложение"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:543
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:684
@@ -805,12 +806,12 @@ msgstr "Создать участок NFT"
 #~ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:185
-msgid "Created At:"
-msgstr "Создано в:"
+#~ msgid "Created At:"
+#~ msgstr "Создано в:"
 
 #: src/components/trading/TradingOverview.jsx:210
-msgid "Created by us:"
-msgstr "Создано нами?"
+#~ msgid "Created by us:"
+#~ msgstr "Создано нами?"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
@@ -839,8 +840,8 @@ msgid "Current Points Balance"
 msgstr "Текущий баланс пунктов"
 
 #: src/components/trading/TradingOverview.jsx:181
-msgid "Current trade status"
-msgstr "Текущий торговый статус"
+#~ msgid "Current trade status"
+#~ msgstr "Текущий торговый статус"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
@@ -855,7 +856,6 @@ msgstr "Текущий торговый статус"
 #~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
-#: src/components/trading/TradingOverview.jsx:136
 msgid "Date"
 msgstr "Дата"
 
@@ -913,11 +913,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:389
 msgid "Developer"
 msgstr "Разработчик"
 
-#: src/electron/main.tsx:386
+#: src/electron/main.tsx:392
 msgid "Developer Tools"
 msgstr "Инструменты разработчика"
 
@@ -938,7 +938,7 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
-#: src/electron/main.tsx:395
+#: src/electron/main.tsx:401
 msgid "Disable Simulator"
 msgstr ""
 
@@ -981,8 +981,8 @@ msgstr "Поддерживает ли ваша машина параллельн
 #~ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:39
-msgid "Drag and drop offer file"
-msgstr "Перетащите сюда файл с предложением сделки"
+#~ msgid "Drag and drop offer file"
+#~ msgstr "Перетащите сюда файл с предложением сделки"
 
 #: src/components/backup/BackupRestore.tsx:173
 msgid "Drag and drop your backup file"
@@ -992,7 +992,7 @@ msgstr "Перетащите файл резервной копии"
 #~ msgid "Drag and drop your recovery backup file"
 #~ msgstr ""
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:348
 msgid "Edit"
 msgstr "Правка"
 
@@ -1002,7 +1002,7 @@ msgstr "Правка"
 msgid "Edit Payout Instructions"
 msgstr "Редактировать инструкции выплат"
 
-#: src/electron/main.tsx:396
+#: src/electron/main.tsx:402
 msgid "Enable Simulator"
 msgstr ""
 
@@ -1028,8 +1028,8 @@ msgstr ""
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
-#: src/components/farm/card/FarmCardStatus.tsx:35
-#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/farm/card/FarmCardStatus.tsx:34
+#: src/components/farm/card/FarmCardStatus.tsx:48
 #: src/components/plot/PlotStatus.tsx:20
 #: src/components/plot/PlotStatus.tsx:21
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
@@ -1118,12 +1118,12 @@ msgstr "Неверный формат адреса вознаграждения 
 msgid "Farmer Reward Address must not be empty."
 msgstr "Адрес наград фермера не должен быть пустым."
 
-#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/farm/card/FarmCardStatus.tsx:37
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
 msgstr "Фермер не подключен"
 
-#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/farm/card/FarmCardStatus.tsx:51
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
 msgstr "Фермер не запущен"
@@ -1138,7 +1138,7 @@ msgstr "Farmers earn block rewards and transaction fees by committing spare spac
 
 #: src/components/farm/Farm.tsx:19
 #: src/components/farm/FarmerStatus.tsx:18
-#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "Фарминг"
@@ -1147,11 +1147,11 @@ msgstr "Фарминг"
 msgid "Farming Mode"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:15
-#: src/components/farm/card/FarmCardStatus.tsx:26
-#: src/components/farm/card/FarmCardStatus.tsx:32
-#: src/components/farm/card/FarmCardStatus.tsx:46
-#: src/components/farm/card/FarmCardStatus.tsx:59
+#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:25
+#: src/components/farm/card/FarmCardStatus.tsx:31
+#: src/components/farm/card/FarmCardStatus.tsx:45
+#: src/components/farm/card/FarmCardStatus.tsx:58
 msgid "Farming Status"
 msgstr "Статус фарминга"
 
@@ -1185,8 +1185,8 @@ msgstr "Объем коммисий"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:334
-#: src/electron/main.tsx:541
+#: src/electron/main.tsx:340
+#: src/electron/main.tsx:547
 msgid "File"
 msgstr "Файл"
 
@@ -1205,11 +1205,11 @@ msgstr "Путь к папке для окончательного хранен�
 msgid "Finished"
 msgstr "Завершен"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:498
 msgid "Follow on Twitter"
 msgstr "Следить в Twitter"
 
-#: src/electron/main.tsx:451
+#: src/electron/main.tsx:457
 msgid "Frequently Asked Questions"
 msgstr "Часто задаваемые вопросы"
 
@@ -1226,7 +1226,7 @@ msgstr "Полный обзор узла"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:423
 msgid "Full Screen"
 msgstr "Полный экран"
 
@@ -1268,7 +1268,7 @@ msgstr "Хэш заголовка"
 msgid "Height"
 msgstr "Высота"
 
-#: src/electron/main.tsx:439
+#: src/electron/main.tsx:445
 msgid "Help"
 msgstr "Помощь"
 
@@ -1331,12 +1331,12 @@ msgid "Index"
 msgstr "Индекс"
 
 #: src/components/trading/TradingOverview.jsx:213
-msgid "Indicated if this offer was created by us"
-msgstr "Показывает, было ли это предложение создано нами или нет"
+#~ msgid "Indicated if this offer was created by us"
+#~ msgstr "Показывает, было ли это предложение создано нами или нет"
 
 #: src/components/trading/TradingOverview.jsx:230
-msgid "Indicated what time this offer was accepted"
-msgstr "Показывает, в какое время было принято это предложение"
+#~ msgid "Indicated what time this offer was accepted"
+#~ msgstr "Показывает, в какое время было принято это предложение"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:333
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:472
@@ -1415,7 +1415,7 @@ msgstr "КиБ исх.\\вх."
 msgid "Last Attempted Proof"
 msgstr "Последняя попытка доказательства"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:14
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "Last Height Farmed"
 msgstr "Высота последнего выращенного блока"
 
@@ -1534,7 +1534,7 @@ msgstr "МиБ Исх./Вх."
 #~ msgstr ""
 
 #: src/components/settings/Settings.tsx:182
-#: src/components/settings/SettingsPanel.tsx:187
+#: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
 msgstr ""
 
@@ -1608,8 +1608,7 @@ msgstr "Далее"
 #~ msgid "Nickname"
 #~ msgstr "Псевдоним"
 
-#: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:257
+#: src/electron/main.tsx:263
 msgid "No"
 msgstr "Нет"
 
@@ -1617,7 +1616,7 @@ msgstr "Нет"
 #~ msgid "No 24 word seed, since this key is imported."
 #~ msgstr "Нет 24 слов семя, так как этот ключ импортируется."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:15
 msgid "No blocks farmed yet"
 msgstr "Выращенных блоков пока нет"
 
@@ -1648,24 +1647,25 @@ msgid "None of your plots have passed the plot filter yet."
 msgstr "Ни один из ваших участков пока не прошел через фильтр."
 
 #: src/components/farm/FarmerStatus.tsx:20
-#: src/components/farm/card/FarmCardNotAvailable.tsx:20
-#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/farm/card/FarmCardNotAvailable.tsx:19
+#: src/components/farm/card/FarmCardNotAvailable.tsx:22
 #: src/components/plot/PlotStatus.tsx:19
 #: src/components/plotNFT/PlotNFTCard.tsx:362
 msgid "Not Available"
 msgstr "Не определено"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:35
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:14
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 msgid "Not Synced"
 msgstr "Не синхронизирован"
 
 #: src/components/trading/TradingOverview.jsx:221
-msgid "Not accepted yet"
-msgstr "Еще не принято"
+#~ msgid "Not accepted yet"
+#~ msgstr "Еще не принято"
 
 #: src/components/trading/TradingOverview.jsx:194
-msgid "Not confirmed yet"
-msgstr "Еще не подтверждено"
+#~ msgid "Not confirmed yet"
+#~ msgstr "Еще не подтверждено"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
@@ -1701,12 +1701,12 @@ msgid "OK"
 msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
-msgid "Offer"
-msgstr "Предложение"
+#~ msgid "Offer"
+#~ msgstr "Предложение"
 
 #: src/components/trading/TradingOverview.jsx:412
-msgid "Offers Created"
-msgstr "Предложение создано"
+#~ msgid "Offers Created"
+#~ msgstr "Предложение создано"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
 #~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
@@ -1729,7 +1729,7 @@ msgstr "Предложение создано"
 #: src/components/app/AppPassPrompt.tsx:120
 #: src/components/settings/RemovePassphrasePrompt.tsx:112
 #: src/components/settings/SetPassphrasePrompt.tsx:151
-#: src/components/settings/SettingsPanel.tsx:218
+#: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
 msgstr ""
 
@@ -1760,12 +1760,12 @@ msgid "Passphrase protection has been disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:133
-#: src/components/settings/SettingsPanel.tsx:143
+#: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:130
-#: src/components/settings/SettingsPanel.tsx:139
+#: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
 msgstr ""
 
@@ -1815,8 +1815,8 @@ msgid "Please Confirm"
 msgstr "Подтвердите, пожалуйста"
 
 #: src/components/trading/CreateOffer.jsx:101
-msgid "Please add a trade pair"
-msgstr "Пожалуйста, добавьте торговую пару"
+#~ msgid "Please add a trade pair"
+#~ msgstr "Пожалуйста, добавьте торговую пару"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:668
 #~ msgid "Please enter 0 fee. Positive fees not supported yet for RL."
@@ -1903,20 +1903,20 @@ msgstr ""
 #~ msgstr "Пожалуйста, завершите синхронизацию перед совершением транзакции"
 
 #: src/components/trading/CreateOffer.jsx:67
-msgid "Please select amount"
-msgstr "Пожалуйста, укажите количество"
+#~ msgid "Please select amount"
+#~ msgstr "Пожалуйста, укажите количество"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:55
 #~ msgid "Please select backup file first"
 #~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:77
-msgid "Please select buy or sell"
-msgstr "Пожалуйста, выберите купить или продать"
+#~ msgid "Please select buy or sell"
+#~ msgstr "Пожалуйста, выберите купить или продать"
 
 #: src/components/trading/CreateOffer.jsx:57
-msgid "Please select coin colour"
-msgstr "Пожалуйста, выберите тип монеты"
+#~ msgid "Please select coin colour"
+#~ msgstr "Пожалуйста, выберите тип монеты"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1944,7 +1944,7 @@ msgstr "Дождитесь окончания синхронизации кош�
 #~ msgid "Plot"
 #~ msgstr "Участок"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/farm/card/FarmCardPlotCount.tsx:11
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Plot Count"
 msgstr "Количество участков"
@@ -2281,14 +2281,14 @@ msgstr "Обновить участки"
 msgid "Relative Lock Height"
 msgstr "Относительная высота строки"
 
-#: src/electron/main.tsx:459
+#: src/electron/main.tsx:465
 msgid "Release Notes"
 msgstr "Примечания к релизу"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
 #: src/components/settings/Settings.tsx:194
-#: src/components/settings/SettingsPanel.tsx:197
+#: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
 msgstr ""
 
@@ -2304,7 +2304,7 @@ msgstr "Удаление"
 #~ msgid "Rename"
 #~ msgstr "Переименовать"
 
-#: src/electron/main.tsx:478
+#: src/electron/main.tsx:484
 msgid "Report an Issue..."
 msgstr "Сообщить о проблеме..."
 
@@ -2331,7 +2331,6 @@ msgstr "Можно пропустить"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:179
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:131
-#: src/components/trading/CreateOffer.jsx:143
 msgid "Save"
 msgstr "Сохранить"
 
@@ -2379,8 +2378,8 @@ msgstr "Выберите окончательный каталог"
 #~ msgstr "Выбор ключа"
 
 #: src/components/trading/ViewOffer.jsx:37
-msgid "Select Offer"
-msgstr "Выберите предложение"
+#~ msgid "Select Offer"
+#~ msgstr "Выберите предложение"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 msgid "Select Temporary Directory"
@@ -2436,8 +2435,8 @@ msgstr "Cвой пул. Когда вы выиграете блок, вы пол
 #: src/components/trading/CreateOffer.jsx:165
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
-msgid "Sell"
-msgstr "Продажа"
+#~ msgid "Sell"
+#~ msgstr "Продажа"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:620
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:748
@@ -2456,7 +2455,7 @@ msgstr "Продажа"
 #: src/components/settings/SetPassphrasePrompt.tsx:137
 #: src/components/settings/SetPassphrasePrompt.tsx:216
 #: src/components/settings/Settings.tsx:205
-#: src/components/settings/SettingsPanel.tsx:206
+#: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
 msgstr ""
 
@@ -2482,8 +2481,8 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:154
 #: src/components/trading/TradesTable.tsx:15
-msgid "Side"
-msgstr "Направление"
+#~ msgid "Side"
+#~ msgstr "Направление"
 
 #: src/components/_selectKey_old/SelectKey.tsx:180
 #~ msgid "Sign In"
@@ -2522,7 +2521,7 @@ msgstr "Получите свои награды за фарм XCH, присое
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:555
+#: src/electron/main.tsx:561
 msgid "Speech"
 msgstr "Речь"
 
@@ -2562,19 +2561,18 @@ msgstr ""
 msgid "State"
 msgstr "Состояние"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:54
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:70
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
 #: src/components/plotNFT/PlotNFTCard.tsx:142
 #: src/components/pool/PoolOverview.tsx:43
-#: src/components/trading/TradingOverview.jsx:127
 msgid "Status"
 msgstr "Статус"
 
 #: src/components/trading/TradingOverview.jsx:178
-msgid "Status:"
-msgstr "Статус:"
+#~ msgid "Status:"
+#~ msgstr "Статус:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -2616,17 +2614,17 @@ msgstr "Подтвердить"
 #~ msgid "Submit Passphrase"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:41
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:49
 msgid "Synced"
 msgstr "Синхронизован"
 
 #: src/components/farm/FarmerStatus.tsx:19
-#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
 msgid "Syncing"
 msgstr "Синхронизация"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:19
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:27
 msgid "Syncing <0/>/<1/>"
 msgstr "Синхронизация <0/>/<1/>"
 
@@ -2679,11 +2677,12 @@ msgstr "Полный узел, к которому подключен ваш ф�
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Минимальный требуемый размер участка для основной сети равен k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:16
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
 msgid "The node is not synced"
 msgstr "Узел не синхронизирован с сетью"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:27
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:35
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Узел синхронизируется, что означает, что он загружает блоки с других узлов, чтобы достичь последнего блока в цепи"
 
@@ -2753,7 +2752,6 @@ msgstr "Это позволяет вам добавить каталог, в к�
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "Эта сложность является искусственно менее сложной, чем в реальной сети, и используется при фарминге, чтобы найти больше доказательств и отправить их в пул. Чем больше участков, тем выше уровень сложности. Сложность не влияет на награды."
 
-#: src/components/trading/CreateOffer.jsx:124
 #: src/hooks/useSelectDirectory.tsx:32
 msgid "This feature is available only from the GUI."
 msgstr "Эта функция доступна только из графического интерфейса."
@@ -2796,7 +2794,7 @@ msgstr "Это общее количество баллов, которое ес
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "Это общее количество баллов, которые ваш фермер набрал для этого участка NFT. Каждый участок k32 будет получать около 10 очков в день, так что если у вас есть 10TiB, следует ожидать около 1000 баллов в день, или 41 баллов в час."
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:44
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:52
 msgid "This node is fully caught up and validating the network"
 msgstr "Этот узел полностью догнал соседние узлы и выполняет валидацию в сети"
 
@@ -2817,12 +2815,12 @@ msgid "This table shows you the last time your farm attempted to win a block cha
 msgstr "Эта таблица показывает вам, когда ваша ферма в последний раз пыталась выиграть испытание при фарминге блока. <0>Подробнее</0>"
 
 #: src/components/trading/TradingOverview.jsx:188
-msgid "This trade was created at this time"
-msgstr "Сделка была создана в это время"
+#~ msgid "This trade was created at this time"
+#~ msgstr "Сделка была создана в это время"
 
 #: src/components/trading/TradingOverview.jsx:204
-msgid "This trade was included on blockchain at this block height"
-msgstr "Сделка была включена в блокчейн на указанной высоте блока"
+#~ msgid "This trade was included on blockchain at this block height"
+#~ msgstr "Сделка была включена в блокчейн на указанной высоте блока"
 
 #: src/components/app/AppTimeBombAlert.tsx:19
 #~ msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
@@ -2854,7 +2852,7 @@ msgstr "Временная метка"
 #~ msgid "Total Balance"
 #~ msgstr "Итоговый баланс"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2862,7 +2860,7 @@ msgstr ""
 msgid "Total Iterations"
 msgstr "Всего итераций"
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:13
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:12
 msgid "Total Network Space"
 msgstr "Суммарное пространство сети"
 
@@ -2870,7 +2868,7 @@ msgstr "Суммарное пространство сети"
 msgid "Total Plot Size:"
 msgstr "Общий объем участков:"
 
-#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:11
 msgid "Total Size of Plots"
 msgstr "Общий объем участков"
 
@@ -2887,36 +2885,36 @@ msgstr "Общее количество итераций с момента за�
 #~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:349
-msgid "Trade Details"
-msgstr "Детали сделки"
+#~ msgid "Trade Details"
+#~ msgstr "Детали сделки"
 
 #: src/components/trading/TradingOverview.jsx:124
-msgid "Trade ID"
-msgstr "Идентификатор сделки"
+#~ msgid "Trade ID"
+#~ msgstr "Идентификатор сделки"
 
 #: src/components/trading/TradingOverview.jsx:171
-msgid "Trade ID:"
-msgstr "Идентификатор сделки:"
+#~ msgid "Trade ID:"
+#~ msgstr "Идентификатор сделки:"
 
 #: src/components/trading/TradeManager.tsx:34
-msgid "Trade Overview"
-msgstr "Обзор торгов"
+#~ msgid "Trade Overview"
+#~ msgstr "Обзор торгов"
 
 #: src/components/app/AppSelectMode.tsx:106
 msgid "Trade tokens"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:152
-msgid "Trades will show up here"
-msgstr "Здесь будут отображаться сделки"
+#~ msgid "Trades will show up here"
+#~ msgstr "Здесь будут отображаться сделки"
 
 #: src/components/trading/TradeManager.tsx:23
-msgid "Trading"
-msgstr "Торговля"
+#~ msgid "Trading"
+#~ msgstr "Торговля"
 
 #: src/components/trading/TradingOverview.jsx:421
-msgid "Trading History"
-msgstr "История торгов"
+#~ msgid "Trading History"
+#~ msgstr "История торгов"
 
 #: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
@@ -2940,8 +2938,8 @@ msgid "Unfinished"
 msgstr "Незаконченный"
 
 #: src/components/trading/TradingOverview.jsx:174
-msgid "Unique identifier"
-msgstr "Уникальный идентификатор"
+#~ msgid "Unique identifier"
+#~ msgstr "Уникальный идентификатор"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
 #~ msgid "Unknown"
@@ -2960,7 +2958,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "Пользовательский публичный ключ"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:27
+#: src/components/farm/card/FarmCardUserFees.tsx:26
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2984,7 +2982,7 @@ msgstr "Итерации VDF суб слота"
 msgid "Verify Pool Details"
 msgstr "Подтвердите подробности пула"
 
-#: src/electron/main.tsx:374
+#: src/electron/main.tsx:380
 msgid "View"
 msgstr "Вид"
 
@@ -2994,8 +2992,8 @@ msgid "View Log"
 msgstr "Посмотреть журнал"
 
 #: src/components/trading/TradeManager.tsx:54
-msgid "View Offer"
-msgstr "Просмотр заявок"
+#~ msgid "View Offer"
+#~ msgstr "Просмотр заявок"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
@@ -3014,7 +3012,7 @@ msgstr "Ссылка для входа на пул"
 #~ msgid "View pending balances..."
 #~ msgstr "Просмотр ожидаемого баланса..."
 
-#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/farm/card/FarmCardNotAvailable.tsx:25
 #: src/components/plot/PlotStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:27
 msgid "Wait for synchronization"
@@ -3135,17 +3133,16 @@ msgstr "Вес - это общая добавленная сложность в�
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "Когда вы получите пакет информации о настройке от администратора, введите его ниже, чтобы завершить настройку кошелька с ограниченнием скорости вывода:"
 
-#: src/electron/main.tsx:425
+#: src/electron/main.tsx:431
 msgid "Window"
 msgstr "Окно"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:32
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Without fees"
 msgstr "Без комиссии"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:258
+#: src/electron/main.tsx:264
 msgid "Yes"
 msgstr "Да"
 
@@ -3296,7 +3293,7 @@ msgstr "[Ошибка 22] Файл не найден. Скорее всего, �
 #~ msgid "not synced"
 #~ msgstr "не синхр."
 
-#: src/components/plot/add/PlotAddForm.tsx:124
+#: src/components/plot/add/PlotAddForm.tsx:127
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 

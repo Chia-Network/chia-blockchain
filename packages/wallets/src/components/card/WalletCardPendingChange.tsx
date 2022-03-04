@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
 import { CardSimple } from '@chia/core';
 import useWallet from '../../hooks/useWallet';
-import getWalletHumanValue from '../../utils/getWalletHumanValue';
+import useWalletHumanValue from '../../hooks/useWalletHumanValue';
 
 type Props = {
   walletId: number;
@@ -28,10 +28,7 @@ export default function WalletCardPendingChange(props: Props) {
   const isLoading = loading || isLoadingWalletBalance;
   const value = walletBalance?.pendingChange;
 
-  const humanValue = useMemo(() => wallet && value !== undefined
-      ? `${getWalletHumanValue(wallet, value)} ${unit}`
-      : ''
-  ,[value, wallet, unit]);
+  const humanValue = useWalletHumanValue(wallet, value, unit);
 
   return (
     <CardSimple

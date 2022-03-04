@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import WalletGraph from '../WalletGraph';
 import { CardSimple } from '@chia/core';
 import useWallet from '../../hooks/useWallet';
-import getWalletHumanValue from '../../utils/getWalletHumanValue';
+import useWalletHumanValue from '../../hooks/useWalletHumanValue';
 
 const StyledGraphContainer = styled.div`
   margin-left: -1rem;
@@ -37,10 +37,7 @@ export default function WalletCardTotalBalance(props: Props) {
   const isLoading = loading || isLoadingWalletBalance;
   const value = walletBalance?.confirmedWalletBalance;
 
-  const humanValue = useMemo(() => wallet && value !== undefined
-      ? `${getWalletHumanValue(wallet, value)} ${unit}`
-      : ''
-  ,[value, wallet, unit]);
+  const humanValue = useWalletHumanValue(wallet, value, unit);
 
   return (
     <CardSimple

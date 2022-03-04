@@ -130,7 +130,3 @@ export default function PlotNFTChangePool(props: Props) {
     </>
   );
 }
-
-PlotNFTChangePool.defaultProps = {
-  headerTag: undefined,
-};

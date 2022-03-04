@@ -187,8 +187,8 @@ msgstr "Cím / Kirakós hash"
 #~ msgstr ""
 
 #: src/components/WalletHistory.tsx:245
-msgid "All"
-msgstr ""
+#~ msgid "All"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 #~ msgid "Alternate tmpdir/tmpdir2"
@@ -197,7 +197,7 @@ msgstr ""
 #: src/components/WalletHistory.tsx:163
 #: src/components/WalletSend.tsx:161
 #: src/components/cat/WalletCATSend.tsx:205
-#: src/components/offers/OfferEditorConditionsPanel.tsx:104
+#: src/components/offers/OfferEditorConditionsPanel.tsx:112
 #: src/components/offers/OfferViewer.tsx:226
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
@@ -219,7 +219,7 @@ msgstr ""
 msgid "Amount must be an even amount."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:89
+#: src/components/offers/OfferManager.tsx:109
 msgid "Are you sure you want to cancel your offer?"
 msgstr ""
 
@@ -291,7 +291,7 @@ msgstr "Egyenleg"
 #~ msgid "Base Farmer Reward Amount"
 #~ msgstr "Központi Gazdász Jutalom Mennyiség"
 
-#: src/components/offers/OfferShareDialog.tsx:734
+#: src/components/offers/OfferShareDialog.tsx:765
 msgid "Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must first join the {KeybaseTeamName} team. Please note that it might take a few moments to join the channel."
 msgstr ""
 
@@ -369,8 +369,8 @@ msgstr ""
 #~ msgstr "Vásárlás"
 
 #: src/constants/WalletName.ts:23
-msgid "CAT Wallet"
-msgstr ""
+#~ msgid "CAT Wallet"
+#~ msgstr ""
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -386,16 +386,17 @@ msgstr ""
 
 #: src/components/WalletRenameDialog.tsx:91
 #: src/components/offers/OfferDataEntryDialog.tsx:69
-#: src/components/offers/OfferShareDialog.tsx:398
-#: src/components/offers/OfferShareDialog.tsx:527
-#: src/components/offers/OfferShareDialog.tsx:767
+#: src/components/offers/OfferShareDialog.tsx:429
+#: src/components/offers/OfferShareDialog.tsx:558
+#: src/components/offers/OfferShareDialog.tsx:798
+#: src/components/offers/OfferShareDialog.tsx:913
 #: src/components/offers/OfferViewer.tsx:292
 msgid "Cancel"
 msgstr "Mégsem"
 
-#: src/components/offers/OfferManager.tsx:388
-#: src/components/offers/OfferManager.tsx:196
-#: src/components/offers/OfferManager.tsx:197
+#: src/components/offers/OfferManager.tsx:103
+#: src/components/offers/OfferManager.tsx:175
+#: src/components/offers/OfferManager.tsx:432
 msgid "Cancel Offer"
 msgstr ""
 
@@ -403,7 +404,7 @@ msgstr ""
 #~ msgid "Cancel and Spend"
 #~ msgstr "Mégse és Fizetés"
 
-#: src/components/offers/OfferManager.tsx:108
+#: src/components/offers/OfferManager.tsx:130
 msgid "Cancel on blockchain"
 msgstr ""
 
@@ -449,6 +450,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
+#: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
 msgstr ""
 
@@ -477,11 +479,12 @@ msgstr "Chia Pénztárca"
 #~ msgid "Claim Rewards"
 #~ msgstr "Kérjen jutalmakat"
 
-#: src/components/offers/OfferManager.tsx:199
-#: src/components/offers/OfferShareDialog.tsx:349
-#: src/components/offers/OfferShareDialog.tsx:492
-#: src/components/offers/OfferShareDialog.tsx:696
-#: src/components/offers/OfferShareDialog.tsx:880
+#: src/components/offers/OfferManager.tsx:168
+#: src/components/offers/OfferShareDialog.tsx:380
+#: src/components/offers/OfferShareDialog.tsx:523
+#: src/components/offers/OfferShareDialog.tsx:727
+#: src/components/offers/OfferShareDialog.tsx:877
+#: src/components/offers/OfferShareDialog.tsx:1039
 msgid "Close"
 msgstr "Bezárás"
 
@@ -707,11 +710,11 @@ msgstr "Tranzakció létrehozása"
 #~ msgstr "Adminisztrátor tárca létrehozása"
 
 #: src/components/offers/OfferEditor.tsx:227
-#: src/components/offers/OfferManager.tsx:484
+#: src/components/offers/OfferManager.tsx:528
 msgid "Create an Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:479
+#: src/components/offers/OfferManager.tsx:523
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 msgstr ""
 
@@ -747,7 +750,7 @@ msgstr ""
 #~ msgid "Created by us:"
 #~ msgstr "Készítette:"
 
-#: src/components/offers/OfferManager.tsx:110
+#: src/components/offers/OfferManager.tsx:132
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
 msgstr ""
 
@@ -759,7 +762,7 @@ msgstr ""
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr "Plot NFT készítése az ön poolinghoz"
 
-#: src/components/offers/OfferManager.tsx:305
+#: src/components/offers/OfferManager.tsx:348
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
 msgstr ""
@@ -909,7 +912,7 @@ msgstr ""
 #~ msgid "Disconnect"
 #~ msgstr "Kapcsolat bontása"
 
-#: src/components/offers/OfferManager.tsx:358
+#: src/components/offers/OfferManager.tsx:402
 msgid "Display Offer Data"
 msgstr ""
 
@@ -922,7 +925,7 @@ msgstr "Elosztott identitás"
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/offers/OfferShareDialog.tsx:868
+#: src/components/offers/OfferShareDialog.tsx:1028
 msgid "Do not show this dialog again"
 msgstr ""
 
@@ -1029,8 +1032,8 @@ msgstr ""
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:231
-#: src/components/offers/OfferShareDialog.tsx:231
+#: src/components/offers/OfferShareDialog.tsx:232
+#: src/components/offers/OfferShareDialog.tsx:232
 msgid "Failed to execute Keybase command: {stderr}"
 msgstr ""
 
@@ -1125,7 +1128,7 @@ msgstr "Farm"
 #: src/components/cat/WalletCATSend.tsx:218
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
-#: src/components/offers/OfferManager.tsx:125
+#: src/components/offers/OfferManager.tsx:147
 #: src/components/offers/OfferViewer.tsx:469
 #: src/components/rateLimited/WalletRateLimited.jsx:732
 msgid "Fee"
@@ -1206,9 +1209,13 @@ msgstr "Fájlnév"
 #~ msgid "Get Pool Login Link"
 #~ msgstr "Get Pool Login Link"
 
-#: src/components/offers/OfferShareDialog.tsx:689
-#: src/components/offers/OfferShareDialog.tsx:758
+#: src/components/offers/OfferShareDialog.tsx:720
+#: src/components/offers/OfferShareDialog.tsx:789
 msgid "Go to #{KeybaseChannelName}"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:874
+msgid "Go to Offerpool"
 msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:173
@@ -1227,7 +1234,7 @@ msgstr "A HD vagy a hierarchikus determinisztikus kulcsok egyfajta nyilvános ku
 #~ msgid "Harvester Plots"
 #~ msgstr "Farmolható plot-ok"
 
-#: src/components/offers/OfferShareDialog.tsx:462
+#: src/components/offers/OfferShareDialog.tsx:493
 msgid "Hashgreen DEX URL"
 msgstr ""
 
@@ -1283,11 +1290,11 @@ msgstr "IP-cím"
 #~ msgid "If none selected, then it will default to the temporary directory."
 #~ msgstr "Ha egyik sincs kiválasztva, akkor az alapértelmezés szerint az ideiglenes könyvtár lesz"
 
-#: src/components/offers/OfferShareDialog.tsx:384
+#: src/components/offers/OfferShareDialog.tsx:415
 msgid "If selected, your offer will be not be shared publicly."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:94
+#: src/components/offers/OfferManager.tsx:116
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 msgstr ""
 
@@ -1307,13 +1314,14 @@ msgstr "A Wallet importálása a Mnemonicsból"
 #~ msgid "In Progress"
 #~ msgstr "Folyamatban"
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:232
+#: src/components/offers/OfferEditorConditionsPanel.tsx:242
 #: src/components/offers/OfferViewer.tsx:454
 msgid "In exchange for"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:373
-#: src/components/offers/OfferShareDialog.tsx:516
+#: src/components/offers/OfferShareDialog.tsx:404
+#: src/components/offers/OfferShareDialog.tsx:547
+#: src/components/offers/OfferShareDialog.tsx:901
 msgid "In exchange for:"
 msgstr ""
 
@@ -1350,7 +1358,7 @@ msgstr "Kezdeti összeg"
 msgid "Initialize a Rate Limited User Wallet:"
 msgstr "Korlátozott Arányú Felhasználó Tárca létrehozása:"
 
-#: src/components/offers/OfferShareDialog.tsx:729
+#: src/components/offers/OfferShareDialog.tsx:760
 msgid "Install Keybase"
 msgstr ""
 
@@ -1401,7 +1409,7 @@ msgstr "Intervallum"
 #~ msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 #~ msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:747
+#: src/components/offers/OfferShareDialog.tsx:778
 msgid "Join {KeybaseTeamName}"
 msgstr ""
 
@@ -1409,11 +1417,11 @@ msgstr ""
 #~ msgid "K-Size"
 #~ msgstr "K-méret"
 
-#: src/components/offers/OfferShareDialog.tsx:629
+#: src/components/offers/OfferShareDialog.tsx:660
 msgid "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:718
+#: src/components/offers/OfferShareDialog.tsx:749
 msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {KeybaseTeamName} team, you must first have Keybase installed."
 msgstr ""
 
@@ -1541,7 +1549,7 @@ msgstr ""
 #~ msgstr "A gazdálkodási jutalmak kezelése"
 
 #: src/components/WalletHeader.tsx:85
-#: src/components/offers/OfferManager.tsx:471
+#: src/components/offers/OfferManager.tsx:515
 msgid "Manage Offers"
 msgstr ""
 
@@ -1665,7 +1673,7 @@ msgstr "Becenév"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Nincs kitermelt blokk"
 
-#: src/components/offers/OfferManager.tsx:424
+#: src/components/offers/OfferManager.tsx:468
 msgid "No current offers"
 msgstr ""
 
@@ -1702,7 +1710,7 @@ msgstr "Node azonosító"
 msgid "Not Available"
 msgstr "Nem elérhető"
 
-#: src/components/WalletStatus.tsx:32
+#: src/components/WalletStatus.tsx:34
 msgid "Not Synced"
 msgstr "Nem szinkronizált"
 
@@ -1773,9 +1781,10 @@ msgstr ""
 msgid "Offer Identifier"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:314
-#: src/components/offers/OfferShareDialog.tsx:457
-#: src/components/offers/OfferShareDialog.tsx:676
+#: src/components/offers/OfferShareDialog.tsx:345
+#: src/components/offers/OfferShareDialog.tsx:488
+#: src/components/offers/OfferShareDialog.tsx:707
+#: src/components/offers/OfferShareDialog.tsx:857
 msgid "Offer Shared"
 msgstr ""
 
@@ -1783,11 +1792,11 @@ msgstr ""
 msgid "Offer has been accepted and is awaiting confirmation."
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:319
+#: src/components/offers/OfferShareDialog.tsx:350
 msgid "OfferBin URL"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:266
+#: src/components/offers/OfferManager.tsx:309
 msgid "Offered"
 msgstr ""
 
@@ -1795,11 +1804,11 @@ msgstr ""
 #~ msgid "Offers Created"
 #~ msgstr "Az ajánlatok elkészültek"
 
-#: src/components/offers/OfferManager.tsx:498
+#: src/components/offers/OfferManager.tsx:542
 msgid "Offers you accepted"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:493
+#: src/components/offers/OfferManager.tsx:537
 msgid "Offers you created"
 msgstr ""
 
@@ -1902,17 +1911,17 @@ msgstr ""
 msgid "Pending"
 msgstr "Függőben"
 
-#: src/components/card/WalletCardPendingBalance.tsx:37
+#: src/components/card/WalletCardPendingBalance.tsx:39
 #: src/components/rateLimited/WalletRateLimited.jsx:572
 msgid "Pending Balance"
 msgstr "Függôben lévô egyenleg"
 
-#: src/components/card/WalletCardPendingChange.tsx:38
+#: src/components/card/WalletCardPendingChange.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:577
 msgid "Pending Change"
 msgstr "Függőben lévő módosítások"
 
-#: src/components/card/WalletCardPendingTotalBalance.tsx:38
+#: src/components/card/WalletCardPendingTotalBalance.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:567
 msgid "Pending Total Balance"
 msgstr "Függôben lévô egyenleg"
@@ -2463,7 +2472,7 @@ msgstr ""
 #~ msgid "Report an Issue..."
 #~ msgstr "Hibabejelentés..."
 
-#: src/components/offers/OfferManager.tsx:289
+#: src/components/offers/OfferManager.tsx:332
 msgid "Requested"
 msgstr ""
 
@@ -2500,7 +2509,7 @@ msgstr "Mentés"
 msgid "Save Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:373
+#: src/components/offers/OfferManager.tsx:417
 msgid "Save Offer File"
 msgstr ""
 
@@ -2641,31 +2650,36 @@ msgstr "Küldje el a publikus címét a Rate Limited Wallet rendszergazdájának
 #~ msgid "Settings"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:319
-#: src/components/offers/OfferShareDialog.tsx:406
-#: src/components/offers/OfferShareDialog.tsx:535
-#: src/components/offers/OfferShareDialog.tsx:775
+#: src/components/offers/OfferManager.tsx:363
+#: src/components/offers/OfferShareDialog.tsx:437
+#: src/components/offers/OfferShareDialog.tsx:566
+#: src/components/offers/OfferShareDialog.tsx:806
+#: src/components/offers/OfferShareDialog.tsx:921
 msgid "Share"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:831
+#: src/components/offers/OfferShareDialog.tsx:983
 msgid "Share Offer"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:382
+#: src/components/offers/OfferShareDialog.tsx:413
 msgid "Share Privately"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:509
+#: src/components/offers/OfferShareDialog.tsx:540
 msgid "Share on Hashgreen DEX"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:713
+#: src/components/offers/OfferShareDialog.tsx:744
 msgid "Share on Keybase"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:366
+#: src/components/offers/OfferShareDialog.tsx:397
 msgid "Share on OfferBin"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:894
+msgid "Share on offerpool"
 msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
@@ -2676,7 +2690,7 @@ msgstr ""
 msgid "Show Asset Id"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:344
+#: src/components/offers/OfferManager.tsx:388
 msgid "Show Details"
 msgstr ""
 
@@ -2738,7 +2752,7 @@ msgstr "Elérhetô összeg"
 msgid "Spendable Amount Per Interval"
 msgstr "Idôszakonként elérhetô összeg"
 
-#: src/components/card/WalletCardSpendableBalance.tsx:38
+#: src/components/card/WalletCardSpendableBalance.tsx:40
 #: src/components/rateLimited/WalletRateLimited.jsx:547
 msgid "Spendable Balance"
 msgstr "Elérhető egyenleg"
@@ -2770,7 +2784,7 @@ msgstr ""
 #~ msgstr "Megye"
 
 #: src/components/WalletStatusCard.tsx:22
-#: src/components/offers/OfferManager.tsx:243
+#: src/components/offers/OfferManager.tsx:286
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
 msgstr "Állapot"
@@ -2826,11 +2840,11 @@ msgstr ""
 msgid "Summary"
 msgstr ""
 
-#: src/components/WalletStatus.tsx:37
+#: src/components/WalletStatus.tsx:39
 msgid "Synced"
 msgstr "Szinkronizálva"
 
-#: src/components/WalletStatus.tsx:42
+#: src/components/WalletStatus.tsx:44
 msgid "Syncing"
 msgstr "Szinkronizálás folyamatban"
 
@@ -3091,7 +3105,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/card/WalletCardTotalBalance.tsx:46
+#: src/components/card/WalletCardTotalBalance.tsx:48
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Teljes egyenleg"
@@ -3177,11 +3191,11 @@ msgstr ""
 #~ msgid "Unable to create plot NFT"
 #~ msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:642
+#: src/components/offers/OfferShareDialog.tsx:673
 msgid "Unable to open Keybase. Install Keybase from https://keybase.io"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:565
+#: src/components/offers/OfferShareDialog.tsx:596
 msgid "Unable to open browser. Install Keybase from https://keybase.io"
 msgstr ""
 
@@ -3202,8 +3216,8 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr "Ismeretlen"
 
-#: src/components/offers/OfferManager.tsx:250
-#: src/components/offers/OfferManager.tsx:273
+#: src/components/offers/OfferManager.tsx:293
+#: src/components/offers/OfferManager.tsx:316
 #: src/components/offers/OfferSummaryRow.tsx:66
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
@@ -3269,15 +3283,15 @@ msgstr "Felhasználó publikus kulcsa"
 #~ msgstr "Pool bejelentkezési linkjének megnézése"
 
 #: src/components/offers/OfferImport.tsx:153
-#: src/components/offers/OfferManager.tsx:487
+#: src/components/offers/OfferManager.tsx:531
 msgid "View an Offer"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:481
+#: src/components/offers/OfferShareDialog.tsx:512
 msgid "View on Hashgreen DEX"
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:338
+#: src/components/offers/OfferShareDialog.tsx:369
 msgid "View on OfferBin"
 msgstr ""
 
@@ -3502,7 +3516,7 @@ msgstr ""
 #~ msgid "You need {currencyCode} to join a pool."
 #~ msgstr "{currencyCode}-ra van szüksége, hogy a pool-ba be tudjon jelentkezni."
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:231
+#: src/components/offers/OfferEditorConditionsPanel.tsx:241
 msgid "You will offer"
 msgstr ""
 
@@ -3558,12 +3572,13 @@ msgstr ""
 #~ msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
 #~ msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:680
+#: src/components/offers/OfferShareDialog.tsx:711
 msgid "Your offer has been successfully posted to Keybase."
 msgstr ""
 
-#: src/components/offers/OfferShareDialog.tsx:372
-#: src/components/offers/OfferShareDialog.tsx:515
+#: src/components/offers/OfferShareDialog.tsx:403
+#: src/components/offers/OfferShareDialog.tsx:546
+#: src/components/offers/OfferShareDialog.tsx:900
 msgid "Your offer:"
 msgstr ""
 
@@ -3629,9 +3644,9 @@ msgstr "szinkronizálás"
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr ""
 
-#: src/components/offers/OfferAssetSelector.tsx:137
-#~ msgid "{0}"
-#~ msgstr ""
+#: src/components/offers/OfferShareDialog.tsx:861
+msgid "{0}"
+msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"

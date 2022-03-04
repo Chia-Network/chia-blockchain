@@ -1,22 +1,22 @@
-import Big from 'big.js';
+import BigNumber from 'bignumber.js';
 import TransactionType from '../constants/TransactionType';
 import type Wallet from '../types/Wallet';
 
 // deprecated
 export default function computeStatistics(wallets: Wallet[]): {
-  totalChiaFarmed: Big;
+  totalChiaFarmed: BigNumber;
   biggestHeight: number;
   biggestRewardHeight: number;
-  poolCoins: Big;
-  farmerCoins: Big;
-  totalBlockRewards: Big;
-  userTransactionFees: Big;
-  blockRewards: Big;
+  poolCoins: BigNumber;
+  farmerCoins: BigNumber;
+  totalBlockRewards: BigNumber;
+  userTransactionFees: BigNumber;
+  blockRewards: BigNumber;
 } {
   let biggestHeight = 0;
   let biggestRewardHeight = 0;
-  let poolCoins = Big(0);
-  let farmerCoins = Big(0);
+  let poolCoins = new BigNumber(0);
+  let farmerCoins = new BigNumber(0);
 
   wallets.forEach((wallet) => {
     if (!wallet) {
@@ -56,11 +56,11 @@ export default function computeStatistics(wallets: Wallet[]): {
   });
 
   const totalChiaFarmed = poolCoins.plus(farmerCoins);
-  const totalBlockRewards = Big(poolCoins).times(8).div(7);
-  const userTransactionFees = Big(farmerCoins).minus(
-    Big(totalBlockRewards).div(8),
+  const totalBlockRewards = new BigNumber(poolCoins).times(8).div(7);
+  const userTransactionFees = new BigNumber(farmerCoins).minus(
+    new BigNumber(totalBlockRewards).div(8),
   );
-  const blockRewards = Big(poolCoins)
+  const blockRewards = new BigNumber(poolCoins)
     .plus(farmerCoins)
     .minus(userTransactionFees);
 

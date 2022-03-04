@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
+import BigNumber from 'bignumber.js';
 import { orderBy, groupBy, sumBy, map } from 'lodash';
 import { /* Typography, */ Paper } from '@material-ui/core';
 import styled from 'styled-components';
@@ -123,7 +124,7 @@ function aggregatePoints(
 function generateTransactionGraphData(
   transactions: Transaction[],
 ): {
-  value: number;
+  value: BigNumber;
   timestamp: number;
 }[] {
   // use only confirmed transactions
@@ -135,7 +136,7 @@ function generateTransactionGraphData(
 
   // extract and compute values
   let results = confirmedTransactions.map<{
-    value: number;
+    value: BigNumber;
     timestamp: number;
   }>((transaction) => {
     const { type, confirmedAtHeight, amount, feeAmount } = transaction;
@@ -145,7 +146,8 @@ function generateTransactionGraphData(
       TransactionType.OUTGOING_TRADE,
     ].includes(type);
 
-    const value = (amount + feeAmount) * (isOutgoing ? -1 : 1);
+    const total = BigNumber(amount).plus(BigNumber(feeAmount));
+    const value = isOutgoing ? total.negated() : total;
 
     return {
       value,
@@ -157,10 +159,14 @@ function generateTransactionGraphData(
   const groupedResults = groupBy(results, 'timestamp');
 
   // sum grouped transaction and extract just valuable information
-  results = map(groupedResults, (items, timestamp) => ({
-    timestamp: Number(timestamp),
-    value: sumBy(items, 'value'),
-  }));
+  results = map(groupedResults, (items, timestamp) => {
+    const values = items.map((item) => item.value);
+
+    return {
+      timestamp: Number(timestamp),
+      value: BigNumber.sum(values),
+    };
+  });
 
   // order by timestamp
   results = orderBy(results, ['timestamp'], ['desc']);
@@ -196,8 +202,8 @@ function prepareGraphPoints(
   const points = [
     {
       x: peakTransaction.confirmedAtHeight,
-      y: Math.max(0, Number(mojoToChia(start))),
-      tooltip: mojoToChia(balance),
+      y: BigNumber.max(0, mojoToChia(start)).toNumber(), // max 21,000,000 safe to number
+      tooltip: mojoToChia(balance).toString(), // bignumber is not supported by react
     },
   ];
 
@@ -208,8 +214,8 @@ function prepareGraphPoints(
 
     points.push({
       x: timestamp,
-      y: Math.max(0, Number(mojoToChia(start))),
-      tooltip: mojoToChia(start),
+      y: BigNumber.max(0, mojoToChia(start)).toNumber(), // max 21,000,000 safe to number
+      tooltip: mojoToChia(start).toString, // bignumber is not supported by react
     });
   });
 

@@ -204,8 +204,8 @@ msgstr ""
 #~ msgstr "自動從農會合約地址建立名稱"
 
 #: src/components/FormBackButton/FormBackButton.tsx:47
-#: src/screens/SelectKey/SelectKey.tsx:60
-#: src/screens/SelectKey/SelectKeyItem.tsx:68
+#: src/screens/SelectKey/SelectKey.tsx:79
+#: src/screens/SelectKey/SelectKeyItem.tsx:93
 msgid "Back"
 msgstr "返回"
 
@@ -304,11 +304,12 @@ msgstr "返回"
 #~ msgid "CCListItems.title"
 #~ msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:121
+#: src/screens/SelectKey/SelectKeyItem.tsx:146
 msgid "Can be backed up to mnemonic seed"
 msgstr "可以備份到助記符號種子"
 
 #: src/components/ConfirmDialog/ConfirmDialog.tsx:105
+#: src/hooks/useKeyringMigrationPrompt.tsx:17
 msgid "Cancel"
 msgstr "取消"
 
@@ -578,7 +579,7 @@ msgstr "複製到剪貼板"
 #~ msgid "Create a Plot NFT"
 #~ msgstr "建立一塊農場"
 
-#: src/screens/SelectKey/SelectKey.tsx:141
+#: src/screens/SelectKey/SelectKey.tsx:179
 msgid "Create a new private key"
 msgstr "建立一個新的私鑰"
 
@@ -644,7 +645,7 @@ msgstr "建立一個新的私鑰"
 #~ msgid "Current trade status"
 #~ msgstr "目前交易狀態"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:136
+#: src/screens/SelectKey/SelectKeyItem.tsx:161
 msgid "DANGER: permanently delete private key"
 msgstr "危險：將永久刪除私鑰"
 
@@ -670,8 +671,8 @@ msgstr ""
 #~ msgid "Delay"
 #~ msgstr "延遲"
 
-#: src/screens/SelectKey/SelectKey.tsx:59
-#: src/screens/SelectKey/SelectKeyItem.tsx:67
+#: src/screens/SelectKey/SelectKey.tsx:78
+#: src/screens/SelectKey/SelectKeyItem.tsx:92
 msgid "Delete"
 msgstr "刪除"
 
@@ -689,8 +690,8 @@ msgstr "刪除"
 #~ msgid "Delete Unconfirmed Transactions"
 #~ msgstr "刪除未確認的交易"
 
-#: src/screens/SelectKey/SelectKey.tsx:161
-#: src/screens/SelectKey/SelectKey.tsx:58
+#: src/screens/SelectKey/SelectKey.tsx:199
+#: src/screens/SelectKey/SelectKey.tsx:77
 msgid "Delete all keys"
 msgstr "刪除全部金鑰"
 
@@ -698,11 +699,11 @@ msgstr "刪除全部金鑰"
 #~ msgid "Delete key"
 #~ msgstr "Delete key"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:66
+#: src/screens/SelectKey/SelectKeyItem.tsx:91
 msgid "Delete key {fingerprint}"
 msgstr "刪除帳號指紋：{fingerprint}"
 
-#: src/screens/SelectKey/SelectKey.tsx:64
+#: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除全部金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
@@ -710,7 +711,7 @@ msgstr "刪除全部金鑰將會永久從你的電腦中移除，請確保你有
 #~ msgid "Deleting key"
 #~ msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:99
+#: src/screens/SelectKey/SelectKeyItem.tsx:124
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "刪除此金鑰將會永久從你的電腦中移除，請確保你有備份。你確定要繼續？"
 
@@ -926,8 +927,8 @@ msgstr ""
 #~ msgid "Farmer is not running"
 #~ msgstr "塊農未運作"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:66
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:66
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:67
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:67
 msgid "Farmer public key:"
 msgstr "農夫公鑰:"
 
@@ -1101,7 +1102,7 @@ msgstr "隱藏進階選項"
 #~ msgid "Import Wallet from Mnemonics"
 #~ msgstr "以助記符號匯入錢包"
 
-#: src/screens/SelectKey/SelectKey.tsx:151
+#: src/screens/SelectKey/SelectKey.tsx:189
 msgid "Import from Mnemonics (24 words)"
 msgstr "從助記詞(24 字) 匯入"
 
@@ -1248,7 +1249,7 @@ msgstr ""
 #~ msgid "Loading keyring status"
 #~ msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:78
+#: src/screens/SelectKey/SelectKey.tsx:116
 msgid "Loading list of the keys"
 msgstr ""
 
@@ -1264,8 +1265,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:96
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:123
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
 msgid "Log Out"
 msgstr ""
 
@@ -1273,8 +1274,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "登入中"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:95
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:120
 msgid "Logout"
 msgstr ""
 
@@ -1334,9 +1335,9 @@ msgstr ""
 #~ msgid "MiB Up/Down"
 #~ msgstr "MiB 上傳/下傳"
 
-#: src/components/_selectKey_old/SelectKey.tsx:137
-#~ msgid "Migrate"
-#~ msgstr ""
+#: src/hooks/useKeyringMigrationPrompt.tsx:16
+msgid "Migrate"
+msgstr ""
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1346,10 +1347,9 @@ msgstr ""
 #~ msgid "Migrate Keys"
 #~ msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:136
-#: src/components/app/AppKeyringMigrator.tsx:125
-#~ msgid "Migration required"
-#~ msgstr ""
+#: src/hooks/useKeyringMigrationPrompt.tsx:15
+msgid "Migration required"
+msgstr ""
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1423,8 +1423,8 @@ msgstr ""
 #~ msgid "No"
 #~ msgstr "否"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:92
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:92
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:93
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:93
 msgid "No 24 word seed, since this key is imported."
 msgstr "由這個鑰匙是匯入的，沒有 24 個字種子。"
 
@@ -1921,8 +1921,8 @@ msgstr "好"
 #~ msgid "Pool does not provide target_puzzle_hash."
 #~ msgstr "農會未提供 目標_拼圖_雜湊值。"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:74
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:74
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:75
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:75
 msgid "Pool public key:"
 msgstr "礦池公鑰 (PPK):"
 
@@ -1969,7 +1969,7 @@ msgstr "礦池公鑰 (PPK):"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:116
+#: src/screens/SelectKey/SelectKeyItem.tsx:141
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 
@@ -1977,15 +1977,15 @@ msgstr "帶有公有指紋 {fingerprint} 的私鑰"
 #~ msgid "Private key {0}"
 #~ msgstr "私鑰 {0}"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:27
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:39
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:27
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:39
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:28
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:40
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:28
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:40
 msgid "Private key {fingerprint}"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:50
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:50
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
 msgid "Private key:"
 msgstr "私鑰："
 
@@ -2006,8 +2006,8 @@ msgstr "私鑰："
 #~ msgid "Pubkey"
 #~ msgstr "公鑰"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:58
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:58
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:59
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:59
 msgid "Public key:"
 msgstr "公鑰："
 
@@ -2167,12 +2167,12 @@ msgstr "公鑰："
 #~ msgid "Secure your keychain using a strong passphrase"
 #~ msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:125
+#: src/screens/SelectKey/SelectKeyItem.tsx:150
 msgid "See private key"
 msgstr "看私鑰"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:84
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:84
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:85
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:85
 msgid "Seed:"
 msgstr "種子："
 
@@ -2184,7 +2184,7 @@ msgstr "種子："
 #~ msgid "Select Final Directory"
 #~ msgstr "選擇最終資料夾"
 
-#: src/screens/SelectKey/SelectKey.tsx:97
+#: src/screens/SelectKey/SelectKey.tsx:135
 msgid "Select Key"
 msgstr "選擇金鑰"
 
@@ -2296,7 +2296,7 @@ msgstr "顯示進階選項"
 #~ msgid "Side"
 #~ msgstr "方向"
 
-#: src/screens/SelectKey/SelectKey.tsx:102
+#: src/screens/SelectKey/SelectKey.tsx:140
 msgid "Sign In"
 msgstr "登入"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Transactions Filter Hash"
 #~ msgstr "交易過濾雜湊值"
 
-#: src/screens/SelectKey/SelectKey.tsx:85
+#: src/screens/SelectKey/SelectKey.tsx:123
 msgid "Try Again"
 msgstr ""
 
@@ -2756,7 +2756,7 @@ msgstr ""
 #~ msgid "Unable to create plot NFT"
 #~ msgstr "無法建立農場"
 
-#: src/screens/SelectKey/SelectKey.tsx:89
+#: src/screens/SelectKey/SelectKey.tsx:127
 msgid "Unable to load the list of the keys"
 msgstr ""
 
@@ -2933,15 +2933,15 @@ msgstr ""
 #~ msgid "Warm start"
 #~ msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:92
+#: src/screens/SelectKey/SelectKeyItem.tsx:117
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 msgstr "警告：這個金鑰的錢包還有餘額，如果刪除金鑰可能會導致你遺失這個錢包"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:74
+#: src/screens/SelectKey/SelectKeyItem.tsx:99
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 msgstr "警告：這個金鑰用於你的耕種獎勵地址。刪除金鑰後可能會無法領取之後的耕種獎勵。"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:83
+#: src/screens/SelectKey/SelectKeyItem.tsx:108
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 msgstr "警告：這個金鑰用於你的農會獎勵地址。刪除金鑰後可能會無法領取之後的農會獎勵。"
 
@@ -2953,7 +2953,7 @@ msgstr "警告：這個金鑰用於你的農會獎勵地址。刪除金鑰後可
 #~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 #~ msgstr "權重是所有包括這個的子區塊的總增加難度"
 
-#: src/screens/SelectKey/SelectKey.tsx:105
+#: src/screens/SelectKey/SelectKey.tsx:143
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
 msgstr "歡迎來到 Chia。請用已有的金鑰登入，或建立新的金鑰。"
 
@@ -3072,9 +3072,9 @@ msgstr "您有做過變更。請問您想要放棄它們嗎？"
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
 #~ msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:141
-#~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-#~ msgstr ""
+#: src/hooks/useKeyringMigrationPrompt.tsx:20
+msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
+msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 #~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."

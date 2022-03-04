@@ -62,18 +62,18 @@ msgstr "Ο harvester είναι μια υπηρεσία που εκτελείτ�
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:507
-#: src/electron/main.tsx:594
+#: src/electron/main.tsx:513
+#: src/electron/main.tsx:600
 msgid "About Chia Blockchain"
 msgstr "Περί Chia Blockchain"
 
 #: src/components/trading/ViewOffer.jsx:74
-msgid "Accept"
-msgstr "Αποδοχή"
+#~ msgid "Accept"
+#~ msgstr "Αποδοχή"
 
 #: src/components/trading/TradingOverview.jsx:227
-msgid "Accepted at time:"
-msgstr "Αποδεκτή εγκαίρως:"
+#~ msgid "Accepted at time:"
+#~ msgstr "Αποδεκτή εγκαίρως:"
 
 #: src/components/plot/PlotsFailed.tsx:18
 #: src/components/plot/PlotsNotFound.tsx:18
@@ -89,8 +89,8 @@ msgid "Actions"
 msgstr "Ενέργειες"
 
 #: src/components/trading/CreateOffer.jsx:202
-msgid "Add"
-msgstr "Προσθήκη"
+#~ msgid "Add"
+#~ msgstr "Προσθήκη"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:877
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:208
@@ -111,7 +111,7 @@ msgstr "Προσθήκη plot σε αναμονή"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:45
 #: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:175
+#: src/components/plot/add/PlotAddForm.tsx:178
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -155,8 +155,8 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:197
 #: src/components/trading/TradesTable.tsx:19
-msgid "Amount"
-msgstr "Ποσό"
+#~ msgid "Amount"
+#~ msgstr "Ποσό"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:581
 #~ msgid "Amount ({cc_unit})"
@@ -183,9 +183,13 @@ msgstr ""
 msgid "Are you sure you want to disconnect?"
 msgstr "Είστε βέβαιοι οτι θέλετε να αποσυνδεθείτε;"
 
+#: src/electron/main.tsx:268
+msgid "Are you sure you want to quit?"
+msgstr ""
+
 #: src/electron/main.tsx:262
-msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-msgstr "Είστε βέβαιοι ότι θέλετε να σταματήσετε? Το GUI Plotting και το Farming θα σταματήσει."
+#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
+#~ msgstr "Είστε βέβαιοι ότι θέλετε να σταματήσετε? Το GUI Plotting και το Farming θα σταματήσει."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -227,7 +231,7 @@ msgstr "Ποσό Ανταμοιβής Base Farmer"
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "Παρακάτω είναι οι τρέχουσες προκλήσεις block. Μπορεί να έχετε ή να μην έχετε αποδεικτικό χώρου για αυτές τις προκλήσεις. Αυτά τα block δεν περιέχουν επί του παρόντος αποδεικτικό χρόνου."
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:15
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:14
 msgid "Best estimate over last 24 hours"
 msgstr "Καλύτερη εκτίμηση κατά τις τελευταίες 24 ώρες"
 
@@ -243,7 +247,7 @@ msgstr "Καλύτερη εκτίμηση κατά τις τελευταίες 2
 msgid "Block"
 msgstr "Block"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:30
 msgid "Block Rewards"
 msgstr ""
 
@@ -292,8 +296,8 @@ msgstr "Αλλά επί του παρόντος κάνετε farming <0/>"
 #: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
-msgid "Buy"
-msgstr "Αγορά"
+#~ msgid "Buy"
+#~ msgstr "Αγορά"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -317,15 +321,12 @@ msgstr "Αγορά"
 #: src/components/settings/ChangePassphrasePrompt.tsx:224
 #: src/components/settings/RemovePassphrasePrompt.tsx:138
 #: src/components/settings/SetPassphrasePrompt.tsx:207
-#: src/components/trading/CreateOffer.jsx:140
-#: src/components/trading/TradingOverview.jsx:399
-#: src/components/trading/ViewOffer.jsx:71
 msgid "Cancel"
 msgstr "Ακύρωση"
 
 #: src/components/trading/TradingOverview.jsx:388
-msgid "Cancel and Spend"
-msgstr "Ακύρωση και Δαπάνη"
+#~ msgid "Cancel and Spend"
+#~ msgstr "Ακύρωση και Δαπάνη"
 
 #: src/components/plot/PlotsNotFound.tsx:36
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -345,7 +346,7 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:232
 #: src/components/settings/Settings.tsx:160
-#: src/components/settings/SettingsPanel.tsx:166
+#: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
 msgstr ""
 
@@ -355,15 +356,15 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:486
+#: src/electron/main.tsx:492
 msgid "Chat on KeyBase"
 msgstr "Συνομιλήστε στο KeyBase"
 
-#: src/electron/main.tsx:504
+#: src/electron/main.tsx:510
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:443
+#: src/electron/main.tsx:449
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blockchain Wiki"
 
@@ -418,13 +419,13 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:365
-msgid "Coins:"
-msgstr "Νομίσματα:"
+#~ msgid "Coins:"
+#~ msgstr "Νομίσματα:"
 
 #: src/components/trading/CreateOffer.jsx:173
 #: src/components/trading/TradesTable.tsx:23
-msgid "Colour"
-msgstr "Χρώμα"
+#~ msgid "Colour"
+#~ msgstr "Χρώμα"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:223
 #~ msgid "Colour Info"
@@ -447,7 +448,7 @@ msgstr "Χρώμα"
 #~ msgstr "Επιλογές Χρωματισμένων Νομισμάτων"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
-#: src/electron/main.tsx:260
+#: src/electron/main.tsx:266
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Επιβεβαίωση"
@@ -471,8 +472,8 @@ msgid "Confirmation"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:200
-msgid "Confirmed at block:"
-msgstr "Επιβεβαιώθηκε στο block:"
+#~ msgid "Confirmed at block:"
+#~ msgstr "Επιβεβαιώθηκε στο block:"
 
 #: src/components/_wallet_old/WalletHistory.tsx:51
 #~ msgid "Confirmed at height {0}"
@@ -521,7 +522,7 @@ msgstr "Τύπος σύνδεσης"
 msgid "Connections"
 msgstr "Συνδέσεις"
 
-#: src/electron/main.tsx:467
+#: src/electron/main.tsx:473
 msgid "Contribute on GitHub"
 msgstr "Συμβάλετε στο GitHub"
 
@@ -541,7 +542,7 @@ msgstr "Συμβάλετε στο GitHub"
 #~ msgstr "Αντιγραφή στο Πρόχειρο"
 
 #: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:195
+#: src/components/plot/add/PlotAddForm.tsx:198
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "Create"
 msgstr "Δημιουργία"
@@ -567,8 +568,8 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/trading/TradeManager.tsx:45
-msgid "Create Offer"
-msgstr "Δημιουργία Προσφοράς"
+#~ msgid "Create Offer"
+#~ msgstr "Δημιουργία Προσφοράς"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -587,8 +588,8 @@ msgstr "Δημιουργία Προσφοράς"
 #~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:136
-msgid "Create Trade Offer"
-msgstr "Δημιουργία Προσφοράς Συναλλαγής"
+#~ msgid "Create Trade Offer"
+#~ msgstr "Δημιουργία Προσφοράς Συναλλαγής"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:543
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:684
@@ -633,12 +634,12 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:185
-msgid "Created At:"
-msgstr "Δημιουργήθηκε στις:"
+#~ msgid "Created At:"
+#~ msgstr "Δημιουργήθηκε στις:"
 
 #: src/components/trading/TradingOverview.jsx:210
-msgid "Created by us:"
-msgstr "Δημιουργήθηκε από εμάς:"
+#~ msgid "Created by us:"
+#~ msgstr "Δημιουργήθηκε από εμάς:"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
@@ -667,8 +668,8 @@ msgid "Current Points Balance"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:181
-msgid "Current trade status"
-msgstr "Τρέχουσα κατάσταση συναλλαγής"
+#~ msgid "Current trade status"
+#~ msgstr "Τρέχουσα κατάσταση συναλλαγής"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
@@ -683,7 +684,6 @@ msgstr "Τρέχουσα κατάσταση συναλλαγής"
 #~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
-#: src/components/trading/TradingOverview.jsx:136
 msgid "Date"
 msgstr "Ημερομηνία"
 
@@ -741,11 +741,11 @@ msgstr ""
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:383
+#: src/electron/main.tsx:389
 msgid "Developer"
 msgstr "Προγραμματιστής"
 
-#: src/electron/main.tsx:386
+#: src/electron/main.tsx:392
 msgid "Developer Tools"
 msgstr "Εργαλεία Προγραμματιστή"
 
@@ -766,7 +766,7 @@ msgstr ""
 #~ msgid "Disable Passphrase Protection"
 #~ msgstr ""
 
-#: src/electron/main.tsx:395
+#: src/electron/main.tsx:401
 msgid "Disable Simulator"
 msgstr ""
 
@@ -809,8 +809,8 @@ msgstr "Yποστηρίζει το μηχάνημα μας σας parallel plott
 #~ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:39
-msgid "Drag and drop offer file"
-msgstr "Μεταφορά και απόθεση αρχείου προσφοράς"
+#~ msgid "Drag and drop offer file"
+#~ msgstr "Μεταφορά και απόθεση αρχείου προσφοράς"
 
 #: src/components/backup/BackupRestore.tsx:173
 msgid "Drag and drop your backup file"
@@ -820,7 +820,7 @@ msgstr "Σύρετε και αποθέστε το αρχείο αντιγράφ�
 #~ msgid "Drag and drop your recovery backup file"
 #~ msgstr ""
 
-#: src/electron/main.tsx:342
+#: src/electron/main.tsx:348
 msgid "Edit"
 msgstr "Επεξεργασία"
 
@@ -830,7 +830,7 @@ msgstr "Επεξεργασία"
 msgid "Edit Payout Instructions"
 msgstr ""
 
-#: src/electron/main.tsx:396
+#: src/electron/main.tsx:402
 msgid "Enable Simulator"
 msgstr ""
 
@@ -856,8 +856,8 @@ msgstr ""
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
-#: src/components/farm/card/FarmCardStatus.tsx:35
-#: src/components/farm/card/FarmCardStatus.tsx:49
+#: src/components/farm/card/FarmCardStatus.tsx:34
+#: src/components/farm/card/FarmCardStatus.tsx:48
 #: src/components/plot/PlotStatus.tsx:20
 #: src/components/plot/PlotStatus.tsx:21
 #: src/components/plot/queue/PlotQueueIndicator.tsx:22
@@ -946,12 +946,12 @@ msgstr ""
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:38
+#: src/components/farm/card/FarmCardStatus.tsx:37
 #: src/components/plot/PlotStatus.tsx:28
 msgid "Farmer is not connected"
 msgstr "Ο Farmer δεν είναι συνδεδεμένος"
 
-#: src/components/farm/card/FarmCardStatus.tsx:52
+#: src/components/farm/card/FarmCardStatus.tsx:51
 #: src/components/plot/PlotStatus.tsx:29
 msgid "Farmer is not running"
 msgstr "Διακομιστής δεν λειτουργεί"
@@ -966,7 +966,7 @@ msgstr "Οι αγρότες κερδίζουν ανταμοιβές και τέ�
 
 #: src/components/farm/Farm.tsx:19
 #: src/components/farm/FarmerStatus.tsx:18
-#: src/components/farm/card/FarmCardStatus.tsx:62
+#: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "Συγκομιδή"
@@ -975,11 +975,11 @@ msgstr "Συγκομιδή"
 msgid "Farming Mode"
 msgstr ""
 
-#: src/components/farm/card/FarmCardStatus.tsx:15
-#: src/components/farm/card/FarmCardStatus.tsx:26
-#: src/components/farm/card/FarmCardStatus.tsx:32
-#: src/components/farm/card/FarmCardStatus.tsx:46
-#: src/components/farm/card/FarmCardStatus.tsx:59
+#: src/components/farm/card/FarmCardStatus.tsx:14
+#: src/components/farm/card/FarmCardStatus.tsx:25
+#: src/components/farm/card/FarmCardStatus.tsx:31
+#: src/components/farm/card/FarmCardStatus.tsx:45
+#: src/components/farm/card/FarmCardStatus.tsx:58
 msgid "Farming Status"
 msgstr "Κατάσταση Συγκομιδής"
 
@@ -1013,8 +1013,8 @@ msgstr "Ποσό Τέλων"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:334
-#: src/electron/main.tsx:541
+#: src/electron/main.tsx:340
+#: src/electron/main.tsx:547
 msgid "File"
 msgstr "Αρχείο"
 
@@ -1033,11 +1033,11 @@ msgstr "Τελική τοποθεσία φακέλου"
 msgid "Finished"
 msgstr "Ολοκληρώθηκε"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:498
 msgid "Follow on Twitter"
 msgstr "Ακολουθήστε μας στο Τwitter"
 
-#: src/electron/main.tsx:451
+#: src/electron/main.tsx:457
 msgid "Frequently Asked Questions"
 msgstr "Συχνές ερωτήσεις"
 
@@ -1054,7 +1054,7 @@ msgstr ""
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:417
+#: src/electron/main.tsx:423
 msgid "Full Screen"
 msgstr "Πλήρης Οθόνη"
 
@@ -1096,7 +1096,7 @@ msgstr "Header Hash"
 msgid "Height"
 msgstr "Ύψος"
 
-#: src/electron/main.tsx:439
+#: src/electron/main.tsx:445
 msgid "Help"
 msgstr "Βοήθεια"
 
@@ -1159,12 +1159,12 @@ msgid "Index"
 msgstr "Ευρετήριο"
 
 #: src/components/trading/TradingOverview.jsx:213
-msgid "Indicated if this offer was created by us"
-msgstr "Αναφέρεται εάν αυτή η προσφορά δημιουργήθηκε από εμάς"
+#~ msgid "Indicated if this offer was created by us"
+#~ msgstr "Αναφέρεται εάν αυτή η προσφορά δημιουργήθηκε από εμάς"
 
 #: src/components/trading/TradingOverview.jsx:230
-msgid "Indicated what time this offer was accepted"
-msgstr "Ένδειξη του χρόνου αποδοχής αυτής της προσφοράς"
+#~ msgid "Indicated what time this offer was accepted"
+#~ msgstr "Ένδειξη του χρόνου αποδοχής αυτής της προσφοράς"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:333
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:472
@@ -1243,7 +1243,7 @@ msgstr "KiB Πάνω/Κάτω"
 msgid "Last Attempted Proof"
 msgstr "Τελευταία Προσπάθεια Απόδειξης"
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:14
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "Last Height Farmed"
 msgstr "Τελευταίο συκομιζόμενο ύψος"
 
@@ -1362,7 +1362,7 @@ msgstr "MiB Up/Down"
 #~ msgstr ""
 
 #: src/components/settings/Settings.tsx:182
-#: src/components/settings/SettingsPanel.tsx:187
+#: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
 msgstr ""
 
@@ -1436,8 +1436,7 @@ msgstr "Επόμενο"
 #~ msgid "Nickname"
 #~ msgstr "Ψευδώνυμο"
 
-#: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:257
+#: src/electron/main.tsx:263
 msgid "No"
 msgstr "Όχι"
 
@@ -1445,7 +1444,7 @@ msgstr "Όχι"
 #~ msgid "No 24 word seed, since this key is imported."
 #~ msgstr "Κανένα seed 24 λέξεων, καθώς αυτό το κλειδί έχει εισαχθεί."
 
-#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:16
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:15
 msgid "No blocks farmed yet"
 msgstr "Κανένα block δεν έχει συγκομιστεί ακόμη"
 
@@ -1476,24 +1475,25 @@ msgid "None of your plots have passed the plot filter yet."
 msgstr "Κανένα από τα οικόπεδά σας δεν έχει περάσει ακόμα το φίλτρο οικόπεδον."
 
 #: src/components/farm/FarmerStatus.tsx:20
-#: src/components/farm/card/FarmCardNotAvailable.tsx:20
-#: src/components/farm/card/FarmCardNotAvailable.tsx:23
+#: src/components/farm/card/FarmCardNotAvailable.tsx:19
+#: src/components/farm/card/FarmCardNotAvailable.tsx:22
 #: src/components/plot/PlotStatus.tsx:19
 #: src/components/plotNFT/PlotNFTCard.tsx:362
 msgid "Not Available"
 msgstr "Δεν είναι διαθέσιμο"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:35
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:14
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:43
 msgid "Not Synced"
 msgstr "Δεν Είναι Συγχρονισμένο"
 
 #: src/components/trading/TradingOverview.jsx:221
-msgid "Not accepted yet"
-msgstr "Δεν έχει γίνει ακόμη δεκτή"
+#~ msgid "Not accepted yet"
+#~ msgstr "Δεν έχει γίνει ακόμη δεκτή"
 
 #: src/components/trading/TradingOverview.jsx:194
-msgid "Not confirmed yet"
-msgstr "Δεν έχει επιβεβαιωθεί ακόμη"
+#~ msgid "Not confirmed yet"
+#~ msgstr "Δεν έχει επιβεβαιωθεί ακόμη"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
@@ -1529,12 +1529,12 @@ msgid "OK"
 msgstr "Εντάξει"
 
 #: src/components/trading/ViewOffer.jsx:67
-msgid "Offer"
-msgstr "Προσφορά"
+#~ msgid "Offer"
+#~ msgstr "Προσφορά"
 
 #: src/components/trading/TradingOverview.jsx:412
-msgid "Offers Created"
-msgstr "Δημιουργήθηκαν Προσφορές"
+#~ msgid "Offers Created"
+#~ msgstr "Δημιουργήθηκαν Προσφορές"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
 #~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
@@ -1557,7 +1557,7 @@ msgstr "Δημιουργήθηκαν Προσφορές"
 #: src/components/app/AppPassPrompt.tsx:120
 #: src/components/settings/RemovePassphrasePrompt.tsx:112
 #: src/components/settings/SetPassphrasePrompt.tsx:151
-#: src/components/settings/SettingsPanel.tsx:218
+#: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
 msgstr ""
 
@@ -1588,12 +1588,12 @@ msgid "Passphrase protection has been disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:133
-#: src/components/settings/SettingsPanel.tsx:143
+#: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
 msgstr ""
 
 #: src/components/settings/Settings.tsx:130
-#: src/components/settings/SettingsPanel.tsx:139
+#: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
 msgstr ""
 
@@ -1643,8 +1643,8 @@ msgid "Please Confirm"
 msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:101
-msgid "Please add a trade pair"
-msgstr "Παρακαλούμε προσθέστε ένα ζεύγος συναλλαγών"
+#~ msgid "Please add a trade pair"
+#~ msgstr "Παρακαλούμε προσθέστε ένα ζεύγος συναλλαγών"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:668
 #~ msgid "Please enter 0 fee. Positive fees not supported yet for RL."
@@ -1731,20 +1731,20 @@ msgstr ""
 #~ msgstr "Παρακαλώ ολοκληρώστε το συγχρονισμό πριν πραγματοποιήσετε μια συναλλαγή"
 
 #: src/components/trading/CreateOffer.jsx:67
-msgid "Please select amount"
-msgstr "Παρακαλώ εισάγετε ποσό"
+#~ msgid "Please select amount"
+#~ msgstr "Παρακαλώ εισάγετε ποσό"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:55
 #~ msgid "Please select backup file first"
 #~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:77
-msgid "Please select buy or sell"
-msgstr "Επιλέξτε αγορά ή πώληση"
+#~ msgid "Please select buy or sell"
+#~ msgstr "Επιλέξτε αγορά ή πώληση"
 
 #: src/components/trading/CreateOffer.jsx:57
-msgid "Please select coin colour"
-msgstr "Παρακαλώ επιλέξτε χρώμα νομίσματος"
+#~ msgid "Please select coin colour"
+#~ msgstr "Παρακαλώ επιλέξτε χρώμα νομίσματος"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1772,7 +1772,7 @@ msgstr ""
 #~ msgid "Plot"
 #~ msgstr "Plot"
 
-#: src/components/farm/card/FarmCardPlotCount.tsx:12
+#: src/components/farm/card/FarmCardPlotCount.tsx:11
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Plot Count"
 msgstr "Μετρητής Plot"
@@ -2109,14 +2109,14 @@ msgstr "Ανανέωση Plots"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:459
+#: src/electron/main.tsx:465
 msgid "Release Notes"
 msgstr "Τι νέο υπάρχει"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
 #: src/components/settings/Settings.tsx:194
-#: src/components/settings/SettingsPanel.tsx:197
+#: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
 msgstr ""
 
@@ -2132,7 +2132,7 @@ msgstr "Αφαιρείται"
 #~ msgid "Rename"
 #~ msgstr "Μετονομασία"
 
-#: src/electron/main.tsx:478
+#: src/electron/main.tsx:484
 msgid "Report an Issue..."
 msgstr "Αναφορά προβλήματος..."
 
@@ -2159,7 +2159,6 @@ msgstr "Ασφαλής Παράλειψη"
 
 #: src/components/farm/FarmManageFarmingRewards.tsx:179
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:131
-#: src/components/trading/CreateOffer.jsx:143
 msgid "Save"
 msgstr "Αποθήκευση"
 
@@ -2207,8 +2206,8 @@ msgstr "Επιλογή Τελικού Καταλόγου"
 #~ msgstr "Επιλογή Κλειδιού"
 
 #: src/components/trading/ViewOffer.jsx:37
-msgid "Select Offer"
-msgstr "Επιλογή Προσφοράς"
+#~ msgid "Select Offer"
+#~ msgstr "Επιλογή Προσφοράς"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 msgid "Select Temporary Directory"
@@ -2264,8 +2263,8 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:165
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
-msgid "Sell"
-msgstr "Πώληση"
+#~ msgid "Sell"
+#~ msgstr "Πώληση"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:620
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:748
@@ -2284,7 +2283,7 @@ msgstr "Πώληση"
 #: src/components/settings/SetPassphrasePrompt.tsx:137
 #: src/components/settings/SetPassphrasePrompt.tsx:216
 #: src/components/settings/Settings.tsx:205
-#: src/components/settings/SettingsPanel.tsx:206
+#: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
 msgstr ""
 
@@ -2310,8 +2309,8 @@ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:154
 #: src/components/trading/TradesTable.tsx:15
-msgid "Side"
-msgstr "Πλευρά"
+#~ msgid "Side"
+#~ msgstr "Πλευρά"
 
 #: src/components/_selectKey_old/SelectKey.tsx:180
 #~ msgid "Sign In"
@@ -2350,7 +2349,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:555
+#: src/electron/main.tsx:561
 msgid "Speech"
 msgstr "Speech"
 
@@ -2390,19 +2389,18 @@ msgstr ""
 msgid "State"
 msgstr "Κατάσταση"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:54
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:62
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:70
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
 #: src/components/plotNFT/PlotNFTCard.tsx:142
 #: src/components/pool/PoolOverview.tsx:43
-#: src/components/trading/TradingOverview.jsx:127
 msgid "Status"
 msgstr "Κατάσταση"
 
 #: src/components/trading/TradingOverview.jsx:178
-msgid "Status:"
-msgstr "Κατάσταση:"
+#~ msgid "Status:"
+#~ msgstr "Κατάσταση:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -2444,17 +2442,17 @@ msgstr "Υποβολή"
 #~ msgid "Submit Passphrase"
 #~ msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:41
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:49
 msgid "Synced"
 msgstr "Συγχρονίστηκε"
 
 #: src/components/farm/FarmerStatus.tsx:19
-#: src/components/farm/card/FarmCardStatus.tsx:18
+#: src/components/farm/card/FarmCardStatus.tsx:17
 #: src/components/plot/PlotStatus.tsx:18
 msgid "Syncing"
 msgstr "Συγχρονισμός..."
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:19
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:27
 msgid "Syncing <0/>/<1/>"
 msgstr ""
 
@@ -2507,11 +2505,12 @@ msgstr "Ο πλήρης κόμβος στον οποίο είναι συνδεδ
 msgid "The minimum required size for mainnet is k=32"
 msgstr "Το ελάχιστο απαιτούμενο μέγεθος για το mainnet είναι k=32"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:37
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:16
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:45
 msgid "The node is not synced"
 msgstr "Ο κόμβος δεν είναι συγχρονισμένος"
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:27
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:35
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr "Ο κόμβος συγχρονίζεται, πράγμα που σημαίνει ότι γίνεται λήψη μπλοκ από άλλους κόμβους, για να φτάσει το τελευταίο μπλοκ στην αλυσίδα"
 
@@ -2581,7 +2580,6 @@ msgstr "Αυτό σας επιτρέπει να προσθέσετε έναν κ
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:124
 #: src/hooks/useSelectDirectory.tsx:32
 msgid "This feature is available only from the GUI."
 msgstr "Αυτή η δυνατότητα είναι διαθέσιμη μόνο στα μέλη PRO."
@@ -2624,7 +2622,7 @@ msgstr ""
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr ""
 
-#: src/components/fullNode/card/FullNodeCardStatus.tsx:44
+#: src/components/fullNode/card/FullNodeCardStatus.tsx:52
 msgid "This node is fully caught up and validating the network"
 msgstr "Αυτός ο κόμβος είναι πλήρως παγιδευμένος και επικυρώνει το δίκτυο"
 
@@ -2645,12 +2643,12 @@ msgid "This table shows you the last time your farm attempted to win a block cha
 msgstr "Αυτός ο πίνακας σας δείχνει την τελευταία φορά που το farm σας προσπάθησε να κερδίσει ένα block challenge. <0>Μάθετε περισσότερα</0>"
 
 #: src/components/trading/TradingOverview.jsx:188
-msgid "This trade was created at this time"
-msgstr "Αυτή η συναλλαγή δημιουργήθηκε αυτή την ώρα"
+#~ msgid "This trade was created at this time"
+#~ msgstr "Αυτή η συναλλαγή δημιουργήθηκε αυτή την ώρα"
 
 #: src/components/trading/TradingOverview.jsx:204
-msgid "This trade was included on blockchain at this block height"
-msgstr "Αυτή η συναλλαγή συμπεριλήφθηκε στο blockchain σε αυτό το ύψος μπλοκ"
+#~ msgid "This trade was included on blockchain at this block height"
+#~ msgstr "Αυτή η συναλλαγή συμπεριλήφθηκε στο blockchain σε αυτό το ύψος μπλοκ"
 
 #: src/components/app/AppTimeBombAlert.tsx:19
 #~ msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
@@ -2682,7 +2680,7 @@ msgstr "Χρονικό Στιγμιότυπο"
 #~ msgid "Total Balance"
 #~ msgstr "Συνολικό Υπόλοιπο"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2690,7 +2688,7 @@ msgstr ""
 msgid "Total Iterations"
 msgstr "Σύνολο Επαναλήψεων"
 
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:13
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:12
 msgid "Total Network Space"
 msgstr "Συνολικός Χώρος Δικτύου"
 
@@ -2698,7 +2696,7 @@ msgstr "Συνολικός Χώρος Δικτύου"
 msgid "Total Plot Size:"
 msgstr "Συνολικό Μέγεθος Plot:"
 
-#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:12
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:11
 msgid "Total Size of Plots"
 msgstr "Συνολικό μέγεθος των plots"
 
@@ -2715,36 +2713,36 @@ msgstr "Συνολικές επαναλήψεις από την αρχή του 
 #~ msgstr "Trade"
 
 #: src/components/trading/TradingOverview.jsx:349
-msgid "Trade Details"
-msgstr "Trade Details"
+#~ msgid "Trade Details"
+#~ msgstr "Trade Details"
 
 #: src/components/trading/TradingOverview.jsx:124
-msgid "Trade ID"
-msgstr "Ταυτότητα Συναλλαγής"
+#~ msgid "Trade ID"
+#~ msgstr "Ταυτότητα Συναλλαγής"
 
 #: src/components/trading/TradingOverview.jsx:171
-msgid "Trade ID:"
-msgstr "Ταυτότητα Συναλλαγής:"
+#~ msgid "Trade ID:"
+#~ msgstr "Ταυτότητα Συναλλαγής:"
 
 #: src/components/trading/TradeManager.tsx:34
-msgid "Trade Overview"
-msgstr "Επισκόπηση Συναλλαγών"
+#~ msgid "Trade Overview"
+#~ msgstr "Επισκόπηση Συναλλαγών"
 
 #: src/components/app/AppSelectMode.tsx:106
 msgid "Trade tokens"
 msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:152
-msgid "Trades will show up here"
-msgstr "Οι Συναλλαγές θα εμφανιστούν εδώ"
+#~ msgid "Trades will show up here"
+#~ msgstr "Οι Συναλλαγές θα εμφανιστούν εδώ"
 
 #: src/components/trading/TradeManager.tsx:23
-msgid "Trading"
-msgstr "Συναλλαγές"
+#~ msgid "Trading"
+#~ msgstr "Συναλλαγές"
 
 #: src/components/trading/TradingOverview.jsx:421
-msgid "Trading History"
-msgstr "Ιστορικό Συναλλαγών"
+#~ msgid "Trading History"
+#~ msgstr "Ιστορικό Συναλλαγών"
 
 #: src/components/block/Block.jsx:298
 msgid "Transactions Filter Hash"
@@ -2768,8 +2766,8 @@ msgid "Unfinished"
 msgstr "Μη Ολοκληρωμένο"
 
 #: src/components/trading/TradingOverview.jsx:174
-msgid "Unique identifier"
-msgstr "Μοναδικό αναγνωριστικό"
+#~ msgid "Unique identifier"
+#~ msgstr "Μοναδικό αναγνωριστικό"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
 #~ msgid "Unknown"
@@ -2788,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "Pubkey Χρήστη"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:27
+#: src/components/farm/card/FarmCardUserFees.tsx:26
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2812,7 +2810,7 @@ msgstr "VDF Sub Slot Iterations"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:374
+#: src/electron/main.tsx:380
 msgid "View"
 msgstr "Εμφάνιση"
 
@@ -2822,8 +2820,8 @@ msgid "View Log"
 msgstr "Εμφάνιση αρχείου καταγραφής"
 
 #: src/components/trading/TradeManager.tsx:54
-msgid "View Offer"
-msgstr "Προβολή Προσφοράς"
+#~ msgid "View Offer"
+#~ msgstr "Προβολή Προσφοράς"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
@@ -2842,7 +2840,7 @@ msgstr ""
 #~ msgid "View pending balances..."
 #~ msgstr "Προβολή εκκρεμών υπολοίπων..."
 
-#: src/components/farm/card/FarmCardNotAvailable.tsx:26
+#: src/components/farm/card/FarmCardNotAvailable.tsx:25
 #: src/components/plot/PlotStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:27
 msgid "Wait for synchronization"
@@ -2963,17 +2961,16 @@ msgstr "Το βάρος είναι η συνολική προστιθέμενη 
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "Όταν λαμβάνετε το πακέτο πληροφοριών εγκατάστασης από τον διαχειριστή σας, πληκτρολογήστε το παρακάτω για να ολοκληρώσετε την εγκατάσταση του Rate Limited Wallet:"
 
-#: src/electron/main.tsx:425
+#: src/electron/main.tsx:431
 msgid "Window"
 msgstr "Παράθυρο"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:32
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Without fees"
 msgstr "Χωρίς Χρεώσεις"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/components/trading/TradingOverview.jsx:208
-#: src/electron/main.tsx:258
+#: src/electron/main.tsx:264
 msgid "Yes"
 msgstr "Ναι"
 
@@ -3124,7 +3121,7 @@ msgstr "[Σφάλμα 22] Το αρχείο δεν βρέθηκε. Πιθανό�
 #~ msgid "not synced"
 #~ msgstr "δεν συγχρονίστηκε"
 
-#: src/components/plot/add/PlotAddForm.tsx:124
+#: src/components/plot/add/PlotAddForm.tsx:127
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 

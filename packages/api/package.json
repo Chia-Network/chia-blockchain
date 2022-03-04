@@ -19,10 +19,12 @@
   },
   "dependencies": {
     "@babel/runtime": "7.16.7",
+    "bignumber.js": "9.0.2",
     "core-js": "3.20.3",
     "crypto-browserify": "3.12.0",
     "debug": "4.3.3",
     "events": "3.3.0",
+    "json-bigint": "1.0.0",
     "lodash": "4.17.21",
     "regenerator-runtime": "0.13.9"
   },
@@ -34,6 +36,7 @@
     "@rollup/plugin-babel": "5.3.0",
     "@rollup/plugin-commonjs": "21.0.1",
     "@rollup/plugin-node-resolve": "13.1.3",
+    "@types/json-bigint": "1.0.1",
     "@types/core-js": "2.5.5",
     "@types/lodash": "4.14.178",
     "@types/node": "17.0.10",

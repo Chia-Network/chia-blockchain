@@ -4,7 +4,7 @@ import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@material-ui/core';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@material-ui/icons';
-import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled, toBech32m, useCurrencyCode, mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
+import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled, toBech32m, useCurrencyCode, mojoToChia, mojoToCAT, FormatLargeNumber } from '@chia/core';
 import { useGetOfferRecordMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import styled from 'styled-components';
 import type { Row } from '@chia/core';
@@ -151,9 +151,11 @@ const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
           </strong>
           &nbsp;
           <strong>
-            {type === WalletType.CAT
-              ? mojoToCATLocaleString(row.amount)
-              : mojoToChiaLocaleString(row.amount)}
+            <FormatLargeNumber
+              value={type === WalletType.CAT
+                ? mojoToCAT(row.amount)
+                : mojoToChia(row.amount)} 
+            />
           </strong>
           &nbsp;
           {metadata.unit}
@@ -165,7 +167,9 @@ const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
   {
     field: (row: Row, metadata) => (
       <>
-        <strong>{mojoToChiaLocaleString(row.feeAmount)}</strong>
+        <strong>
+          <FormatLargeNumber value={mojoToChia(row.feeAmount)} />
+        </strong>
         &nbsp;
         {metadata.feeUnit}
       </>
