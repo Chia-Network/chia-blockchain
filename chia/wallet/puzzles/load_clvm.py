@@ -4,51 +4,64 @@ import os
 import pathlib
 
 import pkg_resources
-from clvm_tools.clvmc import compile_clvm as compile_clvm_py
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
-compile_clvm = compile_clvm_py
 
-# Handle optional use of clvm_tools_rs if available and requested
-if "CLVM_TOOLS_RS" in os.environ:
+compile_clvm_py = None
+
+
+def translate_path(p_):
+    p = str(p_)
+    if os.path.isdir(p):
+        return p
+    else:
+        module_object = importlib.import_module(p)
+        return os.path.dirname(inspect.getfile(module_object))
+
+
+# Handle optional use of python clvm_tools if available and requested
+if "CLVM_TOOLS" in os.environ:
     try:
+        from clvm_tools.clvmc import compile_clvm as compile_clvm_py_candidate
 
+        compile_clvm_py = compile_clvm_py_candidate
+    finally:
+        pass
+
+
+def compile_clvm(full_path, output, search_paths=[]):
+    # Compile using rust (default)
+    # Ensure path translation is done in the idiomatic way currently
+    # expected.  It can use either a filesystem path or name a python
+    # module.
+    treated_include_paths = list(map(translate_path, search_paths))
+    compile_clvm_rust(str(full_path), str(output), treated_include_paths)
+
+    if "CLVM_TOOLS" in os.environ and os.environ["CLVM_TOOLS"] == "check" and compile_clvm_py is not None:
+        # Simple helper to read the compiled output
         def sha256file(f):
             import hashlib
 
             m = hashlib.sha256()
-            m.update(open(f).read().encode("utf8"))
+            m.update(open(f).read().strip().encode("utf8"))
             return m.hexdigest()
 
-        from clvm_tools_rs import compile_clvm as compile_clvm_rs
+        orig = '%s.orig' % output
+        
+        compile_clvm_py(full_path, orig, search_paths=search_paths)
+        orig256 = sha256file(orig)
+        rs256 = sha256file(output)
 
-        def translate_path(p_):
-            p = str(p_)
-            if os.path.isdir(p):
-                return p
-            else:
-                module_object = importlib.import_module(p)
-                return os.path.dirname(inspect.getfile(module_object))
+        print(orig, orig256, rs256)
 
-        def rust_compile_clvm(full_path, output, search_paths=[]):
-            treated_include_paths = list(map(translate_path, search_paths))
-            compile_clvm_rs(str(full_path), str(output), treated_include_paths)
-
-            if os.environ["CLVM_TOOLS_RS"] == "check":
-                orig = str(output) + ".orig"
-                compile_clvm_py(full_path, orig, search_paths=search_paths)
-                orig256 = sha256file(orig)
-                rs256 = sha256file(output)
-
-                if orig256 != rs256:
-                    print("Compiled %s: %s vs %s\n" % (full_path, orig256, rs256))
-                    print("Aborting compilation due to mismatch with rust")
-                    assert orig256 == rs256
-
-        compile_clvm = rust_compile_clvm
-    finally:
-        pass
-
+        if orig256 != rs256:
+            print("Compiled %s: %s vs %s\n" % (full_path, orig256, rs256))
+            print("Aborting compilation due to mismatch with rust")
+            assert orig256 == rs256
+        else:
+            print("Compilation match %s: %s\n" % (full_path, orig256))
+    
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
