@@ -14,10 +14,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
     - name: Display mypy version
       id: display-mypy-version
       run: |
         mypy --version
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
     - uses: pre-commit/action@v2.0.3
