@@ -192,9 +192,8 @@ def process_config_start_method(
         log.warning(f"Configured start method {from_config!r} not available in: {start_methods_string}")
         choice = "default"
     else:
-        # TODO: mypy doesn't realize that by the time we get here from_config must be
-        #       one of the keys in `start_methods` due to the above `not in`
-        #       condition.
+        # mypy doesn't realize that by the time we get here from_config must be one of
+        # the keys in `start_methods` due to the above `not in` condition.
         choice = from_config  # type: ignore[assignment]
 
     processed_method = start_methods[choice]
