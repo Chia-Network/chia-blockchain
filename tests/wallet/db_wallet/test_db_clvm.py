@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 
 from blspy import G2Element
 from clvm.EvalError import EvalError
@@ -61,7 +62,7 @@ class TestDLLifecycle:
         #  Returning Any from function declared to return "Program"
         return Program.to(self.get_merkle_tree(string).generate_proof(self.hash_merkle_value(string)))  # type: ignore
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def setup_sim_and_singleton(self) -> SetupArgs:
         # TODO: Fix hint errors and remove ignore
         #  Call to untyped function "create" in typed context
