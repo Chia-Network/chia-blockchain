@@ -474,7 +474,8 @@ wallet:
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite
+  # v2 used by the light wallet sync protocol
+  database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
   # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
@@ -483,7 +484,7 @@ wallet:
   network_overrides: *network_overrides
   selected_network: *selected_network
 
-  target_peer_count: 5
+  target_peer_count: 3
   peer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds

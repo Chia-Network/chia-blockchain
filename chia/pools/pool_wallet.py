@@ -44,7 +44,6 @@ from chia.pools.pool_puzzles import (
 
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import (
-    master_sk_to_pooling_authentication_sk,
     find_owner_sk,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -70,6 +69,8 @@ class PoolWallet:
     standard_wallet: Wallet
     wallet_id: int
     singleton_list: List[Coin]
+    _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]]
+
     """
     From the user's perspective, this is not a wallet at all, but a way to control
     whether their pooling-enabled plots are being self-farmed, or farmed by a pool,
@@ -234,13 +235,8 @@ class PoolWallet:
         existing_config: Optional[PoolWalletConfig] = pool_config_dict.get(current_state.launcher_id, None)
 
         if make_new_authentication_key or existing_config is None:
-            new_auth_sk: PrivateKey = master_sk_to_pooling_authentication_sk(
-                self.wallet_state_manager.private_key, uint32(self.wallet_id), uint32(0)
-            )
-            auth_pk: G1Element = new_auth_sk.get_g1()
             payout_instructions: str = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
         else:
-            auth_pk = existing_config.authentication_public_key
             payout_instructions = existing_config.payout_instructions
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -250,25 +246,21 @@ class PoolWallet:
             current_state.current.target_puzzle_hash,
             current_state.p2_singleton_puzzle_hash,
             current_state.current.owner_pubkey,
-            auth_pk,
         )
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
     @staticmethod
-    def get_next_interesting_coin_ids(spend: CoinSpend) -> List[bytes32]:
+    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
         # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
-        # If we return a value, it is a coin ID that we are also interested in (to support two transitions per block)
-        coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(spend)
-        if coin is not None:
-            return [coin.name()]
-        return []
+        # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
+        return get_most_recent_singleton_coin_from_coin_spend(spend)
 
-    async def apply_state_transitions(self, new_state: CoinSpend, block_height: uint32):
+    async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
-        Updates the Pool state (including DB) with new singleton spends. The block spends can contain many spends
-        that we are not interested in, and can contain many ephemeral spends. They must all be in the same block.
-        The DB must be committed after calling this method. All validation should be done here.
+        Updates the Pool state (including DB) with new singleton spends.
+        The DB must be committed after calling this method. All validation should be done here. Returns True iff
+        the spend is a valid transition spend for the singleton, False otherwise.
         """
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
@@ -276,13 +268,16 @@ class PoolWallet:
         tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
         assert tip_coin is not None
         spent_coin_name: bytes32 = tip_coin.name()
+
         if spent_coin_name != new_state.coin.name():
-            self.log.warning(f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} ")
-            return
+            self.log.warning(
+                f"Failed to apply state transition. tip: {tip_coin} new_state: {new_state} height {block_height}"
+            )
+            return False
 
         await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
         tip_spend = (await self.get_tip())[1]
-        self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend}")
+        self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
         # If we have reached the target state, resets it to None. Loops back to get current state
         for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
@@ -294,6 +289,7 @@ class PoolWallet:
                 break
 
         await self.update_pool_config(False)
+        return True
 
     async def rewind(self, block_height: int) -> bool:
         """
@@ -332,6 +328,7 @@ class PoolWallet:
         this method.
         """
         self = PoolWallet()
+        self._owner_sk_and_index = None
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -368,6 +365,7 @@ class PoolWallet:
         to do anything here.
         """
         self = PoolWallet()
+        self._owner_sk_and_index = None
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
@@ -448,11 +446,22 @@ class PoolWallet:
         )
         return standard_wallet_record, p2_singleton_puzzle_hash, launcher_coin_id
 
+    async def _get_owner_key_cache(self) -> Tuple[PrivateKey, uint32]:
+        if self._owner_sk_and_index is None:
+            self._owner_sk_and_index = find_owner_sk(
+                [self.wallet_state_manager.private_key], (await self.get_current_state()).current.owner_pubkey
+            )
+        assert self._owner_sk_and_index is not None
+        return self._owner_sk_and_index
+
+    async def get_pool_wallet_index(self) -> uint32:
+        return (await self._get_owner_key_cache())[1]
+
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            owner_sk: Optional[PrivateKey] = await find_owner_sk([self.wallet_state_manager.private_key], pk)
-            assert owner_sk is not None
-            return owner_sk
+            sk, _ = await self._get_owner_key_cache()
+            assert sk.get_g1() == pk
+            return sk
 
         return await sign_coin_spends(
             [coin_spend],
@@ -730,7 +739,6 @@ class PoolWallet:
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         )
-
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
