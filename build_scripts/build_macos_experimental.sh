@@ -92,12 +92,14 @@ echo "Listing dist contents"
 ls -alh dist
 ls -alh dist/mac
 
+mv dist ../../../build_scripts/dist/
 # mv Chia-darwin-x64 ../../../build_scripts/dist/
-# cd ../../../build_scripts || exit
+cd ../../../build_scripts || exit
 
-# DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
+DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 # echo "Create $DMG_NAME"
-# mkdir final_installer
+mkdir final_installer
+mv dist/$DMG_NAME final_installer/
 # electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
 # --overwrite --out final_installer
 # LAST_EXIT_CODE=$?
@@ -106,15 +108,15 @@ ls -alh dist/mac
 # 	exit $LAST_EXIT_CODE
 # fi
 
-# if [ "$NOTARIZE" == true ]; then
-# 	echo "Notarize $DMG_NAME on ci"
-# 	cd final_installer || exit
-#   notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
-# 	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
-#   echo "Notarization step complete"
-# else
-# 	echo "Not on ci or no secrets so skipping Notarize"
-# fi
+if [ "$NOTARIZE" == true ]; then
+	echo "Notarize $DMG_NAME on ci"
+	cd final_installer || exit
+  notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
+	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
+  echo "Notarization step complete"
+else
+	echo "Not on ci or no secrets so skipping Notarize"
+fi
 
 # Notes on how to manually notarize
 #
