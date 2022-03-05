@@ -16,6 +16,7 @@
     "asar": true,
     "asarUnpack": "**/daemon/**",
     "mac": {
+      "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
       "category": "public.app-category.finance",
       "target": "dmg",
       "icon": "src/assets/img/chia.icns",
