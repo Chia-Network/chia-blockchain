@@ -359,7 +359,9 @@ class PoolWallet:
         await self.wallet_state_manager.add_new_wallet(
             self, self.wallet_info.id, create_puzzle_hashes=False, in_transaction=in_transaction
         )
-        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], in_transaction)
+        await self.wallet_state_manager.interested_store.add_interested_puzzle_hashes(
+            [p2_puzzle_hash], [self.wallet_id], in_transaction
+        )
         return self
 
     @staticmethod
