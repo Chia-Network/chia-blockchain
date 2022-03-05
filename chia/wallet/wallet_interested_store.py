@@ -112,7 +112,7 @@ class WalletInterestedStore:
         name: str,
         first_seen_height: Optional[uint32],
         sender_puzzle_hash: bytes32,
-        in_transaction: bool = False,
+        in_transaction: bool = True,
     ) -> None:
         """
         Add an unacknowledged CAT to the database. It will only be inserted once at the first time.
