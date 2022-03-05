@@ -26,6 +26,27 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     },
+    "dmg": {
+      "background": "../../../build_scripts/assets/dmg/background.tiff",
+      "iconSize": 80,
+      "contents": [
+        {
+          "x": 466,
+          "y": 280,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 192,
+          "y": 280,
+          "type": "file"
+        }
+      ],
+      "window": {
+        "width": 658,
+        "height": 498
+      }
+    },
     "files": [
       "build",
       "daemon",
