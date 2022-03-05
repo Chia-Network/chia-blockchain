@@ -246,7 +246,7 @@ class TestCostCalculation:
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
         npc_result = get_name_puzzle_conditions(
-            generator, 20000000, cost_per_byte=0, mempool_mode=False, height=softfork_height
+            generator, 23000000, cost_per_byte=0, mempool_mode=False, height=softfork_height
         )
 
         assert npc_result.error is None

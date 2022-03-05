@@ -8,8 +8,10 @@ from typing import Any, Callable, List, Optional, Tuple, Dict
 
 import aiohttp
 
+from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -470,6 +472,10 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
         )
         print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+
+    print(" ")
+    trusted_peers: Dict = config.get("trusted_peers", {})
+    await print_connections(wallet_client, time, NodeType, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
