@@ -120,12 +120,15 @@ class Wallet:
         return spendable
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
+        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
+        )
         addition_amount = 0
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
-                self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                if record.spend_bundle is not None:
+                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
                 continue
             our_spend = False
             for coin in record.removals:
@@ -508,7 +511,7 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(tx)
         await self.wallet_state_manager.wallet_node.update_ui()
 
-    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
+    # This is to be aggregated together with a CAT offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
         list_of_solutions = []
         utxos = None

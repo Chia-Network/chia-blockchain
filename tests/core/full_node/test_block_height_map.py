@@ -1,6 +1,6 @@
 import pytest
 import struct
-from chia.full_node.block_height_map import BlockHeightMap
+from chia.full_node.block_height_map import BlockHeightMap, SesCache
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper
 
@@ -8,8 +8,7 @@ from tests.util.db_connection import DBConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from typing import Optional
 from chia.util.ints import uint8
-
-# from tests.conftest import tmp_dir
+from chia.util.files import write_file_async
 
 
 def gen_block_hash(height: int) -> bytes32:
@@ -178,6 +177,41 @@ class TestBlockHeightMap:
                 await db_wrapper.db.execute("DROP TABLE block_records")
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
+            height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            for height in reversed(range(10000)):
+                assert height_map.contains_height(height)
+                assert height_map.get_hash(height) == gen_block_hash(height)
+                if (height % 20) == 0:
+                    assert height_map.get_ses(height) == gen_ses(height)
+                else:
+                    with pytest.raises(KeyError) as _:
+                        height_map.get_ses(height)
+
+    @pytest.mark.asyncio
+    async def test_restore_entire_chain(self, tmp_dir, db_version):
+
+        # this is a test where the height-to-hash and height-to-ses caches are
+        # entirely unrelated to the database. Make sure they can both be fully
+        # replaced
+        async with DBConnection(db_version) as db_wrapper:
+
+            heights = bytearray(900 * 32)
+            for i in range(900):
+                idx = i * 32
+                heights[idx : idx + 32] = bytes([i % 256] * 32)
+
+            await write_file_async(tmp_dir / "height-to-hash", heights)
+
+            ses_cache = []
+            for i in range(0, 900, 19):
+                ses_cache.append((i, gen_ses(i + 9999)))
+
+            await write_file_async(tmp_dir / "sub-epoch-summaries", bytes(SesCache(ses_cache)))
+
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 10000, ses_every=20)
+
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):

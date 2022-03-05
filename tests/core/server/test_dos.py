@@ -3,6 +3,7 @@ import asyncio
 import logging
 
 import pytest
+import pytest_asyncio
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
 from chia.full_node.full_node_api import FullNodeAPI
@@ -38,9 +39,9 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
 

@@ -25,7 +25,7 @@ sudo rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.5
+pip install pyinstaller==4.9
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
@@ -88,8 +88,7 @@ cd ../../../build_scripts || exit
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
---overwrite --out final_installer
+NODE_PATH=./npm_macos/node_modules node build_dmg.js dist/Chia-darwin-x64/Chia.app $CHIA_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"

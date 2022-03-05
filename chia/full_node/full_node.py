@@ -1,6 +1,9 @@
 import asyncio
+import contextlib
 import dataclasses
 import logging
+import multiprocessing
+from multiprocessing.context import BaseContext
 import random
 import time
 import traceback
@@ -62,7 +65,7 @@ from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
-from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
+from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -94,6 +97,7 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
+    multiprocessing_start_context: Optional[BaseContext]
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
@@ -124,6 +128,10 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
+
+        # TODO: Logging isn't setup yet so the log entries related to parsing the
+        #       config would end up on stdout if handled here.
+        self.multiprocessing_context = None
 
         # Used for metrics
         self.dropped_tx: Set[bytes32] = set()
@@ -184,10 +192,22 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
+        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
+            coin_store=self.coin_store,
+            block_store=self.block_store,
+            consensus_constants=self.constants,
+            hint_store=self.hint_store,
+            blockchain_dir=self.db_path.parent,
+            reserved_cores=reserved_cores,
+            multiprocessing_context=self.multiprocessing_context,
         )
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self.mempool_manager = MempoolManager(
+            coin_store=self.coin_store,
+            consensus_constants=self.constants,
+            multiprocessing_context=self.multiprocessing_context,
+        )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
@@ -284,7 +304,11 @@ class FullNode:
             raise
 
     async def initialize_weight_proof(self):
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler = WeightProofHandler(
+            constants=self.constants,
+            blockchain=self.blockchain,
+            multiprocessing_context=self.multiprocessing_context,
+        )
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
@@ -729,9 +753,9 @@ class FullNode:
             self._transaction_queue_task.cancel()
         if hasattr(self, "_blockchain_lock_queue"):
             self._blockchain_lock_queue.close()
+        cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self):
-        cancel_task_safe(self._sync_task, self.log)
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.connection.close()
@@ -739,6 +763,9 @@ class FullNode:
             await asyncio.wait([self._init_weight_proof])
         if hasattr(self, "_blockchain_lock_queue"):
             await self._blockchain_lock_queue.await_closed()
+        if self._sync_task is not None:
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._sync_task
 
     async def _sync(self):
         """
@@ -939,10 +966,10 @@ class FullNode:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                await self.send_peak_to_wallets()
                 peak = self.blockchain.get_peak()
                 if len(coin_states) > 0 and fork_height is not None:
                     await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
+                await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         loop = asyncio.get_event_loop()
@@ -1047,15 +1074,18 @@ class FullNode:
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
-        pre_validate_start = time.time()
+        pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
             blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
         )
-        pre_validate_end = time.time()
-        if pre_validate_end - pre_validate_start > 10:
-            self.log.warning(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
-        else:
-            self.log.debug(f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds")
+        pre_validate_end = time.monotonic()
+        pre_validate_time = pre_validate_end - pre_validate_start
+
+        self.log.log(
+            logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
+            f"Block pre-validation time: {pre_validate_end - pre_validate_start:0.2f} seconds "
+            f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
+        )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
                 self.log.error(
@@ -1202,6 +1232,8 @@ class FullNode:
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
+
+        self._state_changed("signage_point", {"broadcast_farmer": broadcast_farmer})
 
     async def peak_post_processing(
         self,
@@ -1382,6 +1414,7 @@ class FullNode:
         self,
         respond_block: full_node_protocol.RespondBlock,
         peer: Optional[ws.WSChiaConnection] = None,
+        raise_on_disconnected: bool = False,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -1503,6 +1536,8 @@ class FullNode:
 
                 elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     self.log.info(f"Disconnected block {header_hash} at height {block.height}")
+                    if raise_on_disconnected:
+                        raise RuntimeError("Expected block to be added, received disconnected block.")
                     return None
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
@@ -1553,7 +1588,7 @@ class FullNode:
             f"Block validation time: {validation_time:0.2f} seconds, "
             f"pre_validation time: {pre_validation_time:0.2f} seconds, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
-            f"{percent_full_str}",
+            f"{percent_full_str} header_hash: {header_hash} height: {block.height}",
         )
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
@@ -1886,7 +1921,7 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.respond_block(full_node_protocol.RespondBlock(block))
+            await self.respond_block(full_node_protocol.RespondBlock(block), raise_on_disconnected=True)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:

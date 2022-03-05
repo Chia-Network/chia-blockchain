@@ -6,6 +6,7 @@ from secrets import token_bytes
 from typing import List, Optional
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
@@ -52,7 +53,7 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
     bc1, connection, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
@@ -61,7 +62,7 @@ async def empty_blockchain(request):
     db_path.unlink()
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain_original(request):
     bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1

@@ -40,6 +40,7 @@ class WalletPoolStore:
         wallet_id: int,
         spend: CoinSpend,
         height: uint32,
+        in_transaction=False,
     ) -> None:
         """
         Appends (or replaces) entries in the DB. The new list must be at least as long as the existing list, and the
@@ -47,31 +48,38 @@ class WalletPoolStore:
         until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
-        if wallet_id not in self._state_transitions_cache:
-            self._state_transitions_cache[wallet_id] = []
-        all_state_transitions: List[Tuple[uint32, CoinSpend]] = self.get_spends_for_wallet(wallet_id)
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            if wallet_id not in self._state_transitions_cache:
+                self._state_transitions_cache[wallet_id] = []
+            all_state_transitions: List[Tuple[uint32, CoinSpend]] = self.get_spends_for_wallet(wallet_id)
 
-        if (height, spend) in all_state_transitions:
-            return
+            if (height, spend) in all_state_transitions:
+                return
 
-        if len(all_state_transitions) > 0:
-            if height < all_state_transitions[-1][0]:
-                raise ValueError("Height cannot go down")
-            if spend.coin.parent_coin_info != all_state_transitions[-1][1].coin.name():
-                raise ValueError("New spend does not extend")
+            if len(all_state_transitions) > 0:
+                if height < all_state_transitions[-1][0]:
+                    raise ValueError("Height cannot go down")
+                if spend.coin.parent_coin_info != all_state_transitions[-1][1].coin.name():
+                    raise ValueError("New spend does not extend")
 
-        all_state_transitions.append((height, spend))
+            all_state_transitions.append((height, spend))
 
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
-            (
-                len(all_state_transitions) - 1,
-                wallet_id,
-                height,
-                bytes(spend),
-            ),
-        )
-        await cursor.close()
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
+                (
+                    len(all_state_transitions) - 1,
+                    wallet_id,
+                    height,
+                    bytes(spend),
+                ),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
         """
