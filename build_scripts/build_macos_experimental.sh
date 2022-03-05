@@ -62,51 +62,26 @@ jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json 
 
 echo "Building macOS Electron app"
 npx electron-builder build -m
-# electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
-# --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
-# --appVersion=$CHIA_INSTALLER_VERSION
 LAST_EXIT_CODE=$?
 
 # reset the package.json to the original
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	# echo >&2 "electron-packager failed!"
 	echo >&2 "electron-builder failed!"
 	exit $LAST_EXIT_CODE
 fi
-
-# if [ "$NOTARIZE" == true ]; then
-#   electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
-#   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
-#   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
-#   --no-gatekeeper-assess
-# fi
-# LAST_EXIT_CODE=$?
-# if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-# 	echo >&2 "electron-osx-sign failed!"
-# 	exit $LAST_EXIT_CODE
-# fi
 
 echo "Listing dist contents"
 ls -alh dist
 ls -alh dist/mac
 
 mv dist/* ../../../build_scripts/dist/
-# mv Chia-darwin-x64 ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
-# echo "Create $DMG_NAME"
 mkdir final_installer
 mv dist/$DMG_NAME final_installer/
-# electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
-# --overwrite --out final_installer
-# LAST_EXIT_CODE=$?
-# if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-# 	echo >&2 "electron-installer-dmg failed!"
-# 	exit $LAST_EXIT_CODE
-# fi
 
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
