@@ -8,6 +8,7 @@ import {
   TableCell,
   TableContainer,
 } from '@material-ui/core';
+import moment from 'moment';
 import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
 import { useGetBlockQuery, useGetBlockRecordQuery  } from '@chia/api-react'
@@ -29,7 +30,6 @@ import {
   toBech32m,
 } from '@chia/core';
 import {
-  unix_to_short_date,
   hex_to_array,
   arr_to_hex,
   sha256,
@@ -175,7 +175,7 @@ export default function Block() {
     {
       name: <Trans>Timestamp</Trans>,
       value: blockRecord.timestamp
-        ? unix_to_short_date(blockRecord.timestamp)
+        ? moment(blockRecord.timestamp * 1000).format('LLL')
         : null,
       tooltip: (
         <Trans>

@@ -9,6 +9,7 @@ import {
   Typography,
   Container,
 } from '@material-ui/core';
+import moment from 'moment';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router';
@@ -27,7 +28,6 @@ import {
   setBackupInfo,
   selectFilePath,
 } from '../../modules/backup';
-import { unix_to_short_date } from '../../util/utils';
 import type { RootState } from '../../modules/rootReducer';
 import Wallet from '../../types/Wallet';
 import myStyle from '../../constants/style';
@@ -215,7 +215,7 @@ function BackupDetails() {
     fingerprint: backup_fingerprint,
   } = backupInfo;
 
-  const date = unix_to_short_date(timestamp);
+  const date = moment(timestamp * 1000).format('LLL')
 
   let words = useSelector(
     (state: RootState) => state.mnemonic_state.mnemonic_input,
