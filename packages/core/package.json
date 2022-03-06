@@ -26,7 +26,6 @@
     "@lingui/macro": "3.13.0",
     "@rehooks/local-storage": "2.4.4",
     "bech32": "2.0.0",
-    "big.js": "6.1.1",
     "bignumber.js": "9.0.2",
     "bytes-iec": "3.1.1",
     "cookie": "0.4.1",
