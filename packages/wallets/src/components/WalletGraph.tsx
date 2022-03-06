@@ -164,7 +164,7 @@ function generateTransactionGraphData(
 
     return {
       timestamp: Number(timestamp),
-      value: BigNumber.sum(values),
+      value: BigNumber.sum(...values),
     };
   });
 
