@@ -5,14 +5,14 @@ const complexNumber = 1234567.0123456789;
 export default function bigNumberToLocaleString(value: BigNumber, locale?: string): string {
     const formatter = Intl.NumberFormat(locale);
     if (!formatter) {
-      throw new Error(`Formater for ${locale} is not supported`);
+      throw new Error(`Formatter for ${locale} is not supported`);
     }
 
     const decimalFormatter = new Intl.NumberFormat(locale, { 
       maximumFractionDigits: 12,
     });
     if (!decimalFormatter) {
-      throw new Error(`Decimal formater for ${locale} is not supported`);
+      throw new Error(`Decimal formatter for ${locale} is not supported`);
     }
 
     const parts = decimalFormatter.formatToParts(complexNumber);
