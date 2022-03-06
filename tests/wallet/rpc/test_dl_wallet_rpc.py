@@ -94,7 +94,7 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup_1 = await start_rpc_server(
             wallet_rpc_api,
             hostname,
             daemon_port,
@@ -104,7 +104,7 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup_2 = await start_rpc_server(
             wallet_rpc_api_2,
             hostname,
             daemon_port,
@@ -250,5 +250,6 @@ class TestWalletRpc:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()
+            await rpc_cleanup_2()
+            await rpc_cleanup_1()
             await rpc_cleanup_node()

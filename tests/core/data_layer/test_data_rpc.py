@@ -29,10 +29,9 @@ pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
 
 
-async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
-    test_rpc_port = uint16(find_available_listen_port())
+async def init_data_layer(root_path: Path, wallet_rpc_port: int) -> AsyncIterator[DataLayer]:
     config = bt.config
-    kwargs = service_kwargs_for_data_layer(root_path, config, test_rpc_port)
+    kwargs = service_kwargs_for_data_layer(root_path, config, wallet_rpc_port=uint16(wallet_rpc_port))
     kwargs.update(parse_cli_args=False)
     service = Service(**kwargs)
     await service.start()
@@ -55,12 +54,14 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(find_available_listen_port())
+        print(f" ==== found {daemon_port=}")
+        # test_rpc_port = uint16(find_available_listen_port("test_rpc_port"))
+        # print(f" ==== found for wallet {test_rpc_port=}")
         rpc_cleanup = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
             daemon_port,
-            test_rpc_port,
+            wallet_node_0.config["port"],
             lambda x: None,
             bt.root_path,
             config,
@@ -87,7 +88,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(root_path, wallet_rpc_port=wallet_node.config["port"]):
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"

@@ -28,6 +28,7 @@ def service_kwargs_for_data_layer(
     self_hostname = config["self_hostname"]
     if wallet_rpc_port is None:
         wallet_rpc_port = dl_config["wallet_peer"]["port"]
+    print(f" ==== service_kwargs_for_data_layer() {wallet_rpc_port=}")
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), root_path, config)
     data_layer = DataLayer(root_path=root_path, wallet_rpc_init=wallet_rpc_init)
     api = DataLayerAPI(data_layer)

@@ -3,23 +3,24 @@ import socket
 from typing import Set
 
 recent_ports: Set[int] = set()
+local_random = random.Random()
+local_random.seed(a="abc", version=2)
 
 
 def find_available_listen_port(name: str = "free") -> int:
     global recent_ports
 
     while True:
-        port = random.randint(2000, 65535)
+        port = local_random.randint(2000, 65535)
         if port in recent_ports:
             continue
 
-        s = socket.socket()
-        try:
-            s.bind(("127.0.0.1", port))
-        except BaseException:
-            s.close()
-            continue
-        s.close()
+        with socket.socket() as s:
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+
         recent_ports.add(port)
         print(f"{name} port: {port}")
         return port
