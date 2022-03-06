@@ -817,13 +817,8 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
-        amount = request["amount"]
-        if not isinstance(amount, uint64):
-            amount = uint64(amount)
-
-        wallet_id = request["wallet_id"]
-        if not isinstance(wallet_id, uint32):
-            wallet_id = uint32(wallet_id)
+        amount = uint64(request["amount"])
+        wallet_id = uint32(request["wallet_id"])
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
