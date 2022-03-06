@@ -120,8 +120,8 @@ class DLOWallet:
         tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             amount, full_puzzle.get_tree_hash()
         )
-        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            full_puzzle.get_tree_hash(), self.wallet_id, True
+        await self.wallet_state_manager.add_interested_puzzle_hashes(
+            [full_puzzle.get_tree_hash()], [self.wallet_id], True
         )
 
         active_coin = None
