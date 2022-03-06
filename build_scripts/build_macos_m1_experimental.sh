@@ -15,7 +15,7 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-cd npm_macos || exit
+cd npm_macos_m1 || exit
 npm ci
 PATH=$(npm bin):$PATH
 cd .. || exit
@@ -27,8 +27,10 @@ echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
-echo "Create executables with pyinstaller"
+echo "Install pyinstaller and build bootloaders for M1"
 pip install pyinstaller==4.9
+
+echo "Create executables with pyinstaller"
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
