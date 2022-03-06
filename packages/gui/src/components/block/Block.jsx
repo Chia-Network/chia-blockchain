@@ -36,8 +36,6 @@ import {
 } from '../../util/utils';
 import BlockTitle from './BlockTitle';
 
-/* global BigInt */
-
 async function computeNewPlotId(block) {
   const { poolPublicKey, plotPublicKey } =
     block.rewardChainBlock.proofOfSpace;

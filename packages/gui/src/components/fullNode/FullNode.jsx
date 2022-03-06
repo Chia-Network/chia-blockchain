@@ -20,8 +20,6 @@ import FullNodeConnections from './FullNodeConnections';
 import FullNodeBlockSearch from './FullNodeBlockSearch';
 import FullNodeCards from './card/FullNodeCards';
 
-/* global BigInt */
-
 const cols = [
   {
     minWidth: '250px',

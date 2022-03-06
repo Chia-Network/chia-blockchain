@@ -1,5 +1,6 @@
 import { Wallet, CAT, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
 import type { Transaction, WalletConnections } from '@chia/api';
+import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
 import api, { baseQuery } from '../api';
@@ -245,8 +246,8 @@ export const walletApi = apiWithTag.injectEndpoints({
       unconfirmedWalletBalance: number;
       unspentCoinCount: number;
       walletId: number;
-      pendingBalance: number;
-      pendingTotalBalance: number;
+      pendingBalance: BigNumber;
+      pendingTotalBalance: BigNumber;
     }, { 
       walletId: number;
     }>({
@@ -264,8 +265,8 @@ export const walletApi = apiWithTag.injectEndpoints({
           },
         } = response;
 
-        const pendingBalance = BigInt(unconfirmedWalletBalance) - BigInt(confirmedWalletBalance);
-        const pendingTotalBalance = BigInt(confirmedWalletBalance) + BigInt(pendingBalance);
+        const pendingBalance = new BigNumber(unconfirmedWalletBalance) - new BigNumber(confirmedWalletBalance);
+        const pendingTotalBalance = new BigNumber(confirmedWalletBalance) + new BigNumber(pendingBalance);
 
         return {
           ...walletBalance,

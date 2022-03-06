@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@babel/runtime": "7.16.7",
+    "bignumber.js": "9.0.2",
     "core-js": "3.20.3",
     "debug": "4.3.3",
     "lodash": "4.17.21",
