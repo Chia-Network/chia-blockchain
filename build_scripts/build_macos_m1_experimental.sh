@@ -76,7 +76,7 @@ fi
 
 echo "Listing dist contents"
 ls -alh dist
-ls -alh dist/mac
+ls -alh dist/mac-arm64
 
 mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
