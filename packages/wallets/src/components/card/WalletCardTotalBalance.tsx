@@ -1,4 +1,4 @@
-import React, { useMemo, ReactElement } from 'react';
+import React, { ReactElement } from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
 import styled from 'styled-components';

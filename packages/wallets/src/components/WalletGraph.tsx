@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
 import BigNumber from 'bignumber.js';
-import { orderBy, groupBy, sumBy, map } from 'lodash';
+import { orderBy, groupBy, map } from 'lodash';
 import { /* Typography, */ Paper } from '@material-ui/core';
 import styled from 'styled-components';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
