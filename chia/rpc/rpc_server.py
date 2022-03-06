@@ -295,13 +295,16 @@ async def start_rpc_server(
     root_path: Path,
     net_config,
     connect_to_daemon=True,
+    max_request_body_size=None,
 ):
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
     try:
-        app = aiohttp.web.Application()
+        if max_request_body_size is None:
+            max_request_body_size = 1024 ** 2
+        app = aiohttp.web.Application(client_max_size=max_request_body_size)
         rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         app.add_routes(

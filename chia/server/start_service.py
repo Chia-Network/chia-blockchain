@@ -50,6 +50,7 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
+        max_request_body_size=None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -63,6 +64,7 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self.max_request_body_size = max_request_body_size
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -162,6 +164,7 @@ class Service:
                     self.root_path,
                     self.config,
                     self._connect_to_daemon,
+                    max_request_body_size=self.max_request_body_size,
                 )
             )
 
