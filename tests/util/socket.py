@@ -13,13 +13,12 @@ def find_available_listen_port(name: str = "free") -> int:
         if port in recent_ports:
             continue
 
-        s = socket.socket()
-        try:
-            s.bind(("127.0.0.1", port))
-        except BaseException:
-            s.close()
-            continue
-        s.close()
+        with socket.socket() as s:
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+
         recent_ports.add(port)
         print(f"{name} port: {port}")
         return port
