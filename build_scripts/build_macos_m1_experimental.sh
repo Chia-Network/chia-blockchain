@@ -81,11 +81,13 @@ ls -alh dist/mac-arm64
 mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
-DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
+mv dist/"Chia-$CHIA_INSTALLER_VERSION.dmg" dist/"Chia-$CHIA_INSTALLER_VERSION-arm64.dmg"
+DMG_NAME="Chia-$CHIA_INSTALLER_VERSION-arm64.dmg"
 mkdir final_installer
 mv dist/$DMG_NAME final_installer/
 
-ls -lh final_installer
+echo "Listing final_installer contents"
+ls -alh final_installer
 
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
