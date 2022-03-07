@@ -411,7 +411,9 @@ class TestDLWallet:
         assert (
             len(
                 await dl_wallet_0.get_history(
-                    launcher_id, min_generation=uint32(expected_generation - 1), max_generation=uint32(expected_generation - 1)
+                    launcher_id,
+                    min_generation=uint32(expected_generation - 1),
+                    max_generation=uint32(expected_generation - 1),
                 )
             )
             == 1
