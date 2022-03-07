@@ -15,8 +15,8 @@ export default function FullNodeCardPeakTime() {
     <CardSimple
       loading={isLoading}
       valueColor="textPrimary"
-      title={<Trans>Peak Time</Trans>}
-      tooltip={<Trans>This is the time of the latest peak sub block.</Trans>}
+      title={<Trans>Last Transaction Block Time</Trans>}
+      tooltip={<Trans>This is the timestamp of the most recent transaction block.</Trans>}
       value={value}
       error={error}
     />
