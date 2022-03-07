@@ -825,9 +825,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             selected_coins = await wallet.select_coins(amount=amount)
 
-        return {
-            "coins": [coin.to_json_dict() for coin in selected_coins]
-        }
+        return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
     ##########################################################################################
     # CATs and Trading
