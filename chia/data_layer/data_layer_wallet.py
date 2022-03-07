@@ -709,7 +709,7 @@ class DataLayerWallet:
                 )
             )
             # TODO: this needs to actually know if it is in a transaction
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], False)
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:

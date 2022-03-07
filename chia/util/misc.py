@@ -68,3 +68,35 @@ def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
             return True
         elif ch == "n":
             return False
+
+
+import asyncio
+import dataclasses
+import logging
+import traceback
+
+
+@dataclasses.dataclass
+class LoggingLock:
+    logger: logging.Logger
+    id: str
+    lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
+
+    async def __aenter__(self):
+        self.log(message="entering")
+        try:
+            return await self.lock.__aenter__()
+        finally:
+            self.log(message="entered")
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        self.log(message="exiting")
+        try:
+            return await self.lock.__aexit__(exc_type, exc_value, traceback)
+        finally:
+            self.log(message="exited")
+
+    def log(self, message):
+        self.logger.info(f" ==== {message} {self.id} (locked: {self.lock.locked()})")
+        stack = "".join(traceback.format_stack())
+        self.logger.info(stack)

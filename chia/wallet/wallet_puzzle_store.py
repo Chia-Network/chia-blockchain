@@ -12,6 +12,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletType
 
 log = logging.getLogger(__name__)
+from chia.util.misc import LoggingLock
 
 
 class WalletPuzzleStore:
@@ -22,7 +23,7 @@ class WalletPuzzleStore:
     """
 
     db_connection: aiosqlite.Connection
-    lock: asyncio.Lock
+    lock: LoggingLock
     cache_size: uint32
     all_puzzle_hashes: Set[bytes32]
     db_wrapper: DBWrapper
@@ -63,7 +64,7 @@ class WalletPuzzleStore:
 
         await self.db_connection.commit()
         # Lock
-        self.lock = asyncio.Lock()  # external
+        self.lock = LoggingLock(logger=log, id=f"WPS:{id(self)}")  # external
         await self._init_cache()
         return self
 

@@ -66,6 +66,8 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 
+from chia.util.misc import LoggingLock
+
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
@@ -78,7 +80,7 @@ class WalletStateManager:
     start_index: int
 
     # Makes sure only one asyncio thread is changing the blockchain state at one time
-    lock: asyncio.Lock
+    lock: LoggingLock
 
     log: logging.Logger
 
@@ -133,7 +135,7 @@ class WalletStateManager:
         self.server = server
         self.root_path = root_path
         self.log = logging.getLogger(name if name else __name__)
-        self.lock = asyncio.Lock()
+        self.lock = LoggingLock(logger=self.log, id=f"WSM:{id(self)}")
         self.log.debug(f"Starting in db path: {db_path}")
         self.db_connection = await aiosqlite.connect(db_path)
         await self.db_connection.execute("pragma journal_mode=wal")
@@ -401,10 +403,13 @@ class WalletStateManager:
             assert record is not None
 
             # Set this key to used so we never use it again
+            self.log.info(f" ==== get_unused_derivation_record() A")
             await self.puzzle_store.set_used_up_to(record.index, in_transaction=in_transaction)
+            self.log.info(f" ==== get_unused_derivation_record() B")
 
             # Create more puzzle hashes / keys
             await self.create_more_puzzle_hashes(in_transaction=in_transaction)
+            self.log.info(f" ==== get_unused_derivation_record() C")
             return record
 
     async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
