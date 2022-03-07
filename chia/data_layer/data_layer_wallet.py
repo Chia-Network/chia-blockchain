@@ -9,7 +9,6 @@ from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
-from chia.server.outbound_message import NodeType
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
