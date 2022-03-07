@@ -671,24 +671,39 @@ class WalletNode:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
             if trusted:
+                self.log.info(f" ==== receive_state_from_peer() A")
                 async with self.wallet_state_manager.db_wrapper.lock:
+                    self.log.info(f" ==== receive_state_from_peer() B")
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        self.log.info(f" ==== receive_state_from_peer() C")
                         await self.wallet_state_manager.db_wrapper.begin_transaction()
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        self.log.info(f" ==== receive_state_from_peer() D")
+                        import random
+                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height, id=random.randrange(2**16))
+                        self.log.info(f" ==== receive_state_from_peer() E")
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        self.log.info(f" ==== receive_state_from_peer() F")
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                             last_change_height_cs(states[-1]) - 1, in_transaction=True
                         )
+                        self.log.info(f" ==== receive_state_from_peer() G")
                     except Exception as e:
+                        self.log.info(f" ==== receive_state_from_peer() H")
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                        self.log.info(f" ==== receive_state_from_peer() I")
                         await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                        self.log.info(f" ==== receive_state_from_peer() J")
                         await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                        self.log.info(f" ==== receive_state_from_peer() K")
                         await self.wallet_state_manager.pool_store.rebuild_cache()
+                        self.log.info(f" ==== receive_state_from_peer() L")
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
+                    self.log.info(f" ==== receive_state_from_peer() M")
+                self.log.info(f" ==== receive_state_from_peer() N")
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)

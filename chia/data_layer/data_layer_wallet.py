@@ -621,22 +621,29 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
+    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, id=None) -> None:
+        if id is not None: self.log.info(f" ==== singleton_removed() {id:7} A")
         parent_name = parent_spend.coin.name()
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
 
+        if id is not None: self.log.info(f" ==== singleton_removed() {id:7} B")
         matched, curried_args = match_dl_singleton(puzzle.to_program())
+        if id is not None: self.log.info(f" ==== singleton_removed() {id:7} C")
         if matched:
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} D")
             self.log.info(f"DL singleton removed: {parent_spend.coin}")
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
                 parent_name
             )
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} E")
             if singleton_record is None:
+                if id is not None: self.log.info(f" ==== singleton_removed() {id:7} F")
                 self.log.warning(f"DL wallet received coin it does not have parent for. Expected parent {parent_name}.")
                 return
 
             # First let's create the singleton's full puz to check if it's the same (report spend)
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} G")
             current_full_puz: Program = create_host_fullpuz(
                 singleton_record.inner_puzzle_hash,
                 singleton_record.root,
@@ -678,7 +685,9 @@ class DataLayerWallet:
                 return
 
             new_singleton = Coin(parent_name, full_puzzle_hash, amount)
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} H")
             timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(height)
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} I")
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 SingletonRecord(
                     coin_id=new_singleton.name(),
@@ -697,6 +706,7 @@ class DataLayerWallet:
                 ),
                 True,
             )
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} J")
             await self.wallet_state_manager.coin_store.add_coin_record(
                 WalletCoinRecord(
                     new_singleton,
@@ -708,9 +718,12 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} K")
             # TODO: this needs to actually know if it is in a transaction
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], False)
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
+            if id is not None: self.log.info(f" ==== singleton_removed() {id:7} L")
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
+        if id is not None: self.log.info(f" ==== singleton_removed() {id:7} M")
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
         """

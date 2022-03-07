@@ -293,6 +293,12 @@ class TestDLWallet:
     )
     @pytest.mark.asyncio
     async def test_rebase(self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+        from tests.setup_nodes import bt
+        log_config = bt.config["logging"]
+        log_config["log_level"] = "INFO"
+        from chia.util.chia_logging import initialize_logging
+        initialize_logging(service_name="test", logging_config=log_config, root_path=bt.root_path)
+
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -395,12 +401,11 @@ class TestDLWallet:
         expected_generation += 1
         funds -= 2000000000001
 
-        await time_out_assert(1500, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
-        assert False
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
 
-        for i in range(0, 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        # for i in range(0, 2):
+        #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+        #     await asyncio.sleep(0.5)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_1, launcher_id)

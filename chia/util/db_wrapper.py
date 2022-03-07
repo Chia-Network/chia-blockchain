@@ -4,18 +4,23 @@ import contextlib
 import aiosqlite
 
 
+from chia.util.misc import LoggingLock
+import logging
+
+log = logging.getLogger(__name__)
+
 class DBWrapper:
     """
     This object handles HeaderBlocks and Blocks stored in DB used by wallet.
     """
 
     db: aiosqlite.Connection
-    lock: asyncio.Lock
+    lock: LoggingLock
     db_version: int
 
     def __init__(self, connection: aiosqlite.Connection, db_version: int = 1):
         self.db = connection
-        self.lock = asyncio.Lock()
+        self.lock = LoggingLock(logger=log, id=f"DBW:{id(self)}")
         self.db_version = db_version
 
     async def begin_transaction(self):

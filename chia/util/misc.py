@@ -96,6 +96,20 @@ class LoggingLock:
         finally:
             self.log(message="exited")
 
+    async def acquire(self):
+        self.log(message="acquiring")
+        try:
+            return await self.lock.acquire()
+        finally:
+            self.log(message="acquired")
+
+    def release(self):
+        self.log(message="releasing")
+        try:
+            return self.lock.release()
+        finally:
+            self.log(message="released")
+
     def log(self, message):
         self.logger.info(f" ==== {message} {self.id} (locked: {self.lock.locked()})")
         stack = "".join(traceback.format_stack())

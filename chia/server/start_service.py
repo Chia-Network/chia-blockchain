@@ -76,7 +76,7 @@ class Service:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, service_config["logging"], root_path)
+        # initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
