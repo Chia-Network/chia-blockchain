@@ -50,132 +50,120 @@ class WalletWeightProofHandler:
         self._multiprocessing_context = multiprocessing_context
         self._multiprocessing_lock = asyncio.Lock()
         self._weight_proof_task: Optional[asyncio.Task] = None
-        self._executor_shutdown_tempfile: Optional[IO] = None
-        self._executor: Optional[ProcessPoolExecutor] = None
 
     def shut_down_weight_proof_procs(self):
         if self._weight_proof_task is not None:
             if not self._weight_proof_task.done():
                 self._weight_proof_task.cancel()
         self._weight_proof_task = None
-        if self._executor_shutdown_tempfile is not None:
-            self._executor_shutdown_tempfile.close()
-            self._executor_shutdown_tempfile = None
-        if self._executor is not None:
-            self._executor.shutdown(wait=True)
-            self._executor = None
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation=False
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         async with self._multiprocessing_lock:
-            self._executor_shutdown_tempfile = _create_shutdown_file()
-            self._executor = ProcessPoolExecutor(
-                self._num_processes,
-                mp_context=self._multiprocessing_context,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_worker",),
-            )
             self._weight_proof_task = asyncio.create_task(
                 self._validate_weight_proof_inner(weight_proof, skip_segment_validation)
             )
             valid, fork_point, summaries, block_records = await self._weight_proof_task
-            self.shut_down_weight_proof_procs()
 
             return valid, fork_point, summaries, block_records
 
     async def _validate_weight_proof_inner(
         self, weight_proof: WeightProof, skip_segment_validation: bool
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
-        assert len(weight_proof.sub_epochs) > 0
-        if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0), [], []
+        with ProcessPoolExecutor(
+            self._num_processes,
+            mp_context=self._multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        ) as executor:
+            with _create_shutdown_file() as shutdown_file:
+                assert len(weight_proof.sub_epochs) > 0
+                if len(weight_proof.sub_epochs) == 0:
+                    return False, uint32(0), [], []
 
-        peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
-        log.info(f"validate weight proof peak height {peak_height}")
+                peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
+                log.info(f"validate weight proof peak height {peak_height}")
 
-        # TODO: Consider if this can be spun off to a thread as an alternative to
-        #       sprinkling async sleeps around.  Also see the corresponding comment
-        #       in the full node code.
-        #       all instances tagged as: 098faior2ru08d08ufa
+                # TODO: Consider if this can be spun off to a thread as an alternative to
+                #       sprinkling async sleeps around.  Also see the corresponding comment
+                #       in the full node code.
+                #       all instances tagged as: 098faior2ru08d08ufa
 
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
-        await asyncio.sleep(0)  # break up otherwise multi-second sync code
-        if summaries is None:
-            log.error("weight proof failed sub epoch data validation")
-            return False, uint32(0), [], []
+                summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
+                await asyncio.sleep(0)  # break up otherwise multi-second sync code
+                if summaries is None:
+                    log.error("weight proof failed sub epoch data validation")
+                    return False, uint32(0), [], []
 
-        seed = summaries[-2].get_hash()
-        rng = random.Random(seed)
-        if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
-            log.error("failed weight proof sub epoch sample validation")
-            return False, uint32(0), [], []
+                seed = summaries[-2].get_hash()
+                rng = random.Random(seed)
+                if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
+                    log.error("failed weight proof sub epoch sample validation")
+                    return False, uint32(0), [], []
 
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self._constants, summaries, weight_proof
-        )
-        await asyncio.sleep(0)  # break up otherwise multi-second sync code
-
-        vdf_tasks: List[asyncio.Future] = []
-
-        if self._executor_shutdown_tempfile is None or self._executor is None:
-            raise RuntimeError("Shutting down")
-
-        recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
-            self._executor,
-            _validate_recent_blocks_and_get_records,
-            constants,
-            wp_recent_chain_bytes,
-            summary_bytes,
-            pathlib.Path(self._executor_shutdown_tempfile.name),
-        )
-        try:
-            if not skip_segment_validation:
-                segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes
+                constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
+                    self._constants, summaries, weight_proof
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
-                if not segments_validated:
+                vdf_tasks: List[asyncio.Future] = []
+
+                recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
+                    executor,
+                    _validate_recent_blocks_and_get_records,
+                    constants,
+                    wp_recent_chain_bytes,
+                    summary_bytes,
+                    pathlib.Path(shutdown_file.name),
+                )
+                try:
+                    if not skip_segment_validation:
+                        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+                            constants, rng, wp_segment_bytes, summary_bytes
+                        )
+                        await asyncio.sleep(0)  # break up otherwise multi-second sync code
+
+                        if not segments_validated:
+                            return False, uint32(0), [], []
+
+                        vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
+                        for chunk in vdf_chunks:
+                            byte_chunks = []
+                            for vdf_proof, classgroup, vdf_info in chunk:
+                                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+
+                            vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
+                                executor,
+                                _validate_vdf_batch,
+                                constants,
+                                byte_chunks,
+                                pathlib.Path(shutdown_file.name),
+                            )
+                            vdf_tasks.append(vdf_task)
+                            # give other stuff a turn
+                            await asyncio.sleep(0)
+
+                        for vdf_task in vdf_tasks:
+                            validated = await vdf_task
+                            if not validated:
+                                return False, uint32(0), [], []
+
+                    valid_recent_blocks, records_bytes = await recent_blocks_validation_task
+                finally:
+                    recent_blocks_validation_task.cancel()
+                    for vdf_task in vdf_tasks:
+                        vdf_task.cancel()
+
+                if not valid_recent_blocks:
+                    log.error("failed validating weight proof recent blocks")
+                    # Verify the data
                     return False, uint32(0), [], []
 
-                vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
-                for chunk in vdf_chunks:
-                    byte_chunks = []
-                    for vdf_proof, classgroup, vdf_info in chunk:
-                        byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+                records = [BlockRecord.from_bytes(b) for b in records_bytes]
 
-                    vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
-                        self._executor,
-                        _validate_vdf_batch,
-                        constants,
-                        byte_chunks,
-                        pathlib.Path(self._executor_shutdown_tempfile.name),
-                    )
-                    vdf_tasks.append(vdf_task)
-                    # give other stuff a turn
-                    await asyncio.sleep(0)
-
-                for vdf_task in vdf_tasks:
-                    validated = await vdf_task
-                    if not validated:
-                        return False, uint32(0), [], []
-
-            valid_recent_blocks, records_bytes = await recent_blocks_validation_task
-        finally:
-            recent_blocks_validation_task.cancel()
-            for vdf_task in vdf_tasks:
-                vdf_task.cancel()
-
-        if not valid_recent_blocks:
-            log.error("failed validating weight proof recent blocks")
-            # Verify the data
-            return False, uint32(0), [], []
-
-        records = [BlockRecord.from_bytes(b) for b in records_bytes]
-
-        # TODO fix find fork point
-        return True, uint32(0), summaries, records
+                # TODO fix find fork point
+                return True, uint32(0), summaries, records
 
     def get_fork_point(self, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
         """
