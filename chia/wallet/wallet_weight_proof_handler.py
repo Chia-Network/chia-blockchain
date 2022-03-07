@@ -67,11 +67,21 @@ class WalletWeightProofHandler:
         self, weight_proof: WeightProof, skip_segment_validation=False
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         async with self._multiprocessing_lock:
+            self._executor_shutdown_tempfile = _create_shutdown_file()
+            self._executor = ProcessPoolExecutor(
+                self._num_processes,
+                mp_context=self._multiprocessing_context,
+                initializer=setproctitle,
+                initargs=(f"{getproctitle()}_worker",),
+            )
             self._weight_proof_task = asyncio.create_task(
                 self._validate_weight_proof_inner(weight_proof, skip_segment_validation)
             )
             valid, fork_point, summaries, block_records = await self._weight_proof_task
             self._weight_proof_task = None
+
+            self._executor_shutdown_tempfile.close()
+            self._executor.shutdown(wait=True)
             return valid, fork_point, summaries, block_records
 
     async def _validate_weight_proof_inner(
@@ -108,13 +118,6 @@ class WalletWeightProofHandler:
 
         vdf_tasks: List[asyncio.Future] = []
 
-        self._executor_shutdown_tempfile = _create_shutdown_file()
-        self._executor = ProcessPoolExecutor(
-            self._num_processes,
-            mp_context=self._multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
-        )
         recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
             self._executor,
             _validate_recent_blocks_and_get_records,
