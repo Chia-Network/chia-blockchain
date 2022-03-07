@@ -34,6 +34,9 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - uses: Chia-Network/actions/enforce-semver@main
+        if: startsWith(github.ref, 'refs/tags/')
+
       - uses: Chia-Network/actions/git-ssh-to-https@main
 
       - name: Cleanup any leftovers that exist from previous runs
@@ -195,32 +198,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-mac-m1
-      
-      - name: Ensure versioning compliance
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          set -e
-          echo "Version $GITHUB_REF_NAME"
-          IFS='.'
-          verArray=($GITHUB_REF_NAME)
-          if [[ ${#verArray[@]} -le 2 ]]
-          then
-            echo "The version number tagged in this release is two or fewer numbers. Please use a three-digit version number in the form of Major.minor.patch."
-            exit 1
-          elif [[ ${#verArray[@]} -gt 3 ]]
-          then
-            echo "The version number tagged in this release is three or more numbers. Please use a three-digit version number in the form of Major.minor.patch."
-            exit 1
-          else
-            for i in "${verArray[@]}"
-            do
-              if ! [[ $i =~ ^[0-9]{1,3} ]]
-              then
-                echo "Please use only numbers in your versioning."
-                exit 1
-              fi
-            done
-          fi 
 
       # We want to delete this no matter what happened in the previous steps (failures, success, etc)
       - name: Delete signing keychain
