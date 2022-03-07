@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional, Tuple, Dict
 
 import aiohttp
 
-from chia.cmds.show import print_connections
+from chia.cmds.peer import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
