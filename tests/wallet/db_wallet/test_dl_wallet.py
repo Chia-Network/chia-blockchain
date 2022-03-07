@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 import pytest_asyncio
-from typing import AsyncIterator, Iterator
+from typing import AsyncIterator, Iterator, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -345,6 +345,16 @@ class TestDLWallet:
         await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
         await asyncio.wait_for(full_node_api.process_transaction_records(records=[dl_record, std_record]), timeout=15)
+        expected_generation = 0
+
+        async def singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32) -> Optional[uint32]:
+            latest = await wallet.get_latest_singleton(launcher_id)
+            if latest is None:
+                return None
+
+            return latest.generation
+
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -357,12 +367,17 @@ class TestDLWallet:
 
         # Because these have the same fee, the one that gets pushed first will win
         report_txs, _ = await dl_wallet_1.create_report_spend(launcher_id, fee=uint64(2000000000000))
+        assert len(report_txs) == 2, "expected two tx, a singleton spend and a fee spend"
         record_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
         assert record_1 is not None
         assert current_record != record_1
+
         update_txs = await dl_wallet_0.create_update_state_spend(
             launcher_id, bytes32([0] * 32), fee=uint64(2000000000000)
         )
+        expected_generation += 1
+
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert initial_record != record_0
@@ -377,24 +392,17 @@ class TestDLWallet:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
         await asyncio.wait_for(full_node_api.process_transaction_records(records=report_txs), timeout=15)
-
+        expected_generation += 1
         funds -= 2000000000001
 
-        async def is_singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32, generation: int) -> bool:
-            latest = await wallet.get_latest_singleton(launcher_id)
-            if latest is not None and latest.generation == generation:
-                return True
-            return False
-
-        next_generation = current_record.generation + 2
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
 
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
             await asyncio.sleep(0.5)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_1, launcher_id, next_generation)
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_1, launcher_id)
         latest = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert latest is not None
         assert latest == (await dl_wallet_1.get_latest_singleton(launcher_id))
@@ -403,7 +411,7 @@ class TestDLWallet:
         assert (
             len(
                 await dl_wallet_0.get_history(
-                    launcher_id, min_generation=uint32(next_generation - 1), max_generation=uint32(next_generation - 1)
+                    launcher_id, min_generation=uint32(expected_generation - 1), max_generation=uint32(expected_generation - 1)
                 )
             )
             == 1
@@ -444,15 +452,15 @@ class TestDLWallet:
 
         funds -= 2000000000000
 
-        next_generation += 1
-        await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
+        expected_generation += 1
+        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
         await time_out_assert(15, does_singleton_have_root, True, dl_wallet_0, launcher_id, bytes32([1] * 32))
         await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
         assert (
             len(
                 await dl_wallet_0.get_history(
-                    launcher_id, min_generation=uint32(next_generation), max_generation=uint32(next_generation)
+                    launcher_id, min_generation=uint32(expected_generation), max_generation=uint32(expected_generation)
                 )
             )
             == 1
