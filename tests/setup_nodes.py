@@ -676,7 +676,8 @@ async def setup_full_system(
         ]
 
         if connect_to_daemon_port:
-            daemon_ws = await setup_daemon(btools=b_tools).__anext__()
+            node_iters.append(setup_daemon(btools=b_tools))
+            daemon_ws = await node_iters[9].__anext__()
 
         introducer, introducer_server = await node_iters[0].__anext__()
         harvester_service = await node_iters[1].__anext__()
@@ -712,10 +713,12 @@ async def setup_full_system(
         )
 
         if connect_to_daemon_port:
-            node_iters.append(daemon_ws)
             yield ret + (daemon_ws,)
         else:
             yield ret
 
-        await _teardown_nodes(node_iters[:-1])
-        await _teardown_nodes([node_iters[-1]])
+        if connect_to_daemon_port:
+            await _teardown_nodes(node_iters[:-1])
+            await _teardown_nodes([node_iters[-1]])
+        else:
+            await _teardown_nodes(node_iters)
