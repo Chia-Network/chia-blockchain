@@ -54,9 +54,6 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        print(f" ==== found {daemon_port=}")
-        # test_rpc_port = uint16(find_available_listen_port("test_rpc_port"))
-        # print(f" ==== found for wallet {test_rpc_port=}")
         rpc_cleanup = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
