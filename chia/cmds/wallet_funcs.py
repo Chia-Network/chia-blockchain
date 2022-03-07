@@ -41,12 +41,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type == WalletType.STANDARD_WALLET:
+    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
     else:
-        raise LookupError("Only standard wallet and CAT wallets are supported")
+        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
 
     return mojo_per_unit
 
@@ -68,12 +68,12 @@ async def get_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    if wallet_type == WalletType.STANDARD_WALLET:
+    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
-        raise LookupError("Only standard wallet and CAT wallets are supported")
+        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
 
     return name
 
@@ -461,20 +461,31 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
+    is_synced: bool = await wallet_client.get_synced()
+    is_syncing: bool = await wallet_client.get_sync_status()
+
     print(f"Wallet height: {await wallet_client.get_height_info()}")
-    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-    print(f"Balances, fingerprint: {fingerprint}")
-    for summary in summaries_response:
-        wallet_id = summary["id"]
-        balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"]))
-        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-        print(
-            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
-        )
-        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+    if is_syncing:
+        print("Sync status: Syncing...")
+    elif is_synced:
+        print("Sync status: Synced")
+    else:
+        print("Sync status: Not synced")
+
+    if not is_syncing and is_synced:
+        print(f"Balances, fingerprint: {fingerprint}")
+        for summary in summaries_response:
+            wallet_id = summary["id"]
+            balances = await wallet_client.get_wallet_balance(wallet_id)
+            typ = WalletType(int(summary["type"]))
+            address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+            print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
+            print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
+            print(
+                f"   -Pending Total Balance: "
+                f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+            )
+            print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
     print(" ")
     trusted_peers: Dict = config.get("trusted_peers", {})

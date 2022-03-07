@@ -1,16 +1,20 @@
+import json
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from statistics import stdev
 from time import process_time as clock
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, Type, Union
 
 import click
-from utils import EnumType, rand_bytes, rand_full_block, rand_hash
+from utils import EnumType, get_commit_hash, rand_bytes, rand_full_block, rand_hash
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
+
+_version = 1
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,25 @@ def print_row(
     avg_iterations = "{0:>18}".format(f"{avg_iterations}")
     stdev_iterations = "{0:>22}".format(f"{stdev_iterations}")
     print(f"{mode} | {us_per_iteration} | {stdev_us_per_iteration} | {avg_iterations} | {stdev_iterations}", end=end)
+
+
+@dataclass
+class BenchmarkResults:
+    us_per_iteration: float
+    stdev_us_per_iteration: float
+    avg_iterations: int
+    stdev_iterations: float
+
+
+def print_results(mode: str, bench_result: BenchmarkResults, final: bool) -> None:
+    print_row(
+        mode=mode,
+        us_per_iteration=bench_result.us_per_iteration,
+        stdev_us_per_iteration=bench_result.stdev_us_per_iteration,
+        avg_iterations=bench_result.avg_iterations,
+        stdev_iterations=bench_result.stdev_iterations,
+        end="\n" if final else "\r",
+    )
 
 
 # The strings in this Enum are by purpose. See benchmark.utils.EnumType.
@@ -158,18 +181,60 @@ def calc_stdev_percent(iterations: List[int], avg: float) -> float:
     return int((deviation / avg * 100) * 100) / 100
 
 
+def pop_data(key: str, *, old: Dict[str, Any], new: Dict[str, Any]) -> Tuple[Any, Any]:
+    if key not in old:
+        sys.exit(f"{key} missing in old")
+    if key not in new:
+        sys.exit(f"{key} missing in new")
+    return old.pop(key), new.pop(key)
+
+
+def print_compare_row(c0: str, c1: Union[str, float], c2: Union[str, float], c3: Union[str, float]) -> None:
+    c0 = "{0:<12}".format(f"{c0}")
+    c1 = "{0:<16}".format(f"{c1}")
+    c2 = "{0:<16}".format(f"{c2}")
+    c3 = "{0:<12}".format(f"{c3}")
+    print(f"{c0} | {c1} | {c2} | {c3}")
+
+
+def compare_results(
+    old: Dict[str, Dict[str, Dict[str, Union[float, int]]]], new: Dict[str, Dict[str, Dict[str, Union[float, int]]]]
+) -> None:
+    old_version, new_version = pop_data("version", old=old, new=new)
+    if old_version != new_version:
+        sys.exit(f"version missmatch: old: {old_version} vs new: {new_version}")
+    old_commit_hash, new_commit_hash = pop_data("commit_hash", old=old, new=new)
+    for data, modes in new.items():
+        if data not in old:
+            continue
+        print(f"\ncompare: {data}, old: {old_commit_hash}, new: {new_commit_hash}")
+        print_compare_row("mode", "µs/iteration old", "µs/iteration new", "diff %")
+        for mode, results in modes.items():
+            if mode not in old[data]:
+                continue
+            old_us, new_us = pop_data("us_per_iteration", old=old[data][mode], new=results)
+            print_compare_row(mode, old_us, new_us, int((new_us - old_us) / old_us * 10000) / 100)
+
+
 @click.command()
 @click.option("-d", "--data", default=Data.all, type=EnumType(Data))
 @click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
 @click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")
 @click.option("-t", "--ms", default=50, help="Milliseconds per run")
 @click.option("--live/--no-live", default=False, help="Print live results (slower)")
-def run(data: Data, mode: Mode, runs: int, ms: int, live: bool) -> None:
+@click.option("-o", "--output", type=click.File("w"), help="Write the results to a file")
+@click.option("-c", "--compare", type=click.File("r"), help="Compare to the results from a file")
+def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, compare: TextIO) -> None:
     results: Dict[Data, Dict[Mode, List[List[int]]]] = {}
+    bench_results: Dict[str, Any] = {"version": _version, "commit_hash": get_commit_hash()}
     for current_data, parameter in benchmark_parameter.items():
-        results[current_data] = {}
         if data == Data.all or current_data == data:
-            print(f"\nruns: {runs}, ms/run: {ms}, benchmarks: {mode.name}, data: {parameter.data_class.__name__}")
+            results[current_data] = {}
+            bench_results[current_data] = {}
+            print(
+                f"\nbenchmarks: {mode.name}, data: {parameter.data_class.__name__} runs: {runs}, ms/run: {ms}, "
+                f"commit_hash: {bench_results['commit_hash']}"
+            )
             print_row(
                 mode="mode",
                 us_per_iteration="µs/iteration",
@@ -184,22 +249,21 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool) -> None:
                     all_results: List[List[int]] = results[current_data][current_mode]
                     obj = parameter.object_creation_cb()
 
-                    def print_results(print_run: int, final: bool) -> None:
+                    def get_bench_results() -> BenchmarkResults:
                         all_runtimes: List[int] = [x for inner in all_results for x in inner]
                         total_iterations: int = len(all_runtimes)
                         total_elapsed_us: int = sum(all_runtimes)
-                        avg_iterations: float = total_iterations / print_run
+                        avg_iterations: float = total_iterations / len(all_results)
                         stdev_iterations: float = calc_stdev_percent([len(x) for x in all_results], avg_iterations)
+                        us_per_iteration: float = total_elapsed_us / total_iterations
                         stdev_us_per_iteration: float = calc_stdev_percent(
                             all_runtimes, total_elapsed_us / total_iterations
                         )
-                        print_row(
-                            mode=current_mode.name,
-                            us_per_iteration=int(total_elapsed_us / total_iterations * 100) / 100,
-                            stdev_us_per_iteration=stdev_us_per_iteration,
-                            avg_iterations=int(avg_iterations),
-                            stdev_iterations=stdev_iterations,
-                            end="\n" if final else "\r",
+                        return BenchmarkResults(
+                            int(us_per_iteration * 100) / 100,
+                            stdev_us_per_iteration,
+                            int(avg_iterations),
+                            stdev_iterations,
                         )
 
                     current_run: int = 0
@@ -219,9 +283,16 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool) -> None:
                             us_iteration_results = run_for_ms(lambda: conversion_cb(prepared_obj), ms)
                         all_results.append(us_iteration_results)
                         if live:
-                            print_results(current_run, False)
+                            print_results(current_mode.name, get_bench_results(), False)
                     assert current_run == runs
-                    print_results(runs, True)
+                    bench_result = get_bench_results()
+                    bench_results[current_data][current_mode] = bench_result.__dict__
+                    print_results(current_mode.name, bench_result, True)
+    json_output = json.dumps(bench_results)
+    if output:
+        output.write(json_output)
+    if compare:
+        compare_results(json.load(compare), json.loads(json_output))
 
 
 if __name__ == "__main__":
