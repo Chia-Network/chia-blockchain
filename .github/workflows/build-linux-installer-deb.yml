@@ -34,7 +34,7 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
-    
+
     - uses: Chia-Network/actions/enforce-semver@main
       if: startsWith(github.ref, 'refs/tags/')
 
