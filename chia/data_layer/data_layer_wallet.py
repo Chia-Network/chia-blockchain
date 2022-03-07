@@ -265,7 +265,7 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
-        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
+        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
                 new_singleton,
@@ -709,7 +709,8 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
+            # TODO: this needs to actually know if it is in a transaction
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
