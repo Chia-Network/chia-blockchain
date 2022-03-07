@@ -6,7 +6,7 @@ import signal
 import sqlite3
 
 from secrets import token_bytes
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, AsyncGenerator
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
@@ -66,7 +66,7 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_daemon(btools: BlockTools):
+async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, None]:
     root_path = btools.root_path
     config = btools.config
     assert "daemon_port" in config
@@ -674,6 +674,10 @@ async def setup_full_system(
             setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
             setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
         ]
+
+        if connect_to_daemon_port:
+            daemon_ws = await setup_daemon(btools=b_tools).__anext__()
+
         introducer, introducer_server = await node_iters[0].__anext__()
         harvester_service = await node_iters[1].__anext__()
         harvester = harvester_service._node
@@ -693,10 +697,6 @@ async def setup_full_system(
         vdf_sanitizer = await node_iters[7].__anext__()
         sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
-        if connect_to_daemon_port:
-            node_iters.append(setup_daemon(btools=b_tools))
-            daemon1 = await node_iters[9].__anext__()
-
         ret = (
             node_api_1,
             node_api_2,
@@ -712,7 +712,8 @@ async def setup_full_system(
         )
 
         if connect_to_daemon_port:
-            yield ret + (daemon1,)
+            node_iters.append(daemon_ws)
+            yield ret + (daemon_ws,)
         else:
             yield ret
 

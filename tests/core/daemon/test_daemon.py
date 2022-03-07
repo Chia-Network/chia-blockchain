@@ -73,7 +73,7 @@ class TestDaemon:
 
         await time_out_assert_custom_interval(60, 1, num_connections, 1)
 
-        await time_out_assert(30, node_height_at_least, True, node2, 1)
+        await time_out_assert(1500, node_height_at_least, True, node2, 1)
 
         session = aiohttp.ClientSession()
 
