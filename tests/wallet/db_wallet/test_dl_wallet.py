@@ -395,7 +395,8 @@ class TestDLWallet:
         expected_generation += 1
         funds -= 2000000000001
 
-        await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
+        await time_out_assert(1500, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
+        assert False
 
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))

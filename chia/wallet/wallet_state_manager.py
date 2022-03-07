@@ -388,7 +388,9 @@ class WalletStateManager:
         for every wallet to ensure we always have more in the database. Never reusue the
         same public key more than once (for privacy).
         """
+        self.log.info(f" ==== get_unused_derivation_record() A")
         async with self.puzzle_store.lock:
+            self.log.info(f" ==== get_unused_derivation_record() B")
             # If we have no unused public keys, we will create new ones
             unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
             if unused is None:
@@ -403,14 +405,15 @@ class WalletStateManager:
             assert record is not None
 
             # Set this key to used so we never use it again
-            self.log.info(f" ==== get_unused_derivation_record() A")
+            self.log.info(f" ==== get_unused_derivation_record() C")
             await self.puzzle_store.set_used_up_to(record.index, in_transaction=in_transaction)
-            self.log.info(f" ==== get_unused_derivation_record() B")
+            self.log.info(f" ==== get_unused_derivation_record() D")
 
             # Create more puzzle hashes / keys
             await self.create_more_puzzle_hashes(in_transaction=in_transaction)
-            self.log.info(f" ==== get_unused_derivation_record() C")
-            return record
+            self.log.info(f" ==== get_unused_derivation_record() E")
+        self.log.info(f" ==== get_unused_derivation_record() F")
+        return record
 
     async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
         async with self.puzzle_store.lock:
