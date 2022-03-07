@@ -1131,7 +1131,7 @@ class WalletStateManager:
     async def _await_closed(self) -> None:
         await self.db_connection.close()
         if self.weight_proof_handler is not None:
-            self.weight_proof_handler.cancel_weight_proof_tasks()
+            self.weight_proof_handler.shut_down_weight_proof_procs()
 
     def unlink_db(self):
         Path(self.db_path).unlink()
