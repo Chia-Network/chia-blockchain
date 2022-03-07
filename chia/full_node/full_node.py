@@ -134,7 +134,7 @@ class FullNode:
         self.multiprocessing_context = None
 
         # Used for metrics
-        self.dropped_tx: Set[bytes32] = set()
+        self.dropped_tx = 0
         self.not_dropped_tx = 0
 
         self._ui_tasks = set()
