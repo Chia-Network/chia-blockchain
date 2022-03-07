@@ -11,7 +11,8 @@ from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
 from pathlib import Path
 from sys import exit, platform
-from typing import Any, List, Optional, Tuple, Type, Union, TypeVar
+from typing import Any, List, Optional, Tuple, Type, Union
+
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
 #
@@ -26,8 +27,6 @@ MASTER_PASSPHRASE_USER_NAME = "Chia Passphrase"
 
 LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
 OSPassphraseStore = Union[MacKeyring, WinKeyring]
-
-_T_KeyringWrapper = TypeVar("_T_KeyringWrapper", bound="KeyringWrapper")
 
 
 def get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
@@ -105,37 +104,24 @@ class KeyringWrapper:
     cached_passphrase_is_validated: bool = False
     legacy_keyring = None
 
-    @classmethod
-    def create(
-        cls: Type[_T_KeyringWrapper], keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, force_legacy: bool = False
-    ) -> Optional[_T_KeyringWrapper]:
+    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH, force_legacy: bool = False):
         """
-        Create a new KeyringWrapper instance.
+        Initializes the keyring backend based on the OS. For Linux, we previously
+        used CryptFileKeyring. We now use our own FileKeyring backend and migrate
+        the data from the legacy CryptFileKeyring (on write).
         """
-        # instance: KeyringWrapper = KeyringWrapper()
-        instance = cls()
-        instance.keys_root_path = keys_root_path
+        self.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
             if check_legacy_keyring_keys_present(legacy_keyring):
-                instance.keyring = legacy_keyring
+                self.keyring = legacy_keyring
             else:
                 return None
         else:
-            instance.refresh_keyrings(keys_root_path)
-        return instance
+            self.refresh_keyrings()
 
-    def refresh_keyrings(self, keys_root_path: Optional[Path]) -> None:
-        """
-        Initializes or updates the keyring backend based on the OS. For Linux, we
-        previously used CryptFileKeyring. We now use our own FileKeyring backend
-        and migrate the data from the legacy CryptFileKeyring (on write).
-        """
-
-        if keys_root_path is not None:
-            self.keys_root_path = keys_root_path
-
-        self.cleanup_keyring()
+    def refresh_keyrings(self):
+        self.keyring = None
         self.keyring = self._configure_backend()
 
         # Configure the legacy keyring if keyring passphrases are supported to support migration (if necessary)
@@ -164,7 +150,7 @@ class KeyringWrapper:
 
         return keyring
 
-    def _configure_legacy_backend(self) -> Optional[LegacyKeyring]:
+    def _configure_legacy_backend(self) -> LegacyKeyring:
         # If keyring.yaml isn't found or is empty, check if we're using
         # CryptFileKeyring, Mac Keychain, or Windows Credential Manager
         filekeyring = self.keyring if type(self.keyring) == FileKeyring else None
@@ -201,25 +187,17 @@ class KeyringWrapper:
     @staticmethod
     def get_shared_instance(create_if_necessary=True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
-            KeyringWrapper.__shared_instance = KeyringWrapper.create(keys_root_path=KeyringWrapper.__keys_root_path)
+            KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 
         return KeyringWrapper.__shared_instance
 
     @staticmethod
     def cleanup_shared_instance():
-        if KeyringWrapper.__shared_instance is not None:
-            KeyringWrapper.__shared_instance.cleanup_keyring()
-            KeyringWrapper.__shared_instance = None
-
-    def cleanup_keyring(self):
-        filekeyring: Optional[FileKeyring] = self.keyring if type(self.keyring) == FileKeyring else None
-        if filekeyring is not None:
-            filekeyring.cleanup_keyring_file_watcher()
-        self.keyring = None
+        KeyringWrapper.__shared_instance = None
 
     @staticmethod
     def get_legacy_instance() -> Optional["KeyringWrapper"]:
-        return KeyringWrapper.create(force_legacy=True)
+        return KeyringWrapper(force_legacy=True)
 
     def get_keyring(self):
         """
