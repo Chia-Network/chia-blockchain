@@ -4,7 +4,7 @@ import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
 import api, { baseQuery } from '../api';
 
-const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord', 'OfferCounts']});
+const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'TransactionCount', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord', 'OfferCounts']});
 
 type OfferCounts = {
   total: number;
@@ -222,7 +222,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       invalidatesTags: [{ type: 'Wallets', id: 'LIST' }],
     }),
 
-    deleteUnconfirmedTransactions: build.mutation<any, { 
+    deleteUnconfirmedTransactions: build.mutation<any, {
       walletId: number;
     }>({
       query: ({ walletId }) => ({
@@ -230,8 +230,12 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [walletId],
       }),
+      invalidatesTags: [
+        { type: 'Transactions', id: 'LIST' },
+        'TransactionCount',
+      ],
     }),
-  
+
     getWalletBalance: build.query<{
       confirmedWalletBalance: number;
       maxSendAmount: number;
@@ -639,6 +643,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [walletId],
       }),
       transformResponse: (response: any) => response?.count,
+      providesTags: ['TransactionCount'],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
         service: Wallet,
