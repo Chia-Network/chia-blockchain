@@ -127,7 +127,7 @@ class PoolWallet:
     @classmethod
     def _verify_self_pooled(cls, state) -> Optional[str]:
         err = ""
-        if state.pool_url != "":
+        if state.pool_url not in [None, ""]:
             err += " Unneeded pool_url for self-pooling"
 
         if state.relative_lock_height != 0:
