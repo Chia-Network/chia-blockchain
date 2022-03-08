@@ -18,6 +18,7 @@ class DaemonProxy:
         self._request_dict: Dict[str, asyncio.Event] = {}
         self.response_dict: Dict[str, Any] = {}
         self.ssl_context = ssl_context
+        self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
@@ -25,8 +26,8 @@ class DaemonProxy:
         return request
 
     async def start(self):
-        session = aiohttp.ClientSession()
-        self.websocket = await session.ws_connect(
+        self.client_session = aiohttp.ClientSession()
+        self.websocket = await self.client_session.ws_connect(
             self._uri,
             autoclose=True,
             autoping=True,
@@ -127,6 +128,8 @@ class DaemonProxy:
     async def close(self) -> None:
         if self.websocket is not None:
             await self.websocket.close()
+        if self.client_session is not None:
+            await self.client_session.close()
 
     async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})
