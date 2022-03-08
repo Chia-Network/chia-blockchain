@@ -35,13 +35,13 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - uses: Chia-Network/actions/enforce-semver@main
-      if: startsWith(github.ref, 'refs/tags/')
-
     - uses: Chia-Network/actions/git-ssh-to-https@main
 
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
+
+    - uses: Chia-Network/actions/enforce-semver@main
+      if: startsWith(github.ref, 'refs/tags/')
 
     - name: Setup Python environment
       uses: actions/setup-python@v2
