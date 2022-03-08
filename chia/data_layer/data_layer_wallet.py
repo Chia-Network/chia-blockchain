@@ -367,16 +367,24 @@ class DataLayerWallet:
         return dl_record, std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True
+        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True, in_transaction: bool = False, debug_id=None
     ) -> TransactionRecord:
+        if debug_id is not None: self.log.info(f" ==== create_tandem_xch_tx() {debug_id:7} A")
+
+        puzzle_hash = await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction)
+
+        if debug_id is not None: self.log.info(f" ==== create_tandem_xch_tx() {debug_id:7} B")
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
+            puzzle_hash=puzzle_hash,
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
             puzzle_announcements_to_consume=None if coin_announcement else {announcement_to_assert},
+            in_transaction=in_transaction,
+            debug_id=debug_id,
         )
+        if debug_id is not None: self.log.info(f" ==== create_tandem_xch_tx() {debug_id:7} C")
         assert chia_tx.spend_bundle is not None
         return chia_tx
 
@@ -385,19 +393,26 @@ class DataLayerWallet:
         launcher_id: bytes32,
         root_hash: bytes32,
         fee: uint64 = uint64(0),
+        debug_id=None,
     ) -> List[TransactionRecord]:
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} A")
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} C")
 
         inner_puzzle_derivation: Optional[
             DerivationRecord
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             singleton_record.inner_puzzle_hash
         )
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} D")
         if inner_puzzle_derivation is None:
+            if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} E")
             raise ValueError(f"DL Wallet does not have permission to update Singleton with launcher ID {launcher_id}")
 
         # Make the child's puzzles
-        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
+        # TODO: this needs to actually be aware if it is in a transaction or not
+        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=True)
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} F")
         next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle.get_tree_hash(), root_hash)
         next_full_puz = create_host_fullpuz(next_inner_puzzle.get_tree_hash(), root_hash, launcher_id)
 
@@ -443,8 +458,11 @@ class DataLayerWallet:
             SerializedProgram.from_program(current_full_puz),
             SerializedProgram.from_program(full_sol),
         )
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} G")
         await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(current_inner_puzzle.get_tree_hash())
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} H")
         spend_bundle = await self.sign(coin_spend)
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} I")
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -464,16 +482,21 @@ class DataLayerWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
         )
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} I A")
         if fee > 0:
+            if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} I B")
+            # TODO: this needs to actually know if it is in a transaction
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=True, debug_id=debug_id,
             )
+            if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} I C")
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
         else:
             txs = [dl_tx]
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} I D")
         new_singleton_record = SingletonRecord(
             coin_id=Coin(
                 current_coin.name(), next_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
@@ -491,7 +514,10 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} J")
+        # TODO: this needs to actually be aware if it is in a transaction
+        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, True)
+        if debug_id is not None: self.log.info(f" ==== create_update_state_spend() {debug_id:7} K")
         return txs
 
     async def create_report_spend(
@@ -722,24 +748,28 @@ class DataLayerWallet:
             # TODO: this needs to actually know if it is in a transaction
             await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
             if id is not None: self.log.info(f" ==== singleton_removed() {id:7} L")
-            await self.potentially_handle_resubmit(singleton_record.launcher_id)
+            await self.potentially_handle_resubmit(singleton_record.launcher_id, debug_id=id)
         if id is not None: self.log.info(f" ==== singleton_removed() {id:7} M")
 
-    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
+    async def potentially_handle_resubmit(self, launcher_id: bytes32, debug_id=None) -> None:
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
         singletons on to the new latest singleton.  If there is a fork and the root changed, we assume that everything
         has failed and delete any pending state.
         """
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} A")
         unconfirmed_singletons = await self.wallet_state_manager.dl_store.get_unconfirmed_singletons(launcher_id)
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} B")
         if len(unconfirmed_singletons) == 0:
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} B return")
             return
         unconfirmed_singletons = sorted(unconfirmed_singletons, key=attrgetter("generation"))
         full_branch: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
             launcher_id,
             min_generation=unconfirmed_singletons[0].generation,
         )
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} C")
         if len(unconfirmed_singletons) == len(full_branch) and set(unconfirmed_singletons) == set(full_branch):
             return
 
@@ -748,6 +778,7 @@ class DataLayerWallet:
         parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(
             unconfirmed_singletons[0].lineage_proof.parent_name
         )
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} D")
         if parent_singleton is None or any(parent_singleton.root != s.root for s in full_branch if s.confirmed):
             root_changed: bool = True
         else:
@@ -757,46 +788,73 @@ class DataLayerWallet:
         # First let's find all of our txs matching our unconfirmed singletons
         unconfirmed_ids: Set[bytes32] = {s.lineage_proof.parent_name for s in unconfirmed_singletons}
         relevant_dl_txs: List[TransactionRecord] = []
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} E")
         for id in unconfirmed_ids:
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} F {id}")
             tx = await self.wallet_state_manager.tx_store.get_transaction_record(id)
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} G {id}")
             if tx is not None:
+                if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} H {id}")
                 relevant_dl_txs.append(tx)
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} I")
         # Let's check our standard wallet for fee transactions related to these dl txs
         all_spends: List[SpendBundle] = [tx.spend_bundle for tx in relevant_dl_txs if tx.spend_bundle is not None]
         all_removal_ids: Set[bytes32] = {removal.name() for sb in all_spends for removal in sb.removals()}
         unconfirmed_std_txs: List[
             TransactionRecord
         ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.standard_wallet.id())
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} J")
         relevant_std_txs: List[TransactionRecord] = [
             tx for tx in unconfirmed_std_txs if any(c.name() in all_removal_ids for c in tx.removals)
         ]
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} K")
         # Delete all of the relevant transactions
         for tx in [*relevant_dl_txs, *relevant_std_txs]:
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} L")
             await self.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} M")
         # Delete all of the unconfirmed singleton records
         for singleton in unconfirmed_singletons:
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} N")
             await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} O")
 
-        if not root_changed:
-            # The root never changed so let's attempt a rebase
-            try:
-                all_txs: List[TransactionRecord] = []
-                for singleton in unconfirmed_singletons:
-                    for tx in relevant_dl_txs:
-                        if any(c.name() == singleton.coin_id for c in tx.additions):
-                            if tx.spend_bundle is not None:
-                                fee = uint64(tx.spend_bundle.fees())
-                            else:
-                                fee = uint64(0)
+        try:
+            if not root_changed:
+                if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} P")
+                # The root never changed so let's attempt a rebase
+                try:
+                    if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} Q")
+                    all_txs: List[TransactionRecord] = []
+                    for singleton in unconfirmed_singletons:
+                        for tx in relevant_dl_txs:
+                            if any(c.name() == singleton.coin_id for c in tx.additions):
+                                if tx.spend_bundle is not None:
+                                    fee = uint64(tx.spend_bundle.fees())
+                                else:
+                                    fee = uint64(0)
 
-                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
-                for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx)
-            except Exception as e:
-                self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
-                # Something went wrong so let's delete anything pending that was created
-                for singleton in unconfirmed_singletons:
-                    await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
+                                if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} R")
+                                all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee, debug_id=debug_id))
+                                if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} S")
+                    for tx in all_txs:
+                        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} T")
+                        # TODO: needs to actual know if it is in a transaction
+                        await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=True)
+                    if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} U")
+                except Exception as e:
+                    if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} V")
+                    self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
+                    # Something went wrong so let's delete anything pending that was created
+                    for singleton in unconfirmed_singletons:
+                        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} W")
+                        await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
+                    if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} W 2")
+                finally:
+                    if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} X")
+        finally:
+            if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} Y")
+        if debug_id is not None: self.log.info(f" ==== potentially_handle_resubmit() {debug_id:7} Z")
 
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)

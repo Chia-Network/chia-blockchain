@@ -403,9 +403,9 @@ class TestDLWallet:
 
         await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_0, launcher_id)
 
-        # for i in range(0, 2):
-        #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-        #     await asyncio.sleep(0.5)
+        for i in range(0, 2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+            await asyncio.sleep(0.5)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await time_out_assert(15, singleton_generation, expected_generation, dl_wallet_1, launcher_id)

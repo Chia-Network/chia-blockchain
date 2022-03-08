@@ -712,11 +712,16 @@ class WalletNode:
                         return False
                 concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
                 all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
+            self.log.info(f" ==== receive_state_from_peer() O")
             idx += len(states)
 
+        self.log.info(f" ==== receive_state_from_peer() P")
         still_connected = self.server is not None and peer.peer_node_id in self.server.all_connections
+        self.log.info(f" ==== receive_state_from_peer() Q")
         await asyncio.gather(*all_tasks)
+        self.log.info(f" ==== receive_state_from_peer() R")
         await self.update_ui()
+        self.log.info(f" ==== receive_state_from_peer() S")
         return still_connected and self.server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:

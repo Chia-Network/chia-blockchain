@@ -179,8 +179,8 @@ class Wallet:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
         puzzle = puzzle_for_pk(bytes(dr.pubkey))
         await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
         return puzzle
@@ -315,6 +315,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        in_transaction: bool = False,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -379,7 +380,7 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash(in_transaction=in_transaction)
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -441,17 +442,21 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        in_transaction: bool = False,
+            debug_id=None
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
+        if debug_id is not None: self.log.info(f" ==== generate_signed_transaction() {debug_id:7} A")
         if primaries is None:
             non_change_amount = amount
         else:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
+        if debug_id is not None: self.log.info(f" ==== generate_signed_transaction() {debug_id:7} B")
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
@@ -464,17 +469,21 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
+            in_transaction=in_transaction
         )
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
+        if debug_id is not None: self.log.info(f" ==== generate_signed_transaction() {debug_id:7} C")
         await self.hack_populate_secret_keys_for_coin_spends(transaction)
+        if debug_id is not None: self.log.info(f" ==== generate_signed_transaction() {debug_id:7} D")
         spend_bundle: SpendBundle = await sign_coin_spends(
             transaction,
             self.secret_key_store.secret_key_for_public_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
+        if debug_id is not None: self.log.info(f" ==== generate_signed_transaction() {debug_id:7} E")
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
