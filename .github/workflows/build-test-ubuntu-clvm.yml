@@ -83,9 +83,7 @@ jobs:
       run: |
         . ./activate
 
-        pip install git+https://github.com/Chia-Network/clvm_tools_rs.git@20220305-test-threading-fix
-
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
+        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0
 
 
 #

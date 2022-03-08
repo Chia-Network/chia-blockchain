@@ -4,7 +4,6 @@ import os
 import time
 
 from typing import Optional, TextIO
-from pathlib import Path
 import pathlib
 
 import pkg_resources
@@ -13,7 +12,7 @@ from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 
 # Cribbed mostly from chia/daemon/server.py
-def create_exclusive_lock(lockfile: Path) -> Optional[TextIO]:
+def create_exclusive_lock(lockfile) -> Optional[TextIO]:
     """
     Open a lockfile exclusively.
     """
@@ -119,26 +118,10 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
         if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
             # Establish whether the size is zero on entry
             clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
-            assert len(clvm_hex.strip()) != 0
 
             full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
-            res = compile_clvm(full_path, output, search_paths=[full_path.parent])
-
-            if res != str(output):
-                print(f'want {str(output).encode("utf8")}')
-                print(f'have {res.encode("utf8")}')
-                assert res == output
-
-            # Possible workaround for concurrent tests loading resources at the
-            # top level scope: return our own conception of the content.
-            file_stat = os.stat(output)
-            assert file_stat.st_size > 2
-
-            with open(output) as f:
-                program_text = f.read()
-                assert len(program_text.strip()) != 0
-                return SerializedProgram.from_bytes(bytes.fromhex(program_text))
+            compile_clvm(full_path, output, search_paths=[full_path.parent])
 
     except NotImplementedError:
         # pyinstaller doesn't support `pkg_resources.resource_exists`
