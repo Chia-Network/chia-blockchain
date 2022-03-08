@@ -37,7 +37,7 @@ def compile_clvm(full_path, output, search_paths=[]):
     # expected.  It can use either a filesystem path or name a python
     # module.
     treated_include_paths = list(map(translate_path, search_paths))
-    compile_clvm_rust(str(full_path), str(output), treated_include_paths)
+    res = compile_clvm_rust(str(full_path), str(output), treated_include_paths)
 
     if "CLVM_TOOLS" in os.environ and os.environ["CLVM_TOOLS"] == "check" and compile_clvm_py is not None:
         # Simple helper to read the compiled output
@@ -61,6 +61,8 @@ def compile_clvm(full_path, output, search_paths=[]):
         else:
             print("Compilation match %s: %s\n" % (full_path, orig256))
 
+    return res
+
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
@@ -82,7 +84,12 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
 
             full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
-            compile_clvm(full_path, output, search_paths=[full_path.parent])
+            res = compile_clvm(full_path, output, search_paths=[full_path.parent])
+
+            if res != str(output):
+                print(f'want {str(output).encode("utf8")}')
+                print(f'have {res.encode("utf8")}')
+                assert res == output
 
             # Possible workaround for concurrent tests loading resources at the
             # top level scope: return our own conception of the content.
