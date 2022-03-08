@@ -2365,7 +2365,7 @@ class TestMaliciousGenerators:
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_2, blocks[-1].height)
+        await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
         spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
         coin_spend_0 = recursive_replace(spend_bundle.coin_spends[0], "coin.puzzle_hash", bytes32([1] * 32))
