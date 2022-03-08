@@ -42,6 +42,12 @@ buffer_blocks = 4
 
 
 @pytest_asyncio.fixture(scope="function")
+def self_hostname():
+    from tests.conftest import self_hostname
+    return self_hostname
+
+
+@pytest_asyncio.fixture(scope="function")
 async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
