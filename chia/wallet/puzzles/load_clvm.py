@@ -82,7 +82,7 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
 
             # Possible workaround for concurrent tests loading resources at the
             # top level scope: return our own conception of the content.
-            with open(hex_filename) as f:
+            with open(full_path.parent / hex_filename) as f:
                 return SerializedProgram.from_bytes(bytes.fromhex(f.read()))
 
     except NotImplementedError:
