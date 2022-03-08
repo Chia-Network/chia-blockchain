@@ -27,21 +27,11 @@ def bt(get_keychain) -> BlockTools:
     return _shared_block_tools
 
 
-# If you attempt to use a global hostname variable, or a constant fixture like the one below,
-# some system tests behave more timing dependent and flaky, possible because the bt (BlockTools)
-# fixture is not fully initialized before it is used. See:
-#     tests/wallet/cat_wallet/test_trades.py
-#     tests/wallet/rpc/test_wallet_rpc.py
-# @pytest_asyncio.fixture(scope="function")
-# def self_hostname():
-#    return "localhost"
-
-
 # if you have a system that has an unusual hostname for localhost and you want
 # to run the tests, change the `self_hostname` fixture
-@pytest_asyncio.fixture(scope="function")
-def self_hostname(bt):
-    return bt.config["self_hostname"]
+@pytest_asyncio.fixture(scope="session")
+def self_hostname():
+    return "localhost"
 
 
 # NOTE:
