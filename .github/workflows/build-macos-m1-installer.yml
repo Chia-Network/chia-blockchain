@@ -39,9 +39,6 @@ jobs:
       - name: Cleanup any leftovers that exist from previous runs
         run: bash build_scripts/clean-runner.sh || true
 
-      - uses: Chia-Network/actions/enforce-semver@main
-        if: startsWith(github.ref, 'refs/tags/')
-
       - name: Test for secrets access
         id: check_secrets
         shell: bash
