@@ -133,7 +133,6 @@ class BlockTools:
         root_path: Optional[Path] = None,
         const_dict=None,
         keychain: Optional[Keychain] = None,
-        daemon_port=None,
     ):
         self._tempdir = None
         if root_path is None:
@@ -154,10 +153,7 @@ class BlockTools:
             self._config[service]["selected_network"] = "testnet0"
 
         # some tests start the daemon, make sure it's on a free port
-        if daemon_port is None:
-            self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
-        else:
-            self._config["daemon_port"] = daemon_port
+        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -2034,12 +2030,11 @@ async def create_block_tools_async(
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
-    daemon_port: Optional[uint16] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, daemon_port=daemon_port)
+    bt = BlockTools(constants, root_path, const_dict, keychain,)
     await bt.setup_keys()
     await bt.setup_plots()
 
