@@ -2,6 +2,7 @@ import importlib
 import inspect
 import os
 import pathlib
+import tempfile
 
 import pkg_resources
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -53,8 +54,6 @@ def compile_clvm(full_path, output, search_paths=[]):
         orig256 = sha256file(orig)
         rs256 = sha256file(output)
 
-        print(orig, orig256, rs256)
-
         if orig256 != rs256:
             print("Compiled %s: %s vs %s\n" % (full_path, orig256, rs256))
             print("Aborting compilation due to mismatch with rust")
@@ -80,6 +79,12 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
             full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
             compile_clvm(full_path, output, search_paths=[full_path.parent])
+
+            # Possible workaround for concurrent tests loading resources at the
+            # top level scope: return our own conception of the content.
+            with open(hex_filename) as f:
+                return SerializedProgram.from_bytes(bytes.fromhex(f.read()))
+
     except NotImplementedError:
         # pyinstaller doesn't support `pkg_resources.resource_exists`
         # so we just fall through to loading the hex clvm
