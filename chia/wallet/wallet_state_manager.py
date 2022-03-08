@@ -68,7 +68,6 @@ from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 from chia.util.misc import LoggingLock
 
-
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
@@ -627,15 +626,9 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def new_coin_state(
-        self,
-        coin_states: List[CoinState],
-        peer: WSChiaConnection,
-        fork_height: Optional[uint32],
-        id=None,
-        potential_height=None,
+        self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32], id=None, potential_height=None
     ) -> None:
-        if id is not None:
-            self.log.info(f" ==== new_coin_state() {id:7} A {potential_height}")
+        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} A {potential_height}")
         # TODO: add comment about what this method does
 
         # Input states should already be sorted by cs_height, with reorgs at the beginning
@@ -646,18 +639,15 @@ class WalletStateManager:
                 raise ValueError("Input coin_states is not sorted properly")
             curr_h = last_change_height
 
-        if id is not None:
-            self.log.info(f" ==== new_coin_state() {id:7} B {potential_height}")
+        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} B {potential_height}")
         all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
 
-        if id is not None:
-            self.log.info(f" ==== new_coin_state() {id:7} C {potential_height}")
+        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} C {potential_height}")
         for coin_state_idx, coin_state in enumerate(coin_states):
-            if id is not None:
-                self.log.info(f" ==== new_coin_state() {id:7} D {potential_height}")
+            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} D {potential_height}")
             wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                 coin_state.coin.puzzle_hash
             )
@@ -675,8 +665,7 @@ class WalletStateManager:
                 ):
                     continue
 
-            if id is not None:
-                self.log.info(f" ==== new_coin_state() {id:7} E {potential_height}")
+            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} E {potential_height}")
             wallet_id: Optional[uint32] = None
             wallet_type: Optional[WalletType] = None
             if wallet_info is not None:
@@ -692,8 +681,7 @@ class WalletStateManager:
                         wallet_id = potential_dl.id()
                         wallet_type = WalletType(potential_dl.type())
 
-            if id is not None:
-                self.log.info(f" ==== new_coin_state() {id:7} F {potential_height}")
+            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} F {potential_height}")
             if wallet_id is None or wallet_type is None:
                 self.log.info(f"No wallet for coin state: {coin_state}")
                 continue
@@ -706,33 +694,28 @@ class WalletStateManager:
 
             all_outgoing = [tx for tx in all_txs if "OUTGOING" in TransactionType(tx.type).name]
 
-            if id is not None:
-                self.log.info(f" ==== new_coin_state() {id:7} G {potential_height}")
+            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} G {potential_height}")
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
             if derivation_index is not None:
                 await self.puzzle_store.set_used_up_to(derivation_index, True)
 
             if coin_state.created_height is None:
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} H {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} H {potential_height}")
                 # TODO implements this coin got reorged
                 # TODO: we need to potentially roll back the pool wallet here
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} I {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} I {potential_height}")
                 await self.coin_added(coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type)
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} J {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} J {potential_height}")
                 self.log.info(f"Coin Removed: {coin_state}")
                 record = await self.coin_store.get_coin_record(coin_state.coin.name())
                 if coin_state.coin.name() in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
                 if record is None:
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} K {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} K {potential_height}")
                     farmer_reward = False
                     pool_reward = False
                     tx_type: int
@@ -840,40 +823,31 @@ class WalletStateManager:
 
                             await self.tx_store.add_transaction_record(tx_record, True)
                 else:
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} L {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} L {potential_height}")
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} M {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} M {potential_height}")
                     rem_tx_records: List[TransactionRecord] = []
                     for out_tx_record in all_outgoing:
                         for rem_coin in out_tx_record.removals:
                             if rem_coin.name() == coin_state.coin.name():
                                 rem_tx_records.append(out_tx_record)
 
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} N {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} N {potential_height}")
                     for tx_record in rem_tx_records:
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} O {potential_height} {tx_record.name}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} O {potential_height} {tx_record.name}")
                         await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} P {potential_height} {tx_record.name}")
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} Q {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} P {potential_height} {tx_record.name}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} Q {potential_height}")
                     await self.coin_store.db_connection.commit()
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} R {potential_height}")
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} S {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} R {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} S {potential_height}")
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
                         if rem_coin.name() == coin_state.coin.name():
                             self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
 
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} T {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} T {potential_height}")
                 if record.wallet_type == WalletType.POOLING_WALLET:
                     if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                         wallet = self.wallets[uint32(record.wallet_id)]
@@ -904,110 +878,83 @@ class WalletStateManager:
                             )
                             assert len(new_coin_state) == 1
                             curr_coin_state = new_coin_state[0]
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} U {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} U {potential_height}")
                 if record.wallet_type == WalletType.DATA_LAYER:
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} V {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} V {potential_height}")
                     singleton_spend = await self.wallet_node.fetch_puzzle_solution(
                         peer, coin_state.spent_height, coin_state.coin
                     )
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} W {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} W {potential_height}")
                     try:
                         dl_wallet = self.wallets[uint32(record.wallet_id)]
                         await dl_wallet.singleton_removed(singleton_spend, coin_state.spent_height, id=id)
                     except BaseException as e:
                         import traceback
-
-                        if id is not None:
-                            self.log.info(
-                                f" ==== new_coin_state() {id:7} W {potential_height} {e} {''.join(traceback.format_exc())}"
-                            )
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} W {potential_height} {e} {''.join(traceback.format_exc())}")
                         raise
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} X {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} X {potential_height}")
 
                 # Check if a child is a singleton launcher
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} AA {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AA {potential_height}")
                 if children is None:
                     children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
                 assert children is not None
-                if id is not None:
-                    self.log.info(f" ==== new_coin_state() {id:7} AB {potential_height}")
+                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AB {potential_height}")
                 for child in children:
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AC {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AC {potential_height}")
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                         continue
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AD {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AD {potential_height}")
                     if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AE {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AE {potential_height}")
                         continue
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AF {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AF {potential_height}")
                     if child.spent_height is None:
                         # TODO handle spending launcher later block
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AG {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AG {potential_height}")
                         continue
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AH {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AH {potential_height}")
                     launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
                         peer, coin_state.spent_height, child.coin
                     )
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AI {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AI {potential_height}")
                     if launcher_spend is None:
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AJ {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AJ {potential_height}")
                         continue
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AK {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AK {potential_height}")
                     try:
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AL {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AL {potential_height}")
                         pool_state = solution_to_pool_state(launcher_spend)
                         assert pool_state is not None
                     except (AssertionError, ValueError) as e:
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AM {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AM {potential_height}")
                         self.log.debug(f"Not a pool wallet launcher {e}")
                         matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AN {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AN {potential_height}")
                         if (
                             matched
                             and inner_puzhash is not None
                             and (await self.puzzle_store.puzzle_hash_exists(inner_puzhash))
                         ):
-                            if id is not None:
-                                self.log.info(f" ==== new_coin_state() {id:7} AO {potential_height}")
+                            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AO {potential_height}")
                             for _, wallet in self.wallets.items():
                                 if wallet.type() == WalletType.DATA_LAYER.value:
                                     dl_wallet = wallet
                                     break
                             else:  # No DL wallet exists yet
-                                if id is not None:
-                                    self.log.info(f" ==== new_coin_state() {id:7} AOA {potential_height}")
+                                if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AOA {potential_height}")
                                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(self, self.main_wallet)
-                            if id is not None:
-                                self.log.info(f" ==== new_coin_state() {id:7} AOB {potential_height}")
+                            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AOB {potential_height}")
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
                                 spend=launcher_spend,
                                 height=child.spent_height,
                                 in_transaction=True,
                             )
-                        if id is not None:
-                            self.log.info(f" ==== new_coin_state() {id:7} AP {potential_height}")
+                        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AP {potential_height}")
                         continue
 
-                    if id is not None:
-                        self.log.info(f" ==== new_coin_state() {id:7} AQ {potential_height}")
+                    if id is not None: self.log.info(f" ==== new_coin_state() {id:7} AQ {potential_height}")
                     # solution_to_pool_state may return None but this may not be an error
                     if pool_state is None:
                         self.log.debug("solution_to_pool_state returned None, ignore and continue")
@@ -1033,14 +980,11 @@ class WalletStateManager:
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
-        if id is not None:
-            self.log.info(f" ==== new_coin_state() {id:7} ZA {potential_height}")
+        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} ZA {potential_height}")
         for coin_state_removed in trade_coin_removed:
-            if id is not None:
-                self.log.info(f" ==== new_coin_state() {id:7} ZB {potential_height}")
+            if id is not None: self.log.info(f" ==== new_coin_state() {id:7} ZB {potential_height}")
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height)
-        if id is not None:
-            self.log.info(f" ==== new_coin_state() {id:7} ZC {potential_height}")
+        if id is not None: self.log.info(f" ==== new_coin_state() {id:7} ZC {potential_height}")
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
