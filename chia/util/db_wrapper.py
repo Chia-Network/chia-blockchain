@@ -1,13 +1,13 @@
 import asyncio
 import contextlib
+import logging
 
 import aiosqlite
 
-
 from chia.util.misc import LoggingLock
-import logging
 
 log = logging.getLogger(__name__)
+
 
 class DBWrapper:
     """

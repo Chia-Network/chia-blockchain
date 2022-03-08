@@ -681,7 +681,10 @@ class WalletNode:
                         await self.wallet_state_manager.db_wrapper.begin_transaction()
                         self.log.info(f" ==== receive_state_from_peer() D")
                         import random
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height, id=random.randrange(2**16))
+
+                        await self.wallet_state_manager.new_coin_state(
+                            states, peer, fork_height, id=random.randrange(2 ** 16)
+                        )
                         self.log.info(f" ==== receive_state_from_peer() E")
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                         self.log.info(f" ==== receive_state_from_peer() F")
