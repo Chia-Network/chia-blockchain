@@ -8,18 +8,16 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 1.3.0 Chia blockchain 2022-3-07
 
-We at Chia have been working hard to bring all of our new features together into one easy-to-use release. Today, we’re proud to announce the release of our 1.3.0 client. There is a lengthy list of added features and changes, as well as a few noteworthy items to be aware of when upgrading. We'd also like to give a very special thanks to our beta testers! Thanks to their efforts, we've found, and remediated many bugs during the beta phases of this release.
-
 ### Added:
 
 - CAT wallet support - add wallets for your favorite CATs.
 - Offers - make, take, and share your offers.
-- Integrated light wallet sync - to get you synced up faster while your full node syncs.
+- Integrated lite wallet sync - to get you synced up faster while your full node syncs.
 - Wallet mode - Access just the wallet features to make and receive transactions.
 - Farmer mode - All your farming tools, and full node, while getting all the benefits of the upgraded wallet features.
 - New v2 DB - improved compression for smaller footprint (the v2 DB is created alongside the v1 DB. Please be sure to have enough disk space before executing the DB upgrade command).
 - Key derivation tool via CLI - lets you derive wallet addresses, child keys, and also search your keys for arbitrary wallet addresses/keys.
-- Light wallet data migration - CAT wallets you set up and your offer history will be carried over.
+- Lite wallet data migration - CAT wallets you set up and your offer history will be carried over.
 - The farmer will report version info in User-Agent field for pool protocol (Thanks @FazendaPool).
 - Added new RPC, get_version, to the daemon to return the version of Chia (Thanks @dkackman).
 - Added new config.yaml setting, reserved_cores, to specify how many cores Chia will not use when launching process pools. Using 0 will allow Chia to use all cores for process pools. Set the default to 0 to allow Chia to use all cores. This can result in faster syncing and better performance overall especially on lower-end CPUs like the Raspberry Pi4.
@@ -32,8 +30,8 @@ We at Chia have been working hard to bring all of our new features together into
 
 ### Changed:
 
-- Light wallet client sync updated to only require 3 peers instead of 5.
-- Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added (this behavior can be toggled in config.yaml).
+- Lite wallet client sync updated to only require 3 peers instead of 5.
+- Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added (thanks to @ojura, this behavior can be toggled in config.yaml).
 - New sorting pattern for offer history - Open/pending offers sorted on top ordered by creation date > confirmation block height > trade id, and then Confirmed and Cancelled offers sorted by the same order.
 - When plotting multiple plots with the GUI, new items are taken from the top of the list instead of the bottom.
 - CA certificate store update.
@@ -74,6 +72,7 @@ We at Chia have been working hard to bring all of our new features together into
 - Thanks to @random-zebra for fixing a bug in the bls-signature copy assignment operator.
 - Thanks to @lourkeur for fixes in blspy related to pybind11 2.8+.
 - Thanks to @nioos-ledger with a fix to the python implementation of bls-signatures.
+- Thanks to @yan74 for help debugging a race condition writing to config.yaml during beta.
 - Fixed issue where the DB could lose the peak of the chain when receiving a compressed block.
 - Fixed showing inbound transaction after an offer is cancelled.
 - Fixed blockchain fee "Value seems high" message showing up when it shouldn't.
