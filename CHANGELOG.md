@@ -54,6 +54,8 @@ for setuptools_scm/PEP 440 reasons.
 - Removed the option to display "All" rows per page on the transactions page of the GUI.
 - Updated the background image for the MacOS installer.
 - Changed the behavior of what info is displayed if the database is still syncing.
+  - It should not be expected that wallet info, such as payout address, should not reflect what their desired values until everything has completed syncing.
+  - The payout instructions may not be editable via the GUI until syncing has completed.
 
 ### Fixed:
 
@@ -67,7 +69,7 @@ for setuptools_scm/PEP 440 reasons.
 - Thanks to @risner for fixes related to using colorlog.
 - Fixed issues in reading the pool_list from config if set to null.
 - Fixed display info in CLI chia show -c when No Info should be displayed.
-- Thanks to @madMAx42v3r for fixes in chiapos related to a possible race condition when multiple threads call Verifier::ValidateProof.
+- Thanks to @madMAx43v3r for fixes in chiapos related to a possible race condition when multiple threads call Verifier::ValidateProof.
 - Thanks to @PastaPastaPasta for some compiler warning fixes in bls-signatures.
 - Thanks to @random-zebra for fixing a bug in the bls-signature copy assignment operator.
 - Thanks to @lourkeur for fixes in blspy related to pybind11 2.8+.
@@ -76,6 +78,9 @@ for setuptools_scm/PEP 440 reasons.
 - Fixed issue where the DB could lose the peak of the chain when receiving a compressed block.
 - Fixed showing inbound transaction after an offer is cancelled.
 - Fixed blockchain fee "Value seems high" message showing up when it shouldn't.
+- Bugs in pool farming where auth key was being set incorrectly, leading to invalid signature bugs.
+- Memory leak in the full node sync store where peak hashes were stored without being pruned.
+- Fixed a timelord issue which could cause a few blocks to not be infused on chain if a certain proof of space signs conflicting blocks.
 
 ### Known Issues:
 
@@ -86,6 +91,9 @@ for setuptools_scm/PEP 440 reasons.
 - Wallets with large number of transactions or large number of coins will take longer to sync (more than a few minutes), but should take less time than a full node sync. It could fail in some cases.
 - Huge numbers cannot be put into amount/fee input for transactions in the GUI.
 - Some Linux systems experience excessive memory usage with the value *default*/*python_default*/*fork* configured for *multiprocessing_start_method:*. Setting this value to *spawn* may produce better results, but in some uncommon cases, is know to cause crashes.
+- Sending a TX with too low of a fee can cause an infinite spinner in the GUI when the mempool is full.
+  - Workaround: Restart the GUI, or clear unconfirmed TX.
+- Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
 
 ## 1.2.11 Chia blockchain 2021-11-4
 
