@@ -3,7 +3,7 @@ import inspect
 import os
 import time
 
-from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Optional, TextIO
 from pathlib import Path
 import pathlib
 
@@ -12,31 +12,20 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 
-try:
-    import fcntl
-
-    has_fcntl = True
-except ImportError:
-    has_fcntl = False
-
-
-def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
+# Cribbed mostly from chia/daemon/server.py
+def create_exclusive_lock(lockfile: Path) -> Optional[TextIO]:
     """
     Open a lockfile exclusively.
     """
 
     try:
-        if has_fcntl:
-            f = open(lockfile, "w")
-            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        else:
-            if lockfile.exists():
-                lockfile.unlink()
-            fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            f = open(fd, "w")
-        f.write(text)
+        fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+        f = open(fd, "w")
+
+        f.write("lock")
     except IOError:
         return None
+
     return f
 
 
@@ -102,7 +91,7 @@ def compile_clvm(full_path, output, search_paths=[]):
 
     lock_file = None
     while True:
-        lock_file = singleton(lock_filename)
+        lock_file = create_exclusive_lock(lock_filename)
         if lock_file is not None:
             break
 
