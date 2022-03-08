@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 
 import pytest
 import pytest_asyncio
@@ -802,20 +802,24 @@ class TestPoolWalletRpc:
             assert status.target is None
             assert status_2.target is None
 
-            join_pool_tx: TransactionRecord = await client.pw_join_pool(
-                wallet_id,
-                pool_ph,
-                "https://pool.example.com",
-                10,
-                fee,
-            )
-            join_pool_tx_2: TransactionRecord = await client.pw_join_pool(
-                wallet_id_2,
-                pool_ph,
-                "https://pool.example.com",
-                10,
-                fee,
-            )
+            join_pool_tx: TransactionRecord = (
+                await client.pw_join_pool(
+                    wallet_id,
+                    pool_ph,
+                    "https://pool.example.com",
+                    10,
+                    fee,
+                )
+            )["transaction"]
+            join_pool_tx_2: TransactionRecord = (
+                await client.pw_join_pool(
+                    wallet_id_2,
+                    pool_ph,
+                    "https://pool.example.com",
+                    10,
+                    fee,
+                )
+            )["transaction"]
             assert join_pool_tx is not None
             assert join_pool_tx_2 is not None
 
@@ -919,13 +923,15 @@ class TestPoolWalletRpc:
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is None
 
-            join_pool_tx: TransactionRecord = await client.pw_join_pool(
-                wallet_id,
-                pool_ph,
-                "https://pool.example.com",
-                5,
-                fee,
-            )
+            join_pool_tx: TransactionRecord = (
+                await client.pw_join_pool(
+                    wallet_id,
+                    pool_ph,
+                    "https://pool.example.com",
+                    5,
+                    fee,
+                )
+            )["transaction"]
             assert join_pool_tx is not None
 
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
@@ -953,9 +959,9 @@ class TestPoolWalletRpc:
 
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
-            leave_pool_tx: TransactionRecord = await client.pw_self_pool(wallet_id, fee)
-            assert leave_pool_tx.wallet_id == wallet_id
-            assert leave_pool_tx.amount == 1
+            leave_pool_tx: Dict[str, Any] = await client.pw_self_pool(wallet_id, fee)
+            assert leave_pool_tx["transaction"].wallet_id == wallet_id
+            assert leave_pool_tx["transaction"].amount == 1
 
             async def status_is_leaving():
                 await self.farm_blocks(full_node_api, our_ph, 1)
@@ -1054,13 +1060,15 @@ class TestPoolWalletRpc:
             assert pw_info.current.relative_lock_height == 5
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
-            join_pool_tx: TransactionRecord = await client.pw_join_pool(
-                wallet_id,
-                pool_b_ph,
-                "https://pool-b.org",
-                10,
-                fee,
-            )
+            join_pool_tx: TransactionRecord = (
+                await client.pw_join_pool(
+                    wallet_id,
+                    pool_b_ph,
+                    "https://pool-b.org",
+                    10,
+                    fee,
+                )
+            )["transaction"]
             assert join_pool_tx is not None
 
             async def status_is_leaving():
@@ -1156,13 +1164,15 @@ class TestPoolWalletRpc:
             assert pw_info.current.pool_url == "https://pool-a.org"
             assert pw_info.current.relative_lock_height == 5
 
-            join_pool_tx: TransactionRecord = await client.pw_join_pool(
-                wallet_id,
-                pool_b_ph,
-                "https://pool-b.org",
-                10,
-                fee,
-            )
+            join_pool_tx: TransactionRecord = (
+                await client.pw_join_pool(
+                    wallet_id,
+                    pool_b_ph,
+                    "https://pool-b.org",
+                    10,
+                    fee,
+                )
+            )["transaction"]
             assert join_pool_tx is not None
             await time_out_assert(
                 10,
