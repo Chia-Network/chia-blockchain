@@ -44,7 +44,8 @@ dev_dependencies = [
     "build",
     "pre-commit",
     "pytest",
-    "pytest-asyncio",
+    # >=0.17.0 for the fixture decorator
+    "pytest-asyncio >=0.17.0",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
