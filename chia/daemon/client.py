@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import websockets
+import aiohttp
 
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
@@ -18,20 +18,26 @@ class DaemonProxy:
         self._request_dict: Dict[str, asyncio.Event] = {}
         self.response_dict: Dict[str, Any] = {}
         self.ssl_context = ssl_context
+        self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
     async def start(self):
-        self.websocket = await websockets.connect(self._uri, max_size=None, ssl=self.ssl_context)
+        session = aiohttp.ClientSession()
+        self.websocket = await session.ws_connect(
+            self._uri,
+            autoclose=True,
+            autoping=True,
+            heartbeat=60,
+            ssl_context=self.ssl_context,
+            max_msg_size=100 * 1024 * 1024,
+        )
 
         async def listener():
             while True:
-                try:
-                    message = await self.websocket.recv()
-                except websockets.exceptions.ConnectionClosedOK:
-                    return None
+                message = await self.websocket.receive_str()
                 decoded = json.loads(message)
                 id = decoded["request_id"]
 
@@ -46,7 +52,9 @@ class DaemonProxy:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
-        asyncio.create_task(self.websocket.send(string))
+        if self.websocket is None:
+            raise Exception("Websocket is not connected")
+        asyncio.create_task(self.websocket.send_str(string))
 
         async def timeout():
             await asyncio.sleep(30)
@@ -117,7 +125,8 @@ class DaemonProxy:
         return response
 
     async def close(self) -> None:
-        await self.websocket.close()
+        if self.websocket is not None:
+            await self.websocket.close()
 
     async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})
