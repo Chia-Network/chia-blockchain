@@ -42,6 +42,12 @@ from tests.util.socket import find_available_listen_port
 log = logging.getLogger(__name__)
 
 
+@pytest_asyncio.fixture(scope="function")
+def self_hostname():
+    from tests.conftest import self_hostname
+    return self_hostname
+
+
 class TestWalletRpc:
     @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
