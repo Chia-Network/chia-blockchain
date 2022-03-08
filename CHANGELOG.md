@@ -8,7 +8,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 1.3.0 Chia blockchain 2022-3-07
 
-We at Chia have been working hard to bring all of our new features together into one easy-to-use release. Today, we’re proud to announce the release of our 1.3.0 client. There is a lenghty list of added features and changes, as well as a few noteworthy items to be aware of when upgrading. We'd also like to give a very special thanks to our beta testers! Thanks to their efforts, we've found, and remediated may bugs during the beta phases of this release.
+We at Chia have been working hard to bring all of our new features together into one easy-to-use release. Today, we’re proud to announce the release of our 1.3.0 client. There is a lengthy list of added features and changes, as well as a few noteworthy items to be aware of when upgrading. We'd also like to give a very special thanks to our beta testers! Thanks to their efforts, we've found, and remediated many bugs during the beta phases of this release.
 
 ### Added:
 
