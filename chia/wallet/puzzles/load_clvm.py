@@ -76,6 +76,10 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
 
     try:
         if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
+            # Establish whether the size is zero on entry
+            clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
+            assert len(clvm_hex.strip()) != 0
+
             full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
             compile_clvm(full_path, output, search_paths=[full_path.parent])
@@ -83,7 +87,9 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
             # Possible workaround for concurrent tests loading resources at the
             # top level scope: return our own conception of the content.
             with open(full_path.parent / hex_filename) as f:
-                return SerializedProgram.from_bytes(bytes.fromhex(f.read()))
+                program_text = f.read()
+                assert len(program_text.strip()) != 0
+                return SerializedProgram.from_bytes(bytes.fromhex(program_text))
 
     except NotImplementedError:
         # pyinstaller doesn't support `pkg_resources.resource_exists`
@@ -91,6 +97,7 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
         pass
 
     clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
+    assert len(clvm_hex.strip()) != 0
     clvm_blob = bytes.fromhex(clvm_hex)
     return SerializedProgram.from_bytes(clvm_blob)
 
