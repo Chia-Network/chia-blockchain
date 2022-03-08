@@ -1,6 +1,4 @@
-import atexit
 import logging
-import pytest
 import asyncio
 import signal
 import sqlite3
@@ -22,7 +20,7 @@ from chia.simulator.start_simulator import service_kwargs_for_full_node_simulato
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from tests.block_tools import create_block_tools_async, test_constants, BlockTools, create_block_tools
+from tests.block_tools import create_block_tools_async, test_constants, BlockTools
 from tests.util.keyring import TempKeyring
 from tests.util.socket import find_available_listen_port
 from chia.util.hash import std_hash
@@ -35,17 +33,7 @@ def cleanup_keyring(keyring: TempKeyring):
     keyring.cleanup()
 
 
-temp_keyring = TempKeyring(populate=True)
-keychain = temp_keyring.get_keychain()
-atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
-
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session")
-def bt() -> BlockTools:
-    _shared_block_tools = create_block_tools(constants=test_constants, keychain=keychain)
-    return _shared_block_tools
 
 
 def constants_for_dic(dic):
