@@ -2034,7 +2034,12 @@ async def create_block_tools_async(
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain,)
+    bt = BlockTools(
+        constants,
+        root_path,
+        const_dict,
+        keychain,
+    )
     await bt.setup_keys()
     await bt.setup_plots()
 

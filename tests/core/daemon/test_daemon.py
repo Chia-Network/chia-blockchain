@@ -17,7 +17,6 @@ from tests.setup_nodes import setup_daemon, self_hostname, setup_full_system
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert_custom_interval, time_out_assert
 from tests.util.keyring import TempKeyring
-from tests.util.socket import find_available_listen_port
 
 
 class TestDaemon:
@@ -32,9 +31,7 @@ class TestDaemon:
 
     @pytest_asyncio.fixture(scope="function")
     async def get_b_tools(self, get_temp_keyring):
-        local_b_tools = await create_block_tools_async(
-            constants=test_constants_modified, keychain=get_temp_keyring
-        )
+        local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
         new_config = local_b_tools._config
         local_b_tools.change_config(new_config)
         return local_b_tools
@@ -55,7 +52,7 @@ class TestDaemon:
             bt,
             b_tools=get_b_tools,
             b_tools_1=get_b_tools_1,
-            connect_to_daemon_port=get_b_tools._config["daemon_port"],
+            connect_to_daemon=True,
             db_version=1,
         ):
             yield _

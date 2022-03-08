@@ -92,11 +92,11 @@ async def setup_full_node(
     port,
     rpc_port,
     local_bt: BlockTools,
-    connect_to_daemon_port: uint16 = None,
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=0,
     sanitize_weight_proof_only=False,
+    connect_to_daemon=False,
     db_version=1,
 ):
     db_path = local_bt.root_path / f"{db_name}"
@@ -109,12 +109,9 @@ async def setup_full_node(
                 connection.execute("INSERT INTO database_version VALUES (?)", (db_version,))
                 connection.commit()
 
+    if connect_to_daemon:
+        assert local_bt.config["daemon_port"] is not None
     config = local_bt.config["full_node"]
-
-    connect_to_daemon = False
-    if connect_to_daemon_port is not None:
-        config["daemon_port"] = connect_to_daemon_port
-        connect_to_daemon = True
 
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
@@ -398,7 +395,6 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 find_available_listen_port("node1"),
                 find_available_listen_port("node1 rpc"),
                 await create_block_tools_async(constants=test_constants, keychain=keychain1),
-                connect_to_daemon_port=None,
                 simulator=False,
                 db_version=db_version,
             ),
@@ -409,7 +405,6 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 find_available_listen_port("node2"),
                 find_available_listen_port("node2 rpc"),
                 await create_block_tools_async(constants=test_constants, keychain=keychain2),
-                connect_to_daemon_port=None,
                 simulator=False,
                 db_version=db_version,
             ),
@@ -440,7 +435,6 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
                 find_available_listen_port(f"node{i}"),
                 find_available_listen_port(f"node{i} rpc"),
                 await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
-                connect_to_daemon_port=None,
                 simulator=False,
                 db_version=db_version,
             )
@@ -470,7 +464,6 @@ async def setup_node_and_wallet(
                 find_available_listen_port("node1"),
                 find_available_listen_port("node1 rpc"),
                 btools,
-                connect_to_daemon_port=None,
                 simulator=False,
                 db_version=db_version,
             ),
@@ -523,7 +516,6 @@ async def setup_simulators_and_wallets(
                 port,
                 rpc_port,
                 bt_tools,
-                connect_to_daemon_port=None,
                 simulator=True,
                 db_version=db_version,
             )
@@ -597,14 +589,15 @@ async def setup_full_system(
     shared_b_tools: BlockTools,
     b_tools: BlockTools = None,
     b_tools_1: BlockTools = None,
-    connect_to_daemon_port: Optional[uint16] = None,
     db_version=1,
+    connect_to_daemon=False,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if b_tools is None:
             b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
         if b_tools_1 is None:
             b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
+
         introducer_port = find_available_listen_port("introducer")
         farmer_port = find_available_listen_port("farmer")
         farmer_rpc_port = find_available_listen_port("farmer rpc")
@@ -650,11 +643,11 @@ async def setup_full_system(
                 node1_port,
                 rpc1_port,
                 b_tools,
-                connect_to_daemon_port,
                 introducer_port,
                 False,
                 10,
                 True,
+                connect_to_daemon=connect_to_daemon,
                 db_version=db_version,
             ),
             setup_full_node(
@@ -664,7 +657,6 @@ async def setup_full_system(
                 node2_port,
                 rpc2_port,
                 b_tools_1,
-                connect_to_daemon_port=None,
                 introducer_port=introducer_port,
                 simulator=False,
                 send_uncompact_interval=10,
@@ -675,7 +667,7 @@ async def setup_full_system(
             setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
         ]
 
-        if connect_to_daemon_port:
+        if connect_to_daemon:
             node_iters.append(setup_daemon(btools=b_tools))
             daemon_ws = await node_iters[9].__anext__()
 
@@ -712,12 +704,12 @@ async def setup_full_system(
             node_api_1.full_node.server,
         )
 
-        if connect_to_daemon_port:
+        if connect_to_daemon:
             yield ret + (daemon_ws,)
         else:
             yield ret
 
-        if connect_to_daemon_port:
+        if connect_to_daemon:
             await _teardown_nodes(node_iters[:-1])
             await _teardown_nodes([node_iters[-1]])
         else:
