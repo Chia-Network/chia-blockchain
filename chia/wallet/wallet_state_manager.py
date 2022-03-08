@@ -1137,6 +1137,7 @@ class WalletStateManager:
             await self.coin_store.rebuild_wallet_cache()
             await self.tx_store.rebuild_tx_cache()
             await self.pool_store.rebuild_cache()
+            raise
 
     async def _await_closed(self) -> None:
         await self.db_connection.close()
