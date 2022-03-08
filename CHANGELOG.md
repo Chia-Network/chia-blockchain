@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [Unreleased]
+
+
 ## 1.3.0 Chia blockchain 2022-3-07
 
 ### Added:
@@ -95,6 +98,7 @@ for setuptools_scm/PEP 440 reasons.
   - Workaround: Restart the GUI, or clear unconfirmed TX.
 - Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
 
+
 ## 1.2.11 Chia blockchain 2021-11-4
 
 Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
@@ -128,6 +132,7 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
+
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
