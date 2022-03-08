@@ -48,22 +48,22 @@ def softfork_height(request):
 block_format_version = "rc4"
 
 
-@pytest_asyncio.fixture(scope="session")
-async def default_400_blocks():
+@pytest.fixture(scope="session")
+def default_400_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", seed=b"alternate2")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def default_1000_blocks():
+@pytest.fixture(scope="session")
+def default_1000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def pre_genesis_empty_slots_1000_blocks():
+@pytest.fixture(scope="session")
+def pre_genesis_empty_slots_1000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
@@ -71,22 +71,22 @@ async def pre_genesis_empty_slots_1000_blocks():
     )
 
 
-@pytest_asyncio.fixture(scope="session")
-async def default_10000_blocks():
+@pytest.fixture(scope="session")
+def default_10000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def default_20000_blocks():
+@pytest.fixture(scope="session")
+def default_20000_blocks():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def default_10000_blocks_compact():
+@pytest.fixture(scope="session")
+def default_10000_blocks_compact():
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
@@ -99,7 +99,7 @@ async def default_10000_blocks_compact():
     )
 
 
-@pytest_asyncio.fixture(scope="function")
-async def tmp_dir():
+@pytest.fixture(scope="function")
+def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
