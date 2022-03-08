@@ -1,12 +1,43 @@
 import importlib
 import inspect
 import os
+import time
+
+from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from pathlib import Path
 import pathlib
-import tempfile
 
 import pkg_resources
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
+
+
+try:
+    import fcntl
+
+    has_fcntl = True
+except ImportError:
+    has_fcntl = False
+
+
+def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
+    """
+    Open a lockfile exclusively.
+    """
+
+    try:
+        if has_fcntl:
+            f = open(lockfile, "w")
+            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        else:
+            if lockfile.exists():
+                lockfile.unlink()
+            fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            f = open(fd, "w")
+        f.write(text)
+    except IOError:
+        return None
+    return f
 
 
 compile_clvm_py = None
@@ -31,8 +62,9 @@ if "CLVM_TOOLS" in os.environ:
         pass
 
 
-def compile_clvm(full_path, output, search_paths=[]):
+def compile_clvm_in_lock(full_path, output, search_paths):
     # Compile using rust (default)
+
     # Ensure path translation is done in the idiomatic way currently
     # expected.  It can use either a filesystem path or name a python
     # module.
@@ -64,6 +96,25 @@ def compile_clvm(full_path, output, search_paths=[]):
     return res
 
 
+def compile_clvm(full_path, output, search_paths=[]):
+    # Ensure that we're the only one recompiling full_path
+    lock_filename = f"{full_path}.lock"
+
+    lock_file = None
+    while True:
+        lock_file = singleton(lock_filename)
+        if lock_file is not None:
+            break
+
+        time.sleep(0.1)
+
+    try:
+        return compile_clvm_in_lock(full_path, output, search_paths)
+    finally:
+        lock_file.close()
+        os.remove(lock_filename)
+
+
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
     """
     This function takes a .clvm file in the given package and compiles it to a
@@ -73,7 +124,6 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
     clvm_filename: file name
     package_or_requirement: usually `__name__` if the clvm file is in the same package
     """
-
     hex_filename = f"{clvm_filename}.hex"
 
     try:
