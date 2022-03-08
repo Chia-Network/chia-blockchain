@@ -27,10 +27,9 @@ def bt(get_keychain) -> BlockTools:
     return _shared_block_tools
 
 
-@pytest.fixture(scope="session")
-def self_hostname(bt):
-    return bt.config["self_hostname"]
-
+# if you have a system that has an unusual hostname for localhost and you want
+# to run the tests, change this constant
+self_hostname = "localhost"
 
 # NOTE:
 #       Instantiating the bt fixture results in an attempt to create the chia root directory

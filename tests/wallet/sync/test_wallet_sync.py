@@ -35,8 +35,8 @@ def event_loop():
 
 class TestWalletSync:
     @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet(test_constants):
+    async def wallet_node(self, self_hostname):
+        async for _ in setup_node_and_wallet(test_constants, self_hostname):
             yield _
 
     @pytest_asyncio.fixture(scope="function")
@@ -45,8 +45,8 @@ class TestWalletSync:
             yield _
 
     @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(test_constants, starting_height=100):
+    async def wallet_node_starting_height(self, self_hostname):
+        async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
             yield _
 
     @pytest.mark.parametrize(

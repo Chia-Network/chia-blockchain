@@ -48,11 +48,6 @@ def bt() -> BlockTools:
     return _shared_block_tools
 
 
-# if you have a system that has an unusual hostname for localhost and you want
-# to run the tests, change this constant
-self_hostname = "localhost"
-
-
 def constants_for_dic(dic):
     return test_constants.replace(**dic)
 
@@ -452,7 +447,7 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 
 
 async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants, starting_height=None, key_seed=None, db_version=1
+    consensus_constants: ConsensusConstants, self_hostname: str, starting_height=None, key_seed=None, db_version=1
 ):
     with TempKeyring(populate=True) as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
