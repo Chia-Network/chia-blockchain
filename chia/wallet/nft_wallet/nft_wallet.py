@@ -266,7 +266,7 @@ class NFTWallet:
         return Program.to([8, pk])
 
     async def generate_new_nft(
-        self, uri: str, percentage: uint64, backpayment_address: bytes32, amount: int = 1
+        self, metadata: Program, percentage: uint64, backpayment_address: bytes32, amount: int = 1
     ) -> Optional[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
@@ -279,7 +279,7 @@ class NFTWallet:
         genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        nft_transfer_program = nft_puzzles.create_transfer_puzzle(uri, percentage, backpayment_address)
+        nft_transfer_program = nft_puzzles.create_transfer_puzzle(metadata, percentage, backpayment_address)
         eve_fullpuz = nft_puzzles.create_full_puzzle(
             launcher_coin.name(), self.nft_wallet_info.my_did, nft_transfer_program.get_tree_hash()
         )
@@ -303,8 +303,8 @@ class NFTWallet:
 
         # EVE SPEND BELOW
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        # 1 is a coin announcement
-        messages = [(1, "a")]
+        # 2 is a puzzle announcement
+        messages = [(2, "a")]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -312,7 +312,7 @@ class NFTWallet:
         my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
         innersol = Program.to(
-            [eve_coin.amount, did_wallet.did_info.current_inner.get_tree_hash(), my_did_amount, my_did_parent, 0]
+            [eve_coin.amount, did_wallet.did_info.current_inner.get_tree_hash(), 0]
         )
         fullsol = Program.to(
             [
@@ -349,20 +349,16 @@ class NFTWallet:
 
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        # 1 is a coin announcement
-        messages = [(1, "a")]
+        # 2 is a puzzle announcement
+        messages = [(2, "a")]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
-        my_did_amount = message_sb.coin_solutions[0].coin.amount
-        my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
 
         innersol = Program.to(
             [
                 nft_coin_info.coin.amount,
                 did_wallet.did_info.current_inner.get_tree_hash(),
-                my_did_amount,
-                my_did_parent,
                 0,
             ]
         )
@@ -409,16 +405,14 @@ class NFTWallet:
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         if trade_prices_list == 0 or trade_prices_list == [] or trade_prices_list == Program.to(0):
             transfer_prog = 0
-            messages = [(1, bytes(new_did))]
+            messages = [(2, bytes(new_did))]
         else:
             transfer_prog = nft_coin_info.transfer_program
-            # 1 is a coin announcement
-            messages = [(1, Program.to(trade_prices_list).get_tree_hash() + bytes(new_did))]
+            # 2 is a puzzle announcement
+            messages = [(2, Program.to(trade_prices_list).get_tree_hash() + bytes(new_did))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
-        my_did_amount = message_sb.coin_solutions[0].coin.amount
-        my_did_parent = message_sb.coin_solutions[0].coin.parent_coin_info
         # my_amount
         # my_did_inner_hash
         # my_did_amount
@@ -435,12 +429,8 @@ class NFTWallet:
             [
                 nft_coin_info.coin.amount,
                 did_wallet.did_info.current_inner.get_tree_hash(),
-                my_did_amount,
-                my_did_parent,
                 new_did,
-                new_did_parent,
                 new_did_inner_hash,
-                new_did_amount,
                 trade_prices_list,
                 transfer_prog,
                 0,  # this should be expanded for other possible transfer_programs
@@ -453,6 +443,7 @@ class NFTWallet:
                 innersol,
             ]
         )
+        # breakpoint()
         list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
@@ -538,7 +529,7 @@ class NFTWallet:
         # offers_sb = SpendBundle(spend_list, AugSchemeMPL.aggregate([]))
         # sb_list.append(offers_sb)
         # breakpoint()
-        messages = [(1, trade_price_list_discovered.get_tree_hash() + bytes(nft_id))]
+        messages = [(2, trade_price_list_discovered.get_tree_hash() + bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")

@@ -160,10 +160,15 @@ class TestNFTRPC:
 
         await asyncio.sleep(3)
 
+        # metadata = Program.to([
+        #     ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        #     ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+        # ])
         val = await api_0.nft_mint_nft(
             {
                 "wallet_id": nft_wallet_id_0,
                 "uri": "https://www.chia.net/img/branding/chia-logo.svg",
+                "hash": 0xd4584ad463139fa8c0d9f68f4b59f185,
                 "artist_percentage": 20,
                 "artist_address": ph2
             }
@@ -182,7 +187,8 @@ class TestNFTRPC:
 
         assert val["success"]
         assert len(val["nfts"]) == 1
-        nft_coin_info = val["nfts"][0]
+        nft_coin_info = val["nfts"][0][0]
+        assert val["nfts"][0][1] == b"https://www.chia.net/img/branding/chia-logo.svg"
 
         val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_0})
         assert val["success"]
@@ -220,3 +226,4 @@ class TestNFTRPC:
 
         assert val["success"]
         assert len(val["nfts"]) == 1
+        assert val["nfts"][1] == b"https://www.chia.net/img/branding/chia-logo.svg"

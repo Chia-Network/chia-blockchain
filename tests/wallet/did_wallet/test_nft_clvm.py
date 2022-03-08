@@ -4,7 +4,8 @@ from chia.util.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.coin import Coin
-
+from chia.wallet.puzzles.cat_loader import CAT_MOD
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_MOD = load_clvm("did_innerpuz.clvm")
@@ -62,12 +63,8 @@ def test_transfer_no_backpayments():
             nft_program.get_tree_hash(),  # below here is the solution
             uint64(1),
             did_one_innerpuz.get_tree_hash(),
-            did_one_amount,
-            did_one_parent,
             did_two,
-            did_two_parent,
             did_two_innerpuz.get_tree_hash(),
-            did_two_amount,
             trade_price,
             nft_program,
             0,
@@ -75,11 +72,11 @@ def test_transfer_no_backpayments():
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     ann = bytes(bytes(trade_price) + did_two)
-    announcement_one = Announcement(did_one_coin.name(), ann)
+    announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
     # announcement_two = Announcement(did_two_coin.name(), ann)
-    assert res.rest().first().first().as_int() == 61
+    assert res.rest().first().first().as_int() == 63
     assert res.rest().first().rest().first().as_atom() == announcement_one.name()
-    # assert res.rest().rest().first().first().as_int() == 61
+    # assert res.rest().rest().first().first().as_int() == 63
     # assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
 
 
@@ -104,23 +101,26 @@ def test_transfer_with_backpayments():
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
     # NFT_MOD_HASH
-    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
     # NFT_TRANSFER_PROGRAM_HASH
     # my_amount
     # my_did_inner_hash
-    # my_did_amount
-    # my_did_parent
     # new_did
-    # new_did_parent
     # new_did_inner_hash
-    # new_did_amount
-    # trade_price
+    # trade_prices_list
     # transfer_program_reveal
     # transfer_program_solution
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
-    nft_program = NFT_TRANSFER_PROGRAM.curry([nft_creator_address, 20, "http://chia.net"])
+    # ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH
+    nft_program = NFT_TRANSFER_PROGRAM.curry([
+        nft_creator_address,
+        20,
+        "http://chia.net",
+        OFFER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash()
+    ])
     trade_price = [[20]]
     solution = Program.to(
         [
@@ -129,14 +129,10 @@ def test_transfer_with_backpayments():
             did_one,
             nft_program.get_tree_hash(),
             # below here is the solution
-            uint64(1),  # truths
+            uint64(1),
             did_one_innerpuz.get_tree_hash(),
-            did_one_amount,
-            did_one_parent,
             did_two,
-            did_two_parent,
             did_two_innerpuz.get_tree_hash(),
-            did_two_amount,
             trade_price,
             nft_program,
             0,
@@ -145,11 +141,11 @@ def test_transfer_with_backpayments():
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
 
     ann = bytes(bytes(Program.to(trade_price).get_tree_hash()) + did_two)
-    announcement_one = Announcement(did_one_coin.name(), ann)
-    announcement_two = Announcement(did_two_coin.name(), ann)
-    assert res.rest().first().first().as_int() == 61
+    announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
+    announcement_two = Announcement(did_two_coin.puzzle_hash, ann)
+    assert res.rest().first().first().as_int() == 63
     assert res.rest().first().rest().first().as_atom() == announcement_two.name()
-    assert res.rest().rest().first().first().as_int() == 61
+    assert res.rest().rest().first().first().as_int() == 63
     assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
     assert res.rest().rest().rest().rest().rest().first().first().as_int() == 51
     assert res.rest().rest().rest().rest().rest().first().rest().first().as_atom() == nft_creator_address
@@ -201,8 +197,6 @@ def test_announce():
             nft_program.get_tree_hash(),  # below here is the solution
             uint64(1),  # truths
             did_one_innerpuz.get_tree_hash(),
-            did_one_amount,
-            did_one_parent,
             0,
             0,
             0,
@@ -214,8 +208,8 @@ def test_announce():
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     ann = bytes("a", "utf-8")
-    announcement_one = Announcement(did_one_coin.name(), ann)
-    assert res.rest().rest().first().first().as_int() == 61
+    announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
+    assert res.rest().rest().first().first().as_int() == 63
     assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
     assert res.rest().rest().rest().first().first().as_int() == 60
     assert res.rest().rest().rest().first().rest().first().as_atom() == did_one

@@ -34,8 +34,8 @@ def create_full_puzzle(singleton_id, current_owner_did, nft_transfer_program_has
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
-def create_transfer_puzzle(uri, percentage, backpayment_address):
-    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, uri, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]))
+def create_transfer_puzzle(metadata, percentage, backpayment_address):
+    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, metadata, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]))
     return ret
 
 
@@ -72,7 +72,7 @@ def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
 
 def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None
@@ -131,7 +131,7 @@ def get_uri_list_from_transfer_program(transfer_prog: Program) -> List[str]:
 
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import PrivateKey, G1Element
-
+from chia.types.blockchain_format.program import Program
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
@@ -28,6 +28,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_transfer_program
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -1167,17 +1168,25 @@ class WalletRpcApi:
         address = request["artist_address"]
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
+        metadata = Program.to([
+            ('u', [address]),
+            ('h', request["hash"]),
+        ])
         if "amount" in request:
-            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], address, request["amount"])
+            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
         else:
-            await nft_wallet.generate_new_nft(request["uri"], request["artist_percentage"], address)
+            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
         wallet_id = int(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
-        return {"wallet_id": wallet_id, "success": True, "nfts": nfts}
+        nft_uri_pairs = []
+        for nft in nfts:
+            uri = get_uri_list_from_transfer_program(nft.transfer_program)
+            nft_uri_pairs.append((nft, uri))
+        return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
 
     async def nft_transfer_nft(self, request):
         wallet_id = int(request["wallet_id"])
