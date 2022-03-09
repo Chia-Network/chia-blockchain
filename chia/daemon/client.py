@@ -26,25 +26,33 @@ class DaemonProxy:
         return request
 
     async def start(self):
-        self.client_session = aiohttp.ClientSession()
-        self.websocket = await self.client_session.ws_connect(
-            self._uri,
-            autoclose=True,
-            autoping=True,
-            heartbeat=60,
-            ssl_context=self.ssl_context,
-            max_msg_size=100 * 1024 * 1024,
-        )
+        try:
+            self.client_session = aiohttp.ClientSession()
+            self.websocket = await self.client_session.ws_connect(
+                self._uri,
+                autoclose=True,
+                autoping=True,
+                heartbeat=60,
+                ssl_context=self.ssl_context,
+                max_msg_size=100 * 1024 * 1024,
+            )
+        except Exception:
+            await self.close()
+            raise
 
         async def listener():
             while True:
-                message = await self.websocket.receive_str()
-                decoded = json.loads(message)
-                id = decoded["request_id"]
+                message = await self.websocket.receive()
+                if message.type == aiohttp.WSMsgType.TEXT:
+                    decoded = json.loads(message.data)
+                    request_id = decoded["request_id"]
 
-                if id in self._request_dict:
-                    self.response_dict[id] = decoded
-                    self._request_dict[id].set()
+                    if request_id in self._request_dict:
+                        self.response_dict[request_id] = decoded
+                        self._request_dict[request_id].set()
+                else:
+                    await self.close()
+                    return None
 
         asyncio.create_task(listener())
         await asyncio.sleep(1)

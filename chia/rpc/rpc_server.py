@@ -30,6 +30,7 @@ class RpcServer:
         self.log = log
         self.shut_down = False
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.client_session: Optional[aiohttp.ClientSession] = None
         self.service_name = service_name
         self.root_path = root_path
         self.net_config = net_config
@@ -45,6 +46,8 @@ class RpcServer:
         self.shut_down = True
         if self.websocket is not None:
             await self.websocket.close()
+        if self.client_session is not None:
+            await self.client_session.close()
 
     async def _state_changed(self, *args):
         if self.websocket is None:
@@ -259,30 +262,33 @@ class RpcServer:
 
                 break
 
-        await ws.close()
 
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
             try:
                 if self.shut_down:
                     break
-                async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(
-                        f"wss://{self_hostname}:{daemon_port}",
-                        autoclose=True,
-                        autoping=True,
-                        heartbeat=60,
-                        ssl_context=self.ssl_context,
-                        max_msg_size=100 * 1024 * 1024,
-                    ) as ws:
-                        self.websocket = ws
-                        await self.connection(ws)
-                    self.websocket = None
+                self.client_session = aiohttp.ClientSession()
+                self.websocket = await self.client_session.ws_connect(
+                    f"wss://{self_hostname}:{daemon_port}",
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl_context=self.ssl_context,
+                    max_msg_size=100 * 1024 * 1024,
+                )
+                await self.connection(self.websocket)
             except aiohttp.ClientConnectorError:
                 self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
+            if self.websocket is not None:
+                await self.websocket.close()
+            if self.client_session is not None:
+                await self.client_session.close()
+            self.websocket = None
+            self.client_session = None
             await asyncio.sleep(2)
 
 
