@@ -16,7 +16,6 @@ from tests.time_out_assert import time_out_assert
 from tests.setup_nodes import setup_simulators_and_wallets
 
 
-
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
