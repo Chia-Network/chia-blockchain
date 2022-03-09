@@ -49,7 +49,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path: Path = config_path_for_filename(root_path, filename)
     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
-        tmp_path: Path = Path(tmp_dir) / (filename + str(os.getpid()))
+        tmp_path: Path = Path(tmp_dir) / (Path(filename).with_suffix("." + str(os.getpid())))
         with open(tmp_path, "w") as f:
             yaml.safe_dump(config_data, f)
         try:
