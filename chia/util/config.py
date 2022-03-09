@@ -3,6 +3,9 @@ import logging
 import os
 import shutil
 import sys
+import tempfile
+import time
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
 
@@ -14,6 +17,8 @@ from chia.util.path import mkdir
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
+
+log = logging.getLogger(__name__)
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
@@ -43,13 +48,14 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path: Path = config_path_for_filename(root_path, filename)
-    tmp_path: Path = path.with_suffix("." + str(os.getpid()))
-    with open(tmp_path, "w") as f:
-        yaml.safe_dump(config_data, f)
-    try:
-        os.replace(str(tmp_path), path)
-    except PermissionError:
-        shutil.move(str(tmp_path), str(path))
+    with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+        tmp_path: Path = Path(tmp_dir) / (filename + str(os.getpid()))
+        with open(tmp_path, "w") as f:
+            yaml.safe_dump(config_data, f)
+        try:
+            os.replace(str(tmp_path), path)
+        except PermissionError:
+            shutil.move(str(tmp_path), str(path))
 
 
 def load_config(
@@ -66,10 +72,20 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r"))
-    if sub_config is not None:
-        r = r.get(sub_config)
-    return r
+
+    for i in range(10):
+        try:
+            r = yaml.safe_load(open(path, "r"))
+            if r is None:
+                raise RuntimeError(f"Yaml load on {path} returned None")
+            if sub_config is not None:
+                r = r.get(sub_config)
+            return r
+        except Exception as e:
+            tb = traceback.format_exc()
+            log.error(f"Error loading file: {tb} {e} Retrying {i}")
+            time.sleep(i * 0.1)
+    raise RuntimeError("Was not able to read config file successfully")
 
 
 def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:
