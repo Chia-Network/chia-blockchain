@@ -262,7 +262,6 @@ class RpcServer:
 
                 break
 
-
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
         while True:
             try:

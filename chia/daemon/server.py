@@ -14,11 +14,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
+from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
-import aiohttp
-from aiohttp.web_ws import WebSocketResponse
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
@@ -39,12 +38,13 @@ from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
-from chia import __version__
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
     from aiohttp import ClientSession, web
+    from aiohttp.http import WSMsgType
+    from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
@@ -216,7 +216,7 @@ class WebSocketServer:
         await ws.prepare(request)
 
         async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
+            if msg.type == WSMsgType.TEXT:
                 if msg.data == "close":
                     self.remove_connection(ws)
                     await ws.close()
@@ -241,7 +241,7 @@ class WebSocketServer:
                                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                                 self.remove_connection(socket)
                                 await socket.close()
-            elif msg.type == aiohttp.WSMsgType.ERROR:
+            elif msg.type == WSMsgType.ERROR:
                 print("ws connection closed with exception %s" % ws.exception())
                 self.remove_connection(ws)
                 await ws.close()
