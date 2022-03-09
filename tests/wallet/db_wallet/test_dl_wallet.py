@@ -296,8 +296,8 @@ class TestDLWallet:
         from tests.setup_nodes import bt
         log_config = bt.config["logging"]
         log_config["log_level"] = "INFO"
-        from chia.util.chia_logging import initialize_logging
-        initialize_logging(service_name="test", logging_config=log_config, root_path=bt.root_path)
+        # from chia.util.chia_logging import initialize_logging
+        # initialize_logging(service_name="test", logging_config=log_config, root_path=bt.root_path)
 
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
