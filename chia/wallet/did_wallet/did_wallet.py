@@ -460,8 +460,8 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         new_puzhash = await self.get_new_inner_hash()
-        # innerpuz solution is (mode amount messages new_puz)
-        innersol: Program = Program.to([0, 1, coin.amount, [], new_puzhash])
+        # innerpuz solution is (mode amount messages_puzzle, message_solution, new_puz)
+        innersol: Program = Program.to([1, coin.amount, [], [], new_puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -529,10 +529,11 @@ class DIDWallet:
         innerpuz: Program = self.did_info.current_inner
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
-        # innerpuz solution is (mode amount messages new_puz)
-        innersol: Program = Program.to([0, 1, coin.amount, messages, new_innerpuzhash])
+        message_puz = did_wallet_puzzles.messages_to_puzzle(messages)
+        # innerpuz solution is (mode amount messages_puzzle, message_solution, new_puz)
+        innersol: Program = Program.to(
+            [1, coin.amount, message_puz, [], new_innerpuzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
@@ -554,7 +555,7 @@ class DIDWallet:
         # sign for AGG_SIG_ME
         # new_inner_puzhash amount message
         message = (
-            Program.to([new_innerpuzhash, coin.amount, messages]).get_tree_hash()
+            Program.to([new_innerpuzhash, coin.amount, message_puz]).get_tree_hash()
             + coin.name()
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
@@ -577,8 +578,9 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         amount = coin.amount - 1
-        # innerpuz solution is (mode amount new_puzhash)
-        innersol: Program = Program.to([0, 0, amount, puzhash])
+        message_puz = did_wallet_puzzles.create_exit_message_puzzle()
+        # innerpuz solution is (mode amount message_puzzle, message_solution, new_puz)
+        innersol: Program = Program.to([1, amount, message_puz, [], puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -602,7 +604,7 @@ class DIDWallet:
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         # sign for AGG_SIG_ME
         message = (
-            Program.to([amount, puzhash]).get_tree_hash()
+            Program.to([puzhash, amount, message_puz]).get_tree_hash()
             + coin.name()
             + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         )
@@ -649,9 +651,9 @@ class DIDWallet:
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
-        # innerpuz solution is (mode, amount, message, new_inner_puzhash)
-        messages = [(0, innermessage)]
-        innersol = Program.to([0, 1, coin.amount, messages, innerpuz.get_tree_hash()])
+        # innerpuz solution is (mode, amount, message_puzzle, message_solution, new_inner_puzhash)
+        message_puz = did_wallet_puzzles.messages_to_puzzle([(0, innermessage)])
+        innersol = Program.to([1, coin.amount, message_puz, [], innerpuz.get_tree_hash()])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -676,7 +678,7 @@ class DIDWallet:
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, messages]).get_tree_hash()
+        to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, message_puz]).get_tree_hash()
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
@@ -986,8 +988,8 @@ class DIDWallet:
 
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
         assert self.did_info.origin_coin is not None
-        # innerpuz solution is (mode amount message new_puzhash)
-        innersol = Program.to([0, 1, coin.amount, [], innerpuz.get_tree_hash()])
+        # innerpuz solution is (mode amount message_puzzle, message_solution, new_puzhash)
+        innersol = Program.to([1, coin.amount, [], [], innerpuz.get_tree_hash()])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [

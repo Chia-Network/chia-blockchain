@@ -96,6 +96,36 @@ def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey)
     return coinsol
 
 
+def messages_to_puzzle(messages: List[Tuple[int, bytes]]):
+    """
+    Convert legacy messages list to a puzzle
+    :param messages: List of message
+    :return: A puzzle program
+    """
+    puzzle = Program.to([])
+    for message in messages:
+        msg_type = message(0)
+        # type 0 is 0 value coin
+        # type 1 is coin announcement
+        # type 2 is puzzle announcement
+        if msg_type:
+            if msg_type == 1:
+                Program.to([ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message(1)]).cons(puzzle)
+            else:
+                Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message(1)]).cons(puzzle)
+        else:
+            Program.to([ConditionOpcode.CREATE_COIN, message(1), 0]).cons(puzzle)
+    return puzzle
+
+
+def create_exit_message_puzzle():
+    """
+    Create message puzzle for exit
+    :return:
+    """
+    return Program.to([ConditionOpcode.CREATE_COIN, 0x00, -113])
+
+
 # inspect puzzle and check it is a DID puzzle
 def check_is_did_puzzle(puzzle: Program):
     r = puzzle.uncurry()

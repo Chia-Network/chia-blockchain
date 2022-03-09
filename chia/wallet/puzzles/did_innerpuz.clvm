@@ -9,9 +9,9 @@
   RECOVERY_DID_LIST_HASH  ; the list of DIDs that can send messages to you for recovery we store only the hash so that we don't have to reveal every time we make a message spend
   NUM_VERIFICATIONS_REQUIRED  ; how many of the above list are required for a recovery
   SINGLETON_STRUCT  ; my singleton_struct, formerly a Truth - ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
-  mode  ; this indicates which spend mode we want. Create message, recover, or self-destruct
+  mode  ; this indicates which spend mode we want. Create message (1) or recover (0)
   new_amount  ; DIDs can receive payments so when we recreate ourselves sometimes we want to change our amount
-  message  ; For create message mode, the message will be a puzzle, otherwise, it will be a list of puzzle hash
+  message_puzzle  ; For create message mode, this will be a puzzle. For recovery mode, it will be puzzle hash
   message_solution ; Solution of the inner message puzzle, only required in the create message mode
   new_inner_puzhash  ; this is used during the message creation spend to optionally give ourselves a new inner puzzle - this is useful for updating our recovery list
   parent_innerpuzhash_amounts_for_recovery_ids  ; during a recovery we need extra information about our recovery list coins
@@ -112,27 +112,21 @@
   )
 
   ;Spend modes:
-  ;0 = exit spend
+  ;0 = recovery
   ;1 = create messages and recreate singleton
-  ;2 = recovery
 
   ;MAIN
   (if mode
-    (if (= mode 1)
-      ; mode one - create messages and recreate singleton
-      (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message))) (a message message_solution)))
-    ; mode two - recovery
+    ; mode 1 - create messages and recreate singleton
+    (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message_puzzle))) (a message_puzzle message_solution)))
+    ; mode 0 - recovery
     ; check that recovery list is not empty
-      (if recovery_list_reveal
-        (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-          (c (list CREATE_COIN message new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
-          (x)
-        )
+    (if recovery_list_reveal
+      (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
+        (c (list CREATE_COIN message_puzzle new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message_puzzle parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
         (x)
       )
+      (x)
     )
-    ; mode zero - exit spend
-    (list (list CREATE_COIN 0x00 -113) (list CREATE_COIN message new_amount) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_amount message))))
   )
-
 )
