@@ -4,6 +4,8 @@ import pytest
 import pytest_asyncio
 import tempfile
 
+from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes
+
 # Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
 
@@ -128,3 +130,27 @@ def default_10000_blocks_compact(bt):
 def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def four_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def five_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
+        yield _
