@@ -75,7 +75,7 @@ def compile_clvm_in_lock(full_path, output, search_paths):
         rs256 = sha256file(output)
 
         if orig256 != rs256:
-            print("Compiled %s: %s vs %s\n" % (full_path, orig256, rs256))
+            print("Compiled original %s: %s vs rust %s\n" % (full_path, orig256, rs256))
             print("Aborting compilation due to mismatch with rust")
             assert orig256 == rs256
         else:
