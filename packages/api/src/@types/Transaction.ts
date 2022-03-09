@@ -1,3 +1,4 @@
+import type BigNumber from 'bignumber.js';
 import type Coin from './Coin';
 import type SpendBundle from './SpendBundle';
 import type TransactionType from '../constants/TransactionType';
@@ -7,9 +8,9 @@ type Transaction = {
   createdAtTime: number;
   toAddress: string;
   toPuzzleHash?: string;
-  amount: number;
-  sent: number;
-  feeAmount: number;
+  amount: number | BigNumber;
+  sent: number | BigNumber;
+  feeAmount: number | BigNumber;
   incoming: boolean;
   confirmed: boolean;
   spendBundle?: SpendBundle;
