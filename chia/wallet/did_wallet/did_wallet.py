@@ -531,8 +531,7 @@ class DIDWallet:
             new_innerpuzhash = innerpuz.get_tree_hash()
         message_puz = did_wallet_puzzles.messages_to_puzzle(messages)
         # innerpuz solution is (mode amount messages_puzzle, message_solution, new_puz)
-        innersol: Program = Program.to(
-            [1, coin.amount, message_puz, [], new_innerpuzhash])
+        innersol: Program = Program.to([1, coin.amount, message_puz, [], new_innerpuzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
