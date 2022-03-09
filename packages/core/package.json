@@ -27,7 +27,6 @@
     "@rehooks/local-storage": "2.4.4",
     "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
-    "bytes-iec": "3.1.1",
     "cookie": "0.4.1",
     "core-js": "3.20.3",
     "is-electron": "2.2.1",

@@ -48,14 +48,14 @@ const cols = [
         <>
           <FormatBytes
             value={row.bytesWritten}
-            unit="kiB"
+            unit="KiB"
             removeUnit
             fixedDecimals
           />
           /
           <FormatBytes
             value={row.bytesRead}
-            unit="kiB"
+            unit="KiB"
             removeUnit
             fixedDecimals
           />
