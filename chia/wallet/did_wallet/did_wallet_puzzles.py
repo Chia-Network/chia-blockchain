@@ -126,6 +126,7 @@ def create_exit_message_puzzle():
     return Program.to([ConditionOpcode.CREATE_COIN, 0x00, -113])
 
 
+
 # inspect puzzle and check it is a DID puzzle
 def check_is_did_puzzle(puzzle: Program):
     r = puzzle.uncurry()
