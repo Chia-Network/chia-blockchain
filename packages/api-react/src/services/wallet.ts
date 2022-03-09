@@ -265,8 +265,8 @@ export const walletApi = apiWithTag.injectEndpoints({
           },
         } = response;
 
-        const pendingBalance = new BigNumber(unconfirmedWalletBalance) - new BigNumber(confirmedWalletBalance);
-        const pendingTotalBalance = new BigNumber(confirmedWalletBalance) + new BigNumber(pendingBalance);
+        const pendingBalance = new BigNumber(unconfirmedWalletBalance).minus(confirmedWalletBalance);
+        const pendingTotalBalance = new BigNumber(confirmedWalletBalance).plus(pendingBalance);
 
         return {
           ...walletBalance,
