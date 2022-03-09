@@ -1,20 +1,12 @@
 import time
 
 import pytest
-import pytest_asyncio
 
 from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname):
-    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-        yield _
 
 
 class TestNodeLoad:
