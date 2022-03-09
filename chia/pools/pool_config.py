@@ -67,10 +67,7 @@ def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1El
     if pool_list is not None:
         for pool_config_dict in pool_list:
             try:
-                if (
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"]))
-                    == config_entry.owner_public_key
-                ):
+                if hexstr_to_bytes(pool_config_dict["owner_public_key"]) == bytes(config_entry.owner_public_key):
                     auth_key_hex = bytes(auth_key).hex()
                     if pool_config_dict.get("authentication_public_key", "") != auth_key_hex:
                         pool_config_dict["authentication_public_key"] = auth_key_hex
@@ -78,6 +75,7 @@ def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1El
             except Exception as e:
                 log.error(f"Exception updating config: {pool_config_dict} {e}")
     if updated:
+        log.info(f"Updating pool config for auth key: {auth_key}")
         config["pool"]["pool_list"] = pool_list
         save_config(root_path, "config.yaml", config)
 
