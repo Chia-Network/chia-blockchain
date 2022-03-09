@@ -24,7 +24,7 @@ export default function FarmCardBlockRewards() {
         </>
       );
     }
-  }, [farmerRewardAmount, poolRewardAmount, locale]);
+  }, [farmerRewardAmount, poolRewardAmount, locale, currencyCode]);
 
   return (
     <CardSimple
