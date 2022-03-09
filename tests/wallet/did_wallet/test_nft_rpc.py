@@ -120,6 +120,7 @@ class TestNFTRPC:
         assert val["my_did"]
         assert val["type"] == WalletType.DISTRIBUTED_ID.value
         # did_0 = val["my_did"]
+
         did_wallet_id_0 = val["wallet_id"]
 
         api_1 = WalletRpcApi(wallet_node_1)

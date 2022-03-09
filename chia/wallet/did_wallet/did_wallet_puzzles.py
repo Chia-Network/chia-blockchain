@@ -104,17 +104,17 @@ def messages_to_puzzle(messages: List[Tuple[int, bytes]]):
     """
     puzzle = Program.to([])
     for message in messages:
-        msg_type = message(0)
+        msg_type = message[0]
         # type 0 is 0 value coin
         # type 1 is coin announcement
         # type 2 is puzzle announcement
         if msg_type:
             if msg_type == 1:
-                Program.to([ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message(1)]).cons(puzzle)
+                Program.to([ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message[1]]).cons(puzzle)
             else:
-                Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message(1)]).cons(puzzle)
+                Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message[1]]).cons(puzzle)
         else:
-            Program.to([ConditionOpcode.CREATE_COIN, message(1), 0]).cons(puzzle)
+            Program.to([ConditionOpcode.CREATE_COIN, message[1], 0]).cons(puzzle)
     return puzzle
 
 
