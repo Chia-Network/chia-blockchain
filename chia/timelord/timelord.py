@@ -183,25 +183,22 @@ class Timelord:
 
     async def _stop_chain(self, chain: Chain):
         try:
-            while chain not in self.allows_iters:
-                self.lock.release()
-                await asyncio.sleep(0.05)
-                log.error(f"Trying to stop {chain} before its initialization.")
-                await self.lock.acquire()
-                if chain not in self.chain_type_to_stream:
-                    log.warning(f"Trying to stop a crashed chain: {chain}.")
-                    return None
-            stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
-            stop_writer.write(b"010")
-            await stop_writer.drain()
+            _, _, stop_writer = self.chain_type_to_stream[chain]
             if chain in self.allows_iters:
+                stop_writer.write(b"010")
+                await stop_writer.drain()
                 self.allows_iters.remove(chain)
+            else:
+                log.error(f"Trying to stop {chain} before its initialization.")
+                stop_writer.close()
+                await stop_writer.wait_closed()
             if chain not in self.unspawned_chains:
                 self.unspawned_chains.append(chain)
-            if chain in self.chain_type_to_stream:
-                del self.chain_type_to_stream[chain]
+            del self.chain_type_to_stream[chain]
         except ConnectionResetError as e:
             log.error(f"{e}")
+        except Exception as e:
+            log.error(f"Exception in stop chain: {type(e)} {e}")
 
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[uint64]:
         assert self.last_state is not None
