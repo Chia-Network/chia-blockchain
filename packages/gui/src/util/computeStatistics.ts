@@ -56,7 +56,7 @@ export default function computeStatistics(wallets: Wallet[]): {
   });
 
   const totalChiaFarmed = poolCoins.plus(farmerCoins);
-  const totalBlockRewards = new BigNumber(poolCoins).times(8).div(7);
+  const totalBlockRewards = new BigNumber(poolCoins).times(7).div(8);
   const userTransactionFees = new BigNumber(farmerCoins).minus(
     new BigNumber(totalBlockRewards).div(8),
   );
