@@ -20,9 +20,8 @@ export default function Fee(props: FeeProps) {
   return (
     <Amount {...props}>
       {({ value, mojo }) => {
-        const bigMojo = new BigNumber(mojo.toString());
-        const isHigh = bigMojo.gte('100000000000');
-        const isLow = bigMojo.gt('0') && bigMojo.lt('1');
+        const isHigh = mojo.gte('100000000000');
+        const isLow = mojo.gt('0') && mojo.lt('1');
 
         if (!value) {
           return;
