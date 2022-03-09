@@ -12,7 +12,7 @@ from threading import Thread
 from time import sleep
 from typing import Dict
 
-# Commented-out lines are preserved to aide in debugging the multiprocessing tests
+# Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging
 # import os
 # import threading
@@ -71,26 +71,28 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config))
 
 
+@pytest.fixture(scope="function")
+def root_path_populated_with_config(tmpdir) -> Path:
+    """
+    Create a temp directory and populate it with a default config.yaml.
+    Returns the root path containing the config.
+    """
+    root_path: Path = Path(tmpdir)
+    create_default_chia_config(root_path)
+    return Path(root_path)
+
+
+@pytest.fixture(scope="function")
+def default_config_dict() -> Dict:
+    """
+    Returns a dictionary containing the default config.yaml contents
+    """
+    content: str = initial_config_file("config.yaml")
+    config: Dict = yaml.safe_load(content)
+    return config
+
+
 class TestConfig:
-    @pytest.fixture(scope="function")
-    def root_path_populated_with_config(self, tmpdir) -> Path:
-        """
-        Create a temp directory and populate it with a default config.yaml.
-        Returns the root path containing the config.
-        """
-        root_path: Path = Path(tmpdir)
-        create_default_chia_config(root_path)
-        return Path(root_path)
-
-    @pytest.fixture(scope="function")
-    def default_config_dict(self) -> Dict:
-        """
-        Returns a dictionary containing the default config.yaml contents
-        """
-        content: str = initial_config_file("config.yaml")
-        config: Dict = yaml.safe_load(content)
-        return config
-
     def test_create_config_new(self, tmpdir):
         """
         Test create_default_chia_config() as in a first run scenario

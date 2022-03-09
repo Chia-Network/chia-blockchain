@@ -65,50 +65,55 @@ class DummyLegacyKeyring(KeyringBackend):
         del self.service_dict[service][username]
 
 
+@pytest.fixture(scope="function")
+def empty_keyring():
+    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
+
+
+@pytest.fixture(scope="function")
+def keyring_with_one_key(empty_keyring):
+    keychain = empty_keyring
+    keychain.add_private_key(TEST_MNEMONIC_SEED, "")
+    return keychain
+
+
+@pytest.fixture(scope="function")
+def mnemonic_seed_file(tmp_path):
+    seed_file = Path(tmp_path) / "seed.txt"
+    with open(seed_file, "w") as f:
+        f.write(TEST_MNEMONIC_SEED)
+    return seed_file
+
+
+@pytest.fixture(scope="function")
+def setup_keyringwrapper(tmp_path):
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(tmp_path)
+    _ = KeyringWrapper.get_shared_instance()
+    yield
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+
+
+@pytest.fixture(scope="function")
+def setup_legacy_keyringwrapper(tmp_path, monkeypatch):
+    def mock_setup_keyring_file_watcher(_):
+        pass
+
+    # Silence errors in the watchdog module during testing
+    monkeypatch.setattr(FileKeyring, "setup_keyring_file_watcher", mock_setup_keyring_file_watcher)
+
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(tmp_path)
+    KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
+    yield
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+
+
 class TestKeysCommands:
-    @pytest.fixture(scope="function")
-    def empty_keyring(self):
-        with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
-            yield keychain
-            KeyringWrapper.cleanup_shared_instance()
-
-    @pytest.fixture(scope="function")
-    def keyring_with_one_key(self, empty_keyring):
-        keychain = empty_keyring
-        keychain.add_private_key(TEST_MNEMONIC_SEED, "")
-        return keychain
-
-    @pytest.fixture(scope="function")
-    def mnemonic_seed_file(self, tmp_path):
-        seed_file = Path(tmp_path) / "seed.txt"
-        with open(seed_file, "w") as f:
-            f.write(TEST_MNEMONIC_SEED)
-        return seed_file
-
-    @pytest.fixture(scope="function")
-    def setup_keyringwrapper(self, tmp_path):
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        _ = KeyringWrapper.get_shared_instance()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
-
-    @pytest.fixture(scope="function")
-    def setup_legacy_keyringwrapper(self, tmp_path, monkeypatch):
-        def mock_setup_keyring_file_watcher(_):
-            pass
-
-        # Silence errors in the watchdog module during testing
-        monkeypatch.setattr(FileKeyring, "setup_keyring_file_watcher", mock_setup_keyring_file_watcher)
-
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
-
     def test_generate_with_new_config(self, tmp_path, empty_keyring):
         """
         Generate a new config and a new key. Verify that the config has

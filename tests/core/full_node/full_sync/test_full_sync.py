@@ -28,27 +28,31 @@ def event_loop():
 log = logging.getLogger(__name__)
 
 
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes(db_version, self_hostname):
+    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def four_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def five_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
 class TestFullSync:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version, self_hostname):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_nodes(self, db_version, self_hostname):
-        async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def four_nodes(self, db_version, self_hostname):
-        async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def five_nodes(self, db_version, self_hostname):
-        async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
     @pytest.mark.asyncio
     async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config

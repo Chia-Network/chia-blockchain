@@ -21,32 +21,37 @@ def event_loop():
     yield loop
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 3, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_five_freeze():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_sim_two_wallets():
+    async for _ in setup_simulators_and_wallets(3, 2, {}):
+        yield _
+
+
 class TestDIDWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.asyncio
     async def test_creation_from_backup_file(self, self_hostname, three_wallet_nodes):
         num_blocks = 5
