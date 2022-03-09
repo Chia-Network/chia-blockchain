@@ -52,6 +52,7 @@ _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
 FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[Any], Dict[str, Type[Any]]] = {}
+VALIDATE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any], None]]] = {}
 STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any, BinaryIO], Any]]] = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any], Any]]] = {}
 
@@ -247,6 +248,55 @@ def stream_str(item: Any, f: BinaryIO) -> None:
     f.write(str_bytes)
 
 
+def validate_dataclass(validate_funcs: Dict[str, Callable[[Any], Any]], item: Dict[str, Any]) -> None:
+    for name, validate_func in validate_funcs.items():
+        validate_func(item[name])
+
+
+def validate_optional(validate_inner: Callable[[Any], Any], item: Any) -> None:
+    if item is None:
+        return
+    validate_inner(item)
+
+
+def validate_tuple(validate_funcs: List[Callable[[Any], Any]], items: Tuple[Any, ...]) -> None:
+    assert len(validate_funcs) == len(items)
+    if type(items) != tuple:
+        raise TypeError()
+    for i in range(len(items)):
+        validate_funcs[i](items[i])
+
+
+def validate_list(validate_func: Callable[[Any], Any], items: List[Any]) -> None:
+    if type(items) != list:
+        raise TypeError()
+    for i in range(len(items)):
+        validate_func(items[i])
+
+
+def validate_primitive(f_type: Type[Any], item: Any) -> None:
+    if type(item) != f_type:
+        raise TypeError(f"Expected {f_type}, got {type(item)}")
+
+
+def function_to_validate_one_item(f_type: Type[Any]) -> Any:
+    if is_type_SpecificOptional(f_type):
+        inner_type = get_args(f_type)[0]
+        validate_inner_func = function_to_validate_one_item(inner_type)
+        return lambda item: validate_optional(validate_inner_func, item)
+    if is_type_List(f_type):
+        inner_type = get_args(f_type)[0]
+        validate_inner_func = function_to_validate_one_item(inner_type)
+        return lambda items: validate_list(validate_inner_func, items)
+    if is_type_Tuple(f_type):
+        validate_inner_funcs = []
+        for inner_type in get_args(f_type):
+            validate_inner_funcs.append(function_to_validate_one_item(inner_type))
+        return lambda items: validate_tuple(validate_inner_funcs, items)
+
+    return lambda item: validate_primitive(f_type, item)
+
+
 def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     """
     This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
@@ -282,6 +332,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     if not issubclass(cls, Streamable):
         raise SyntaxError(f"Streamable inheritance required. {correct_usage_string}")
 
+    validate_functions = []
     stream_functions = []
     parse_functions = []
     try:
@@ -293,9 +344,11 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
 
     for _, f_type in fields.items():
+        validate_functions.append(function_to_validate_one_item(f_type))
         stream_functions.append(cls.function_to_stream_one_item(f_type))
         parse_functions.append(cls.function_to_parse_one_item(f_type))
 
+    VALIDATE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = validate_functions
     STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
     return cls
@@ -346,60 +399,18 @@ class Streamable:
     Make sure to use the streamable decorator when inheriting from the Streamable class to prepare the streaming caches.
     """
 
-    def post_init_parse(self, item: Any, f_name: str, f_type: Type[Any]) -> Any:
-        if is_type_List(f_type):
-            collected_list: List[Any] = []
-            inner_type: Type[Any] = get_args(f_type)[0]
-            # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            if not is_type_List(type(item)):
-                raise ValueError(f"Wrong type for {f_name}, need a list.")
-            for el in item:
-                collected_list.append(self.post_init_parse(el, f_name, inner_type))
-            return collected_list
-        if is_type_SpecificOptional(f_type):
-            if item is None:
-                return None
-            else:
-                inner_type: Type = get_args(f_type)[0]  # type: ignore
-                return self.post_init_parse(item, f_name, inner_type)
-        if is_type_Tuple(f_type):
-            collected_list = []
-            if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
-                raise ValueError(f"Wrong type for {f_name}, need a tuple.")
-            if len(item) != len(get_args(f_type)):
-                raise ValueError(f"Wrong number of elements in tuple {f_name}.")
-            for i in range(len(item)):
-                inner_type = get_args(f_type)[i]
-                tuple_item = item[i]
-                collected_list.append(self.post_init_parse(tuple_item, f_name, inner_type))
-            return tuple(collected_list)
-        if not isinstance(item, f_type):
-            try:
-                item = f_type(item)
-            except (TypeError, AttributeError, ValueError):
-                try:
-                    item = f_type.from_bytes(item)
-                except Exception:
-                    item = f_type.from_bytes(bytes(item))
-        if not isinstance(item, f_type):
-            raise ValueError(f"Wrong type for {f_name}")
-        return item
-
     def __post_init__(self) -> None:
         try:
             fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
+            validate_funcs = VALIDATE_FUNCTIONS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
             fields = {}
+            validate_funcs = []
         data = self.__dict__
-        for (f_name, f_type) in fields.items():
-            if f_name not in data:
-                raise ValueError(f"Field {f_name} not present")
-            try:
-                if not isinstance(data[f_name], f_type):
-                    object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
-            except TypeError:
-                # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
-                object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
+        for field, validate_func in zip(fields, validate_funcs):
+            if field not in data:
+                raise ValueError(f"Field {field} not present")
+            validate_func(data[field])
 
     @classmethod
     def function_to_parse_one_item(cls, f_type: Type[Any]) -> Callable[[BinaryIO], Any]:
