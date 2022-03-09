@@ -22,7 +22,7 @@ jobs:
   build:
     name: Ubuntu wallet-cat_wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 4
