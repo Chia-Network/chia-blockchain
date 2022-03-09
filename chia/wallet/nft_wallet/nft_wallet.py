@@ -496,6 +496,7 @@ class NFTWallet:
     async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = uint64(0)) -> SpendBundle:
         trade_price_list_discovered = None
         nft_id = None
+
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
                 inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
@@ -535,6 +536,7 @@ class NFTWallet:
 
         backpayment_amount = 0
         sb_list = [sending_sb]
+
         for pair in trade_price_list_discovered.as_iter():
             if len(pair.as_python()) == 1:
                 backpayment_amount += pair.first().as_int()
