@@ -17,7 +17,7 @@ class Chia {
   }
 
   get value(): BigNumber {
-    return new BigNumber(this._value);
+    return this._value;
   }
 
   get unit(): Unit {
