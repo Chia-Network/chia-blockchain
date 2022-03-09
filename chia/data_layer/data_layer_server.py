@@ -81,6 +81,42 @@ class DataLayerServer:
             }
         )
 
+    async def handle_history(self, request: Dict[str, str]) -> str:
+        tree_id = request["tree_id"]
+        generation = request["generation"]
+        max_generation = request["max_generation"]
+        tree_id_bytes = bytes32.from_hexstr(tree_id)
+        dowload_full_history = request["dowload_full_history"]
+        nodes = await self.data_store.handle_history(
+            tree_id_bytes,
+            int(generation),
+            int(max_generation),
+            bool(dowload_full_history),
+        )
+        answer = []
+        for node in nodes:
+            if isinstance(node, TerminalNode):
+                answer.append(
+                    {
+                        "key": node.key.hex(),
+                        "value": node.value.hex(),
+                        "is_terminal": True,
+                    }
+                )
+            else:
+                answer.append(
+                    {
+                        "left": str(node.left_hash),
+                        "right": str(node.right_hash),
+                        "is_terminal": False,
+                    }
+                )
+        return json.dumps(
+            {
+                "answer": answer,
+            }
+        )
+
     async def handle_operations(self, request: Dict[str, str]) -> str:
         tree_id = request["tree_id"]
         generation = request["generation"]
@@ -133,6 +169,8 @@ class DataLayerServer:
                     json_response = await self.handle_tree_nodes(json_request)
                 elif json_request["type"] == "request_operations":
                     json_response = await self.handle_operations(json_request)
+                elif json_request["type"] == "request_history":
+                    json_response = await self.handle_history(json_request)
                 await ws.send_str(json_response)
 
         return ws

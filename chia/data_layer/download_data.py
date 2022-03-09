@@ -1,6 +1,6 @@
 import aiohttp
 import json
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import NodeType, Status, Subscription, Side, DownloadMode
@@ -146,6 +146,100 @@ async def download_data_history(
             await ws.send_str(json.dumps({"type": "close"}))
 
     return True
+
+
+async def download_batch_data(
+    data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
+) -> bool:
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
+            request = {
+                "type": "request_root",
+                "tree_id": tree_id.hex(),
+                "node_hash": target_hash.hex(),
+            }
+            await ws.send_str(json.dumps(request))
+            msg = await ws.receive()
+            root_json = json.loads(msg.data)
+            generation = root_json["generation"]
+            root = await data_store.get_tree_root(tree_id=tree_id, lock=lock)
+            # We've downloaded too much, rollback.
+            if root.generation > generation:
+                await data_store.rollback_to_generation(tree_id=tree_id, target_generation=generation, lock=lock)
+                return True
+            existing_generation = root.generation + 1
+            insert_batch: List[Tuple[NodeType, str, str]] = []
+            stack: List[bytes32] = []
+            add_to_db_cache: Dict[str, Any] = {}
+
+            request = {
+                "type": "request_history",
+                "tree_id": tree_id.hex(),
+                "generation": str(existing_generation),
+                "max_generation": str(generation),
+                "download_full_history": "True",
+            }
+            await ws.send_str(json.dumps(request))
+            msg = await ws.receive()
+            msg_json = json.loads(msg.data)
+            answer = msg_json["answer"]
+            node: Optional[bytes32] = None
+
+            for row in answer:
+                if row["is_terminal"]:
+                    key = row["key"]
+                    value = row["value"]
+                    hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
+                    if hash.hex() == node:
+                        insert_batch.append((NodeType.TERMINAL, key, value))
+                        right_hash = hash.hex()
+                        while right_hash in add_to_db_cache:
+                            node, left_hash = add_to_db_cache[right_hash]
+                            del add_to_db_cache[right_hash]
+                            insert_batch.append((NodeType.INTERNAL, left_hash, right_hash))
+                            right_hash = node
+                    else:
+                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
+                    if len(stack) > 0:
+                        node = stack.pop()
+                    else:
+                        root_hash = node
+                        node = None
+                else:
+                    left_hash = row["left"]
+                    right_hash = row["right"]
+                    left_hash_bytes = bytes32.from_hexstr(left_hash)
+                    right_hash_bytes = bytes32.from_hexstr(right_hash)
+                    hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
+                        left_hash_bytes, right_hash_bytes
+                    )
+                    if hash.hex() == node:
+                        add_to_db_cache[right_hash] = (node, left_hash)
+                        # At most max_height nodes will be pending to be added to DB.
+                        assert len(add_to_db_cache) <= 100
+                    else:
+                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
+                    stack.append(right_hash)
+                    node = left_hash
+
+                assert root_hash is not None
+                if node is None:
+                    await data_store.insert_batch_for_generation(
+                        insert_batch,
+                        tree_id,
+                        root_hash,
+                        existing_generation,
+                        lock=lock,
+                    )
+                    insert_batch = []
+                    existing_generation += 1
+                    assert stack == []
+                    assert add_to_db_cache == {}
+
+            assert existing_generation + 1 == generation
+            await ws.send_str(json.dumps({"type": "close"}))
+
+    return False
 
 
 async def download_data(

@@ -975,6 +975,32 @@ class DataStore:
                 node_hash = node.left_hash
         return nodes
 
+    async def handle_history(
+        self,
+        tree_id: bytes32,
+        generation_begin: int,
+        max_generation: int,
+        dowload_full_history: bool,
+        num_generations: int = 10000000,
+        *,
+        lock: bool = True,
+    ) -> List[Node]:
+        result: List[Node] = []
+
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            query_generation_begin = max(generation_begin - 1, 0)
+            query_generation_end = min(
+                generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
+            )
+            query_generation_end = min(query_generation_end, max_generation + 1)
+            roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
+            for root in roots:
+                if root.node_hash is not None:
+                    nodes = await self.get_left_to_right_ordering(root.node_hash, tree_id, True, lock=False)
+                    result += nodes
+
+        return result
+
     # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
     async def get_single_operation(
         self,
