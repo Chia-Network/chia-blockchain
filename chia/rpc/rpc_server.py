@@ -44,10 +44,6 @@ class RpcServer:
 
     async def stop(self):
         self.shut_down = True
-        if self.websocket is not None:
-            await self.websocket.close()
-        if self.client_session is not None:
-            await self.client_session.close()
 
     async def _state_changed(self, *args):
         if self.websocket is None:
@@ -263,10 +259,8 @@ class RpcServer:
                 break
 
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
-        while True:
+        while not self.shut_down:
             try:
-                if self.shut_down:
-                    break
                 self.client_session = aiohttp.ClientSession()
                 self.websocket = await self.client_session.ws_connect(
                     f"wss://{self_hostname}:{daemon_port}",
