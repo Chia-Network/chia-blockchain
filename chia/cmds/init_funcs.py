@@ -467,13 +467,16 @@ def chia_init(
         config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(db_path.parent)
-        import sqlite3
 
-        with sqlite3.connect(db_path) as connection:
-            connection.execute("CREATE TABLE database_version(version int)")
-            connection.execute("INSERT INTO database_version VALUES (2)")
-            connection.commit()
+        # Check if a DB file was already in place from a backup, etc
+        if not db_path.exists():
+            mkdir(db_path.parent)
+            import sqlite3
+
+            with sqlite3.connect(db_path) as connection:
+                connection.execute("CREATE TABLE database_version(version int)")
+                connection.execute("INSERT INTO database_version VALUES (2)")
+                connection.commit()
 
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
