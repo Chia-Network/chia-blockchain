@@ -230,9 +230,9 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [walletId],
       }),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, { walletId }) => [
         { type: 'Transactions', id: 'LIST' },
-        'TransactionCount',
+        { type: 'TransactionCount', id: walletId },
       ],
     }),
 
@@ -643,7 +643,9 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [walletId],
       }),
       transformResponse: (response: any) => response?.count,
-      providesTags: ['TransactionCount'],
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'TransactionCount', id: walletId }]
+        : [],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
         service: Wallet,
