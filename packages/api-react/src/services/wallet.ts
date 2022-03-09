@@ -297,6 +297,15 @@ export const walletApi = apiWithTag.injectEndpoints({
         command: 'getFarmedAmount',
         service: Wallet,
       }),
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onCoinAdded',
+        service: Wallet,
+        endpoint: () => walletApi.endpoints.getWalletBalance,
+      }, {
+        command: 'onCoinRemoved',
+        service: Wallet,
+        endpoint: () => walletApi.endpoints.getWalletBalance,
+      }]),
     }),
   
     sendTransaction: build.mutation<any, { 
