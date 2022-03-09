@@ -77,6 +77,9 @@ export default function Autocomplete(props: Props) {
 
   return (
     <MaterialAutocomplete
+      autoComplete
+      autoHighlight
+      autoSelect
       options={options}
       filterOptions={filterOptions}
       onChange={(_e, newValue) => handleChange(newValue)}
