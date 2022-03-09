@@ -1,31 +1,13 @@
 import importlib
 import inspect
 import os
-import time
 
-from typing import Optional, TextIO
 import pathlib
 
 import pkg_resources
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.util.lock import with_lock
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
-
-
-# Cribbed mostly from chia/daemon/server.py
-def create_exclusive_lock(lockfile) -> Optional[TextIO]:
-    """
-    Open a lockfile exclusively.
-    """
-
-    try:
-        fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-        f = open(fd, "w")
-
-        f.write("lock")
-    except IOError:
-        return None
-
-    return f
 
 
 compile_clvm_py = None
@@ -85,22 +67,10 @@ def compile_clvm_in_lock(full_path, output, search_paths):
 
 
 def compile_clvm(full_path, output, search_paths=[]):
-    # Ensure that we're the only one recompiling full_path
-    lock_filename = f"{full_path}.lock"
+    def do_compile():
+        compile_clvm_in_lock(full_path, output, search_paths)
 
-    lock_file = None
-    while True:
-        lock_file = create_exclusive_lock(lock_filename)
-        if lock_file is not None:
-            break
-
-        time.sleep(0.1)
-
-    try:
-        return compile_clvm_in_lock(full_path, output, search_paths)
-    finally:
-        lock_file.close()
-        os.remove(lock_filename)
+    with_lock(f"{full_path}.lock", do_compile)
 
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
