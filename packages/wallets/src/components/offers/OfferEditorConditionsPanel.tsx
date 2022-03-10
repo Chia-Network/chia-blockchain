@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import BigNumber from 'bignumber.js';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
 import {
@@ -10,6 +11,7 @@ import {
   mojoToChiaLocaleString,
   mojoToCAT,
   mojoToCATLocaleString,
+  useLocale,
 } from '@chia/core';
 import {
   Box,
@@ -39,21 +41,22 @@ type OfferEditorConditionsRowProps = {
 function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
   const { namePrefix, item, tradeSide, addRow, removeRow, updateRow, showAddWalletMessage, disabled, ...rest } = props;
   const { getValues } = useFormContext();
+  const [locale] = useLocale();
   const row: OfferEditorRowData = getValues(namePrefix);
   const { data: walletBalance, isLoading } = useGetWalletBalanceQuery({ walletId: row.assetWalletId });
 
   const spendableBalanceString: string | undefined = useMemo(() => {
-    let balanceString = undefined;
-    let balance = 0;
+    let balanceString: string | undefined;
+    let balance = new BigNumber(0);
 
     if (!isLoading && tradeSide === 'sell' && walletBalance && walletBalance.walletId == row.assetWalletId) {
       switch (item.walletType) {
         case WalletType.STANDARD_WALLET:
-          balanceString = mojoToChiaLocaleString(walletBalance.spendableBalance);
+          balanceString = mojoToChiaLocaleString(walletBalance.spendableBalance, locale);
           balance = mojoToChia(walletBalance.spendableBalance);
           break;
         case WalletType.CAT:
-          balanceString = mojoToCATLocaleString(walletBalance.spendableBalance);
+          balanceString = mojoToCATLocaleString(walletBalance.spendableBalance, locale);
           balance = mojoToCAT(walletBalance.spendableBalance);
           break;
         default:
@@ -61,7 +64,7 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
       }
     }
 
-    if (balanceString !== row.spendableBalanceString || balance !== row.spendableBalance) {
+    if (balanceString !== row.spendableBalanceString || !balance.isEqualTo(row.spendableBalance)) {
       row.spendableBalanceString = balanceString;
       row.spendableBalance = balance;
 
@@ -69,7 +72,7 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
     }
 
     return balanceString;
-  }, [row.assetWalletId, walletBalance, isLoading]);
+  }, [row.assetWalletId, walletBalance, isLoading, locale]);
 
   function handleAssetChange(namePrefix: string, selectedWalletId: number, selectedWalletType: WalletType) {
     const row: OfferEditorRowData = getValues(namePrefix);
@@ -77,17 +80,20 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
     row.assetWalletId = selectedWalletId;
     row.walletType = selectedWalletType;
     row.spendableBalanceString = spendableBalanceString;
-    row.spendableBalance = walletBalance ? walletBalance.spendableBalance : 0;
+    row.spendableBalance = walletBalance 
+      ? new BigNumber(walletBalance.spendableBalance) 
+      : new BigNumber(0);
 
     updateRow(row);
   }
 
-  function handleAmountChange(namePrefix: string, amount: number) {
+  function handleAmountChange(namePrefix: string, amount: string) {
     const row: OfferEditorRowData = getValues(namePrefix);
 
-    row.amount = amount;
-
-    updateRow(row);
+    updateRow({
+      ...row,
+      amount,
+    });
   }
 
   return (
@@ -119,7 +125,7 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
               disabled={disabled}
               symbol={item.walletType === WalletType.STANDARD_WALLET ? undefined : ""}
               showAmountInMojos={item.walletType === WalletType.STANDARD_WALLET}
-              onChange={(value: number) => handleAmountChange(namePrefix, value)}
+              onChange={(value: string) => handleAmountChange(namePrefix, value)}
               required
               fullWidth
             />

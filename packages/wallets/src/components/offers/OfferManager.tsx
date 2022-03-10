@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
 import { Trans, t } from '@lingui/macro';
 import moment from 'moment';
+import BigNumber from 'bignumber.js';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Back,
@@ -61,7 +62,7 @@ const StyledTradeIcon = styled(TradeIcon)`
 
 type OfferCancellationOptions = {
   cancelWithTransaction: boolean;
-  cancellationFee: number;
+  cancellationFee: BigNumber;
 };
 
 type ConfirmOfferCancellationProps = {
@@ -75,7 +76,7 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
   const methods = useForm({
     defaultValues: {
       fee: '',
-    }
+    },
   });
   const [cancelWithTransaction, setCancelWithTransaction] = useState<boolean>(canCancelWithTransaction);
 
@@ -85,11 +86,11 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
 
   async function handleConfirm() {
     const { fee: xchFee } = methods.getValues();
-    var fee = 0;
 
-    if (cancelWithTransaction) {
-      fee = Number.parseFloat(chiaToMojo(xchFee));
-    }
+    const fee = cancelWithTransaction 
+      ? chiaToMojo(xchFee)
+      : new BigNumber(0);
+
     onClose([true, { cancelWithTransaction, cancellationFee: fee }]);
   }
 
