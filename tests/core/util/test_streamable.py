@@ -152,6 +152,29 @@ def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
         dataclass_from_dict(ConvertTupleFailures, input_dict)
 
 
+@dataclass
+class ConvertListFailures:
+    a: List[int]
+    b: List[List[int]]
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, TypeError, id="a: invalid type list"),
+        pytest.param({"a": 1, "b": [1, [2, 2]]}, TypeError, id="a: invalid type int"),
+        pytest.param({"a": "11", "b": [1, [2, 2]]}, TypeError, id="a: invalid type str"),
+        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, TypeError, id="b: invalid type list"),
+        pytest.param({"a": [1, 1], "b": [1, 2]}, TypeError, id="b: invalid type int"),
+        pytest.param({"a": [1, 1], "b": [1, "22"]}, TypeError, id="b: invalid type str"),
+    ],
+)
+def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(ConvertListFailures, input_dict)
+
+
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [

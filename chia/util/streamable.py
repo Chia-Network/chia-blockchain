@@ -112,10 +112,9 @@ def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Collection[An
 
 
 def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
-    list_data = []
-    for item in items:
-        list_data.append(convert_func(item))
-    return list_data
+    if type(items) != list:
+        raise TypeError(f"expected: list, actual: {type(items).__name__}")
+    return [convert_func(item) for item in items]
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
