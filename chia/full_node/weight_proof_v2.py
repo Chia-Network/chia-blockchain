@@ -681,27 +681,28 @@ def _create_sub_epoch_data(
 
 def handle_block_vdfs(constants: ConsensusConstants, header_block: HeaderBlock, blocks: Dict[bytes32, BlockRecord]):
     block_rec = blocks[header_block.header_hash]
-
-    sp_input = ClassgroupElement.get_default_element()
-    sp_iters = header_block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
-    if not header_block.challenge_chain_sp_proof.normalized_to_identity:
-        (_, _, sp_input, _, _, sp_iters) = get_signage_point_vdf_info(
+    compressed_sp_output = None
+    if  header_block.challenge_chain_sp_proof:
+        sp_input = ClassgroupElement.get_default_element()
+        sp_iters = header_block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
+        if not header_block.challenge_chain_sp_proof.normalized_to_identity:
+            (_, _, sp_input, _, _, sp_iters) = get_signage_point_vdf_info(
+                constants,
+                header_block.finished_sub_slots,
+                block_rec.overflow,
+                None if header_block.height == 0 else blocks[header_block.prev_header_hash],
+                BlockCache(blocks),
+                block_rec.sp_total_iters(constants),
+                block_rec.sp_iters(constants),
+            )
+        compressed_sp_output = compress_output(
             constants,
-            header_block.finished_sub_slots,
-            block_rec.overflow,
-            None if header_block.height == 0 else blocks[header_block.prev_header_hash],
-            BlockCache(blocks),
-            block_rec.sp_total_iters(constants),
-            block_rec.sp_iters(constants),
+            sp_input,
+            header_block.challenge_chain_sp_proof,
+            header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
+            sp_iters,
+            header_block.reward_chain_block.challenge_chain_sp_vdf.output,
         )
-    compressed_sp_output = compress_output(
-        constants,
-        sp_input,
-        header_block.challenge_chain_sp_proof,
-        header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
-        sp_iters,
-        header_block.reward_chain_block.challenge_chain_sp_vdf.output,
-    )
     cc_ip_input = ClassgroupElement.get_default_element()
     cc_ip_iters = block_rec.ip_iters(constants)
     prev_block = None
@@ -718,7 +719,6 @@ def handle_block_vdfs(constants: ConsensusConstants, header_block: HeaderBlock, 
         cc_ip_iters,
         header_block.reward_chain_block.challenge_chain_ip_vdf.output,
     )
-
     compressed_icc_ip_output = None
     if header_block.infused_challenge_chain_ip_proof is not None:
         icc_ip_iters = block_rec.ip_iters(constants)
@@ -755,7 +755,6 @@ def handle_block_vdfs(constants: ConsensusConstants, header_block: HeaderBlock, 
         blocks[header_block.header_hash].ip_iters(constants),
         header_block.total_iters,
     )
-
 
 
 def handle_finished_slots(end_of_slot: EndOfSubSlotBundle) -> SubSlotDataV2:
