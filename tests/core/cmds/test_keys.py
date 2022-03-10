@@ -117,7 +117,7 @@ class TestKeysCommands:
 
         # Generate the new config
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"], catch_exceptions=False)
 
         assert init_result.exit_code == 0
 

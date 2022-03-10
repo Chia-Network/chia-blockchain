@@ -32,62 +32,114 @@ from typing import Dict
 # log = logging.getLogger(__name__)
 
 
-def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bool, iterations: int):
+def write_config(
+    root_path: Path, config: Dict, atomic_write: bool, do_sleep: bool, iterations: int, error_queue: Queue
+):
     """
     Wait for a random amount of time and write out the config data. With a large
     config, we expect save_config() to require multiple writes.
     """
-    for i in range(iterations):
-        # This is a small sleep to get interweaving reads and writes
-        sleep(0.05)
+    try:
+        for i in range(iterations):
+            # This is a small sleep to get interweaving reads and writes
+            sleep(0.05)
 
-        if do_sleep:
-            sleep(random.random())
-        # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] write_config")
-        # save_config(root_path=root_path, filename="config.yaml", config_data=modified_config)
-        if atomic_write:
-            # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
-            # leading to a non-atomic operation
-            with get_config_lock(root_path, "config.yaml"):
-                save_config(root_path=root_path, filename="config.yaml", config_data=config)
-        else:
-            path: Path = config_path_for_filename(root_path, filename="config.yaml")
-            # print("Trying to get lock write")
-            with get_config_lock(root_path, "config.yaml"):
-                # print("Write start")
-                with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
-                    tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
-                    with open(tmp_path, "w") as f:
-                        yaml.safe_dump(config, f)
-                    shutil.copy2(str(tmp_path), str(path))
-                # print("Write end")
+            if do_sleep:
+                sleep(random.random())
+            # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] write_config")
+            # save_config(root_path=root_path, filename="config.yaml", config_data=modified_config)
+            if atomic_write:
+                # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
+                # leading to a non-atomic operation
+                with get_config_lock(root_path, "config.yaml"):
+                    save_config(root_path=root_path, filename="config.yaml", config_data=config)
+            else:
+                path: Path = config_path_for_filename(root_path, filename="config.yaml")
+                print("Trying to get lock write")
+                with get_config_lock(root_path, "config.yaml"):
+                    print("Write start")
+                    with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+                        tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
+                        with open(tmp_path, "w") as f:
+                            yaml.safe_dump(config, f)
+                        shutil.copy2(str(tmp_path), str(path))
+                    print("Write end")
+    except Exception as e:
+        error_queue.put(e)
 
 
-def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: bool, iterations: int):
+def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: bool, iterations: int, error_queue: Queue):
     """
     Wait for a random amount of time, read the config and compare with the
     default config data. If the config file is partially-written or corrupt,
     load_config should fail or return bad data
     """
-    for i in range(iterations):
-        # This is a small sleep to get interweaving reads and writes
-        sleep(0.05)
+    try:
+        for i in range(iterations):
+            # This is a small sleep to get interweaving reads and writes
+            sleep(0.05)
 
-        # Wait a moment. The read and write threads are delayed by a random amount
-        # in an attempt to interleave their execution.
-        if do_sleep:
-            sleep(random.random())
-        # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
+            # Wait a moment. The read and write threads are delayed by a random amount
+            # in an attempt to interleave their execution.
+            if do_sleep:
+                sleep(random.random())
+            # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
-        with get_config_lock(root_path, "config.yaml"):
-            # print("Read start")
-            config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
-            # print("Read end")
-            assert len(config) > 0
-            # if config != default_config:
-            #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
-            #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
-            assert config == default_config
+            with get_config_lock(root_path, "config.yaml"):
+                print("Read start")
+                config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
+                print("Read end")
+                assert len(config) > 0
+                # if config != default_config:
+                #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
+                #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
+                assert config == default_config
+    except Exception as e:
+        error_queue.put(e)
+
+
+async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
+    """
+    Spin-off reader and writer threads and wait for completion
+    """
+    error_queue: Queue = Queue()
+    thread1 = Thread(
+        target=write_config,
+        kwargs={
+            "root_path": root_path,
+            "config": default_config,
+            "atomic_write": False,
+            "do_sleep": True,
+            "iterations": 1,
+            "error_queue": error_queue,
+        },
+    )
+    thread2 = Thread(
+        target=read_and_compare_config,
+        kwargs={
+            "root_path": root_path,
+            "default_config": default_config,
+            "do_sleep": True,
+            "iterations": 1,
+            "error_queue": error_queue,
+        },
+    )
+
+    thread1.start()
+    thread2.start()
+
+    thread1.join()
+    thread2.join()
+    if error_queue.qsize() > 0:
+        raise error_queue.get()
+
+
+def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
+    """
+    Subprocess entry point. This function spins-off threads to perform read/write tasks
+    concurrently, possibly leading to synchronization issues accessing config data.
+    """
+    asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config))
 
 
 class TestConfig:
@@ -226,20 +278,12 @@ class TestConfig:
         args = list(map(lambda _: (root_path, default_config_dict), range(num_workers)))
         # Spin-off several processes (not threads) to read and write config data. If any
         # read failures are detected, the failing process will assert.
-        with ProcessPoolExecutor(max_workers=num_workers) as pool:
-            tasks = []
-            for i in range(num_workers):
-                tasks.append(
-                    asyncio.get_running_loop().run_in_executor(
-                        pool, write_config, root_path, default_config_dict, False, True, 1
-                    )
-                )
-                tasks.append(
-                    asyncio.get_running_loop().run_in_executor(
-                        pool, read_and_compare_config, root_path, default_config_dict, True, 1
-                    )
-                )
-            await asyncio.gather(*tasks)
+        with Pool(processes=num_workers) as pool:
+            res = pool.starmap_async(run_reader_and_writer_tasks, args)
+            try:
+                res.get(timeout=60)
+            except TimeoutError:
+                pytest.skip("Timed out waiting for reader/writer processes to complete")
 
     @pytest.mark.asyncio
     async def test_non_atomic_writes(self, root_path_populated_with_config, default_config_dict):

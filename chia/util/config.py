@@ -11,10 +11,10 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import pkg_resources
 import yaml
+from filelock import FileLock, BaseFileLock
 from typing_extensions import Literal
 
 from chia.util.path import mkdir
-from fasteners import InterProcessLock
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
@@ -47,13 +47,11 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
-def get_config_lock(root_path: Path, filename: Union[str, Path]) -> InterProcessLock:
-    # This is a re-entrant lock, so it does not work with multiple threads (it will allow both threads to access the
-    # object at the same time). Make sure to ONLY use this method in sync context, and not async, since async can
-    # allow context switching and allow another async thread to try to change the config
-
-    path: Path = config_path_for_filename(root_path, filename)
-    return InterProcessLock(path.with_suffix(".lock"))
+def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock:
+    lock_path: Path = config_path_for_filename(root_path, filename).with_suffix(".lock")
+    if not lock_path.exists():
+        lock_path.touch(exist_ok=True)
+    return FileLock(lock_path)
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
@@ -81,7 +79,7 @@ def load_config(
 
     path = config_path_for_filename(root_path, filename)
 
-    config_lock: Optional[InterProcessLock] = None
+    config_lock: Optional[BaseFileLock] = None
     if acquire_lock:
         config_lock = get_config_lock(root_path, filename)
         acquired = config_lock.acquire()
