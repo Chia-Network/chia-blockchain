@@ -21,7 +21,7 @@ from multiprocessing import Pool, TimeoutError, Queue
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict
+from typing import Dict, Optional
 
 
 # Commented-out lines are preserved to aide in debugging the multiprocessing tests
@@ -33,7 +33,12 @@ from typing import Dict
 
 
 def write_config(
-    root_path: Path, config: Dict, atomic_write: bool, do_sleep: bool, iterations: int, error_queue: Queue
+    root_path: Path,
+    config: Dict,
+    atomic_write: bool,
+    do_sleep: bool,
+    iterations: int,
+    error_queue: Optional[Queue] = None,
 ):
     """
     Wait for a random amount of time and write out the config data. With a large
@@ -55,20 +60,24 @@ def write_config(
                     save_config(root_path=root_path, filename="config.yaml", config_data=config)
             else:
                 path: Path = config_path_for_filename(root_path, filename="config.yaml")
-                print("Trying to get lock write")
+                # print("Trying to get lock write")
                 with get_config_lock(root_path, "config.yaml"):
-                    print("Write start")
+                    # print("Write start")
                     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                         tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                         with open(tmp_path, "w") as f:
                             yaml.safe_dump(config, f)
                         shutil.copy2(str(tmp_path), str(path))
-                    print("Write end")
+                    # print("Write end")
     except Exception as e:
-        error_queue.put(e)
+        if error_queue is not None:
+            error_queue.put(e)
+        raise e
 
 
-def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: bool, iterations: int, error_queue: Queue):
+def read_and_compare_config(
+    root_path: Path, default_config: Dict, do_sleep: bool, iterations: int, error_queue: Optional[Queue] = None
+):
     """
     Wait for a random amount of time, read the config and compare with the
     default config data. If the config file is partially-written or corrupt,
@@ -86,16 +95,18 @@ def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: boo
             # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
             with get_config_lock(root_path, "config.yaml"):
-                print("Read start")
+                # print("Read start")
                 config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
-                print("Read end")
+                # print("Read end")
                 assert len(config) > 0
                 # if config != default_config:
                 #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
                 #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
                 assert config == default_config
     except Exception as e:
-        error_queue.put(e)
+        if error_queue is not None:
+            error_queue.put(e)
+        raise e
 
 
 async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
@@ -301,13 +312,13 @@ class TestConfig:
             for i in range(10):
                 all_tasks.append(
                     asyncio.get_running_loop().run_in_executor(
-                        pool, read_and_compare_config, root_path, default_config_dict, False, 100
+                        pool, read_and_compare_config, root_path, default_config_dict, False, 100, None
                     )
                 )
                 if i % 2 == 0:
                     all_tasks.append(
                         asyncio.get_running_loop().run_in_executor(
-                            pool, write_config, root_path, default_config_dict, False, False, 100
+                            pool, write_config, root_path, default_config_dict, False, False, 100, None
                         )
                     )
             await asyncio.gather(*all_tasks)

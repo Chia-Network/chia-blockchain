@@ -1,10 +1,10 @@
 import base64
-import fasteners
 import os
 import shutil
 import sys
 import threading
 import yaml
+from filelock import FileLock, Timeout
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from contextlib import contextmanager
@@ -49,14 +49,17 @@ def loads_keyring(method):
 
 @contextmanager
 def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    if not lock_path.exists():
+        lock_path.touch(exist_ok=True)
+    lock = FileLock(str(lock_path))
     result = None
     for i in range(0, max_iters):
-        if lock.acquire_write_lock(timeout=timeout):
+        try:
+            lock.acquire(timeout=timeout)
             yield  # <----
-            lock.release_write_lock()
+            lock.release()
             break
-        else:
+        except Timeout:
             print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
                 print(f" Remaining attempts: {max_iters - 1 - i}")
@@ -68,14 +71,17 @@ def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
 
 @contextmanager
 def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+    if not lock_path.exists():
+        lock_path.touch(exist_ok=True)
+    lock = FileLock(str(lock_path))
     result = None
     for i in range(0, max_iters):
-        if lock.acquire_read_lock(timeout=timeout):
+        try:
+            lock.acquire(timeout=timeout)
             yield  # <----
-            lock.release_read_lock()
+            lock.release()
             break
-        else:
+        except Timeout:
             print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
                 print(f" Remaining attempts: {max_iters - 1 - i}")
@@ -138,7 +144,7 @@ class FileKeyring(FileSystemEventHandler):
         """
         Returns a path suitable for creating a lockfile derived from the input path.
         Currently used to provide a lockfile path to be used by
-        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        FileLock when guarding access to keyring.yaml
         """
         return file_path.with_name(f".{file_path.name}.lock")
 
