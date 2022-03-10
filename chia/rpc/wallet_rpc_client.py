@@ -12,6 +12,13 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 
 
+def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
+    result["transaction"] = TransactionRecord.from_json_dict(result["transaction"])
+    if result["fee_transaction"]:
+        result["fee_transaction"] = TransactionRecord.from_json_dict(result["fee_transaction"])
+    return result
+
+
 class WalletRpcClient(RpcClient):
     """
     Client to Chia RPC, connects to a local wallet. Uses HTTP/JSON, and converts back from
@@ -291,10 +298,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: str, fee: uint64) -> TransactionRecord:
-        return TransactionRecord.from_json_dict(
-            (await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
-        )
+    async def pw_self_pool(self, wallet_id: str, fee: uint64) -> Dict:
+        reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
+        reply = parse_result_transactions(reply)
+        return reply
 
     async def pw_join_pool(
         self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
@@ -308,17 +315,13 @@ class WalletRpcClient(RpcClient):
         }
 
         reply = await self.fetch("pw_join_pool", request)
-        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
-        if reply["fee_transaction"]:
-            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
-        return reply["transaction"]
+        reply = parse_result_transactions(reply)
+        return reply
 
     async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> Dict:
         reply = await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee})
         reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
-        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
-        if reply["fee_transaction"]:
-            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
+        reply = parse_result_transactions(reply)
         return reply
 
     async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
