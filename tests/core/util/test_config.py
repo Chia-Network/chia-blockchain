@@ -21,7 +21,7 @@ from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict, List
+from typing import Dict
 
 
 # Commented-out lines are preserved to aide in debugging the multiprocessing tests
