@@ -10,10 +10,12 @@ class DBWrapper:
 
     db: aiosqlite.Connection
     lock: asyncio.Lock
+    db_version: int
 
-    def __init__(self, connection: aiosqlite.Connection):
+    def __init__(self, connection: aiosqlite.Connection, db_version: int = 1):
         self.db = connection
         self.lock = asyncio.Lock()
+        self.db_version = db_version
 
     async def begin_transaction(self):
         cursor = await self.db.execute("BEGIN TRANSACTION")
@@ -25,5 +27,5 @@ class DBWrapper:
             cursor = await self.db.execute("ROLLBACK")
             await cursor.close()
 
-    async def commit_transaction(self):
+    async def commit_transaction(self) -> None:
         await self.db.commit()

@@ -24,8 +24,17 @@ from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass(frozen=True)
+@streamable
+class FullNodeStorePeakResult(Streamable):
+    added_eos: Optional[EndOfSubSlotBundle]
+    new_signage_points: List[Tuple[uint8, SignagePoint]]
+    new_infusion_points: List[timelord_protocol.NewInfusionPointVDF]
 
 
 class FullNodeStore:
@@ -660,9 +669,7 @@ class FullNodeStore:
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         fork_block: Optional[BlockRecord],
         blocks: BlockchainInterface,
-    ) -> Tuple[
-        Optional[EndOfSubSlotBundle], List[Tuple[uint8, SignagePoint]], List[timelord_protocol.NewInfusionPointVDF]
-    ]:
+    ) -> FullNodeStorePeakResult:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more blocks with an sp in the previous sub-slot)
@@ -751,7 +758,7 @@ class FullNodeStore:
             if eos_op is not None:
                 self.recent_eos.put(eos_op.challenge_chain.get_hash(), (eos_op, time.time()))
 
-        return new_eos, new_sps, new_ips
+        return FullNodeStorePeakResult(new_eos, new_sps, new_ips)
 
     def get_finished_sub_slots(
         self,

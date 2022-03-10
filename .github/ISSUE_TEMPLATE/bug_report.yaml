@@ -1,0 +1,52 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug] "
+labels: ["bug"]
+#assignees:
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out a clear and concise description of what the bug is. (If what you are experiencing is NOT a bug but instead a support issue, please open a Discussion instead!)
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description:  A clear and concise description of what happened, how to reproduce it, and what you expected to happen.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of Chia are you running?
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: What platform are you using?
+      multiple: false
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Pi4
+    validations:
+      required: true
+  - type: dropdown
+    id: ui
+    attributes:
+      label: What ui mode are you using?
+      multiple: false
+      options:
+        - GUI
+        - CLI
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell

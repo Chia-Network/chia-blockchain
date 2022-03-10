@@ -40,7 +40,7 @@ class uint128(int):
         value = int(value)
         if value > (2 ** 128) - 1 or value < 0:
             raise ValueError(f"Value {value} of does not fit into uint128")
-        return int.__new__(cls, value)  # type: ignore
+        return int.__new__(cls, value)
 
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
@@ -63,7 +63,7 @@ class int512(int):
         # [-INT512_MAX, INT512_MAX]
         if value >= (2 ** 512) or value <= -(2 ** 512):
             raise ValueError(f"Value {value} of does not fit into in512")
-        return int.__new__(cls, value)  # type: ignore
+        return int.__new__(cls, value)
 
     # Uses 65 bytes to fit in the sign bit
     @classmethod

@@ -1,16 +1,18 @@
 import functools
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
+
+from chia.types.blockchain_format.sized_bytes import bytes48
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 
 
-def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force_cache: bool) -> List[GTElement]:
+def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], force_cache: bool) -> List[GTElement]:
     pairings: List[Optional[GTElement]] = []
     missing_count: int = 0
     for pk, msg in zip(pks, msgs):
-        aug_msg: bytes = bytes(pk) + msg
+        aug_msg: bytes = pk + msg
         h: bytes = bytes(std_hash(aug_msg))
         pairing: Optional[GTElement] = cache.get(h)
         if not force_cache and pairing is None:
@@ -24,26 +26,27 @@ def get_pairings(cache: LRUCache, pks: List[G1Element], msgs: List[bytes], force
 
     for i, pairing in enumerate(pairings):
         if pairing is None:
-            aug_msg = bytes(pks[i]) + msgs[i]
+            aug_msg = pks[i] + msgs[i]
             aug_hash: G2Element = AugSchemeMPL.g2_from_message(aug_msg)
-            pairing = pks[i].pair(aug_hash)
+            pairing = G1Element.from_bytes(pks[i]).pair(aug_hash)
 
             h = bytes(std_hash(aug_msg))
             cache.put(h, pairing)
             pairings[i] = pairing
-
     return pairings
 
 
-LOCAL_CACHE: LRUCache = LRUCache(10000)
+# Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.
+LOCAL_CACHE: LRUCache = LRUCache(50000)
 
 
 def aggregate_verify(
-    pks: List[G1Element], msgs: List[bytes], sig: G2Element, force_cache: bool = False, cache: LRUCache = LOCAL_CACHE
+    pks: List[bytes48], msgs: Sequence[bytes], sig: G2Element, force_cache: bool = False, cache: LRUCache = LOCAL_CACHE
 ):
     pairings: List[GTElement] = get_pairings(cache, pks, msgs, force_cache)
     if len(pairings) == 0:
-        return AugSchemeMPL.aggregate_verify(pks, msgs, sig)
+        pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pks]
+        return AugSchemeMPL.aggregate_verify(pks_objects, msgs, sig)
 
     pairings_prod: GTElement = functools.reduce(GTElement.__mul__, pairings)
     return pairings_prod == sig.pair(G1Element.generator())

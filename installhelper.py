@@ -6,6 +6,7 @@
 #
 import json
 import os
+from os.path import exists
 import subprocess
 from pkg_resources import parse_version
 
@@ -15,7 +16,7 @@ from pkg_resources import parse_version
 # https://github.com/inveniosoftware/invenio-assets/blob/maint-1.0/invenio_assets/npm.py
 # Copyright (C) 2015-2018 CERN.
 #
-def make_semver(version_str):
+def make_semver(version_str: str) -> str:
     v = parse_version(version_str)
     major = v._version.release[0]
     try:
@@ -32,34 +33,40 @@ def make_semver(version_str):
         prerelease.append("".join(str(x) for x in v._version.pre))
     if v._version.dev:
         prerelease.append("".join(str(x) for x in v._version.dev))
-    prerelease = ".".join(prerelease)
 
     local = v.local
 
     version = "{0}.{1}.{2}".format(major, minor, patch)
 
     if prerelease:
-        version += "-{0}".format(prerelease)
+        version += "-{0}".format(".".join(prerelease))
     if local:
         version += "+{0}".format(local)
 
     return version
 
 
-def update_version():
-    with open(f"{os.path.dirname(__file__)}/chia-blockchain-gui/package.json") as f:
-        data = json.load(f)
-
+def get_chia_version() -> str:
     version: str = "0.0"
     output = subprocess.run(["chia", "version"], capture_output=True)
     if output.returncode == 0:
         version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
+    return make_semver(version)
 
-    data["version"] = make_semver(version)
 
-    with open(f"{os.path.dirname(__file__)}/chia-blockchain-gui/package.json", "w") as w:
+def update_version(package_json_path: str):
+    if not exists(package_json_path):
+        return
+
+    with open(package_json_path) as f:
+        data = json.load(f)
+
+    data["version"] = get_chia_version()
+
+    with open(package_json_path, "w") as w:
         json.dump(data, indent=4, fp=w)
 
 
 if __name__ == "__main__":
-    update_version()
+    update_version(f"{os.path.dirname(__file__)}/chia-blockchain-gui/package.json")
+    update_version(f"{os.path.dirname(__file__)}/chia-blockchain-gui/packages/gui/package.json")

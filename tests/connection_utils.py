@@ -15,13 +15,12 @@ from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from tests.setup_nodes import self_hostname
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
 
-async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer) -> bool:
+async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
     cons = list(server.all_connections.values())[:]
     for con in cons:
         await con.close()
@@ -29,7 +28,7 @@ async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaSer
 
 
 async def add_dummy_connection(
-    server: ChiaServer, dummy_port: int, type: NodeType = NodeType.FULL_NODE
+    server: ChiaServer, self_hostname: str, dummy_port: int, type: NodeType = NodeType.FULL_NODE
 ) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
@@ -66,7 +65,7 @@ async def add_dummy_connection(
     return incoming_queue, peer_id
 
 
-async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WSChiaConnection:
+async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_hostname: str) -> WSChiaConnection:
     """
     Connect server_2 to server_1, and get return the connection in server_1.
     """

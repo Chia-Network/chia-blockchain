@@ -15,7 +15,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
+    coin_record["spent"] = coin_record["spent_block_index"] > 0
+    return coin_record
 
 
 class FullNodeRpcApi:
@@ -30,6 +36,7 @@ class FullNodeRpcApi:
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
             "/get_blocks": self.get_blocks,
+            "/get_block_count_metrics": self.get_block_count_metrics,
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
@@ -55,7 +62,10 @@ class FullNodeRpcApi:
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
         }
 
-    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
+        if change_data is None:
+            change_data = {}
+
         payloads = []
         if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
@@ -68,8 +78,19 @@ class FullNodeRpcApi:
                     "wallet_ui",
                 )
             )
-            return payloads
-        return []
+            payloads.append(
+                create_payload_dict(
+                    "get_blockchain_state",
+                    data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+
+        if change in ("block", "signage_point"):
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
+
+        return payloads
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
@@ -81,6 +102,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        node_id = self.service.server.node_id.hex()
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
@@ -95,7 +117,13 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
-                    "mempool_size": 0,
+                    "mempool_cost": 0,
+                    "mempool_min_fees": {
+                        "cost_5000000": 0,
+                    },
+                    "mempool_max_total_cost": 0,
+                    "block_max_cost": 0,
+                    "node_id": node_id,
                 },
             }
             return res
@@ -140,8 +168,14 @@ class FullNodeRpcApi:
 
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
+            mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
+            mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
+            mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
             mempool_size = 0
+            mempool_cost = 0
+            mempool_min_fee_5m = 0
+            mempool_max_total_cost = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_full_node_connections()) > 0
         else:
@@ -163,6 +197,15 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+                "mempool_cost": mempool_cost,
+                "mempool_min_fees": {
+                    # We may give estimates for varying costs in the future
+                    # This Dict sets us up for that in the future
+                    "cost_5000000": mempool_min_fee_5m,
+                },
+                "mempool_max_total_cost": mempool_max_total_cost,
+                "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
+                "node_id": node_id,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
@@ -175,7 +218,7 @@ class FullNodeRpcApi:
 
     async def get_recent_signage_point_or_eos(self, request: Dict):
         if "sp_hash" not in request:
-            challenge_hash: bytes32 = hexstr_to_bytes(request["challenge_hash"])
+            challenge_hash: bytes32 = bytes32.from_hexstr(request["challenge_hash"])
             # This is the case of getting an end of slot
             eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
             if not eos_tuple:
@@ -208,7 +251,7 @@ class FullNodeRpcApi:
             return {"eos": eos, "time_received": time_received, "reverted": True}
 
         # Now we handle the case of getting a signage point
-        sp_hash: bytes32 = hexstr_to_bytes(request["sp_hash"])
+        sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
         sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
         if sp_tuple is None:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
@@ -265,7 +308,7 @@ class FullNodeRpcApi:
     async def get_block(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
-        header_hash = hexstr_to_bytes(request["header_hash"])
+        header_hash = bytes32.from_hexstr(request["header_hash"])
 
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
         if block is None:
@@ -281,6 +324,9 @@ class FullNodeRpcApi:
         exclude_hh = False
         if "exclude_header_hash" in request:
             exclude_hh = request["exclude_header_hash"]
+        exclude_reorged = False
+        if "exclude_reorged" in request:
+            exclude_reorged = request["exclude_reorged"]
 
         start = int(request["start"])
         end = int(request["end"])
@@ -290,11 +336,35 @@ class FullNodeRpcApi:
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
         json_blocks = []
         for block in blocks:
+            hh: bytes32 = block.header_hash
+            if exclude_reorged and self.service.blockchain.height_to_hash(block.height) != hh:
+                # Don't include forked (reorged) blocks
+                continue
             json = block.to_json_dict()
             if not exclude_hh:
-                json["header_hash"] = block.header_hash.hex()
+                json["header_hash"] = hh.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
+
+    async def get_block_count_metrics(self, request: Dict):
+        compact_blocks = 0
+        uncompact_blocks = 0
+        with log_exceptions(self.service.log, consume=True):
+            compact_blocks = await self.service.block_store.count_compactified_blocks()
+            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+
+        hint_count = 0
+        if self.service.hint_store is not None:
+            with log_exceptions(self.service.log, consume=True):
+                hint_count = await self.service.hint_store.count_hints()
+
+        return {
+            "metrics": {
+                "compact_blocks": compact_blocks,
+                "uncompact_blocks": uncompact_blocks,
+                "hint_count": hint_count,
+            }
+        }
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
         if "start" not in request:
@@ -313,7 +383,10 @@ class FullNodeRpcApi:
             if peak_height < uint32(a):
                 self.service.log.warning("requested block is higher than known peak ")
                 break
-            header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))
+            # TODO: address hint error and remove ignore
+            #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has type
+            #       "bytes32")  [assignment]
+            header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))  # type: ignore[assignment]
             record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
@@ -347,7 +420,7 @@ class FullNodeRpcApi:
         if "header_hash" not in request:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
-        header_hash = hexstr_to_bytes(header_hash_str)
+        header_hash = bytes32.from_hexstr(header_hash_str)
         record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
@@ -391,8 +464,8 @@ class FullNodeRpcApi:
         if newer_block_hex == older_block_hex:
             raise ValueError("New and old must not be the same")
 
-        newer_block_bytes = hexstr_to_bytes(newer_block_hex)
-        older_block_bytes = hexstr_to_bytes(older_block_hex)
+        newer_block_bytes = bytes32.from_hexstr(newer_block_hex)
+        older_block_bytes = bytes32.from_hexstr(older_block_hex)
 
         newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
         if newer_block is None:
@@ -431,7 +504,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
         """
@@ -453,7 +526,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
         """
@@ -461,13 +534,13 @@ class FullNodeRpcApi:
         """
         if "name" not in request:
             raise ValueError("Name not in request")
-        name = hexstr_to_bytes(request["name"])
+        name = bytes32.from_hexstr(request["name"])
 
         coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
-        return {"coin_record": coin_record}
+        return {"coin_record": coin_record_dict_backwards_compat(coin_record.to_json_dict())}
 
     async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
         """
@@ -489,7 +562,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -511,7 +584,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
@@ -539,13 +612,14 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
-        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
+        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)
+        assert header_hash is not None
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
@@ -566,13 +640,13 @@ class FullNodeRpcApi:
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
-        header_hash = hexstr_to_bytes(request["header_hash"])
+        header_hash = bytes32.from_hexstr(request["header_hash"])
 
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        async with self.service.blockchain.lock:
+        async with self.service._blockchain_lock_low_priority:
             if self.service.blockchain.height_to_hash(block.height) != header_hash:
                 raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
@@ -593,7 +667,7 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
-        tx_id: bytes32 = hexstr_to_bytes(request["tx_id"])
+        tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
