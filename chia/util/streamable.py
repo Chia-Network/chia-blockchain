@@ -129,7 +129,12 @@ def convert_hex_string(item: str) -> bytes:
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
     if type(item) == f_type:
         return item
-    return f_type(hexstr_to_bytes(item))
+    if not isinstance(item, bytes):
+        item = convert_hex_string(item)
+    try:
+        return f_type(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}")
 
 
 def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:

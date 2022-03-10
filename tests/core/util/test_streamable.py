@@ -12,7 +12,7 @@ from typing_extensions import Literal, get_args
 from chia.protocols.wallet_protocol import RespondRemovals
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes4, bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint8, uint32, uint64
@@ -173,6 +173,35 @@ def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
         dataclass_from_dict(ConvertListFailures, input_dict)
+
+
+@dataclass
+class ConvertByteTypeFailures:
+    a: bytes4
+    b: bytes
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": 0, "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": [], "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": {}, "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": "invalid", "b": bytes(0)}, TypeError, id="a: invalid hex string"),
+        pytest.param({"a": "000000", "b": bytes(0)}, TypeError, id="a: hex string too short"),
+        pytest.param({"a": "0000000000", "b": bytes(0)}, TypeError, id="a: hex string too long"),
+        pytest.param({"a": b"\00\00\00", "b": bytes(0)}, TypeError, id="a: bytes too short"),
+        pytest.param({"a": b"\00\00\00\00\00", "b": bytes(0)}, TypeError, id="a: bytes too long"),
+        pytest.param({"a": "00000000", "b": 0}, TypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": []}, TypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": {}}, TypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": "invalid"}, TypeError, id="b: invalid hex string"),
+    ],
+)
+def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(ConvertByteTypeFailures, input_dict)
 
 
 @pytest.mark.parametrize(
