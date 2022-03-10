@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import multiprocessing.context
 import time
+import traceback
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
@@ -797,7 +798,6 @@ class WalletStateManager:
 
                     for tx_record in rem_tx_records:
                         await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                    await self.coin_store.db_connection.commit()
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
                         if rem_coin.name() == coin_state.coin.name():
@@ -1103,30 +1103,41 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.coin_store.rollback_to_block(height)
+        try:
+            await self.db_wrapper.commit_transaction()
+            await self.db_wrapper.begin_transaction()
 
-        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
-        await self.tx_store.rollback_to_block(height)
-        await self.coin_store.db_wrapper.commit_transaction()
-        for record in reorged:
-            if record.type in [
-                TransactionType.OUTGOING_TX,
-                TransactionType.OUTGOING_TRADE,
-                TransactionType.INCOMING_TRADE,
-            ]:
-                await self.tx_store.tx_reorged(record)
-        self.tx_pending_changed()
+            await self.coin_store.rollback_to_block(height)
+            reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
+            await self.tx_store.rollback_to_block(height)
+            for record in reorged:
+                if record.type in [
+                    TransactionType.OUTGOING_TX,
+                    TransactionType.OUTGOING_TRADE,
+                    TransactionType.INCOMING_TRADE,
+                ]:
+                    await self.tx_store.tx_reorged(record, in_transaction=True)
+            self.tx_pending_changed()
 
-        # Removes wallets that were created from a blockchain transaction which got reorged.
-        remove_ids = []
-        for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == WalletType.POOLING_WALLET.value:
-                remove: bool = await wallet.rewind(height)
-                if remove:
-                    remove_ids.append(wallet_id)
-        for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id, in_transaction=False)
-            self.wallets.pop(wallet_id)
+            # Removes wallets that were created from a blockchain transaction which got reorged.
+            remove_ids = []
+            for wallet_id, wallet in self.wallets.items():
+                if wallet.type() == WalletType.POOLING_WALLET.value:
+                    remove: bool = await wallet.rewind(height, in_transaction=True)
+                    if remove:
+                        remove_ids.append(wallet_id)
+            for wallet_id in remove_ids:
+                await self.user_store.delete_wallet(wallet_id, in_transaction=True)
+                self.wallets.pop(wallet_id)
+            await self.db_wrapper.commit_transaction()
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Exception while rolling back: {e} {tb}")
+            await self.db_wrapper.rollback_transaction()
+            await self.coin_store.rebuild_wallet_cache()
+            await self.tx_store.rebuild_tx_cache()
+            await self.pool_store.rebuild_cache()
+            raise
 
     async def _await_closed(self) -> None:
         await self.db_connection.close()

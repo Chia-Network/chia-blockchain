@@ -103,7 +103,7 @@ class TestWalletPoolStore:
             await store.rebuild_cache()
             await store.add_spend(1, solution_4, 101)
             await store.rebuild_cache()
-            await store.rollback(101, 1)
+            await store.rollback(101, 1, False)
             await store.rebuild_cache()
             assert store.get_spends_for_wallet(1) == [
                 (100, solution_1),
@@ -112,7 +112,7 @@ class TestWalletPoolStore:
                 (101, solution_4),
             ]
             await store.rebuild_cache()
-            await store.rollback(100, 1)
+            await store.rollback(100, 1, False)
             await store.rebuild_cache()
             assert store.get_spends_for_wallet(1) == [
                 (100, solution_1),
@@ -125,7 +125,7 @@ class TestWalletPoolStore:
             await store.add_spend(1, solution_4, 105)
             solution_5: CoinSpend = make_child_solution(solution_4)
             await store.add_spend(1, solution_5, 105)
-            await store.rollback(99, 1)
+            await store.rollback(99, 1, False)
             assert store.get_spends_for_wallet(1) == []
 
         finally:
