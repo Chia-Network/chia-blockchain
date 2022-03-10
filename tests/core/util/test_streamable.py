@@ -204,13 +204,38 @@ def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> N
         dataclass_from_dict(ConvertByteTypeFailures, input_dict)
 
 
+@dataclass
+class ConvertUnhashableTypeFailures:
+    a: G1Element
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": 0}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": []}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": {}}, TypeError, id="a: no string and no bytes"),
+        pytest.param({"a": "invalid"}, TypeError, id="a: invalid hex string"),
+        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, TypeError, id="a: hex string too short"),
+        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, TypeError, id="a: hex string too long"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, TypeError, id="a: bytes too short"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, TypeError, id="a: bytes too long"),
+        pytest.param({"a": b"\00" * G1Element.SIZE}, TypeError, id="a: invalid g1 element"),
+    ],
+)
+def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(ConvertUnhashableTypeFailures, input_dict)
+
+
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [
         [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ValueError],
         [TestDataclassFromDict1, {"a": 1, "b": "2"}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, ValueError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ValueError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
         [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],

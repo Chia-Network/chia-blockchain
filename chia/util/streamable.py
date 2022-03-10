@@ -140,11 +140,15 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
 def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
     if type(item) == f_type:
         return item
-    if hasattr(f_type, "from_bytes_unchecked"):
-        from_bytes_method = f_type.from_bytes_unchecked
-    else:
-        from_bytes_method = f_type.from_bytes
-    return from_bytes_method(hexstr_to_bytes(item))
+    if not isinstance(item, bytes):
+        item = convert_hex_string(item)
+    try:
+        if hasattr(f_type, "from_bytes_unchecked"):
+            return f_type.from_bytes_unchecked(item)
+        else:
+            return f_type.from_bytes(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}")
 
 
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
