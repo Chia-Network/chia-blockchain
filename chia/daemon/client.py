@@ -13,13 +13,19 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class DaemonProxy:
-    def __init__(self, uri: str, ssl_context: Optional[ssl.SSLContext]):
+    def __init__(
+        self,
+        uri: str,
+        ssl_context: Optional[ssl.SSLContext],
+        max_message_size: Optional[int] = 50 * 1000 * 1000,
+    ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
         self.response_dict: Dict[str, Any] = {}
         self.ssl_context = ssl_context
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.max_message_size = max_message_size
 
     def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
@@ -34,7 +40,7 @@ class DaemonProxy:
                 autoping=True,
                 heartbeat=60,
                 ssl_context=self.ssl_context,
-                max_msg_size=100 * 1024 * 1024,
+                max_msg_size=self.max_message_size,
             )
         except Exception:
             await self.close()
@@ -144,12 +150,14 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context: Optional[ssl.SSLContext]) -> DaemonProxy:
+async def connect_to_daemon(
+    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: Optional[ssl.SSLContext]
+) -> DaemonProxy:
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context)
+    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context, max_message_size)
     await client.start()
     return client
 
@@ -163,12 +171,15 @@ async def connect_to_daemon_and_validate(root_path: Path, quiet: bool = False) -
 
     try:
         net_config = load_config(root_path, "config.yaml")
+        daemon_max_message_size = net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
-        connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
+        connection = await connect_to_daemon(
+            net_config["self_hostname"], net_config["daemon_port"], daemon_max_message_size, ssl_context
+        )
         r = await connection.ping()
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
@@ -188,7 +199,6 @@ async def acquire_connection_to_daemon(root_path: Path, quiet: bool = False):
     block exits scope, execution resumes in this function, wherein the connection is
     closed.
     """
-    from chia.daemon.client import connect_to_daemon_and_validate
 
     daemon: Optional[DaemonProxy] = None
     try:

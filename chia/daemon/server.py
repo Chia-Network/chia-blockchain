@@ -42,8 +42,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import ClientSession, web
-    from aiohttp.http import WSMsgType
+    from aiohttp import ClientSession, web, WSMsgType
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
@@ -152,7 +151,7 @@ class WebSocketServer:
         self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
-        self.shutdownd_event = shutdown_event
+        self.shutdown_event = shutdown_event
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -208,7 +207,7 @@ class WebSocketServer:
         await self.exit()
         if self.websocket_server is not None:
             self.websocket_server.close()
-        self.shutdownd_event.set()
+        self.shutdown_event.set()
         return {"success": True}
 
     async def incoming_connection(self, request):
