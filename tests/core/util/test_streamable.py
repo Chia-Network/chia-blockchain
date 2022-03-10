@@ -259,15 +259,15 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
     "test_class, input_dict, error",
     [
         [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2"}, TypeError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
         [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
         [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
     ],
 )
 def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:

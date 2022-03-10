@@ -66,6 +66,7 @@ ConvertFunctionType = Callable[[object], object]
 class Field:
     name: str
     type: Type[object]
+    has_default: bool
 
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
@@ -77,7 +78,14 @@ CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionT
 
 def create_fields_cache(cls: Type[object]) -> Tuple[Field, ...]:
     hints = get_type_hints(cls)
-    fields = tuple(Field(field.name, hints.get(field.name, None)) for field in dataclasses.fields(cls))
+    fields = tuple(
+        Field(
+            name=field.name,
+            type=hints.get(field.name, None),
+            has_default=field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING,
+        )
+        for field in dataclasses.fields(cls)
+    )
     assert all(field.type is not None for field in fields)
     return fields
 
@@ -167,6 +175,8 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     """
     if type(item) == klass:
         return item
+    if type(item) != dict:
+        raise TypeError(f"expected: dict, actual: {type(item).__name__}")
 
     if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
         # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
@@ -179,13 +189,22 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
         fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
         convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
 
-    return klass(
-        **{
-            field.name: convert_func(item[field.name])
-            for field, convert_func in zip(fields, convert_funcs)
-            if field.name in item
-        }
-    )
+    try:
+        return klass(
+            **{
+                field.name: convert_func(item[field.name])
+                for field, convert_func in zip(fields, convert_funcs)
+                if field.name in item
+            }
+        )
+    except TypeError as e:
+        missing_fields = [field.name for field in fields if field.name not in item and not field.has_default]
+        if len(missing_fields) > 0:
+            raise KeyError(
+                f"{len(missing_fields)} field{'s' if len(missing_fields) > 1 else ''} missing for {klass.__name__}: "
+                + ", ".join(missing_fields)
+            ) from e
+        raise e
 
 
 def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
