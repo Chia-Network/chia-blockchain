@@ -242,10 +242,15 @@ class Keychain:
     def __init__(self, user: Optional[str] = None, service: Optional[str] = None, force_legacy: bool = False):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
-        if force_legacy:
-            self.keyring_wrapper = KeyringWrapper.get_legacy_instance()
-        else:
-            self.keyring_wrapper = KeyringWrapper.get_shared_instance()
+
+        keyring_wrapper: Optional[KeyringWrapper] = (
+            KeyringWrapper.get_legacy_instance() if force_legacy else KeyringWrapper.get_shared_instance()
+        )
+
+        if keyring_wrapper is None:
+            raise KeyringNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+
+        self.keyring_wrapper = keyring_wrapper
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
