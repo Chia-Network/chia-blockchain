@@ -125,6 +125,33 @@ def test_pure_dataclasses_in_dataclass_from_dict() -> None:
     assert d2.c == 1.2345
 
 
+@dataclass
+class ConvertTupleFailures:
+    a: Tuple[int, int]
+    b: Tuple[int, Tuple[int, int]]
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": (1,), "b": (1, (2, 2))}, ValueError, id="a: item missing"),
+        pytest.param({"a": (1, 1, 1), "b": (1, (2, 2))}, ValueError, id="a: item too much"),
+        pytest.param({"a": (1, 1), "b": (1, (2,))}, ValueError, id="b: item missing"),
+        pytest.param({"a": (1, 1), "b": (1, (2, 2, 2))}, ValueError, id="b: item too much"),
+        pytest.param({"a": "11", "b": (1, (2, 2))}, TypeError, id="a: invalid type list"),
+        pytest.param({"a": 1, "b": (1, (2, 2))}, TypeError, id="a: invalid type int"),
+        pytest.param({"a": "11", "b": (1, (2, 2))}, TypeError, id="a: invalid type str"),
+        pytest.param({"a": (1, 1), "b": (1, "22")}, TypeError, id="b: invalid type list"),
+        pytest.param({"a": (1, 1), "b": (1, 2)}, TypeError, id="b: invalid type int"),
+        pytest.param({"a": (1, 1), "b": (1, "22")}, TypeError, id="b: invalid type str"),
+    ],
+)
+def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(ConvertTupleFailures, input_dict)
+
+
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [

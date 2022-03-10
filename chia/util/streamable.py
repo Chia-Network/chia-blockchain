@@ -5,7 +5,21 @@ import io
 import os
 import pprint
 from enum import Enum
-from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Collection,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+)
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal, get_args, get_origin
@@ -89,11 +103,12 @@ def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
     return convert_func(item)
 
 
-def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Tuple[Any, ...]) -> Tuple[Any, ...]:
-    tuple_data = []
-    for i in range(len(items)):
-        tuple_data.append(convert_funcs[i](items[i]))
-    return tuple(tuple_data)
+def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Collection[Any]) -> Tuple[Any, ...]:
+    if len(items) != len(convert_funcs):
+        raise ValueError(f"Invalid size. Expected: {len(convert_funcs)}, got: {len(items)}")
+    if type(items) != tuple and type(items) != list:
+        raise TypeError(f"expected: tuple or list, actual: {type(items).__name__}")
+    return tuple(convert_func(item) for convert_func, item in zip(convert_funcs, items))
 
 
 def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
