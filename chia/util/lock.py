@@ -18,6 +18,7 @@ def create_exclusive_lock(lockfile) -> Optional[TextIO]:
 
     return f
 
+
 def with_lock(lock_filename, run):
     """
     Ensure that this process and this thread is the only one operating on the
