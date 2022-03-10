@@ -681,31 +681,27 @@ def _create_sub_epoch_data(
 
 def handle_block_vdfs(constants: ConsensusConstants, header_block: HeaderBlock, blocks: Dict[bytes32, BlockRecord]):
     block_rec = blocks[header_block.header_hash]
-    cc_ip_output, icc_ip_output = handle_infusion_point_vdf(block_rec, blocks, constants, header_block)
-    return SubSlotDataV2(
-        header_block.reward_chain_block.proof_of_space if block_rec.is_challenge_block(constants) else None,
+
+    sp_input = ClassgroupElement.get_default_element()
+    sp_iters = header_block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
+    if not header_block.challenge_chain_sp_proof.normalized_to_identity:
+        (_, _, sp_input, _, _, sp_iters) = get_signage_point_vdf_info(
+            constants,
+            header_block.finished_sub_slots,
+            block_rec.overflow,
+            None if header_block.height == 0 else blocks[header_block.prev_header_hash],
+            BlockCache(blocks),
+            block_rec.sp_total_iters(constants),
+            block_rec.sp_iters(constants),
+        )
+    compressed_sp_output = compress_output(
+        constants,
+        sp_input,
         header_block.challenge_chain_sp_proof,
-        header_block.challenge_chain_ip_proof,
-        header_block.reward_chain_block.signage_point_index,
-        None,
-        handle_signage_point_vdf(block_rec, blocks, constants, header_block),
-        cc_ip_output,
-        None,
-        header_block.infused_challenge_chain_ip_proof,
-        icc_ip_output,
-        None,
-        None,
-        header_block.reward_chain_block.challenge_chain_sp_signature
-        if block_rec.is_challenge_block(constants)
-        else None,
-        blocks[header_block.header_hash].ip_iters(constants),
-        header_block.total_iters,
+        header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
+        sp_iters,
+        header_block.reward_chain_block.challenge_chain_sp_vdf.output,
     )
-
-
-def handle_infusion_point_vdf(
-    block_rec, blocks, constants, header_block
-) -> Tuple[CompressedClassgroupElement, Optional[CompressedClassgroupElement]]:
     cc_ip_input = ClassgroupElement.get_default_element()
     cc_ip_iters = block_rec.ip_iters(constants)
     prev_block = None
@@ -740,35 +736,26 @@ def handle_infusion_point_vdf(
             icc_ip_iters,
             header_block.reward_chain_block.infused_challenge_chain_ip_vdf.output,
         )
-
-    return compressed_cc_ip_output, compressed_icc_ip_output
-
-
-def handle_signage_point_vdf(block_rec, blocks, constants, header_block) -> Optional[CompressedClassgroupElement]:
-    if not header_block.challenge_chain_sp_proof:
-        return None
-
-    input = ClassgroupElement.get_default_element()
-    sp_iters = header_block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations
-    if not header_block.challenge_chain_sp_proof.normalized_to_identity:
-        (_, _, input, _, _, sp_iters) = get_signage_point_vdf_info(
-            constants,
-            header_block.finished_sub_slots,
-            block_rec.overflow,
-            None if header_block.height == 0 else blocks[header_block.prev_header_hash],
-            BlockCache(blocks),
-            block_rec.sp_total_iters(constants),
-            block_rec.sp_iters(constants),
-        )
-    compressed_sp_output = compress_output(
-        constants,
-        input,
+    return SubSlotDataV2(
+        header_block.reward_chain_block.proof_of_space if block_rec.is_challenge_block(constants) else None,
         header_block.challenge_chain_sp_proof,
-        header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
-        sp_iters,
-        header_block.reward_chain_block.challenge_chain_sp_vdf.output,
+        header_block.challenge_chain_ip_proof,
+        header_block.reward_chain_block.signage_point_index,
+        None,
+        compressed_sp_output,
+        compressed_cc_ip_output,
+        None,
+        header_block.infused_challenge_chain_ip_proof,
+        compressed_icc_ip_output,
+        None,
+        None,
+        header_block.reward_chain_block.challenge_chain_sp_signature
+        if block_rec.is_challenge_block(constants)
+        else None,
+        blocks[header_block.header_hash].ip_iters(constants),
+        header_block.total_iters,
     )
-    return compressed_sp_output
+
 
 
 def handle_finished_slots(end_of_slot: EndOfSubSlotBundle) -> SubSlotDataV2:
