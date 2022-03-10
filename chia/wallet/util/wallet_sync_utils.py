@@ -41,7 +41,7 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
         if response is not None and isinstance(response, RespondBlockHeader):
             if response.header_block.is_transaction_block:
                 return response.header_block
-        elif request_height < height:
+        else:
             break
         request_height = request_height - 1
     return None
