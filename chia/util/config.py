@@ -14,7 +14,7 @@ import yaml
 from typing_extensions import Literal
 
 from chia.util.path import mkdir
-from filelock import FileLock
+from fasteners import InterProcessLock
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
@@ -49,7 +49,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path: Path = config_path_for_filename(root_path, filename)
-    with FileLock(path.with_suffix(".lock")):
+    with InterProcessLock(path.with_suffix(".lock")):
         with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
             tmp_path: Path = Path(tmp_dir) / Path(filename)
             with open(tmp_path, "w") as f:
@@ -67,7 +67,7 @@ def load_config(
     exit_on_error=True,
 ) -> Dict:
     path = config_path_for_filename(root_path, filename)
-    with FileLock(path.with_suffix(".lock")):
+    with InterProcessLock(path.with_suffix(".lock")):
         if not path.is_file():
             if not exit_on_error:
                 raise ValueError("Config not found")

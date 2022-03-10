@@ -7,7 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 import pytest
 import random
 import yaml
-from filelock import FileLock
+from fasteners import InterProcessLock
 
 from chia.util.config import (
     create_default_chia_config,
@@ -51,7 +51,7 @@ def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bo
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
         else:
             path: Path = config_path_for_filename(root_path, filename="config.yaml")
-            with FileLock(path.with_suffix(".lock")):
+            with InterProcessLock(path.with_suffix(".lock")):
                 with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                     tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                     with open(tmp_path, "w") as f:
