@@ -300,11 +300,11 @@ export const walletApi = apiWithTag.injectEndpoints({
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onCoinAdded',
         service: Wallet,
-        endpoint: () => walletApi.endpoints.getWalletBalance,
+        endpoint: () => walletApi.endpoints.getFarmedAmount,
       }, {
         command: 'onCoinRemoved',
         service: Wallet,
-        endpoint: () => walletApi.endpoints.getWalletBalance,
+        endpoint: () => walletApi.endpoints.getFarmedAmount,
       }]),
     }),
   
