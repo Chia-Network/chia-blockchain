@@ -56,9 +56,7 @@ def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bo
                     tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                     with open(tmp_path, "w") as f:
                         yaml.safe_dump(config, f)
-                    print("started copy")
                     shutil.copy2(str(tmp_path), str(path))
-                    print("ended copy")
 
 
 def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: bool, iterations: int):
