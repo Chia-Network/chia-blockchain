@@ -117,6 +117,15 @@ def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[An
     return [convert_func(item) for item in items]
 
 
+def convert_hex_string(item: str) -> bytes:
+    if not isinstance(item, str):
+        raise TypeError(f"expected: hex-string, actual: {type(item).__name__}")
+    try:
+        return hexstr_to_bytes(item)
+    except Exception as e:
+        raise TypeError(f'Can\'t convert the string "{item}" to bytes: {e}')
+
+
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
     if type(item) == f_type:
         return item
