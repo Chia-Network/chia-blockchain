@@ -115,6 +115,7 @@ class TempKeyring:
             use_os_credential_store=use_os_credential_store,
             setup_cryptfilekeyring=setup_cryptfilekeyring,
         )
+        self.old_keys_root_path = None
         self.delete_on_cleanup = delete_on_cleanup
         self.cleaned_up = False
 
@@ -181,10 +182,19 @@ class TempKeyring:
 
     def __enter__(self):
         assert not self.cleaned_up
-        return self.get_keychain()
+        if KeyringWrapper.get_shared_instance(create_if_necessary=False) is not None:
+            self.old_keys_root_path = KeyringWrapper.get_shared_instance().keys_root_path
+            KeyringWrapper.cleanup_shared_instance()
+        kc = self.get_keychain()
+        KeyringWrapper.set_keys_root_path(kc.keyring_wrapper.keys_root_path)
+        return kc
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.cleanup()
+        if self.old_keys_root_path is not None:
+            KeyringWrapper.cleanup_shared_instance()
+            KeyringWrapper.set_keys_root_path(self.old_keys_root_path)
+            KeyringWrapper.get_shared_instance()
 
     def get_keychain(self):
         return self.keychain
