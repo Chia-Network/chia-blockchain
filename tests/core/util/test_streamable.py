@@ -229,10 +229,36 @@ def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any
         dataclass_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
 
+class NoStrClass:
+    def __str__(self) -> str:
+        raise RuntimeError("No string")
+
+
+@dataclass
+class ConvertPrimitiveFailures:
+    a: int
+    b: uint8
+    c: str
+
+
+@pytest.mark.parametrize(
+    "input_dict, error",
+    [
+        pytest.param({"a": "a", "b": uint8(1), "c": "2"}, TypeError, id="a: invalid value"),
+        pytest.param({"a": 0, "b": [], "c": "2"}, TypeError, id="b: invalid value"),
+        pytest.param({"a": 0, "b": uint8(1), "c": NoStrClass()}, TypeError, id="c: invalid value"),
+    ],
+)
+def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(ConvertPrimitiveFailures, input_dict)
+
+
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [
-        [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ValueError],
+        [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2"}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],

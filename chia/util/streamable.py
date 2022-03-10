@@ -154,7 +154,10 @@ def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
     if type(item) == f_type:
         return item
-    return f_type(item)
+    try:
+        return f_type(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}")
 
 
 def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
