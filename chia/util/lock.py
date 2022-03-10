@@ -1,9 +1,11 @@
 import os
 import time
-from typing import Optional, TextIO
+from typing import Optional, TextIO, TypeVar, Callable
+
+T = TypeVar('T')
 
 # Cribbed mostly from chia/daemon/server.py
-def create_exclusive_lock(lockfile) -> Optional[TextIO]:
+def create_exclusive_lock(lockfile: str) -> Optional[TextIO]:
     """
     Open a lockfile exclusively.
     """
@@ -19,10 +21,12 @@ def create_exclusive_lock(lockfile) -> Optional[TextIO]:
     return f
 
 
-def with_lock(lock_filename, run):
+def with_lock(lock_filename: str, run: Callable[[], T]) -> T:
     """
     Ensure that this process and this thread is the only one operating on the
     resource associated with lock_filename systemwide.
+
+    Pass through the result of run after exiting the lock.
     """
 
     lock_file = None
@@ -34,7 +38,7 @@ def with_lock(lock_filename, run):
         time.sleep(0.1)
 
     try:
-        run()
+        return run()
     finally:
         lock_file.close()
         os.remove(lock_filename)
