@@ -2,7 +2,7 @@ import os
 import time
 from typing import Optional, TextIO, TypeVar, Callable
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Cribbed mostly from chia/daemon/server.py
 def create_exclusive_lock(lockfile: str) -> Optional[TextIO]:
