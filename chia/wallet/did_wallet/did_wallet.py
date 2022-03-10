@@ -781,17 +781,18 @@ class DIDWallet:
     ) -> SpendBundle:
         assert self.did_info.origin_coin is not None
 
-        # innersol is mode new_amount message new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal)  # noqa
+        # innersol is mode new_amount message_puzzle message_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
         innersol: Program = Program.to(
             [
-                coin.name(),
-                2,
+                0,
                 coin.amount,
                 puzhash,
+                [],
                 puzhash,
                 parent_innerpuzhash_amounts_for_recovery_ids,
                 bytes(pubkey),
                 self.did_info.backup_ids,
+                coin.name(),
             ]
         )
         # full solution is (parent_info my_amount solution)

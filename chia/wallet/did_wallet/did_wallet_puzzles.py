@@ -102,7 +102,7 @@ def messages_to_puzzle(messages: List[Tuple[int, bytes]]):
     :param messages: List of message
     :return: A puzzle program
     """
-    puzzle = Program.to([])
+    puzzle = []
     for message in messages:
         msg_type = message[0]
         # type 0 is 0 value coin
@@ -110,12 +110,27 @@ def messages_to_puzzle(messages: List[Tuple[int, bytes]]):
         # type 2 is puzzle announcement
         if msg_type:
             if msg_type == 1:
-                Program.to([ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message[1]]).cons(puzzle)
+                puzzle.append(f"(0x{ConditionOpcode.CREATE_COIN_ANNOUNCEMEN.hex()} {serialize_value(message[1])})")
             else:
-                Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message[1]]).cons(puzzle)
+                puzzle.append(f"(0x{ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.hex()} {serialize_value(message[1])})")
         else:
-            Program.to([ConditionOpcode.CREATE_COIN, message[1], 0]).cons(puzzle)
-    return puzzle
+            puzzle.append(f"(0x{ConditionOpcode.CREATE_COIN.hex()} {serialize_value(message[1])} 0)")
+    conditions = " ".join(puzzle)
+    return Program.to(binutils.assemble(f"(q . ({conditions}))"))
+
+
+def serialize_value(value):
+    """
+    Serialize the message value
+    :param value: value of the message
+    :return: A string
+    """
+    if isinstance(value, str):
+        return f"'{value}'"
+    elif isinstance(value, bytes):
+        return f"0x{value.hex()}"
+    else:
+        return value
 
 
 def create_exit_message_puzzle():
@@ -123,7 +138,7 @@ def create_exit_message_puzzle():
     Create message puzzle for exit
     :return:
     """
-    return Program.to([ConditionOpcode.CREATE_COIN, 0x00, -113])
+    return Program.to(binutils.assemble(f"(q . ((0x{ConditionOpcode.CREATE_COIN.hex()} 0x00 -113)))"))
 
 
 # inspect puzzle and check it is a DID puzzle
