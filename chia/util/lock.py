@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional, TextIO, TypeVar, Callable
+from typing import Callable, Optional, TextIO, TypeVar
 
 
 T = TypeVar("T")
