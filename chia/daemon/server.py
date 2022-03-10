@@ -146,7 +146,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_server = None
+        self.websocket_runner: Optional[web.AppRunner] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.shut_down = False
         self.keychain_server = KeychainServer()
@@ -178,22 +178,18 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        self.app = web.Application(client_max_size=self.daemon_max_message_size)
-        routes = [
-            web.get("/", self.incoming_connection),
-        ]
-        self.app.add_routes(routes)
-        self.runner = web.AppRunner(self.app, access_log=None, logger=self.log, keepalive_timeout=300)
-        await self.runner.setup()
+        app = web.Application(client_max_size=self.daemon_max_message_size)
+        app.add_routes([web.get("/", self.incoming_connection)])
+        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
+        await self.websocket_runner.setup()
 
-        self.site = web.TCPSite(
-            self.runner,
+        site = web.TCPSite(
+            self.websocket_runner,
             port=self.daemon_port,
             shutdown_timeout=3,
             ssl_context=self.ssl_context,
         )
-        await self.site.start()
-        self.log.info("Waiting Daemon WebSocketServer closure")
+        await site.start()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -205,8 +201,8 @@ class WebSocketServer:
     async def stop(self) -> Dict[str, Any]:
         self.shut_down = True
         await self.exit()
-        if self.websocket_server is not None:
-            self.websocket_server.close()
+        if self.websocket_runner is not None:
+            await self.websocket_runner.cleanup()
         self.shutdown_event.set()
         return {"success": True}
 
