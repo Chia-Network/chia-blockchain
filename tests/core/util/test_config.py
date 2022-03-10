@@ -17,7 +17,7 @@ from chia.util.config import (
     get_config_lock,
 )
 from chia.util.path import mkdir
-from multiprocessing import Pool, TimeoutError
+from multiprocessing import Pool, TimeoutError, Queue
 from pathlib import Path
 from threading import Thread
 from time import sleep
@@ -48,15 +48,19 @@ def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bo
         if atomic_write:
             # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
             # leading to a non-atomic operation
-            save_config(root_path=root_path, filename="config.yaml", config_data=config)
+            with get_config_lock(root_path, "config.yaml"):
+                save_config(root_path=root_path, filename="config.yaml", config_data=config)
         else:
             path: Path = config_path_for_filename(root_path, filename="config.yaml")
+            # print("Trying to get lock write")
             with get_config_lock(root_path, "config.yaml"):
+                # print("Write start")
                 with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                     tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                     with open(tmp_path, "w") as f:
                         yaml.safe_dump(config, f)
                     shutil.copy2(str(tmp_path), str(path))
+                # print("Write end")
 
 
 def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: bool, iterations: int):
@@ -76,46 +80,14 @@ def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: boo
         # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
         with get_config_lock(root_path, "config.yaml"):
-            config: Dict = load_config(root_path=root_path, filename="config.yaml")
+            # print("Read start")
+            config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
+            # print("Read end")
             assert len(config) > 0
             # if config != default_config:
             #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
             #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
             assert config == default_config
-
-
-async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict, atomic_write: bool):
-    """
-    Spin-off reader and writer threads and wait for completion
-    """
-    thread1 = Thread(
-        target=write_config,
-        kwargs={
-            "root_path": root_path,
-            "config": default_config,
-            "atomic_write": atomic_write,
-            "do_sleep": True,
-            "iterations": 1,
-        },
-    )
-    thread2 = Thread(
-        target=read_and_compare_config,
-        kwargs={"root_path": root_path, "default_config": default_config, "do_sleep": True, "iterations": 1},
-    )
-
-    thread1.start()
-    thread2.start()
-
-    thread1.join()
-    thread2.join()
-
-
-def run_reader_and_writer_tasks(root_path: Path, default_config: Dict, atomic_write: bool = True):
-    """
-    Subprocess entry point. This function spins-off threads to perform read/write tasks
-    concurrently, possibly leading to synchronization issues accessing config data.
-    """
-    asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config, atomic_write))
 
 
 class TestConfig:
@@ -238,12 +210,11 @@ class TestConfig:
         loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
         assert loaded["harvester"]["farmer_peer"]["host"] == "oldmacdonald.eie.io"
 
-    def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
+    @pytest.mark.asyncio
+    async def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
         """
         Test whether multiple readers/writers encounter data corruption. When using non-atomic operations
         to write to the config, partial/incomplete writes can cause readers to yield bad/corrupt data.
-        Access to config.yaml isn't currently synchronized, so the best we can currently hope for is that
-        the file contents are written-to as a whole.
         """
         # Artifically inflate the size of the default config. This is done to (hopefully) force
         # save_config() to require multiple writes. When save_config() was using shutil.move()
@@ -252,15 +223,23 @@ class TestConfig:
         root_path: Path = root_path_populated_with_config
         save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
         num_workers: int = 30
-        args = list(map(lambda _: (root_path, default_config_dict, False), range(num_workers)))
+        args = list(map(lambda _: (root_path, default_config_dict), range(num_workers)))
         # Spin-off several processes (not threads) to read and write config data. If any
         # read failures are detected, the failing process will assert.
-        with Pool(processes=num_workers) as pool:
-            res = pool.starmap_async(run_reader_and_writer_tasks, args)
-            try:
-                res.get(timeout=60)
-            except TimeoutError:
-                pytest.skip("Timed out waiting for reader/writer processes to complete")
+        with ProcessPoolExecutor(max_workers=num_workers) as pool:
+            tasks = []
+            for i in range(num_workers):
+                tasks.append(
+                    asyncio.get_running_loop().run_in_executor(
+                        pool, write_config, root_path, default_config_dict, False, True, 1
+                    )
+                )
+                tasks.append(
+                    asyncio.get_running_loop().run_in_executor(
+                        pool, read_and_compare_config, root_path, default_config_dict, True, 1
+                    )
+                )
+            await asyncio.gather(*tasks)
 
     @pytest.mark.asyncio
     async def test_non_atomic_writes(self, root_path_populated_with_config, default_config_dict):

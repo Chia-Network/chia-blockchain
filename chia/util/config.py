@@ -48,6 +48,10 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 def get_config_lock(root_path: Path, filename: Union[str, Path]) -> InterProcessLock:
+    # This is a re-entrant lock, so it does not work with multiple threads (it will allow both threads to access the
+    # object at the same time). Make sure to ONLY use this method in sync context, and not async, since async can
+    # allow context switching and allow another async thread to try to change the config
+
     path: Path = config_path_for_filename(root_path, filename)
     return InterProcessLock(path.with_suffix(".lock"))
 
@@ -73,12 +77,16 @@ def load_config(
     acquire_lock: bool = True,
 ) -> Dict:
     # This must be called under an acquired config lock, or acquire_lock should be True
+    # This is a re-entrant lock, so it does not work with multiple threads
+
     path = config_path_for_filename(root_path, filename)
 
     config_lock: Optional[InterProcessLock] = None
     if acquire_lock:
         config_lock = get_config_lock(root_path, filename)
-        config_lock.acquire()
+        acquired = config_lock.acquire()
+        if not acquired:
+            raise RuntimeError("Not able to acquire lock in load_config")
 
     try:
         if not path.is_file():
