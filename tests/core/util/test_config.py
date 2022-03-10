@@ -15,6 +15,7 @@ from chia.util.config import (
     load_config,
     save_config,
     config_path_for_filename,
+    create_config_lock,
 )
 from chia.util.path import mkdir
 from multiprocessing import Pool, TimeoutError
@@ -51,7 +52,7 @@ def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bo
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
         else:
             path: Path = config_path_for_filename(root_path, filename="config.yaml")
-            with InterProcessLock(path.with_suffix(".lock")):
+            with create_config_lock(root_path, "config.yaml"):
                 with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                     tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                     with open(tmp_path, "w") as f:
@@ -75,12 +76,13 @@ def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: boo
             sleep(random.random())
         # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
-        config: Dict = load_config(root_path=root_path, filename="config.yaml")
-        assert len(config) > 0
-        # if config != default_config:
-        #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
-        #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
-        assert config == default_config
+        with create_config_lock(root_path, "config.yaml"):
+            config: Dict = load_config(root_path=root_path, filename="config.yaml")
+            assert len(config) > 0
+            # if config != default_config:
+            #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
+            #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
+            assert config == default_config
 
 
 async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict, atomic_write: bool):

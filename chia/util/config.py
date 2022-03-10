@@ -47,27 +47,40 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
-def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
+def create_config_lock(root_path: Path, filename: Union[str, Path]) -> InterProcessLock:
     path: Path = config_path_for_filename(root_path, filename)
-    with InterProcessLock(path.with_suffix(".lock")):
-        with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
-            tmp_path: Path = Path(tmp_dir) / Path(filename)
-            with open(tmp_path, "w") as f:
-                yaml.safe_dump(config_data, f)
-            try:
-                os.replace(str(tmp_path), path)
-            except PermissionError:
-                shutil.move(str(tmp_path), str(path))
+    return InterProcessLock(path.with_suffix(".lock"))
+
+
+def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
+    # This must be called under an acquired config lock
+    path: Path = config_path_for_filename(root_path, filename)
+    with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+        tmp_path: Path = Path(tmp_dir) / Path(filename)
+        with open(tmp_path, "w") as f:
+            yaml.safe_dump(config_data, f)
+        try:
+            os.replace(str(tmp_path), path)
+        except PermissionError:
+            shutil.move(str(tmp_path), str(path))
 
 
 def load_config(
     root_path: Path,
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
-    exit_on_error=True,
+    exit_on_error: bool = True,
+    acquire_lock: bool = True,
 ) -> Dict:
+    # This must be called under an acquired config lock, or acquire_lock should be True
     path = config_path_for_filename(root_path, filename)
-    with InterProcessLock(path.with_suffix(".lock")):
+
+    config_lock: Optional[InterProcessLock] = None
+    if acquire_lock:
+        config_lock = create_config_lock(root_path, filename)
+        config_lock.acquire()
+
+    try:
         if not path.is_file():
             if not exit_on_error:
                 raise ValueError("Config not found")
@@ -92,6 +105,9 @@ def load_config(
                 print(f"Error loading file: {tb} {e} Retrying {i}")
                 time.sleep(i * 0.1)
         raise RuntimeError("Was not able to read config file successfully")
+    finally:
+        if config_lock is not None:
+            config_lock.release()
 
 
 def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:
