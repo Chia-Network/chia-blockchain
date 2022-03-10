@@ -21,7 +21,7 @@ from chia.util.config import (
     load_config,
     save_config,
     unflatten_properties,
-    create_config_lock,
+    get_config_lock,
 )
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir, path_from_root
@@ -75,7 +75,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return None
 
-    with create_config_lock(new_root, "config.yaml"):
+    with get_config_lock(new_root, "config.yaml"):
         config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
         pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
         all_targets = []
@@ -120,7 +120,8 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         updated_target: bool = False
         if "xch_target_address" not in config["farmer"]:
             print(
-                f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling) to {all_targets[0]}"
+                f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling)"
+                f" to {all_targets[0]}"
             )
             config["farmer"]["xch_target_address"] = all_targets[0]
             updated_target = True
@@ -196,7 +197,7 @@ def migrate_from(
 
     # update config yaml with new keys
 
-    with create_config_lock(new_root, "config.yaml"):
+    with get_config_lock(new_root, "config.yaml"):
         config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
         config_str: str = initial_config_file("config.yaml")
         default_config: Dict = yaml.safe_load(config_str)
@@ -462,7 +463,7 @@ def chia_init(
 
     config: Dict
 
-    with create_config_lock(root_path, "config.yaml"):
+    with get_config_lock(root_path, "config.yaml"):
         if v1_db:
             config = load_config(root_path, "config.yaml", acquire_lock=False)
             db_pattern = config["full_node"]["database_path"]

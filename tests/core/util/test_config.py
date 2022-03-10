@@ -7,7 +7,6 @@ from concurrent.futures import ProcessPoolExecutor
 import pytest
 import random
 import yaml
-from fasteners import InterProcessLock
 
 from chia.util.config import (
     create_default_chia_config,
@@ -15,7 +14,7 @@ from chia.util.config import (
     load_config,
     save_config,
     config_path_for_filename,
-    create_config_lock,
+    get_config_lock,
 )
 from chia.util.path import mkdir
 from multiprocessing import Pool, TimeoutError
@@ -52,7 +51,7 @@ def write_config(root_path: Path, config: Dict, atomic_write: bool, do_sleep: bo
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
         else:
             path: Path = config_path_for_filename(root_path, filename="config.yaml")
-            with create_config_lock(root_path, "config.yaml"):
+            with get_config_lock(root_path, "config.yaml"):
                 with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                     tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                     with open(tmp_path, "w") as f:
@@ -76,7 +75,7 @@ def read_and_compare_config(root_path: Path, default_config: Dict, do_sleep: boo
             sleep(random.random())
         # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
-        with create_config_lock(root_path, "config.yaml"):
+        with get_config_lock(root_path, "config.yaml"):
             config: Dict = load_config(root_path=root_path, filename="config.yaml")
             assert len(config) > 0
             # if config != default_config:

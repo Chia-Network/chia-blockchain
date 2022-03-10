@@ -9,7 +9,7 @@ from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config, create_config_lock
+from chia.util.config import load_config, save_config, get_config_lock
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
 
 def add_plot_directory(root_path: Path, str_path: str) -> Dict:
     log.debug(f"add_plot_directory {str_path}")
-    with create_config_lock(root_path, "config.yaml"):
+    with get_config_lock(root_path, "config.yaml"):
         config = load_config(root_path, "config.yaml", acquire_lock=False)
         if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
             config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
@@ -89,7 +89,7 @@ def add_plot_directory(root_path: Path, str_path: str) -> Dict:
 
 def remove_plot_directory(root_path: Path, str_path: str) -> None:
     log.debug(f"remove_plot_directory {str_path}")
-    with create_config_lock(root_path, "config.yaml"):
+    with get_config_lock(root_path, "config.yaml"):
         config = load_config(root_path, "config.yaml", acquire_lock=False)
         str_paths: List[str] = get_plot_directories(root_path, config)
         # If path str matches exactly, remove

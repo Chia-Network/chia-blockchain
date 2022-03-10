@@ -47,7 +47,7 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
-def create_config_lock(root_path: Path, filename: Union[str, Path]) -> InterProcessLock:
+def get_config_lock(root_path: Path, filename: Union[str, Path]) -> InterProcessLock:
     path: Path = config_path_for_filename(root_path, filename)
     return InterProcessLock(path.with_suffix(".lock"))
 
@@ -77,7 +77,7 @@ def load_config(
 
     config_lock: Optional[InterProcessLock] = None
     if acquire_lock:
-        config_lock = create_config_lock(root_path, filename)
+        config_lock = get_config_lock(root_path, filename)
         config_lock.acquire()
 
     try:
@@ -88,13 +88,13 @@ def load_config(
             print("** please run `chia init` to migrate or create new config files **")
             # TODO: fix this hack
             sys.exit(-1)
-        # This loop should not be necessary due to the FileLock, but it's kept here just in case
+        # This loop should not be necessary due to the config lock, but it's kept here just in case
         for i in range(10):
             try:
                 with open(path, "r") as opened_config_file:
                     r = yaml.safe_load(opened_config_file)
                     if r is None:
-                        print(f"yaml.safe_load returned None: {path}")
+                        log.error(f"yaml.safe_load returned None: {path}")
                         time.sleep(i * 0.1)
                         continue
                     if sub_config is not None:
@@ -102,7 +102,7 @@ def load_config(
                     return r
             except Exception as e:
                 tb = traceback.format_exc()
-                print(f"Error loading file: {tb} {e} Retrying {i}")
+                log.error(f"Error loading file: {tb} {e} Retrying {i}")
                 time.sleep(i * 0.1)
         raise RuntimeError("Was not able to read config file successfully")
     finally:

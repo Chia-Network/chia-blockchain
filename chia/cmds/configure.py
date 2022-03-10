@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 import click
 
-from chia.util.config import load_config, save_config, str2bool, create_config_lock
+from chia.util.config import load_config, save_config, str2bool, get_config_lock
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
@@ -24,7 +24,7 @@ def configure(
     seeder_domain_name: str,
     seeder_nameserver: str,
 ):
-    with create_config_lock(root_path, "config.yaml"):
+    with get_config_lock(root_path, "config.yaml"):
         config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml", acquire_lock=False)
         change_made = False
         if set_node_introducer:
