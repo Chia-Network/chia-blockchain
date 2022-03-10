@@ -32,10 +32,7 @@ async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Conn
         updates.append((is_my_offer, row[1]))
 
     try:
-        await db_connection.executemany(
-            "UPDATE trade_records SET is_my_offer=? WHERE trade_id=?",
-            updates,
-        )
+        await db_connection.executemany("UPDATE trade_records SET is_my_offer=? WHERE trade_id=?", updates)
     except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
         log.exception("Failed to migrate is_my_offer property in trade_records")
         raise
@@ -55,12 +52,7 @@ class TradeStore:
     log: logging.Logger
 
     @classmethod
-    async def create(
-        cls,
-        db_wrapper: DBWrapper,
-        cache_size: uint32 = uint32(600000),
-        name: str = None,
-    ) -> "TradeStore":
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000), name: str = None) -> "TradeStore":
         self = cls()
 
         if name:
@@ -163,11 +155,7 @@ class TradeStore:
         await self.add_trade_record(tx, in_transaction)
 
     async def increment_sent(
-        self,
-        id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
@@ -217,10 +205,19 @@ class TradeStore:
         row = await cursor.fetchone()
         await cursor.close()
 
-        if row is None:
-            return 0, 0, 0
+        total = 0
+        my_offers_count = 0
+        taken_offers_count = 0
 
-        return int(row[0]), int(row[1]), int(row[2])
+        if row is not None:
+            if row[0] is not None:
+                total = int(row[0])
+            if row[1] is not None:
+                my_offers_count = int(row[1])
+            if row[2] is not None:
+                taken_offers_count = int(row[2])
+
+        return total, my_offers_count, taken_offers_count
 
     async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
         """
@@ -253,13 +250,7 @@ class TradeStore:
         Returns the list of trades that have not been received by full node yet.
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE sent<? and confirmed=?",
-            (
-                4,
-                0,
-            ),
-        )
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE sent<? and confirmed=?", (4, 0))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
