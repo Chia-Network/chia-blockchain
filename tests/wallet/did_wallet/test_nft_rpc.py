@@ -13,6 +13,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert
+from tests.setup_nodes import setup_simulators_and_wallets
 
 
 
@@ -119,6 +120,8 @@ class TestNFTRPC:
             assert val["success"]
         assert val["my_did"]
         assert val["type"] == WalletType.DISTRIBUTED_ID.value
+        # did_0 = val["my_did"]
+
         # did_0 = val["my_did"]
 
         did_wallet_id_0 = val["wallet_id"]
