@@ -75,7 +75,6 @@ def load_config(
     acquire_lock: bool = True,
 ) -> Dict:
     # This must be called under an acquired config lock, or acquire_lock should be True
-    # This is a re-entrant lock, so it does not work with multiple threads
 
     path = config_path_for_filename(root_path, filename)
 
