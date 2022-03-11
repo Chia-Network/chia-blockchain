@@ -12,6 +12,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert
+from tests.setup_nodes import setup_simulators_and_wallets
 
 
 async def is_transaction_in_mempool(user_wallet_id, api, tx_id: bytes32) -> bool:
