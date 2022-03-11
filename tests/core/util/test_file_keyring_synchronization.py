@@ -1,7 +1,7 @@
 import logging
 import os
 import pytest
-from filelock import FileLock, Timeout
+from filelock import BaseFileLock, FileLock, Timeout
 
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -147,7 +147,7 @@ def poll_directory(dir: Path, expected_entries: int, max_attempts: int, interval
     return found_all
 
 
-def create_dir_and_lock(lock_path: Path) -> FileLock:
+def create_dir_and_lock(lock_path: Path) -> BaseFileLock:
     lock = FileLock(str(lock_path))
     if not lock_path.exists():
         lock_path.parent.mkdir(exist_ok=True)

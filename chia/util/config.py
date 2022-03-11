@@ -51,7 +51,7 @@ def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock
     lock_path: Path = config_path_for_filename(root_path, filename).with_suffix(".lock")
     if not lock_path.exists():
         lock_path.touch(exist_ok=True)
-    return FileLock(lock_path)  # type: ignore[arg-type]
+    return FileLock(lock_path)
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
