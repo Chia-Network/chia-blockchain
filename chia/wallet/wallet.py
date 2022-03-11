@@ -16,6 +16,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.hash import std_hash
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -244,59 +245,34 @@ class Wallet:
         python_program[1].append(condition)
         return Program.to(python_program)
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
+    async def select_coins(self, target: uint64, exclude: List[Coin] = None) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
-        Note: This must be called under a wallet state manager lock
+        Note: Must be called under wallet state manager lock
         """
-        if exclude is None:
-            exclude = []
-
-        spendable_amount = await self.get_spendable_balance()
-
-        if amount > spendable_amount:
-            error_msg = (
-                f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
-                f" {spendable_amount}"
-            )
-            self.log.warning(error_msg)
-            raise ValueError(error_msg)
-
-        self.log.info(f"About to select coins for amount {amount}")
-        unspent: List[WalletCoinRecord] = list(
+        spendable_amount: uint128 = await self.get_spendable_balance()
+        spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
         )
-        sum_value = 0
-        used_coins: Set = set()
-
-        # Use older coins first
-        unspent.sort(reverse=True, key=lambda r: r.coin.amount)
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        for coinrecord in unspent:
-            if sum_value >= amount and len(used_coins) > 0:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            if coinrecord.coin in exclude:
-                continue
-            sum_value += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-            self.log.debug(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_value < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-
-        self.log.debug(f"Successfully selected coins: {used_coins}")
-        return used_coins
+        coins = await select_coins(
+            spendable_amount,
+            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            spendable_coins,
+            unconfirmed_removals,
+            self.log,
+            uint128(target),
+            exclude,
+        )
+        assert coins is not None and len(coins) > 0
+        assert sum(c.amount for c in coins) >= target
+        return coins
 
     async def _generate_unsigned_transaction(
         self,
@@ -332,7 +308,7 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         if coins is None:
-            coins = await self.select_coins(total_amount)
+            coins = await self.select_coins(uint64(total_amount))
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -515,9 +491,9 @@ class Wallet:
         # If we're losing value then get coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if chia_amount < 0:
-            utxos = await self.select_coins(abs(chia_amount), exclude)
+            utxos = await self.select_coins(uint64(abs(chia_amount)), exclude)
         else:
-            utxos = await self.select_coins(0, exclude)
+            utxos = await self.select_coins(uint64(0), exclude)
 
         assert len(utxos) > 0
 
