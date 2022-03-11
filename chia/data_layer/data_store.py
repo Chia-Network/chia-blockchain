@@ -843,6 +843,20 @@ class DataStore:
 
         return
 
+    async def insert_root_for_processed_batch(
+        self, tree_id: bytes32, root: Root, status: Status = Status.PENDING, *, lock: bool = True
+    ) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
+            new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            assert root.node_hash == new_root.node_hash
+            if new_root.node_hash is None:
+                return
+            nodes = await self.get_left_to_right_ordering(new_root.node_hash, tree_id, True, lock=False)
+            for node in nodes:
+                if isinstance(node, InternalNode):
+                    await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
+
     async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_keys_values(tree_id=tree_id, lock=False)
@@ -949,18 +963,18 @@ class DataStore:
         lock: bool = True,
         num_nodes: int = 1000000000,
     ) -> List[Node]:
-        ancestors = await self.get_ancestors(node_hash, tree_id, lock=True)
-        path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
-        # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
-        # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
         if not get_subtree_only:
+            ancestors = await self.get_ancestors(node_hash, tree_id, lock=lock)
+            path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
+            # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
+            # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
             stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
         else:
             stack = []
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
-                node = await self.get_node(node_hash)
+                node = await self.get_node(node_hash, lock=lock)
             except Exception:
                 return []
             if isinstance(node, TerminalNode):
@@ -975,7 +989,7 @@ class DataStore:
                 node_hash = node.left_hash
         return nodes
 
-    async def handle_history(
+    async def handle_deltas(
         self,
         tree_id: bytes32,
         generation_begin: int,

@@ -81,13 +81,13 @@ class DataLayerServer:
             }
         )
 
-    async def handle_history(self, request: Dict[str, str]) -> str:
+    async def handle_deltas(self, request: Dict[str, str]) -> str:
         tree_id = request["tree_id"]
         generation = request["generation"]
         max_generation = request["max_generation"]
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         dowload_full_history = request["dowload_full_history"]
-        nodes = await self.data_store.handle_history(
+        nodes = await self.data_store.handle_deltas(
             tree_id_bytes,
             int(generation),
             int(max_generation),
@@ -169,8 +169,8 @@ class DataLayerServer:
                     json_response = await self.handle_tree_nodes(json_request)
                 elif json_request["type"] == "request_operations":
                     json_response = await self.handle_operations(json_request)
-                elif json_request["type"] == "request_history":
-                    json_response = await self.handle_history(json_request)
+                elif json_request["type"] == "request_deltas":
+                    json_response = await self.handle_deltas(json_request)
                 await ws.send_str(json_response)
 
         return ws
