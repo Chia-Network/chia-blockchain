@@ -15,6 +15,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.rpc_request import TxAddition, CatSpendMultiRequest
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -91,6 +92,7 @@ class WalletRpcApi:
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
             "/cat_spend": self.cat_spend,
+            "/cat_spend_multi": self.cat_spend_multi,
             "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_offer_summary": self.get_offer_summary,
@@ -862,6 +864,36 @@ class WalletRpcApi:
         return {
             "transaction": tx.to_json_dict_convenience(self.service.config),
             "transaction_id": tx.name,
+        }
+
+    async def cat_spend_multi(self, request: CatSpendMultiRequest):
+        assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+
+        wallet_id = uint32(request["wallet_id"])
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        additions: List[TxAddition] = [TxAddition.from_json(a) for a in request["additions"]]
+
+        # prepare data for zipping in 'generate_signed_transaction'
+        amounts = []
+        puzzle_hashes = []
+        memos = []
+        for addition in additions:
+            amounts.append(addition.amount)
+            puzzle_hashes.append(addition.puzzle_hash)
+            memos.append(addition.memos if addition.memos is not None else [])
+
+        txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+            amounts=amounts, puzzle_hashes=puzzle_hashes, fee=request["fee"], memos=memos
+        )
+        for tx in txs:
+            await wallet.standard_wallet.push_transaction(tx)
+
+        return {
+            "transaction": txs[0].to_json_dict_convenience(self.service.config),
+            "transaction_id": txs[0].name,
         }
 
     async def cat_get_asset_id(self, request):

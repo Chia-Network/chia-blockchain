@@ -5,6 +5,7 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.rpc_request import TxAddition
 from chia.util.ints import uint32, uint64
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -392,6 +393,23 @@ class WalletRpcClient(RpcClient):
             "memos": memos if memos else [],
         }
         res = await self.fetch("cat_spend", send_dict)
+        return TransactionRecord.from_json_dict_convenience(res["transaction"])
+
+    async def cat_spend_multi(
+        self,
+        wallet_id: int,
+        additions: List[TxAddition],
+        coins: Optional[List[Coin]] = None,
+        fee: Optional[uint64] = uint64(0),
+    ) -> TransactionRecord:
+
+        request_data = {
+            "wallet_id": wallet_id,
+            "additions": [a.to_json() for a in additions],
+            "coins": coins,
+            "fee": fee
+        }
+        res = await self.fetch("cat_spend_multi", request_data)
         return TransactionRecord.from_json_dict_convenience(res["transaction"])
 
     # Offers
