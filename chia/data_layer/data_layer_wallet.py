@@ -264,7 +264,7 @@ class DataLayerWallet:
             )
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
-        await self.wallet_state_manager.add_interested_puzzle_hash(launcher_id, self.id(), in_transaction)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
                 new_singleton,
@@ -408,7 +408,7 @@ class DataLayerWallet:
         )
 
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
-        await self.wallet_state_manager.add_interested_puzzle_hash(singleton_record.launcher_id, self.id(), False)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()], False)
 
         return dl_record, std_record, launcher_coin.name()
 
