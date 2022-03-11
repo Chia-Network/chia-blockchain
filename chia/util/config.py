@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import pkg_resources
 import yaml
-from filelock import FileLock, BaseFileLock
+from filelock import BaseFileLock, FileLock
 from typing_extensions import Literal
 
 from chia.util.path import mkdir

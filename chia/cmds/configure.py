@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 import click
 
-from chia.util.config import load_config, save_config, str2bool, get_config_lock
+from chia.util.config import get_config_lock, load_config, save_config, str2bool
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
