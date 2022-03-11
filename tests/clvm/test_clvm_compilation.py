@@ -43,6 +43,9 @@ wallet_program_files = set(
         "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
         "chia/wallet/puzzles/delegated_genesis_checker.clvm",
         "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
+        "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
+        "chia/wallet/puzzles/nft_innerpuz.clvm",
+        "chia/wallet/puzzles/nft_transfer_program.clvm",
     ]
 )
 
