@@ -181,9 +181,14 @@ jobs:
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      shell: bash
       run: |
-        ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
-        aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download-chia-net/builds/
+        GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+        CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
+        echo ::set-output name=CHIA_DEV_BUILD::${CHIA_DEV_BUILD}
+        echo ${CHIA_DEV_BUILD}
+        pwd
+        aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download-chia-net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
 
     - name: Create Checksums
       env:

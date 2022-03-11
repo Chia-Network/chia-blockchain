@@ -407,9 +407,7 @@ class ChiaServer:
         connection: Optional[WSChiaConnection] = None
         try:
             # Crawler/DNS introducer usually uses a lower timeout than the default
-            timeout_value = (
-                30 if "peer_connect_timeout" not in self.config else float(self.config["peer_connect_timeout"])
-            )
+            timeout_value = float(self.config.get("peer_connect_timeout", 30))
             timeout = ClientTimeout(total=timeout_value)
             session = ClientSession(timeout=timeout)
 

@@ -5,6 +5,7 @@ from typing import Dict
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
@@ -42,6 +43,9 @@ def service_kwargs_for_full_node_crawler(
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
     )
+
+    if config.get("crawler", {}).get("start_rpc_server", True):
+        kwargs["rpc_info"] = (CrawlerRpcApi, config.get("crawler", {}).get("crawler_rpc_port", 8561))
 
     return kwargs
 

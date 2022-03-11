@@ -108,7 +108,9 @@ steps:
       export AWS_ACCESS_KEY_ID=$(AccessKey)
       export AWS_SECRET_ACCESS_KEY=$(SecretKey)
       export AWS_DEFAULT_REGION=us-west-2
-      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/builds/
+      export GIT_SHORT_HASH=$(git rev-parse --short HEAD)
+      export CHIA_DEV_BUILD=$(basename $(ls $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg | sed "s/.dmg/-$GIT_SHORT_HASH.dmg/"))
+      aws s3 cp $(System.DefaultWorkingDirectory)/build_scripts/final_installer/*.dmg s3://download-chia-net/dev/$CHIA_DEV_BUILD
     displayName: "Upload to S3"
 
   - bash: |

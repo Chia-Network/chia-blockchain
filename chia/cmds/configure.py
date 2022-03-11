@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 import click
 
@@ -19,6 +19,10 @@ def configure(
     set_peer_count: str,
     testnet: str,
     peer_connect_timeout: str,
+    crawler_db_path: str,
+    crawler_minimum_version_count: Optional[int],
+    seeder_domain_name: str,
+    seeder_nameserver: str,
     enable_data_server: str = "",
 ):
     config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -103,6 +107,7 @@ def configure(
             testnet_port = "58444"
             testnet_introducer = "introducer-testnet10.chia.net"
             testnet_dns_introducer = "dns-introducer-testnet10.chia.net"
+            bootstrap_peers = ["testnet10-node.chia.net"]
             testnet = "testnet10"
             config["full_node"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
@@ -113,6 +118,7 @@ def configure(
             config["introducer"]["port"] = int(testnet_port)
             config["full_node"]["introducer_peer"]["host"] = testnet_introducer
             config["full_node"]["dns_servers"] = [testnet_dns_introducer]
+            config["wallet"]["dns_servers"] = [testnet_dns_introducer]
             config["selected_network"] = testnet
             config["harvester"]["selected_network"] = testnet
             config["pool"]["selected_network"] = testnet
@@ -123,6 +129,13 @@ def configure(
             config["introducer"]["selected_network"] = testnet
             config["wallet"]["selected_network"] = testnet
             config["data_layer"]["selected_network"] = testnet
+
+            if "seeder" in config:
+                config["seeder"]["port"] = int(testnet_port)
+                config["seeder"]["other_peers_port"] = int(testnet_port)
+                config["seeder"]["selected_network"] = testnet
+                config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
             print("Default full node port, introducer and network setting updated")
             change_made = True
 
@@ -131,6 +144,7 @@ def configure(
             mainnet_port = "8444"
             mainnet_introducer = "introducer.chia.net"
             mainnet_dns_introducer = "dns-introducer.chia.net"
+            bootstrap_peers = ["node.chia.net"]
             net = "mainnet"
             config["full_node"]["port"] = int(mainnet_port)
             config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
@@ -150,6 +164,13 @@ def configure(
             config["ui"]["selected_network"] = net
             config["introducer"]["selected_network"] = net
             config["wallet"]["selected_network"] = net
+
+            if "seeder" in config:
+                config["seeder"]["port"] = int(mainnet_port)
+                config["seeder"]["other_peers_port"] = int(mainnet_port)
+                config["seeder"]["selected_network"] = net
+                config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
             print("Default full node port, introducer and network setting updated")
             change_made = True
         else:
@@ -159,10 +180,25 @@ def configure(
         config["full_node"]["peer_connect_timeout"] = int(peer_connect_timeout)
         change_made = True
 
+    if crawler_db_path is not None and "seeder" in config:
+        config["seeder"]["crawler_db_path"] = crawler_db_path
+        change_made = True
+
+    if crawler_minimum_version_count is not None and "seeder" in config:
+        config["seeder"]["minimum_version_count"] = crawler_minimum_version_count
+        change_made = True
+
+    if seeder_domain_name is not None and "seeder" in config:
+        config["seeder"]["domain_name"] = seeder_domain_name
+        change_made = True
+
+    if seeder_nameserver is not None and "seeder" in config:
+        config["seeder"]["nameserver"] = seeder_nameserver
+        change_made = True
+
     if change_made:
         print("Restart any running chia services for changes to take effect")
         save_config(root_path, "config.yaml", config)
-    return 0
 
 
 @click.command("configure", short_help="Modify configuration")
@@ -206,6 +242,26 @@ def configure(
 @click.option("--set-peer-count", help="Update the target peer count (default 80)", type=str)
 @click.option("--set-peer-connect-timeout", help="Update the peer connect timeout (default 30)", type=str)
 @click.option(
+    "--crawler-db-path",
+    help="configures the path to the crawler database",
+    type=str,
+)
+@click.option(
+    "--crawler-minimum-version-count",
+    help="configures how many of a particular version must be seen to be reported in logs",
+    type=int,
+)
+@click.option(
+    "--seeder-domain-name",
+    help="configures the seeder domain_name setting. Ex: `seeder.example.com.`",
+    type=str,
+)
+@click.option(
+    "--seeder-nameserver",
+    help="configures the seeder nameserver setting. Ex: `example.com.`",
+    type=str,
+)
+@click.option(
     "--enable-data-server",
     "--data-server",
     help="Enable or disable data propagation server for your data layer",
@@ -224,6 +280,10 @@ def configure_cmd(
     set_peer_count,
     testnet,
     set_peer_connect_timeout,
+    crawler_db_path,
+    crawler_minimum_version_count,
+    seeder_domain_name,
+    seeder_nameserver,
     enable_data_server,
 ):
     configure(
@@ -238,5 +298,9 @@ def configure_cmd(
         set_peer_count,
         testnet,
         set_peer_connect_timeout,
+        crawler_db_path,
+        crawler_minimum_version_count,
+        seeder_domain_name,
+        seeder_nameserver,
         enable_data_server,
     )
