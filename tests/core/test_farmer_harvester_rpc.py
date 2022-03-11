@@ -18,7 +18,7 @@ from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
+from tests.setup_nodes import setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
@@ -27,13 +27,13 @@ log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation():
-    async for _ in setup_farmer_harvester(test_constants):
+async def simulation(bt):
+    async for _ in setup_farmer_harvester(bt, test_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment(simulation):
+async def environment(bt, simulation, self_hostname):
     harvester_service, farmer_service = simulation
 
     def stop_node_cb():
@@ -171,7 +171,7 @@ async def test_farmer_signage_point_endpoints(environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_reward_target_endpoints(environment):
+async def test_farmer_reward_target_endpoints(bt, environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -220,7 +220,7 @@ async def test_farmer_reward_target_endpoints(environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_get_pool_state(environment):
+async def test_farmer_get_pool_state(environment, self_hostname):
     (
         farmer_service,
         farmer_rpc_api,
@@ -237,7 +237,7 @@ async def test_farmer_get_pool_state(environment):
             "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
             "owner_public_key": "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0",  # noqa
             "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
-            "pool_url": "localhost",
+            "pool_url": self_hostname,
             "p2_singleton_puzzle_hash": "16e4bac26558d315cded63d4c5860e98deb447cc59146dd4de06ce7394b14f17",
             "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
         }

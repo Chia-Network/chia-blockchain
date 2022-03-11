@@ -41,11 +41,13 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "build",
     "pre-commit",
     "pytest",
-    "pytest-asyncio",
+    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "twine",
     "isort",
     "flake8",
     "mypy",

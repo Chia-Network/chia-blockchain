@@ -14,8 +14,7 @@ from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.util.path import mkdir
-
-from tests.setup_nodes import bt
+from tests.block_tools import BlockTools
 
 
 async def create_blockchain(constants: ConsensusConstants, db_version: int):
@@ -36,6 +35,7 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
 def persistent_blocks(
     num_of_blocks: int,
     db_name: str,
+    bt: BlockTools,
     seed: bytes = b"",
     empty_sub_slots=0,
     normalized_to_identity_cc_eos: bool = False,
@@ -69,6 +69,7 @@ def persistent_blocks(
         num_of_blocks,
         seed,
         empty_sub_slots,
+        bt,
         normalized_to_identity_cc_eos,
         normalized_to_identity_icc_eos,
         normalized_to_identity_cc_sp,
@@ -81,6 +82,7 @@ def new_test_db(
     num_of_blocks: int,
     seed: bytes,
     empty_sub_slots: int,
+    bt: BlockTools,
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,

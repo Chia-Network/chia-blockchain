@@ -18,8 +18,8 @@ from tests.setup_nodes import test_constants, setup_node_and_wallet
 
 class TestWalletBlockchain:
     @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet(test_constants):
+    async def wallet_node(self, self_hostname):
+        async for _ in setup_node_and_wallet(test_constants, self_hostname):
             yield _
 
     @pytest.mark.asyncio

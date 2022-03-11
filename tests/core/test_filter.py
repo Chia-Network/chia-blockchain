@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import setup_simulators_and_wallets, bt
+from tests.setup_nodes import setup_simulators_and_wallets
 
 
 class TestFilter:
@@ -14,7 +14,7 @@ class TestFilter:
             yield _
 
     @pytest.mark.asyncio
-    async def test_basic_filter_test(self, wallet_and_node):
+    async def test_basic_filter_test(self, wallet_and_node, bt):
         full_nodes, wallets = wallet_and_node
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
