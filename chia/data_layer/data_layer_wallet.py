@@ -754,7 +754,7 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_id(new_singleton.name())
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
