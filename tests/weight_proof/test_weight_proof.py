@@ -22,7 +22,7 @@ from tests.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
-from tests.setup_nodes import bt
+
 
 try:
     from reprlib import repr
@@ -201,7 +201,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_edge_cases(self, default_400_blocks):
+    async def test_weight_proof_edge_cases(self, bt, default_400_blocks):
         blocks: List[FullBlock] = default_400_blocks
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -377,7 +377,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact):
+    async def test_weight_proof1000_partial_blocks_compact(self, bt, default_10000_blocks_compact):
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
             block_list_input=default_10000_blocks_compact,

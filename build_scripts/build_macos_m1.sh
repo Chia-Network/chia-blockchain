@@ -90,8 +90,7 @@ cd ../../../build_scripts || exit
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION-arm64.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
-electron-installer-dmg dist/Chia-darwin-arm64/Chia.app Chia-$CHIA_INSTALLER_VERSION-arm64 \
---overwrite --out final_installer
+NODE_PATH=./npm_macos_m1/node_modules node build_dmg.js dist/Chia-darwin-arm64/Chia.app $CHIA_INSTALLER_VERSION-arm64
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"
