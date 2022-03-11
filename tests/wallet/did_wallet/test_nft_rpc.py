@@ -4,19 +4,17 @@ import pytest
 
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.time_out_assert import time_out_assert
+from tests.setup_nodes import setup_simulators_and_wallets
+
 # from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 
 
 @pytest.fixture(scope="module")
@@ -127,7 +125,7 @@ class TestNFTRPC:
             assert val["success"]
         assert val["my_did"]
         assert val["type"] == WalletType.DISTRIBUTED_ID.value
-        did_0 = val["my_did"]
+        # did_0 = val["my_did"]
         did_wallet_id_0 = val["wallet_id"]
 
         api_1 = WalletRpcApi(wallet_node_1)

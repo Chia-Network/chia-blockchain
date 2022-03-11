@@ -31,12 +31,13 @@ def test_transfer_no_backpayments():
     #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
-    did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
-    did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
-    did_two_amount = 401
+    # did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    # did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
+    # did_two_amount = 401
 
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
-    did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+    # did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+
     # NFT_MOD_HASH
     # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
