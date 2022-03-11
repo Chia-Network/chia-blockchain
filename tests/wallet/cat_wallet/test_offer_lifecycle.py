@@ -86,7 +86,7 @@ class TestOfferLifecycle:
                 else:
                     payments.append(Payment(acs_ph, amount, []))
 
-        # This bundle create all of the initial coins
+        # This bundle creates all of the initial coins
         parent_bundle = SpendBundle(
             [
                 CoinSpend(

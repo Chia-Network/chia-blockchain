@@ -18,7 +18,8 @@ from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.blockchain_format.program import SerializedProgram
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
+
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def event_loop():
 
 class TestBlockStore:
     @pytest.mark.asyncio
-    async def test_block_store(self, tmp_dir, db_version):
+    async def test_block_store(self, tmp_dir, db_version, bt):
         assert sqlite3.threadsafety == 1
         blocks = bt.get_consecutive_blocks(10)
 
@@ -69,7 +70,7 @@ class TestBlockStore:
             assert len(block_record_records) == len(blocks)
 
     @pytest.mark.asyncio
-    async def test_deadlock(self, tmp_dir, db_version):
+    async def test_deadlock(self, tmp_dir, db_version, bt):
         """
         This test was added because the store was deadlocking in certain situations, when fetching and
         adding blocks repeatedly. The issue was patched.
@@ -102,7 +103,7 @@ class TestBlockStore:
             await asyncio.gather(*tasks)
 
     @pytest.mark.asyncio
-    async def test_rollback(self, tmp_dir):
+    async def test_rollback(self, bt, tmp_dir):
         blocks = bt.get_consecutive_blocks(10)
 
         async with DBConnection(2) as db_wrapper:
@@ -145,7 +146,7 @@ class TestBlockStore:
                 count += 1
 
     @pytest.mark.asyncio
-    async def test_count_compactified_blocks(self, tmp_dir, db_version):
+    async def test_count_compactified_blocks(self, bt, tmp_dir, db_version):
         blocks = bt.get_consecutive_blocks(10)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -164,7 +165,7 @@ class TestBlockStore:
             assert count == 0
 
     @pytest.mark.asyncio
-    async def test_count_uncompactified_blocks(self, tmp_dir, db_version):
+    async def test_count_uncompactified_blocks(self, bt, tmp_dir, db_version):
         blocks = bt.get_consecutive_blocks(10)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -183,7 +184,7 @@ class TestBlockStore:
             assert count == 10
 
     @pytest.mark.asyncio
-    async def test_replace_proof(self, tmp_dir, db_version):
+    async def test_replace_proof(self, bt, tmp_dir, db_version):
         blocks = bt.get_consecutive_blocks(10)
 
         def rand_bytes(num) -> bytes:
@@ -227,7 +228,7 @@ class TestBlockStore:
                 assert b.challenge_chain_ip_proof == proof
 
     @pytest.mark.asyncio
-    async def test_get_generator(self, db_version):
+    async def test_get_generator(self, bt, db_version):
         blocks = bt.get_consecutive_blocks(10)
 
         def generator(i: int) -> SerializedProgram:

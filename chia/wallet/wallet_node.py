@@ -97,7 +97,6 @@ class WalletNode:
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
-    new_state_lock: Optional[asyncio.Lock]
 
     def __init__(
         self,
@@ -120,7 +119,6 @@ class WalletNode:
         self.proof_hashes: List = []
         self.state_changed_callback = None
         self.wallet_state_manager = None
-        self.new_state_lock = None
         self.server = None
         self.wsm_close_task = None
         self.sync_task: Optional[asyncio.Task] = None
@@ -355,7 +353,7 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.info(f"Pulled from queue: {item}")
+                self.log.debug(f"Pulled from queue: {item}")
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
@@ -536,14 +534,14 @@ class WalletNode:
 
         # The number of coin id updates are usually going to be significantly less than ph updates, so we can
         # sync from 0 every time.
-        continue_while = False
+        continue_while = True
         all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(0)
         already_checked_coin_ids: Set[bytes32] = set()
         while continue_while:
             one_k_chunks = chunks(all_coin_ids, 1000)
             for chunk in one_k_chunks:
                 c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
-                c_update_res = list(filter(is_new_state_update, c_update_res))
+
                 if not await self.receive_state_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
                     return
@@ -591,15 +589,15 @@ class WalletNode:
         # TODO: optimize fetching
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
-        if self.new_state_lock is None:
-            self.new_state_lock = asyncio.Lock()
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
             await self.wallet_state_manager.reorg_rollback(fork_height)
+            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
         if fork_height is not None:
             cache.clear_after_height(fork_height)
+            self.log.info(f"Rolling back to {fork_height}")
 
         all_tasks: List[asyncio.Task] = []
         target_concurrent_tasks: int = 20
@@ -609,6 +607,7 @@ class WalletNode:
         items = sorted(items_input, key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
+            assert self.wallet_state_manager is not None
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -617,34 +616,43 @@ class WalletNode:
                         for inner_state in inner_states:
                             self.add_state_to_race_cache(header_hash, height, inner_state)
                             self.log.info(f"Added to race cache: {height}, {inner_state}")
-                    if trusted:
-                        valid_states = inner_states
-                    else:
-                        valid_states = [
-                            inner_state
-                            for inner_state in inner_states
-                            if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
-                        ]
+                    valid_states = [
+                        inner_state
+                        for inner_state in inner_states
+                        if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
+                    ]
                     if len(valid_states) > 0:
-                        self.log.info(
-                            f"new coin state received ({inner_idx_start}-"
-                            f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
-                        )
-                        assert self.new_state_lock is not None
-                        async with self.new_state_lock:
+                        async with self.wallet_state_manager.db_wrapper.lock:
+                            self.log.info(
+                                f"new coin state received ({inner_idx_start}-"
+                                f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
+                            )
                             if self.wallet_state_manager is None:
                                 return
-                            await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
+                            try:
+                                await self.wallet_state_manager.db_wrapper.commit_transaction()
+                                await self.wallet_state_manager.db_wrapper.begin_transaction()
+                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
-                            if update_finished_height:
-                                if len(cs_heights) == 1:
-                                    # We have processed all past tasks, so we can increase the height safely
-                                    synced_up_to = last_change_height_cs(valid_states[-1]) - 1
-                                else:
-                                    # We know we have processed everything before this min height
-                                    synced_up_to = min(cs_heights)
-                                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
+                                if update_finished_height:
+                                    if len(cs_heights) == 1:
+                                        # We have processed all past tasks, so we can increase the height safely
+                                        synced_up_to = last_change_height_cs(valid_states[-1]) - 1
+                                    else:
+                                        # We know we have processed everything before this min height
+                                        synced_up_to = min(cs_heights) - 1
+                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
+                                        synced_up_to, in_transaction=True
+                                    )
+                                await self.wallet_state_manager.db_wrapper.commit_transaction()
 
+                            except Exception as e:
+                                tb = traceback.format_exc()
+                                self.log.error(f"Exception while adding state: {e} {tb}")
+                                await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                                await self.wallet_state_manager.pool_store.rebuild_cache()
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -662,18 +670,39 @@ class WalletNode:
             if peer.peer_node_id not in self.server.all_connections:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
                 return False
-            while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
-                await asyncio.sleep(0.1)
-                if self._shut_down:
-                    self.log.info("Terminating receipt and validation due to shut down request")
-                    return False
-            concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
-            all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
+            if trusted:
+                async with self.wallet_state_manager.db_wrapper.lock:
+                    try:
+                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        await self.wallet_state_manager.db_wrapper.begin_transaction()
+                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
+                            last_change_height_cs(states[-1]) - 1, in_transaction=True
+                        )
+                    except Exception as e:
+                        await self.wallet_state_manager.db_wrapper.rollback_transaction()
+                        await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
+                        await self.wallet_state_manager.tx_store.rebuild_tx_cache()
+                        await self.wallet_state_manager.pool_store.rebuild_cache()
+                        tb = traceback.format_exc()
+                        self.log.error(f"Error adding states.. {e} {tb}")
+                        return False
+            else:
+                while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
+                    await asyncio.sleep(0.1)
+                    if self._shut_down:
+                        self.log.info("Terminating receipt and validation due to shut down request")
+                        return False
+                concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
+                all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
             idx += len(states)
 
+        still_connected = self.server is not None and peer.peer_node_id in self.server.all_connections
         await asyncio.gather(*all_tasks)
         await self.update_ui()
-        return True
+        return still_connected and self.server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
         assert self.wallet_state_manager is not None
@@ -838,6 +867,7 @@ class WalletNode:
                         self.wallet_state_manager.set_sync_mode(True)
                     await self.long_sync(new_peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
                     self.wallet_state_manager.set_sync_mode(False)
+
         else:
             far_behind: bool = (
                 new_peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
@@ -848,6 +878,11 @@ class WalletNode:
             if (
                 peer.peer_node_id not in self.synced_peers or far_behind
             ) and new_peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                if await self.check_for_synced_trusted_peer(header_block, request_time):
+                    self.wallet_state_manager.set_sync_mode(False)
+                    self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
+                    return
+
                 syncing = False
                 if far_behind or len(self.synced_peers) == 0:
                     syncing = True
