@@ -1169,7 +1169,7 @@ class WalletRpcApi:
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
         metadata = Program.to([
-            ('u', [address]),
+            ('u', request["uris"]),
             ('h', request["hash"]),
         ])
         if "amount" in request:
