@@ -214,11 +214,9 @@ class TempKeyring:
         if self.old_keys_root_path is not None:
             if KeyringWrapper.get_shared_instance(create_if_necessary=False) is not None:
                 shared_keys_root_path = KeyringWrapper.get_shared_instance().keys_root_path
-                assert (
-                    shared_keys_root_path == keys_root_path
-                ), f"Detected a new shared KeyringWrapper instance using keys_root_path={shared_keys_root_path}"
-            KeyringWrapper.cleanup_shared_instance()
-            KeyringWrapper.set_keys_root_path(self.old_keys_root_path)
-            KeyringWrapper.get_shared_instance()
+                if shared_keys_root_path == keys_root_path:
+                    KeyringWrapper.cleanup_shared_instance()
+                    KeyringWrapper.set_keys_root_path(self.old_keys_root_path)
+                    KeyringWrapper.get_shared_instance()
 
         self.cleaned_up = True
