@@ -7,7 +7,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -25,7 +25,7 @@ class TestCATWallet:
 
     @pytest.mark.asyncio
     @pytest.mark.skip
-    async def test_create_rl_coin(self, two_wallet_nodes):
+    async def test_create_rl_coin(self, two_wallet_nodes, self_hostname):
         num_blocks = 4
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

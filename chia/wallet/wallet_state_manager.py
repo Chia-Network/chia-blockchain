@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import multiprocessing.context
 import time
+import traceback
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
@@ -598,7 +599,7 @@ class WalletStateManager:
                     "automatically_add_unknown_cats", False
                 ):
                     cat_wallet = await CATWallet.create_wallet_for_cat(
-                        self, self.main_wallet, bytes(tail_hash).hex()[2:]
+                        self, self.main_wallet, bytes(tail_hash).hex()[2:], in_transaction=True
                     )
                     wallet_id = cat_wallet.id()
                     wallet_type = WalletType(cat_wallet.type())
@@ -731,7 +732,7 @@ class WalletStateManager:
                             name=bytes32(token_bytes()),
                             memos=[],
                         )
-                        await self.tx_store.add_transaction_record(tx_record, False)
+                        await self.tx_store.add_transaction_record(tx_record, True)
 
                     children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
                     assert children is not None
@@ -786,7 +787,7 @@ class WalletStateManager:
                                 memos=[],
                             )
 
-                            await self.tx_store.add_transaction_record(tx_record, False)
+                            await self.tx_store.add_transaction_record(tx_record, True)
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
                     rem_tx_records: List[TransactionRecord] = []
@@ -797,7 +798,6 @@ class WalletStateManager:
 
                     for tx_record in rem_tx_records:
                         await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                    await self.coin_store.db_connection.commit()
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
                         if rem_coin.name() == coin_state.coin.name():
@@ -870,10 +870,12 @@ class WalletStateManager:
                         child.coin.name(),
                         [launcher_spend],
                         child.spent_height,
-                        False,
+                        True,
                         "pool_wallet",
                     )
-                    coin_added = launcher_spend.additions()[0]
+                    launcher_spend_additions = launcher_spend.additions()
+                    assert len(launcher_spend_additions) == 1
+                    coin_added = launcher_spend_additions[0]
                     await self.coin_added(
                         coin_added, coin_state.spent_height, [], pool_wallet.id(), WalletType(pool_wallet.type())
                     )
@@ -1030,7 +1032,7 @@ class WalletStateManager:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 
-        await self.create_more_puzzle_hashes()
+        await self.create_more_puzzle_hashes(in_transaction=True)
         return coin_record_1
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
@@ -1043,15 +1045,15 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+        await self.add_interested_coin_ids(all_coins_names, False)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
-    async def add_transaction(self, tx_record: TransactionRecord):
+    async def add_transaction(self, tx_record: TransactionRecord, in_transaction=False):
         """
         Called from wallet to add transaction that is not being set to full_node
         """
-        await self.tx_store.add_transaction_record(tx_record, False)
+        await self.tx_store.add_transaction_record(tx_record, in_transaction)
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
@@ -1101,30 +1103,41 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.coin_store.rollback_to_block(height)
+        try:
+            await self.db_wrapper.commit_transaction()
+            await self.db_wrapper.begin_transaction()
 
-        reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
-        await self.tx_store.rollback_to_block(height)
-        await self.coin_store.db_wrapper.commit_transaction()
-        for record in reorged:
-            if record.type in [
-                TransactionType.OUTGOING_TX,
-                TransactionType.OUTGOING_TRADE,
-                TransactionType.INCOMING_TRADE,
-            ]:
-                await self.tx_store.tx_reorged(record)
-        self.tx_pending_changed()
+            await self.coin_store.rollback_to_block(height)
+            reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
+            await self.tx_store.rollback_to_block(height)
+            for record in reorged:
+                if record.type in [
+                    TransactionType.OUTGOING_TX,
+                    TransactionType.OUTGOING_TRADE,
+                    TransactionType.INCOMING_TRADE,
+                ]:
+                    await self.tx_store.tx_reorged(record, in_transaction=True)
+            self.tx_pending_changed()
 
-        # Removes wallets that were created from a blockchain transaction which got reorged.
-        remove_ids = []
-        for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == WalletType.POOLING_WALLET.value:
-                remove: bool = await wallet.rewind(height)
-                if remove:
-                    remove_ids.append(wallet_id)
-        for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id, in_transaction=True)
-            self.wallets.pop(wallet_id)
+            # Removes wallets that were created from a blockchain transaction which got reorged.
+            remove_ids = []
+            for wallet_id, wallet in self.wallets.items():
+                if wallet.type() == WalletType.POOLING_WALLET.value:
+                    remove: bool = await wallet.rewind(height, in_transaction=True)
+                    if remove:
+                        remove_ids.append(wallet_id)
+            for wallet_id in remove_ids:
+                await self.user_store.delete_wallet(wallet_id, in_transaction=True)
+                self.wallets.pop(wallet_id)
+            await self.db_wrapper.commit_transaction()
+        except Exception as e:
+            tb = traceback.format_exc()
+            self.log.error(f"Exception while rolling back: {e} {tb}")
+            await self.db_wrapper.rollback_transaction()
+            await self.coin_store.rebuild_wallet_cache()
+            await self.tx_store.rebuild_tx_cache()
+            await self.pool_store.rebuild_cache()
+            raise
 
     async def _await_closed(self) -> None:
         await self.db_connection.close()
@@ -1153,10 +1166,10 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True):
+    async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet
         if create_puzzle_hashes:
-            await self.create_more_puzzle_hashes()
+            await self.create_more_puzzle_hashes(in_transaction=in_transaction)
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
@@ -1190,9 +1203,6 @@ class WalletStateManager:
     ):
         await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data, in_transaction)
         self.tx_pending_changed()
-
-    async def set_action_done(self, action_id: int):
-        await self.action_store.action_done(action_id)
 
     async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
 

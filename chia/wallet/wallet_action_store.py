@@ -84,29 +84,6 @@ class WalletActionStore:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
-    async def action_done(self, action_id: int):
-        """
-        Marks action as done
-        """
-        action: Optional[WalletAction] = await self.get_wallet_action(action_id)
-        assert action is not None
-        async with self.db_wrapper.lock:
-            cursor = await self.db_connection.execute(
-                "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-                (
-                    action.id,
-                    action.name,
-                    action.wallet_id,
-                    action.type.value,
-                    action.wallet_callback,
-                    True,
-                    action.data,
-                ),
-            )
-
-            await cursor.close()
-            await self.db_connection.commit()
-
     async def get_all_pending_actions(self) -> List[WalletAction]:
         """
         Returns list of all pending action
