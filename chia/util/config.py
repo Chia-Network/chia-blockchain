@@ -78,33 +78,32 @@ def load_config(
 
     path = config_path_for_filename(root_path, filename)
 
-    with contextlib.ExitStack() as exit_stack:
-        if acquire_lock:
-            exit_stack.enter_context(get_config_lock(root_path, filename))
-
-        if not path.is_file():
-            if not exit_on_error:
-                raise ValueError("Config not found")
-            print(f"can't find {path}")
-            print("** please run `chia init` to migrate or create new config files **")
-            # TODO: fix this hack
-            sys.exit(-1)
-        # This loop should not be necessary due to the config lock, but it's kept here just in case
-        for i in range(10):
-            try:
+    if not path.is_file():
+        if not exit_on_error:
+            raise ValueError("Config not found")
+        print(f"can't find {path}")
+        print("** please run `chia init` to migrate or create new config files **")
+        # TODO: fix this hack
+        sys.exit(-1)
+    # This loop should not be necessary due to the config lock, but it's kept here just in case
+    for i in range(10):
+        try:
+            with contextlib.ExitStack() as exit_stack:
+                if acquire_lock:
+                    exit_stack.enter_context(get_config_lock(root_path, filename))
                 with open(path, "r") as opened_config_file:
                     r = yaml.safe_load(opened_config_file)
-                    if r is None:
-                        log.error(f"yaml.safe_load returned None: {path}")
-                        time.sleep(i * 0.1)
-                        continue
-                    if sub_config is not None:
-                        r = r.get(sub_config)
-                    return r
-            except Exception as e:
-                tb = traceback.format_exc()
-                log.error(f"Error loading file: {tb} {e} Retrying {i}")
+            if r is None:
+                log.error(f"yaml.safe_load returned None: {path}")
                 time.sleep(i * 0.1)
+                continue
+            if sub_config is not None:
+                r = r.get(sub_config)
+            return r
+        except Exception as e:
+            tb = traceback.format_exc()
+            log.error(f"Error loading file: {tb} {e} Retrying {i}")
+            time.sleep(i * 0.1)
     raise RuntimeError("Was not able to read config file successfully")
 
 
