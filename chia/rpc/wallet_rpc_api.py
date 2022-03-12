@@ -756,7 +756,12 @@ class WalletRpcApi:
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        address = request["address"]
+        selected_network = self.service.config["selected_network"]
+        expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
+        if address[0 : len(expected_prefix)] != expected_prefix:
+            raise ValueError("Unexpected Address Prefix")
+        puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
         memos: List[bytes] = []
         if "memos" in request:
