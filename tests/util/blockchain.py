@@ -43,6 +43,9 @@ def persistent_blocks(
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
 ):
+    print(f" ==== persistent_blocks()")
+    print(f" ==== persistent_blocks() type(bt)={type(bt)!r}")
+    print(f" ==== persistent_blocks() bt={bt!r}")
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()

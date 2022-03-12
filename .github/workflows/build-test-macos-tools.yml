@@ -94,7 +94,7 @@ jobs:
     - name: Test tools code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/tools/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/tools/test_*.py -s -v --capture no --durations 0
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
