@@ -104,7 +104,7 @@ async def setup_wallet_node(
             service_name_prefix="test_",
         )
 
-        service = Service(**kwargs, handle_signals=False)
+        service = Service(**kwargs, running_new_process=False)
 
         await service.start()
 
