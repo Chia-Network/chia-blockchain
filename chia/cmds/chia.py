@@ -16,7 +16,6 @@ from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.db import db_cmd
-from chia.util.config import config_path_for_filename
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import (
     Keychain,
