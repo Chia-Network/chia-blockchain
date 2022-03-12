@@ -59,7 +59,7 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
 @contextlib.contextmanager
 def lock_and_load_config(root_path: Path, filename: Union[str, Path]) -> Iterator[Dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
-        config = load_config(root_path=root_path, filename=filename)
+        config = load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
         yield config
         # TODO: would need to be fancier to integrate this since it is conditional
         # save_config(root_path=root_path, filename=filename, config_data=config)
