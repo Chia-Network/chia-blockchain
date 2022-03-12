@@ -141,7 +141,7 @@ async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
 
     thread1.join()
     thread2.join()
-    if not error_queue.empty() > 0:
+    if not error_queue.empty():
         raise error_queue.get()
 
 
