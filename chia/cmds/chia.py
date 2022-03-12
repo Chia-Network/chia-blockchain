@@ -92,8 +92,7 @@ def cli(
         except Exception as e:
             print(f"Failed to read passphrase: {e}")
 
-    if config_path_for_filename(Path(root_path), "config.yaml").exists():
-        check_ssl(Path(root_path))
+    check_ssl(Path(root_path))
 
 
 if not supports_keyring_passphrase():
