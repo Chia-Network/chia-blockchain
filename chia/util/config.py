@@ -53,8 +53,6 @@ def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock
     # TODO: enhance the lock or enforce the restriction
 
     lock_path: Path = config_path_for_filename(root_path, filename).with_suffix(".lock")
-    if not lock_path.exists():
-        lock_path.touch(exist_ok=True)
     return FileLock(lock_path)
 
 
