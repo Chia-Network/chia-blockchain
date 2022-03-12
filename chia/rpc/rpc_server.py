@@ -45,6 +45,10 @@ class RpcServer:
 
     async def stop(self):
         self.shut_down = True
+        if self.websocket is not None:
+            await self.websocket.close()
+        if self.client_session is not None:
+            await self.client_session.close()
 
     async def _state_changed(self, *args):
         if self.websocket is None:
