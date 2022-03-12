@@ -51,24 +51,19 @@ def write_config(
 
             if do_sleep:
                 sleep(random.random())
-            # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] write_config")
-            # save_config(root_path=root_path, filename="config.yaml", config_data=modified_config)
             if atomic_write:
                 # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
-                # leading to a non-atomic operation
+                # leading to a non-atomic operation.
                 with get_config_lock(root_path, "config.yaml"):
                     save_config(root_path=root_path, filename="config.yaml", config_data=config)
             else:
                 path: Path = config_path_for_filename(root_path, filename="config.yaml")
-                # print("Trying to get lock write")
                 with get_config_lock(root_path, "config.yaml"):
-                    # print("Write start")
                     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                         tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                         with open(tmp_path, "w") as f:
                             yaml.safe_dump(config, f)
                         shutil.copy2(str(tmp_path), str(path))
-                    # print("Write end")
     except Exception as e:
         if error_queue is not None:
             error_queue.put(e)
@@ -92,16 +87,9 @@ def read_and_compare_config(
             # in an attempt to interleave their execution.
             if do_sleep:
                 sleep(random.random())
-            # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
 
             with get_config_lock(root_path, "config.yaml"):
-                # print("Read start")
                 config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
-                # print("Read end")
-                assert len(config) > 0
-                # if config != default_config:
-                #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
-                #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
                 assert config == default_config
     except Exception as e:
         if error_queue is not None:
