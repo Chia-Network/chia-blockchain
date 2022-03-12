@@ -36,6 +36,12 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Upload Debug artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: debug
+        path: ${{ github.workspace }}/tests/conftest.py
+
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
