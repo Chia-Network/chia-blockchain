@@ -92,6 +92,10 @@ def new_test_db(
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
 ):
     print(f"create {path} with {num_of_blocks} blocks with ")
+    print(f" ==== new_test_db() bt={bt!r}")
+    print(f" ==== new_test_db() about to report bt.get_consecutive_blocks")
+    print(f" ==== new_test_db() bt.get_consecutive_blocks={bt.get_consecutive_blocks!r}")
+    print(f" ==== new_test_db() about to regular access bt.get_consecutive_blocks")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,
         seed=seed,
@@ -101,6 +105,8 @@ def new_test_db(
         normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
     )
+    print(f" ==== new_test_db() about to force raise an exception")
+    raise Exception(" ==== this should be broken! ====")
     block_bytes_list: List[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))
