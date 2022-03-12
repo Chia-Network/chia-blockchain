@@ -1,5 +1,5 @@
 # Github actions template config.
-oses = ["ubuntu", "macos"]
+oses = ["ubuntu", "macos", "windows"]
 
 # Defaults are conservative.
 parallel = False
