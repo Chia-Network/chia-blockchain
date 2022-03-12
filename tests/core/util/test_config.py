@@ -9,15 +9,15 @@ import random
 import yaml
 
 from chia.util.config import (
+    config_path_for_filename,
     create_default_chia_config,
+    get_config_lock,
     initial_config_file,
     load_config,
     save_config,
-    config_path_for_filename,
-    get_config_lock,
 )
 from chia.util.path import mkdir
-from multiprocessing import Pool, TimeoutError, Queue
+from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
