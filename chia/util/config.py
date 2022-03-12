@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import logging
 import os
 import shutil
@@ -77,14 +78,10 @@ def load_config(
 
     path = config_path_for_filename(root_path, filename)
 
-    config_lock: Optional[BaseFileLock] = None
-    if acquire_lock:
-        config_lock = get_config_lock(root_path, filename)
-        acquired = config_lock.acquire()
-        if not acquired:
-            raise RuntimeError("Not able to acquire lock in load_config")
+    with contextlib.ExitStack() as exit_stack:
+        if acquire_lock:
+            exit_stack.enter_context(get_config_lock(root_path, filename))
 
-    try:
         if not path.is_file():
             if not exit_on_error:
                 raise ValueError("Config not found")
@@ -108,10 +105,7 @@ def load_config(
                 tb = traceback.format_exc()
                 log.error(f"Error loading file: {tb} {e} Retrying {i}")
                 time.sleep(i * 0.1)
-        raise RuntimeError("Was not able to read config file successfully")
-    finally:
-        if config_lock is not None:
-            config_lock.release()
+    raise RuntimeError("Was not able to read config file successfully")
 
 
 def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:
