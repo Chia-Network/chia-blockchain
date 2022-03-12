@@ -72,7 +72,7 @@ def write_config(
     except Exception as e:
         if error_queue is not None:
             error_queue.put(e)
-        raise e
+        raise
 
 
 def read_and_compare_config(
@@ -106,7 +106,7 @@ def read_and_compare_config(
     except Exception as e:
         if error_queue is not None:
             error_queue.put(e)
-        raise e
+        raise
 
 
 async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
