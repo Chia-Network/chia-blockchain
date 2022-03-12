@@ -206,9 +206,9 @@ def migrate_from(
 
         save_config(new_root, "config.yaml", config)
 
-        create_all_ssl(new_root)
+    create_all_ssl(new_root)
 
-        return 1
+    return 1
 
 
 def create_all_ssl(root_path: Path):
