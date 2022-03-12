@@ -463,24 +463,24 @@ def chia_init(
 
     config: Dict
 
-    with get_config_lock(root_path, "config.yaml"):
-        if v1_db:
+    if v1_db:
+        with get_config_lock(root_path, "config.yaml"):
             config = load_config(root_path, "config.yaml", acquire_lock=False)
             db_pattern = config["full_node"]["database_path"]
             new_db_path = db_pattern.replace("_v2_", "_v1_")
             config["full_node"]["database_path"] = new_db_path
             save_config(root_path, "config.yaml", config)
-        else:
-            config = load_config(root_path, "config.yaml", acquire_lock=False)["full_node"]
-            db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-            db_path = path_from_root(root_path, db_path_replaced)
-            mkdir(db_path.parent)
-            import sqlite3
+    else:
+        config = load_config(root_path, "config.yaml")["full_node"]
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        db_path = path_from_root(root_path, db_path_replaced)
+        mkdir(db_path.parent)
+        import sqlite3
 
-            with sqlite3.connect(db_path) as connection:
-                connection.execute("CREATE TABLE database_version(version int)")
-                connection.execute("INSERT INTO database_version VALUES (2)")
-                connection.commit()
+        with sqlite3.connect(db_path) as connection:
+            connection.execute("CREATE TABLE database_version(version int)")
+            connection.execute("INSERT INTO database_version VALUES (2)")
+            connection.commit()
 
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
