@@ -21,7 +21,7 @@ def get_keychain():
 
 
 @pytest.fixture(scope="session", name="bt")
-def bt(get_keychain) -> BlockTools:
+def block_tools_fixture(get_keychain) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
     _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
     return _shared_block_tools
@@ -73,21 +73,21 @@ block_format_version = "rc4"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks():
+def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"alternate2")
 
 
 @pytest.fixture(scope="session")
-def default_1000_blocks():
+def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def pre_genesis_empty_slots_1000_blocks():
+def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
@@ -96,21 +96,21 @@ def pre_genesis_empty_slots_1000_blocks():
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks():
+def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks():
+def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks_compact():
+def default_10000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
