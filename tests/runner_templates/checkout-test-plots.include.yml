@@ -2,6 +2,6 @@
       uses: actions/checkout@v2
       with:
         repository: 'Chia-Network/test-cache'
-        path: '${{ env.HOME }}/.chia'
+        path: '.chia'
         ref: '0.28.0'
         fetch-depth: 1
