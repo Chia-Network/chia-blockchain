@@ -19,9 +19,9 @@ from chia.util.config import (
     create_default_chia_config,
     initial_config_file,
     load_config,
+    lock_and_load_config,
     save_config,
     unflatten_properties,
-    get_config_lock,
 )
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir, path_from_root
@@ -75,8 +75,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return None
 
-    with get_config_lock(new_root, "config.yaml"):
-        config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(new_root, "config.yaml") as config:
         pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
         all_targets = []
         stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
@@ -197,8 +196,7 @@ def migrate_from(
 
     # update config yaml with new keys
 
-    with get_config_lock(new_root, "config.yaml"):
-        config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(new_root, "config.yaml") as config:
         config_str: str = initial_config_file("config.yaml")
         default_config: Dict = yaml.safe_load(config_str)
         flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
@@ -464,8 +462,7 @@ def chia_init(
     config: Dict
 
     if v1_db:
-        with get_config_lock(root_path, "config.yaml"):
-            config = load_config(root_path, "config.yaml", acquire_lock=False)
+        with lock_and_load_config(root_path, "config.yaml") as config:
             db_pattern = config["full_node"]["database_path"]
             new_db_path = db_pattern.replace("_v2_", "_v1_")
             config["full_node"]["database_path"] = new_db_path
