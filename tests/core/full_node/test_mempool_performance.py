@@ -35,13 +35,14 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 log = logging.getLogger(__name__)
 
 
-class TestMempoolPerformance:
-    @pytest_asyncio.fixture(scope="module")
-    async def wallet_nodes(self, bt):
-        key_seed = bt.farmer_master_sk_entropy
-        async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
-            yield _
+@pytest_asyncio.fixture(scope="module")
+async def wallet_nodes(bt):
+    key_seed = bt.farmer_master_sk_entropy
+    async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
+        yield _
 
+
+class TestMempoolPerformance:
     @pytest.mark.asyncio
     async def test_mempool_update_performance(self, bt, wallet_nodes, default_400_blocks, self_hostname):
         blocks = default_400_blocks

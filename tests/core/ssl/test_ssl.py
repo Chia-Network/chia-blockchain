@@ -51,32 +51,36 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         return False
 
 
+@pytest_asyncio.fixture(scope="function")
+async def harvester_farmer(bt):
+    async for _ in setup_farmer_harvester(bt, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def introducer(bt):
+    introducer_port = find_available_listen_port("introducer")
+    async for _ in setup_introducer(bt, introducer_port):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def timelord(bt):
+    timelord_port = find_available_listen_port("timelord")
+    node_port = find_available_listen_port("node")
+    rpc_port = find_available_listen_port("rpc")
+    vdf_port = find_available_listen_port("vdf")
+    async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
+        yield _
+
+
 class TestSSL:
-    @pytest_asyncio.fixture(scope="function")
-    async def harvester_farmer(self, bt):
-        async for _ in setup_farmer_harvester(bt, test_constants):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def introducer(self, bt):
-        introducer_port = find_available_listen_port("introducer")
-        async for _ in setup_introducer(bt, introducer_port):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def timelord(self, bt):
-        timelord_port = find_available_listen_port("timelord")
-        node_port = find_available_listen_port("node")
-        rpc_port = find_available_listen_port("rpc")
-        vdf_port = find_available_listen_port("vdf")
-        async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
-            yield _
-
     @pytest.mark.asyncio
     async def test_public_connections(self, wallet_node, self_hostname):
         full_nodes, wallets = wallet_node

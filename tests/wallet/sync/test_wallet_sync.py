@@ -27,22 +27,25 @@ def wallet_height_at_least(wallet_node, h):
 log = getLogger(__name__)
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_simulator():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_starting_height(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
+        yield _
+
+
 class TestWalletSync:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self, self_hostname):
-        async for _ in setup_node_and_wallet(test_constants, self_hostname):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_starting_height(self, self_hostname):
-        async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
