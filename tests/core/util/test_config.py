@@ -273,8 +273,7 @@ class TestConfig:
         loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
         assert loaded["harvester"]["farmer_peer"]["host"] == "oldmacdonald.eie.io"
 
-    @pytest.mark.asyncio
-    async def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
+    def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
         """
         Test whether multiple readers/writers encounter data corruption. When using non-atomic operations
         to write to the config, partial/incomplete writes can cause readers to yield bad/corrupt data.
