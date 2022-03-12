@@ -148,7 +148,6 @@ class WebSocketServer:
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
         self.websocket_runner: Optional[web.AppRunner] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
-        self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = shutdown_event
@@ -185,6 +184,7 @@ class WebSocketServer:
 
         site = web.TCPSite(
             self.websocket_runner,
+            host=self.self_hostname,
             port=self.daemon_port,
             shutdown_timeout=3,
             ssl_context=self.ssl_context,
@@ -199,47 +199,50 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
-        self.shut_down = True
-        await self.exit()
-        if self.websocket_runner is not None:
-            await self.websocket_runner.cleanup()
-        self.shutdown_event.set()
+        asyncio.create_task(self.exit())
         return {"success": True}
 
     async def incoming_connection(self, request):
         ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
         await ws.prepare(request)
 
-        async for msg in ws:
+        while True:
+            msg = await ws.receive()
+            self.log.debug(f"Received message: {msg}")
             if msg.type == WSMsgType.TEXT:
-                if msg.data == "close":
-                    self.remove_connection(ws)
-                    await ws.close()
-                else:
-                    try:
-                        decoded = json.loads(msg.data)
-                        if "data" not in decoded:
-                            decoded["data"] = {}
-                        response, sockets_to_use = await self.handle_message(ws, decoded)
-                    except Exception as e:
-                        tb = traceback.format_exc()
-                        self.log.error(f"Error while handling message: {tb}")
-                        error = {"success": False, "error": f"{e}"}
-                        response = format_response(decoded, error)
-                        sockets_to_use = []
-                    if len(sockets_to_use) > 0:
-                        for socket in sockets_to_use:
-                            try:
-                                await socket.send_str(response)
-                            except Exception as e:
-                                tb = traceback.format_exc()
-                                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                                self.remove_connection(socket)
-                                await socket.close()
-            elif msg.type == WSMsgType.ERROR:
-                print("ws connection closed with exception %s" % ws.exception())
+                try:
+                    decoded = json.loads(msg.data)
+                    if "data" not in decoded:
+                        decoded["data"] = {}
+                    response, sockets_to_use = await self.handle_message(ws, decoded)
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    self.log.error(f"Error while handling message: {tb}")
+                    error = {"success": False, "error": f"{e}"}
+                    response = format_response(decoded, error)
+                    sockets_to_use = []
+                if len(sockets_to_use) > 0:
+                    for socket in sockets_to_use:
+                        try:
+                            await socket.send_str(response)
+                        except Exception as e:
+                            tb = traceback.format_exc()
+                            self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
+                            self.remove_connection(socket)
+                            await socket.close()
+                            break
+            else:
+                service_name = "Unknown"
+                if ws in self.remote_address_map:
+                    service_name = self.remote_address_map[ws]
+                if msg.type == WSMsgType.CLOSE:
+                    self.log.info(f"ConnectionClosed. Closing websocket with {service_name}")
+                elif msg.type == WSMsgType.ERROR:
+                    print(f"Websocket exception. Closing websocket with {service_name}. {ws.exception()}")
+
                 self.remove_connection(ws)
                 await ws.close()
+                break
 
     def remove_connection(self, websocket: WebSocketResponse):
         service_name = None
@@ -1110,20 +1113,16 @@ class WebSocketServer:
 
         return response
 
-    async def exit(self) -> Dict[str, Any]:
+    async def exit(self) -> None:
         jobs = []
         for k in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, k))
         if jobs:
             await asyncio.wait(jobs)
         self.services.clear()
-
-        # TODO: fix this hack
-        asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
-
-        response = {"success": True}
-        return response
+        if self.websocket_runner is not None:
+            await self.websocket_runner.cleanup()
+        self.shutdown_event.set()
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
