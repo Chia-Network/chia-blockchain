@@ -48,10 +48,6 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 
 def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock:
-
-    # WARNING: async activity is not allowed when inside a get_config_lock() context
-    # TODO: enhance the lock or enforce the restriction
-
     config_path = config_path_for_filename(root_path, filename)
     lock_path: Path = config_path.with_name(config_path.name + ".lock")
     return FileLock(lock_path)

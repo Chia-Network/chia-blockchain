@@ -82,10 +82,6 @@ def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1El
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
-
-    # WARNING: async activity is not allowed inside get_config_lock()
-    # TODO: enhance the lock or enforce the restriction
-
     with get_config_lock(root_path, "config.yaml"):
         full_config = load_config(root_path, "config.yaml", acquire_lock=False)
         full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
