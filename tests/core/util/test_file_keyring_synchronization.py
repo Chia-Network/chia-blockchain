@@ -147,19 +147,21 @@ def poll_directory(dir: Path, expected_entries: int, max_attempts: int, interval
     return found_all
 
 
+@pytest.fixture(scope="function")
+def ready_dir(tmp_path: Path):
+    ready_dir: Path = tmp_path / "ready"
+    mkdir(ready_dir)
+    return ready_dir
+
+
+@pytest.fixture(scope="function")
+def finished_dir(tmp_path: Path):
+    finished_dir: Path = tmp_path / "finished"
+    mkdir(finished_dir)
+    return finished_dir
+
+
 class TestFileKeyringSynchronization:
-    @pytest.fixture(scope="function")
-    def ready_dir(self, tmp_path: Path):
-        ready_dir: Path = tmp_path / "ready"
-        mkdir(ready_dir)
-        return ready_dir
-
-    @pytest.fixture(scope="function")
-    def finished_dir(self, tmp_path: Path):
-        finished_dir: Path = tmp_path / "finished"
-        mkdir(finished_dir)
-        return finished_dir
-
     # When: using a new empty keyring
     @using_temp_file_keyring()
     def test_multiple_writers(self):

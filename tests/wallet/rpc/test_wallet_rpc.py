@@ -42,12 +42,13 @@ from tests.util.socket import find_available_listen_port
 log = logging.getLogger(__name__)
 
 
-class TestWalletRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
 
+
+class TestWalletRpc:
     @pytest.mark.parametrize(
         "trusted",
         [True, False],

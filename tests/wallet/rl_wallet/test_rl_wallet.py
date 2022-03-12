@@ -17,12 +17,13 @@ def event_loop():
     yield loop
 
 
-class TestCATWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
 
+
+class TestCATWallet:
     @pytest.mark.asyncio
     @pytest.mark.skip
     async def test_create_rl_coin(self, two_wallet_nodes, self_hostname):

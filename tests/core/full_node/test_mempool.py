@@ -89,8 +89,7 @@ def event_loop():
     yield loop
 
 
-# TODO: this fixture should really be at function scope, to make all tests
-# independent.
+# TODO: this fixture should really be at function scope, to make all tests independent.
 # The reason it isn't is that our simulators can't be destroyed correctly, which
 # means you can't instantiate more than one per process, so this is a hack until
 # that is fixed. For now, our tests are not independent

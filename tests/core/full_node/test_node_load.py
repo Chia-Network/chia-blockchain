@@ -18,12 +18,13 @@ def event_loop():
     yield loop
 
 
-class TestNodeLoad:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version, self_hostname):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes(db_version, self_hostname):
+    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
 
+
+class TestNodeLoad:
     @pytest.mark.asyncio
     async def test_blocks_load(self, bt, two_nodes, self_hostname):
         num_blocks = 50

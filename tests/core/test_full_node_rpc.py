@@ -28,12 +28,13 @@ from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
 
 
-class TestRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_simulators_and_wallets(2, 0, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes():
+    async for _ in setup_simulators_and_wallets(2, 0, {}):
+        yield _
 
+
+class TestRpc:
     @pytest.mark.asyncio
     async def test1(self, two_nodes, bt, self_hostname):
         num_blocks = 5
