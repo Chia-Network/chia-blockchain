@@ -596,6 +596,10 @@ class Farmer:
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
+
+                # WARNING: async activity is not allowed inside get_config_lock()
+                # TODO: enhance the lock or enforce the restriction
+
                 with get_config_lock(self._root_path, "config.yaml"):
                     config = load_config(self._root_path, "config.yaml", acquire_lock=False)
                     new_list = []
