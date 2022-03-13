@@ -19,6 +19,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
+from chia.wallet.transaction_record import TransactionRecord
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
@@ -194,6 +195,31 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 50, 100)) == 0
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
+
+            async def check_transaction_confirmed(spend_bundle) -> bool:
+                tx = await full_node_api_1.wallet_state_manager.get_transaction(spend_bundle.name)
+                return tx.confirmed
+
+            coin_record = (await client.get_coin_records_by_puzzle_hash(ph, False))[0]
+
+            # Spend a coin using the standard transaction - making it suitable for compression
+            spend_bundle = wallet.generate_signed_transaction(coin_record.coin.amount, ph_receiver, coin_record.coin)
+            await client.push_tx(spend_bundle)
+
+            await time_out_assert(
+                10,
+                full_node_api_1.full_node.mempool_manager.get_spendbundle,
+                spend_bundle,
+                spend_bundle.name,
+            )
+
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+            await time_out_assert(10, check_transaction_confirmed, True, spend_bundle)
+
+            full_block = (await full_node_api_1.get_all_full_blocks())[-1]
+
+            assert full_block.transactions_generator is not None
+            assert len(block.transactions_generator_ref_list) > 0 # compression has occured
 
             block_spends = await client.get_block_spends((await full_node_api_1.get_all_full_blocks())[-1].header_hash)
 
