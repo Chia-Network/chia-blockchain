@@ -196,6 +196,27 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
+            coin_to_spend = list(blocks[-1].get_included_reward_coins())[1]
+
+            memo = "c0ffee".encode("utf-8")
+
+            # First coin created with memo
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend, memo=memo)
+            await client.push_tx(spend_bundle)
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            # Second coin created with memo
+            coin_to_spend = list(blocks[-1].get_included_reward_coins())[2]
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend, memo=memo)
+            await client.push_tx(spend_bundle)
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            # Get coin records by hint
+            coin_records = await client.get_coin_records_by_hint(memo)
+            assert len(coin_records) == 2
+
+            # todo: tests that cover include_spent_coins / start_height / end_height
+
             assert len(await client.get_connections()) == 0
 
             await client.open_connection(self_hostname, server_2._port)
@@ -224,6 +245,7 @@ class TestRpc:
             assert blocks[1].header_hash == new_blocks[1].header_hash
             assert blocks[2].header_hash == new_blocks[2].header_hash
             assert blocks[3].header_hash != new_blocks[3].header_hash
+
 
         finally:
             # Checks that the RPC manages to stop the node
