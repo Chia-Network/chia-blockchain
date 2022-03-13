@@ -7,7 +7,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Callable
 
 from clvm.casts import int_from_bytes
 
@@ -30,6 +30,7 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
@@ -98,6 +99,10 @@ class Blockchain(BlockchainInterface):
     compact_proof_lock: asyncio.Lock
     hint_store: HintStore
 
+    # Subscriptions for light clients
+    coin_subscriptions: Dict[bytes32, Set[bytes32]]  # Puzzle Hash : Set[Peer ID]
+    ph_subscriptions: Dict[bytes32, Set[bytes32]]  # Puzzle Hash : Set[Peer ID]
+
     @staticmethod
     async def create(
         coin_store: CoinStore,
@@ -136,6 +141,8 @@ class Blockchain(BlockchainInterface):
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
         self.hint_store = hint_store
+        self.coin_subscriptions = {}
+        self.ph_subscriptions = {}
         return self
 
     def shut_down(self):
@@ -190,6 +197,7 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: PreValidationResult,
         fork_point_with_peak: Optional[uint32] = None,
+        wallet_subscription_callback: Optional[Callable] = None,
     ) -> Tuple[
         ReceiveBlockResult,
         Optional[Err],
@@ -207,6 +215,7 @@ class Blockchain(BlockchainInterface):
             block: The FullBlock to be validated.
             pre_validation_result: A result of successful pre validation
             fork_point_with_peak: The fork point, for efficiency reasons, if None, it will be recomputed
+            wallet_subscription_callback: A callback that sends subscription updates to other wallets.
 
         Returns:
             The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
@@ -264,7 +273,7 @@ class Blockchain(BlockchainInterface):
                 await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
-                    block_record, genesis, fork_point_with_peak, npc_result
+                    block_record, genesis, fork_point_with_peak, npc_result, wallet_subscription_callback
                 )
                 await self.block_store.db_wrapper.commit_transaction()
 
@@ -317,6 +326,7 @@ class Blockchain(BlockchainInterface):
         genesis: bool,
         fork_point_with_peak: Optional[uint32],
         npc_result: Optional[NPCResult],
+        wallet_subscription_callback: Optional[Callable],
     ) -> Tuple[
         Optional[uint32],
         Optional[uint32],
@@ -332,6 +342,7 @@ class Blockchain(BlockchainInterface):
         peak = self.get_peak()
         lastest_coin_state: Dict[bytes32, CoinRecord] = {}
         hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
+        changes_for_peers: Dict[bytes32, Set[CoinState]] = {}
 
         if genesis:
             if peak is None:
@@ -424,9 +435,36 @@ class Blockchain(BlockchainInterface):
                     for record in added_rec:
                         assert record
                         lastest_coin_state[record.name] = record
+                        if record.name in self.coin_subscriptions:
+                            subscribed_peers = self.coin_subscriptions[record.name]
+                            for peer in subscribed_peers:
+                                if peer not in changes_for_peers:
+                                    changes_for_peers[peer] = set()
+                                changes_for_peers[peer].add(record.coin_state)
+
+                        if record.coin.puzzle_hash in self.ph_subscriptions:
+                            subscribed_peers = self.ph_subscriptions[record.coin.puzzle_hash]
+                            for peer in subscribed_peers:
+                                if peer not in changes_for_peers:
+                                    changes_for_peers[peer] = set()
+                                changes_for_peers[peer].add(record.coin_state)
+
                     for record in removed_rec:
                         assert record
                         lastest_coin_state[record.name] = record
+                        if record.name in self.coin_subscriptions:
+                            subscribed_peers = self.coin_subscriptions[record.name]
+                            for peer in subscribed_peers:
+                                if peer not in changes_for_peers:
+                                    changes_for_peers[peer] = set()
+                                changes_for_peers[peer].add(record.coin_state)
+
+                        if record.coin.puzzle_hash in self.ph_subscriptions:
+                            subscribed_peers = self.ph_subscriptions[record.coin.puzzle_hash]
+                            for peer in subscribed_peers:
+                                if peer not in changes_for_peers:
+                                    changes_for_peers[peer] = set()
+                                changes_for_peers[peer].add(record.coin_state)
 
                     if npc_res is not None:
                         hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
@@ -436,12 +474,29 @@ class Blockchain(BlockchainInterface):
                             key = hint
                             if key not in hint_coin_state:
                                 hint_coin_state[key] = {}
-                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
+                            coin_record = lastest_coin_state[coin_id]
+                            hint_coin_state[key][coin_id] = coin_record
+                            # While `hint` is typed as a `bytes`, and this is locally verified
+                            # immediately above, if it has length 32 then it might match an entry in
+                            # `self.ph_subscriptions`.  It is unclear if there is a more proper means
+                            # of handling this situation.
+                            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
+                            if subscribed_peers is not None:
+                                for peer in subscribed_peers:
+                                    if peer not in changes_for_peers:
+                                        changes_for_peers[peer] = set()
+                                    changes_for_peers[peer].add(coin_record.coin_state)
 
             await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(block_record.header_hash)
+            if wallet_subscription_callback is not None:
+                asyncio.create_task(
+                    wallet_subscription_callback(
+                        block_record.height, uint32(max(fork_height, 0)), block_record.header_hash, changes_for_peers
+                    )
+                )
             return (
                 uint32(max(fork_height, 0)),
                 block_record.height,

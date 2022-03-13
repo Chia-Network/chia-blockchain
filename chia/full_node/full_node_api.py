@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -20,10 +20,10 @@ from chia.protocols import farmer_protocol, full_node_protocol, introducer_proto
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
@@ -41,7 +41,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.api_decorators import api_request, bytes_required, execute_task, peer_required, reply_type
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1424,13 +1424,13 @@ class FullNodeAPI:
         for puzzle_hash in request.puzzle_hashes:
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
-            if puzzle_hash not in self.full_node.ph_subscriptions:
-                self.full_node.ph_subscriptions[puzzle_hash] = set()
+            if puzzle_hash not in self.full_node.blockchain.ph_subscriptions:
+                self.full_node.blockchain.ph_subscriptions[puzzle_hash] = set()
             if (
-                peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
+                peer.peer_node_id not in self.full_node.blockchain.ph_subscriptions[puzzle_hash]
                 and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
-                self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
+                self.full_node.blockchain.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
                 self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
@@ -1461,13 +1461,13 @@ class FullNodeAPI:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
         max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for coin_id in request.coin_ids:
-            if coin_id not in self.full_node.coin_subscriptions:
-                self.full_node.coin_subscriptions[coin_id] = set()
+            if coin_id not in self.full_node.blockchain.coin_subscriptions:
+                self.full_node.blockchain.coin_subscriptions[coin_id] = set()
             if (
-                peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
+                peer.peer_node_id not in self.full_node.blockchain.coin_subscriptions[coin_id]
                 and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
-                self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
+                self.full_node.blockchain.coin_subscriptions[coin_id].add(peer.peer_node_id)
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 

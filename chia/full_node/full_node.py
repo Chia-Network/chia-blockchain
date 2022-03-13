@@ -3,10 +3,11 @@ import contextlib
 import dataclasses
 import logging
 import multiprocessing
-from multiprocessing.context import BaseContext
 import random
 import time
 import traceback
+from datetime import datetime
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -25,22 +26,17 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
 from chia.full_node.hint_store import HintStore
+from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import (
-    RequestBlocks,
-    RespondBlock,
-    RespondBlocks,
-    RespondSignagePoint,
-)
+from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
@@ -66,15 +62,14 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
-from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
-from datetime import datetime
-from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 class FullNode:
@@ -141,8 +136,6 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
-        self.ph_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
         self.peer_coin_ids: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[Coin ids]
         self.peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[puzzle_hash]
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
@@ -713,16 +706,16 @@ class FullNode:
         if node_id in self.peer_puzzle_hash:
             puzzle_hashes = self.peer_puzzle_hash[node_id]
             for ph in puzzle_hashes:
-                if ph in self.ph_subscriptions:
-                    if node_id in self.ph_subscriptions[ph]:
-                        self.ph_subscriptions[ph].remove(node_id)
+                if ph in self.blockchain.ph_subscriptions:
+                    if node_id in self.blockchain.ph_subscriptions[ph]:
+                        self.blockchain.ph_subscriptions[ph].remove(node_id)
 
         if node_id in self.peer_coin_ids:
             coin_ids = self.peer_coin_ids[node_id]
             for coin_id in coin_ids:
-                if coin_id in self.coin_subscriptions:
-                    if node_id in self.coin_subscriptions[coin_id]:
-                        self.coin_subscriptions[coin_id].remove(node_id)
+                if coin_id in self.blockchain.coin_subscriptions:
+                    if node_id in self.blockchain.coin_subscriptions[coin_id]:
+                        self.blockchain.coin_subscriptions[coin_id].remove(node_id)
 
         if peer.peer_node_id in self.peer_sub_counter:
             self.peer_sub_counter.pop(peer.peer_node_id)
@@ -957,7 +950,7 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                success, advanced_peak, fork_height, coin_states = await self.receive_block_batch(
+                success, advanced_peak, fork_height, _ = await self.receive_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
@@ -966,9 +959,6 @@ class FullNode:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                peak = self.blockchain.get_peak()
-                if len(coin_states) > 0 and fork_height is not None:
-                    await self.update_wallets(peak.height, fork_height, peak.header_hash, coin_states)
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -985,8 +975,9 @@ class FullNode:
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
             self.log.error(f"sync from fork point failed err: {e}")
 
-    async def send_peak_to_wallets(self):
-        peak = self.blockchain.get_peak()
+    async def send_peak_to_wallets(self, peak: Optional[BlockRecord] = None):
+        if peak is None:
+            peak = self.blockchain.get_peak()
         assert peak is not None
         msg = make_msg(
             ProtocolMessageTypes.new_peak_wallet,
@@ -1009,43 +1000,8 @@ class FullNode:
         height: uint32,
         fork_height: uint32,
         peak_hash: bytes32,
-        state_update: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        changes_for_peer: Dict[bytes32, Set[CoinState]],
     ):
-        changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
-
-        states, hint_state = state_update
-
-        for coin_record in states:
-            if coin_record.name in self.coin_subscriptions:
-                subscribed_peers = self.coin_subscriptions[coin_record.name]
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_record.coin_state)
-
-            if coin_record.coin.puzzle_hash in self.ph_subscriptions:
-                subscribed_peers = self.ph_subscriptions[coin_record.coin.puzzle_hash]
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_record.coin_state)
-
-        # This is just a verification that the assumptions justifying the ignore below
-        # are valid.
-        hint: bytes
-        for hint, records in hint_state.items():
-            # While `hint` is typed as a `bytes`, and this is locally verified
-            # immediately above, if it has length 32 then it might match an entry in
-            # `self.ph_subscriptions`.  It is unclear if there is a more proper means
-            # of handling this situation.
-            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
-            if subscribed_peers is not None:
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    for record in records.values():
-                        changes_for_peer[peer].add(record.coin_state)
-
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:
                 continue
@@ -1100,7 +1056,7 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             result, error, fork_height, coin_changes = await self.blockchain.receive_block(
-                block, pre_validation_results[i], None if advanced_peak else fork_point
+                block, pre_validation_results[i], None if advanced_peak else fork_point, self.update_wallets
             )
             coin_record_list, hint_records = coin_changes
 
@@ -1397,17 +1353,7 @@ class FullNode:
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # Tell wallets about the new peak
-        msg = make_msg(
-            ProtocolMessageTypes.new_peak_wallet,
-            wallet_protocol.NewPeakWallet(
-                record.header_hash,
-                record.height,
-                record.weight,
-                fork_height,
-            ),
-        )
-        await self.update_wallets(record.height, fork_height, record.header_hash, coin_changes)
-        await self.server.send_to_all([msg], NodeType.WALLET)
+        await self.send_peak_to_wallets(record)
         self._state_changed("new_peak")
 
     async def respond_block(
@@ -1517,7 +1463,7 @@ class FullNode:
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     added, error_code, fork_height, coin_changes = await self.blockchain.receive_block(
-                        block, result_to_validate, None
+                        block, result_to_validate, None, self.update_wallets
                     )
 
                     if (
