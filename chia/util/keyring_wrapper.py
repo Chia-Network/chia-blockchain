@@ -110,15 +110,20 @@ class KeyringWrapper:
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
+        from chia.util.keychain import KeyringNotSet
+
         self.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
             if check_legacy_keyring_keys_present(legacy_keyring):
                 self.keyring = legacy_keyring
-            else:
-                return None
         else:
             self.refresh_keyrings()
+
+        if self.keyring is None:
+            raise KeyringNotSet(
+                f"Unable to initialize keyring backend: keys_root_path={keys_root_path}, force_legacy={force_legacy}"
+            )
 
     def refresh_keyrings(self):
         self.keyring = None

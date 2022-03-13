@@ -18,7 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint8
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -756,7 +756,12 @@ class WalletRpcApi:
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
-        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        address = request["address"]
+        selected_network = self.service.config["selected_network"]
+        expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
+        if address[0 : len(expected_prefix)] != expected_prefix:
+            raise ValueError("Unexpected Address Prefix")
+        puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
         memos: List[bytes] = []
         if "memos" in request:
@@ -1322,6 +1327,9 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != uint8(WalletType.POOLING_WALLET):
+            raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
+
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
@@ -1352,6 +1360,8 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != uint8(WalletType.POOLING_WALLET):
+            raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
@@ -1369,6 +1379,8 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != uint8(WalletType.POOLING_WALLET):
+            raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
 
         async with self.service.wallet_state_manager.lock:
             transaction, fee_tx = await wallet.claim_pool_rewards(fee)
@@ -1381,8 +1393,10 @@ class WalletRpcApi:
             return {"success": False, "error": "not_initialized"}
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
+
         if wallet.type() != WalletType.POOLING_WALLET.value:
-            raise ValueError(f"wallet_id {wallet_id} is not a pooling wallet")
+            raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
+
         state: PoolWalletInfo = await wallet.get_current_state()
         unconfirmed_transactions: List[TransactionRecord] = await wallet.get_unconfirmed_transactions()
         return {

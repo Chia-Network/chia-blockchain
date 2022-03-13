@@ -36,15 +36,16 @@ acs_ph = acs.get_tree_hash()
 NO_LINEAGE_PROOF = LineageProof()
 
 
+@pytest_asyncio.fixture(scope="function")
+async def setup_sim():
+    sim = await SpendSim.create()
+    sim_client = SimClient(sim)
+    await sim.farm_block()
+    return sim, sim_client
+
+
 class TestCATLifecycle:
     cost: Dict[str, int] = {}
-
-    @pytest_asyncio.fixture(scope="function")
-    async def setup_sim(self):
-        sim = await SpendSim.create()
-        sim_client = SimClient(sim)
-        await sim.farm_block()
-        return sim, sim_client
 
     async def do_spend(
         self,

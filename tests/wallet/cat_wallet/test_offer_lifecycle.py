@@ -41,139 +41,138 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
     return construct_cat_puzzle(CAT_MOD, str_to_tail_hash(tail_str), acs).get_tree_hash()
 
 
-class TestOfferLifecycle:
-    cost: Dict[str, int] = {}
+@pytest_asyncio.fixture(scope="function")
+async def setup_sim():
+    sim = await SpendSim.create()
+    sim_client = SimClient(sim)
+    await sim.farm_block()
+    return sim, sim_client
 
-    @pytest_asyncio.fixture(scope="function")
-    async def setup_sim(self):
-        sim = await SpendSim.create()
-        sim_client = SimClient(sim)
-        await sim.farm_block()
-        return sim, sim_client
 
-    # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
-    async def generate_coins(
-        self,
-        sim,
-        sim_client,
-        requested_coins: Dict[Optional[str], List[uint64]],
-    ) -> Dict[Optional[str], List[Coin]]:
-        await sim.farm_block(acs_ph)
-        parent_coin: Coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
+# This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
+async def generate_coins(
+    sim,
+    sim_client,
+    requested_coins: Dict[Optional[str], List[uint64]],
+) -> Dict[Optional[str], List[Coin]]:
+    await sim.farm_block(acs_ph)
+    parent_coin: Coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
 
-        # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
-        payments: List[Payment] = []
-        cat_bundles: List[SpendBundle] = []
-        for tail_str, amounts in requested_coins.items():
-            for amount in amounts:
-                if tail_str:
-                    tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
-                    cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                    payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
-                    cat_bundles.append(
-                        unsigned_spend_bundle_for_spendable_cats(
-                            CAT_MOD,
-                            [
-                                SpendableCAT(
-                                    Coin(parent_coin.name(), cat_puzzle.get_tree_hash(), amount),
-                                    tail.get_tree_hash(),
-                                    acs,
-                                    Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
-                                )
-                            ],
-                        )
-                    )
-                else:
-                    payments.append(Payment(acs_ph, amount, []))
-
-        # This bundle create all of the initial coins
-        parent_bundle = SpendBundle(
-            [
-                CoinSpend(
-                    parent_coin,
-                    acs,
-                    Program.to([[51, p.puzzle_hash, p.amount] for p in payments]),
-                )
-            ],
-            G2Element(),
-        )
-
-        # Then we aggregate it with all of the eve spends
-        await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
-        await sim.farm_block()
-
-        # Search for all of the coins and put them into a dictionary
-        coin_dict: Dict[Optional[str], List[Coin]] = {}
-        for tail_str, _ in requested_coins.items():
+    # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
+    payments: List[Payment] = []
+    cat_bundles: List[SpendBundle] = []
+    for tail_str, amounts in requested_coins.items():
+        for amount in amounts:
             if tail_str:
-                tail_hash: bytes32 = str_to_tail_hash(tail_str)
-                cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
-                coin_dict[tail_str] = [
-                    cr.coin
-                    for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
-                ]
-            else:
-                coin_dict[None] = list(
-                    filter(
-                        lambda c: c.amount < 250000000000,
+                tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
+                cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
+                payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
+                cat_bundles.append(
+                    unsigned_spend_bundle_for_spendable_cats(
+                        CAT_MOD,
                         [
-                            cr.coin
-                            for cr in await (
-                                sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False)
+                            SpendableCAT(
+                                Coin(parent_coin.name(), cat_puzzle.get_tree_hash(), amount),
+                                tail.get_tree_hash(),
+                                acs,
+                                Program.to([[51, acs_ph, amount], [51, 0, -113, tail, []]]),
                             )
                         ],
                     )
                 )
+            else:
+                payments.append(Payment(acs_ph, amount, []))
 
-        return coin_dict
-
-    # This method simulates a wallet's `generate_signed_transaction` but doesn't bother with non-offer announcements
-    def generate_secure_bundle(
-        self,
-        selected_coins: List[Coin],
-        announcements: List[Announcement],
-        offered_amount: uint64,
-        tail_str: Optional[str] = None,
-    ) -> SpendBundle:
-        announcement_assertions: List[List] = [[63, a.name()] for a in announcements]
-        selected_coin_amount: int = sum([c.amount for c in selected_coins])
-        non_primaries: List[Coin] = [] if len(selected_coins) < 2 else selected_coins[1:]
-        inner_solution: List[List] = [
-            [51, Offer.ph(), offered_amount],  # Offered coin
-            [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
-            *announcement_assertions,
-        ]
-
-        if tail_str is None:
-            bundle = SpendBundle(
-                [
-                    CoinSpend(
-                        selected_coins[0],
-                        acs,
-                        Program.to(inner_solution),
-                    ),
-                    *[CoinSpend(c, acs, Program.to([])) for c in non_primaries],
-                ],
-                G2Element(),
+    # This bundle creates all of the initial coins
+    parent_bundle = SpendBundle(
+        [
+            CoinSpend(
+                parent_coin,
+                acs,
+                Program.to([[51, p.puzzle_hash, p.amount] for p in payments]),
             )
-        else:
-            spendable_cats: List[SpendableCAT] = [
-                SpendableCAT(
-                    c,
-                    str_to_tail_hash(tail_str),
-                    acs,
-                    Program.to(
-                        [
-                            [51, 0, -113, str_to_tail(tail_str), Program.to([])],  # Use the TAIL rather than lineage
-                            *(inner_solution if c == selected_coins[0] else []),
-                        ]
-                    ),
-                )
-                for c in selected_coins
-            ]
-            bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+        ],
+        G2Element(),
+    )
 
-        return bundle
+    # Then we aggregate it with all of the eve spends
+    await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
+    await sim.farm_block()
+
+    # Search for all of the coins and put them into a dictionary
+    coin_dict: Dict[Optional[str], List[Coin]] = {}
+    for tail_str, _ in requested_coins.items():
+        if tail_str:
+            tail_hash: bytes32 = str_to_tail_hash(tail_str)
+            cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
+            coin_dict[tail_str] = [
+                cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
+            ]
+        else:
+            coin_dict[None] = list(
+                filter(
+                    lambda c: c.amount < 250000000000,
+                    [
+                        cr.coin
+                        for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))
+                    ],
+                )
+            )
+
+    return coin_dict
+
+
+# `generate_secure_bundle` simulates a wallet's `generate_signed_transaction`
+# but doesn't bother with non-offer announcements
+def generate_secure_bundle(
+    selected_coins: List[Coin],
+    announcements: List[Announcement],
+    offered_amount: uint64,
+    tail_str: Optional[str] = None,
+) -> SpendBundle:
+    announcement_assertions: List[List] = [[63, a.name()] for a in announcements]
+    selected_coin_amount: int = sum([c.amount for c in selected_coins])
+    non_primaries: List[Coin] = [] if len(selected_coins) < 2 else selected_coins[1:]
+    inner_solution: List[List] = [
+        [51, Offer.ph(), offered_amount],  # Offered coin
+        [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
+        *announcement_assertions,
+    ]
+
+    if tail_str is None:
+        bundle = SpendBundle(
+            [
+                CoinSpend(
+                    selected_coins[0],
+                    acs,
+                    Program.to(inner_solution),
+                ),
+                *[CoinSpend(c, acs, Program.to([])) for c in non_primaries],
+            ],
+            G2Element(),
+        )
+    else:
+        spendable_cats: List[SpendableCAT] = [
+            SpendableCAT(
+                c,
+                str_to_tail_hash(tail_str),
+                acs,
+                Program.to(
+                    [
+                        [51, 0, -113, str_to_tail(tail_str), Program.to([])],  # Use the TAIL rather than lineage
+                        *(inner_solution if c == selected_coins[0] else []),
+                    ]
+                ),
+            )
+            for c in selected_coins
+        ]
+        bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+
+    return bundle
+
+
+class TestOfferLifecycle:
+    cost: Dict[str, int] = {}
 
     @pytest.mark.asyncio()
     async def test_complex_offer(self, setup_sim):
@@ -185,7 +184,7 @@ class TestOfferLifecycle:
                 "red": [250, 100],
                 "blue": [3000],
             }
-            all_coins: Dict[Optional[str], List[Coin]] = await self.generate_coins(sim, sim_client, coins_needed)
+            all_coins: Dict[Optional[str], List[Coin]] = await generate_coins(sim, sim_client, coins_needed)
             chia_coins: List[Coin] = all_coins[None]
             red_coins: List[Coin] = all_coins["red"]
             blue_coins: List[Coin] = all_coins["blue"]
@@ -202,7 +201,7 @@ class TestOfferLifecycle:
                 chia_requested_payments, chia_coins
             )
             chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments)
-            chia_secured_bundle: SpendBundle = self.generate_secure_bundle(chia_coins, chia_announcements, 1000)
+            chia_secured_bundle: SpendBundle = generate_secure_bundle(chia_coins, chia_announcements, 1000)
             chia_offer = Offer(chia_requested_payments, chia_secured_bundle)
             assert not chia_offer.is_valid()
 
@@ -218,9 +217,7 @@ class TestOfferLifecycle:
                 red_requested_payments, red_coins
             )
             red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments)
-            red_secured_bundle: SpendBundle = self.generate_secure_bundle(
-                red_coins, red_announcements, 350, tail_str="red"
-            )
+            red_secured_bundle: SpendBundle = generate_secure_bundle(red_coins, red_announcements, 350, tail_str="red")
             red_offer = Offer(red_requested_payments, red_secured_bundle)
             assert not red_offer.is_valid()
 
@@ -244,7 +241,7 @@ class TestOfferLifecycle:
                 blue_requested_payments, blue_coins
             )
             blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments)
-            blue_secured_bundle: SpendBundle = self.generate_secure_bundle(
+            blue_secured_bundle: SpendBundle = generate_secure_bundle(
                 blue_coins, blue_announcements, 2000, tail_str="blue"
             )
             blue_offer = Offer(blue_requested_payments, blue_secured_bundle)

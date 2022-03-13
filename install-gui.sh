@@ -32,13 +32,20 @@ nodejs_is_installed(){
 }
 
 do_install_npm_locally(){
+  NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
-  if [ "$NPM_VERSION" -lt "7" ]; then
-    echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+
+  if [ "$NODEJS_VERSION" -lt "16" ] || [ "$NPM_VERSION" -lt "7" ]; then
+    if [ "$NODEJS_VERSION" -lt "16" ]; then
+      echo "Current NodeJS version($(node -v)) is less than 16. GUI app requires NodeJS>=16."
+    fi
+    if [ "$NPM_VERSION" -lt "7" ]; then
+      echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+    fi
 
     if [ "$(uname)" = "OpenBSD" ] || [ "$(uname)" = "FreeBSD" ]; then
       # `n` package does not support OpenBSD/FreeBSD
-      echo "Please install npm>=7 manually"
+      echo "Please install NodeJS>=16 and/or npm>=7 manually"
       exit 1
     fi
 
@@ -61,15 +68,37 @@ do_install_npm_locally(){
     # `n 16` here installs nodejs@16 under $N_PREFIX directory
     echo "n 16"
     n 16
+    echo "Current NodeJS version: $(node -v)"
     echo "Current npm version: $(npm -v)"
+    if [ "$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')" -lt "16" ]; then
+      echo "Error: Failed to install NodeJS>=16"
+      exit 1
+    fi
     if [ "$(npm -v | cut -d'.' -f 1)" -lt "7" ]; then
       echo "Error: Failed to install npm>=7"
       exit 1
     fi
     cd "${SCRIPT_DIR}"
   else
+    echo "Found NodeJS $(node -v)"
     echo "Found npm $(npm -v)"
   fi
+}
+
+# Work around for inconsistent `npm` exec path issue
+# https://github.com/Chia-Network/chia-blockchain/pull/10460#issuecomment-1054492495
+patch_inconsistent_npm_issue(){
+  node_module_dir=$1
+  if [ ! -d "$node_module_dir" ]; then
+    mkdir "$node_module_dir"
+  fi
+  if [ ! -d "${node_module_dir}/.bin" ]; then
+    mkdir "${node_module_dir}/.bin"
+  fi
+  if [ -e "${node_module_dir}/.bin/npm" ]; then
+    rm -f "${node_module_dir}/.bin/npm"
+  fi
+  ln -s "$(command -v npm)" "${node_module_dir}/.bin/npm"
 }
 
 # Manage npm and other install requirements on an OS specific basis
@@ -155,17 +184,22 @@ if [ ! "$CI" ]; then
 
   if [ "$SUBMODULE_BRANCH" ];
   then
-    git fetch
-    git checkout "$SUBMODULE_BRANCH"
-    git pull
+    git fetch --all
+    git reset --hard "$SUBMODULE_BRANCH"
     echo ""
     echo "Building the GUI with branch $SUBMODULE_BRANCH"
     echo ""
   fi
 
+  # Work around for inconsistent `npm` exec path issue
+  # https://github.com/Chia-Network/chia-blockchain/pull/10460#issuecomment-1054492495
+  patch_inconsistent_npm_issue "../node_modules"
+
   npm ci
   npm audit fix || true
   npm run build
+
+  # Set modified output of `chia version` to version property of GUI's package.json
   python ../installhelper.py
 else
   echo "Skipping node.js in install.sh on MacOS ci."

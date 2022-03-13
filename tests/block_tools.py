@@ -153,7 +153,7 @@ class BlockTools:
             self._config[service]["selected_network"] = "testnet0"
 
         # some tests start the daemon, make sure it's on a free port
-        self._config["daemon_port"] = find_available_listen_port("daemon port")
+        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -2012,13 +2012,34 @@ def create_test_unfinished_block(
     )
 
 
+# Remove these counters when `create_block_tools` and `create_block_tools_async` are removed
+create_block_tools_async_count = 0
+create_block_tools_count = 0
+
+# Note: tests that still use `create_block_tools` and `create_block_tools_async` should probably be
+# moved to the bt fixture in conftest.py. Take special care to find out if the users of these functions
+# need different BlockTools instances
+
+# All tests need different root directories containing different config.yaml files.
+# The daemon's listen port is configured in the config.yaml, and the only way a test can control which
+# listen port it uses is to write it to the config file.
+
+
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
-    bt = BlockTools(constants, root_path, const_dict, keychain)
+    global create_block_tools_async_count
+    create_block_tools_async_count += 1
+    print(f"  create_block_tools_async called {create_block_tools_async_count} times")
+    bt = BlockTools(
+        constants,
+        root_path,
+        const_dict,
+        keychain,
+    )
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2031,6 +2052,9 @@ def create_block_tools(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
+    global create_block_tools_count
+    create_block_tools_count += 1
+    print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
