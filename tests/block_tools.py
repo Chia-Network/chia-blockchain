@@ -1,7 +1,6 @@
 import asyncio
 import copy
 import logging
-import os
 import random
 import shutil
 import ssl
@@ -1374,7 +1373,7 @@ def get_challenges(
 
 
 def get_plot_dir() -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent().joinpath("test-plots")
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
     mkdir(cache_path)
     return cache_path
 

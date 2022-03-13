@@ -46,7 +46,7 @@ def persistent_blocks(
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
-    block_path_dir = DEFAULT_ROOT_PATH.parent().joinpath("blocks")
+    block_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("blocks")
     file_path = block_path_dir.joinpath(db_name)
     if not path.exists(block_path_dir):
         mkdir(block_path_dir.parent)
