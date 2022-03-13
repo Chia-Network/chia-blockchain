@@ -31,7 +31,7 @@ jobs:
         os: [ubuntu-latest]
 
     env:
-      CHIA_ROOT: ${{ github.workspace }}/.chia
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
 
     steps:
     - name: Checkout Code
