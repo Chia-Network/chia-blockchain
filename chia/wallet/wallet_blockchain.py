@@ -407,7 +407,7 @@ class WalletBlockchain(BlockchainInterface):
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self.__sub_epoch_summaries[height]
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32:
         return self.__height_to_hash[height]
 
     def contains_height(self, height: uint32) -> bool:

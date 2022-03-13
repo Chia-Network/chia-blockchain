@@ -690,7 +690,7 @@ class Blockchain(BlockchainInterface):
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self.__height_map.get_ses(height)
 
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def height_to_hash(self, height: uint32) -> bytes32:
         return self.__height_map.get_hash(height)
 
     def contains_height(self, height: uint32) -> bool:

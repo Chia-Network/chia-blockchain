@@ -1,22 +1,31 @@
 # flake8: noqa: F811, F401
 import asyncio
 import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 import pytest
+
+from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
+from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.weight_proof import WeightProofV2
 from chia.util.block_cache import BlockCache
 from chia.util.config import load_config
+from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
@@ -77,12 +86,12 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
 async def load_blocks_dont_validate(
     blocks,
 ) -> Tuple[
-    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[bytes32, SubEpochSummary]
+    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[uint32, SubEpochSummary]
 ]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, BlockRecord] = {}
-    sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
+    sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
     block: FullBlock
@@ -336,7 +345,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
+        valid, fork_point, _ = await wpf.validate_weight_proof(wp)
 
         assert valid
         assert fork_point == 0
@@ -358,6 +367,7 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof10000__blocks_compact(self, default_10000_blocks_compact):
         blocks = default_10000_blocks_compact
+
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
@@ -378,6 +388,23 @@ class TestWeightProof:
             normalized_to_identity_cc_eos=True,
             normalized_to_identity_icc_eos=True,
         )
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        prev_b = sub_blocks[height_to_hash[3069]]
+        block = header_cache[height_to_hash[3070]]
+        block_cache = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+            test_constants, len(block.finished_sub_slots) > 0, prev_b, block_cache
+        )
+        required_iters, error = validate_finished_header_block(
+            test_constants,
+            block_cache,
+            block,
+            False,
+            difficulty,
+            sub_slot_iters,
+        )
+
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
@@ -484,7 +511,7 @@ class TestWeightProof:
         for x in range(10, -1, -1):
             wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
             assert wp is not None
-            valid, fork_point, _ = await wpf_verify.validate_weight_proof(wp)
+            valid, fork_point = wpf_verify.validate_weight_proof_single_proc(wp)
             assert valid
             assert fork_point == 0
         # extend proof with 100 blocks
@@ -492,23 +519,37 @@ class TestWeightProof:
         summaries[before_last_ses_height] = before_last_ses
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
-        valid, fork_point, _ = await wpf.validate_weight_proof(new_wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(new_wp)
         assert valid
         assert fork_point != 0
 
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Downloads/blockchain_v1_mainnet.sqlite")
-        wrapper = DBWrapper(connection)
-        block_store = await BlockStore.create(wrapper)
+        connection = await aiosqlite.connect("/Users/almog/.chia/mainnet/db/blockchain_v1_mainnet.sqlite")
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         overrides = config["network_overrides"]["constants"]["mainnet"]
         print(overrides["GENESIS_CHALLENGE"])
         updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
 
+        await connection.execute("pragma journal_mode=wal")
+
+        await connection.execute(
+            "pragma synchronous={}".format(
+                db_synchronous_on(
+                    config.get("db_sync", "auto"), Path("/Users/almog/.chia/mainnet/db/blockchain_v1_mainnet.sqlite")
+                )
+            )
+        )
+        db_version: int = await lookup_db_version(connection)
+
+        wrapper = DBWrapper(connection, config.get("allow_database_upgrades", False), db_version=db_version)
+        block_store = await BlockStore.create(wrapper)
+        hint_store = await HintStore.create(wrapper)
         coin_store = await CoinStore.create(wrapper)
-        blockchain = await Blockchain.create(coin_store, block_store, updated_constants)
+        blockchain = await Blockchain.create(
+            coin_store, block_store, updated_constants, hint_store, Path("/Users/almog/.chia/mainnet/db/")
+        )
         peak = blockchain.get_peak()
         # peak_height = peak.height
         # peak_header = await block_store.get_full_blocks_at([peak_height])
@@ -530,15 +571,34 @@ class TestWeightProof:
         summary_heights = blockchain.get_ses_heights()
         wpf = WeightProofHandlerV2(updated_constants, blockchain)
         wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak.height))
-        # wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak_height))
         wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
         valid, fork_point = wpf_not_synced.validate_weight_proof_single_proc(wp)
         assert valid
         await connection.close()
         # assert valid
+        epoch = wp.sub_epoch_segments[0].sub_epoch_n
+        subepoch = []
+        for segment in wp.sub_epoch_segments:
+            if epoch != segment.sub_epoch_n:
+                break
+            subepoch.append(segment)
+
+        print(f"sub epoch size  is {get_size(subepoch)}")
         print(f"len is {len(wp.sub_epochs)} size  is {get_size(wp.sub_epochs)}")
         print(f"len is {len(wp.sub_epoch_segments)} size  is {get_size(wp.sub_epoch_segments)}")
         print(f"len is {len(wp.recent_chain_data)} size  is {get_size(wp.recent_chain_data)}")
+        print(f"wp size is {get_size(wp)}")
+        bits = bytes(wp)
+        f = open("/Users/almog/.chia/mainnet/db/wp.txt", "wb")
+        f.write(bits)
+        f.close()
+        in_file = open("/Users/almog/.chia/mainnet/db/wp.txt", "rb")
+        data = in_file.read()  # if you only wanted to read 512 bytes, do .read(512)
+        in_file.close()
+        new_wp2 = WeightProofV2.from_bytes(data)
+        print(f"wp size is {len(data)}")
+        print(f"wp size is {len(new_wp2.recent_chain_data)}")
+        print(f"wp size is {get_size(new_wp2)}")
 
 
 def get_size(obj, seen=None):

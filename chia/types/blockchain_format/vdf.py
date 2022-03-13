@@ -1,5 +1,6 @@
 import logging
 import traceback
+from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Pool
 from dataclasses import dataclass
 from enum import IntEnum
@@ -81,10 +82,10 @@ class VDFProof(Streamable):
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
             return False
-        return is_valid(self, constants.DISCRIMINANT_SIZE_BITS, input_el, info)
+        return is_valid_inner(self, constants.DISCRIMINANT_SIZE_BITS, input_el, info)
 
 
-def is_valid(
+def is_valid_inner(
     proof: VDFProof,
     desc_size: int,
     input_el: ClassgroupElement,
@@ -112,17 +113,17 @@ class CompressibleVDFField(IntEnum):
 
 
 def compress_output(
-    constants: ConsensusConstants,
-    input: ClassgroupElement,
-    proof: VDFProof,
+    disc_size: int,
     challenge: bytes32,
-    number_of_iterations: uint64,
+    input: ClassgroupElement,
     output: ClassgroupElement,
+    proof: VDFProof,
+    number_of_iterations: uint64,
 ):
     res = get_b_from_n_wesolowski(
-        str(get_discriminant(challenge, constants.DISCRIMINANT_SIZE_BITS)),
+        str(get_discriminant(challenge, disc_size)),
         input.data,
-        output.data + bytes(proof.witness),
+        output.data + proof.witness,
         number_of_iterations,
         proof.witness_type,
     )
@@ -130,23 +131,28 @@ def compress_output(
 
 
 def verify_compressed_vdf(
-    disc_size: int,
+    executor: ProcessPoolExecutor,
+    constants: ConsensusConstants,
     challenge: bytes32,
-    input: ClassgroupElement,
-    output: CompressedClassgroupElement,
+    vdf_input: ClassgroupElement,
+    vdf_output: CompressedClassgroupElement,
     proof: VDFProof,
     number_of_iterations: uint64,
 ):
-    disc: int = get_discriminant(challenge, disc_size)
-    res, val = verify_n_wesolowski_with_b(
-        str(disc),
-        f"0x{output.data.hex()}",
-        input.data,
+    if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
+        log.error(f"invalid witness type")
+        return None
+    res = executor.submit(
+        verify_compressed_future,
+        constants.DISCRIMINANT_SIZE_BITS,
+        bytes(challenge),
+        bytes(vdf_input.data),
+        f"0x{vdf_output.data.hex()}",
         bytes(proof.witness),
-        number_of_iterations,
         proof.witness_type,
+        number_of_iterations,
     )
-    return res, ClassgroupElement.from_bytes(val)
+    return res
 
 
 def verify_compressed_future(
@@ -169,57 +175,26 @@ def verify_compressed_future(
     )
 
 
-class VDFAsyncProver:
-    def __init__(self):
-        self.executor = Pool()
-
-    async def is_valid(
-        self,
-        proof: VDFProof,
-        constants: ConsensusConstants,
-        input_el: ClassgroupElement,
-        info: VDFInfo,
-        target_vdf_info: Optional[VDFInfo] = None,
-    ):
-        if target_vdf_info is not None and info != target_vdf_info:
-            tb = traceback.format_stack()
-            log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
-            return None
-        if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-            log.error(f"invalid witness type")
-            return None
-        return self.executor.apply_async(is_valid, (proof, constants.DISCRIMINANT_SIZE_BITS, input_el, info))
-
-    def verify_compressed_vdf(
-        self,
-        constants: ConsensusConstants,
-        challenge: bytes32,
-        vdf_input: ClassgroupElement,
-        vdf_output: CompressedClassgroupElement,
-        proof: VDFProof,
-        number_of_iterations: uint64,
-    ):
-        if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-            log.error(f"invalid witness type")
-            return None
-
-        res = self.executor.apply_async(
-            verify_compressed_future,
-            (
-                constants.DISCRIMINANT_SIZE_BITS,
-                bytes(challenge),
-                bytes(vdf_input.data),
-                f"0x{vdf_output.data.hex()}",
-                bytes(proof.witness),
-                proof.witness_type,
-                number_of_iterations,
-            ),
-        )
-        return res
+async def is_valid(
+    executor: ProcessPoolExecutor,
+    proof: VDFProof,
+    constants: ConsensusConstants,
+    input_el: ClassgroupElement,
+    info: VDFInfo,
+    target_vdf_info: Optional[VDFInfo] = None,
+):
+    if target_vdf_info is not None and info != target_vdf_info:
+        tb = traceback.format_stack()
+        log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
+        return None
+    if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
+        log.error(f"invalid witness type")
+        return None
+    return executor.submit(is_valid_inner, proof, constants.DISCRIMINANT_SIZE_BITS, input_el, info)
 
 
-def get_vdf_result(res):
-    if res is None:
+def get_vdf_result(future):
+    if future is None:
         raise Exception("vdf res future was None")
-    x, y = res.get()
+    x, y = future.result()
     return x, ClassgroupElement.from_bytes(y)
