@@ -4,7 +4,7 @@ import pytest_asyncio
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
@@ -21,34 +21,39 @@ def event_loop():
     yield loop
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 3, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_five_freeze():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_sim_two_wallets():
+    async for _ in setup_simulators_and_wallets(3, 2, {}):
+        yield _
+
+
 class TestDIDWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_creation_from_backup_file(self, three_wallet_nodes):
+    async def test_creation_from_backup_file(self, self_hostname, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -173,7 +178,7 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes):
+    async def test_did_recovery_with_multiple_backup_dids(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -281,7 +286,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_did_recovery_with_empty_set(self, two_wallet_nodes):
+    async def test_did_recovery_with_empty_set(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -328,7 +333,7 @@ class TestDIDWallet:
         assert additions == []
 
     @pytest.mark.asyncio
-    async def test_did_attest_after_recovery(self, two_wallet_nodes):
+    async def test_did_attest_after_recovery(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]

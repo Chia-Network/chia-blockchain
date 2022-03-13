@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import math
+from multiprocessing.context import BaseContext
 import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
@@ -60,6 +61,7 @@ class WeightProofHandler:
         self,
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         self.tip: Optional[bytes32] = None
         self.proof: Optional[WeightProof] = None
@@ -67,6 +69,7 @@ class WeightProofHandler:
         self.blockchain = blockchain
         self.lock = asyncio.Lock()
         self._num_processes = 4
+        self.multiprocessing_context = multiprocessing_context
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
@@ -624,6 +627,7 @@ class WeightProofHandler:
         # TODO: Consider implementing an async polling closer for the executor.
         with ProcessPoolExecutor(
             max_workers=self._num_processes,
+            mp_context=self.multiprocessing_context,
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         ) as executor:

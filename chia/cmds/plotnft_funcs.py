@@ -279,7 +279,8 @@ async def submit_tx_with_confirmation(
 
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            tx_record: TransactionRecord = await func()
+            result: Dict = await func()
+            tx_record: TransactionRecord = result["transaction"]
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)

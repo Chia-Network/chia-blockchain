@@ -18,7 +18,7 @@ from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from tests.setup_nodes import bt, self_hostname, setup_farmer_harvester, test_constants
+from tests.setup_nodes import setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
@@ -27,13 +27,13 @@ log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation():
-    async for _ in setup_farmer_harvester(test_constants):
+async def simulation(bt):
+    async for _ in setup_farmer_harvester(bt, test_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment(simulation):
+async def environment(bt, simulation, self_hostname):
     harvester_service, farmer_service = simulation
 
     def stop_node_cb():
@@ -171,7 +171,7 @@ async def test_farmer_signage_point_endpoints(environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_reward_target_endpoints(environment):
+async def test_farmer_reward_target_endpoints(bt, environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -220,7 +220,7 @@ async def test_farmer_reward_target_endpoints(environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_get_pool_state(environment):
+async def test_farmer_get_pool_state(environment, self_hostname):
     (
         farmer_service,
         farmer_rpc_api,
