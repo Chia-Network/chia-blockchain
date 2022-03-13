@@ -117,6 +117,7 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
+                    "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
                         "cost_5000000": 0,
