@@ -413,29 +413,23 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        tx_info: Optional[TransactionsInfo] = full_block.transactions_info
-        generator_program: Optional[SerializedProgram] = full_block.transactions_generator
-        height: uint32 = full_block.reward_chain_block.height
         spends: List[CoinSpend] = []
-        if tx_info is not None and generator_program is not None:
-            cost = tx_info.cost
-            block_generator = await self.service.blockchain.get_block_generator(full_block)
-            if block_generator is None:
-                return {"block_spends": spends}
+        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        if block_generator is None:
+            return {"block_spends": spends}
 
-            args = create_generator_args(block_generator.generator_refs).first()
-            _, block_result = block_generator.program.run_with_cost(
-                min(self.service.constants.MAX_BLOCK_COST_CLVM, cost), 0, args
-            )
+        args = create_generator_args(block_generator.generator_refs).first()
+        _, block_result = block_generator.program.run_with_cost(
+            self.service.constants.MAX_BLOCK_COST_CLVM, 0, args
+        )
 
-            coin_spends = block_result.first()
+        coin_spends = block_result.first()
 
-            for spend in coin_spends.as_iter():
-
-                parent, puzzle, amount, solution = spend.as_iter()
-                puzzle_hash = puzzle.get_tree_hash()
-                coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-                spends.append(CoinSpend(coin, puzzle, solution))
+        for spend in coin_spends.as_iter():
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+            spends.append(CoinSpend(coin, puzzle, solution))
 
         return {"block_spends": spends}
 
