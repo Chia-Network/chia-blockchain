@@ -66,7 +66,7 @@ class RpcClient:
 
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
-    
+
     async def healthz(self) -> Dict:
         return await self.fetch("healthz", {})
 
