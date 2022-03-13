@@ -423,17 +423,9 @@ class FullNodeRpcApi:
             if block_generator is None:
                 return {"block_spends": spends}
 
-            if height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
-                # conditions must use integers in canonical encoding (i.e. no redundant
-                # leading zeros)
-                # the division operator may not be used with negative operands
-                flags = COND_CANON_INTS | NO_NEG_DIV
-            else:
-                flags = 0
-
             args = create_generator_args(block_generator.generator_refs).first()
             _, block_result = block_generator.program.run_with_cost(
-                min(self.service.constants.MAX_BLOCK_COST_CLVM, cost), flags, args
+                min(self.service.constants.MAX_BLOCK_COST_CLVM, cost), 0, args
             )
 
             coin_spends = block_result.first()
