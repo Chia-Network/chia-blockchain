@@ -48,11 +48,10 @@ def persistent_blocks(
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("blocks")
     file_path = block_path_dir.joinpath(db_name)
-    if not path.exists(block_path_dir):
-        mkdir(block_path_dir.parent)
-        mkdir(block_path_dir)
+    mkdir(block_path_dir)
 
     if file_path.exists():
+        print(f"File found at: {file_path}")
         try:
             bytes_list = file_path.read_bytes()
             block_bytes_list: List[bytes] = pickle.loads(bytes_list)
@@ -64,7 +63,10 @@ def persistent_blocks(
                 return blocks
         except EOFError:
             print("\n error reading db file")
+    else:
+        print(f"File not found at: {file_path}")
 
+    print(f"Creating a new test db")
     return new_test_db(
         file_path,
         num_of_blocks,
