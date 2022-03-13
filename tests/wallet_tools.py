@@ -1,4 +1,3 @@
-from optparse import Option
 from typing import Dict, List, Optional, Tuple, Any
 
 from blspy import AugSchemeMPL, G2Element, PrivateKey
