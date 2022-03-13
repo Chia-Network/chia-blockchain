@@ -345,7 +345,7 @@ class TestWeightProof:
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
-        valid, fork_point, _ = await wpf.validate_weight_proof(wp)
+        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
         assert fork_point == 0
@@ -526,7 +526,8 @@ class TestWeightProof:
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/.chia/mainnet/db/blockchain_v1_mainnet.sqlite")
+        db_path = "path to db"
+        connection = await aiosqlite.connect(db_path)
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         overrides = config["network_overrides"]["constants"]["mainnet"]
         print(overrides["GENESIS_CHALLENGE"])
@@ -537,7 +538,7 @@ class TestWeightProof:
         await connection.execute(
             "pragma synchronous={}".format(
                 db_synchronous_on(
-                    config.get("db_sync", "auto"), Path("/Users/almog/.chia/mainnet/db/blockchain_v1_mainnet.sqlite")
+                    config.get("db_sync", "auto"), Path(db_path)
                 )
             )
         )
