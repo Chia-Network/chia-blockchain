@@ -960,7 +960,7 @@ def _validate_sub_epoch_segments(
                 curr_ssi,
                 curr_difficulty,
                 prev_ses if idx == 0 else None,
-                True,
+                sampled,
                 cc_sub_slot_hash,
                 icc_sub_slot_hash,
                 uint64(0) if slot_after_challenge else ip_iters,
@@ -1017,7 +1017,7 @@ def _validate_segment(
         if after_challenge_block and not ssd.is_end_of_slot():
             deficit -= 1
 
-        if sampled and ssd.is_challenge():
+        if ssd.is_challenge():
             # validate challenge block vdfs and pospace
             assert cc_challenge is not None
             res = _validate_challenge_sub_slot_data(
@@ -1030,6 +1030,7 @@ def _validate_segment(
                 prev_cc_challenge,
                 output_cache,
                 executor,
+                sampled,
             )
             if res is None:
                 log.error(f"failed to validate challenge slot {idx} vdfs")
@@ -1057,7 +1058,7 @@ def _validate_segment(
             ):
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return None
-        elif sampled and not after_challenge_block and not ssd.is_end_of_slot():
+        elif not after_challenge_block and not ssd.is_end_of_slot():
             # overflow blocks before challenge block, compute sp compressed output
             if not handle_overflows(
                 cc_challenge, icc_challenge, constants, first_block, idx, output_cache, executor, sub_slot_data
@@ -1264,6 +1265,7 @@ def _validate_challenge_sub_slot_data(
     prev_challenge: Optional[bytes32],
     long_outputs,
     executor: ProcessPoolExecutor,
+    sampled:bool,
 ) -> Optional[bytes32]:
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = None
@@ -1343,15 +1345,16 @@ def _validate_challenge_sub_slot_data(
 
     pospace_challenge = challenge
     assert sub_slot_data.signage_point_index is not None
-    if is_overflow_block(constants, sub_slot_data.signage_point_index):
-        assert prev_challenge
-        pospace_challenge = prev_challenge
-    required_iters = __validate_pospace(
-        constants, sub_slots, sub_slot_idx, curr_difficulty, pospace_challenge, ssi, long_outputs
-    )
-    if required_iters is None:
-        log.error(f"failed to get requierd iterations for challenge slot {sub_slot_idx} vdfs")
-        return None
+    if sampled:
+        if is_overflow_block(constants, sub_slot_data.signage_point_index):
+            assert prev_challenge
+            pospace_challenge = prev_challenge
+        required_iters = __validate_pospace(
+            constants, sub_slots, sub_slot_idx, curr_difficulty, pospace_challenge, ssi, long_outputs
+        )
+        if required_iters is None:
+            log.error(f"failed to get requierd iterations for challenge slot {sub_slot_idx} vdfs")
+            return None
 
     assert sub_slot_data.proof_of_space
     assert sub_slot_data.ip_iters
