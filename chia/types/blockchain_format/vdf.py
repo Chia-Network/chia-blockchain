@@ -195,6 +195,6 @@ async def is_valid(
 
 def get_vdf_result(future):
     if future is None:
-        raise Exception("vdf res future was None")
+        raise Exception("vdf future was None")
     x, y = future.result()
     return x, ClassgroupElement.from_bytes(y)

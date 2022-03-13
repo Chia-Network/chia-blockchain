@@ -960,7 +960,7 @@ def _validate_sub_epoch_segments(
                 curr_ssi,
                 curr_difficulty,
                 prev_ses if idx == 0 else None,
-                sampled,
+                True,
                 cc_sub_slot_hash,
                 icc_sub_slot_hash,
                 uint64(0) if slot_after_challenge else ip_iters,
