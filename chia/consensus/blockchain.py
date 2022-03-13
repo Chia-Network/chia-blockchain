@@ -7,7 +7,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Callable
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -435,36 +435,12 @@ class Blockchain(BlockchainInterface):
                     for record in added_rec:
                         assert record
                         lastest_coin_state[record.name] = record
-                        if record.name in self.coin_subscriptions:
-                            subscribed_peers = self.coin_subscriptions[record.name]
-                            for peer in subscribed_peers:
-                                if peer not in changes_for_peers:
-                                    changes_for_peers[peer] = set()
-                                changes_for_peers[peer].add(record.coin_state)
-
-                        if record.coin.puzzle_hash in self.ph_subscriptions:
-                            subscribed_peers = self.ph_subscriptions[record.coin.puzzle_hash]
-                            for peer in subscribed_peers:
-                                if peer not in changes_for_peers:
-                                    changes_for_peers[peer] = set()
-                                changes_for_peers[peer].add(record.coin_state)
+                        self.check_subscriptions(record, changes_for_peers)
 
                     for record in removed_rec:
                         assert record
                         lastest_coin_state[record.name] = record
-                        if record.name in self.coin_subscriptions:
-                            subscribed_peers = self.coin_subscriptions[record.name]
-                            for peer in subscribed_peers:
-                                if peer not in changes_for_peers:
-                                    changes_for_peers[peer] = set()
-                                changes_for_peers[peer].add(record.coin_state)
-
-                        if record.coin.puzzle_hash in self.ph_subscriptions:
-                            subscribed_peers = self.ph_subscriptions[record.coin.puzzle_hash]
-                            for peer in subscribed_peers:
-                                if peer not in changes_for_peers:
-                                    changes_for_peers[peer] = set()
-                                changes_for_peers[peer].add(record.coin_state)
+                        self.check_subscriptions(record, changes_for_peers)
 
                     if npc_res is not None:
                         hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
@@ -528,6 +504,21 @@ class Blockchain(BlockchainInterface):
                 return [], [], None
         else:
             return [], [], None
+
+    def check_subscriptions(self, record: CoinRecord, changes_for_peers: Dict[bytes32, Set[CoinState]]) -> None:
+        if record.name in self.coin_subscriptions:
+            subscribed_peers = self.coin_subscriptions[record.name]
+            for peer in subscribed_peers:
+                if peer not in changes_for_peers:
+                    changes_for_peers[peer] = set()
+                changes_for_peers[peer].add(record.coin_state)
+
+        if record.coin.puzzle_hash in self.ph_subscriptions:
+            subscribed_peers = self.ph_subscriptions[record.coin.puzzle_hash]
+            for peer in subscribed_peers:
+                if peer not in changes_for_peers:
+                    changes_for_peers[peer] = set()
+                changes_for_peers[peer].add(record.coin_state)
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert self.contains_block(header_hash)

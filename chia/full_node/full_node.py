@@ -249,7 +249,7 @@ class FullNode:
                 full_peak, peak, max(peak.height - 1, 0), None, []
             )
             await self.peak_post_processing_2(
-                full_peak, peak, max(peak.height - 1, 0), None, ([], {}), mempool_new_peak_result, fns_peak_result
+                full_peak, peak, max(peak.height - 1, 0), None, mempool_new_peak_result, fns_peak_result
             )
         if self.config["send_uncompact_interval"] != 0:
             sanitize_weight_proof_only = False
@@ -418,7 +418,7 @@ class FullNode:
                                 peak_fb, peak, fork_height, peer, coin_changes[0]
                             )
                             await self.peak_post_processing_2(
-                                peak_fb, peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
+                                peak_fb, peak, fork_height, peer, mempool_new_peak_result, fns_peak_result
                             )
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
@@ -1110,7 +1110,7 @@ class FullNode:
                 )
 
                 await self.peak_post_processing_2(
-                    peak_fb, peak, max(peak.height - 1, 0), None, ([], {}), mempool_new_peak_result, fns_peak_result
+                    peak_fb, peak, max(peak.height - 1, 0), None, mempool_new_peak_result, fns_peak_result
                 )
 
         if peak is not None and self.weight_proof_handler is not None:
@@ -1292,7 +1292,6 @@ class FullNode:
         record: BlockRecord,
         fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        coin_changes: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
         mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]],
         fns_peak_result: FullNodeStorePeakResult,
     ):
@@ -1517,7 +1516,7 @@ class FullNode:
             assert fork_height is not None
             assert fns_peak_result is not None
             await self.peak_post_processing_2(
-                block, new_peak, fork_height, peer, coin_changes, mempool_new_peak_result, fns_peak_result
+                block, new_peak, fork_height, peer, mempool_new_peak_result, fns_peak_result
             )
 
         percent_full_str = (
