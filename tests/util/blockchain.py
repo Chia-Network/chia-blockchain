@@ -1,5 +1,4 @@
 import pickle
-from os import path
 from pathlib import Path
 from typing import List
 
@@ -66,7 +65,7 @@ def persistent_blocks(
     else:
         print(f"File not found at: {file_path}")
 
-    print(f"Creating a new test db")
+    print("Creating a new test db")
     return new_test_db(
         file_path,
         num_of_blocks,
