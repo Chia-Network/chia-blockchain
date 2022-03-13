@@ -523,10 +523,10 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        db_path = "path to db"
+        db_path = "path to db file"
         connection = await aiosqlite.connect(db_path)
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         overrides = config["network_overrides"]["constants"]["mainnet"]
@@ -549,57 +549,18 @@ class TestWeightProof:
         hint_store = await HintStore.create(wrapper)
         coin_store = await CoinStore.create(wrapper)
         blockchain = await Blockchain.create(
-            coin_store, block_store, updated_constants, hint_store, Path("/Users/almog/.chia/mainnet/db/")
+            coin_store, block_store, updated_constants, hint_store, Path("db folder")
         )
         peak = blockchain.get_peak()
-        # peak_height = peak.height
-        # peak_header = await block_store.get_full_blocks_at([peak_height])
-        # peak = peak_header[0]
-
-        # assert peak is not None
-
-        # Sets the other state variables (peak_height and height_to_hash)
-        # curr: BlockRecord = blocks[peak.header_hash]
-        # while True:
-        #     sub_height_to_hash[curr.height] = curr.header_hash
-        #     if curr.sub_epoch_summary_included is not None:
-        #         sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
-        #     if curr.height == 0:
-        #         break
-        #     curr = blocks[curr.prev_hash]
-        # assert len(sub_height_to_hash) == peak_height + 1
-        # block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-        summary_heights = blockchain.get_ses_heights()
         wpf = WeightProofHandlerV2(updated_constants, blockchain)
         wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak.height))
         wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
-        valid, fork_point = wpf_not_synced.validate_weight_proof_single_proc(wp)
+        valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
         await connection.close()
-        # assert valid
-        epoch = wp.sub_epoch_segments[0].sub_epoch_n
-        subepoch = []
-        for segment in wp.sub_epoch_segments:
-            if epoch != segment.sub_epoch_n:
-                break
-            subepoch.append(segment)
+        print(f"wp size is {len(bytes(wp))}")
 
-        print(f"sub epoch size  is {get_size(subepoch)}")
-        print(f"len is {len(wp.sub_epochs)} size  is {get_size(wp.sub_epochs)}")
-        print(f"len is {len(wp.sub_epoch_segments)} size  is {get_size(wp.sub_epoch_segments)}")
-        print(f"len is {len(wp.recent_chain_data)} size  is {get_size(wp.recent_chain_data)}")
-        print(f"wp size is {get_size(wp)}")
-        bits = bytes(wp)
-        f = open("/Users/almog/.chia/mainnet/db/wp.txt", "wb")
-        f.write(bits)
-        f.close()
-        in_file = open("/Users/almog/.chia/mainnet/db/wp.txt", "rb")
-        data = in_file.read()  # if you only wanted to read 512 bytes, do .read(512)
-        in_file.close()
-        new_wp2 = WeightProofV2.from_bytes(data)
-        print(f"wp size is {len(data)}")
-        print(f"wp size is {len(new_wp2.recent_chain_data)}")
-        print(f"wp size is {get_size(new_wp2)}")
+
 
 
 def get_size(obj, seen=None):

@@ -5,7 +5,6 @@ import math
 import random
 import time
 from concurrent.futures.process import ProcessPoolExecutor
-from multiprocessing import Pool
 from typing import Dict, List, Optional, Tuple, Union
 
 from chia.consensus.block_header_validation import validate_finished_header_block
@@ -250,7 +249,7 @@ class WeightProofHandlerV2:
 
             # if we have enough sub_epoch samples, dont sample
             if sample_n >= self.MAX_SAMPLES:
-                log.debug("reached sampled sub epoch cap")
+                log.info(f"reached sampled sub epoch cap {sample_n}")
                 break
             # sample sub epoch
             # next sub block
@@ -800,7 +799,7 @@ def compress_segments(
             # remove all redundant values
             segment = compress_segment(segment)
         compressed_segments.append(segment)
-    return segments
+    return compressed_segments
 
 
 def compress_segment(segment: SubEpochChallengeSegmentV2) -> SubEpochChallengeSegmentV2:
@@ -813,13 +812,20 @@ def compress_segment(segment: SubEpochChallengeSegmentV2) -> SubEpochChallengeSe
         segment.icc_sub_slot_hash,
         segment.prev_icc_ip_iters,
     )
+    after_challenge = False
     for subslot_data in segment.sub_slot_data:
-        new_slot = dataclasses.replace(
-            subslot_data,
-            cc_signage_point=None,
-            cc_infusion_point=None,
-            cc_slot_end=None,
-        )
+        new_slot = subslot_data
+        if after_challenge:
+            new_slot = dataclasses.replace(
+                    subslot_data,
+                    cc_signage_point=None,
+                    cc_infusion_point=None,
+                    cc_slot_end=None,
+                    icc_infusion_point=None,
+                    icc_slot_end=None,
+                )
+        if subslot_data.is_challenge():
+            after_challenge = True
         comp_seg.sub_slot_data.append(new_slot)
     return comp_seg
 
