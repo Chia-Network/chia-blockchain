@@ -1374,6 +1374,11 @@ def get_challenges(
 
 def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+
+    ci = os.environ.get("CI")
+    if ci is not None and not cache_path.exists():
+        raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
+
     mkdir(cache_path)
     return cache_path
 
