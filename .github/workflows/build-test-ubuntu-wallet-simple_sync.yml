@@ -74,8 +74,8 @@ jobs:
       run: |
         cd $HOME
         ln -s $GITHUB_WORKSPACE/.chia_elsewhere
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        echo "$HOME/.chia_elsewhere"
+        ls -al $HOME/.chia_elsewhere
 
     - name: Install ubuntu dependencies
       run: |
