@@ -42,7 +42,7 @@ def service_kwargs_for_data_layer(
         advertised_port=dl_config["port"],
         service_name=SERVICE_NAME,
         network_id=network_id,
-        max_request_body_size=dl_config["rpc_server_max_request_body_size"],
+        max_request_body_size=dl_config.get("rpc_server_max_request_body_size", 26214400),
     )
     port = dl_config.get("port")
     if port is not None:
