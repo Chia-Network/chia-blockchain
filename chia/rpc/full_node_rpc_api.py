@@ -593,9 +593,12 @@ class FullNodeRpcApi:
         """
         if "hint" not in request:
             raise ValueError("Hint not in request")
-        
-        names: List[bytes32] = await self.full_node.hint_store.get_coin_ids(request["hint"])
-        
+
+        if self.service.hint_store is None:
+
+            return {"coin_records": []}
+        names: List[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
+
         kwargs: Dict[str, Any] = {
             "include_spent_coins": False,
             "names": names,
@@ -608,7 +611,7 @@ class FullNodeRpcApi:
 
         if "include_spent_coins" in request:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
-        
+
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
