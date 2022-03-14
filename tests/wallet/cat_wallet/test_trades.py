@@ -3,6 +3,7 @@ from secrets import token_bytes
 from typing import List
 
 import pytest
+import pytest_asyncio
 
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -30,7 +31,7 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
@@ -39,7 +40,7 @@ async def two_wallet_nodes():
 buffer_blocks = 4
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def wallets_prefarm(two_wallet_nodes, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.

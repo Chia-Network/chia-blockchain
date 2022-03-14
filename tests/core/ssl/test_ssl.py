@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 import pytest
+import pytest_asyncio
 
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.outbound_message import NodeType
@@ -51,22 +52,22 @@ async def establish_connection(server: ChiaServer, dummy_port: int, ssl_context)
 
 
 class TestSSL:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def harvester_farmer(self):
         async for _ in setup_farmer_harvester(test_constants):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self):
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def introducer(self):
         async for _ in setup_introducer(21233):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def timelord(self):
         async for _ in setup_timelord(21236, 21237, False, test_constants, bt):
             yield _
