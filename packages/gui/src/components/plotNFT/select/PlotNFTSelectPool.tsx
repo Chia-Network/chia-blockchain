@@ -90,7 +90,6 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   const hasBalance = !!balance && balance > 0;
 
   const methods = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues: {
       fee: '',
       self: true,

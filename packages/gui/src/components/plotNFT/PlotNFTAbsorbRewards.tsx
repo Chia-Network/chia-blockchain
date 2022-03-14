@@ -51,7 +51,6 @@ export default function PlotNFTAbsorbRewards(props: Props) {
   }, [data?.nfts, plotNFTId]);
 
   const methods = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues: {
       fee: '',
     },

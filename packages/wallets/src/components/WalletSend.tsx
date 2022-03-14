@@ -45,7 +45,6 @@ export default function WalletSend(props: SendCardProps) {
   const [sendTransaction, { isLoading: isSendTransactionLoading }] = useSendTransactionMutation();
   const [farmBlock] = useFarmBlockMutation();
   const methods = useForm<SendTransactionData>({
-    shouldUnregister: false,
     defaultValues: {
       address: '',
       amount: '',

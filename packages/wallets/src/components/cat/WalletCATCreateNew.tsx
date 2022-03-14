@@ -13,7 +13,6 @@ type CreateCATWalletData = {
 export default function WalletCATCreateNew() {
   const navigate = useNavigate();
   const methods = useForm<CreateCATWalletData>({
-    shouldUnregister: false,
     defaultValues: {
       amount: '',
       fee: '',

@@ -19,7 +19,6 @@ type CreateExistingCATWalletData = {
 
 export default function WalletCATCreateExisting() {
   const methods = useForm<CreateExistingCATWalletData>({
-    shouldUnregister: false,
     defaultValues: {
       name: '',
       fee: '',

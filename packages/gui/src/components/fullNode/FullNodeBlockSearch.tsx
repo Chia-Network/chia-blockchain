@@ -18,7 +18,6 @@ type FormData = {
 export default function FullNodeBlockSearch() {
   const navigate = useNavigate();
   const methods = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues: {
       hash: '',
     },

@@ -51,7 +51,6 @@ function OfferEditor(props: OfferEditorProps) {
     takerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: 0 }],
   };
   const methods = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues,
   });
   const errorDialog = useShowError();

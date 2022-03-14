@@ -30,7 +30,6 @@ export default function WalletRenameDialog(props: Props) {
 
   const openDialog = useOpenDialog();
   const methods = useForm<WalletRenameDialogFormData>({
-    shouldUnregister: false,
     defaultValues: {
       name,
     },

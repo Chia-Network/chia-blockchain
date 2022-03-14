@@ -71,7 +71,6 @@ export default function PlotAddForm(props: Props) {
   }
 
   const methods = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues: defaultsForPlotter(PlotterName.CHIAPOS),
   });
 

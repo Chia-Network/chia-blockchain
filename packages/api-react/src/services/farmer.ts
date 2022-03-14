@@ -37,9 +37,9 @@ export const farmerApi = apiWithTag.injectEndpoints({
     }),
 
     getRewardTargets: build.query<undefined, { 
-      searchForPrivateKey: boolean; 
+      searchForPrivateKey?: boolean; 
     }>({
-      query: ({ searchForPrivateKey }) => ({
+      query: ({ searchForPrivateKey } = {}) => ({
         command: 'getRewardTargets',
         service: Farmer,
         args: [searchForPrivateKey],

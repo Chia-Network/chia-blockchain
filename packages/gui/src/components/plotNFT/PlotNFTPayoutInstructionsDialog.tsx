@@ -41,7 +41,6 @@ export default function PlotNFTPayoutInstructionsDialog(props: Props) {
 
   const methods = useForm<FormData>({
     mode: 'onChange',
-    shouldUnregister: false,
     defaultValues: {
       payoutAddress: payoutAddress || '',
     },

@@ -61,7 +61,6 @@ export default function WalletCATSend(props: Props) {
   }, [currencyCode]);
 
   const methods = useForm<SendTransactionData>({
-    shouldUnregister: false,
     defaultValues: {
       address: '',
       amount: '',
