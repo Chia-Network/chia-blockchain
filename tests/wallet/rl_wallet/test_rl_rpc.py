@@ -52,12 +52,13 @@ async def check_balance(api, wallet_id):
     return balance
 
 
-class TestRLWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def three_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 3, {}):
+        yield _
 
+
+class TestRLWallet:
     @pytest.mark.asyncio
     @pytest.mark.skip
     async def test_create_rl_coin(self, three_wallet_nodes, self_hostname):

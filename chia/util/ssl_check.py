@@ -79,7 +79,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
 
         # Check the Mozilla Root CAs as well
         all_certs.append(Path(get_mozilla_ca_crt()))
-    except ValueError:
+    except (FileNotFoundError, ValueError):
         pass
 
     return all_certs, all_keys

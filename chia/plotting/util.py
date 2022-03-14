@@ -9,7 +9,7 @@ from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, save_config, get_config_lock
 
 log = logging.getLogger(__name__)
 
@@ -79,28 +79,30 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
 
 def add_plot_directory(root_path: Path, str_path: str) -> Dict:
     log.debug(f"add_plot_directory {str_path}")
-    config = load_config(root_path, "config.yaml")
-    if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
-        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
-    save_config(root_path, "config.yaml", config)
-    return config
+    with get_config_lock(root_path, "config.yaml"):
+        config = load_config(root_path, "config.yaml", acquire_lock=False)
+        if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
+            config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+        save_config(root_path, "config.yaml", config)
+        return config
 
 
 def remove_plot_directory(root_path: Path, str_path: str) -> None:
     log.debug(f"remove_plot_directory {str_path}")
-    config = load_config(root_path, "config.yaml")
-    str_paths: List[str] = get_plot_directories(root_path, config)
-    # If path str matches exactly, remove
-    if str_path in str_paths:
-        str_paths.remove(str_path)
+    with get_config_lock(root_path, "config.yaml"):
+        config = load_config(root_path, "config.yaml", acquire_lock=False)
+        str_paths: List[str] = get_plot_directories(root_path, config)
+        # If path str matches exactly, remove
+        if str_path in str_paths:
+            str_paths.remove(str_path)
 
-    # If path matches full path, remove
-    new_paths = [Path(sp).resolve() for sp in str_paths]
-    if Path(str_path).resolve() in new_paths:
-        new_paths.remove(Path(str_path).resolve())
+        # If path matches full path, remove
+        new_paths = [Path(sp).resolve() for sp in str_paths]
+        if Path(str_path).resolve() in new_paths:
+            new_paths.remove(Path(str_path).resolve())
 
-    config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
-    save_config(root_path, "config.yaml", config)
+        config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
+        save_config(root_path, "config.yaml", config)
 
 
 def remove_plot(path: Path):

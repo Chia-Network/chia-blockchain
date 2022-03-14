@@ -23,12 +23,13 @@ def event_loop():
     yield loop
 
 
-class TestWalletBlockchain:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self, self_hostname):
-        async for _ in setup_node_and_wallet(test_constants, self_hostname):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+        yield _
 
+
+class TestWalletBlockchain:
     @pytest.mark.asyncio
     async def test_wallet_blockchain(self, wallet_node, default_1000_blocks):
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node

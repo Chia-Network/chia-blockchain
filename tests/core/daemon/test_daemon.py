@@ -19,44 +19,49 @@ from tests.time_out_assert import time_out_assert_custom_interval, time_out_asse
 from tests.util.keyring import TempKeyring
 
 
+@pytest_asyncio.fixture(scope="function")
+async def get_temp_keyring():
+    with TempKeyring() as keychain:
+        yield keychain
+
+
+@pytest_asyncio.fixture(scope="function")
+async def get_b_tools_1(get_temp_keyring):
+    return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def get_b_tools(get_temp_keyring):
+    local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
+    new_config = local_b_tools._config
+    local_b_tools.change_config(new_config)
+    return local_b_tools
+
+
+@pytest_asyncio.fixture(scope="function")
+async def get_daemon_with_temp_keyring(get_b_tools):
+    async for daemon in setup_daemon(btools=get_b_tools):
+        yield get_b_tools, daemon
+
+
+# TODO: Ideally, the db_version should be the (parameterized) db_version
+# fixture, to test all versions of the database schema. This doesn't work
+# because of a hack in shutting down the full node, which means you cannot run
+# more than one simulations per process.
+@pytest_asyncio.fixture(scope="function")
+async def simulation(bt, get_b_tools, get_b_tools_1):
+    async for _ in setup_full_system(
+        test_constants_modified,
+        bt,
+        b_tools=get_b_tools,
+        b_tools_1=get_b_tools_1,
+        connect_to_daemon=True,
+        db_version=1,
+    ):
+        yield _
+
+
 class TestDaemon:
-    @pytest_asyncio.fixture(scope="function")
-    async def get_temp_keyring(self):
-        with TempKeyring() as keychain:
-            yield keychain
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools_1(self, get_temp_keyring):
-        return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_b_tools(self, get_temp_keyring):
-        local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-        new_config = local_b_tools._config
-        local_b_tools.change_config(new_config)
-        return local_b_tools
-
-    @pytest_asyncio.fixture(scope="function")
-    async def get_daemon_with_temp_keyring(self, get_b_tools):
-        async for daemon in setup_daemon(btools=get_b_tools):
-            yield get_b_tools, daemon
-
-    # TODO: Ideally, the db_version should be the (parameterized) db_version
-    # fixture, to test all versions of the database schema. This doesn't work
-    # because of a hack in shutting down the full node, which means you cannot run
-    # more than one simulations per process.
-    @pytest_asyncio.fixture(scope="function")
-    async def simulation(self, bt, get_b_tools, get_b_tools_1):
-        async for _ in setup_full_system(
-            test_constants_modified,
-            bt,
-            b_tools=get_b_tools,
-            b_tools_1=get_b_tools_1,
-            connect_to_daemon=True,
-            db_version=1,
-        ):
-            yield _
-
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, self_hostname, simulation, bt, get_b_tools, get_b_tools_1):
         node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
@@ -332,7 +337,7 @@ class TestDaemon:
                 # Expect: Failure due to invalid mnemonic
                 await check_invalid_mnemonic_length_case(await ws.receive())
 
-                # When: using using an incorrect mnemnonic
+                # When: using an incorrect mnemnonic
                 await ws.send_str(
                     create_payload(
                         "add_private_key", {"mnemonic": " ".join(["abandon"] * 24), "passphrase": ""}, "test", "daemon"

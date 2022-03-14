@@ -27,12 +27,13 @@ def event_loop():
     yield loop
 
 
-class TestDIDWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def three_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 3, {}):
+        yield _
 
+
+class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_create_did(self, bt, three_wallet_nodes, self_hostname):
         num_blocks = 4

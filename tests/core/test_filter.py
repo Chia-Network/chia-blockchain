@@ -14,12 +14,13 @@ def event_loop():
     yield loop
 
 
-class TestFilter:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_and_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def wallet_and_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
 
+
+class TestFilter:
     @pytest.mark.asyncio
     async def test_basic_filter_test(self, wallet_and_node, bt):
         full_nodes, wallets = wallet_and_node

@@ -21,32 +21,37 @@ from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_100_pk():
+    async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_five_freeze():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_sim_two_wallets():
+    async for _ in setup_simulators_and_wallets(3, 2, {}, True):
+        yield _
+
+
 class TestWalletSimulator:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_100_pk(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}, True):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
