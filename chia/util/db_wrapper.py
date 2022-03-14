@@ -99,14 +99,15 @@ class DBWrapper2:
         task = asyncio.current_task()
         assert task is not None
 
-        async with contextlib.AsyncExitStack() as exit_stack:
-            if self._current_writer != task:
-                # not nested inside an existing write context so acquire the lock
-                await exit_stack.enter_async_context(self._lock)
-
-            with self._set_current_writer(writer=task):
-                async with self._savepoint(connection=self._write_connection):
-                    yield self._write_connection
+        if self._current_writer != task:
+            # not nested inside an existing write context so acquire the lock
+            async with self._lock:
+                with self._set_current_writer(writer=task):
+                    async with self._savepoint(connection=self._write_connection):
+                        yield self._write_connection
+        else:
+            async with self._savepoint(connection=self._write_connection):
+                yield self._write_connection
 
     @contextlib.asynccontextmanager
     async def _read_connection(self) -> AsyncIterator[aiosqlite.Connection]:
