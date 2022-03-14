@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import AsyncIterator, Dict, Optional
+from typing import AsyncIterator, Dict, Iterator, Optional
 
 import aiosqlite
 
@@ -71,38 +71,51 @@ class DBWrapper2:
         return name
 
     @contextlib.asynccontextmanager
+    async def _savepoint(self, connection) -> AsyncIterator[None]:
+        name = self._next_savepoint()
+        await connection.execute(f"SAVEPOINT {name}")
+        try:
+            # TODO: maybe yield out something to make it possible to cancel the
+            #       savepoint other than raising an exception?
+            yield
+        except:  # noqa E722
+            await connection.execute(f"ROLLBACK TO {name}")
+            raise
+        finally:
+            # rollback to a savepoint doesn't cancel the transaction, it
+            # just rolls back the state. We need to cancel it regardless
+            await connection.execute(f"RELEASE {name}")
+
+    @contextlib.contextmanager
+    def _set_current_writer(self, writer: asyncio.Task) -> Iterator[None]:
+        self._current_writer = writer
+        try:
+            yield
+        finally:
+            self._current_writer = None
+
+    @contextlib.asynccontextmanager
     async def write_db(self) -> AsyncIterator[aiosqlite.Connection]:
         task = asyncio.current_task()
         assert task is not None
-        if self._current_writer == task:
-            # we allow nesting writers within the same task
 
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            try:
+        if self._current_writer != task:
+            # not nested inside an existing write context so acquire the lock
+            async with self._lock:
+                with self._set_current_writer(writer=task):
+                    async with self._savepoint(connection=self._write_connection):
+                        yield self._write_connection
+        else:
+            async with self._savepoint(connection=self._write_connection):
                 yield self._write_connection
-            except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
-                raise
-            finally:
-                # rollback to a savepoint doesn't cancel the transaction, it
-                # just rolls back the state. We need to cancel it regardless
-                await self._write_connection.execute(f"RELEASE {name}")
-            return
 
-        async with self._lock:
-
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            try:
-                self._current_writer = task
-                yield self._write_connection
-            except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
-                raise
-            finally:
-                self._current_writer = None
-                await self._write_connection.execute(f"RELEASE {name}")
+    @contextlib.asynccontextmanager
+    async def _read_connection(self) -> AsyncIterator[aiosqlite.Connection]:
+        connection = await self._read_connections.get()
+        try:
+            yield connection
+        finally:
+            self._read_connections.put_nowait(connection)
 
     @contextlib.asynccontextmanager
     async def read_db(self) -> AsyncIterator[aiosqlite.Connection]:
@@ -123,15 +136,16 @@ class DBWrapper2:
             yield self._write_connection
             return
 
-        if task in self._in_use:
-            yield self._in_use[task]
-        else:
-            c = await self._read_connections.get()
+        maybe_connection = self._in_use.get(task)
+        if maybe_connection is not None:
+            yield maybe_connection
+            return
+
+        async with self._read_connection() as connection:
+            # record our connection in this dict to allow nested calls in
+            # the same task to use the same connection
+            self._in_use[task] = connection
             try:
-                # record our connection in this dict to allow nested calls in
-                # the same task to use the same connection
-                self._in_use[task] = c
-                yield c
+                yield connection
             finally:
                 del self._in_use[task]
-                self._read_connections.put_nowait(c)
