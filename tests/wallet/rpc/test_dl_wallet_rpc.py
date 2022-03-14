@@ -3,6 +3,7 @@ import logging
 from typing import AsyncIterator, List, Tuple
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -29,7 +30,7 @@ SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, Chi
 
 
 class TestWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _

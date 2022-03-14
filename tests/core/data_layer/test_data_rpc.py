@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Tuple, Set
 import pytest
+import pytest_asyncio
 
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -39,13 +40,13 @@ async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
     await service.wait_closed()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def one_wallet_node() -> AsyncIterator[nodes]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
         full_nodes, wallets = nodes
