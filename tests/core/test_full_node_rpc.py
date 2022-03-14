@@ -196,30 +196,45 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
-            coin_to_spend = list(blocks[-1].get_included_reward_coins())[1]
+            memo = 32 * b"\f"
 
-            memo = "c0ffee".encode("utf-8")
+            for i in range(2):
+                await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            # First coin created with memo
-            spend_bundle = wallet.generate_signed_transaction(
-                coin_to_spend.amount, ph_receiver, coin_to_spend, memo=memo
-            )
-            await client.push_tx(spend_bundle)
+                state = await client.get_blockchain_state()
+                block = await client.get_block(state["peak"].header_hash)
+
+                coin_to_spend = list(block.get_included_reward_coins())[0]
+
+                spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
+                await client.push_tx(spend_bundle)
+
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            # Second coin created with memo
-            coin_to_spend = list(blocks[-1].get_included_reward_coins())[2]
-            spend_bundle = wallet.generate_signed_transaction(
-                coin_to_spend.amount, ph_receiver, coin_to_spend, memo=memo
-            )
+            coin_to_spend = (await client.get_coin_records_by_hint(memo))[0].coin
+
+            # Spend the most recent coin so we can test including spent coins later
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
+
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            # Get coin records by hint
             coin_records = await client.get_coin_records_by_hint(memo)
+
+            assert len(coin_records) == 3
+
+            coin_records = await client.get_coin_records_by_hint(memo, include_spent_coins=False)
+
             assert len(coin_records) == 2
 
-            # todo: tests that cover include_spent_coins / start_height / end_height
+            state = await client.get_blockchain_state()
+
+            # Get coin records by hint
+            coin_records = await client.get_coin_records_by_hint(
+                memo, start_height=state["peak"].height - 1, end_height=state["peak"].height
+            )
+
+            assert len(coin_records) == 1
 
             assert len(await client.get_connections()) == 0
 
