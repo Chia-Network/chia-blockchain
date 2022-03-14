@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional, Union, Callable
+from typing import Any, Callable, Dict, Optional, Union
 
 import click
 
@@ -11,54 +11,36 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
 from chia.util.network import is_trusted_inner
-from chia.wallet.transaction_record import TransactionRecord
 
 
-def print_coins_transactions(
+def print_coins(
     verbose: bool,
     name: str,
     address_prefix: str,
     mojo_per_unit: int,
-    tx_record: Optional[TransactionRecord] = None,
-    coin_record: Optional[CoinRecord] = None,
+    coin_record: CoinRecord,
 ) -> None:
-    if tx_record:
-        if verbose:
-            print(tx_record)
-        else:
-            chia_amount = Decimal(int(tx_record.amount)) / mojo_per_unit
-            to_address = encode_puzzle_hash(tx_record.to_puzzle_hash, address_prefix)
-            print(f"Transaction {tx_record.name}")
-            print(
-                "Status: "
-                f"{'Confirmed' if tx_record.confirmed else ('In mempool' if tx_record.is_in_mempool() else 'Pending')}"
-            )
-            print(f"Amount {'sent' if tx_record.sent else 'received'}: {chia_amount} {name}")
-            print(f"To address: {to_address}")
-            print("Created at:", datetime.fromtimestamp(tx_record.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
-            print("")
-    elif coin_record:
-        if verbose:
-            print(coin_record)
-        else:
-            chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
-            coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
-            confirmed_block = coin_record.confirmed_block_index
-            print(f"Coin 0x{coin_record.name}")
-            print(f"Wallet Address: {coin_address}")
-            print(
-                "Status: "
-                f"{f'Confirmed at block: {confirmed_block}' if coin_record.confirmed_block_index != 0 else 'Pending'}"
-            )
-            print(f"Spent: {f'At Block {coin_record}' if not coin_record.spent else 'No'}")
-            print(f"Amount {'sent'}: {chia_amount} {name}")
-            print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info}")
-            print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
-            print("")
+    if verbose:
+        print(coin_record)
+    else:
+        chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
+        coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
+        confirmed_block = coin_record.confirmed_block_index
+        print(f"Coin 0x{coin_record.name}")
+        print(f"Wallet Address: {coin_address}")
+        print(
+            "Status: "
+            f"{f'Confirmed at block: {confirmed_block}' if coin_record.confirmed_block_index != 0 else 'Pending'}"
+        )
+        print(f"Spent: {f'At Block {coin_record}' if not coin_record.spent else 'No'}")
+        print(f"Amount {'sent'}: {chia_amount} {name}")
+        print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info}")
+        print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
+        print("")
 
 
-async def print_connections(client, time, NodeType, trusted_peers: Dict):
-    connections = await client.get_connections()
+async def print_connections(node_client, time, NodeType, trusted_peers: Dict):
+    connections = await node_client.get_connections()
     print("Connections:")
     print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
     for con in connections:
@@ -116,16 +98,17 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
+    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
-        client: FullNodeRpcClient = await FullNodeRpcClient.create(
+        node_client: FullNodeRpcClient = await FullNodeRpcClient.create(
             self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config
         )
-        await function(client, config, *args)
+        await function(node_client, config, *args)
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
@@ -135,12 +118,12 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
 
-    client.close()
-    await client.await_closed()
+    node_client.close()
+    await node_client.await_closed()
 
 
 async def show_async(
-    client: FullNodeRpcClient,
+    node_client: FullNodeRpcClient,
     config: Dict,
     state: bool,
     show_connections: bool,
@@ -165,7 +148,7 @@ async def show_async(
     from chia.util.misc import format_bytes
 
     if state:
-        blockchain_state = await client.get_blockchain_state()
+        blockchain_state = await node_client.get_blockchain_state()
         if blockchain_state is None:
             print("There is no blockchain found yet. Try again shortly")
             return None
@@ -208,9 +191,9 @@ async def show_async(
                 peak_time = peak.timestamp
             else:
                 peak_hash = peak.header_hash
-                curr = await client.get_block_record(peak_hash)
+                curr = await node_client.get_block_record(peak_hash)
                 while curr is not None and not curr.is_transaction_block:
-                    curr = await client.get_block_record(curr.prev_hash)
+                    curr = await node_client.get_block_record(curr.prev_hash)
                 if curr is not None:
                     peak_time = curr.timestamp
                 else:
@@ -232,10 +215,10 @@ async def show_async(
             print("  Height: |   Hash:")
 
             added_blocks: List[BlockRecord] = []
-            curr = await client.get_block_record(peak.header_hash)
+            curr = await node_client.get_block_record(peak.header_hash)
             while curr is not None and len(added_blocks) < num_blocks and curr.height > 0:
                 added_blocks.append(curr)
-                curr = await client.get_block_record(curr.prev_hash)
+                curr = await node_client.get_block_record(curr.prev_hash)
 
             for b in added_blocks:
                 print(f"{b.height:>9} | {b.header_hash}")
@@ -247,12 +230,12 @@ async def show_async(
             print("")
     if show_connections:
         trusted_peers: Dict = config["full_node"].get("trusted_peers", {})
-        await print_connections(client, time, NodeType, trusted_peers)
+        await print_connections(node_client, time, NodeType, trusted_peers)
         # if called together with state, leave a blank line
         if state:
             print("")
     if exit_node:
-        node_stop = await client.stop_node()
+        node_stop = await node_client.stop_node()
         print(node_stop, "Node stopped")
     if add_connection:
         if ":" not in add_connection:
@@ -264,7 +247,7 @@ async def show_async(
             )
             print(f"Connecting to {ip}, {port}")
             try:
-                await client.open_connection(ip, int(port))
+                await node_client.open_connection(ip, int(port))
             except Exception:
                 print(f"Failed to connect to {ip}:{port}")
     if remove_connection:
@@ -272,12 +255,12 @@ async def show_async(
         if len(remove_connection) != 8:
             result_txt = "Invalid NodeID. Do not include '.'"
         else:
-            connections = await client.get_connections()
+            connections = await node_client.get_connections()
             for con in connections:
                 if remove_connection == con["node_id"].hex()[:8]:
                     print("Attempting to disconnect", "NodeID", remove_connection)
                     try:
-                        await client.close_connection(con["node_id"])
+                        await node_client.close_connection(con["node_id"])
                     except Exception:
                         result_txt = f"Failed to disconnect NodeID {remove_connection}"
                     else:
@@ -287,18 +270,18 @@ async def show_async(
                     result_txt = f"NodeID {remove_connection}... not found"
         print(result_txt)
     if block_header_hash_by_height != "":
-        block_header = await client.get_block_record_by_height(block_header_hash_by_height)
+        block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
         if block_header is not None:
             print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
         else:
             print("Block height", block_header_hash_by_height, "not found")
     if block_by_header_hash != "":
-        block: Optional[BlockRecord] = await client.get_block_record(hexstr_to_bytes(block_by_header_hash))
-        full_block: Optional[FullBlock] = await client.get_block(hexstr_to_bytes(block_by_header_hash))
+        block: Optional[BlockRecord] = await node_client.get_block_record(hexstr_to_bytes(block_by_header_hash))
+        full_block: Optional[FullBlock] = await node_client.get_block(hexstr_to_bytes(block_by_header_hash))
         # Would like to have a verbose flag for this
         if block is not None:
             assert full_block is not None
-            prev_b = await client.get_block_record(block.prev_hash)
+            prev_b = await node_client.get_block_record(block.prev_hash)
             if prev_b is not None:
                 difficulty = block.weight - prev_b.weight
             else:
@@ -363,7 +346,7 @@ async def show_async(
             except ValueError:
                 print("Invalid address")
             else:
-                coin_records = await client.get_coin_records_by_puzzle_hash(ph)
+                coin_records = await node_client.get_coin_records_by_puzzle_hash(ph)
                 if len(coin_records) == 0:
                     print("There are no transactions to this address")
         else:
@@ -374,7 +357,7 @@ async def show_async(
             except ValueError:
                 print("Invalid coin id")
             else:
-                coin_record = await client.get_coin_record_by_name(coin_id)
+                coin_record = await node_client.get_coin_record_by_name(coin_id)
                 if coin_record is None:
                     print("Invalid CoinID: This coin does not exist.")
                 else:
@@ -391,7 +374,7 @@ async def show_async(
                 for j in range(0, num_per_screen):
                     if i + j >= len(coin_records):
                         break
-                    print_coins_transactions(
+                    print_coins(
                         coin_record=coin_records[i + j],
                         verbose=(verbose > 0),
                         name=name,

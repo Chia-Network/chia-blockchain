@@ -4,16 +4,17 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple, Dict
 
 import aiohttp
 
-from chia.cmds.show import print_coins_transactions, print_connections
+from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
@@ -22,6 +23,20 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
+
+
+def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
+    if verbose:
+        print(tx)
+    else:
+        chia_amount = Decimal(int(tx.amount)) / mojo_per_unit
+        to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
+        print(f"Transaction {tx.name}")
+        print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
+        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        print(f"To address: {to_address}")
+        print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        print("")
 
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
@@ -82,8 +97,8 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
         print(e.args[0])
         return
 
-    print_coins_transactions(
-        tx_record=tx,
+    print_transaction(
+        tx,
         verbose=(args["verbose"] > 0),
         name=name,
         address_prefix=address_prefix,
@@ -124,8 +139,8 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
-            print_coins_transactions(
-                tx_record=txs[i + j],
+            print_transaction(
+                txs[i + j],
                 verbose=(args["verbose"] > 0),
                 name=name,
                 address_prefix=address_prefix,
