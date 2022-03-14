@@ -67,7 +67,7 @@ def add_private_key_seed(mnemonic: str):
 
 
 @unlocks_keyring(use_passphrase_cache=True)
-def show_all_keys(show_mnemonic: bool):
+def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
     """
     Prints all keys and mnemonics (if available).
     """
@@ -92,10 +92,13 @@ def show_all_keys(show_mnemonic: bool):
             master_sk_to_farmer_sk(sk).get_g1(),
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
-        print(
-            "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
+        first_wallet_sk: PrivateKey = (
+            master_sk_to_wallet_sk(sk, uint32(0))
+            if non_observer_derivation
+            else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
+        wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
+        print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
         assert seed is not None
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())

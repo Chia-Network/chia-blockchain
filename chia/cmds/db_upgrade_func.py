@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 from time import time
 
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, save_config, get_config_lock
 from chia.util.path import mkdir, path_from_root
 from chia.util.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -44,11 +44,12 @@ def db_upgrade_func(
 
     if update_config:
         print("updating config.yaml")
-        config = load_config(root_path, "config.yaml")
-        new_db_path = db_pattern.replace("_v1_", "_v2_")
-        config["full_node"]["database_path"] = new_db_path
-        print(f"database_path: {new_db_path}")
-        save_config(root_path, "config.yaml", config)
+        with get_config_lock(root_path, "config.yaml"):
+            config = load_config(root_path, "config.yaml", acquire_lock=False)
+            new_db_path = db_pattern.replace("_v1_", "_v2_")
+            config["full_node"]["database_path"] = new_db_path
+            print(f"database_path: {new_db_path}")
+            save_config(root_path, "config.yaml", config)
 
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 

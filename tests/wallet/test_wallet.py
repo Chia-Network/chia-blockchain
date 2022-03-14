@@ -16,43 +16,48 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_100_pk():
+    async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_five_freeze():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_sim_two_wallets():
+    async for _ in setup_simulators_and_wallets(3, 2, {}, True):
+        yield _
+
+
 class TestWalletSimulator:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_100_pk(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}, True):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node, trusted):
+    async def test_wallet_coinbase(self, wallet_node, trusted, self_hostname):
         num_blocks = 10
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -108,7 +113,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes, trusted):
+    async def test_wallet_make_transaction(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -165,7 +170,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase_reorg(self, wallet_node, trusted):
+    async def test_wallet_coinbase_reorg(self, wallet_node, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
@@ -204,7 +209,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets, trusted):
+    async def test_wallet_send_to_three_peers(self, three_sim_two_wallets, trusted, self_hostname):
         num_blocks = 10
         full_nodes, wallets = three_sim_two_wallets
 
@@ -270,7 +275,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze, trusted):
+    async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze, trusted, self_hostname):
         num_blocks = 10
         full_nodes, wallets = two_wallet_nodes_five_freeze
         full_node_api_0 = full_nodes[0]
@@ -390,7 +395,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes, trusted):
+    async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -457,7 +462,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes, trusted):
+    async def test_wallet_create_hit_max_send_amount(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -553,7 +558,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes, trusted):
+    async def test_wallet_prevent_fee_theft(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_1 = full_nodes[0]
@@ -638,7 +643,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_tx_reorg(self, two_wallet_nodes, trusted):
+    async def test_wallet_tx_reorg(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -732,7 +737,7 @@ class TestWalletSimulator:
         [False],
     )
     @pytest.mark.asyncio
-    async def test_address_sliding_window(self, wallet_node_100_pk, trusted):
+    async def test_address_sliding_window(self, wallet_node_100_pk, trusted, self_hostname):
         full_nodes, wallets = wallet_node_100_pk
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
@@ -775,7 +780,7 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_transaction_options(self, two_wallet_nodes, trusted):
+    async def test_wallet_transaction_options(self, two_wallet_nodes, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

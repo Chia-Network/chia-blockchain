@@ -40,7 +40,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, save_config, config_path_for_filename
+from chia.util.config import load_config, save_config, config_path_for_filename, get_config_lock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
@@ -317,9 +317,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"GET /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"GET /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -357,9 +359,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"POST /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"POST /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -374,7 +378,7 @@ class Farmer:
 
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> Optional[Dict]:
+    ) -> None:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
@@ -397,10 +401,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"PUT /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
-                        return response
+                        self.log.log(log_level, f"PUT /farmer response: {response}")
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -410,7 +415,6 @@ class Farmer:
             self.handle_failed_pool_response(
                 pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
             )
-        return None
 
     def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
         if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
@@ -464,16 +468,17 @@ class Farmer:
 
                 # TODO: Improve error handling below, inform about unexpected failures
                 if time.time() >= pool_state["next_pool_info_update"]:
+                    pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
-                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
 
                 if time.time() >= pool_state["next_farmer_update"]:
+                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
                     async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
@@ -489,7 +494,6 @@ class Farmer:
                                 if farmer_response is not None:
                                     pool_state["current_difficulty"] = farmer_response.current_difficulty
                                     pool_state["current_points"] = farmer_response.current_points
-                                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                             else:
                                 try:
                                     error_code_response = PoolErrorCode(response["error_code"])
@@ -497,11 +501,6 @@ class Farmer:
                                     self.log.error(
                                         f"Invalid error code received from the pool: {response['error_code']}"
                                     )
-
-                                self.log.error(
-                                    "update_pool_farmer_info failed: "
-                                    f"{response['error_code']}, {response['error_message']}"
-                                )
 
                         return farmer_response, error_code_response
 
@@ -537,29 +536,9 @@ class Farmer:
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
-                            put_farmer_response_dict = await self._pool_put_farmer(
+                            await self._pool_put_farmer(
                                 pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
-                            try:
-                                # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
-                                #     put_farmer_response_dict
-                                # )
-                                # if put_farmer_response.payout_instructions:
-                                #     self.log.info(
-                                #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                #     )
-                                # TODO: Fix Streamable implementation and recover the above.
-                                if put_farmer_response_dict["payout_instructions"]:
-                                    self.log.info(
-                                        f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                    )
-                                else:
-                                    raise Exception
-                            except Exception:
-                                self.log.error(
-                                    f"Failed to update farmer information on the pool {pool_config.pool_url}"
-                                )
-
                     else:
                         self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
@@ -602,34 +581,36 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]):
-        config = load_config(self._root_path, "config.yaml")
-        if farmer_target_encoded is not None:
-            self.farmer_target_encoded = farmer_target_encoded
-            self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
-            config["farmer"]["xch_target_address"] = farmer_target_encoded
-        if pool_target_encoded is not None:
-            self.pool_target_encoded = pool_target_encoded
-            self.pool_target = decode_puzzle_hash(pool_target_encoded)
-            config["pool"]["xch_target_address"] = pool_target_encoded
-        save_config(self._root_path, "config.yaml", config)
+        with get_config_lock(self._root_path, "config.yaml"):
+            config = load_config(self._root_path, "config.yaml", acquire_lock=False)
+            if farmer_target_encoded is not None:
+                self.farmer_target_encoded = farmer_target_encoded
+                self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
+                config["farmer"]["xch_target_address"] = farmer_target_encoded
+            if pool_target_encoded is not None:
+                self.pool_target_encoded = pool_target_encoded
+                self.pool_target = decode_puzzle_hash(pool_target_encoded)
+                config["pool"]["xch_target_address"] = pool_target_encoded
+            save_config(self._root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                config = load_config(self._root_path, "config.yaml")
-                new_list = []
-                pool_list = config["pool"].get("pool_list", [])
-                if pool_list is not None:
-                    for list_element in pool_list:
-                        if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
-                            list_element["payout_instructions"] = payout_instructions
-                        new_list.append(list_element)
+                with get_config_lock(self._root_path, "config.yaml"):
+                    config = load_config(self._root_path, "config.yaml", acquire_lock=False)
+                    new_list = []
+                    pool_list = config["pool"].get("pool_list", [])
+                    if pool_list is not None:
+                        for list_element in pool_list:
+                            if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
+                                list_element["payout_instructions"] = payout_instructions
+                            new_list.append(list_element)
 
-                config["pool"]["pool_list"] = new_list
-                save_config(self._root_path, "config.yaml", config)
-                # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
-                pool_state_dict["next_farmer_update"] = 0
-                return
+                    config["pool"]["pool_list"] = new_list
+                    save_config(self._root_path, "config.yaml", config)
+                    # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
+                    pool_state_dict["next_farmer_update"] = 0
+                    return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")
 

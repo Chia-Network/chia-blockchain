@@ -5,7 +5,7 @@ import pytest_asyncio
 
 from chia.farmer.farmer import Farmer
 from chia.util.keychain import generate_mnemonic
-from tests.setup_nodes import bt, setup_farmer_harvester, test_constants
+from tests.setup_nodes import setup_farmer_harvester, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -14,13 +14,13 @@ def farmer_is_started(farmer):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment():
-    async for _ in setup_farmer_harvester(test_constants, False):
+async def environment(bt):
+    async for _ in setup_farmer_harvester(bt, test_constants, False):
         yield _
 
 
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(environment):
+async def test_start_with_empty_keychain(environment, bt):
     _, farmer_service = environment
     farmer: Farmer = farmer_service._node
     # First remove all keys from the keychain
@@ -41,7 +41,7 @@ async def test_start_with_empty_keychain(environment):
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(environment):
+async def test_harvester_handshake(environment, bt):
     harvester_service, farmer_service = environment
     harvester = harvester_service._node
     farmer = farmer_service._node
