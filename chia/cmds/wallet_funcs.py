@@ -435,7 +435,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
 
 
 def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount / scale} {address_prefix} "
+    ret = f"{amount/scale} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
@@ -481,7 +481,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     else:
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i + 1}) {fp}")
+            print(f"{i+1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
