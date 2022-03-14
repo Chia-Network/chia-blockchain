@@ -5,7 +5,9 @@ import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, Iterable, List, Optional, Protocol, Tuple, Type, TypeVar
+from typing import Any, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
+
+from typing_extensions import Protocol
 
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
