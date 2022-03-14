@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, Optional, Union
 import click
 
 from chia.cmds.units import units
-from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
@@ -123,7 +122,7 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
 
 async def show_async(
-    node_client: FullNodeRpcClient,
+    node_client,
     config: Dict,
     state: bool,
     show_connections: bool,
