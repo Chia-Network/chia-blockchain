@@ -21,11 +21,11 @@ class WSChiaConnectionDummy:
     peer_port: int = 0
     last_sent_message: Optional[Message] = None
 
-    async def send_message(self, message: Message):
+    async def send_message(self, message: Message) -> None:
         self.last_sent_message = message
 
 
-def get_dummy_connection(node_type: NodeType, peer_id=None) -> WSChiaConnectionDummy:
+def get_dummy_connection(node_type: NodeType, peer_id: Optional[bytes32] = None) -> WSChiaConnectionDummy:
     return WSChiaConnectionDummy(node_type, bytes32(token_bytes(32)) if peer_id is None else peer_id)
 
 
@@ -38,7 +38,7 @@ async def start_harvester_service(harvester_service: Service) -> Harvester:
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
     await harvester_service.start()
-    harvester.plot_manager.stop_refreshing()
+    harvester.plot_manager.stop_refreshing()  # type: ignore[no-untyped-call]  # TODO, Add typing in PlotManager
 
     assert harvester.plot_sync_sender._sync_id == 0
     assert harvester.plot_sync_sender._next_message_id == 0

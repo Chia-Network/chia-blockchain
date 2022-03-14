@@ -15,14 +15,15 @@ from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import State
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import add_plot_directory, remove_plot_directory
+from chia.protocols.harvester_protocol import Plot
 from chia.server.start_service import Service
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config
-from chia.util.ints import uint64
+from chia.util.ints import uint8, uint64
+from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
-from tests.plotting.test_plot_manager import TestDirectory
+from tests.plotting.test_plot_manager import MockPlotInfo, TestDirectory
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
 
@@ -35,7 +36,7 @@ def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bo
     )
 
 
-def assert_path_list_matches(expected_list: List, actual_list: List):
+def assert_path_list_matches(expected_list: List[str], actual_list: List[str]) -> None:
     assert len(expected_list) == len(actual_list)
     for item in expected_list:
         assert str(item) in actual_list
@@ -53,37 +54,49 @@ class ExpectedResult:
     duplicates_delta: PathListDelta = field(default_factory=PathListDelta)
     callback_passed: bool = False
 
-    def add_valid(self, list_plots: List) -> None:
+    def add_valid(self, list_plots: List[MockPlotInfo]) -> None:
+        def create_mock_plot(info: MockPlotInfo) -> Plot:
+            return Plot(
+                info.prover.get_filename(),
+                uint8(0),
+                bytes32(b"\x00" * 32),
+                None,
+                None,
+                G1Element(),
+                uint64(0),
+                uint64(0),
+            )
+
         self.valid_count += len(list_plots)
-        self.valid_delta.additions.update({x.prover.get_filename(): x for x in list_plots})
+        self.valid_delta.additions.update({x.prover.get_filename(): create_mock_plot(x) for x in list_plots})
 
-    def remove_valid(self, list_paths: List) -> None:
+    def remove_valid(self, list_paths: List[Path]) -> None:
         self.valid_count -= len(list_paths)
-        self.valid_delta.removals += list_paths.copy()
+        self.valid_delta.removals += [str(x) for x in list_paths]
 
-    def add_invalid(self, list_paths: List) -> None:
+    def add_invalid(self, list_paths: List[Path]) -> None:
         self.invalid_count += len(list_paths)
-        self.invalid_delta.additions += list_paths.copy()
+        self.invalid_delta.additions += [str(x) for x in list_paths]
 
-    def remove_invalid(self, list_paths: List) -> None:
+    def remove_invalid(self, list_paths: List[Path]) -> None:
         self.invalid_count -= len(list_paths)
-        self.invalid_delta.removals += list_paths.copy()
+        self.invalid_delta.removals += [str(x) for x in list_paths]
 
-    def add_keys_missing(self, list_paths: List) -> None:
+    def add_keys_missing(self, list_paths: List[Path]) -> None:
         self.keys_missing_count += len(list_paths)
-        self.keys_missing_delta.additions += list_paths.copy()
+        self.keys_missing_delta.additions += [str(x) for x in list_paths]
 
-    def remove_keys_missing(self, list_paths: List) -> None:
+    def remove_keys_missing(self, list_paths: List[Path]) -> None:
         self.keys_missing_count -= len(list_paths)
-        self.keys_missing_delta.removals += list_paths.copy()
+        self.keys_missing_delta.removals += [str(x) for x in list_paths]
 
-    def add_duplicates(self, list_paths: List) -> None:
+    def add_duplicates(self, list_paths: List[Path]) -> None:
         self.duplicates_count += len(list_paths)
-        self.duplicates_delta.additions += list_paths.copy()
+        self.duplicates_delta.additions += [str(x) for x in list_paths]
 
-    def remove_duplicates(self, list_paths: List) -> None:
+    def remove_duplicates(self, list_paths: List[Path]) -> None:
         self.duplicates_count -= len(list_paths)
-        self.duplicates_delta.removals += list_paths.copy()
+        self.duplicates_delta.removals += [str(x) for x in list_paths]
 
 
 @dataclass
@@ -109,7 +122,7 @@ class Environment:
                 return harvester
         return None
 
-    def add_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.loaded):
+    def add_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.loaded) -> None:
         add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
         if state == State.loaded:
             self.expected[harvester_index].add_valid(directory.plot_info_list())
@@ -122,7 +135,7 @@ class Environment:
         else:
             assert False, "Invalid state"
 
-    def remove_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.removed):
+    def remove_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.removed) -> None:
         remove_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
         if state == State.removed:
             self.expected[harvester_index].remove_valid(directory.path_list())
@@ -155,7 +168,7 @@ class Environment:
         self.remove_directory(harvester_index, self.dir_invalid, State.invalid)
         self.remove_directory(harvester_index, self.dir_duplicates, State.duplicates)
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta):
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta) -> None:
         harvester: Optional[Harvester] = self.get_harvester(peer_id)
         assert harvester is not None
         expected = self.expected[self.harvesters.index(harvester)]
@@ -247,7 +260,9 @@ class Environment:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment(tmp_path: Path, farmer_multi_harvester: Tuple[List[Service], Service]) -> Environment:
+async def environment(
+    bt: BlockTools, tmp_path: Path, farmer_multi_harvester: Tuple[List[Service], Service]
+) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
         return TestDirectory(tmp_path / "plots" / name, plot_list)
 

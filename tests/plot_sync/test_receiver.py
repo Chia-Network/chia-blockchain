@@ -1,7 +1,7 @@
 import logging
 import time
 from secrets import token_bytes
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, Type, Union
 
 import pytest
 from blspy import G1Element
@@ -21,6 +21,7 @@ from chia.protocols.harvester_protocol import (
 from chia.server.ws_connection import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.streamable import _T_Streamable
 from tests.plot_sync.util import get_dummy_connection
 
 log = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def assert_default_values(receiver: Receiver) -> None:
     assert receiver.duplicates() == []
 
 
-async def dummy_callback(_, __) -> None:
+async def dummy_callback(_: bytes32, __: Delta) -> None:
     pass
 
 
@@ -50,7 +51,9 @@ class SyncStepData:
     payload_type: Any
     args: Any
 
-    def __init__(self, state: State, function: Callable, payload_type: Callable, *args) -> None:
+    def __init__(
+        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
+    ) -> None:
         self.state = state
         self.function = function
         self.payload_type = payload_type
@@ -61,7 +64,7 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
     return PlotSyncIdentifier(uint64(0), current_sync_id, message_id)
 
 
-def create_payload(payload_type: Any, start: bool, *args) -> Any:
+def create_payload(payload_type: Any, start: bool, *args: Any) -> Any:
     global next_message_id
     if start:
         next_message_id = uint64(0)
@@ -77,12 +80,13 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     assert message is not None
     response: PlotSyncResponse = PlotSyncResponse.from_bytes(message.data)
     assert response.error is not None
-    assert response.error.code == error_code
+    assert response.error.code == error_code.value
 
 
-def pre_function_validate(receiver: Receiver, data, expected_state: State) -> None:
+def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
+            assert type(plot_info) == Plot
             assert plot_info.filename not in receiver.plots()
     elif expected_state == State.removed:
         for path in data:
@@ -98,9 +102,10 @@ def pre_function_validate(receiver: Receiver, data, expected_state: State) -> No
             assert path not in receiver.duplicates()
 
 
-def post_function_validate(receiver: Receiver, data, expected_state: State) -> None:
+def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
+            assert type(plot_info) == Plot
             assert plot_info.filename in receiver._delta.valid.additions
     elif expected_state == State.removed:
         for path in data:
@@ -333,7 +338,7 @@ async def test_invalid_ids() -> None:
             # Test invalid message_id
             invalid_message_id_param = current_step.payload_type(
                 plot_sync_identifier(receiver.expected_sync_id(), uint64(receiver.expected_message_id() + 1)),
-                *current_step.args
+                *current_step.args,
             )
             await current_step.function(invalid_message_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_identifier)

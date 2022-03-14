@@ -17,9 +17,8 @@ from chia.server.start_timelord import service_kwargs_for_timelord
 from chia.server.start_wallet import service_kwargs_for_wallet
 from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
-from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config, save_config
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.config import load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from tests.block_tools import BlockTools

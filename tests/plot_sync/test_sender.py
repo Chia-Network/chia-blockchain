@@ -6,11 +6,11 @@ from chia.plot_sync.util import Constants
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
 from chia.server.ws_connection import NodeType, ProtocolMessageTypes
 from chia.util.ints import int16, uint64
+from tests.block_tools import BlockTools
 from tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
-from tests.setup_nodes import bt
 
 
-def test_default_values() -> None:
+def test_default_values(bt: BlockTools) -> None:
     sender = Sender(bt.plot_manager)
     assert sender._plot_manager == bt.plot_manager
     assert sender._connection is None
@@ -24,7 +24,7 @@ def test_default_values() -> None:
     assert sender._response is None
 
 
-def test_set_connection_values() -> None:
+def test_set_connection_values(bt: BlockTools) -> None:
     farmer_connection = get_dummy_connection(NodeType.FARMER)
     sender = Sender(bt.plot_manager)
     # Test invalid NodeType values
@@ -37,11 +37,12 @@ def test_set_connection_values() -> None:
             )
     # Test setting a valid connection works
     sender.set_connection(farmer_connection)  # type:ignore[arg-type]
-    assert sender._connection == farmer_connection
+    assert sender._connection is not None
+    assert sender._connection == farmer_connection  # type: ignore[comparison-overlap]
 
 
 @pytest.mark.asyncio
-async def test_start_stop_send_task() -> None:
+async def test_start_stop_send_task(bt: BlockTools) -> None:
     sender = Sender(bt.plot_manager)
     # Make sure starting/restarting works
     for _ in range(2):
@@ -58,7 +59,7 @@ async def test_start_stop_send_task() -> None:
         assert sender._task is None
 
 
-def test_set_response() -> None:
+def test_set_response(bt: BlockTools) -> None:
     sender = Sender(bt.plot_manager)
 
     def new_expected_response(sync_id: int, message_id: int, message_type: ProtocolMessageTypes) -> ExpectedResponse:

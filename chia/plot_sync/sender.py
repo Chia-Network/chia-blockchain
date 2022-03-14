@@ -85,10 +85,10 @@ class Sender:
     _connection: Optional[WSChiaConnection]
     _sync_id: uint64
     _next_message_id: uint64
-    _messages: List[MessageGenerator]
+    _messages: List[MessageGenerator[PayloadType]]
     _last_sync_id: uint64
     _stop_requested = False
-    _task: Optional[asyncio.Task[Any]]
+    _task: Optional[asyncio.Task]  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work
     _lock: threading.Lock
     _response: Optional[ExpectedResponse]
 

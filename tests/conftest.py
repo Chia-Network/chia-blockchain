@@ -42,6 +42,7 @@ from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
+from tests.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(scope="session")
@@ -162,11 +163,11 @@ def tmp_dir():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_multi_harvester(request: pytest.FixtureRequest, tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    from tests.setup_nodes import setup_farmer_multi_harvester, test_constants
-
+async def farmer_multi_harvester(
+    request: pytest.FixtureRequest, tmp_path: Path, bt: BlockTools
+) -> AsyncIterator[Tuple[List[Service], Service]]:
     marker = request.node.get_closest_marker("harvesters")
-    async for _ in setup_farmer_multi_harvester(bt, self_hostname, marker.kwargs["count"], tmp_path, test_constants):
+    async for _ in setup_farmer_multi_harvester(bt, marker.kwargs["count"], tmp_path, test_constants):
         yield _
 
 

@@ -113,7 +113,7 @@ class PlotSyncStart(Streamable):
     last_sync_id: uint64
     plot_file_count: uint32
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"PlotSyncStart: identifier {self.identifier}, initial {self.initial}, "
             f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}"
@@ -127,7 +127,7 @@ class PlotSyncPathList(Streamable):
     data: List[str]
     final: bool
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PlotSyncPathList: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
@@ -138,7 +138,7 @@ class PlotSyncPlotList(Streamable):
     data: List[Plot]
     final: bool
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PlotSyncPlotList: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
 
 
@@ -148,7 +148,7 @@ class PlotSyncDone(Streamable):
     identifier: PlotSyncIdentifier
     duration: uint64
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PlotSyncDone: identifier {self.identifier}, duration {self.duration}"
 
 
@@ -159,7 +159,7 @@ class PlotSyncError(Streamable):
     message: str
     expected_identifier: Optional[PlotSyncIdentifier]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PlotSyncError: code {self.code}, count {self.message}, expected_identifier {self.expected_identifier}"
 
 
@@ -170,5 +170,5 @@ class PlotSyncResponse(Streamable):
     message_type: int16
     error: Optional[PlotSyncError]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"

@@ -108,7 +108,7 @@ class Receiver:
     async def _process(
         self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
     ) -> None:
-        async def send_response(plot_sync_error: Optional[PlotSyncError] = None):
+        async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
             if self._connection is not None:
                 await self._connection.send_message(
                     make_msg(

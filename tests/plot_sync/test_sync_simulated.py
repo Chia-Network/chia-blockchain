@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from secrets import token_bytes
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pytest
 from blspy import G1Element
@@ -20,7 +20,7 @@ from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
 from chia.server.start_service import Service
-from chia.server.ws_connection import ProtocolMessageTypes, make_msg
+from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint64
@@ -192,7 +192,7 @@ class TestRunner:
             data.validate_plot_sync()
 
 
-async def skip_processing(self, _, message_type, message) -> bool:
+async def skip_processing(self: Any, _: WSChiaConnection, message_type: ProtocolMessageTypes, message: Any) -> bool:
     self.message_counter += 1
     if self.simulate_error == ErrorSimulation.DropEveryFourthMessage:
         if self.message_counter % 4 == 0:
@@ -225,7 +225,9 @@ async def skip_processing(self, _, message_type, message) -> bool:
     return False
 
 
-async def _testable_process(self, peer, message_type, message) -> None:
+async def _testable_process(
+    self: Any, peer: WSChiaConnection, message_type: ProtocolMessageTypes, message: Any
+) -> None:
     if await skip_processing(self, peer, message_type, message):
         return
     await self.original_process(peer, message_type, message)
@@ -257,7 +259,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
         def get_id(self) -> bytes32:
             return self.plot_id
 
-        def get_size(self):
+        def get_size(self) -> int:
             return self.size
 
     return [
