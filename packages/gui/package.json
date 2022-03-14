@@ -40,7 +40,6 @@
         "@nivo/core": "0.79.0",
         "@nivo/line": "0.79.1",
         "@rehooks/local-storage": "2.4.4",
-        "bech32": "2.0.0",
         "big.js": "6.1.1",
         "byte-size": "8.1.0",
         "core-js": "3.20.3",

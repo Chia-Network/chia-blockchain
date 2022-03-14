@@ -1,6 +1,6 @@
 import type { PlotNFT } from '@chia/api';
 import { useSetPayoutInstructionsMutation, useGetNetworkInfoQuery } from '@chia/api-react';
-import toBech32m, { decode } from '../util/toBech32m';
+import { toBech32m, fromBech32m } from '@chia/core';
 
 export default function usePayoutAddress(nft: PlotNFT): {
   loading: boolean;
@@ -25,7 +25,7 @@ export default function usePayoutAddress(nft: PlotNFT): {
     let newPayoutInstructions: string;
 
     try {
-      newPayoutInstructions = decode(newPayoutAddress)
+      newPayoutInstructions = fromBech32m(newPayoutAddress)
     } catch {
       newPayoutInstructions = newPayoutAddress;
     }

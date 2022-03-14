@@ -9,6 +9,10 @@ export function removePrefix(value: string, prefix: string): string {
 }
 
 export default function toBech32m(value: string, prefix: string): string {
+  if (value.startsWith(prefix)) {
+    return value;
+  }
+
   const pureHash = removePrefix(value, '0x');
   const words = bech32m.toWords(Buffer.from(pureHash, 'hex'));
   return bech32m.encode(prefix, words);

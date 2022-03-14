@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { Alert } from '@material-ui/lab';
 import styled from 'styled-components';
-import { Flex, Form, TextField, Loading } from '@chia/core';
+import { Flex, Form, TextField, Loading, fromBech32m } from '@chia/core';
 import { useSetRewardTargetsMutation, useGetRewardTargetsQuery } from '@chia/api-react';
 import {
   Button,
@@ -13,7 +13,6 @@ import {
   DialogContent,
   Typography,
 } from '@material-ui/core';
-import { bech32m } from 'bech32';
 
 const StyledTextField = styled(TextField)`
   min-width: 640px;
@@ -56,14 +55,16 @@ export default function FarmManageFarmingRewards(props: Props) {
   function handleClose() {
     onClose();
   }
-  function handleDialogClose(event: any, reason: any) {
-      if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
-      onClose();
-      }}
 
-      function checkAddress(stringToCheck: string): boolean {
+  function handleDialogClose(event: any, reason: any) {
+    if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
+      onClose();
+    }
+  }
+
+  function checkAddress(stringToCheck: string): boolean {
     try {
-      bech32m.decode(stringToCheck);
+      fromBech32m(stringToCheck);
       return true;
     }
     catch {
