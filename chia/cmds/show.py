@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Callable
 
 import click
 
@@ -44,7 +44,7 @@ def print_coins_transactions(
             chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
             coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
             confirmed_block = coin_record.confirmed_block_index
-            print(f"Coin {coin_record.name}")
+            print(f"Coin 0x{coin_record.name}")
             print(f"Wallet Address: {coin_address}")
             print(
                 "Status: "
@@ -52,7 +52,7 @@ def print_coins_transactions(
             )
             print(f"Spent: {f'At Block {coin_record}' if not coin_record.spent else 'No'}")
             print(f"Amount {'sent'}: {chia_amount} {name}")
-            print(f"Parent Coin ID: {coin_record.coin.parent_coin_info}")
+            print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info}")
             print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
             print("")
 
@@ -108,7 +108,7 @@ async def print_connections(client, time, NodeType, trusted_peers: Dict):
         print(con_str)
 
 
-async def execute_with_node(rpc_port: Optional[int], *args):
+async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
     import traceback
 
     import aiohttp
@@ -125,7 +125,7 @@ async def execute_with_node(rpc_port: Optional[int], *args):
         client: FullNodeRpcClient = await FullNodeRpcClient.create(
             self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config
         )
-        await show_async(client, config, *args)
+        await function(client, config, *args)
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
@@ -479,6 +479,7 @@ def show_cmd(
     asyncio.run(
         execute_with_node(
             rpc_port,
+            show_async,
             state,
             connections,
             exit_node,
