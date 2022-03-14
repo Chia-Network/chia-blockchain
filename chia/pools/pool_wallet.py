@@ -350,7 +350,7 @@ class PoolWallet:
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        await self.wallet_state_manager.add_interested_puzzle_hash(p2_puzzle_hash, self.wallet_id, False)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], False)
         return self
 
     @staticmethod
