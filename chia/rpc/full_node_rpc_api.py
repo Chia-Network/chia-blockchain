@@ -595,8 +595,8 @@ class FullNodeRpcApi:
             raise ValueError("Hint not in request")
 
         if self.service.hint_store is None:
-
             return {"coin_records": []}
+
         names: List[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
 
         kwargs: Dict[str, Any] = {
