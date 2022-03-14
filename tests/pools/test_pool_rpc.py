@@ -88,12 +88,6 @@ async def wallet_is_synced(wallet_node: WalletNode, full_node_api):
     )
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 PREFARMED_BLOCKS = 4
 
 

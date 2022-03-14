@@ -35,12 +35,6 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="module")
 async def wallet_nodes(bt):
     key_seed = bt.farmer_master_sk_entropy

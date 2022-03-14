@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 import pytest
@@ -23,12 +22,6 @@ WALLET_A = WalletTool(test_constants)
 WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 @pytest_asyncio.fixture(scope="function")
