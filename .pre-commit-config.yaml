@@ -14,6 +14,27 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies: [click~=7.1]
+# The following, commented hook is the usual way to add isort. However, it doesn't work in some environments.
+# See https://github.com/PyCQA/isort/issues/1874#issuecomment-1002212936
+# -----------------------------------------------------
+# - repo: https://github.com/pycqa/isort
+#   rev: 5.9.3
+#   hooks:
+#   - id: isort
+# -----------------------------------------------------
+#  The hook below is the workaround for the issue above.
+-   repo: local
+    hooks:
+    -   id: isort
+        name: isort
+        entry: isort
+        require_serial: true
+        language: python
+        language_version: python3
+        types_or: [cython, pyi, python]
+        args: ['--filter-files']
+        minimum_pre_commit_version: '2.9.2'
+        additional_dependencies: [isort==5.10.1]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:

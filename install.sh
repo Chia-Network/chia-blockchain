@@ -160,6 +160,10 @@ if [ "$(uname)" = "Linux" ]; then
     if ! command -v python3.9 >/dev/null 2>&1; then
       install_python3_and_sqlite3_from_source_with_yum
     fi
+  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
+    echo "Installing on Rocky."
+    # TODO: make this smarter about getting the latest version
+    sudo yum install --assumeyes python39
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."

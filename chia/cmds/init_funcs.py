@@ -41,7 +41,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.cmds.configure import configure
 
-private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "data_layer", "daemon"}
+private_node_names = {"full_node", "wallet", "farmer", "harvester", "timelord", "crawler", "data_layer", "daemon"}
 public_node_names = {"full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"}
 
 
@@ -407,7 +407,23 @@ def chia_init(
         # This is reached if CHIA_ROOT is set, or if user has run chia init twice
         # before a new update.
         if testnet:
-            configure(root_path, "", "", "", "", "", "", "", "", testnet="true", peer_connect_timeout="")
+            configure(
+                root_path,
+                set_farmer_peer="",
+                set_node_introducer="",
+                set_fullnode_port="",
+                set_harvester_port="",
+                set_log_level="",
+                enable_upnp="",
+                set_outbound_peer_count="",
+                set_peer_count="",
+                testnet="true",
+                peer_connect_timeout="",
+                crawler_db_path="",
+                crawler_minimum_version_count=None,
+                seeder_domain_name="",
+                seeder_nameserver="",
+            )
         if fix_ssl_permissions:
             fix_ssl(root_path)
         if should_check_keys:
@@ -417,7 +433,23 @@ def chia_init(
 
     create_default_chia_config(root_path)
     if testnet:
-        configure(root_path, "", "", "", "", "", "", "", "", testnet="true", peer_connect_timeout="")
+        configure(
+            root_path,
+            set_farmer_peer="",
+            set_node_introducer="",
+            set_fullnode_port="",
+            set_harvester_port="",
+            set_log_level="",
+            enable_upnp="",
+            set_outbound_peer_count="",
+            set_peer_count="",
+            testnet="true",
+            peer_connect_timeout="",
+            crawler_db_path="",
+            crawler_minimum_version_count=None,
+            seeder_domain_name="",
+            seeder_nameserver="",
+        )
     create_all_ssl(root_path)
     if fix_ssl_permissions:
         fix_ssl(root_path)

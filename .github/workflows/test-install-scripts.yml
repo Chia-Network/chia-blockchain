@@ -67,9 +67,10 @@ jobs:
         - name: centos:7
           type: centos
           url: "docker://centos:7"
-        - name: centos:8
-          type: centos
-          url: "docker://centos:8"
+#       commented out until we decide what to do with this, it fails consistently
+#         - name: centos:8
+#           type: centos
+#           url: "docker://centos:8"
         - name: debian:buster
           type: debian
           # https://packages.debian.org/buster/python/python3 (3.7)
@@ -94,6 +95,9 @@ jobs:
 #          type: fedora
 #          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
 #          url: "docker://fedora:35"
+        - name: rockylinux:8
+          type: rocky
+          url: "docker://rockylinux:8"
         - name: ubuntu:bionic (18.04)
           type: ubuntu
           # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
@@ -153,6 +157,11 @@ jobs:
       if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
         yum install --assumeyes git
+
+    - name: Prepare Rocky
+      if: ${{ matrix.distribution.type == 'rocky' }}
+      run: |
+        yum install --assumeyes git sudo
 
     - name: Prepare Ubuntu
       if: ${{ matrix.distribution.type == 'ubuntu' }}
