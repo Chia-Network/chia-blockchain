@@ -41,7 +41,7 @@ class WalletActionStore:
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on action_queue(wallet_id)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on action_queue(wallet_type)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS action_queue_wallet_type on action_queue(wallet_type)")
 
         await self.db_connection.commit()
         return self
