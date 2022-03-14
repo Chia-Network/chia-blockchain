@@ -86,13 +86,11 @@ class FullNodeRpcApi:
                     "metrics",
                 )
             )
-            return payloads
 
-        if change == "block":
-            payloads.append(create_payload_dict("block", change_data, self.service_name, "metrics"))
-            return payloads
+        if change in ("block", "signage_point"):
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        return []
+        return payloads
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
@@ -123,6 +121,7 @@ class FullNodeRpcApi:
                     "mempool_min_fees": {
                         "cost_5000000": 0,
                     },
+                    "mempool_max_total_cost": 0,
                     "block_max_cost": 0,
                     "node_id": node_id,
                 },
@@ -171,10 +170,12 @@ class FullNodeRpcApi:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
             mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
             mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
+            mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
             mempool_size = 0
             mempool_cost = 0
             mempool_min_fee_5m = 0
+            mempool_max_total_cost = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_full_node_connections()) > 0
         else:
@@ -202,6 +203,7 @@ class FullNodeRpcApi:
                     # This Dict sets us up for that in the future
                     "cost_5000000": mempool_min_fee_5m,
                 },
+                "mempool_max_total_cost": mempool_max_total_cost,
                 "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
                 "node_id": node_id,
             },

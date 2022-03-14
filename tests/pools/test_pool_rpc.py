@@ -6,6 +6,7 @@ from shutil import rmtree
 from typing import Optional, List, Dict
 
 import pytest
+import pytest_asyncio
 from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -31,10 +32,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
-FEE_AMOUNT = 10
+FEE_AMOUNT = 2000000000000
 
 
 def get_pool_plot_dir():
@@ -81,12 +83,12 @@ PREFARMED_BLOCKS = 4
 
 
 class TestPoolWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def one_wallet_node_and_rpc(self):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         async for nodes in setup_simulators_and_wallets(1, 1, {}):
@@ -102,7 +104,7 @@ class TestPoolWalletRpc:
             config = bt.config
             hostname = config["self_hostname"]
             daemon_port = config["daemon_port"]
-            test_rpc_port = uint16(21529)
+            test_rpc_port = find_available_listen_port()
 
             rpc_cleanup = await start_rpc_server(
                 api_user,
@@ -122,7 +124,7 @@ class TestPoolWalletRpc:
             await client.await_closed()
             await rpc_cleanup()
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def setup(self, two_wallet_nodes):
         rmtree(get_pool_plot_dir(), ignore_errors=True)
         full_nodes, wallets = two_wallet_nodes

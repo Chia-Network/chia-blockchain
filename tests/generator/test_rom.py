@@ -6,10 +6,10 @@ from chia.full_node.generator import run_generator_unsafe
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.name_puzzle_condition import NPC
 from chia.types.generator_types import BlockGenerator
-from chia.util.condition_tools import ConditionOpcode
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.consensus.condition_costs import ConditionCost

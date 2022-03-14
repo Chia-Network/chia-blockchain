@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import aiosqlite
 import tempfile
 import random
@@ -39,7 +40,7 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
@@ -102,7 +103,7 @@ class TestDbUpgrade:
                     assert err is None
 
             # now, convert v1 in_file to v2 out_file
-            await convert_v1_to_v2(in_file, out_file)
+            convert_v1_to_v2(in_file, out_file)
 
             async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
 

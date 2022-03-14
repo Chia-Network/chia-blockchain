@@ -291,7 +291,7 @@ timelord:
   # without slowing down but running more than 1 with fast_algorithm will
   # run each vdf_client slower.
   fast_algorithm: False
-  # Bluebox (sanatizing Timelord):
+  # Bluebox (sanitizing timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in bluebox_mode.
@@ -304,6 +304,9 @@ timelord:
   slow_bluebox: False
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
+
+  start_rpc_server: True
+  rpc_port: 8557
 
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
@@ -372,7 +375,7 @@ full_node:
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
-  # Send to a Bluebox (sanatizing timelord) uncompact blocks once every
+  # Send to a Bluebox (sanitizing timelord) uncompact blocks once every
   # 'send_uncompact_interval' seconds. Set to 0 if you don't use this feature.
   send_uncompact_interval: 0
   # At every 'send_uncompact_interval' seconds, send blueboxes 'target_uncompact_proofs' proofs to be normalized.
@@ -381,7 +384,7 @@ full_node:
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False
   # timeout for weight proof request
-  weight_proof_timeout: 360
+  weight_proof_timeout: &weight_proof_timeout 360
 
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
@@ -516,6 +519,9 @@ wallet:
   # wallet overrides for limits
   inbound_rate_limit_percent: 100
   outbound_rate_limit_percent: 60
+
+  # timeout for weight proof request
+  weight_proof_timeout: *weight_proof_timeout
 
 data_layer:
   # TODO: consider name
