@@ -87,6 +87,13 @@ export default class Farmer extends Service {
     });
   }
 
+  onConnections(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('get_connections', callback, processData);
+  }
+
   onNewFarmingInfo(
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any,
