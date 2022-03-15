@@ -6,7 +6,7 @@ import time
 import traceback
 from asyncio import CancelledError
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Any
+from typing import Callable, Dict, List, Optional, Set, Tuple, Any, Iterator
 
 from blspy import PrivateKey, AugSchemeMPL
 from packaging.version import Version
@@ -21,7 +21,7 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeyringIsEmpty,
 )
-from chia.full_node.weight_proof import chunks
+from chia.util.chunks import chunks
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -513,7 +513,7 @@ class WalletNode:
         all_puzzle_hashes: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
         while continue_while:
             # Get all phs from puzzle store
-            ph_chunks: List[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
+            ph_chunks: Iterator[List[bytes32]] = chunks(all_puzzle_hashes, 1000)
             for chunk in ph_chunks:
                 ph_update_res: List[CoinState] = await subscribe_to_phs(
                     [p for p in chunk if p not in already_checked_ph], full_node, 0
@@ -1233,7 +1233,7 @@ class WalletNode:
 
             all_peers = self.server.get_full_node_connections()
             blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
-                start, end, peer_request_cache, all_peers, peer.peer_node_id
+                start, end, peer_request_cache, all_peers
             )
             if blocks is None:
                 self.log.error(f"Error fetching blocks {start} {end}")

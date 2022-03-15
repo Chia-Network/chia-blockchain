@@ -19,10 +19,6 @@ import pytest_asyncio
 
 
 class TestDaemon:
-    @pytest_asyncio.fixture(scope="function")
-    async def get_daemon(self, get_b_tools):
-        async for _ in setup_daemon(btools=get_b_tools):
-            yield _
 
     # TODO: Ideally, the db_version should be the (parameterized) db_version
     # fixture, to test all versions of the database schema. This doesn't work
@@ -48,7 +44,6 @@ class TestDaemon:
     async def get_b_tools(self, get_temp_keyring):
         local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
         new_config = local_b_tools._config
-        new_config["daemon_port"] = 55401
         local_b_tools.change_config(new_config)
         return local_b_tools
 
@@ -58,9 +53,10 @@ class TestDaemon:
             yield get_b_tools
 
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, simulation, get_daemon, get_b_tools):
-        node1, node2, _, _, _, _, _, _, _, _, server1 = simulation
-        await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
+    async def test_daemon_simulation(self, simulation, get_b_tools):
+        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
+        node2_port = node2.full_node.config["port"]
+        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
         async def num_connections():
             count = len(node2.server.connection_by_type[NodeType.FULL_NODE].items())
@@ -73,7 +69,7 @@ class TestDaemon:
         ssl_context = get_b_tools.get_daemon_ssl_context()
 
         ws = await session.ws_connect(
-            "wss://127.0.0.1:55401",
+            f"wss://127.0.0.1:{daemon1.daemon_port}",
             autoclose=True,
             autoping=True,
             heartbeat=60,
@@ -176,7 +172,7 @@ class TestDaemon:
 
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
-                "wss://127.0.0.1:55401",
+                f"wss://127.0.0.1:{local_b_tools._config['daemon_port']}",
                 autoclose=True,
                 autoping=True,
                 heartbeat=60,
