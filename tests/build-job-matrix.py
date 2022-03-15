@@ -3,8 +3,9 @@ import argparse
 import json
 import logging
 import os
+import types
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import testconfig
 
@@ -43,11 +44,11 @@ def subdirs(per: str) -> List[Path]:
     return sorted(paths)
 
 
-def module_dict(module):
+def module_dict(module: types.ModuleType) -> Dict[str, Any]:
     return {k: v for k, v in module.__dict__.items() if not k.startswith("_")}
 
 
-def dir_config(dir):
+def dir_config(dir: Path) -> Dict[str, Any]:
     import importlib
 
     module_name = ".".join([*dir.relative_to(root_path).parts, "config"])
@@ -72,7 +73,7 @@ def read_file(filename: Path) -> str:
 
 
 # String function from test dir to test name
-def test_name(dir):
+def test_name(dir: Path) -> str:
     return "-".join(dir.relative_to(root_path).parts)
 
 
@@ -115,7 +116,7 @@ def test_name(dir):
 
 
 # Overwrite with directory specific values
-def update_config(parent, child):
+def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, Any]:
     if child is None:
         return parent
     conf = child
@@ -125,7 +126,7 @@ def update_config(parent, child):
     return conf
 
 
-def dir_path(string):
+def dir_path(string: str) -> Path:
     p = Path(root_path / string)
     if p.is_dir():
         return p
