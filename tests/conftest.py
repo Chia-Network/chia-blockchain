@@ -1,5 +1,6 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 import multiprocessing
+import os
 import pytest
 import pytest_asyncio
 import tempfile
@@ -128,3 +129,15 @@ def default_10000_blocks_compact(bt):
 def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
+
+
+# For the below see https://stackoverflow.com/a/62563106/15133773
+if os.getenv("_PYTEST_RAISE", "0") != "0":
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_exception_interact(call):
+        raise call.excinfo.value
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_internalerror(excinfo):
+        raise excinfo.value
