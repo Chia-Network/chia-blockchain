@@ -1,5 +1,5 @@
 import sys
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import click
 
@@ -138,11 +138,15 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+@click.option("-w", "--wallet_type", help="Choose a specific wallet type to return", type=int, default=None)
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[int]) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
+    args: Dict[str, Any] = {}
+    if wallet_type is not None:
+        args["type"] = wallet_type
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
 @wallet_cmd.command("get_address", short_help="Get a wallet receive address")

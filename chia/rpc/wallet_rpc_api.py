@@ -415,7 +415,11 @@ class WalletRpcApi:
     async def get_wallets(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
-        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+        wallet_type: Optional[WalletType] = None
+        if "type" in request:
+            wallet_type = WalletType(request["type"])
+
+        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
 
         return {"wallets": wallets}
 
