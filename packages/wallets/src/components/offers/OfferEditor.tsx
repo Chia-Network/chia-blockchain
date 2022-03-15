@@ -35,6 +35,7 @@ type FormData = {
   selectedTab: number;
   makerRows: OfferEditorRowData[];
   takerRows: OfferEditorRowData[];
+  fee: number;
 };
 
 type OfferEditorProps = {
@@ -49,6 +50,7 @@ function OfferEditor(props: OfferEditorProps) {
     selectedTab: 0,
     makerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: 0 }],
     takerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: 0 }],
+    fee: 0,
   };
   const methods = useForm<FormData>({
     defaultValues,
@@ -81,6 +83,7 @@ function OfferEditor(props: OfferEditorProps) {
     let missingAssetSelection = false;
     let missingAmount = false;
     let amountExceedsSpendableBalance = false;
+    let feeInMojos = Number.parseFloat(chiaToMojo(formData.fee || 0));
 
     formData.makerRows.forEach((row: OfferEditorRowData) => {
       updateOffer(offer, row, true);
@@ -119,7 +122,7 @@ function OfferEditor(props: OfferEditorProps) {
 
     try {
       // preflight offer creation to check validity
-      const response = await createOfferForIds({ walletIdsAndAmounts: offer, validateOnly: true }).unwrap();
+      const response = await createOfferForIds({ walletIdsAndAmounts: offer, feeInMojos, validateOnly: true }).unwrap();
 
       if (response.success === false) {
         const error = response.error || new Error("Encountered an unknown error while validating offer");
@@ -133,7 +136,7 @@ function OfferEditor(props: OfferEditorProps) {
         const { filePath, canceled } = result;
 
         if (!canceled && filePath) {
-          const response = await createOfferForIds({ walletIdsAndAmounts: offer, validateOnly: false }).unwrap();
+          const response = await createOfferForIds({ walletIdsAndAmounts: offer, feeInMojos, validateOnly: false }).unwrap();
           if (response.success === false) {
             const error = response.error || new Error("Encountered an unknown error while creating offer");
             errorDialog(error);
@@ -182,6 +185,7 @@ function OfferEditor(props: OfferEditorProps) {
       <StyledEditorBox>
         <Flex flexDirection="column" rowGap={3} flexGrow={1}>
           <OfferEditorConditionsPanel makerSide="sell" disabled={processing} />
+          <Divider />
           <Flex gap={3}>
             <Button
               variant="contained"

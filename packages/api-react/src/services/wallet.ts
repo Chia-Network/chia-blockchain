@@ -864,15 +864,17 @@ export const walletApi = apiWithTag.injectEndpoints({
 
     createOfferForIds: build.mutation<any, {
       walletIdsAndAmounts: { [key: string]: number };
+      feeInMojos: number;
       validateOnly?: boolean;
     }>({
       query: ({
         walletIdsAndAmounts,
+        feeInMojos,
         validateOnly,
       }) => ({
         command: 'createOfferForIds',
         service: Wallet,
-        args: [walletIdsAndAmounts, validateOnly],
+        args: [walletIdsAndAmounts, feeInMojos, validateOnly],
       }),
       invalidatesTags: [{ type: 'OfferTradeRecord', id: 'LIST' }, 'OfferCounts'],
     }),

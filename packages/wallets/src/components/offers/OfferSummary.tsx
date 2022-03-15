@@ -4,6 +4,7 @@ import { type OfferSummaryRecord  } from '@chia/api';
 import {
   Flex,
   StateColor,
+  TooltipIcon,
   mojoToChia,
   mojoToCAT,
 } from '@chia/core';
@@ -24,6 +25,7 @@ const StyledWarningText = styled(Typography)`
 
 type Props = {
   isMyOffer: boolean;
+  imported: boolean;
   summary: OfferSummaryRecord;
   makerTitle: React.ReactElement | string;
   takerTitle: React.ReactElement | string;
@@ -32,12 +34,13 @@ type Props = {
 };
 
 export default function OfferSummary(props: Props) {
-  const { isMyOffer, summary, makerTitle, takerTitle, rowIndentation, setIsMissingRequestedAsset } = props;
+  const { isMyOffer, imported, summary, makerTitle, takerTitle, rowIndentation, setIsMissingRequestedAsset } = props;
   const theme = useTheme();
   const { lookupByAssetId } = useAssetIdName();
   const horizontalPadding = `${theme.spacing(rowIndentation)}px`; // logic borrowed from Flex's gap computation
   const makerEntries: [string, number][] = Object.entries(summary.offered);
   const takerEntries: [string, number][] = Object.entries(summary.requested);
+  const makerFee: number = summary.fees;
   const makerAssetInfo = makerEntries.length === 1 ? lookupByAssetId(makerEntries[0][0]) : undefined;
   const takerAssetInfo = takerEntries.length === 1 ? lookupByAssetId(takerEntries[0][0]) : undefined;
   const makerAmount = makerEntries[0][0].toLowerCase() === 'xch' ? Number(mojoToChia(makerEntries[0][1])) : Number(mojoToCAT(makerEntries[0][1]));
@@ -107,11 +110,35 @@ export default function OfferSummary(props: Props) {
           <OfferExchangeRate makerAssetInfo={makerAssetInfo} takerAssetInfo={takerAssetInfo} makerExchangeRate={makerExchangeRate} takerExchangeRate={takerExchangeRate} />
         </Flex>
       )}
+      {makerFee > 0 && (
+        <Flex flexDirection="column" gap={2}>
+          <Divider />
+          <Flex flexDirection="row" alignItems="center" gap={1}>
+            <Typography variant="body1" color="secondary" style={{fontWeight: 'bold'}}>
+              <Trans>Fees included in offer:</Trans>
+            </Typography>
+            <Typography color="primary">{Number(makerFee).toLocaleString()}</Typography>
+            <Typography>{makerFee === 1 ? "mojo" : "mojos"}</Typography>
+            <TooltipIcon>
+              {imported ? (
+                <Trans>
+                  This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small.
+                </Trans>
+              ) : (
+                <Trans>
+                  This offer has a fee included to help expedite the transaction when the offer is accepted.
+                </Trans>
+              )}
+            </TooltipIcon>
+          </Flex>
+        </Flex>
+      )}
     </Flex>
   );
 }
 
 OfferSummary.defaultProps = {
   isMyOffer: false,
+  imported: false,
   rowIndentation: 3,
 };

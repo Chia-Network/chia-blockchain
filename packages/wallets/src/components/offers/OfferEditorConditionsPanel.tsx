@@ -1,17 +1,20 @@
 import React, { useMemo } from 'react';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
-import { 
-  Amount, 
+import {
+  Amount,
+  Fee,
   Flex,
+  TooltipIcon,
   mojoToChia,
   mojoToChiaLocaleString,
   mojoToCAT,
   mojoToCATLocaleString,
 } from '@chia/core';
-import { 
-  Divider, 
-  IconButton, 
+import {
+  Box,
+  Divider,
+  IconButton,
   Typography,
 } from '@material-ui/core';
 import { Add, Remove } from '@material-ui/icons';
@@ -242,9 +245,9 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
   sections[1].headerTitle = <Trans>In exchange for</Trans>
 
   return (
-    <Flex flexDirection="column" gap={2}>
+    <Flex flexDirection="column" gap={3}>
       {sections.map((section, sectionIndex) => (
-        <>
+        <Flex flexDirection="column" gap={2}>
           <Typography variant="subtitle1">{section.headerTitle}</Typography>
           {section.fields.map((field, fieldIndex) => (
             <OfferEditorConditionRow
@@ -272,7 +275,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
           {sectionIndex !== (sections.length - 1) && (
             <Divider />
           )}
-        </>
+        </Flex>
       ))}
       {!!makerAssetInfo && !!makerExchangeRate && !!takerAssetInfo && !!takerExchangeRate && (
         <>
@@ -285,9 +288,31 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
             <Flex flexDirection="column" alignItems="center" style={{width: '10%'}}>
             </Flex>
           </Flex>
-          <Divider />
         </>
       )}
+      <Divider />
+      <Flex flexDirection="row" gap={0} style={{width: '90%'}}>
+        <Flex flexDirection="column" flexGrow={1} style={{width: '45%'}}>
+          <Fee
+            id="filled-secondary"
+            variant="filled"
+            name="fee"
+            color="secondary"
+            label={<Trans>Fee</Trans>}
+          />
+        </Flex>
+        <Flex style={{width: '2em'}} justifyContent="center">
+          <Box style={{position: 'relative', top: '20px'}}>
+            <TooltipIcon>
+              <Trans>
+                Including a fee in the offer can help expedite the transaction when the offer is accepted.
+              </Trans>
+            </TooltipIcon>
+          </Box>
+        </Flex>
+        <Flex flexDirection="column" flexGrow={1} style={{width: '45%'}}>
+        </Flex>
+      </Flex>
     </Flex>
   );
 }

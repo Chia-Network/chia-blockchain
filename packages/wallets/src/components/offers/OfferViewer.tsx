@@ -450,6 +450,7 @@ function OfferDetails(props: OfferDetailsProps) {
         <Card title={<Trans>Summary</Trans>}>
           <OfferSummary
             isMyOffer={tradeRecord?.isMyOffer}
+            imported={!!imported}
             summary={summary}
             makerTitle={<Typography variant="h6"><Trans>In exchange for</Trans></Typography>}
             takerTitle={<Typography variant="h6"><Trans>You will receive</Trans></Typography>}
