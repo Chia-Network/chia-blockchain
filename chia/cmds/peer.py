@@ -153,21 +153,13 @@ async def peer_async(
         "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
-    default=None,
-)
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
+    default=None
 )
 def peer_cmd(
     connections: bool,
     add_connection: str,
     remove_connection: str,
     rpc_port: Optional[int],
-    wallet_rpc_port: Optional[int],
 ) -> None:
     import asyncio
 
