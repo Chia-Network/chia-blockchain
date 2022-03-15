@@ -166,8 +166,7 @@ for path in test_paths:
     for_matrix = {
         # TODO: handle CHECK_RESOURCE_USAGE
         "job_timeout": conf["job_timeout"],
-        # TODO: disabled for now while debugging
-        # 'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
+        "pytest_parallel_args": "-n auto" if conf["parallel"] else "",
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
         "path": os.fspath(path_for_cli),
@@ -176,27 +175,6 @@ for path in test_paths:
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
 
-
-# configuration = [{'path': os.fspath(path), 'name': '.'.join(path.with_suffix('').parts)} for path in test_paths]
-# # TODO: remove this.  filtering just to avoid the hanging tests while
-# # configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
-# TODO: these are entirely commented out
-configuration = [c for c in configuration if c["name"] not in ["wallet.test_backup", "wallet.test_wallet_store"]]
-# # TODO: these seem to hang
-# # configuration = [
-# #     c
-# #     for c in configuration
-# #     if c['name'] not in [
-# #         'blockchain.test_blockchain_transactions',
-# #         'core.full_node.test_mempool',
-# #         'core.full_node.test_node_load',
-# #         'core.full_node.test_performance',
-# #         'core.full_node.test_transactions',
-# #         'wallet.cc_wallet.test_cc_wallet',
-# #         'wallet.sync.test_wallet_sync',
-# #         'wallet.test_wallet_store',
-# #     ]
-# # ]
 
 configuration_json = json.dumps(configuration)
 
