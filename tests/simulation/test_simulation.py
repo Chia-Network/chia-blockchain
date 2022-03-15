@@ -1,6 +1,7 @@
 from typing import AsyncIterator, List, Tuple
 
 import pytest
+import pytest_asyncio
 
 from chia.cmds.units import units
 from chia.types.peer_info import PeerInfo
@@ -42,7 +43,7 @@ class TestSimulation:
     # fixture, to test all versions of the database schema. This doesn't work
     # because of a hack in shutting down the full node, which means you cannot run
     # more than one simulations per process.
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def extra_node(self):
         with TempKeyring() as keychain:
             b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
@@ -55,12 +56,12 @@ class TestSimulation:
             ):
                 yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def simulation(self):
         async for _ in setup_full_system(test_constants_modified, db_version=1):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def one_wallet_node(
         self,
     ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]]:

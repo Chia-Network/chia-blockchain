@@ -12,6 +12,7 @@ import aiosqlite
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 import pytest
+import pytest_asyncio
 
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -81,7 +82,7 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest.fixture(name="db_connection", scope="function")
+@pytest_asyncio.fixture(name="db_connection", scope="function")
 async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
     async with aiosqlite.connect(":memory:") as connection:
         # make sure this is on for tests even if we disable it at run time
@@ -101,12 +102,12 @@ def tree_id_fixture() -> bytes32:
     return bytes32(pad + base)
 
 
-@pytest.fixture(name="raw_data_store", scope="function")
+@pytest_asyncio.fixture(name="raw_data_store", scope="function")
 async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
     return await DataStore.create(db_wrapper=db_wrapper)
 
 
-@pytest.fixture(name="data_store", scope="function")
+@pytest_asyncio.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
     await raw_data_store.create_tree(tree_id=tree_id)
 
