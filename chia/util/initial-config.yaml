@@ -305,6 +305,9 @@ timelord:
   # If `slow_bluebox` is True, launches `slow_bluebox_process_count` processes.
   slow_bluebox_process_count: 1
 
+  start_rpc_server: True
+  rpc_port: 8557
+
   ssl:
     private_crt:  "config/ssl/timelord/private_timelord.crt"
     private_key:  "config/ssl/timelord/private_timelord.key"
@@ -381,7 +384,7 @@ full_node:
   # Default is set to False, as the network needs only one or two blueboxes like this.
   sanitize_weight_proof_only: False
   # timeout for weight proof request
-  weight_proof_timeout: 360
+  weight_proof_timeout: &weight_proof_timeout 360
 
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
@@ -516,6 +519,9 @@ wallet:
   # wallet overrides for limits
   inbound_rate_limit_percent: 100
   outbound_rate_limit_percent: 60
+
+  # timeout for weight proof request
+  weight_proof_timeout: *weight_proof_timeout
 
 data_layer:
   # TODO: consider name
