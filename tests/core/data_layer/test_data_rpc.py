@@ -33,7 +33,7 @@ async def init_data_layer(root_path: Path, wallet_rpc_port: int) -> AsyncIterato
     config = bt.config
     kwargs = service_kwargs_for_data_layer(root_path, config, wallet_rpc_port=uint16(wallet_rpc_port))
     kwargs.update(parse_cli_args=False)
-    service = Service(**kwargs, handle_signals=False)
+    service = Service(**kwargs)
     await service.start()
     yield service._api.data_layer
     service.stop()
