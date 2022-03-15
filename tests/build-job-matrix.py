@@ -8,7 +8,6 @@ from typing import Dict, List
 
 import testconfig
 
-
 root_path = Path(__file__).parent.resolve()
 
 
@@ -165,13 +164,13 @@ for path in test_paths:
 
     for_matrix = {
         # TODO: handle CHECK_RESOURCE_USAGE
-        'job_timeout': conf['job_timeout'],
+        "job_timeout": conf["job_timeout"],
         # TODO: disabled for now while debugging
         # 'pytest_parallel_args': '-n auto' if conf['parallel'] else '',
-        'checkout_blocks_and_plots': conf["checkout_blocks_and_plots"],
-        'install_timelord': conf["install_timelord"],
-        'path': os.fspath(path_for_cli),
-        'name': '.'.join(relative_path.with_suffix('').parts),
+        "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
+        "install_timelord": conf["install_timelord"],
+        "path": os.fspath(path_for_cli),
+        "name": ".".join(relative_path.with_suffix("").parts),
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
@@ -181,7 +180,7 @@ for path in test_paths:
 # # TODO: remove this.  filtering just to avoid the hanging tests while
 # # configuration = [c for c in configuration if c['name'] in ['plotting', 'generator', 'core.full_node']]
 # TODO: these are entirely commented out
-configuration = [c for c in configuration if c['name'] not in ['wallet.test_backup', 'wallet.test_wallet_store']]
+configuration = [c for c in configuration if c["name"] not in ["wallet.test_backup", "wallet.test_wallet_store"]]
 # # TODO: these seem to hang
 # # configuration = [
 # #     c
@@ -203,4 +202,4 @@ configuration_json = json.dumps(configuration)
 for line in json.dumps(configuration, indent=4).splitlines():
     logging.info(line)
 
-print(f'{configuration_json}')
+print(f"{configuration_json}")
