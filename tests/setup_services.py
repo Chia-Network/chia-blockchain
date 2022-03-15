@@ -52,6 +52,7 @@ async def setup_full_node(
     port,
     rpc_port,
     local_bt: BlockTools,
+    *,
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=0,
