@@ -519,20 +519,24 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    # The message spend can send messages and also change your innerpuz
-    async def create_message_spend(self, messages: List[Tuple[int, bytes]], new_innerpuzhash: Optional[bytes32] = None):
+    # The message spend cantests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
+    async def create_message_spend(
+        self, message_puz: Program, message_sol: Program = Program.to([]), new_innerpuzhash: Optional[bytes32] = None
+    ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
         innerpuz: Program = self.did_info.current_inner
+        # Quote message puzzle & solution
+        message_puz = Program.to((1, message_puz))
+        message_sol = Program.to((1, message_sol))
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
-        message_puz = did_wallet_puzzles.messages_to_puzzle(messages)
         # innerpuz solution is (mode amount messages_puzzle, message_solution, new_puz)
-        innersol: Program = Program.to(
-            [1, coin.amount, message_puz, [], new_innerpuzhash])
+        innersol: Program = Program.to([1, coin.amount, message_puz, message_sol, new_innerpuzhash])
+
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
@@ -578,7 +582,7 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         amount = coin.amount - 1
-        message_puz = did_wallet_puzzles.create_exit_message_puzzle()
+        message_puz = Program.to((1, [[51, 0x00, -113]]))
         # innerpuz solution is (mode amount message_puzzle, message_solution, new_puz)
         innersol: Program = Program.to([1, amount, message_puz, [], puzhash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
@@ -651,8 +655,9 @@ class DIDWallet:
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
+        # Create new coin
+        message_puz = Program.to((1, [[51, innermessage, 0]]))
         # innerpuz solution is (mode, amount, message_puzzle, message_solution, new_inner_puzhash)
-        message_puz = did_wallet_puzzles.messages_to_puzzle([(0, innermessage)])
         innersol = Program.to([1, coin.amount, message_puz, [], innerpuz.get_tree_hash()])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
