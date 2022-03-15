@@ -852,7 +852,7 @@ class DataStore:
             assert root.node_hash == new_root.node_hash
             if new_root.node_hash is None:
                 return
-            nodes = await self.get_left_to_right_ordering(new_root.node_hash, tree_id, True, lock=False)
+            nodes = await self.get_left_to_right_ordering(new_root, tree_id, True, lock=False)
             for node in nodes:
                 if isinstance(node, InternalNode):
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
@@ -954,15 +954,31 @@ class DataStore:
             node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id, lock=False)
 
+    async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> int:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT MIN(generation) FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
+                {"hash": node_hash.hex(), "tree_id": tree_id.hex()},
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                raise RuntimeError("Hash not found in ancestor table.")
+
+            generation = row["generation"]
+            return int(generation)
+
     async def get_left_to_right_ordering(
         self,
-        node_hash: bytes32,
+        root: Root,
         tree_id: bytes32,
         get_subtree_only: bool,
+        get_only_deltas: bool = False,
         *,
         lock: bool = True,
         num_nodes: int = 1000000000,
     ) -> List[Node]:
+        node_hash = root.node_hash
+        assert node_hash is not None
         if not get_subtree_only:
             ancestors = await self.get_ancestors(node_hash, tree_id, lock=lock)
             path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
@@ -977,16 +993,21 @@ class DataStore:
                 node = await self.get_node(node_hash, lock=lock)
             except Exception:
                 return []
-            if isinstance(node, TerminalNode):
+            if not get_only_deltas:
                 nodes.append(node)
+            else:
+                first_generation = await self.get_first_generation(node_hash, tree_id, lock=False)
+                if first_generation == root.generation:
+                    nodes.append(node)
+            if isinstance(node, TerminalNode):
                 if len(stack) > 0:
                     node_hash = stack.pop()
                 else:
                     break
             elif isinstance(node, InternalNode):
-                nodes.append(node)
                 stack.append(node.right_hash)
                 node_hash = node.left_hash
+
         return nodes
 
     async def handle_deltas(
@@ -994,7 +1015,6 @@ class DataStore:
         tree_id: bytes32,
         generation_begin: int,
         max_generation: int,
-        dowload_full_history: bool,
         num_generations: int = 10000000,
         *,
         lock: bool = True,
@@ -1010,7 +1030,7 @@ class DataStore:
             roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
             for root in roots:
                 if root.node_hash is not None:
-                    nodes = await self.get_left_to_right_ordering(root.node_hash, tree_id, True, lock=False)
+                    nodes = await self.get_left_to_right_ordering(root, tree_id, True, True, lock=False)
                     result += nodes
 
         return result
