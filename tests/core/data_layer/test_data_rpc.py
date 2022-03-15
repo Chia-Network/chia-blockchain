@@ -22,6 +22,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
@@ -30,7 +31,13 @@ nodes = Tuple[WalletNode, FullNodeSimulator]
 
 async def init_data_layer(root_path: Path, wallet_rpc_port: int) -> AsyncIterator[DataLayer]:
     config = bt.config
-    kwargs = service_kwargs_for_data_layer(root_path, config, wallet_rpc_port=uint16(wallet_rpc_port))
+    kwargs = service_kwargs_for_data_layer(
+        root_path=root_path,
+        config=config,
+        port=find_available_listen_port("data_layer"),
+        rpc_port=find_available_listen_port("data_layer_rpc"),
+        wallet_rpc_port=wallet_rpc_port,
+    )
     kwargs.update(parse_cli_args=False)
     service = Service(**kwargs)
     await service.start()

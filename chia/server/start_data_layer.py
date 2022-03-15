@@ -22,7 +22,11 @@ log = logging.getLogger(__name__)
 
 # TODO: Review need for config and if retained then hint it properly.
 def service_kwargs_for_data_layer(
-    root_path: pathlib.Path, config: Dict[str, Any], wallet_rpc_port: Optional[uint16] = None
+    root_path: pathlib.Path,
+    config: Dict[str, Any],
+    port: Optional[int] = None,
+    rpc_port: Optional[int] = None,
+    wallet_rpc_port: Optional[int] = None,
 ) -> Dict[str, Any]:
     dl_config = config["data_layer"]
     self_hostname = config["self_hostname"]
@@ -43,12 +47,17 @@ def service_kwargs_for_data_layer(
         service_name=SERVICE_NAME,
         network_id=network_id,
     )
-    port = dl_config.get("port")
+
+    if port is None:
+        port = dl_config.get("port")
     if port is not None:
         kwargs.update(advertised_port=dl_config["port"], server_listen_ports=[dl_config["port"]])
-    rpc_port = dl_config.get("rpc_port")
+
+    if rpc_port is None:
+        rpc_port = dl_config.get("rpc_port")
     if rpc_port is not None:
         kwargs["rpc_info"] = (DataLayerRpcApi, dl_config["rpc_port"])
+
     return kwargs
 
 
