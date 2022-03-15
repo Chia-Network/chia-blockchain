@@ -988,29 +988,6 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
         bytes32.from_hexstr("50e2f97295de32c7b0eaea32bf1969ceab2e4645b17882e8f1080d143aa262ab"),
     ]
     assert [node.hash for node in all_nodes] == expected_nodes
-    root_2 = await data_store.get_tree_root(tree_id, 3)
-    nodes_2 = await data_store.get_left_to_right_ordering(
-        root_2,
-        tree_id,
-        False,
-        num_nodes=100,
-    )
-    assert [node.hash for node in nodes_2] == expected_nodes[3:]
-    root_3 = await data_store.get_tree_root(tree_id, 6)
-    nodes_3 = await data_store.get_left_to_right_ordering(
-        root_3,
-        tree_id,
-        False,
-        num_nodes=4,
-    )
-    assert [node.hash for node in nodes_3] == expected_nodes[6:10]
-    nodes_4 = await data_store.get_left_to_right_ordering(
-        root_2,
-        tree_id,
-        True,
-        num_nodes=100,
-    )
-    assert nodes_4 == nodes_2[:1]
 
 
 @pytest.mark.asyncio

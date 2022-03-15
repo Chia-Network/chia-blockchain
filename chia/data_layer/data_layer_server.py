@@ -59,7 +59,7 @@ class DataLayerServer:
         tree_root = await self.data_store.get_last_tree_root_by_hash(tree_id_bytes, node_hash_bytes)
         if tree_root is None:
             return json.dumps({"answer": {}})
-        nodes = await self.data_store.get_left_to_right_ordering(tree_root, tree_id_bytes, True)
+        nodes = await self.data_store.get_left_to_right_ordering(tree_root, tree_id_bytes)
         answer = []
         for node in nodes:
             if isinstance(node, TerminalNode):

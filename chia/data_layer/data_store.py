@@ -852,7 +852,7 @@ class DataStore:
             assert root.node_hash == new_root.node_hash
             if new_root.node_hash is None:
                 return
-            nodes = await self.get_left_to_right_ordering(new_root, tree_id, True, lock=False)
+            nodes = await self.get_left_to_right_ordering(new_root, tree_id, lock=False)
             for node in nodes:
                 if isinstance(node, InternalNode):
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
@@ -971,7 +971,6 @@ class DataStore:
         self,
         root: Root,
         tree_id: bytes32,
-        get_subtree_only: bool,
         get_only_deltas: bool = False,
         *,
         lock: bool = True,
@@ -979,14 +978,7 @@ class DataStore:
     ) -> List[Node]:
         node_hash = root.node_hash
         assert node_hash is not None
-        if not get_subtree_only:
-            ancestors = await self.get_ancestors(node_hash, tree_id, lock=lock)
-            path_hashes = {node_hash, *(ancestor.hash for ancestor in ancestors)}
-            # The hashes that need to be traversed, initialized here as the hashes to the right of the ancestors
-            # ordered from shallowest (root) to deepest (leaves) so .pop() from the end gives the deepest first.
-            stack = [ancestor.right_hash for ancestor in reversed(ancestors) if ancestor.right_hash not in path_hashes]
-        else:
-            stack = []
+        stack: List[bytes32] = []
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
@@ -1030,7 +1022,7 @@ class DataStore:
             roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
             for root in roots:
                 if root.node_hash is not None:
-                    nodes = await self.get_left_to_right_ordering(root, tree_id, True, True, lock=False)
+                    nodes = await self.get_left_to_right_ordering(root, tree_id, True, lock=False)
                     result += nodes
 
         return result
