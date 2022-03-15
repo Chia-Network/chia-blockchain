@@ -653,7 +653,10 @@ class FullNodeRpcApi:
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
             removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
 
-        return {"additions": additions, "removals": removals}
+        return {
+            "additions": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in additions],
+            "removals": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in removals],
+        }
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())
