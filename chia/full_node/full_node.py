@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import logging
+import os
 import random
 import time
 import traceback
@@ -67,6 +68,7 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -828,21 +830,24 @@ class FullNode:
             capabilities = weight_proof_peer.capabilities
             self.log.debug(f"capabilities {capabilities} ")
             weight_proof_v2 = False
+            ses_response = None
+            seed = None
             if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
                 weight_proof_v2 = True
                 self.log.info("using new weight proof format")
             if weight_proof_v2:
-                request = full_node_protocol.RequestProofOfWeightV2(heaviest_peak_height, heaviest_peak_hash)
+                request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_height)
+                ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=10)
+                #todo move salt to member/config
+                seed = std_hash(os.urandom(32) + bytes(ses_response.sub_epoch_summary.get_hash()))
+                request = full_node_protocol.RequestProofOfWeightV2(heaviest_peak_height, heaviest_peak_hash, seed)
                 response = await weight_proof_peer.request_proof_of_weight_v2(request, timeout=wp_timeout)
             else:
                 request = full_node_protocol.RequestProofOfWeight(heaviest_peak_height, heaviest_peak_hash)
                 response = await weight_proof_peer.request_proof_of_weight(request, timeout=wp_timeout)
 
             # Disconnect from this peer, because they have not behaved properly
-            if response is None or not (
-                isinstance(response, full_node_protocol.RespondProofOfWeight)
-                or isinstance(response, full_node_protocol.RespondProofOfWeightV2)
-            ):
+            if response is None:
                 await weight_proof_peer.close(600)
                 raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.height != heaviest_peak_height:
@@ -862,8 +867,12 @@ class FullNode:
             try:
                 if weight_proof_v2:
                     validated, fork_point, summaries = await self.weight_proof_handler_v2.validate_weight_proof(
-                        response.wp
+                        response.wp, seed
                     )
+
+                    # todo move into handler
+                    if summaries[-2].get_hash() != ses_response.sub_epoch_summary.get_hash():
+                        raise RuntimeError(f"Weight proof sub epoch summary did not match")
                 else:
                     validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(
                         response.wp
@@ -1149,7 +1158,7 @@ class FullNode:
                 )
 
         if peak is not None and self.weight_proof_handler is not None:
-            await self.weight_proof_handler_v2.get_proof_of_weight(peak.header_hash)
+            await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             self._state_changed("block")
 
     def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]):
@@ -1249,7 +1258,7 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
             f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
+            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
@@ -1266,7 +1275,9 @@ class FullNode:
             # TODO: address hint error and remove ignore
             #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
             #       expected "bytes32"  [arg-type]
-            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
+            fork_block = self.blockchain.block_record(
+                self.blockchain.height_to_hash(fork_height)
+            )  # type: ignore[arg-type]  # noqa: E501
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
@@ -2379,7 +2390,6 @@ class FullNode:
 async def node_next_block_check(
     peer: ws.WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface
 ) -> bool:
-
     block_response: Optional[Any] = await peer.request_block(full_node_protocol.RequestBlock(potential_peek, True))
     if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
         peak = blockchain.get_peak()

@@ -55,6 +55,11 @@ class ProtocolMessageTypes(Enum):
     request_peers = 43
     respond_peers = 44
 
+    request_proof_of_weight_v2 = 78
+    respond_proof_of_weight_v2 = 79
+    request_sub_epoch_summary = 80
+    respond_sub_epoch_summary = 81
+
     # Wallet protocol (wallet <-> full_node)
     request_puzzle_solution = 45
     respond_puzzle_solution = 46
@@ -97,5 +102,3 @@ class ProtocolMessageTypes(Enum):
     respond_children = 75
     request_ses_hashes = 76
     respond_ses_hashes = 77
-    request_proof_of_weight_v2 = 78
-    respond_proof_of_weight_v2 = 79

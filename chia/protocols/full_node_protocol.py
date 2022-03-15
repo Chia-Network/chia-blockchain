@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -64,16 +65,26 @@ class RespondProofOfWeight(Streamable):
 
 @dataclass(frozen=True)
 @streamable
+class RequestSubEpochSummary(Streamable):
+    tip: uint32
+
+@dataclass(frozen=True)
+@streamable
+class RespondSubEpochSummary(Streamable):
+    sub_epoch_summary: SubEpochSummary
+
+@dataclass(frozen=True)
+@streamable
 class RequestProofOfWeightV2(Streamable):
     total_number_of_blocks: uint32
     tip: bytes32
+    seed: bytes32
 
 
 @dataclass(frozen=True)
 @streamable
 class RespondProofOfWeightV2(Streamable):
     wp: WeightProofV2
-    tip: bytes32
 
 
 @dataclass(frozen=True)

@@ -1,7 +1,6 @@
 import logging
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Pool
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional
