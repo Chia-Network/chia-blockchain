@@ -29,6 +29,7 @@ jobs:
       - name: Find test paths
         id: configure
         run: |
+          set -o errexit
           echo ::set-output name=configuration::$(python tests/build-job-matrix.py --per directory --verbose)
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
