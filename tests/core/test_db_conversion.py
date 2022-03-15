@@ -103,7 +103,7 @@ class TestDbUpgrade:
                     assert err is None
 
             # now, convert v1 in_file to v2 out_file
-            await convert_v1_to_v2(in_file, out_file)
+            convert_v1_to_v2(in_file, out_file)
 
             async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
 

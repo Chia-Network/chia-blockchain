@@ -83,12 +83,11 @@ class WalletStateManager:
     # Makes sure only one asyncio thread is changing the blockchain state at one time
     lock: asyncio.Lock
 
-    tx_lock: asyncio.Lock
-
     log: logging.Logger
 
     # TODO Don't allow user to send tx until wallet is synced
     sync_mode: bool
+    sync_target: uint32
     genesis: FullBlock
 
     state_changed_callback: Optional[Callable]
@@ -161,6 +160,7 @@ class WalletStateManager:
 
         self.wallet_node = wallet_node
         self.sync_mode = False
+        self.sync_target = uint32(0)
         self.finished_sync_up_to = uint32(0)
         self.weight_proof_handler = WalletWeightProofHandler(self.constants)
         self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
@@ -469,11 +469,12 @@ class WalletStateManager:
             return True
         return False
 
-    def set_sync_mode(self, mode: bool):
+    def set_sync_mode(self, mode: bool, sync_height: uint32 = uint32(0)):
         """
         Sets the sync mode. This changes the behavior of the wallet node.
         """
         self.sync_mode = mode
+        self.sync_target = sync_height
         self.state_changed("sync_changed")
 
     async def get_confirmed_spendable_balance_for_wallet(self, wallet_id: int, unspent_records=None) -> uint128:
@@ -756,7 +757,7 @@ class WalletStateManager:
                         tx_record = TransactionRecord(
                             confirmed_at_height=coin_state.created_height,
                             created_at_time=uint64(created_timestamp),
-                            to_puzzle_hash=coin_state.coin.puzzle_hash,
+                            to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin_state.coin.puzzle_hash)),
                             amount=uint64(coin_state.coin.amount),
                             fee_amount=uint64(0),
                             confirmed=True,
@@ -810,7 +811,7 @@ class WalletStateManager:
                             tx_record = TransactionRecord(
                                 confirmed_at_height=coin_state.spent_height,
                                 created_at_time=uint64(spent_timestamp),
-                                to_puzzle_hash=to_puzzle_hash,
+                                to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, to_puzzle_hash)),
                                 amount=uint64(int(amount)),
                                 fee_amount=uint64(fee),
                                 confirmed=True,
@@ -1036,7 +1037,7 @@ class WalletStateManager:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=timestamp,
-                to_puzzle_hash=coin.puzzle_hash,
+                to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
                 amount=coin.amount,
                 fee_amount=uint64(0),
                 confirmed=True,
@@ -1068,7 +1069,7 @@ class WalletStateManager:
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),
                     created_at_time=timestamp,
-                    to_puzzle_hash=coin.puzzle_hash,
+                    to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin.puzzle_hash)),
                     amount=coin.amount,
                     fee_amount=uint64(0),
                     confirmed=True,
@@ -1318,6 +1319,14 @@ class WalletStateManager:
         txs: List[TransactionRecord] = await self.tx_store.get_transactions_by_trade_id(trade_id)
         for tx in txs:
             await self.tx_store.delete_transaction_record(tx.name)
+
+    async def convert_puzzle_hash(self, wallet_id: uint32, puzzle_hash: bytes32) -> bytes32:
+        wallet = self.wallets[wallet_id]
+        # This should be general to wallets but for right now this is just for CATs so we'll add this if
+        if wallet.type() == WalletType.CAT.value:
+            return await wallet.convert_puzzle_hash(puzzle_hash)
+
+        return puzzle_hash
 
     def get_dl_wallet(self):
         for _, wallet in self.wallets.items():

@@ -170,6 +170,15 @@ class WalletRpcApi:
             if peers_close_task is not None:
                 await peers_close_task
 
+    async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
+        assert self.service.wallet_state_manager is not None
+        return dataclasses.replace(
+            tx,
+            to_puzzle_hash=(
+                await self.service.wallet_state_manager.convert_puzzle_hash(tx.wallet_id, tx.to_puzzle_hash)
+            ),
+        )
+
     ##########################################################################################
     # Key management
     ##########################################################################################
@@ -384,7 +393,7 @@ class WalletRpcApi:
 
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-        height = self.service.wallet_state_manager.blockchain.get_peak_height()
+        height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         return {"height": height}
 
     async def get_network_info(self, request: Dict):
@@ -667,7 +676,7 @@ class WalletRpcApi:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
-            "transaction": tr.to_json_dict_convenience(self.service.config),
+            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
 
@@ -685,7 +694,10 @@ class WalletRpcApi:
             wallet_id, start, end, sort_key=sort_key, reverse=reverse
         )
         return {
-            "transactions": [tr.to_json_dict_convenience(self.service.config) for tr in transactions],
+            "transactions": [
+                (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+                for tr in transactions
+            ],
             "wallet_id": wallet_id,
         }
 
@@ -837,7 +849,7 @@ class WalletRpcApi:
         memos: List[bytes] = []
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
+        if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         if "fee" in request:
