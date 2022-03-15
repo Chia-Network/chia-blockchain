@@ -22,7 +22,6 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
