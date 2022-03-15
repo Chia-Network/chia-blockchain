@@ -44,64 +44,64 @@ async def setup_sim():
     return sim, sim_client
 
 
+async def do_spend(
+    sim: SpendSim,
+    sim_client: SimClient,
+    tail: Program,
+    coins: List[Coin],
+    lineage_proofs: List[Program],
+    inner_solutions: List[Program],
+    expected_result: Tuple[MempoolInclusionStatus, Err],
+    reveal_limitations_program: bool = True,
+    signatures: List[G2Element] = [],
+    extra_deltas: Optional[List[int]] = None,
+    additional_spends: List[SpendBundle] = [],
+    limitations_solutions: Optional[List[Program]] = None,
+) -> int:
+    if limitations_solutions is None:
+        limitations_solutions = [Program.to([])] * len(coins)
+    if extra_deltas is None:
+        extra_deltas = [0] * len(coins)
+
+    spendable_cat_list: List[SpendableCAT] = []
+    for coin, innersol, proof, limitations_solution, extra_delta in zip(
+        coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
+    ):
+        spendable_cat_list.append(
+            SpendableCAT(
+                coin,
+                tail.get_tree_hash(),
+                acs,
+                innersol,
+                limitations_solution=limitations_solution,
+                lineage_proof=proof,
+                extra_delta=extra_delta,
+                limitations_program_reveal=tail if reveal_limitations_program else Program.to([]),
+            )
+        )
+
+    spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
+        CAT_MOD,
+        spendable_cat_list,
+    )
+    agg_sig = AugSchemeMPL.aggregate(signatures)
+    result = await sim_client.push_tx(
+        SpendBundle.aggregate(
+            [
+                *additional_spends,
+                spend_bundle,
+                SpendBundle([], agg_sig),  # "Signing" the spend bundle
+            ]
+        )
+    )
+    assert result == expected_result
+    cost = cost_of_spend_bundle(spend_bundle)
+    await sim.farm_block()
+    return cost
+
+
 class TestCATLifecycle:
     cost: Dict[str, int] = {}
-
-    async def do_spend(
-        self,
-        sim: SpendSim,
-        sim_client: SimClient,
-        tail: Program,
-        coins: List[Coin],
-        lineage_proofs: List[Program],
-        inner_solutions: List[Program],
-        expected_result: Tuple[MempoolInclusionStatus, Err],
-        reveal_limitations_program: bool = True,
-        signatures: List[G2Element] = [],
-        extra_deltas: Optional[List[int]] = None,
-        additional_spends: List[SpendBundle] = [],
-        limitations_solutions: Optional[List[Program]] = None,
-        cost_str: str = "",
-    ):
-        if limitations_solutions is None:
-            limitations_solutions = [Program.to([])] * len(coins)
-        if extra_deltas is None:
-            extra_deltas = [0] * len(coins)
-
-        spendable_cat_list: List[SpendableCAT] = []
-        for coin, innersol, proof, limitations_solution, extra_delta in zip(
-            coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
-        ):
-            spendable_cat_list.append(
-                SpendableCAT(
-                    coin,
-                    tail.get_tree_hash(),
-                    acs,
-                    innersol,
-                    limitations_solution=limitations_solution,
-                    lineage_proof=proof,
-                    extra_delta=extra_delta,
-                    limitations_program_reveal=tail if reveal_limitations_program else Program.to([]),
-                )
-            )
-
-        spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
-            CAT_MOD,
-            spendable_cat_list,
-        )
-        agg_sig = AugSchemeMPL.aggregate(signatures)
-        result = await sim_client.push_tx(
-            SpendBundle.aggregate(
-                [
-                    *additional_spends,
-                    spend_bundle,
-                    SpendBundle([], agg_sig),  # "Signing" the spend bundle
-                ]
-            )
-        )
-        assert result == expected_result
-        self.cost[cost_str] = cost_of_spend_bundle(spend_bundle)
-        await sim.farm_block()
 
     @pytest.mark.asyncio()
     async def test_cat_mod(self, setup_sim):
@@ -116,7 +116,7 @@ class TestCATLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
             # Testing the eve spend
-            await self.do_spend(
+            self.cost["Eve Spend"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -134,7 +134,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Eve Spend",
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -145,7 +144,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             coins = [coins[0], coins[1]]
-            await self.do_spend(
+            self.cost["Two CATs"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -162,7 +161,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
-                cost_str="Two CATs",
             )
 
             # Testing a combination of three
@@ -171,7 +169,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             total_amount: uint64 = uint64(sum([c.amount for c in coins]))
-            await self.do_spend(
+            self.cost["Three CATs"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -189,7 +187,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 3,
-                cost_str="Three CATs",
             )
 
             # Spend with a standard lineage proof
@@ -197,7 +194,7 @@ class TestCATLifecycle:
             _, curried_args = cat_puzzle.uncurry()
             _, _, innerpuzzle = curried_args.as_iter()
             lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
-            await self.do_spend(
+            self.cost["Standard Lineage Check"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -206,11 +203,10 @@ class TestCATLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 reveal_limitations_program=False,
-                cost_str="Standard Lineage Check",
             )
 
             # Melt some value
-            await self.do_spend(
+            self.cost["Melting Value"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -227,7 +223,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
-                cost_str="Melting Value",
             )
 
             # Mint some value
@@ -247,7 +242,7 @@ class TestCATLifecycle:
                 ],
                 G2Element(),
             )
-            await self.do_spend(
+            self.cost["Mint Value"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -265,7 +260,6 @@ class TestCATLifecycle:
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
                 limitations_solutions=[checker_solution],
-                cost_str="Mint Value",
             )
 
         finally:
@@ -290,7 +284,7 @@ class TestCATLifecycle:
             eve_to_melt = cat_records[3].coin
 
             # Spend two of them to make them non-eve
-            await self.do_spend(
+            self.cost["Spend two eves"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -312,7 +306,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
-                cost_str="Spend two eves",
             )
 
             # Make the lineage proofs for the non-eves
@@ -327,7 +320,7 @@ class TestCATLifecycle:
 
             # Do the complex spend
             # We have both and eve and non-eve doing both minting and melting
-            await self.do_spend(
+            self.cost["Complex Spend"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -362,7 +355,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 4,
                 extra_deltas=[13, -21, 21, -13],
-                cost_str="Complex Spend",
             )
         finally:
             await sim.close()
@@ -390,7 +382,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            await self.do_spend(
+            self.cost["Genesis by ID"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -406,7 +398,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Genesis by ID",
             )
 
         finally:
@@ -435,7 +426,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            await self.do_spend(
+            self.cost["Genesis by Puzhash"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -451,7 +442,6 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Genesis by Puzhash",
             )
 
         finally:
@@ -476,7 +466,7 @@ class TestCATLifecycle:
                 sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            await self.do_spend(
+            self.cost["Signature Issuance"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -493,7 +483,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
-                cost_str="Signature Issuance",
             )
 
             # Test melting value
@@ -502,7 +491,7 @@ class TestCATLifecycle:
                 sk, (int_to_bytes(-1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            await self.do_spend(
+            self.cost["Signature Melt"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -520,7 +509,6 @@ class TestCATLifecycle:
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
-                cost_str="Signature Melt",
             )
 
             # Test minting value
@@ -545,7 +533,7 @@ class TestCATLifecycle:
                 G2Element(),
             )
 
-            await self.do_spend(
+            self.cost["Signature Mint"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -564,7 +552,6 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
-                cost_str="Signature Mint",
             )
 
         finally:
@@ -608,7 +595,7 @@ class TestCATLifecycle:
             )
             signature: G2Element = AugSchemeMPL.sign(sk, new_tail.get_tree_hash())
 
-            await self.do_spend(
+            self.cost["Delegated Genesis"] = await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -625,7 +612,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
                 limitations_solutions=[checker_solution],
-                cost_str="Delegated Genesis",
             )
 
         finally:
