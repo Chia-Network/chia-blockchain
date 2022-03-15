@@ -2,6 +2,8 @@ import unittest
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from pytest import raises
+
 from chia.util.ints import uint8
 from chia.util.type_checking import is_type_List, is_type_SpecificOptional, strictdataclass
 
@@ -53,11 +55,9 @@ class TestStrictClass(unittest.TestCase):
             b = 0
 
         assert TestClass2(25)
-        try:
+
+        with raises(TypeError):
             TestClass2(1, 2)
-            assert False
-        except TypeError:
-            pass
 
     def test_StrictDataClassLists(self):
         @dataclass(frozen=True)
@@ -67,16 +67,12 @@ class TestStrictClass(unittest.TestCase):
             b: List[List[uint8]]
 
         assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
-        try:
-            TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])
-            assert False
-        except AssertionError:
-            pass
-        try:
+
+        with raises(ValueError):
+            TestClass({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]])
+
+        with raises(ValueError):
             TestClass([1, 2, 3], [uint8(200), uint8(25)])
-            assert False
-        except ValueError:
-            pass
 
     def test_StrictDataClassOptional(self):
         @dataclass(frozen=True)

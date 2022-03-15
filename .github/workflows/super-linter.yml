@@ -62,7 +62,6 @@ jobs:
           DEFAULT_BRANCH: main
           LINTER_RULES_PATH: .
           MARKDOWN_CONFIG_FILE: .markdown-lint.yml
-          PYTHON_BLACK_CONFIG_FILE: pyproject.toml
           PYTHON_FLAKE8_CONFIG_FILE: .flake8
           PYTHON_ISORT_CONFIG_FILE: .isort.cfg
           PYTHON_PYLINT_CONFIG_FILE: pylintrc
@@ -77,7 +76,6 @@ jobs:
           VALIDATE_POWERSHELL: true
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
-          VALIDATE_PYTHON_BLACK: true
 #          VALIDATE_PYTHON_ISORT: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true

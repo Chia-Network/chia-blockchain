@@ -20,6 +20,7 @@ from tests.setup_nodes import (
 )
 from tests.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
+from tests.util.socket import find_available_listen_port
 
 test_constants_modified = test_constants.replace(
     **{
@@ -50,7 +51,8 @@ class TestSimulation:
             async for _ in setup_full_node(
                 test_constants_modified,
                 "blockchain_test_3.db",
-                21240,
+                find_available_listen_port(),
+                find_available_listen_port(),
                 b_tools,
                 db_version=1,
             ):
@@ -71,10 +73,13 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
-        await server1.start_client(PeerInfo(self_hostname, uint16(21238)))
+
+        node1_port = node1.full_node.config["port"]
+        node2_port = node2.full_node.config["port"]
+        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(1500, node_height_at_least, True, node2, 7)
-        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(21238)))
+        await time_out_assert(600, node_height_at_least, True, node2, 7)
+        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
@@ -114,12 +119,12 @@ class TestSimulation:
             # )
             return has_compact == [True, True]
 
-        await time_out_assert(1500, has_compact, True, node1, node2)
+        await time_out_assert(600, has_compact, True, node1, node2)
         node3 = extra_node
         server3 = node3.full_node.server
         peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
-        await server3.start_client(PeerInfo(self_hostname, uint16(21237)))
-        await server3.start_client(PeerInfo(self_hostname, uint16(21238)))
+        await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
+        await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
     @pytest.mark.asyncio
