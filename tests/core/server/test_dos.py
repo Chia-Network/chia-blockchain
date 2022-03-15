@@ -41,7 +41,7 @@ def event_loop():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, starting_port=60000, db_version=db_version):
+    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
 
