@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import List, Optional, Set, Tuple
 
@@ -23,12 +22,6 @@ from tests.wallet_tools import WalletTool
 from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 constants = test_constants

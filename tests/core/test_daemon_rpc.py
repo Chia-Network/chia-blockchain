@@ -6,12 +6,13 @@ from chia.daemon.client import connect_to_daemon
 from chia import __version__
 
 
-class TestDaemonRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def get_daemon(self, bt):
-        async for _ in setup_daemon(btools=bt):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def get_daemon(bt):
+    async for _ in setup_daemon(btools=bt):
+        yield _
 
+
+class TestDaemonRpc:
     @pytest.mark.asyncio
     async def test_get_version_rpc(self, get_daemon, bt):
         ws_server = get_daemon

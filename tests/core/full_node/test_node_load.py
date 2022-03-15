@@ -1,4 +1,3 @@
-import asyncio
 import time
 
 import pytest
@@ -12,18 +11,13 @@ from tests.setup_nodes import setup_two_nodes, test_constants
 from tests.time_out_assert import time_out_assert
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes(db_version, self_hostname):
+    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
 
 
 class TestNodeLoad:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version, self_hostname):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
     @pytest.mark.asyncio
     async def test_blocks_load(self, bt, two_nodes, self_hostname):
         num_blocks = 50

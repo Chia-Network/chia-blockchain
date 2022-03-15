@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 import pytest
@@ -25,18 +24,13 @@ WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes(db_version, self_hostname):
+    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
 
 
 class TestBlockchainTransactions:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version, self_hostname):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes, bt):
         num_blocks = 10
