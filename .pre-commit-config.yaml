@@ -1,13 +1,6 @@
 repos:
 -   repo: local
     hooks:
-    -   id: build-workflows
-        name: Validate github action workflows
-        entry: ./tests/build-workflows.py --fail-on-update
-        language: python
-        pass_filenames: false
--   repo: local
-    hooks:
     -   id: init_py_files
         name: __init__.py files
         entry: python3 tests/build-init-files.py -v --root .
