@@ -99,7 +99,7 @@ jobs:
     - name: Test tools code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/tools/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/tools/test_*.py -s -v --durations 0 -m "not benchmark"
 
 
 #
