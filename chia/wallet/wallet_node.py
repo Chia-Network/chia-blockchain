@@ -500,8 +500,9 @@ class WalletNode:
         start_time = time.time()
 
         if rollback:
-            await self.wallet_state_manager.reorg_rollback(fork_height)
-            self.rollback_request_caches(fork_height)
+            async with self.wallet_state_manager.db_wrapper.lock:
+                await self.wallet_state_manager.reorg_rollback(fork_height)
+                self.rollback_request_caches(fork_height)
             await self.update_ui()
 
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
@@ -592,8 +593,9 @@ class WalletNode:
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
-            await self.wallet_state_manager.reorg_rollback(fork_height)
-            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
+            async with self.wallet_state_manager.db_wrapper.lock:
+                await self.wallet_state_manager.reorg_rollback(fork_height)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
         if fork_height is not None:
             cache.clear_after_height(fork_height)
@@ -1030,9 +1032,10 @@ class WalletNode:
         peak_height = self.wallet_state_manager.blockchain.get_peak_height()
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
-            await self.wallet_state_manager.reorg_rollback(fork_height)
+            async with self.wallet_state_manager.db_wrapper.lock:
+                await self.wallet_state_manager.reorg_rollback(fork_height)
+                self.rollback_request_caches(fork_height)
             await self.update_ui()
-        self.rollback_request_caches(fork_height)
 
         if peak is not None:
             assert header_block.weight >= peak.weight
