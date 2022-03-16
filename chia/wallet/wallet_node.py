@@ -468,6 +468,7 @@ class WalletNode:
             await self.wallet_peers.on_connect(peer)
 
     async def perform_atomic_rollback(self, fork_height: int):
+        self.log.info(f"perform_atomic_rollback to {fork_height}")
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
                 await self.db_wrapper.begin_transaction()
@@ -608,12 +609,12 @@ class WalletNode:
             self.validation_semaphore = asyncio.Semaphore(6)
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
-        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
+        if fork_height is not None and height is not None and fork_height != height - 1:
             await self.perform_atomic_rollback(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
         if fork_height is not None:
             cache.clear_after_height(fork_height)
-            self.log.info(f"Cleared caches back to {fork_height}")
+            self.log.info(f"Cleared peer cache back to {fork_height}")
 
         all_tasks: List[asyncio.Task] = []
         target_concurrent_tasks: int = 20
