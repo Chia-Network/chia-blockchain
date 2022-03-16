@@ -608,13 +608,10 @@ class WalletNode:
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
 
-        # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
+        # If there is a fork, we need to ensure that we roll back to properly handle reorgs
         if fork_height is not None and height is not None and fork_height != height - 1:
             await self.perform_atomic_rollback(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
-        if fork_height is not None:
-            cache.clear_after_height(fork_height)
-            self.log.info(f"Cleared peer cache back to {fork_height}")
 
         all_tasks: List[asyncio.Task] = []
         target_concurrent_tasks: int = 20
