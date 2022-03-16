@@ -118,12 +118,12 @@
   ;MAIN
   (if mode
     ; mode 1 - create messages and recreate singleton
-    (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message_puzzle))) (a message_puzzle message_solution)))
+    (c (list CREATE_COIN new_inner_puzhash new_amount (list MY_PUBKEY)) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message_puzzle))) (a message_puzzle message_solution)))
     ; mode 0 - recovery
     ; check that recovery list is not empty
     (if recovery_list_reveal
       (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-        (c (list CREATE_COIN message_puzzle new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message_puzzle parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
+        (c (list CREATE_COIN message_puzzle new_amount (list MY_PUBKEY)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message_puzzle parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
         (x)
       )
       (x)

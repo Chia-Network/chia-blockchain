@@ -1,7 +1,7 @@
 from clvm_tools import binutils
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Iterator
 from blspy import G1Element
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
@@ -94,6 +94,24 @@ def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey)
     solution = Program.to([])
     coinsol = CoinSpend(coin, puzzle, solution)
     return coinsol
+
+
+def match_did_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+    """
+    Given a puzzle test if it's an DID and, if it is, return the curried arguments
+    """
+    try:
+        mod, curried_args = puzzle.uncurry()
+        if mod == SINGLETON_TOP_LAYER_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == DID_INNERPUZ_MOD:
+                return True, curried_args.as_iter()
+    except Exception:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+        return False, iter(())
+    return False, iter(())
 
 
 # inspect puzzle and check it is a DID puzzle
