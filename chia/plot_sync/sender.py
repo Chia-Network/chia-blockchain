@@ -299,14 +299,24 @@ class Sender:
         self._messages.clear()
         self._lock.release()
 
+    def sync_active(self) -> bool:
+        return self._lock.locked() and self._sync_id != 0
+
+    def connected(self) -> bool:
+        return self._connection is not None
+
     async def _run(self) -> None:
+        """
+        This is the sender task responsible to send new messages during sync as they come into Sender._messages
+        triggered by the plot manager callback.
+        """
         while not self._stop_requested:
             try:
-                while not self._lock.locked() or self._sync_id == 0 or self._connection is None:
+                while not self.connected() or not self.sync_active():
                     if self._stop_requested:
                         return
                     await asyncio.sleep(0.1)
-                while not self._stop_requested and self._lock.locked() and self._sync_id != 0:
+                while not self._stop_requested and self.sync_active():
                     if self._next_message_id >= len(self._messages):
                         await asyncio.sleep(0.1)
                         continue
