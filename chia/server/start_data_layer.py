@@ -24,14 +24,10 @@ log = logging.getLogger(__name__)
 def service_kwargs_for_data_layer(
     root_path: pathlib.Path,
     config: Dict[str, Any],
-    port: Optional[int] = None,
-    rpc_port: Optional[int] = None,
-    wallet_rpc_port: Optional[int] = None,
 ) -> Dict[str, Any]:
     dl_config = config["data_layer"]
     self_hostname = config["self_hostname"]
-    if wallet_rpc_port is None:
-        wallet_rpc_port = dl_config["wallet_peer"]["port"]
+    wallet_rpc_port = dl_config["wallet_peer"]["port"]
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), root_path, config)
     data_layer = DataLayer(root_path=root_path, wallet_rpc_init=wallet_rpc_init)
     api = DataLayerAPI(data_layer)
@@ -48,13 +44,11 @@ def service_kwargs_for_data_layer(
         network_id=network_id,
     )
 
-    if port is None:
-        port = dl_config.get("port")
+    port = dl_config.get("port")
     if port is not None:
         kwargs.update(advertised_port=dl_config["port"], server_listen_ports=[dl_config["port"]])
 
-    if rpc_port is None:
-        rpc_port = dl_config.get("rpc_port")
+    rpc_port = dl_config.get("rpc_port")
     if rpc_port is not None:
         kwargs["rpc_info"] = (DataLayerRpcApi, dl_config["rpc_port"])
 
