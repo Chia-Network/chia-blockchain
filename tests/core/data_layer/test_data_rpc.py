@@ -33,7 +33,7 @@ async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
     config = bt.config
     kwargs = service_kwargs_for_data_layer(root_path, config, test_rpc_port)
     kwargs.update(parse_cli_args=False)
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
     await service.start()
     yield service._api.data_layer
     service.stop()
