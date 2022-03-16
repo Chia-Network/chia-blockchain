@@ -677,10 +677,10 @@ class WalletNode:
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                         await self.wallet_state_manager.db_wrapper.begin_transaction()
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
-                        await self.wallet_state_manager.db_wrapper.commit_transaction()
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                             last_change_height_cs(states[-1]) - 1, in_transaction=True
                         )
+                        await self.wallet_state_manager.db_wrapper.commit_transaction()
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
                         await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
