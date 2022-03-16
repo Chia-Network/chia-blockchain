@@ -468,6 +468,7 @@ class WalletNode:
             await self.wallet_peers.on_connect(peer)
 
     async def perform_atomic_rollback(self, fork_height: int):
+        assert self.wallet_state_manager is not None
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
