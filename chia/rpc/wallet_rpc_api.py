@@ -456,7 +456,7 @@ class WalletRpcApi:
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:
                     cat_wallet = await CATWallet.create_wallet_for_cat(
-                        wallet_state_manager, main_wallet, request["asset_id"]
+                        wallet_state_manager, main_wallet, request["asset_id"], name
                     )
                 self.service.wallet_state_manager.state_changed("wallet_created")
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
@@ -923,7 +923,7 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested}}
+        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees()}}
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None

@@ -102,13 +102,12 @@ class TestPoolWalletRpc:
 
             api_user = WalletRpcApi(wallet_node_0)
             config = bt.config
-            hostname = config["self_hostname"]
             daemon_port = config["daemon_port"]
-            test_rpc_port = find_available_listen_port()
+            test_rpc_port = find_available_listen_port("rpc_port")
 
             rpc_cleanup = await start_rpc_server(
                 api_user,
-                hostname,
+                self_hostname,
                 daemon_port,
                 test_rpc_port,
                 lambda x: None,
@@ -136,13 +135,12 @@ class TestPoolWalletRpc:
         pool_ph = pool_ph_record.puzzle_hash
         api_user = WalletRpcApi(wallet_node_0)
         config = bt.config
-        hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(21529)
+        test_rpc_port = find_available_listen_port("rpc_port")
 
         rpc_cleanup = await start_rpc_server(
             api_user,
-            hostname,
+            self_hostname,
             daemon_port,
             test_rpc_port,
             lambda x: None,
@@ -199,7 +197,7 @@ class TestPoolWalletRpc:
                 assert False
         await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+            our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
         await time_out_assert(
             10,
@@ -278,7 +276,7 @@ class TestPoolWalletRpc:
                 assert False
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "http://pool.example.com", 10, "localhost:5000", "new", "FARMING_TO_POOL", fee
+            our_ph, "http://pool.example.com", 10, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
         await time_out_assert(
             10,
@@ -356,10 +354,10 @@ class TestPoolWalletRpc:
                 assert False
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph_1, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+            our_ph_1, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph_1, "localhost", 12, "localhost:5000", "new", "FARMING_TO_POOL", fee
+            our_ph_1, self_hostname, 12, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
 
         await time_out_assert(
@@ -427,7 +425,7 @@ class TestPoolWalletRpc:
             for i in range(22):
                 await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
                 creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
-                    our_ph_1, "localhost", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
+                    our_ph_1, self_hostname, 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
                 )
                 await time_out_assert(
                     10,
@@ -485,7 +483,7 @@ class TestPoolWalletRpc:
 
         await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+            our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
 
         await time_out_assert(
@@ -602,7 +600,7 @@ class TestPoolWalletRpc:
         # Balance stars at 6 XCH
         assert (await wallet_0.get_confirmed_balance()) == 6000000000000
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-            our_ph, "http://123.45.67.89", 10, "localhost:5000", "new", "FARMING_TO_POOL", fee
+            our_ph, "http://123.45.67.89", 10, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
 
         await time_out_assert(
@@ -761,10 +759,10 @@ class TestPoolWalletRpc:
                     assert False
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
             creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-                our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
 
             await time_out_assert(
@@ -895,7 +893,7 @@ class TestPoolWalletRpc:
             await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                our_ph, "", 0, "localhost:5000", "new", "SELF_POOLING", fee
+                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
 
             await time_out_assert(
@@ -1018,7 +1016,7 @@ class TestPoolWalletRpc:
             await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
+                pool_a_ph, "https://pool-a.org", 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
             )
 
             await time_out_assert(
@@ -1121,7 +1119,7 @@ class TestPoolWalletRpc:
             await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
-                pool_a_ph, "https://pool-a.org", 5, "localhost:5000", "new", "FARMING_TO_POOL", fee
+                pool_a_ph, "https://pool-a.org", 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
             )
 
             await time_out_assert(

@@ -67,8 +67,8 @@ class TestWalletRpc:
         ph = await wallet.get_new_puzzlehash()
         ph_2 = await wallet_2.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         if trusted:
             wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -475,7 +475,7 @@ class TestWalletRpc:
             offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
 
             summary = await client.get_offer_summary(offer)
-            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}}
+            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
 
             assert await client.check_offer_validity(offer)
 
@@ -585,7 +585,7 @@ class TestWalletRpc:
             pks = await client.get_public_keys()
             assert len(pks) == 2
 
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             sk_dict = await client.get_private_key(pks[1])
             assert sk_dict["fingerprint"] == pks[1]
 
@@ -620,7 +620,7 @@ class TestWalletRpc:
             assert sk_dict["used_for_pool_rewards"] is False
 
             await client.delete_key(pks[0])
-            await client.log_in_and_skip(pks[1])
+            await client.log_in(pks[1])
             assert len(await client.get_public_keys()) == 1
 
             assert not (await client.get_sync_status())
