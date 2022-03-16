@@ -5,6 +5,7 @@ source=
   chia
   tests
 concurrency=multiprocessing
+parallel=True
 
 [report]
 precision = 1
