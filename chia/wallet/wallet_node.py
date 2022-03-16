@@ -471,15 +471,15 @@ class WalletNode:
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
-                await self.db_wrapper.begin_transaction()
+                await self.wallet_state_manager.db_wrapper.begin_transaction()
                 await self.wallet_state_manager.reorg_rollback(fork_height)
                 self.rollback_request_caches(fork_height)
                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
-                await self.db_wrapper.commit_transaction()
+                await self.wallet_state_manager.db_wrapper.commit_transaction()
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
-                await self.db_wrapper.rollback_transaction()
+                await self.wallet_state_manager.db_wrapper.rollback_transaction()
                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
