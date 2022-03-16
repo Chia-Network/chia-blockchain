@@ -3,6 +3,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
+from chia.wallet.util.wallet_types import WalletType
+
 
 @click.group("wallet", short_help="Manage your wallet")
 def wallet_cmd() -> None:
@@ -138,14 +140,20 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-w", "--wallet_type", help="Choose a specific wallet type to return", type=int, default=None)
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[int]) -> None:
+@click.option(
+    "-w",
+    "--wallet_type",
+    help="Choose a specific wallet type to return",
+    type=click.Choice([x.name.lower() for x in WalletType]),
+    default=None,
+)
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
     args: Dict[str, Any] = {}
     if wallet_type is not None:
-        args["type"] = wallet_type
+        args["type"] = WalletType[wallet_type.upper()]
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
