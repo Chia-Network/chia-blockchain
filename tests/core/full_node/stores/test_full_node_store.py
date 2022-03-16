@@ -1,5 +1,3 @@
-# flake8: noqa: F811, F401
-import asyncio
 import atexit
 import logging
 from secrets import token_bytes
@@ -8,7 +6,6 @@ from typing import List, Optional
 import pytest
 import pytest_asyncio
 
-from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -25,7 +22,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
-    _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
 from tests.setup_nodes import test_constants as test_constants_original
