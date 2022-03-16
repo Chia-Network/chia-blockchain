@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Trans } from '@lingui/macro';
+import { Plural, Trans } from '@lingui/macro';
 import { type OfferSummaryRecord  } from '@chia/api';
 import {
   Flex,
+  FormatLargeNumber,
   StateColor,
   TooltipIcon,
   mojoToChia,
@@ -117,8 +118,8 @@ export default function OfferSummary(props: Props) {
             <Typography variant="body1" color="secondary" style={{fontWeight: 'bold'}}>
               <Trans>Fees included in offer:</Trans>
             </Typography>
-            <Typography color="primary">{Number(makerFee).toLocaleString()}</Typography>
-            <Typography>{makerFee === 1 ? "mojo" : "mojos"}</Typography>
+            <Typography color="primary"><FormatLargeNumber value={makerFee} /></Typography>
+            <Typography><Plural value={makerFee} one="mojo" other="mojos" /></Typography>
             <TooltipIcon>
               {imported ? (
                 <Trans>

@@ -66,10 +66,10 @@ function OfferEditor(props: OfferEditorProps) {
     if (assetWalletId > 0) {
       let mojoAmount = 0;
       if (walletType === WalletType.STANDARD_WALLET) {
-        mojoAmount = Number.parseFloat(chiaToMojo(amount));
+        mojoAmount = chiaToMojo(amount);
       }
       else if (walletType === WalletType.CAT) {
-        mojoAmount = Number.parseFloat(catToMojo(amount));
+        mojoAmount = catToMojo(amount);
       }
       offer[assetWalletId] = debit ? -mojoAmount : mojoAmount;
     }
@@ -83,7 +83,7 @@ function OfferEditor(props: OfferEditorProps) {
     let missingAssetSelection = false;
     let missingAmount = false;
     let amountExceedsSpendableBalance = false;
-    let feeInMojos = Number.parseFloat(chiaToMojo(formData.fee || 0));
+    let feeInMojos = chiaToMojo(formData.fee ?? 0);
 
     formData.makerRows.forEach((row: OfferEditorRowData) => {
       updateOffer(offer, row, true);
