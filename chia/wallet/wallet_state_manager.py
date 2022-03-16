@@ -1126,7 +1126,6 @@ class WalletStateManager:
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
             self.wallets.pop(wallet_id)
 
-
     async def _await_closed(self) -> None:
         await self.db_connection.close()
         if self.weight_proof_handler is not None:

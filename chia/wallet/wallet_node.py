@@ -485,7 +485,6 @@ class WalletNode:
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
 
-
     async def long_sync(
         self,
         target_height: uint32,
