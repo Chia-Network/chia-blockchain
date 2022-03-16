@@ -40,7 +40,7 @@ and is designed so that you could test with it and then swap in a real rpc clien
 @dataclass(frozen=True)
 @streamable
 class SimFullBlock(Streamable):
-    generator: Optional[BlockGenerator]
+    transactions_generator: Optional[BlockGenerator]
     height: uint32  # Note that height is not on a regular FullBlock
 
 
