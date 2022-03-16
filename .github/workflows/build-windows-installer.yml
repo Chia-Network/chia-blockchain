@@ -32,19 +32,6 @@ jobs:
       run: |
         git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
-    - name: Get npm cache directory
-      id: npm-cache
-      run: |
-        echo "::set-output name=dir::$(npm config get cache)"
-
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      with:
-        path: ${{ steps.npm-cache.outputs.dir }}
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Get pip cache dir
       id: pip-cache
       run: |

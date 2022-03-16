@@ -41,14 +41,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Get pip cache dir
       id: pip-cache
       run: |
