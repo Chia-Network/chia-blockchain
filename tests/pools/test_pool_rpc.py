@@ -92,12 +92,6 @@ PREFARMED_BLOCKS = 4
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc(bt, self_hostname):
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async for nodes in setup_simulators_and_wallets(1, 1, {}):

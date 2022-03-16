@@ -17,9 +17,9 @@ from chia.protocols.timelord_protocol import NewInfusionPointVDF
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
-from tests.block_tools import get_signage_point, create_block_tools
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from tests.block_tools import get_signage_point, create_block_tools
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_no_error,
@@ -623,7 +623,7 @@ class TestFullNodeStore:
         for block in blocks:
             await _validate_and_add_block_no_error(blockchain, block)
 
-        log.warning(f"Starting loop")
+        log.warning("Starting loop")
         while True:
             log.warning("Looping")
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
