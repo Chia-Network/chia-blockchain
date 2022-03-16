@@ -58,7 +58,7 @@ async def harvester_farmer(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node():
+async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
@@ -82,8 +82,8 @@ async def timelord(bt):
 
 class TestSSL:
     @pytest.mark.asyncio
-    async def test_public_connections(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_public_connections(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -130,8 +130,8 @@ class TestSSL:
         assert connected is False
 
     @pytest.mark.asyncio
-    async def test_full_node(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_full_node(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -151,8 +151,8 @@ class TestSSL:
         assert connected is True
 
     @pytest.mark.asyncio
-    async def test_wallet(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_wallet(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         wallet_node, wallet_server = wallets[0]
 
         # Wallet should not accept incoming connections

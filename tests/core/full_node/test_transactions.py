@@ -17,7 +17,7 @@ from tests.time_out_assert import time_out_assert
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node():
+async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
@@ -36,9 +36,9 @@ async def three_nodes_two_wallets():
 
 class TestTransactions:
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node, self_hostname):
+    async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
