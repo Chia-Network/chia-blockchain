@@ -4,7 +4,6 @@ import logging
 import multiprocessing
 import multiprocessing.context
 import time
-import traceback
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
