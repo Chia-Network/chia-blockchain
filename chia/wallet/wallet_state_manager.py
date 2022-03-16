@@ -266,44 +266,50 @@ class WalletStateManager:
             # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
             if from_zero:
                 start_index = 0
+            last_index = unused + to_generate
+            if start_index >= last_index:
+                self.log.debug(f"Nothing to scan for for wallet_id: {wallet_id}, index: {start_index}")
+            else:
+                scanning_msg = f"Scanning puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                self.log.info(f"Start: {scanning_msg}")
+                for index in range(start_index, last_index):
+                    if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
+                        continue
 
-            for index in range(start_index, unused + to_generate):
-                if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
-                    continue
-
-                # Hardened
-                pubkey: G1Element = self.get_public_key(uint32(index))
-                puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
-                if puzzle is None:
-                    self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
-                    break
-                puzzlehash: bytes32 = puzzle.get_tree_hash()
-                self.log.info(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
-                derivation_paths.append(
-                    DerivationRecord(
-                        uint32(index), puzzlehash, pubkey, target_wallet.type(), uint32(target_wallet.id()), True
+                    # Hardened
+                    pubkey: G1Element = self.get_public_key(uint32(index))
+                    puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                    if puzzle is None:
+                        self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
+                        break
+                    puzzlehash: bytes32 = puzzle.get_tree_hash()
+                    self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
+                    derivation_paths.append(
+                        DerivationRecord(
+                            uint32(index), puzzlehash, pubkey, target_wallet.type(), uint32(target_wallet.id()), True
+                        )
                     )
-                )
-                # Unhardened
-                pubkey_unhardened: G1Element = self.get_public_key_unhardened(uint32(index))
-                puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
-                if puzzle_unhardened is None:
-                    self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
-                    break
-                puzzlehash_unhardened: bytes32 = puzzle_unhardened.get_tree_hash()
-                self.log.info(
-                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                )
-                derivation_paths.append(
-                    DerivationRecord(
-                        uint32(index),
-                        puzzlehash_unhardened,
-                        pubkey_unhardened,
-                        target_wallet.type(),
-                        uint32(target_wallet.id()),
-                        False,
+                    # Unhardened
+                    pubkey_unhardened: G1Element = self.get_public_key_unhardened(uint32(index))
+                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
+                    if puzzle_unhardened is None:
+                        self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
+                        break
+                    puzzlehash_unhardened: bytes32 = puzzle_unhardened.get_tree_hash()
+                    self.log.debug(
+                        f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
                     )
-                )
+                    derivation_paths.append(
+                        DerivationRecord(
+                            uint32(index),
+                            puzzlehash_unhardened,
+                            pubkey_unhardened,
+                            target_wallet.type(),
+                            uint32(target_wallet.id()),
+                            False,
+                        )
+                    )
+                self.log.info(f"Done: {scanning_msg}")
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
             await self.add_interested_puzzle_hashes(
                 [record.puzzle_hash for record in derivation_paths],
