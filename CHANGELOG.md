@@ -9,6 +9,30 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 
+## 1.3.1 Chia blockchain 2022-3-16
+
+### Fixed
+
+- Fixed `chia keys show` displaying non-observer-derived wallet address.
+- Fixed `plotnft claim` returning an error.
+- Fixed invalid DB commit that prevented rollback of coin store changes.
+- Fixed locking issue with `PlotManager.plots` that caused high lookup times on plots.
+- Fixed exception when `chia keys migrate` is run without needing migration.
+- Fixed wallet RPC `get_offers_count` returning an error when there are no trades (Thanks, @dkackman!)
+- Fixed spelling of "genrated" (Thanks again, @dkackman!)
+- Fixed typo "log_maxbytessrotation" in initial-config (@skweee made their first contribution!)
+
+### Added
+
+- Added sanity checks to ensure wallet addresses is valid when creating transactions.
+- Added a better TLS1.3 check.
+- Added configuration locking.
+
+### Changed
+
+- Update the database queries for the `block_count_metrics` RPC endpoint to utilize indexes effectively for V2 DBs.
+- Several improvements to tests.
+
 ## 1.3.0 Chia blockchain 2022-3-07
 
 ### Added:
