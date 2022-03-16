@@ -5,7 +5,6 @@ import time
 from typing import List
 
 import pytest
-import pytest_asyncio
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
@@ -15,35 +14,11 @@ from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_exactly, node_height_between
-from tests.setup_nodes import setup_n_nodes, setup_two_nodes, test_constants
+from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
 
 
 log = logging.getLogger(__name__)
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname):
-    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def three_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def five_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
-        yield _
 
 
 class TestFullSync:
