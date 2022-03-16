@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 
