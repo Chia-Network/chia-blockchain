@@ -57,7 +57,7 @@ class DIDWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         if amount & 1 == 0:
@@ -76,7 +76,7 @@ class DIDWallet:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
 

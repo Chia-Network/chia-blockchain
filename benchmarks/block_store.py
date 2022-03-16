@@ -6,6 +6,7 @@ from chia.full_node.block_store import BlockStore
 import os
 import sys
 
+from benchmarks.utils import clvm_generator
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint128, uint64, uint32, uint8
 from utils import (
@@ -34,10 +35,6 @@ NUM_ITERS = 20000
 
 # we need seeded random, to have reproducible benchmark runs
 random.seed(123456789)
-
-
-with open("clvm_generator.bin", "rb") as f:
-    clvm_generator = f.read()
 
 
 async def run_add_block_benchmark(version: int):

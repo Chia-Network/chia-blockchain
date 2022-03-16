@@ -254,9 +254,8 @@ class DLOWallet:
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
-        confirmed = await self.get_confirmed_balance(record_list)
         # TODO: should the uint128 be changed?
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), uint128(confirmed))  # type: ignore[return-value]  # noqa: E501
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)  # type: ignore[return-value]  # noqa: E501
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(

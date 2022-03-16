@@ -4,7 +4,7 @@ import pytest_asyncio
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
@@ -64,9 +64,9 @@ class TestDIDWallet:
         ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -185,8 +185,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -292,8 +292,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -339,8 +339,8 @@ class TestDIDWallet:
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
