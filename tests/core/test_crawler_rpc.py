@@ -1,26 +1,12 @@
-import atexit
-
 import pytest
 
 from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
-from tests.block_tools import create_block_tools, test_constants
-from tests.util.keyring import TempKeyring
-
-
-def cleanup_keyring(keyring: TempKeyring):
-    keyring.cleanup()
-
-
-temp_keyring = TempKeyring()
-keychain = temp_keyring.get_keychain()
-atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
-bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
 class TestCrawlerRpc:
     @pytest.mark.asyncio
-    async def test_get_ips_after_timestamp(self):
+    async def test_get_ips_after_timestamp(self, bt):
         crawler = Crawler(bt.config.get("seeder", {}), bt.root_path, consensus_constants=bt.constants)
         crawler_rpc_api = CrawlerRpcApi(crawler)
 

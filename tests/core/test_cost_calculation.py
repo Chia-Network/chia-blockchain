@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pathlib
 import time
@@ -21,12 +20,6 @@ BURN_PUZZLE_HASH = b"0" * 32
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def large_block_generator(size):

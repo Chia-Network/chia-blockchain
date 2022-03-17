@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from secrets import token_bytes
 from typing import Optional
@@ -15,12 +14,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 
 from chia.wallet.wallet_pool_store import WalletPoolStore
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:

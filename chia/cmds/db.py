@@ -19,8 +19,14 @@ def db_cmd() -> None:
     help="don't update config file to point to new database. When specifying a "
     "custom output file, the config will not be updated regardless",
 )
+@click.option(
+    "--force",
+    default=False,
+    is_flag=True,
+    help="force conversion despite warnings",
+)
 @click.pass_context
-def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None:
+def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, force: bool, **kwargs) -> None:
 
     try:
         in_db_path = kwargs.get("input")
@@ -29,7 +35,8 @@ def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None
             Path(ctx.obj["root_path"]),
             None if in_db_path is None else Path(in_db_path),
             None if out_db_path is None else Path(out_db_path),
-            no_update_config,
+            no_update_config=no_update_config,
+            force=force,
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")
@@ -46,7 +53,7 @@ def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None
 @click.pass_context
 def db_validate_cmd(ctx: click.Context, validate_blocks: bool, **kwargs) -> None:
     try:
-        in_db_path = kwargs.get("input")
+        in_db_path = kwargs.get("db")
         db_validate_func(
             Path(ctx.obj["root_path"]),
             None if in_db_path is None else Path(in_db_path),

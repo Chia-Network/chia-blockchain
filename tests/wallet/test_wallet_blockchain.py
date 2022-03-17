@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 from pathlib import Path
 
@@ -15,12 +14,6 @@ from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from tests.setup_nodes import test_constants, setup_node_and_wallet
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 @pytest_asyncio.fixture(scope="function")

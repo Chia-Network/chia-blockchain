@@ -85,7 +85,7 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --capture no --durations 0 -n auto
+        ./venv/bin/py.test tests/clvm/test_*.py -s -v --capture no --durations 0 -n auto -m "not benchmark"
 
 
 #
