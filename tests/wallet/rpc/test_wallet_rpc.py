@@ -410,6 +410,10 @@ class TestWalletRpc:
             assert len(tx_for_address["transactions"]) == 1
             assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
 
+            # Test coin selection
+            selected_coins = await client.select_coins(amount=1, wallet_id=1)
+            assert len(selected_coins) > 0
+
             ##############
             # CATS       #
             ##############
@@ -486,6 +490,10 @@ class TestWalletRpc:
 
             await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
             await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)
+
+            # Test CAT coin selection
+            selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
+            assert len(selected_coins) > 0
 
             ##########
             # Offers #
