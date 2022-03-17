@@ -74,7 +74,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, save_config
+from chia.util.config import get_config_lock, load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -155,7 +155,8 @@ class BlockTools:
         # some tests start the daemon, make sure it's on a free port
         self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
-        save_config(self.root_path, "config.yaml", self._config)
+        with get_config_lock(self.root_path, "config.yaml"):
+            save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
         if const_dict is not None:
@@ -233,7 +234,8 @@ class BlockTools:
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = self.constants.replace_str_to_bytes(**overrides)
         self.constants = updated_constants
-        save_config(self.root_path, "config.yaml", self._config)
+        with get_config_lock(self.root_path, "config.yaml"):
+            save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
         assert self.created_plots == 0
