@@ -40,9 +40,12 @@ async def print_connections(client, time, NodeType, trusted_peers: Dict):
                 f"\n                                                 "
             )
             if peak_height is not None:
-                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}    -Trusted: {trusted}"
+                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
             else:
-                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}     -Trusted: {trusted}"
+                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}"
+            # Only show when Trusted is True
+            if trusted:
+                con_str += f"    -Trusted: {trusted}"
         else:
             con_str = (
                 f"{NodeType(con['type']).name:9} {host:38} "
@@ -115,7 +118,10 @@ async def show_async(
             elif peak is not None and sync_mode:
                 sync_max_block = blockchain_state["sync"]["sync_tip_height"]
                 sync_current_block = blockchain_state["sync"]["sync_progress_height"]
-                print(f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block}.")
+                print(
+                    f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
+                    f"({sync_max_block - sync_current_block} behind)."
+                )
                 print("Peak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")

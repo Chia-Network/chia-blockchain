@@ -5,6 +5,7 @@ import multiprocessing
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -47,6 +48,7 @@ from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -104,6 +106,7 @@ class Blockchain(BlockchainInterface):
         hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -117,7 +120,12 @@ class Blockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - reserved_cores, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers)
+        self.pool = ProcessPoolExecutor(
+            max_workers=num_workers,
+            mp_context=multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
         log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants

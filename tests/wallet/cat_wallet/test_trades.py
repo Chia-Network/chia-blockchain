@@ -13,6 +13,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -25,12 +26,6 @@ async def tx_in_pool(mempool: MempoolManager, tx_id):
     return True
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
@@ -41,7 +36,7 @@ buffer_blocks = 4
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm(two_wallet_nodes, trusted):
+async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
@@ -65,8 +60,8 @@ async def wallets_prefarm(two_wallet_nodes, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     for i in range(0, farm_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph0))
@@ -480,6 +475,15 @@ class TestCATTrades:
         for tx in txs:
             if tx.spend_bundle is not None:
                 await time_out_assert(15, tx_in_pool, True, full_node.full_node.mempool_manager, tx.spend_bundle.name())
+
+        sum_of_outgoing = uint64(0)
+        sum_of_incoming = uint64(0)
+        for tx in txs:
+            if tx.type == TransactionType.OUTGOING_TX.value:
+                sum_of_outgoing = uint64(sum_of_outgoing + tx.amount)
+            elif tx.type == TransactionType.INCOMING_TX.value:
+                sum_of_incoming = uint64(sum_of_incoming + tx.amount)
+        assert (sum_of_outgoing - sum_of_incoming) == 0
 
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))

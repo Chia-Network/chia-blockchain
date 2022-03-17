@@ -28,10 +28,21 @@ def generate_cmd(ctx: click.Context):
 @click.option(
     "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
 )
-def show_cmd(show_mnemonic_seed):
+@click.option(
+    "--non-observer-derivation",
+    "-d",
+    help=(
+        "Show the first wallet address using non-observer derivation. Older Chia versions use "
+        "non-observer derivation when generating wallet addresses."
+    ),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+def show_cmd(show_mnemonic_seed, non_observer_derivation):
     from .keys_funcs import show_all_keys
 
-    show_all_keys(show_mnemonic_seed)
+    show_all_keys(show_mnemonic_seed, non_observer_derivation)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
@@ -201,7 +212,7 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     "--derive-from-hd-path",
     "-p",
     help="Search for items derived from a specific HD path. Indices ending in an 'n' indicate that "
-    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
+    "non-observer derivation should be used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
 @click.pass_context
@@ -289,7 +300,7 @@ def wallet_address_cmd(
     "--derive-from-hd-path",
     "-p",
     help="Derive child keys rooted from a specific HD path. Indices ending in an 'n' indicate that "
-    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
+    "non-observer derivation should be used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
 @click.option(

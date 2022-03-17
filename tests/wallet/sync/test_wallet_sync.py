@@ -13,7 +13,7 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.setup_nodes import bt, self_hostname, setup_node_and_wallet, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import setup_node_and_wallet, setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -27,34 +27,31 @@ def wallet_height_at_least(wallet_node, h):
 log = getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_simulator():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_starting_height(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
+        yield _
 
 
 class TestWalletSync:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_node_and_wallet(test_constants):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(test_constants, starting_height=100):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, wallet_node, default_400_blocks, trusted):
+    async def test_basic_sync_wallet(self, bt, wallet_node, default_400_blocks, trusted, self_hostname):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -77,7 +74,7 @@ class TestWalletSync:
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
-        await disconnect_all_and_reconnect(wallet_server, full_node_server)
+        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
 
         await time_out_assert(
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
@@ -88,7 +85,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, wallet_node, default_1000_blocks, trusted):
+    async def test_almost_recent(self, bt, wallet_node, default_1000_blocks, trusted, self_hostname):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -119,14 +116,14 @@ class TestWalletSync:
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-        await time_out_assert(30, wallet.get_confirmed_balance, 20 * calculate_pool_reward(1000))
+        await time_out_assert(30, wallet.get_confirmed_balance, 20 * calculate_pool_reward(uint32(1000)))
 
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_backtrack_sync_wallet(self, wallet_node, default_400_blocks, trusted):
+    async def test_backtrack_sync_wallet(self, wallet_node, default_400_blocks, trusted, self_hostname):
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
         for block in default_400_blocks[:20]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -147,7 +144,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_short_batch_sync_wallet(self, wallet_node, default_400_blocks, trusted):
+    async def test_short_batch_sync_wallet(self, wallet_node, default_400_blocks, trusted, self_hostname):
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for block in default_400_blocks[:200]:
@@ -169,7 +166,9 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks, default_400_blocks, trusted):
+    async def test_long_sync_wallet(
+        self, bt, wallet_node, default_1000_blocks, default_400_blocks, trusted, self_hostname
+    ):
 
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
@@ -190,12 +189,12 @@ class TestWalletSync:
         for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await disconnect_all_and_reconnect(wallet_server, full_node_server)
+        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
 
         log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
-        await disconnect_all_and_reconnect(wallet_server, full_node_server)
+        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
 
         # Tests a short reorg
         num_blocks = 30
@@ -213,7 +212,7 @@ class TestWalletSync:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, wallet_node_simulator, default_400_blocks, trusted):
+    async def test_wallet_reorg_sync(self, bt, wallet_node_simulator, default_400_blocks, trusted, self_hostname):
         num_blocks = 5
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -266,7 +265,9 @@ class TestWalletSync:
         [False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, wallet_node_simulator, default_400_blocks, trusted):
+    async def test_wallet_reorg_get_coinbase(
+        self, bt, wallet_node_simulator, default_400_blocks, trusted, self_hostname
+    ):
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
@@ -310,7 +311,7 @@ class TestWalletSync:
             await asyncio.sleep(0.4)
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await disconnect_all_and_reconnect(server_2, fn_server)
+        await disconnect_all_and_reconnect(server_2, fn_server, self_hostname)
 
         # Confirm we have the funds
         funds = calculate_pool_reward(uint32(len(blocks_reorg_1))) + calculate_base_farmer_reward(
