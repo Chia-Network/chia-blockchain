@@ -46,7 +46,7 @@ def db_upgrade_cmd(ctx: click.Context, no_update_config: bool, **kwargs) -> None
 @click.pass_context
 def db_validate_cmd(ctx: click.Context, validate_blocks: bool, **kwargs) -> None:
     try:
-        in_db_path = kwargs.get("input")
+        in_db_path = kwargs.get("db")
         db_validate_func(
             Path(ctx.obj["root_path"]),
             None if in_db_path is None else Path(in_db_path),
