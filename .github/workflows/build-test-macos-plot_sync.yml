@@ -85,16 +85,12 @@ jobs:
         brew install boost
         sh install.sh -d
 
-    - name: Install timelord
-      run: |
-        . ./activate
-        sh install-timelord.sh
-        ./vdf_bench square_asm 400000
+# Omitted installing Timelord
 
     - name: Test plot_sync code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/plot_sync/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/plot_sync/test_*.py -s -v --durations 0 -n auto
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
