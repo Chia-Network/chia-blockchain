@@ -185,9 +185,9 @@ class FullNodeRpcClient(RpcClient):
         removals = []
         additions = []
         for coin_record in response["removals"]:
-            removals.append(CoinRecord.from_json_dict(coin_record))
+            removals.append(CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin_record)))
         for coin_record in response["additions"]:
-            additions.append(CoinRecord.from_json_dict(coin_record))
+            additions.append(CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin_record)))
         return additions, removals
 
     async def get_block_records(self, start: int, end: int) -> List:
