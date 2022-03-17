@@ -10,16 +10,21 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["farmer", "full_node", "harvester", "wallet"]
+services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet"]
 
 
-async def call_endpoint(
-    service: str, host: str, port: uint16, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]
-) -> Dict[str, Any]:
+async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 
+    port: uint16
+    if service == "crawler":
+        # crawler config is inside the seeder config
+        port = uint16(config["seeder"][service]["rpc_port"])
+    else:
+        port = uint16(config[service]["rpc_port"])
+
     try:
-        client = await RpcClient.create(host, port, DEFAULT_ROOT_PATH, config)
+        client = await RpcClient.create(config["self_hostname"], port, DEFAULT_ROOT_PATH, config)
     except Exception as e:
         raise Exception(f"Failed to create RPC client {service}: {e}")
     result: Dict[str, Any]
@@ -42,9 +47,7 @@ def print_result(json_dict: Dict[str, Any]) -> None:
 
 
 def get_routes(service: str, config: Dict[str, Any]) -> Dict[str, Any]:
-    return asyncio.run(
-        call_endpoint(service, config["self_hostname"], uint16(config[service]["rpc_port"]), "get_routes", {}, config)
-    )
+    return asyncio.run(call_endpoint(service, "get_routes", {}, config))
 
 
 @click.group("rpc", short_help="RPC Client")
@@ -126,13 +129,10 @@ def create_commands() -> None:
                 except Exception as e:
                     sys.exit(f"Invalid REQUEST JSON: {e}")
 
-            port: uint16 = uint16(config[service]["rpc_port"])
             try:
                 if endpoint[0] == "/":
                     endpoint = endpoint[1:]
-                print_result(
-                    asyncio.run(call_endpoint(service, config["self_hostname"], port, endpoint, request_json, config))
-                )
+                print_result(asyncio.run(call_endpoint(service, endpoint, request_json, config)))
             except Exception as e:
                 sys.exit(e)
 
