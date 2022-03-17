@@ -241,3 +241,83 @@ def test_announce():
     assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
     assert res.rest().rest().rest().first().first().as_int() == 62
     assert res.rest().rest().rest().first().rest().first().as_atom() == did_one
+
+
+def test_update_url_spend():
+    did_one: bytes32 = Program.to("did_one").get_tree_hash()
+    did_two: bytes32 = Program.to("did_two").get_tree_hash()
+
+    did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
+    did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
+    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
+    did_one_amount = 201
+
+    #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
+    did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
+    did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
+    did_two_amount = 401
+
+    did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
+    did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+
+    nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
+    # ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH
+    # (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_prices_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
+
+    trade_price = [[20]]
+    # NFT_MOD_HASH
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    # CURRENT_OWNER_DID
+    # TRANSFER_PROGRAM_MOD_HASH
+    # TRANSFER_PROGRAM_CURRY_PARAMS
+    # METADATA
+    # my_amount
+    # my_did_inner_hash
+    # new_did
+    # new_did_inner_hash
+    # trade_prices_list
+    # transfer_program_reveal
+    # transfer_program_solution
+
+    # (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
+    transfer_program_curry_params = [nft_creator_address, 10, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
+    solution = Program.to(
+        [
+            NFT_MOD_HASH,  # curried in params
+            SINGLETON_STRUCT,
+            did_one,
+            NFT_TRANSFER_PROGRAM.get_tree_hash(),
+            transfer_program_curry_params,
+            [
+                ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+            ],
+            # below here is the solution
+            uint64(1),
+            did_one_innerpuz.get_tree_hash(),
+            did_one,
+            did_one_innerpuz.get_tree_hash(),
+            trade_price,
+            NFT_TRANSFER_PROGRAM,
+            "https://public.newsdirect.com/422529418/bT8ckpSs.png",
+        ]
+    )
+    cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
+    new_inner = NFT_MOD.curry(
+        NFT_MOD_HASH,  # curried in params
+        SINGLETON_STRUCT,
+        did_one,
+        NFT_TRANSFER_PROGRAM.get_tree_hash(),
+        transfer_program_curry_params,
+        [
+            ('u', ["https://public.newsdirect.com/422529418/bT8ckpSs.png", "https://www.chia.net/img/branding/chia-logo.svg"]),
+            ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+        ]
+    )
+    new_full = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_inner)
+    assert res.rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().first().rest().first().as_atom() == new_full.get_tree_hash()
