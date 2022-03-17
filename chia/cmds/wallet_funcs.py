@@ -457,7 +457,10 @@ def print_balance(amount: int, scale: int, address_prefix: str) -> str:
 
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    summaries_response = await wallet_client.get_wallets()
+    wallet_type: Optional[WalletType] = None
+    if "type" in args:
+        wallet_type = WalletType(args["type"])
+    summaries_response = await wallet_client.get_wallets(wallet_type)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
@@ -473,7 +476,11 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         print("Sync status: Not synced")
 
     if not is_syncing and is_synced:
-        print(f"Balances, fingerprint: {fingerprint}")
+        if len(summaries_response) == 0:
+            type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
+            print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
+        else:
+            print(f"Balances, fingerprint: {fingerprint}")
         for summary in summaries_response:
             wallet_id = summary["id"]
             balances = await wallet_client.get_wallet_balance(wallet_id)

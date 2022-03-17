@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Dict, Optional
 
 from blspy import G2Element
 
@@ -34,6 +34,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.wallet_types import WalletType
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -46,6 +47,16 @@ log = logging.getLogger(__name__)
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
+
+
+async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType, int]) -> None:
+    for wallet_type in WalletType:
+        wallets = await client.get_wallets(wallet_type)
+        wallet_count = len(wallets)
+        if wallet_type in expected:
+            assert wallet_count == expected.get(wallet_type, 0)
+            for wallet in wallets:
+                assert wallet["type"] == wallet_type.value
 
 
 class TestWalletRpc:
@@ -142,6 +153,9 @@ class TestWalletRpc:
         client_2 = await WalletRpcClient.create(hostname, test_rpc_port_2, bt.root_path, config)
         client_node = await FullNodeRpcClient.create(hostname, test_rpc_port_node, bt.root_path, config)
         try:
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
+
             await time_out_assert(5, client.get_synced)
             addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "txch")
             tx_amount = 15600000
@@ -400,12 +414,16 @@ class TestWalletRpc:
             # CATS       #
             ##############
 
-            # Creates a wallet and a CAT with 20 mojos
+            # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
+            await client.create_new_cat_and_wallet(100)
             res = await client.create_new_cat_and_wallet(20)
             assert res["success"]
             cat_0_id = res["wallet_id"]
             asset_id = bytes.fromhex(res["asset_id"])
             assert len(asset_id) > 0
+
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
 
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 0
@@ -443,6 +461,9 @@ class TestWalletRpc:
             cat_1_id = res["wallet_id"]
             cat_1_asset_id = bytes.fromhex(res["asset_id"])
             assert cat_1_asset_id == asset_id
+
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 1})
 
             await asyncio.sleep(1)
             for i in range(0, 5):
