@@ -495,7 +495,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
 
     print(" ")
-    trusted_peers: Dict = config.get("trusted_peers", {})
+    trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
     await print_connections(wallet_client, time, NodeType, trusted_peers)
 
 
