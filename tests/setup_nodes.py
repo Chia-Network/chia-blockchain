@@ -287,7 +287,7 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_farmer_harvester(bt: BlockTools, consensus_constants: ConsensusConstants, start_services: bool = True):
+async def setup_harvester_farmer(bt: BlockTools, consensus_constants: ConsensusConstants, *, start_services: bool):
     farmer_port = find_available_listen_port("farmer")
     farmer_rpc_port = find_available_listen_port("farmer rpc")
     harvester_port = find_available_listen_port("harvester")
