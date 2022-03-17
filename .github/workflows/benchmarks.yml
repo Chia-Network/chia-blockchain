@@ -1,7 +1,4 @@
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
-name: Ubuntu clvm Test
+name: Benchmarks
 
 on:
   push:
@@ -20,15 +17,14 @@ concurrency:
 
 jobs:
   build:
-    name: Ubuntu clvm Test
-    runs-on: ${{ matrix.os }}
+    name: Benchmarks
+    runs-on: benchmark
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest]
+        python-version: [ 3.9 ]
 
     steps:
     - name: Checkout Code
@@ -40,14 +36,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
 
     - name: Get pip cache dir
       id: pip-cache
@@ -62,8 +50,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-# Omitted checking out blocks and plots repo Chia-Network/test-cache
-
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get install software-properties-common
@@ -77,14 +63,7 @@ jobs:
       run: |
         sh install.sh -d
 
-# Omitted installing Timelord
-
-    - name: Test clvm code with pytest
+    - name: pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto -m "not benchmark"
-
-
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
+        ./venv/bin/py.test -n 0 -m benchmark tests
