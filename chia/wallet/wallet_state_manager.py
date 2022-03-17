@@ -182,7 +182,7 @@ class WalletStateManager:
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
-                wallet = await Wallet.create(config, wallet_info)
+                wallet = await Wallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.CAT:
                 wallet = await CATWallet.create(
                     self,
