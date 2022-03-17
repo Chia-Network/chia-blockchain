@@ -353,7 +353,7 @@ class BlockTools:
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
 
-    def get_daemon_ssl_context(self) -> Optional[ssl.SSLContext]:
+    def get_daemon_ssl_context(self) -> ssl.SSLContext:
         crt_path = self.root_path / self.config["daemon_ssl"]["private_crt"]
         key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
         ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
