@@ -164,6 +164,14 @@ async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
     return tx.is_in_mempool()
 
 
+async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int):
+    return (await client.get_wallet_balance(str(wallet_id)))["confirmed_wallet_balance"]
+
+
+async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
+    return (await client.get_wallet_balance(str(wallet_id)))["unconfirmed_wallet_balance"]
+
+
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -206,8 +214,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
     )
 
-    await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
-    await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
+    await time_out_assert(5, get_confirmed_balance, initial_funds, client, 1)
+    await time_out_assert(5, get_unconfirmed_balance, initial_funds, client, 1)
 
     await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1})
     await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
@@ -229,18 +237,10 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     assert spend_bundle is not None
 
     await time_out_assert(5, tx_in_mempool, True, client, transaction_id)
-    await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - tx_amount)
-    assert (await client.get_wallet_balance("1"))["unconfirmed_wallet_balance"] == initial_funds - tx_amount
-    assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds
+    await time_out_assert(5, get_unconfirmed_balance, initial_funds - tx_amount, client, 1)
 
     for i in range(0, 5):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
-
-    async def eventual_balance():
-        return (await client.get_wallet_balance("1"))["confirmed_wallet_balance"]
-
-    async def eventual_balance_det(c, wallet_id: str):
-        return (await c.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
 
     await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
     # Checks that the memo can be retrieved
@@ -250,7 +250,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
     assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in spend_bundle.additions()]
 
-    await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
+    await time_out_assert(5, get_confirmed_balance, initial_funds_eventually - tx_amount, client, 1)
 
     # Tests offline signing
     ph_3 = await wallet_2.get_new_puzzlehash()
@@ -332,13 +332,13 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
 
     push_res = await client.push_tx(tx_res.spend_bundle)
     assert push_res["success"]
-    assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds_eventually - tx_amount
+    assert await get_confirmed_balance(client, 1) == initial_funds_eventually - tx_amount
 
     for i in range(0, 5):
         await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
         await asyncio.sleep(0.5)
 
-    await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
+    await time_out_assert(5, get_confirmed_balance, initial_funds_eventually - tx_amount - signed_tx_amount, client, 1)
 
     # Test transaction to two outputs, from a specified coin, with a fee
     coin_to_spend = None
@@ -383,7 +383,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     assert found
 
     new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
-    await time_out_assert(5, eventual_balance, new_balance)
+    await time_out_assert(5, get_confirmed_balance, new_balance, client, 1)
 
     send_tx_res: TransactionRecord = await client.send_transaction_multi(
         "1",
@@ -407,7 +407,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
         await asyncio.sleep(0.5)
 
     new_balance = new_balance - 555 - 666 - 200
-    await time_out_assert(5, eventual_balance, new_balance)
+    await time_out_assert(5, get_confirmed_balance, new_balance, client, 1)
 
     address = await client.get_next_address("1", True)
     assert len(address) > 10
@@ -514,7 +514,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
         await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
         await asyncio.sleep(0.5)
 
-    await time_out_assert(10, eventual_balance_det, 20, client, cat_0_id)
+    await time_out_assert(10, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -556,8 +556,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     cats = await client.get_stray_cats()
     assert len(cats) == 1
 
-    await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
-    await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)
+    await time_out_assert(10, get_confirmed_balance, 16, client, cat_0_id)
+    await time_out_assert(10, get_confirmed_balance, 4, client_2, cat_1_id)
 
     # Test CAT coin selection
     selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
@@ -753,8 +753,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
 
     wallets = await client.get_wallets()
     assert len(wallets) == 1
-    balance = await client.get_wallet_balance(wallets[0]["id"])
-    assert balance["unconfirmed_wallet_balance"] == 0
+    assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
 
     try:
         await client.send_transaction(wallets[0]["id"], uint64(100), addr)
