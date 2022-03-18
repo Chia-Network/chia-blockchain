@@ -24,12 +24,6 @@ from tests.setup_nodes import test_constants
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self, tmp_dir, db_version, bt):

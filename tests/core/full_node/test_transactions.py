@@ -16,12 +16,6 @@ from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="function")
 async def wallet_node():
     async for _ in setup_simulators_and_wallets(1, 1, {}):

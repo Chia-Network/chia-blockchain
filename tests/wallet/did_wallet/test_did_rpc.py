@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pytest
 import pytest_asyncio
@@ -19,12 +18,6 @@ from tests.util.socket import find_available_listen_port
 log = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.skip("TODO: Fix tests")
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 @pytest_asyncio.fixture(scope="function")

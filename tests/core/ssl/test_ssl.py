@@ -13,7 +13,7 @@ from chia.types.peer_info import PeerInfo
 from tests.block_tools import test_constants
 from chia.util.ints import uint16
 from tests.setup_nodes import (
-    setup_farmer_harvester,
+    setup_harvester_farmer,
     setup_introducer,
     setup_simulators_and_wallets,
     setup_timelord,
@@ -53,7 +53,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 
 @pytest_asyncio.fixture(scope="function")
 async def harvester_farmer(bt):
-    async for _ in setup_farmer_harvester(bt, test_constants):
+    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
         yield _
 
 

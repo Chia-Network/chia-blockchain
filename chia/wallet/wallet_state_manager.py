@@ -182,7 +182,7 @@ class WalletStateManager:
             if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
-                wallet = await Wallet.create(config, wallet_info)
+                wallet = await Wallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.CAT:
                 wallet = await CATWallet.create(
                     self,
@@ -1147,8 +1147,8 @@ class WalletStateManager:
     def unlink_db(self):
         Path(self.db_path).unlink()
 
-    async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
-        return await self.user_store.get_all_wallet_info_entries()
+    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
+        return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
     async def get_start_height(self):
         """
