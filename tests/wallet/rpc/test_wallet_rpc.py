@@ -159,6 +159,11 @@ async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType
                 assert wallet["type"] == wallet_type.value
 
 
+async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
+    tx = await client.get_transaction("1", transaction_id)
+    return tx.is_in_mempool()
+
+
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
@@ -223,11 +228,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
-    async def tx_in_mempool():
-        tx = await client.get_transaction("1", transaction_id)
-        return tx.is_in_mempool()
-
-    await time_out_assert(5, tx_in_mempool, True)
+    await time_out_assert(5, tx_in_mempool, True, client, transaction_id)
     await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - tx_amount)
     assert (await client.get_wallet_balance("1"))["unconfirmed_wallet_balance"] == initial_funds - tx_amount
     assert (await client.get_wallet_balance("1"))["confirmed_wallet_balance"] == initial_funds
@@ -661,11 +662,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
 
     created_tx = await client.send_transaction("1", tx_amount, addr)
 
-    async def tx_in_mempool_2():
-        tx = await client.get_transaction("1", created_tx.name)
-        return tx.is_in_mempool()
-
-    await time_out_assert(5, tx_in_mempool_2, True)
+    await time_out_assert(5, tx_in_mempool, True, client, created_tx.name)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
     await client.delete_unconfirmed_transactions("1")
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
