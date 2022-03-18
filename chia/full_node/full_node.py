@@ -2,6 +2,8 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import multiprocessing
+from multiprocessing.context import BaseContext
 import random
 import time
 import traceback
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
+import sqlite3
 from blspy import AugSchemeMPL
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
@@ -63,7 +66,7 @@ from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
-from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED
+from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -72,7 +75,7 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version
+from chia.util.db_version import lookup_db_version, set_db_version_async
 
 
 class FullNode:
@@ -95,6 +98,7 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
+    multiprocessing_start_context: Optional[BaseContext]
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
@@ -125,6 +129,10 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
+
+        # TODO: Logging isn't setup yet so the log entries related to parsing the
+        #       config would end up on stdout if handled here.
+        self.multiprocessing_context = None
 
         # Used for metrics
         self.dropped_tx: Set[bytes32] = set()
@@ -158,10 +166,21 @@ class FullNode:
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
-
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
         await self.connection.execute("pragma synchronous={}".format(db_sync))
+
+        async with self.connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+        ) as conn:
+            if len(await conn.fetchall()) == 0:
+                try:
+                    # this is a new DB file. Make it v2
+                    await set_db_version_async(self.connection, 2)
+                except sqlite3.OperationalError:
+                    # it could be a database created with "chia init", which is
+                    # empty except it has the database_version table
+                    pass
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -185,10 +204,22 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
+        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants, self.hint_store, self.db_path.parent, reserved_cores
+            coin_store=self.coin_store,
+            block_store=self.block_store,
+            consensus_constants=self.constants,
+            hint_store=self.hint_store,
+            blockchain_dir=self.db_path.parent,
+            reserved_cores=reserved_cores,
+            multiprocessing_context=self.multiprocessing_context,
         )
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self.mempool_manager = MempoolManager(
+            coin_store=self.coin_store,
+            consensus_constants=self.constants,
+            multiprocessing_context=self.multiprocessing_context,
+        )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
@@ -285,7 +316,11 @@ class FullNode:
             raise
 
     async def initialize_weight_proof(self):
-        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
+        self.weight_proof_handler = WeightProofHandler(
+            constants=self.constants,
+            blockchain=self.blockchain,
+            multiprocessing_context=self.multiprocessing_context,
+        )
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
@@ -1391,6 +1426,7 @@ class FullNode:
         self,
         respond_block: full_node_protocol.RespondBlock,
         peer: Optional[ws.WSChiaConnection] = None,
+        raise_on_disconnected: bool = False,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -1512,6 +1548,8 @@ class FullNode:
 
                 elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     self.log.info(f"Disconnected block {header_hash} at height {block.height}")
+                    if raise_on_disconnected:
+                        raise RuntimeError("Expected block to be added, received disconnected block.")
                     return None
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
@@ -1895,7 +1933,7 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.respond_block(full_node_protocol.RespondBlock(block))
+            await self.respond_block(full_node_protocol.RespondBlock(block), raise_on_disconnected=True)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:

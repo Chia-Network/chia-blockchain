@@ -56,21 +56,25 @@ class KeychainServer:
         return keychain
 
     async def handle_command(self, command, data) -> Dict[str, Any]:
-        if command == "add_private_key":
-            return await self.add_private_key(cast(Dict[str, Any], data))
-        elif command == "check_keys":
-            return await self.check_keys(cast(Dict[str, Any], data))
-        elif command == "delete_all_keys":
-            return await self.delete_all_keys(cast(Dict[str, Any], data))
-        elif command == "delete_key_by_fingerprint":
-            return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
-        elif command == "get_all_private_keys":
-            return await self.get_all_private_keys(cast(Dict[str, Any], data))
-        elif command == "get_first_private_key":
-            return await self.get_first_private_key(cast(Dict[str, Any], data))
-        elif command == "get_key_for_fingerprint":
-            return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
-        return {}
+        try:
+            if command == "add_private_key":
+                return await self.add_private_key(cast(Dict[str, Any], data))
+            elif command == "check_keys":
+                return await self.check_keys(cast(Dict[str, Any], data))
+            elif command == "delete_all_keys":
+                return await self.delete_all_keys(cast(Dict[str, Any], data))
+            elif command == "delete_key_by_fingerprint":
+                return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
+            elif command == "get_all_private_keys":
+                return await self.get_all_private_keys(cast(Dict[str, Any], data))
+            elif command == "get_first_private_key":
+                return await self.get_first_private_key(cast(Dict[str, Any], data))
+            elif command == "get_key_for_fingerprint":
+                return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
+            return {}
+        except Exception as e:
+            log.exception(e)
+            return {"success": False, "error": str(e), "command": command}
 
     async def add_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -92,6 +96,12 @@ class KeychainServer:
                 "success": False,
                 "error": KEYCHAIN_ERR_KEYERROR,
                 "error_details": {"message": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]},
+            }
+        except ValueError as e:
+            log.exception(e)
+            return {
+                "success": False,
+                "error": str(e),
             }
 
         return {"success": True}
