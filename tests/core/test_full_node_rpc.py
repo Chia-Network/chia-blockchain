@@ -1,5 +1,4 @@
 # flake8: noqa: F811, F401
-import asyncio
 import logging
 from typing import List
 
@@ -20,7 +19,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint8
-from chia.wallet.transaction_record import TransactionRecord
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
