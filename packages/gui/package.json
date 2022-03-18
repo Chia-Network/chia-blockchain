@@ -15,6 +15,19 @@
     "appId": "net.chia.blockchain",
     "asar": true,
     "asarUnpack": "**/daemon/**",
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/img/chia.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "deleteAppDataOnUninstall": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "license": "../../LICENSE",
+      "include": "installer.nsh"
+    },
     "mac": {
       "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
       "category": "public.app-category.finance",
