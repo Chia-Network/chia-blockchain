@@ -254,7 +254,7 @@ class TestBlockStore:
                 generators = await store.get_generators_at([4, 8, 3, 9])
                 assert generators == expected_generators
 
-                with pytest.raises(KeyError):
+                with pytest.raises(ValueError):
                     await store.get_generators_at([100])
 
             assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator

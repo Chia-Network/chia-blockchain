@@ -340,6 +340,7 @@ class BlockStore:
             f"SELECT block, height from full_blocks "
             f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights_db) - 1)}?)'
         )
+        all_heights = set(heights)
         async with self.db.execute(formatted_str, heights_db) as cursor:
             async for row in cursor:
                 block_bytes = zstd.decompress(row[0])
@@ -355,7 +356,12 @@ class BlockStore:
                     gen = b.transactions_generator
                 if gen is None:
                     raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                generators[uint32(row[1])] = gen
+                h = uint32(row[1])
+                generators[h] = gen
+                all_heights.remove(h)
+
+        if all_heights != set():
+            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
 
         return [generators[h] for h in heights]
 
