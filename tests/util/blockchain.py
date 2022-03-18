@@ -1,3 +1,4 @@
+import os
 import pickle
 from os import path
 from pathlib import Path
@@ -47,6 +48,11 @@ def persistent_blocks(
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     block_path_dir = Path("~/.chia/blocks").expanduser()
     file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
+
+    ci = os.environ.get("CI")
+    if ci is not None and not file_path.exists():
+        raise Exception(f"Running in CI and expected path not found: {file_path!r}")
+
     if not path.exists(block_path_dir):
         mkdir(block_path_dir.parent)
         mkdir(block_path_dir)

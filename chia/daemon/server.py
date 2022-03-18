@@ -296,7 +296,6 @@ class WebSocketServer:
         command = message["command"]
         destination = message["destination"]
         if destination != "daemon":
-            destination = message["destination"]
             if destination in self.connections:
                 sockets = self.connections[destination]
                 return dict_to_json_str(message), sockets

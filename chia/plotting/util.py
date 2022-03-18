@@ -84,7 +84,7 @@ def add_plot_directory(root_path: Path, str_path: str) -> Dict:
         if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
             config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
-        return config
+    return config
 
 
 def remove_plot_directory(root_path: Path, str_path: str) -> None:

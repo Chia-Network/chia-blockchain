@@ -1,7 +1,4 @@
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
-name: Ubuntu core-custom_types Test
+name: Benchmarks
 
 on:
   push:
@@ -20,15 +17,14 @@ concurrency:
 
 jobs:
   build:
-    name: Ubuntu core-custom_types Test
-    runs-on: ${{ matrix.os }}
+    name: Benchmarks
+    runs-on: benchmark
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
-        os: [ubuntu-latest]
+        python-version: [ 3.9 ]
 
     steps:
     - name: Checkout Code
@@ -40,14 +36,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache npm
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
 
     - name: Get pip cache dir
       id: pip-cache
@@ -62,20 +50,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
-      with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
-
-    - name: Link home directory
+    - name: Install ubuntu dependencies
       run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
       env:
@@ -83,14 +63,7 @@ jobs:
       run: |
         sh install.sh -d
 
-# Omitted installing Timelord
-
-    - name: Test core-custom_types code with pytest
+    - name: pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/custom_types/test_*.py -s -v --durations 0 -m "not benchmark"
-
-
-#
-# THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
-#
+        ./venv/bin/py.test -n 0 -m benchmark tests
