@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict
 
 import aiosqlite
 
@@ -114,12 +114,12 @@ class WalletPoolStore:
             await self.db_wrapper.lock.acquire()
         try:
             # We can't depend on this list being ordered as asyncio tasks create it
-            new_items: List[Tuple[uint32, CoinSpend]]
+            new_items: List[Tuple[uint32, CoinSpend]] = []
             for wallet_id, items in self._state_transitions_cache.items():
                 if wallet_id == wallet_id_arg:
                     for i, (item_block_height, item_coin_spend) in enumerate(items):
                         if item_block_height <= height:
-                            new_items.append(item_block_height, item_coin_spend)
+                            new_items.append([item_block_height, item_coin_spend])
                 self._state_transitions_cache[wallet_id] = new_items
             cursor = await self.db_connection.execute(
                 "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
