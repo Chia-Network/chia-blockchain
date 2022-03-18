@@ -105,6 +105,7 @@ class WalletRpcClient(RpcClient):
         end: int = None,
         sort_key: SortKey = None,
         reverse: bool = False,
+        to_address: Optional[str] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -115,6 +116,9 @@ class WalletRpcClient(RpcClient):
         if sort_key is not None:
             request["sort_key"] = sort_key.name
         request["reverse"] = reverse
+
+        if to_address is not None:
+            request["to_address"] = to_address
 
         res = await self.fetch(
             "get_transactions",
