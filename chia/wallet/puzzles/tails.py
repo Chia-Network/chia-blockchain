@@ -5,7 +5,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -38,7 +37,7 @@ class LimitationsProgram:
     @classmethod
     async def generate_issuance_bundle(
         cls, wallet, cat_tail_info: Dict, amount: uint64
-    ) -> Tuple[TransactionRecord, SpendBundle]:
+    ) -> Tuple[TransactionRecord, SpendBundle, bytes32]:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
 
@@ -65,14 +64,15 @@ class GenesisById(LimitationsProgram):
         return Program.to([])
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
+    async def generate_issuance_bundle(
+        cls, wallet, _: Dict, amount: uint64
+    ) -> Tuple[TransactionRecord, SpendBundle, bytes32]:
         coins = await wallet.standard_wallet.select_coins(amount)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
-        await wallet.add_lineage(origin_id, LineageProof(), False)
         tail: Program = cls.construct([Program.to(origin_id)])
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
@@ -108,7 +108,7 @@ class GenesisById(LimitationsProgram):
                 False,
             )
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
+        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend]), origin_id
 
 
 class GenesisByPuzhash(LimitationsProgram):
