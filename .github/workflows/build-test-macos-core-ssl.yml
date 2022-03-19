@@ -80,21 +80,16 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
         sh install.sh -d
 
-    - name: Install timelord
-      run: |
-        . ./activate
-        sh install-timelord.sh
-        ./vdf_bench square_asm 400000
+# Omitted installing Timelord
 
     - name: Test core-ssl code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/ssl/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/ssl/test_*.py -s -v --durations 0 -m "not benchmark"
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 import aiosqlite
 import pytest
@@ -7,12 +6,6 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.wallet.key_val_store import KeyValStore
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestWalletKeyValStore:

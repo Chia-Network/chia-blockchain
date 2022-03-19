@@ -74,7 +74,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, save_config
+from chia.util.config import get_config_lock, load_config, lock_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -353,7 +353,7 @@ class BlockTools:
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
 
-    def get_daemon_ssl_context(self) -> Optional[ssl.SSLContext]:
+    def get_daemon_ssl_context(self) -> ssl.SSLContext:
         crt_path = self.root_path / self.config["daemon_ssl"]["private_crt"]
         key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
         ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
@@ -1376,6 +1376,11 @@ def get_challenges(
 
 def get_plot_dir() -> Path:
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+
+    ci = os.environ.get("CI")
+    if ci is not None and not cache_path.exists():
+        raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
+
     mkdir(cache_path)
     return cache_path
 
