@@ -26,12 +26,6 @@ async def tx_in_pool(mempool: MempoolManager, tx_id):
     return True
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):

@@ -1,7 +1,11 @@
 from typing import Dict, Optional
+import platform
 from pathlib import Path
+import shutil
 import sys
 from time import time
+import textwrap
+import os
 
 from chia.util.config import load_config, save_config, get_config_lock
 from chia.util.path import mkdir, path_from_root
@@ -17,8 +21,10 @@ def db_upgrade_func(
     root_path: Path,
     in_db_path: Optional[Path] = None,
     out_db_path: Optional[Path] = None,
+    *,
     no_update_config: bool = False,
-):
+    force: bool = False,
+) -> None:
 
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
 
@@ -40,16 +46,67 @@ def db_upgrade_func(
         out_db_path = path_from_root(root_path, db_path_replaced)
         mkdir(out_db_path.parent)
 
-    convert_v1_to_v2(in_db_path, out_db_path)
+    total, used, free = shutil.disk_usage(out_db_path.parent)
+    in_db_size = in_db_path.stat().st_size
+    if free < in_db_size:
+        no_free: bool = free < in_db_size * 0.6
+        strength: str
+        if no_free:
+            strength = "probably not enough"
+        else:
+            strength = "very little"
+        print(f"there is {strength} free space on the volume where the output database will be written:")
+        print(f"   {out_db_path}")
+        print(
+            f"free space: {free / 1024 / 1024 / 1024:0.2f} GiB expected about "
+            f"{in_db_size / 1024 / 1024 / 1024:0.2f} GiB"
+        )
+        if no_free and not force:
+            print("to override this check and convert anyway, pass --force")
+            return
 
-    if update_config:
-        print("updating config.yaml")
-        with get_config_lock(root_path, "config.yaml"):
-            config = load_config(root_path, "config.yaml", acquire_lock=False)
-            new_db_path = db_pattern.replace("_v1_", "_v2_")
-            config["full_node"]["database_path"] = new_db_path
-            print(f"database_path: {new_db_path}")
-            save_config(root_path, "config.yaml", config)
+    try:
+        convert_v1_to_v2(in_db_path, out_db_path)
+
+        if update_config:
+            print("updating config.yaml")
+            with get_config_lock(root_path, "config.yaml"):
+                config = load_config(root_path, "config.yaml", acquire_lock=False)
+                new_db_path = db_pattern.replace("_v1_", "_v2_")
+                config["full_node"]["database_path"] = new_db_path
+                print(f"database_path: {new_db_path}")
+                save_config(root_path, "config.yaml", config)
+
+    except RuntimeError as e:
+        print(f"conversion failed with error: {e}.")
+    except Exception as e:
+
+        print(
+            textwrap.dedent(
+                f"""\
+            conversion failed with error: {e}.
+            The target v2 database is left in place (possibly in an incomplete state)
+              {out_db_path}
+            If the failure was caused by a full disk, ensure the volumes of your
+            temporary- and target directory have sufficient free space."""
+            )
+        )
+        if platform.system() == "Windows":
+            temp_dir = None
+            # this is where GetTempPath() looks
+            # https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppatha
+            if "TMP" in os.environ:
+                temp_dir = os.environ["TMP"]
+            elif "TEMP" in os.environ:
+                temp_dir = os.environ["TEMP"]
+            elif "USERPROFILE" in os.environ:
+                temp_dir = os.environ["USERPROFILE"]
+            if temp_dir is not None:
+                print(f"your temporary directory may be {temp_dir}")
+            temp_env = "TMP"
+        else:
+            temp_env = "SQLITE_TMPDIR"
+        print(f'you can specify the "{temp_env}" environment variable to control the temporary directory to be used')
 
     print(f"\n\nLEAVING PREVIOUS DB FILE UNTOUCHED {in_db_path}\n")
 
@@ -67,16 +124,13 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
     from contextlib import closing
 
     if not in_path.exists():
-        print(f"input file doesn't exist. {in_path}")
-        raise RuntimeError(f"can't find {in_path}")
+        raise RuntimeError(f"input file doesn't exist. {in_path}")
 
     if in_path == out_path:
-        print(f"output file is the same as the input {in_path}")
-        raise RuntimeError("invalid conversion files")
+        raise RuntimeError(f"output file is the same as the input {in_path}")
 
     if out_path.exists():
-        print(f"output file already exists. {out_path}")
-        raise RuntimeError("already exists")
+        raise RuntimeError(f"output file already exists. {out_path}")
 
     print(f"opening file for reading: {in_path}")
     with closing(sqlite3.connect(in_path)) as in_db:
@@ -84,8 +138,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             with closing(in_db.execute("SELECT * from database_version")) as cursor:
                 row = cursor.fetchone()
                 if row is not None and row[0] != 1:
-                    print(f"blockchain database already version {row[0]}\nDone")
-                    raise RuntimeError("already v2")
+                    raise RuntimeError(f"blockchain database already version {row[0]}. Won't convert")
         except sqlite3.OperationalError:
             pass
 
@@ -120,8 +173,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
             with closing(in_db.execute("SELECT header_hash, height from block_records WHERE is_peak = 1")) as cursor:
                 peak_row = cursor.fetchone()
                 if peak_row is None:
-                    print("v1 database does not have a peak block, there is no blockchain to convert")
-                    raise RuntimeError("no blockchain")
+                    raise RuntimeError("v1 database does not have a peak block, there is no blockchain to convert")
             peak_hash = bytes32(bytes.fromhex(peak_row[0]))
             peak_height = uint32(peak_row[1])
             print(f"peak: {peak_hash.hex()} height: {peak_height}")
@@ -161,7 +213,6 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
                         while True:
                             row_2 = cursor_2.fetchone()
                             if row_2 is None:
-                                print(f"ERROR: could not find block {hh.hex()}")
                                 raise RuntimeError(f"block {hh.hex()} not found")
                             if bytes.fromhex(row_2[0]) == hh:
                                 break

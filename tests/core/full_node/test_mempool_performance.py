@@ -35,12 +35,6 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="module")
 async def wallet_nodes(bt):
     key_seed = bt.farmer_master_sk_entropy
@@ -50,6 +44,7 @@ async def wallet_nodes(bt):
 
 class TestMempoolPerformance:
     @pytest.mark.asyncio
+    @pytest.mark.benchmark
     async def test_mempool_update_performance(self, bt, wallet_nodes, default_400_blocks, self_hostname):
         blocks = default_400_blocks
         full_nodes, wallets = wallet_nodes
@@ -84,7 +79,12 @@ class TestMempoolPerformance:
         blocks = bt.get_consecutive_blocks(3, blocks)
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
-        for block in blocks[-2:]:
+        for idx, block in enumerate(blocks):
             start_t_2 = time.time()
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-            assert time.time() - start_t_2 < 1
+            end_t_2 = time.time()
+            duration = end_t_2 - start_t_2
+            if idx >= len(blocks) - 3:
+                assert duration < 0.1
+            else:
+                assert duration < 0.0002

@@ -82,7 +82,6 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
         sh install.sh -d
@@ -96,7 +95,7 @@ jobs:
     - name: Test core-daemon code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py -s -v --durations 0
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py -s -v --durations 0 -m "not benchmark"
 
     - name: Process coverage data
       run: |
