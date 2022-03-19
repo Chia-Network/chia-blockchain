@@ -242,7 +242,9 @@ class Wallet:
         python_program[1].append(condition)
         return Program.to(python_program)
 
-    async def select_coins(self, target: uint64, exclude: List[Coin] = None) -> Set[Coin]:
+    async def select_coins(
+        self, target: uint64, exclude: List[Coin] = None, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -266,9 +268,8 @@ class Wallet:
             self.log,
             uint128(target),
             exclude,
+            min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
-        assert sum(c.amount for c in coins) >= target
         return coins
 
     async def _generate_unsigned_transaction(

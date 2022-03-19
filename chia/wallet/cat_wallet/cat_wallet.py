@@ -405,7 +405,9 @@ class CATWallet:
 
         return result
 
-    async def select_coins(self, target: uint64) -> Set[Coin]:
+    async def select_coins(
+        self, target: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -426,9 +428,9 @@ class CATWallet:
             unconfirmed_removals,
             self.log,
             uint128(target),
+            exclude,
+            min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
-        assert sum(c.amount for c in coins) >= target
         return coins
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
