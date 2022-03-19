@@ -77,7 +77,10 @@ async def select_coins(
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
-        greater_coins = valid_spendable_coins[: -len(smaller_coins)]
+        if len(smaller_coins) > 0:  # in case we only have bigger coins.
+            greater_coins = valid_spendable_coins[: -len(smaller_coins)]
+        else:
+            greater_coins = valid_spendable_coins
         smallest_coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
