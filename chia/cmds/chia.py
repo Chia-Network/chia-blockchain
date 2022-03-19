@@ -9,6 +9,7 @@ from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.passphrase import passphrase_cmd
 from chia.cmds.plots import plots_cmd
+from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
@@ -131,6 +132,7 @@ cli.add_command(wallet_cmd)
 cli.add_command(plotnft_cmd)
 cli.add_command(configure_cmd)
 cli.add_command(init_cmd)
+cli.add_command(rpc_cmd)
 cli.add_command(show_cmd)
 cli.add_command(start_cmd)
 cli.add_command(stop_cmd)

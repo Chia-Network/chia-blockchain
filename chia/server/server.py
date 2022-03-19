@@ -42,7 +42,7 @@ def ssl_context_for_server(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
@@ -70,7 +70,7 @@ def ssl_context_for_server(
 
 def ssl_context_for_root(
     ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
 
@@ -86,7 +86,7 @@ def ssl_context_for_client(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
@@ -208,7 +208,9 @@ class ChiaServer:
             await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
-                if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
+                if (
+                    self._local_type == NodeType.FULL_NODE or self._local_type == NodeType.WALLET
+                ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
                             to_remove.append(connection)

@@ -5,6 +5,7 @@ import multiprocessing
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -47,6 +48,7 @@ from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
@@ -104,6 +106,7 @@ class Blockchain(BlockchainInterface):
         hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -117,7 +120,12 @@ class Blockchain(BlockchainInterface):
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         num_workers = max(cpu_count - reserved_cores, 1)
-        self.pool = ProcessPoolExecutor(max_workers=num_workers)
+        self.pool = ProcessPoolExecutor(
+            max_workers=num_workers,
+            mp_context=multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
         log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
@@ -322,7 +330,7 @@ class Blockchain(BlockchainInterface):
         None if there was no update to the heaviest chain.
         """
         peak = self.get_peak()
-        lastest_coin_state: Dict[bytes32, CoinRecord] = {}
+        latest_coin_state: Dict[bytes32, CoinRecord] = {}
         hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
         if genesis:
@@ -364,7 +372,7 @@ class Blockchain(BlockchainInterface):
             if block_record.prev_hash != peak.header_hash:
                 roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
                 for coin_record in roll_changes:
-                    lastest_coin_state[coin_record.name] = coin_record
+                    latest_coin_state[coin_record.name] = coin_record
 
             # Rollback sub_epoch_summaries
             self.__height_map.rollback(fork_height)
@@ -415,10 +423,10 @@ class Blockchain(BlockchainInterface):
                     record: Optional[CoinRecord]
                     for record in added_rec:
                         assert record
-                        lastest_coin_state[record.name] = record
+                        latest_coin_state[record.name] = record
                     for record in removed_rec:
                         assert record
-                        lastest_coin_state[record.name] = record
+                        latest_coin_state[record.name] = record
 
                     if npc_res is not None:
                         hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
@@ -428,7 +436,7 @@ class Blockchain(BlockchainInterface):
                             key = hint
                             if key not in hint_coin_state:
                                 hint_coin_state[key] = {}
-                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
+                            hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
 
             await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
@@ -438,7 +446,7 @@ class Blockchain(BlockchainInterface):
                 uint32(max(fork_height, 0)),
                 block_record.height,
                 records_to_add,
-                (list(lastest_coin_state.values()), hint_coin_state),
+                (list(latest_coin_state.values()), hint_coin_state),
             )
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set

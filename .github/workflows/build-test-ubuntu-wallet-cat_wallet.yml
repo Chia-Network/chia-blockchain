@@ -22,7 +22,7 @@ jobs:
   build:
     name: Ubuntu wallet-cat_wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -90,16 +90,12 @@ jobs:
       run: |
         sh install.sh -d
 
-    - name: Install timelord
-      run: |
-        . ./activate
-        sh install-timelord.sh
-        ./vdf_bench square_asm 400000
+# Omitted installing Timelord
 
     - name: Test wallet-cat_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0 -m "not benchmark"
 
 
 #

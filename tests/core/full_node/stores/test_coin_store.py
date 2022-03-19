@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import List, Optional, Set, Tuple
 
@@ -20,15 +19,9 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 constants = test_constants
@@ -59,7 +52,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height):
+    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -157,7 +150,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_set_spent(self, cache_size: uint32, db_version):
+    async def test_set_spent(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(9, [])
 
         async with DBConnection(db_version) as db_wrapper:
@@ -190,7 +183,7 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
-    async def test_num_unspent(self, db_version):
+    async def test_num_unspent(self, bt, db_version):
         blocks = bt.get_consecutive_blocks(37, [])
 
         expect_unspent = 0
@@ -223,7 +216,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_rollback(self, cache_size: uint32, db_version):
+    async def test_rollback(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(20)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -275,7 +268,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version, bt):
 
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
@@ -336,20 +329,15 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version, bt):
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
-            farmer_ph = 32 * b"0"
-            pool_ph = 32 * b"1"
-            # TODO: address hint error and remove ignore
-            #       error: Argument "farmer_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
-            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
-            #       error: Argument "pool_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
-            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
+            farmer_ph = bytes32(32 * b"0")
+            pool_ph = bytes32(32 * b"1")
             blocks = bt.get_consecutive_blocks(
                 num_blocks,
-                farmer_reward_puzzle_hash=farmer_ph,  # type: ignore[arg-type]
-                pool_reward_puzzle_hash=pool_ph,  # type: ignore[arg-type]
+                farmer_reward_puzzle_hash=farmer_ph,
+                pool_reward_puzzle_hash=pool_ph,
                 guarantee_transaction_block=True,
             )
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))

@@ -22,16 +22,21 @@ class CATLineageStore:
     table_name: str
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, asset_id: str):
+    async def create(cls, db_wrapper: DBWrapper, asset_id: str, in_transaction=False):
         self = cls()
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper
         self.db_connection = self.db_wrapper.db
-        await self.db_connection.execute(
-            (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)")
-        )
-
-        await self.db_connection.commit()
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            await self.db_connection.execute(
+                (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY KEY," " lineage blob)")
+            )
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
         return self
 
     async def close(self):
@@ -42,23 +47,35 @@ class CATLineageStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
-        cursor = await self.db_connection.execute(
-            f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)",
-            (coin_id.hex(), bytes(lineage)),
-        )
+    async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof, in_transaction) -> None:
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)",
+                (coin_id.hex(), bytes(lineage)),
+            )
 
-        await cursor.close()
-        await self.db_connection.commit()
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
-    async def remove_lineage_proof(self, coin_id: bytes32) -> None:
-        cursor = await self.db_connection.execute(
-            f"DELETE FROM {self.table_name} WHERE coin_id=?;",
-            (coin_id.hex(),),
-        )
+    async def remove_lineage_proof(self, coin_id: bytes32, in_transaction=True) -> None:
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                f"DELETE FROM {self.table_name} WHERE coin_id=?;",
+                (coin_id.hex(),),
+            )
 
-        await cursor.close()
-        await self.db_connection.commit()
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
 

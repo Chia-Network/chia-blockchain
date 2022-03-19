@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from secrets import token_bytes
 from typing import Optional
@@ -15,12 +14,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint64
 
 from chia.wallet.wallet_pool_store import WalletPoolStore
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:
@@ -64,15 +57,15 @@ class TestWalletPoolStore:
             assert store.get_spends_for_wallet(0) == []
             assert store.get_spends_for_wallet(1) == []
 
-            await store.add_spend(1, solution_1, 100)
+            await store.add_spend(1, solution_1, 100, True)
             assert store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             # Idempotent
-            await store.add_spend(1, solution_1, 100)
+            await store.add_spend(1, solution_1, 100, True)
             assert store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1, 101)
+                await store.add_spend(1, solution_1, 101, True)
 
             # Rebuild cache, no longer present
             await db_wrapper.rollback_transaction()
@@ -80,18 +73,18 @@ class TestWalletPoolStore:
             assert store.get_spends_for_wallet(1) == []
 
             await store.rebuild_cache()
-            await store.add_spend(1, solution_1, 100)
+            await store.add_spend(1, solution_1, 100, False)
             assert store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             solution_1_alt: CoinSpend = make_child_solution(solution_0_alt)
 
             with pytest.raises(ValueError):
-                await store.add_spend(1, solution_1_alt, 100)
+                await store.add_spend(1, solution_1_alt, 100, False)
 
             assert store.get_spends_for_wallet(1) == [(100, solution_1)]
 
             solution_2: CoinSpend = make_child_solution(solution_1)
-            await store.add_spend(1, solution_2, 100)
+            await store.add_spend(1, solution_2, 100, False)
             await store.rebuild_cache()
             solution_3: CoinSpend = make_child_solution(solution_2)
             await store.add_spend(1, solution_3, 100)
@@ -103,7 +96,7 @@ class TestWalletPoolStore:
             await store.rebuild_cache()
             await store.add_spend(1, solution_4, 101)
             await store.rebuild_cache()
-            await store.rollback(101, 1)
+            await store.rollback(101, 1, False)
             await store.rebuild_cache()
             assert store.get_spends_for_wallet(1) == [
                 (100, solution_1),
@@ -112,7 +105,7 @@ class TestWalletPoolStore:
                 (101, solution_4),
             ]
             await store.rebuild_cache()
-            await store.rollback(100, 1)
+            await store.rollback(100, 1, False)
             await store.rebuild_cache()
             assert store.get_spends_for_wallet(1) == [
                 (100, solution_1),
@@ -125,7 +118,7 @@ class TestWalletPoolStore:
             await store.add_spend(1, solution_4, 105)
             solution_5: CoinSpend = make_child_solution(solution_4)
             await store.add_spend(1, solution_5, 105)
-            await store.rollback(99, 1)
+            await store.rollback(99, 1, False)
             assert store.get_spends_for_wallet(1) == []
 
         finally:
