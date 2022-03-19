@@ -434,7 +434,7 @@ class CATWallet:
         return result
 
     async def select_coins(
-        self, target: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -455,7 +455,7 @@ class CATWallet:
             spendable_coins,
             unconfirmed_removals,
             self.log,
-            uint128(target),
+            uint128(amount),
             exclude,
             min_coin_amount,
         )
