@@ -1,12 +1,12 @@
 import asyncio
-from typing import Optional
+from typing import Dict, Optional
 
 from blspy import G2Element
 
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.config import load_config, save_config
+from chia.util.config import get_config_lock, load_config, save_config
 from operator import attrgetter
 import logging
 
@@ -34,26 +34,38 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.wallet_types import WalletType
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
 
-class TestWalletRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
 
+
+async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType, int]) -> None:
+    for wallet_type in WalletType:
+        wallets = await client.get_wallets(wallet_type)
+        wallet_count = len(wallets)
+        if wallet_type in expected:
+            assert wallet_count == expected.get(wallet_type, 0)
+            for wallet in wallets:
+                assert wallet["type"] == wallet_type.value
+
+
+class TestWalletRpc:
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_rpc(self, two_wallet_nodes, trusted):
+    async def test_wallet_rpc(self, two_wallet_nodes, trusted, bt, self_hostname):
         test_rpc_port = find_available_listen_port()
         test_rpc_port_2 = find_available_listen_port()
         test_rpc_port_node = find_available_listen_port()
@@ -137,12 +149,15 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
-        client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
-        client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
+        client = await WalletRpcClient.create(hostname, test_rpc_port, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(hostname, test_rpc_port_2, bt.root_path, config)
+        client_node = await FullNodeRpcClient.create(hostname, test_rpc_port_node, bt.root_path, config)
         try:
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
+
             await time_out_assert(5, client.get_synced)
-            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "xch")
+            addr = encode_puzzle_hash(await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), "txch")
             tx_amount = 15600000
             try:
                 await client.send_transaction("1", 100000000000000001, addr)
@@ -263,7 +278,7 @@ class TestWalletRpc:
             ] == initial_funds_eventually - tx_amount
 
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount - signed_tx_amount)
@@ -290,7 +305,7 @@ class TestWalletRpc:
             push_res = await client_node.push_tx(tx_res.spend_bundle)
             assert push_res["success"]
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             found: bool = False
@@ -330,7 +345,7 @@ class TestWalletRpc:
 
             await asyncio.sleep(3)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             new_balance = new_balance - 555 - 666 - 200
@@ -356,7 +371,7 @@ class TestWalletRpc:
             assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
             # Test RELEVANCE
-            await client.send_transaction("1", 1, encode_puzzle_hash(ph_2, "xch"))  # Create a pending tx
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_2, "txch"))  # Create a pending tx
 
             all_transactions = await client.get_transactions("1", sort_key=SortKey.RELEVANCE)
             sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"), reverse=True)
@@ -386,25 +401,33 @@ class TestWalletRpc:
 
             # Test get_transactions to address
             ph_by_addr = await wallet.get_new_puzzlehash()
-            await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "xch"))
-            await client.farm_block(encode_puzzle_hash(ph_by_addr, "xch"))
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "txch"))
+            await client.farm_block(encode_puzzle_hash(ph_by_addr, "txch"))
             await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
             tx_for_address = await wallet_rpc_api.get_transactions(
-                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "xch")}
+                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "txch")}
             )
             assert len(tx_for_address["transactions"]) == 1
             assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
+
+            # Test coin selection
+            selected_coins = await client.select_coins(amount=1, wallet_id=1)
+            assert len(selected_coins) > 0
 
             ##############
             # CATS       #
             ##############
 
-            # Creates a wallet and a CAT with 20 mojos
+            # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
+            await client.create_new_cat_and_wallet(100)
             res = await client.create_new_cat_and_wallet(20)
             assert res["success"]
             cat_0_id = res["wallet_id"]
             asset_id = bytes.fromhex(res["asset_id"])
             assert len(asset_id) > 0
+
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
 
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 0
@@ -428,7 +451,7 @@ class TestWalletRpc:
 
             await asyncio.sleep(1)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(10, eventual_balance_det, 20, client, cat_0_id)
@@ -443,9 +466,12 @@ class TestWalletRpc:
             cat_1_asset_id = bytes.fromhex(res["asset_id"])
             assert cat_1_asset_id == asset_id
 
+            await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
+            await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 1})
+
             await asyncio.sleep(1)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
             bal_1 = await client_2.get_wallet_balance(cat_1_id)
             assert bal_1["confirmed_wallet_balance"] == 0
@@ -459,11 +485,15 @@ class TestWalletRpc:
 
             await asyncio.sleep(1)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
             await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)
+
+            # Test CAT coin selection
+            selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
+            assert len(selected_coins) > 0
 
             ##########
             # Offers #
@@ -507,7 +537,7 @@ class TestWalletRpc:
 
             await asyncio.sleep(1)
             for i in range(0, 5):
-                await client.farm_block(encode_puzzle_hash(ph_2, "xch"))
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
 
             async def is_trade_confirmed(client, trade) -> bool:
@@ -596,13 +626,14 @@ class TestWalletRpc:
             # set farmer to first private key
             sk = await wallet_node.get_key_for_fingerprint(pks[0])
             test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-            test_config = load_config(wallet_node.root_path, "config.yaml")
-            test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
-            # set pool to second private key
-            sk = await wallet_node.get_key_for_fingerprint(pks[1])
-            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-            test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
-            save_config(wallet_node.root_path, "config.yaml", test_config)
+            with get_config_lock(wallet_node.root_path, "config.yaml"):
+                test_config = load_config(wallet_node.root_path, "config.yaml", acquire_lock=False)
+                test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+                # set pool to second private key
+                sk = await wallet_node.get_key_for_fingerprint(pks[1])
+                test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+                test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+                save_config(wallet_node.root_path, "config.yaml", test_config)
 
             # Check first key
             sk_dict = await client.check_delete_key(pks[0])

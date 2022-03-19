@@ -1,4 +1,4 @@
-import random
+import secrets
 import socket
 from typing import Set
 
@@ -9,17 +9,17 @@ def find_available_listen_port(name: str = "free") -> int:
     global recent_ports
 
     while True:
-        port = random.randint(2000, 65535)
+        port = secrets.randbits(15) + 2000
         if port in recent_ports:
             continue
 
-        s = socket.socket()
-        try:
-            s.bind(("127.0.0.1", port))
-        except BaseException:
-            s.close()
-            continue
-        s.close()
+        with socket.socket() as s:
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                recent_ports.add(port)
+                continue
+
         recent_ports.add(port)
         print(f"{name} port: {port}")
         return port

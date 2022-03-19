@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pytest
 from clvm.casts import int_to_bytes
@@ -12,13 +11,6 @@ from chia.types.spend_bundle import SpendBundle
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.util.db_connection import DBConnection
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 log = logging.getLogger(__name__)
@@ -115,7 +107,7 @@ class TestHintStore:
                 assert rows[0][0] == 4
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, empty_blockchain):  # noqa: F811
+    async def test_hints_in_blockchain(self, empty_blockchain, bt):  # noqa: F811
         blockchain: Blockchain = empty_blockchain
 
         blocks = bt.get_consecutive_blocks(

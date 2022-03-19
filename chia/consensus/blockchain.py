@@ -330,7 +330,7 @@ class Blockchain(BlockchainInterface):
         None if there was no update to the heaviest chain.
         """
         peak = self.get_peak()
-        lastest_coin_state: Dict[bytes32, CoinRecord] = {}
+        latest_coin_state: Dict[bytes32, CoinRecord] = {}
         hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
         if genesis:
@@ -372,7 +372,7 @@ class Blockchain(BlockchainInterface):
             if block_record.prev_hash != peak.header_hash:
                 roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
                 for coin_record in roll_changes:
-                    lastest_coin_state[coin_record.name] = coin_record
+                    latest_coin_state[coin_record.name] = coin_record
 
             # Rollback sub_epoch_summaries
             self.__height_map.rollback(fork_height)
@@ -423,10 +423,10 @@ class Blockchain(BlockchainInterface):
                     record: Optional[CoinRecord]
                     for record in added_rec:
                         assert record
-                        lastest_coin_state[record.name] = record
+                        latest_coin_state[record.name] = record
                     for record in removed_rec:
                         assert record
-                        lastest_coin_state[record.name] = record
+                        latest_coin_state[record.name] = record
 
                     if npc_res is not None:
                         hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
@@ -436,7 +436,7 @@ class Blockchain(BlockchainInterface):
                             key = hint
                             if key not in hint_coin_state:
                                 hint_coin_state[key] = {}
-                            hint_coin_state[key][coin_id] = lastest_coin_state[coin_id]
+                            hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
 
             await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
@@ -446,7 +446,7 @@ class Blockchain(BlockchainInterface):
                 uint32(max(fork_height, 0)),
                 block_record.height,
                 records_to_add,
-                (list(lastest_coin_state.values()), hint_coin_state),
+                (list(latest_coin_state.values()), hint_coin_state),
             )
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set

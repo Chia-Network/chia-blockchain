@@ -151,7 +151,7 @@ class DaemonProxy:
 
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: Optional[ssl.SSLContext]
+    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext
 ) -> DaemonProxy:
     """
     Connect to the local daemon.

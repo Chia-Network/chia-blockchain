@@ -43,6 +43,10 @@ class KeyringMaxUnlockAttempts(Exception):
     pass
 
 
+class KeyringNotSet(Exception):
+    pass
+
+
 def supports_keyring_passphrase() -> bool:
     # Support can be disabled by setting CHIA_PASSPHRASE_SUPPORT to 0/false
     return os.environ.get("CHIA_PASSPHRASE_SUPPORT", "true").lower() in ["1", "true"]
@@ -238,14 +242,15 @@ class Keychain:
     def __init__(self, user: Optional[str] = None, service: Optional[str] = None, force_legacy: bool = False):
         self.user = user if user is not None else default_keychain_user()
         self.service = service if service is not None else default_keychain_service()
-        if force_legacy:
-            legacy_keyring_wrapper = KeyringWrapper.get_legacy_instance()
-            if legacy_keyring_wrapper is not None:
-                self.keyring_wrapper = legacy_keyring_wrapper
-            else:
-                return None
-        else:
-            self.keyring_wrapper = KeyringWrapper.get_shared_instance()
+
+        keyring_wrapper: Optional[KeyringWrapper] = (
+            KeyringWrapper.get_legacy_instance() if force_legacy else KeyringWrapper.get_shared_instance()
+        )
+
+        if keyring_wrapper is None:
+            raise KeyringNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+
+        self.keyring_wrapper = keyring_wrapper
 
     @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
@@ -561,8 +566,10 @@ class Keychain:
 
     @staticmethod
     def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
-        legacy_keyring: Optional[Keychain] = Keychain(force_legacy=True)
-        if legacy_keyring is None:
+        try:
+            legacy_keyring: Keychain = Keychain(force_legacy=True)
+        except KeyringNotSet:
+            # No legacy keyring available, so no keys need to be migrated
             return [], None
         keychain = Keychain()
         all_legacy_sks = legacy_keyring.get_all_private_keys()

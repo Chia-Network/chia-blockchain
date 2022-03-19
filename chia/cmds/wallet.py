@@ -1,7 +1,9 @@
 import sys
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import click
+
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -138,11 +140,21 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+@click.option(
+    "-w",
+    "--wallet_type",
+    help="Choose a specific wallet type to return",
+    type=click.Choice([x.name.lower() for x in WalletType]),
+    default=None,
+)
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
+    args: Dict[str, Any] = {}
+    if wallet_type is not None:
+        args["type"] = WalletType[wallet_type.upper()]
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
 @wallet_cmd.command("get_address", short_help="Get a wallet receive address")
@@ -240,7 +252,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     required=True,
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the genrated offer file to", required=True)
+@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
 def make_offer_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
