@@ -65,7 +65,7 @@ class TestCoinSelection:
                 spendable_amount += c_amount
         spendable_amount = uint128(spendable_amount)
 
-        coin_list: list[WalletCoinRecord] = [
+        coin_list: List[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
@@ -84,7 +84,7 @@ class TestCoinSelection:
     @pytest.mark.asyncio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
-        coin_list: list[WalletCoinRecord] = [
+        coin_list: List[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in coin_amounts
         ]
@@ -147,7 +147,7 @@ class TestCoinSelection:
 
         # test smallest greater than target
         greater_coin_amounts = [1, 2, 5, 20, 400, 700]
-        greater_coin_list: list[WalletCoinRecord] = [
+        greater_coin_list: List[WalletCoinRecord] = [
             WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
             for a in greater_coin_amounts
         ]
