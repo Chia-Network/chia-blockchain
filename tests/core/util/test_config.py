@@ -257,7 +257,8 @@ class TestConfig:
         # Sanity check that we didn't modify the default config
         assert config["harvester"]["farmer_peer"]["host"] != default_config_dict["harvester"]["farmer_peer"]["host"]
         # When: saving the modified config
-        save_config(root_path=root_path, filename="config.yaml", config_data=config)
+        with get_config_lock(root_path, "config.yaml"):
+            save_config(root_path=root_path, filename="config.yaml", config_data=config)
 
         # Expect: modifications should be preserved in the config read from disk
         loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
@@ -273,7 +274,8 @@ class TestConfig:
         # multiple writes were observed, leading to read failures when data was partially written.
         default_config_dict["xyz"] = "x" * 32768
         root_path: Path = root_path_populated_with_config
-        save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
+        with get_config_lock(root_path, "config.yaml"):
+            save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
         num_workers: int = 30
         args = list(map(lambda _: (root_path, default_config_dict), range(num_workers)))
         # Spin-off several processes (not threads) to read and write config data. If any
@@ -294,7 +296,8 @@ class TestConfig:
 
         default_config_dict["xyz"] = "x" * 32768
         root_path: Path = root_path_populated_with_config
-        save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
+        with get_config_lock(root_path, "config.yaml"):
+            save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
 
         with ProcessPoolExecutor(max_workers=4) as pool:
             all_tasks = []

@@ -155,7 +155,6 @@ jobs:
         if: matrix.os.matrix == 'macos'
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
-          BUILD_VDF_CLIENT: "N"
         run: |
           brew install boost
           sh install.sh -d
@@ -177,4 +176,4 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          ./venv/bin/py.test tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }}
+          ./venv/bin/py.test tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark"
