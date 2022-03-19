@@ -701,9 +701,7 @@ class WebSocketServer:
             if new_data not in (None, ""):
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
                 config["log_new"] = new_data
-                self.state_changed(
-                    service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id)
-                )
+                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id))
 
             if new_data:
                 for word in final_words:
@@ -1022,9 +1020,7 @@ class WebSocketServer:
             if process is not None and state == PlotState.RUNNING:
                 run_next = True
                 config["state"] = PlotState.REMOVING
-                self.state_changed(
-                    service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id)
-                )
+                self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
                 await kill_process(process, self.root_path, service_plotter, id)
 
             config["state"] = PlotState.FINISHED
