@@ -10,7 +10,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 async def select_coins(
     spendable_amount: uint128,
-    max_coin_amount: uint128,
+    max_coin_amount: int,
     spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
@@ -68,28 +68,28 @@ async def select_coins(
     # Check for an exact match with all of the coins smaller than the amount.
     # If we have more, smaller coins than the amount we run the next algorithm.
     smaller_coin_sum = 0  # coins smaller than target.
-    smaller_coins: Set[Coin] = set()
+    smaller_coins: List[Coin] = []
     for coin in valid_spendable_coins:
         if coin.amount < amount:
             smaller_coin_sum += coin.amount
-            smaller_coins.add(coin)
+            smaller_coins.append(coin)
     if smaller_coin_sum == amount:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
-        return smaller_coins
+        return set(smaller_coins)
     elif smaller_coin_sum < amount:
-        greater_coins = valid_spendable_coins[: len(smaller_coins)]
+        greater_coins = valid_spendable_coins[: -len(smaller_coins)]
         smallest_coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     else:
-        best_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
-        if best_coin_set is None:
+        knapsack_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
+        if knapsack_coin_set is None:
             raise Exception(
-                "our knapsack algorithm returned None,"
-                " but our smaller_coin_sum is greater then amount. Something went wrong."
+                "our knapsack algorithm returned None, "
+                "but our smaller_coin_sum is greater then amount. Something went wrong."
             )
-        log.debug(f"Selected coins from knapsack algorithm: {best_coin_set}")
-        return best_coin_set
+        log.debug(f"Selected coins from knapsack algorithm: {knapsack_coin_set}")
+        return knapsack_coin_set
 
 
 # These algorithms were based off of the algorithms in:
@@ -105,7 +105,7 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # IMPORTANT: The coins have to be sorted in decending order or else this function will not work.
-def knapsack_coin_algorithm(smaller_coins: Set[Coin], target: uint128, max_coin_amount: int) -> Optional[Set[Coin]]:
+def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin_amount: int) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
