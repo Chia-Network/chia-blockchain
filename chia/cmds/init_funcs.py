@@ -478,13 +478,13 @@ def chia_init(
             save_config(root_path, "config.yaml", config)
 
     else:
-        config = load_config(root_path, "config.yaml", acquire_lock=False)["full_node"]
+        config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced = config["database_path"].replace("CHALLENGE", config["selected_network"])
         db_path = path_from_root(root_path, db_path_replaced)
         mkdir(db_path.parent)
 
-            with sqlite3.connect(db_path) as connection:
-                set_db_version(connection, 2)
+        with sqlite3.connect(db_path) as connection:
+            set_db_version(connection, 2)
 
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")
