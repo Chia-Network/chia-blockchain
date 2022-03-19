@@ -25,7 +25,7 @@ We ask that external contributors create a fork of the `main` branch for any fea
 
 Members of the Chia organization may create feature branches from the `main` branch.
 
-In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `1.0.0`.
+In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `latest`.
 
 ## Branching Strategy
 
