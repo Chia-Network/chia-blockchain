@@ -1,6 +1,5 @@
 import os
 import pickle
-from os import path
 from pathlib import Path
 from typing import List
 
