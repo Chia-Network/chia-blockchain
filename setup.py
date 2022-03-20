@@ -45,7 +45,6 @@ dev_dependencies = [
     "pre-commit",
     "pytest",
     "pytest-asyncio",
-    "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
     "isort",
