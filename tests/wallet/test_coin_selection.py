@@ -117,7 +117,7 @@ class TestCoinSelection:
         assert match_2 is not None
         assert sum([coin.amount for coin in match_2]) == target_amount
         assert len(match_2) == 2
-        # check for match of 3
+        # check for match of at least 3. it is random after all.
         target_amount = uint128(541)
         match_3: Set[Coin] = await select_coins(
             spendable_amount,
@@ -129,7 +129,7 @@ class TestCoinSelection:
         )
         assert match_3 is not None
         assert sum([coin.amount for coin in match_3]) == target_amount
-        assert len(match_3) == 3
+        assert len(match_3) >= 3
 
         # check for match of all
         target_amount = spendable_amount
@@ -164,3 +164,42 @@ class TestCoinSelection:
         assert smallest_result is not None
         assert sum([coin.amount for coin in smallest_result]) > target_amount
         assert len(smallest_result) == 1
+
+        # test smallest greater than target with only 1 large coin.
+        single_greater_coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(70000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+        ]
+        single_greater_spendable_amount = uint128(70000)
+        target_amount = uint128(50000)
+        single_greater_result: Set[Coin] = await select_coins(
+            single_greater_spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            single_greater_coin_list,
+            {},
+            logging.getLogger("test"),
+            target_amount,
+        )
+        assert single_greater_result is not None
+        assert sum([coin.amount for coin in single_greater_result]) > target_amount
+        assert len(single_greater_result) == 1
+
+        # test smallest greater than target with only multiple larger then target coins.
+        multiple_greater_coin_amounts = [90000, 100000, 120000, 200000, 100000]
+        multiple_greater_coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for a in multiple_greater_coin_amounts
+        ]
+        multiple_greater_spendable_amount = uint128(sum(multiple_greater_coin_amounts))
+        target_amount = uint128(70000)
+        multiple_greater_result: Set[Coin] = await select_coins(
+            multiple_greater_spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            multiple_greater_coin_list,
+            {},
+            logging.getLogger("test"),
+            target_amount,
+        )
+        assert multiple_greater_result is not None
+        assert sum([coin.amount for coin in multiple_greater_result]) > target_amount
+        assert sum([coin.amount for coin in multiple_greater_result]) == 90000
+        assert len(multiple_greater_result) == 1
