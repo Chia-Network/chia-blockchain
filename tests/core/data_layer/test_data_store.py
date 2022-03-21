@@ -969,7 +969,7 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     root = await data_store.get_tree_root(tree_id)
     assert root.node_hash is not None
-    all_nodes = await data_store.get_left_to_right_ordering(root, tree_id, False, num_nodes=1000)
+    all_nodes = await data_store.get_left_to_right_ordering(root.node_hash, tree_id, num_nodes=1000)
     expected_nodes = [
         bytes32.from_hexstr("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
         bytes32.from_hexstr("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),

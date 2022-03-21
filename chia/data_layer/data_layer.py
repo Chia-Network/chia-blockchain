@@ -104,27 +104,8 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        hint_keys_values = await self.data_store.get_keys_values_dict(tree_id)
-        old_root = await self.data_store.get_tree_root(tree_id)
-        for change in changelist:
-            if change["action"] == "insert":
-                key = change["key"]
-                value = change["value"]
-                reference_node_hash = change.get("reference_node_hash")
-                side = change.get("side")
-                if reference_node_hash or side:
-                    await self.data_store.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values)
-                else:
-                    await self.data_store.autoinsert(key, value, tree_id, hint_keys_values)
-            else:
-                assert change["action"] == "delete"
-                key = change["key"]
-                await self.data_store.delete(key, tree_id, hint_keys_values)
-
-        root = await self.data_store.get_tree_root(tree_id)
-        # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
-        await self.data_store.rollback_to_generation(tree_id, old_root.generation)
-        await self.data_store.insert_root_for_processed_batch(tree_id, root)
+        await self.data_store.insert_batch(tree_id, changelist)
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
         # todo return empty node hash from get_tree_root
         if root.node_hash is not None:
             node_hash = root.node_hash

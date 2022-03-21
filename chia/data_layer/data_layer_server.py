@@ -57,45 +57,9 @@ class DataLayerServer:
         node_hash_bytes = bytes32.from_hexstr(node_hash)
         tree_id_bytes = bytes32.from_hexstr(tree_id)
         tree_root = await self.data_store.get_last_tree_root_by_hash(tree_id_bytes, node_hash_bytes)
-        if tree_root is None:
+        if tree_root is None or tree_root.node_hash is None:
             return json.dumps({"answer": {}})
-        nodes = await self.data_store.get_left_to_right_ordering(tree_root, tree_id_bytes)
-        answer = []
-        for node in nodes:
-            if isinstance(node, TerminalNode):
-                answer.append(
-                    {
-                        "key": node.key.hex(),
-                        "value": node.value.hex(),
-                        "is_terminal": True,
-                    }
-                )
-            else:
-                answer.append(
-                    {
-                        "left": str(node.left_hash),
-                        "right": str(node.right_hash),
-                        "is_terminal": False,
-                    }
-                )
-        return json.dumps(
-            {
-                "answer": answer,
-            }
-        )
-
-    async def handle_deltas(self, request: Dict[str, str]) -> str:
-        tree_id = request["tree_id"]
-        generation = request["generation"]
-        max_generation = request["max_generation"]
-        tree_id_bytes = bytes32.from_hexstr(tree_id)
-        dowload_full_history = request["dowload_full_history"]
-        nodes = await self.data_store.handle_deltas(
-            tree_id_bytes,
-            int(generation),
-            int(max_generation),
-            bool(dowload_full_history),
-        )
+        nodes = await self.data_store.get_left_to_right_ordering(tree_root.node_hash, tree_id_bytes)
         answer = []
         for node in nodes:
             if isinstance(node, TerminalNode):
@@ -172,8 +136,6 @@ class DataLayerServer:
                     json_response = await self.handle_tree_nodes(json_request)
                 elif json_request["type"] == "request_operations":
                     json_response = await self.handle_operations(json_request)
-                elif json_request["type"] == "request_deltas":
-                    json_response = await self.handle_deltas(json_request)
                 await ws.send_str(json_response)
 
         return ws

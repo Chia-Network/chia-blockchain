@@ -2,7 +2,7 @@ import logging
 import aiosqlite
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, Any
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -843,6 +843,29 @@ class DataStore:
 
         return
 
+    async def insert_batch(self, tree_id: bytes32, changelist: List[Dict[str, Any]], *, lock: bool = True) -> None:
+        hint_keys_values = await self.get_keys_values_dict(tree_id, lock=lock)
+        old_root = await self.get_tree_root(tree_id, lock=lock)
+        for change in changelist:
+            if change["action"] == "insert":
+                key = change["key"]
+                value = change["value"]
+                reference_node_hash = change.get("reference_node_hash")
+                side = change.get("side")
+                if reference_node_hash or side:
+                    await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=lock)
+                else:
+                    await self.autoinsert(key, value, tree_id, hint_keys_values, lock=lock)
+            else:
+                assert change["action"] == "delete"
+                key = change["key"]
+                await self.delete(key, tree_id, hint_keys_values, lock=lock)
+
+        root = await self.get_tree_root(tree_id, lock=lock)
+        # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
+        await self.rollback_to_generation(tree_id, old_root.generation, lock=lock)
+        await self.insert_root_for_processed_batch(tree_id, root, lock=lock)
+
     async def insert_root_for_processed_batch(
         self, tree_id: bytes32, root: Root, status: Status = Status.PENDING, *, lock: bool = True
     ) -> None:
@@ -852,7 +875,7 @@ class DataStore:
             assert root.node_hash == new_root.node_hash
             if new_root.node_hash is None:
                 return
-            nodes = await self.get_left_to_right_ordering(new_root, tree_id, lock=False)
+            nodes = await self.get_left_to_right_ordering(new_root.node_hash, tree_id, lock=False)
             for node in nodes:
                 if isinstance(node, InternalNode):
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
@@ -957,7 +980,7 @@ class DataStore:
     async def get_first_generation(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> int:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                "SELECT MIN(generation) FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
+                "SELECT MIN(generation) AS generation FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
                 {"hash": node_hash.hex(), "tree_id": tree_id.hex()},
             )
             row = await cursor.fetchone()
@@ -967,65 +990,58 @@ class DataStore:
             generation = row["generation"]
             return int(generation)
 
-    async def get_left_to_right_ordering(
+    async def write_tree_to_file(
         self,
         root: Root,
+        node_hash: bytes32,
         tree_id: bytes32,
-        get_only_deltas: bool = False,
+        deltas_only: bool,
+        filename: str,
+        *,
+        lock: bool = True,
+    ) -> None:
+        if deltas_only:
+            generation = await self.get_first_generation(node_hash, tree_id, lock=lock)
+            # Root's generation is not the first time we see this hash, so it's not a new delta.
+            if root.generation != generation:
+                return
+        node = await self.get_node(node_hash, lock=lock)
+        if isinstance(node, InternalNode):
+            await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, filename, lock=lock)
+            await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, filename, lock=lock)
+            with open(filename, "a") as writer:
+                writer.write(f"1 {node.left_hash.hex()} {node.right_hash.hex()}\n")
+        else:
+            assert isinstance(node, TerminalNode)
+            with open(filename, "a") as writer:
+                writer.write(f"2 {node.key.hex()} {node.value.hex()}")
+
+    async def get_left_to_right_ordering(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
         *,
         lock: bool = True,
         num_nodes: int = 1000000000,
     ) -> List[Node]:
-        node_hash = root.node_hash
-        assert node_hash is not None
         stack: List[bytes32] = []
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
-                node = await self.get_node(node_hash, lock=lock)
+                node = await self.get_node(node_hash)
             except Exception:
                 return []
-            if not get_only_deltas:
-                nodes.append(node)
-            else:
-                first_generation = await self.get_first_generation(node_hash, tree_id, lock=False)
-                if first_generation == root.generation:
-                    nodes.append(node)
             if isinstance(node, TerminalNode):
+                nodes.append(node)
                 if len(stack) > 0:
                     node_hash = stack.pop()
                 else:
                     break
             elif isinstance(node, InternalNode):
+                nodes.append(node)
                 stack.append(node.right_hash)
                 node_hash = node.left_hash
-
         return nodes
-
-    async def handle_deltas(
-        self,
-        tree_id: bytes32,
-        generation_begin: int,
-        max_generation: int,
-        num_generations: int = 10000000,
-        *,
-        lock: bool = True,
-    ) -> List[Node]:
-        result: List[Node] = []
-
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            query_generation_begin = max(generation_begin - 1, 0)
-            query_generation_end = min(
-                generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
-            )
-            query_generation_end = min(query_generation_end, max_generation + 1)
-            roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
-            for root in roots:
-                if root.node_hash is not None:
-                    nodes = await self.get_left_to_right_ordering(root, tree_id, True, lock=False)
-                    result += nodes
-
-        return result
 
     # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
     async def get_single_operation(
