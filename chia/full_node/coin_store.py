@@ -476,7 +476,7 @@ class CoinStore:
                         record.timestamp,
                     )
                 )
-            if values2 != []:
+            if len(values2) > 0:
                 async with self.db_wrapper.write_db() as conn:
                     await conn.executemany(
                         "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
@@ -499,7 +499,7 @@ class CoinStore:
                         record.timestamp,
                     )
                 )
-            if values != []:
+            if len(values) > 0:
                 async with self.db_wrapper.write_db() as conn:
                     await conn.executemany(
                         "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",

@@ -119,7 +119,8 @@ class DBWrapper2:
         # so it can read back updates it has made to its transaction, even
         # though it hasn't been comitted yet
         if self._current_writer == task:
-            # we allow nesting writers within the same task
+            # we allow nesting reading while also having a writer connection
+            # open, within the same task
             yield self._write_connection
             return
 
