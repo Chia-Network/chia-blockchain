@@ -23,7 +23,7 @@ from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
@@ -35,19 +35,19 @@ async def wallet_node_100_pk():
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_five_freeze():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def three_sim_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(3, 2, {}):
         yield _
 
 
