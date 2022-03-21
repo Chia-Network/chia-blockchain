@@ -1,7 +1,6 @@
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.network import is_trusted_inner
 import click
-from typing import Any, Optional, Union, Dict
+from typing import Any, Union
 
 
 async def show_async(
@@ -16,7 +15,6 @@ async def show_async(
     from typing import List, Optional
     from chia.consensus.block_record import BlockRecord
     from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-    from chia.server.outbound_message import NodeType
     from chia.types.full_block import FullBlock
     from chia.util.bech32m import encode_puzzle_hash
     from chia.util.byte_types import hexstr_to_bytes
@@ -28,8 +26,7 @@ async def show_async(
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         self_hostname = config["self_hostname"]
-        if rpc_port is None:
-            rpc_port = config["full_node"]["rpc_port"]
+        rpc_port = config["full_node"]["rpc_port"]
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
         if state:
@@ -189,44 +186,13 @@ async def show_async(
     await client.await_closed()
 
 
-@click.command(
-    "show",
-    short_help="Show node information"
-)
-
+@click.command("show", short_help="Show node information")
+@click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
+@click.option("-e", "--exit-node", help="Shut down the running Full Node", is_flag=True, default=False)
 @click.option(
-    "-s",
-    "--state",
-    help="Show the current state of the blockchain",
-    is_flag=True,
-    type=bool,
-    default=False
+    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
-
-@click.option(
-    "-e",
-    "--exit-node",
-    help="Shut down the running Full Node",
-    is_flag=True,
-    default=False
-)
-
-@click.option(
-    "-bh",
-    "--block-header-hash-by-height",
-    help="Look up a block header hash by block height",
-    type=str,
-    default=""
-)
-
-@click.option(
-    "-b",
-    "--block-by-header-hash",
-    help="Look up a block by block header hash",
-    type=str,
-    default=""
-)
-
+@click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
     state: bool,
     exit_node: bool,

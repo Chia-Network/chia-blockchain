@@ -1,5 +1,4 @@
-from typing import Dict
-from typing import Any, Optional, Union, Dict
+from typing import Optional, Dict
 
 import click
 
@@ -124,26 +123,11 @@ async def peer_async(
 
 @click.command("peer", short_help="Show, or modify peering connections")
 @click.option(
-    "-c",
-    "--connections",
-    help="List nodes connected to this Full Node",
-    is_flag=True,
-    type=bool,
-    default=True
+    "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=True
 )
+@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
 @click.option(
-    "-a",
-    "--add-connection",
-    help="Connect to another Full Node by ip:port",
-    type=str,
-    default=""
-)
-@click.option(
-    "-r",
-    "--remove-connection",
-    help="Remove a Node by the first 8 characters of NodeID",
-    type=str,
-    default=""
+    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
 @click.option(
     "-p",
@@ -153,7 +137,7 @@ async def peer_async(
         "See the rpc_port under full_node in config.yaml"
     ),
     type=int,
-    default=None
+    default=None,
 )
 def peer_cmd(
     connections: bool,
