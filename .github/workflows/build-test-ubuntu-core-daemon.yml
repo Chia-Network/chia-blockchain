@@ -77,18 +77,19 @@ jobs:
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
         sh install.sh -d
+
+    - name: Install Ubuntu dependencies
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Install timelord
       run: |
