@@ -82,15 +82,12 @@ async def select_coins(
         else:
             greater_coins = valid_spendable_coins
         smallest_coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
+        assert smallest_coin is not None
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     else:
         knapsack_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
-        if knapsack_coin_set is None:
-            raise Exception(
-                "our knapsack algorithm returned None, "
-                "but our smaller_coin_sum is greater then amount. Something went wrong."
-            )
+        assert knapsack_coin_set is not None
         log.debug(f"Selected coins from knapsack algorithm: {knapsack_coin_set}")
         return knapsack_coin_set
 
