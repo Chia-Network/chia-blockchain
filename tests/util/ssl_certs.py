@@ -1,0 +1,878 @@
+# Certificates and private keys for use in testing
+
+# openssl x509 -in private_ca.crt -text -noout
+#
+# Certificate:
+#     Data:
+#         Version: 3 (0x2)
+#         Serial Number:
+#             7f:4c:d9:d2:c2:3d:7d:5b:cc:aa:8d:64:ae:24:1a:79:5f:13:bc:a0
+#     Signature Algorithm: sha256WithRSAEncryption
+#         Issuer: O=Chia, CN=Chia CA, OU=Organic Farming Division
+#         Validity
+#             Not Before: Mar 21 19:22:54 2022 GMT
+#             Not After : Mar 18 19:22:54 2032 GMT
+#         Subject: O=Chia, CN=Chia CA, OU=Organic Farming Division
+#         Subject Public Key Info:
+#             Public Key Algorithm: rsaEncryption
+#                 Public-Key: (2048 bit)
+#                 Modulus:
+#                     00:bf:b4:97:25:7a:d1:0e:cd:cd:4f:54:d7:12:fe:
+#                     ec:64:6d:9b:1b:5d:5b:e3:84:a3:0a:56:82:44:a6:
+#                     db:e5:c6:e9:bd:1e:2a:fd:18:d9:3e:f7:f3:16:6d:
+#                     86:5f:d1:2b:4e:c7:43:e6:c7:3b:7b:3e:d9:67:15:
+#                     6a:7c:0a:2c:30:3b:63:29:3e:45:0c:f7:5d:d5:f8:
+#                     a3:66:8f:ee:e0:3e:0a:5b:03:b2:f5:ce:2e:8c:03:
+#                     6f:70:04:ea:15:41:f8:85:fc:f4:cb:12:70:15:b3:
+#                     2d:51:f1:a8:67:7b:58:97:94:ab:1a:bc:ec:5a:df:
+#                     84:8a:a4:6c:a9:c3:6e:80:cf:81:be:d4:8d:6b:c2:
+#                     77:a2:d4:b9:f1:f1:6c:39:ed:4e:b1:6b:9b:3e:77:
+#                     79:cd:0d:6d:fb:03:43:f9:bc:31:41:f5:a4:87:83:
+#                     b0:fb:c6:25:4d:94:e7:58:4e:b5:b7:42:8e:7f:f8:
+#                     fd:9b:72:49:28:05:15:2f:9f:59:dc:9e:55:99:60:
+#                     ef:a6:26:9a:7e:b6:e4:a3:9b:35:6e:94:a5:38:d5:
+#                     75:a2:bc:27:8a:82:b2:e2:02:3c:3f:a9:6c:c2:4e:
+#                     46:36:4e:00:c3:36:fd:a3:fc:7f:23:fe:20:37:82:
+#                     2f:62:5e:70:51:84:d7:b3:91:79:e0:9f:9e:20:54:
+#                     34:ef
+#                 Exponent: 65537 (0x10001)
+#         X509v3 extensions:
+#             X509v3 Basic Constraints: critical
+#                 CA:TRUE
+#     Signature Algorithm: sha256WithRSAEncryption
+#          57:b2:d1:39:62:94:da:16:a4:38:ea:41:2a:58:70:8e:e9:d7:
+#          00:58:2b:c8:41:f1:cc:1b:b9:08:9e:8d:93:07:d6:08:bc:8c:
+#          cf:e6:42:50:1d:f2:00:47:72:7b:d3:a5:bf:5d:40:22:9a:ab:
+#          a1:51:17:3e:98:74:7c:b1:e5:6e:67:12:8c:9b:e1:6d:73:9b:
+#          09:e6:b4:1b:9f:54:ac:a5:43:4e:f9:8c:9f:e0:8b:01:4e:17:
+#          2f:46:16:cd:48:ea:4f:6c:64:9b:22:18:81:a6:34:2d:85:dc:
+#          cf:3b:73:15:83:7e:f6:64:b7:fb:5f:03:d2:10:09:da:f5:89:
+#          b2:5a:7e:09:94:9b:09:2f:d5:49:de:99:06:75:06:7e:d2:de:
+#          31:db:53:88:2b:61:18:26:f0:e9:71:fe:56:b0:62:89:92:04:
+#          7b:ba:5f:25:bd:6d:e2:68:41:f1:9d:3f:85:44:29:7d:8c:38:
+#          12:1c:3c:7e:71:9f:2b:c1:64:a8:08:44:69:c2:b6:d6:df:6a:
+#          41:8b:b8:8e:53:0f:46:c9:7f:29:c8:bb:43:d2:48:5d:38:89:
+#          00:bf:8f:41:69:a8:83:0f:e5:37:f0:d6:0a:95:da:b6:09:bb:
+#          d4:d9:60:a2:79:7b:9b:e7:f7:16:29:c0:2a:6b:ef:99:37:26:
+#          e1:4b:7b:b7
+SSL_TEST_PRIVATE_CA_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDKTCCAhGgAwIBAgIUf0zZ0sI9fVvMqo1kriQaeV8TvKAwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMB4XDTIyMDMyMTE5MjI1NFoXDTMyMDMx
+ODE5MjI1NFowRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8G
+A1UECwwYT3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAv7SXJXrRDs3NT1TXEv7sZG2bG11b44SjClaCRKbb5cbp
+vR4q/RjZPvfzFm2GX9ErTsdD5sc7ez7ZZxVqfAosMDtjKT5FDPdd1fijZo/u4D4K
+WwOy9c4ujANvcATqFUH4hfz0yxJwFbMtUfGoZ3tYl5SrGrzsWt+EiqRsqcNugM+B
+vtSNa8J3otS58fFsOe1OsWubPnd5zQ1t+wND+bwxQfWkh4Ow+8YlTZTnWE61t0KO
+f/j9m3JJKAUVL59Z3J5VmWDvpiaafrbko5s1bpSlONV1orwnioKy4gI8P6lswk5G
+Nk4Awzb9o/x/I/4gN4IvYl5wUYTXs5F54J+eIFQ07wIDAQABoxMwETAPBgNVHRMB
+Af8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBXstE5YpTaFqQ46kEqWHCO6dcA
+WCvIQfHMG7kIno2TB9YIvIzP5kJQHfIAR3J706W/XUAimquhURc+mHR8seVuZxKM
+m+Ftc5sJ5rQbn1SspUNO+Yyf4IsBThcvRhbNSOpPbGSbIhiBpjQthdzPO3MVg372
+ZLf7XwPSEAna9YmyWn4JlJsJL9VJ3pkGdQZ+0t4x21OIK2EYJvDpcf5WsGKJkgR7
+ul8lvW3iaEHxnT+FRCl9jDgSHDx+cZ8rwWSoCERpwrbW32pBi7iOUw9GyX8pyLtD
+0khdOIkAv49BaaiDD+U38NYKldq2CbvU2WCieXub5/cWKcAqa++ZNybhS3u3
+-----END CERTIFICATE-----
+"""
+
+# openssl rsa -in private_ca.key -check -text -noout
+#
+# Private-Key: (2048 bit)
+# modulus:
+#     00:bf:b4:97:25:7a:d1:0e:cd:cd:4f:54:d7:12:fe:
+#     ec:64:6d:9b:1b:5d:5b:e3:84:a3:0a:56:82:44:a6:
+#     db:e5:c6:e9:bd:1e:2a:fd:18:d9:3e:f7:f3:16:6d:
+#     86:5f:d1:2b:4e:c7:43:e6:c7:3b:7b:3e:d9:67:15:
+#     6a:7c:0a:2c:30:3b:63:29:3e:45:0c:f7:5d:d5:f8:
+#     a3:66:8f:ee:e0:3e:0a:5b:03:b2:f5:ce:2e:8c:03:
+#     6f:70:04:ea:15:41:f8:85:fc:f4:cb:12:70:15:b3:
+#     2d:51:f1:a8:67:7b:58:97:94:ab:1a:bc:ec:5a:df:
+#     84:8a:a4:6c:a9:c3:6e:80:cf:81:be:d4:8d:6b:c2:
+#     77:a2:d4:b9:f1:f1:6c:39:ed:4e:b1:6b:9b:3e:77:
+#     79:cd:0d:6d:fb:03:43:f9:bc:31:41:f5:a4:87:83:
+#     b0:fb:c6:25:4d:94:e7:58:4e:b5:b7:42:8e:7f:f8:
+#     fd:9b:72:49:28:05:15:2f:9f:59:dc:9e:55:99:60:
+#     ef:a6:26:9a:7e:b6:e4:a3:9b:35:6e:94:a5:38:d5:
+#     75:a2:bc:27:8a:82:b2:e2:02:3c:3f:a9:6c:c2:4e:
+#     46:36:4e:00:c3:36:fd:a3:fc:7f:23:fe:20:37:82:
+#     2f:62:5e:70:51:84:d7:b3:91:79:e0:9f:9e:20:54:
+#     34:ef
+# publicExponent: 65537 (0x10001)
+# privateExponent:
+#     00:90:5a:66:fa:04:fa:49:00:75:5a:08:53:8f:6d:
+#     40:09:fb:72:b1:6f:62:52:f7:3c:61:fb:74:4a:47:
+#     af:0b:dd:f5:81:bf:a6:b5:40:b1:cd:b5:9d:69:44:
+#     fd:cb:46:d1:2a:97:e7:ac:6e:57:7e:dd:7b:8d:20:
+#     d6:37:22:dd:d5:4f:d2:c2:6a:ae:4a:2e:36:8d:79:
+#     95:69:14:76:d6:8a:40:f7:f9:d8:17:39:b3:59:20:
+#     f9:17:cb:cb:8c:48:49:e0:72:f2:cd:bb:4b:85:3b:
+#     8f:a3:c5:a9:7e:8a:a5:d2:36:53:85:65:bf:40:4a:
+#     51:1e:a8:e3:5e:0d:d8:36:cb:3b:16:eb:e5:ba:4b:
+#     ff:06:17:2c:b2:59:b3:80:8a:5e:2d:6b:15:35:42:
+#     72:ce:b8:23:73:72:19:59:06:c1:ce:bd:a4:ef:91:
+#     b3:58:a7:43:f3:de:1c:73:05:ca:b0:85:c2:97:b5:
+#     99:dc:10:dc:71:4f:0f:f4:87:c1:b2:9f:39:d0:0f:
+#     0c:32:97:a5:cb:d4:42:80:f5:b8:33:78:e2:b0:1c:
+#     ad:6a:e4:a4:41:47:fc:81:61:b7:f6:e4:9a:4c:c1:
+#     da:c3:b7:9a:58:b3:3e:d9:f1:74:d3:3c:ee:74:52:
+#     e2:09:c6:ba:6e:7d:19:7a:86:3d:b7:05:bc:44:ea:
+#     1c:81
+# prime1:
+#     00:f3:64:26:1a:b1:66:a9:d9:34:0d:99:e4:3b:33:
+#     33:89:90:d7:e6:0e:1e:5f:b6:d4:ed:6d:3d:51:c0:
+#     2a:b7:27:39:62:0c:1b:42:a2:58:77:bd:bf:4d:63:
+#     c4:e2:03:70:5f:f8:64:53:56:80:8d:50:e7:28:bc:
+#     5c:c3:74:1e:c1:ee:4d:df:73:f5:76:dd:61:34:01:
+#     26:12:5f:6f:66:d1:f5:d1:4c:4e:99:88:47:7a:0e:
+#     33:de:92:1e:c2:b7:97:88:dd:7c:66:d0:83:07:36:
+#     c5:e5:c5:ac:37:ca:26:c2:66:c4:a4:5a:8f:7e:d3:
+#     f9:9b:f5:ca:8b:8a:a9:19:af
+# prime2:
+#     00:c9:a2:fc:47:56:9e:82:40:59:43:3b:33:98:7c:
+#     40:06:6b:34:1f:c2:8b:8e:3a:d4:58:6c:d5:ad:07:
+#     11:27:53:01:eb:70:6e:d7:e2:02:0f:2c:d5:c2:b3:
+#     e2:82:6d:75:c6:85:ab:b3:35:8c:91:a0:de:3e:c4:
+#     ac:c5:28:07:29:4e:7e:3d:e2:75:d1:f9:d0:2a:86:
+#     6e:ed:37:77:c1:87:00:da:e3:07:e0:cd:62:74:db:
+#     0e:a0:9d:61:28:5f:47:c3:d9:62:87:d3:8f:20:d1:
+#     77:53:43:fd:3f:b3:78:5e:cd:45:a4:b2:f5:13:dc:
+#     3d:04:25:eb:d8:2a:13:a8:c1
+# exponent1:
+#     00:b2:58:12:2b:c1:0e:2f:2a:ff:1f:70:42:72:b6:
+#     a3:ef:0b:79:88:13:94:62:22:40:87:f1:61:db:43:
+#     6a:89:66:6e:7f:cf:cb:31:da:6f:e4:dd:df:0d:c0:
+#     2b:86:49:6a:d0:87:dc:4b:cc:b8:c9:d4:1c:6e:17:
+#     08:0a:18:4e:69:60:4b:23:8f:7e:b0:28:ab:8f:45:
+#     c0:35:fa:44:51:1d:4c:78:9e:e7:81:4d:00:c3:09:
+#     21:2c:d7:f9:3e:48:f4:fa:cf:00:d6:fd:b6:e5:54:
+#     57:52:74:b4:2a:f5:2f:cd:87:2c:54:1a:1f:c7:99:
+#     5f:ef:cd:fd:2a:9e:e2:25:f5
+# exponent2:
+#     00:ac:09:2f:8d:fe:4d:87:7c:37:ac:b1:1a:38:83:
+#     ea:6c:8f:93:0d:76:03:73:fa:a5:aa:3c:51:a3:2b:
+#     60:6b:58:db:4e:71:c3:60:d6:28:43:a2:51:4f:aa:
+#     03:1c:9d:1f:db:9d:b8:fd:52:36:f9:19:74:05:c1:
+#     f0:56:d6:ec:25:46:1f:57:d5:9c:08:e7:47:c0:c0:
+#     aa:6c:22:e3:3e:6f:5d:3f:64:6d:18:54:a4:28:67:
+#     ae:77:43:4f:de:0e:4d:40:c0:7c:dc:be:98:63:bb:
+#     d4:3f:6a:c6:ec:4e:c7:e8:ba:e3:2c:be:b3:73:9a:
+#     79:44:cc:c6:08:cc:fd:b1:01
+# coefficient:
+#     00:ac:f7:3e:77:13:dd:ed:c6:15:0a:1a:a4:29:39:
+#     fd:ed:f9:2f:98:fe:e2:c4:dc:33:bb:61:ee:37:9d:
+#     40:ab:25:a5:40:0f:60:78:de:6e:93:44:78:cb:df:
+#     4d:c1:7c:c2:82:2a:9a:17:96:3b:de:a5:3e:c0:5f:
+#     88:79:a6:81:5e:e8:cf:a5:57:2c:be:3d:40:ac:1f:
+#     9f:a4:d8:b0:ed:48:53:c6:1a:f6:00:3c:41:ed:a2:
+#     c8:f6:16:82:9c:89:49:61:ad:fd:db:f4:e2:4f:97:
+#     0f:21:db:d4:b3:4b:1b:24:f4:3a:e0:69:2a:64:c5:
+#     41:02:fb:17:d3:0d:47:f8:7e
+# RSA key ok
+# writing RSA key
+# -----BEGIN PUBLIC KEY-----
+# MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv7SXJXrRDs3NT1TXEv7s
+# ZG2bG11b44SjClaCRKbb5cbpvR4q/RjZPvfzFm2GX9ErTsdD5sc7ez7ZZxVqfAos
+# MDtjKT5FDPdd1fijZo/u4D4KWwOy9c4ujANvcATqFUH4hfz0yxJwFbMtUfGoZ3tY
+# l5SrGrzsWt+EiqRsqcNugM+BvtSNa8J3otS58fFsOe1OsWubPnd5zQ1t+wND+bwx
+# QfWkh4Ow+8YlTZTnWE61t0KOf/j9m3JJKAUVL59Z3J5VmWDvpiaafrbko5s1bpSl
+# ONV1orwnioKy4gI8P6lswk5GNk4Awzb9o/x/I/4gN4IvYl5wUYTXs5F54J+eIFQ0
+# 7wIDAQAB
+# -----END PUBLIC KEY-----
+SSL_TEST_PRIVATE_CA_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpgIBAAKCAQEAv7SXJXrRDs3NT1TXEv7sZG2bG11b44SjClaCRKbb5cbpvR4q
+/RjZPvfzFm2GX9ErTsdD5sc7ez7ZZxVqfAosMDtjKT5FDPdd1fijZo/u4D4KWwOy
+9c4ujANvcATqFUH4hfz0yxJwFbMtUfGoZ3tYl5SrGrzsWt+EiqRsqcNugM+BvtSN
+a8J3otS58fFsOe1OsWubPnd5zQ1t+wND+bwxQfWkh4Ow+8YlTZTnWE61t0KOf/j9
+m3JJKAUVL59Z3J5VmWDvpiaafrbko5s1bpSlONV1orwnioKy4gI8P6lswk5GNk4A
+wzb9o/x/I/4gN4IvYl5wUYTXs5F54J+eIFQ07wIDAQABAoIBAQCQWmb6BPpJAHVa
+CFOPbUAJ+3Kxb2JS9zxh+3RKR68L3fWBv6a1QLHNtZ1pRP3LRtEql+esbld+3XuN
+INY3It3VT9LCaq5KLjaNeZVpFHbWikD3+dgXObNZIPkXy8uMSEngcvLNu0uFO4+j
+xal+iqXSNlOFZb9ASlEeqONeDdg2yzsW6+W6S/8GFyyyWbOAil4taxU1QnLOuCNz
+chlZBsHOvaTvkbNYp0Pz3hxzBcqwhcKXtZncENxxTw/0h8GynznQDwwyl6XL1EKA
+9bgzeOKwHK1q5KRBR/yBYbf25JpMwdrDt5pYsz7Z8XTTPO50UuIJxrpufRl6hj23
+BbxE6hyBAoGBAPNkJhqxZqnZNA2Z5DszM4mQ1+YOHl+21O1tPVHAKrcnOWIMG0Ki
+WHe9v01jxOIDcF/4ZFNWgI1Q5yi8XMN0HsHuTd9z9XbdYTQBJhJfb2bR9dFMTpmI
+R3oOM96SHsK3l4jdfGbQgwc2xeXFrDfKJsJmxKRaj37T+Zv1youKqRmvAoGBAMmi
+/EdWnoJAWUM7M5h8QAZrNB/Ci4461Fhs1a0HESdTAetwbtfiAg8s1cKz4oJtdcaF
+q7M1jJGg3j7ErMUoBylOfj3iddH50CqGbu03d8GHANrjB+DNYnTbDqCdYShfR8PZ
+YofTjyDRd1ND/T+zeF7NRaSy9RPcPQQl69gqE6jBAoGBALJYEivBDi8q/x9wQnK2
+o+8LeYgTlGIiQIfxYdtDaolmbn/PyzHab+Td3w3AK4ZJatCH3EvMuMnUHG4XCAoY
+TmlgSyOPfrAoq49FwDX6RFEdTHie54FNAMMJISzX+T5I9PrPANb9tuVUV1J0tCr1
+L82HLFQaH8eZX+/N/Sqe4iX1AoGBAKwJL43+TYd8N6yxGjiD6myPkw12A3P6pao8
+UaMrYGtY205xw2DWKEOiUU+qAxydH9uduP1SNvkZdAXB8FbW7CVGH1fVnAjnR8DA
+qmwi4z5vXT9kbRhUpChnrndDT94OTUDAfNy+mGO71D9qxuxOx+i64yy+s3OaeUTM
+xgjM/bEBAoGBAKz3PncT3e3GFQoapCk5/e35L5j+4sTcM7th7jedQKslpUAPYHje
+bpNEeMvfTcF8woIqmheWO96lPsBfiHmmgV7oz6VXLL49QKwfn6TYsO1IU8Ya9gA8
+Qe2iyPYWgpyJSWGt/dv04k+XDyHb1LNLGyT0OuBpKmTFQQL7F9MNR/h+
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Crawler Private Certificate and Key (no public cert/key)
+# ---------------------------------------------------------------------------
+
+SSL_TEST_CRAWLER_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUXJwoCwa+OWAQndXJvQJy6NjkodowDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MDI1NVoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDnVIEjnrUDb9VhaL4vOXIh32fFYyXId98mmkQntYeRo2PV
+ftpjz33oL5l4zD6QXT48pJJdSEOsHBlyjwP1IXZMgG4yZWK9VRCI1clVe9CbxW/3
+3I6f3UOCEiN+TAryS+tuPSONe6gQxB/31AmFtX/fyznDEN81pUoITCNAa0o3J0A2
+igCNrepImLeDT2QXPuuNIjSPgSALxWHB8dIXVnKb+9hnoZqn919D7HBzF15c4fcw
+2O710CXSZwy1ZqKN8ZJ/sdB5KSo3G+f3j/8d9DPijBs+2v/h3Iq+0l44Bdo24Ojm
+XVfIlgBp6LQaPce23Fdo51rwwpFih/Xe59bCpUMtAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQAJOdV+TcjFOrFvFizH3e7q
+vZHAH0HmGurn5C0CKIY/Fuc4O8EsTHRZAj8dS4TDSGOlr5aJM41CQ9DFVyXoezqE
+LSl0Gr6ADH9QBonpXEoTnaI3e/5ykxxQOykCPlZfLnK7Ywr/a5X9rFzDvHZCj2qF
+02Y/UnAU0NvMvPAuhLO5BOD4yBV/S3EmdQcjOPJvZ4wyZGjbu5CDy8zHcQzXf84N
+wOOilurIg8Q3dUpOGaF1IAh9/w/1k6bQkwzWGLczO7cBkeLMKoXNuzddz6BVb4wU
+yciNvo1/l/9iPFrueN8KomJftQ6waPEG+NudNzCiKdne+hWReBIqs4hlTeM21tAv
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_CRAWLER_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA51SBI561A2/VYWi+LzlyId9nxWMlyHffJppEJ7WHkaNj1X7a
+Y8996C+ZeMw+kF0+PKSSXUhDrBwZco8D9SF2TIBuMmVivVUQiNXJVXvQm8Vv99yO
+n91DghIjfkwK8kvrbj0jjXuoEMQf99QJhbV/38s5wxDfNaVKCEwjQGtKNydANooA
+ja3qSJi3g09kFz7rjSI0j4EgC8VhwfHSF1Zym/vYZ6Gap/dfQ+xwcxdeXOH3MNju
+9dAl0mcMtWaijfGSf7HQeSkqNxvn94//HfQz4owbPtr/4dyKvtJeOAXaNuDo5l1X
+yJYAaei0Gj3HttxXaOda8MKRYof13ufWwqVDLQIDAQABAoIBAA7KKk96sBv+JGhL
+6Azg4VklDV9jTWEZuNyg9EaNppM7HQDjUVccRvJ3SJqehEl6jKYX53urSRhR25al
+ah1b/FI7y8/RB5UPQTVeZbbfaaDr6JKyOTQjU1OXkUlb1z9Sd0TfB8zd4QrhXyHb
+Hpi71+cY+SJti7fET41kQMS3l1EbRDOVAYcj/ffHd2qAaS/n+HQuS/hxkzB8nZqI
+ZMMLIsgLqYOMnDMwcqsFNuIkUVtG6j/AZqOrdrtuzmCcO4y1w7IvTSRM99juJViQ
+AxAN2uTkAS+0a5hvbsWan7dxXpqOJVidHsiZAHhudKBThlvC2+g1KqjbCvFIWT9j
+9eQX8EECgYEA9M92MpD3eT2x8BNuSWCDZfXB5spvLn8LhSeMu8wcxfhPNtI8lei5
+u7zMhwhPmGUpB2iaDWbDt+A8y5nhwAVUTqTOb1p2ei1CpOFxZP7FPHZUPAqQkzFZ
+IWfAtADp3zpi4UcdF99kCEVqszvw7nbdPPSlikUwqOTgGl7YPo9aQHUCgYEA8edP
+H7olNJHXEKJbUa64FA/v/ycZTDcUKKkuQ6mwVkwIbVT9aXLUMU6ta5hJNY6eFSIk
+Vzqa4paL5nlT/zEqAnvCTjQynhT4CdsEG8R1SxTLHO5L7wUh01e3hqb5ZWxgtXXM
+Up/EyIVWOaQ/fMqdPq5bTRBmS/AyRdORp5f+INkCgYEA7eCdCHuGjH+fZBltY81t
+QGixthFkQXjfd847WMv39YHXbvyQNFZEC6Fj154CwaEiYfmJH5aIfSZdzLTFAHHt
+PtGzac4sK4HJLS+GoM1SV/Le3MyjOPONmQEY5Y+xsOAp7p7MLUM7DzJsgKaw8PX8
++dr688VRh/uFqvoYA4oF93UCgYBHK/kZqpjbuLUADeS0SaWbMX05IvXMeMATnoMg
+IULigQhRspnEdqZ7w1w+tdWETmuwaBUtHO8JD6YlrzjJclub03G9tJnX7O91Ztz0
+ln60EnAYGPx6XJYxKjOzCFmEP7jMatYs0RkCrkhKOUr8mlhdYss2B0cxvH/uD2th
+VdTNMQKBgQCkbQTYKNSh0sDtLKk1wj91LctSVeVEMhomiSe6xi54RPUqWg9OdYBR
+KOXX/q/XZCVdhbVP78+0E5t4qLBRGQJ6Z3Rh1s8RhtG225p8dUVNUQc6DyQyyri6
+n+5LfaxefvG/mONYRshj6yE0tl5xL7sp461e+qcpmpi43M6F2XZa5w==
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Daemon Private Certificate and Key (no public cert/key)
+# ---------------------------------------------------------------------------
+
+SSL_TEST_DAEMON_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUHN3nT5kiDe+TdIG9lLBESsEVjkAwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDDSKqen4a64W37ruNrSHWh7XpKXVJAshjrlkD7u1TNKFn4
+SYSSpLrmo32cUAL5Lrw0Z3FO6nw7iA5Q37scOs5/JlnGtbPjUweF20zJOWB+rXfU
+mLpiy8+LZ01yKIKPruwAaTtvx84hYTa2JfNKTS540+BY0fqk5ikVap+6ruTaQ4qp
+//bIFFsiNV6YVrpYGwMmNox6zv19SGX2wKCjmAS1PF0RszbPDqwnyYOf1Vf7bXax
+gVzny1vDPSG7MhoYdaxpR23mnE+GnyUwlic6e1v/+26Elf0hEzPl8hsM+MtoD+57
+aXFZE0+6n/ZUUuJowhl9BH2ql5XMTU1pdsMgRaNHAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQByeKw8AQdyAzDnBZSVkTTY
+oYQxGME3Tq7fsdJTwL0SOK1kP1/uB1VlL7R1TPpdoChNybEySpeVWadx8fqJv4g1
+tV4EXisZbGnRUpLYezUYW2FHyEMCpSugiad+LP8AxRVRHNvuRMRB28vmAZBth3VU
+SMiM84rIRJQQ4MYpMtEBMK4uxY8U9vGTad9OBotl59rrTR5LHZFG8RG+gR3+NJH5
+/NHYpkBixzmIzMx7+UEpiKXIyNUsWbqX8Th5UcexbXshGae1p9rhxJDjLjMXlw2L
+fikUFCfI44hTxAIb7FplnaSpa1IvMyUUnO+hDlPgiszo0xHNJAAq9gmq5BhVBIX9
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_DAEMON_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAw0iqnp+GuuFt+67ja0h1oe16Sl1SQLIY65ZA+7tUzShZ+EmE
+kqS65qN9nFAC+S68NGdxTup8O4gOUN+7HDrOfyZZxrWz41MHhdtMyTlgfq131Ji6
+YsvPi2dNciiCj67sAGk7b8fOIWE2tiXzSk0ueNPgWNH6pOYpFWqfuq7k2kOKqf/2
+yBRbIjVemFa6WBsDJjaMes79fUhl9sCgo5gEtTxdEbM2zw6sJ8mDn9VX+212sYFc
+58tbwz0huzIaGHWsaUdt5pxPhp8lMJYnOntb//tuhJX9IRMz5fIbDPjLaA/ue2lx
+WRNPup/2VFLiaMIZfQR9qpeVzE1NaXbDIEWjRwIDAQABAoIBAAd4YSZ+Pb4qX3Ww
+Q/zXocBXAEWV+k6FQZTJg6TdjqnmcEKiNVMSwB+Qg36WRPbZRdPPXTNCnwv78WhA
+lrzGtx2ADxEd5Eq+41vIftB3xGw0IJBeY0riNwdDJWBHkm8Cpv6BCAgHoaf/OwOO
+whbGiw+OM1fSeH8UWt/52zBd/l0nBSmKZd68gc3tJGM0O0YZspAbminz7xslTxjp
+RjwzgeN9GMx8NLtOy4ezIix6bu6Xvbgq99crIiRFgN9ScvOScUQhcA3CXMYeodoq
+o+VcBxPNwKr6NkSFivdcllroeBpHe9g56CBaTcSITmIiRSc9CnbWICmijqW/MW1c
+xL98b/ECgYEA6Dm/TIsH1GcndodiG7Fkucy5eHQA0GOmF7tBRNqcPoJHjABKxkrI
+DMpCSkmG9aaUFGeW64KNsTRlMlQo0m85XpCwy+oy4Gvy48PE+FWOEsAsmCXDXX+e
+W2QS/OGSfyoYTuY27NNnZ3x/TT31Q7zJUsVbQ53s++txL9zXegf8zZkCgYEA10a8
+sRD/zxXW1cChczgF+Ep2AS5QQ3R5IPkwAD4IUzgQQYnMy6bw3P3htcBxXgo8tYVg
+ytVdZF1AlmB312+AOfo21LdxPgpLC7vNmlF7YmLz20yooTCJoI783Knv2Cn+wjql
+xLm0rTzK5K1TYQuH3lF8ml4UduyehdppxDfrw98CgYAuZ5u6h+3Am/xeyx7nucMO
+/cHyN/wRqFgAVgLs52Jhe1cgus42YasoIyKsBZVacTcV/L1Dword5kJylC60HlWw
+d+lcVihkgC3BJdWuaipBxPUkUid//4h9aroAnnLPxnGlEovXN0dqfo5RuRfRuV/h
+kl5yXJSGor2zesX0NLRnwQKBgA/UWL2gZV8B2RlAn96MCQxX1VOC503+e4WsLRZn
+eU89ORzImDGFZgKp/HXT38IteIdUdmiTxdlCbiRglY9W2JPqzStZDc+lDB2hwp2N
+TkhOxGWkvmWT3xraSMelC0jW1a/MhjHwAdQXO0gTYqUpJuV3EnV7Y3/XKFTpWYuf
+HQv7AoGBAJpGifaBuQBEWS1oyq/GzvlSOBJv8HEs3oLFxiMViXmrjxuIJpAKZRNM
+AcGw+18NBauyZjx4Tpd/wxXxuA6ViWiLu3F4y6y6586wdjfChvEhwOU0P+ZTZcZy
+7oR9HbtOvsUGS6iGSw5WhAvXVceBykyefHkOwT+/MResLbptV3Fg
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Farmer Private/Public Certificates and Keys
+# ---------------------------------------------------------------------------
+
+SSL_TEST_FARMER_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUBnWSHV+X3cWIjJ53B57CjFJnLiUwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQC3DJHaMt2tZ3nVngZV0IiRZeD5ra6oija4yHNXajazEjO4
+SYRwL3qFXO9i9cZen+Qm8IMbPX/GV1R/nLqe5R2FTpg0cxVTGHr4leP8i9bXiKDo
+ZrImv5rdPmNrpeeWWYL9d337E5X3cUQIWaFPmKszQ7QbjTQpuHnDooZwEzzWsUvf
+le08DpA5aopFWdq1jM4KelOT5koP9HnMpX9OCPaLgKjJoY2/HyoUj4IE0izvgDKM
+/PljOET1X+D8Z0C91ZzyUoe9E7oHQfPwpeEv9Hwz+cwIxRTtV9DBDbdLNKYMER+3
+mKoHjPdb8X+EXI3+U7UYKRKTFLJzG70tNGK4X2KdAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQBMYj2a9BkoIYHBfPq6R8Sd
+gG8d6nZae/ojGjOp9LqZO5rVAgwF8sWx4hfHPrKtdkc3YoSpdJwsvbsEwUkGCGwx
+Zeb/wOMSG2q/Nizy0rQbbUXkdEDE9xgsXE2F5u+JBve3+jy0wR7ZUfk5fBFZjK9A
+/23SoN9UnQ+ihRb4Uj/KACh7Z1tsqnZg+OtrJ8CTee2TNnvXntptboUVD3wSmjow
++Y6G0GtHweeZr/15bFiDJtTLSmz3l+y6DEbM80UsoeZ0gUw7zD2Sv2K8mzSdVXaq
+8re1wfoBMvLtIl5b5dgZGz7QRlstbFmBKtvj/eegy8makEDpeF+5rlhsQPyQEGO7
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_FARMER_PUBLIC_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUUx8iU6FCYhGA7PZEFMpshg2AaaAwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDp3d5OFZell1we8ZFwgf/ArcSXkk8HmBc5gIm6Cj46uIrb
+1zmmHyLqlwtF8mgEZl0if0lItuPHCWjz1ayVQiVeQ20nx4tssHDUcufXhx8kaR36
+YehEY2CVsbF+jaA5zoJQ87y024vurnvf5nMGUReecLxWP1y7f8KUL4xios1qiTng
+ZjBIyw/6o/JtlUYR6qWpcB1VBrR57e8zcJ1b9XLp4QLKWexLu2rcHvz4uenuz33B
+LWMJNWUJcsvH2nGlUsRQpXpr1E2BjiCnADhwKo2sOz5OokGdpMEwRZxDGw/S4IHK
+JwwideNT7XEDgrltGHi38OOAHmAcYKOInQjfiHfzAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQAXO7TdPSISkVTiyLN7UGEd
+o8E+d2icadYmoE1SiWNIbLhX+L0FSiWslAIE5utUmWbJjTLM6uWTBw9OS2DBE9qZ
+wNIPrIiedzY2xHq65CIAF1kpbp18Mn993B/a+gvEwj8n5iu/hCX0Nzwhxlpn7kTY
+oWd6RPnkLJpGXVB2zEdmjMOkZQ9PqtgzXZvrstptVBbk7BHpQ2QsrlXWx/6qjVvI
+ueBSvl8zuZ3C/39rZQJZnPOLEInw1wAzqPAUsg6L5pgwUS59VHVaOT7rHbamViS3
+GaGjKCu91Fu5p9DRwaiylRc/tkHZ3wEZAjqbHnsV4oVdEJvcscf5EDkzldBKWfcf
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_FARMER_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAtwyR2jLdrWd51Z4GVdCIkWXg+a2uqIo2uMhzV2o2sxIzuEmE
+cC96hVzvYvXGXp/kJvCDGz1/xldUf5y6nuUdhU6YNHMVUxh6+JXj/IvW14ig6Gay
+Jr+a3T5ja6XnllmC/Xd9+xOV93FECFmhT5irM0O0G400Kbh5w6KGcBM81rFL35Xt
+PA6QOWqKRVnatYzOCnpTk+ZKD/R5zKV/Tgj2i4CoyaGNvx8qFI+CBNIs74AyjPz5
+YzhE9V/g/GdAvdWc8lKHvRO6B0Hz8KXhL/R8M/nMCMUU7VfQwQ23SzSmDBEft5iq
+B4z3W/F/hFyN/lO1GCkSkxSycxu9LTRiuF9inQIDAQABAoIBAE+V6XwjDXqtOK2F
+7V82MYp17yDfQMcKgMxKasug5HNrAI2peSmFmxGM3I/8J+lQP1Qm0fnv/TPxGE37
+iLA5EWK6TzbOqoDcberS0LMm4ZwITV19+Qsb12tGCtfs5AnclTU61M1rMJLK7jdr
+MNV4nUbGsvIfrIRPLrG+YhEsbBEzfCNw8G50+7gobskyapehX3ue7IT8KieVGuMW
+jYvjmNuEob91krdy8u5VYMLhootO1FEMl8QcU8xZu3qv86QrSyR+9GGZtqc7Tvfv
+HVYr8rSa+zLImIJmi03llxn3GVR+uX5675svdD8y5MIK+WL+DJTQsuaOx38ujsqw
+CDGlQwECgYEA5eT3J/2hdBe1caJRo3s0m+qrMbOEM0/+o4RUMYwmE4KhvqlXD6oy
+HuZG5t5q8VwI4cP6d2gvp2tVD6Ip6ijbHVZ4jR8PRygf6BjJ+eYBNOrLSqQRJgcB
+YLcJTUbQgzr67gDO+HHZJEJo+VzkP260QbvW2YMNSW9x0TYrbR7nTr0CgYEAy9XP
+hUx3C4SyEasW2BnpTQznAu9qtB84EMA6TFDe8euxtj/sB40RUa2ty8DEzQYvERrw
+Wh6lkqBKrhgaGUDy0GXfZcuoMfXPUQwlq+ijZlSvN4tNLTTMJzncHo1499JBEU49
+/H7DzcsJKY2WpKY7h9G3ljyqgvYiAbtaguiAEWECgYEAmTvTrhk1m68N5u89oU1H
+FMIHV/qDHLyuSwmyINB8tLZ23yH6gNt9yvDMw6fu+m/RD8LUWPDeCqbVLLV3YLfY
+zSZM9iuEwHYzRj33qpUvqrjxxg+zyngS6Ac4sQSJiV8v0KJDUoB4Lt4BIG1VSh6d
+Ec+FdrgOjCs3Xy7PJU3a+bUCgYB8yE9aEw1th7ZbCpnZgUNJX/Sr31U7H0F7P7Jw
+tbFF+Du6jjc4CCvqDKCwczoHKRn3Jr6s7MX/lREisq6HdzMuUK8J6jr1Gr3np8AI
+FUqygnUhU63TVtcDzG/sZD8Btz0OEw/vWssTWJArV/o4oWsgIkp5NnpL4dG/raoj
+KaH9AQKBgQCk76J2nj+ukwCjmw/qif2EJAFc9RfVrDInoS/0rPDYUghj+gW/z7OF
+1RQpOvbfWA6LrenRiME7GnG8Ud4hB0cOZ/0CdQaUOOt35FQd7BXvT/od7AYvs4o/
+bzS7Ez1xSiok25/AW3aT4jZHScKs9gTeOGiPffYe/BZzxjs+CgOibg==
+-----END RSA PRIVATE KEY-----
+"""
+
+# This is not a public key in the sense of public/private key pairs.
+# This is the private key for the public-facing farmer service.
+SSL_TEST_FARMER_PUBLIC_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA6d3eThWXpZdcHvGRcIH/wK3El5JPB5gXOYCJugo+OriK29c5
+ph8i6pcLRfJoBGZdIn9JSLbjxwlo89WslUIlXkNtJ8eLbLBw1HLn14cfJGkd+mHo
+RGNglbGxfo2gOc6CUPO8tNuL7q573+ZzBlEXnnC8Vj9cu3/ClC+MYqLNaok54GYw
+SMsP+qPybZVGEeqlqXAdVQa0ee3vM3CdW/Vy6eECylnsS7tq3B78+Lnp7s99wS1j
+CTVlCXLLx9pxpVLEUKV6a9RNgY4gpwA4cCqNrDs+TqJBnaTBMEWcQxsP0uCByicM
+InXjU+1xA4K5bRh4t/DjgB5gHGCjiJ0I34h38wIDAQABAoIBAGVStQALptodi9H0
+Q1kFWbM3Fhe9UfQuVtGY+RLbYT67uZ2pz9ZDYzNUIZQ6hApz9yH9F9kjM+iGESyj
+hNReBiai++XiNGvwvdGtvvjIGBwEVvKl/KW0kKIKjKYR4jtpV1iPYVDSVfwhKJZH
+F8rC04LXwSF07k5l+f2N5DrP4kOnQJ2XM9MazhgEsnGBJdMYylSWOMd3iY8Q6GVX
+YVbC6WlLGb5xh5alBzpmtWB2h02x81KQGV1vyKL1alDls9XU84ixXLL1maWKcMQ5
+6D0lPetE0Vd6ALQO/Ga96wLTpuhZOTnEoxZX53WxhX/NNMKEANdBL1/955ReifIy
+JbqHMHECgYEA9zXlekov2GEcMFu1W9WUDOIOC+WE3yGvzOc/vC25i93+4iKiXJKw
+HmSm7R/A6rXMjlIoLUHPsfDb63KqRLVX9tvJUc8pJ+0N9N5YQHkPg7CUkuicM5PV
+zCepibnLOj0KjUFso16vTd1DS43ceFGJH9uDHPNoUxMTbeo11ybbLQUCgYEA8i6E
+O4AkcqEGRCsx/AyQ5jtXfTKOZHWFvmqPDfPl9eclxjFclvz3DMhqRPornWWu84EX
+9seDXI3L+A9eQjgnlOlSCgbfy3IqwDLy1UxdkUEahPzd99ckMK+VOPSvsdiNiulv
+VZsfaUC0QGMtpsGlR6EROtPIGtQNVluztGABYpcCgYEAqi9LbHW4HHE2E8B+yNru
+0jOpUd1PLMEnIpusT+L2kmhguNL5DVvarQHDvQiYKbzANtYuXIGq9ygGbj+BIk3p
+YcOLA6vm/FqAuit7e98bpCAjGEPUjNlgXOyNFYh3dP9izT3WCV38t1D0rAXcWmRf
+TzQyPfL/xfki7g9Hw3c3efUCgYEAn2FRkL7iPbYPI6mxuYiji4EeMLymzSIypIAI
+KUyL2GsIhwhRQOS1yWnT1hU1wt36ZzJcDQJ8Rtrikxu6EqZWFj/+x66CdadqzxY4
+jXs2ULOhukeX5NVnccr7z4HoZoh3jiXWKWZvI5t7hKxAjO//z8YGSsq5dD59kInF
+GD3ea30CgYAl9vzVpdbvLSmr+O36SVF5NnIH7FBXO92XqxBoquDri8KMOKIvG45N
+QZZgL9gTjdNErdG8Ao/Dt/5VZdjTjrZQcez+4YJiBr1b1VBADFPulRo68U3+NX06
+gz1fmitrNF+MGF4m4seX3sXszQ2t3R3BzDt6jzmvJULTzQV5bnpbsg==
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Full Node Private/Public Certificates and Keys
+# ---------------------------------------------------------------------------
+
+SSL_TEST_FULLNODE_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUNH0cIriIgw2lkIU3vEMfERLYUY8wDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxN1oYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQC2xM3E6m/HHoLYx8X2J2fM7icRv+BZPGBMsNwOW7DEAV2p
+2yqMkokFkr7NPkA+iHwdjCM4ivDkpvENfJMlFVmqgcBlqQ/LQhdKpQiljoe2c2QG
+IfRt4tkmsvYW55qnKdiuOYOgqKG3Uuj1S76/d6gjRvc/iF8kZLLF1hAtCxeAu3ch
+UzKIGVNzRqVWKg8ozuvV2KJEjaHhRr5nfwXEgKyXXsE+JCj3jykZQ55qXfHj6W/X
+JVV+qG9B2m0NaV1h652WlaxtBvsImUlLnmwrAf727HeYBmFGyVAKq09CTQ9guNbY
+TcvM/pcu5yAMnXB/keNphfihkr0cxYAucoA38sdFAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQA+jWrQbRdJaebm522NMXLp
+hQoH41RKKV6TXL02kQAXU7z6mqRLjbxTwXffkO1Rbf4rURkhMqT9VkgGwiuuXgpP
+Z8x2lt9Lz7GXTHCKwByeD/2Pn66MYADLiGLLrtFMeR4jPGmAnFL9mi6lfYqS93Iy
+fWjw8xNDGZemeiP/Yb67fDPo5GmfJHANmHyiS8YJSIrweFjXOi3uO7KUazPbcg4P
+Rzz+e0ltYUrA99UBET3KlgJRbPl/qVfkcGoYzp41PtzH/ef9VO75HPwCCatP4HI5
+mvvVW+qVuBM5ZNAkjhyfeepFJqF2rhN89S90M7eVWyDiTyb3BjkEdOVynX38TBY5
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_FULLNODE_PUBLIC_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUTtlPtmRD2AUe5XekvyA7SCIn7fEwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDe+TdofNDvXB6Fnk3CfAAqPSRhtPysQZ3Xi5Vrj/OwUGKY
+Mp3vOBnN8CqEhXEsBoVjUVv0rwN9Cb8eLOa1JUH2G1yyPjq7gApt6oms3ZVfJsg9
+3W7pgXFoBJaSoPD/dB4S2Gp0NNLX5fnqGbge0x0rJPVT44E3ZxJt2QbwyvNlc6GN
+EVMxrPbj1kx7hgKxF3iK4TZu6ThhKFmDqdZ8fBzcwalbywaLCiKRDp8yDYG+6460
+wZJfyZpy41n34fQ9c4P5HFsGTaUwgWtPrtS9QOjTAgkPcniXsHtI4FfzF4dltGUP
+/efciYFj0v85H4uobyoLGoNIXfFHkDHnCv/q3/G5AgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQDI2hbuxwdk9Ikpqva+NEDw
+7k7IdrEtU4SsBkaxc1nw7Tr3+ZQ58G/6f7bs/khAZFtH+ETc0JFg1EcfeT+ho0gB
+8AJC6oCVsHZVwRqIsaznjOLxB31IMMkanjJDJD46tTEVlL1If/DTYzaWaJR3Zfyn
+QS8cHSxElqEFVc4QbjgSHoJn2eZ6yGh+G+kaW3eM7CjsxNessy4CIDCXS8pcPbON
+hm0veAp+YDLDzceK6G3VVM9AwXknOxOxHUj+tZesytsIK5caLmY6NIjGbnTA6Doc
+nIE8JET7+PeEVXu6dXDSAwbl7pE6mg0IJbFD11veAD1moPXm8b4HBCHKZTl8pMTT
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_FULLNODE_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAtsTNxOpvxx6C2MfF9idnzO4nEb/gWTxgTLDcDluwxAFdqdsq
+jJKJBZK+zT5APoh8HYwjOIrw5KbxDXyTJRVZqoHAZakPy0IXSqUIpY6HtnNkBiH0
+beLZJrL2FueapynYrjmDoKiht1Lo9Uu+v3eoI0b3P4hfJGSyxdYQLQsXgLt3IVMy
+iBlTc0alVioPKM7r1diiRI2h4Ua+Z38FxICsl17BPiQo948pGUOeal3x4+lv1yVV
+fqhvQdptDWldYeudlpWsbQb7CJlJS55sKwH+9ux3mAZhRslQCqtPQk0PYLjW2E3L
+zP6XLucgDJ1wf5HjaYX4oZK9HMWALnKAN/LHRQIDAQABAoIBAFBtA/teCnf9xihs
+qIEsT/IO7mRSIgBCoEG/JeavlHZ7/2JqTivzo5YvQAUDGrQpzSwXabxM77o+eB6u
+LfYIkh+E30wc/BU+bQ9s1gQ8Vx4DYwWL1YqxY0szPzVPD2/16yKnrnN5IUiRlG+0
+uCh7GCMF7HEpqmxSX5TNIOshUWNU3KXihE2mvaSsLPxH6HeDV122EnPEi8U39Oe1
+wIp0PRCSHj72sA0ZT1Vj1kRwNfOo/g624k30kiHZtK8BHA+FrAXTuzYdJtUdONTd
+5WmwYefQgGqUjeO3pNAR1Jxl+YPLQdiNBf3kV+prsAJUg3irxp2uu5H+L+EtYLF0
+wBsZ6mECgYEA3dXw5KzwyeawvR5bvecuRA4JhaDt7fABilDn6PSYtUIUtlQM9XoK
+uOp5+rF90jYwbd3cT/JO0IdCWmFERltVDFF1MoFcDXAlnDnnQd6pliX4OusnV+rf
+quYQPOxbgv0km8ea5U+/fqVTYuzB2HoyEu2OZE4k3Z9TKs6Yco5KcPkCgYEA0uqd
+pPIPbk+u2GLwh/X0NuSVfZyKRPUCiX7ca8CWK4oqx6mcEek3mKDhajKXQkpopd63
+oJWMMNag7WRlHkN+pfmvPhnJ5mTeLmL6DMlMR0KJ8X8RHZ0XPai0oYbFHtUtpyAD
+OOlmNYN7cqW5poPpbg/1i1qTxP1Fb3lQyQ4Cp60CgYEAjZK43yfjr+azCq7yO7rr
+UvFmcEqpLf3K7dv+dTSMtLkMgOQZNRyC9UpnOG/H7b05oRRDQx5P4FNCLG4A5anq
+GCdwVSArgEP/LLnjda1Fq5Zl2iwy+q/huK6E1Gy/ZlRp5aU4nHoNqySVl/+jIqWx
+iVTkV+1rJ6lDqYEZ15optfkCgYA5uRwL2HOArS4c6ncJvrZnj4eaKQ1ucd+P4bhR
+hROUNuweWLzt6fXdP6pxdgcPjW22d42p1UPY2eSRE7jY33/5zKu5QzWOaGymJVBp
+z22g0wUNosj8YdHKfjFxQ4EPPyiPZKN9H+NpIeLXLaPxfoiUJqn8yX1HnEk0iO8j
+F0KCwQKBgGnyy1q4DTDduYK445WiXMlWDpjuFea94r1pv9ABCpXERyToK8fY1lkN
+oNRnZxxWSSRZf7+53ZZDXDIsrMmxifw8Pis+9hRrQJLVjgpuCterMY0dZ1fohnDb
+Hhhav1aMfZ2Zg030UU8nlEnQJYb6IL2PYCVRBbkOISSsNxZnqtED
+-----END RSA PRIVATE KEY-----
+"""
+
+# This is not a public key in the sense of public/private key pairs.
+# This is the private key for the public-facing fullnode service.
+SSL_TEST_FULLNODE_PUBLIC_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEA3vk3aHzQ71wehZ5NwnwAKj0kYbT8rEGd14uVa4/zsFBimDKd
+7zgZzfAqhIVxLAaFY1Fb9K8DfQm/HizmtSVB9htcsj46u4AKbeqJrN2VXybIPd1u
+6YFxaASWkqDw/3QeEthqdDTS1+X56hm4HtMdKyT1U+OBN2cSbdkG8MrzZXOhjRFT
+Maz249ZMe4YCsRd4iuE2buk4YShZg6nWfHwc3MGpW8sGiwoikQ6fMg2BvuuOtMGS
+X8macuNZ9+H0PXOD+RxbBk2lMIFrT67UvUDo0wIJD3J4l7B7SOBX8xeHZbRlD/3n
+3ImBY9L/OR+LqG8qCxqDSF3xR5Ax5wr/6t/xuQIDAQABAoIBAF6pMRPEAbPMyQxz
+E5IgsLU99echPjAnP0qV8N6UY6GTzvfMbW50w8fBUVunh09oiVKL5N0xO+rmq2O1
+LlDzO1ivbyAg+TBHAKZ/bumbvOGDhnl1O7QYhzvgzsf7WbUp5+aaSD+DeYu9D+eJ
++bfkarq5Wwm9SUtrD9Dg1Wh+0OxdauxoaF7HtUIVs7oBLEKdpsokJAI2FqimeNAE
+Yp/C4xSuc49NODM5tUraBwN0YZwjDAJ0IImDl23AubXeuz+a8Jenw6tEm2Tk/Fc6
+38gh+4HGcj5AiMgJqvSFpz2feMN4myL5ugBxd6fzr43cKoxXLp7w1tLSTOwgsRAq
+FDDSgc0CgYEA9DU1gbbLp7onKJIqCNJ1dPXyZJsSNd/FkBokZB6wA7NZNqYclMUk
+lYQ0TQf7gNf5DjIuA9fpRh/pTAAe/qvQlfq4e9i+6ggdJ3VENxge+L7X7Tn/HC0l
+tGRtJLlNOM0lzQXLboNn3oiorOe4doff+oWMI8CtAtHcVAbJDfYaBU8CgYEA6b2E
+h73FVB1pDHOfutzudiegGoDMvh3bdDJxMHxZYaRkpVYC4KjeSV8dv01qwYeqJyw5
+Ov0iBnPliDKplO1u7HX7UU6fm96kWRZQKaqGyyOO596EA7jnLs6VMNvJPHO4z9H9
+SHrgXPrN8qZiyCpJiyA9Th2aK6beAXB0Zng2ZncCgYAjc54C6LCD9ug8YYusoDDg
++9tmc4SfQY8CrmjeB/5xaxXmcxLvHfeDpR+alzARski7oNlBQZTh0zwhBlt5iSPM
+wgsKH5sHiooA8msmvF+yqLHcBHFee8dferzFegkV1+JG8zJnJrhre9dQ0ora2jrP
+uZdwkUYMhL7BjAKf/jwkzQKBgE3+OvbAT9PdbGwHOMk1Zyxt1HKDf84AUHXZTwOK
+uphmLl8s8BDeyC1bW6W1w2WISzJ/Aym3xV651WE45nUXNOgaBh3/SirMg7JmS6Fb
+kVa/KrQb/5juXdW0gPuomuFdC9Hsk8NXnP3pgkbxVgzMb3XI8CvcnNDsATAhwfVf
+L2fJAoGAShRsDqqFJbAUJ4zk56O38dgKrlLn0C6+SCYfM+aw2lTkSqaTwEy289X9
+uZ+5ZL/IIp9eQmVhJzQCQiFM7Z5f2h57S3Fymv7YNYAuAkplAgXQoLIRhjvyB8t1
+BGohZJPuntLO8cPF4f9LirwE4chxWjqTYIP2Tjx/si4h25SPi3A=
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Harvester Private Certificate and Key (no public cert/key)
+# ---------------------------------------------------------------------------
+
+SSL_TEST_HARVESTER_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUf4DWRO881Y6NEhluhRoSqPwVyPowDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDye0lbrwrVikjBnibtBwggncuWx86glh5OcZPtGruWzA44
+2lLLykiaoaJKtydwKmJyIm7ZsGlq4APsXQT66oi4l/2fSVfcG+alco9slH//DdLI
+aAnFV/pquj+MrGQxZ7bP9RoEhI4I1miG2ChGlD47PIYqjAtZPHKHyofRguAYsQqz
+wgvw5SiXF/yN3jBfqHUnthCt51S9/5JM357B0cnNscC7eyNWNwCQqf5tuqphGnSD
+s/L/36TKBrhCiIBXyIGPph8tAQfx8nF56niLPcXsclkrJhW0cwUvQj7QMk3FwkOV
+Y6bQznBsiJ5ET2C+3vgmLF2EjVH6ZitH3Bhp/sXPAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQBjvwGCSqO84p/Ez+j/6ElU
+v64RqBgRm05q69s9SQf0Btl1yme/OdToGJ3Fal6+xVKaGJV0d0JyAebUrMdbS8QM
+OFXGvXeWnzu/43xtfJe6jCjF1KRDvcUL5CAP0ikVwWFRaQrQUu9Hc2iHObA0YzvX
+wXW6HB2QUxJMkiHDJudGcxc079gmbU1344erTljCidhvXP6WERBU1nJBeKNkVxqj
+mRm5d3EuJuOghLc55rgpwpxjzXa6aH0i8KLPAO+lyaDcYqFyRFf6MJ3AkXMn29tT
+bJbYTlXcGa3cQKeyRZXjqw7+lOkiAj6w+iUuzngNioAsK7kHXK87uBL7HMNjHxS8
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_HARVESTER_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA8ntJW68K1YpIwZ4m7QcIIJ3LlsfOoJYeTnGT7Rq7lswOONpS
+y8pImqGiSrcncCpiciJu2bBpauAD7F0E+uqIuJf9n0lX3BvmpXKPbJR//w3SyGgJ
+xVf6aro/jKxkMWe2z/UaBISOCNZohtgoRpQ+OzyGKowLWTxyh8qH0YLgGLEKs8IL
+8OUolxf8jd4wX6h1J7YQredUvf+STN+ewdHJzbHAu3sjVjcAkKn+bbqqYRp0g7Py
+/9+kyga4QoiAV8iBj6YfLQEH8fJxeep4iz3F7HJZKyYVtHMFL0I+0DJNxcJDlWOm
+0M5wbIieRE9gvt74JixdhI1R+mYrR9wYaf7FzwIDAQABAoIBABbbrGSqMZlDuewW
+npDFkuyQM3r5Ru84d47pggpd9MUYY1bUre1sGkAJcKUecudN943O1ShMSwO6LmR/
+uFJ2/YB5Q31aip/DOZDrJb4UmaRPh0lBFXq2+nJJMGhwb9mAb2lXL6axYDpRC/V6
+NwHAQ8WNxRAJt6An5JwMaZVEgx+QkfccvDlliW+TAhWOKnzX2mD43AmcxnhwQ4ip
+KvSIpDxZw3upHaMfvrcjNHZqnj11Yd1zxUPkgfuZWn/DMCJHj1kl9LpdPQKd55Ff
+eBY7zJ+jQaCMYUrAU6rr8UhwwmLNHvvusgICX2jIq+LbKHpnO2GT28m3zufG/EbP
+xZ536FECgYEA/wMbENVIK6AZcPK7im8thqUwzzDgxYnEW1wMAdumGXg5BKsse62x
+LQE+MVtPlNNhLxGPdMyphj0rt2l/IAs8hktRt7aqyl2J+QzdH9Im/sG62mUNLpbd
+KNiBJeXb0es8KacYU0uuHm6AOghuTFZ/KXx9deXUfkLKPVLV6D5F+fUCgYEA82vB
+HSn14NMCH4OWq8gbKSak30MlODfY7STXxcTJ8pewRH/U8Ojb8JzZoGsMqaXF5XE+
++6+y2de4Bq+HhApCfLAYfajPGQm4hQ2JmSEEwje7q15WfD5A+sj4x9kZH0z+hvNH
+rqcsB5sTt7VUjUHZee5q+Uo03VkNttqVys4X0jMCgYA751vdSWzJqrMvQCXj8Bfu
+sDFWCnJSlPlGSModSZ6sDvy95wPtDbE4FDmq2HtKR5lluCdN1aHhAc+aJzMQsPMH
+zPumP0fBf9WgZnAvQGuenp2pHeHJ1vCe3rT/1Q4dMrgQRMtHDdkaFvUSLNbUIeF/
+OloybsnK2x+s5h+PjclcXQKBgQCBo3aSqKE5Xkd4LyWUURsd/GW8Pc9ZtGyER6Xe
+vuJqn5yRrp7iurE/4NkKVVjGFPJjMr+/XSBcYkWw0dTTXn9wVnyEl93L0OCDg+Uv
+N2WIZhQ9vR1ESAdlSJkuHhICGIhJqNEZVBDf8Bg9M4ZXQKWpCW/RWlLzO5VRN/Kk
+ssP+/wKBgQCcoVJg/uCLPDysVHwzDqTix5mL3DVB+eEHYn9M0I/0SQv1K4vneSmM
+Eox+UeP87+2FCBF/291UdTnnLmP8rsy1556gVpdB4bsoaEJyuG65kiPJnTwX8ruV
+sA/z2D2IvyMPbbVE4HG1SKXF5prh1xMoaagBR/XSvfkRMGryJV2jEw==
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Introducer Public Certificate and Key (no private cert/key)
+# ---------------------------------------------------------------------------
+
+SSL_TEST_INTRODUCER_PUBLIC_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUVEp7z5dtur9olw7oV04NLFL44xIwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDROWl4WGd12P9LtcWaBLUGM/KfiX96rCf/ci5acPbs4pmU
+PGTSYxtVb8AN774mL3GBmGqGPdUP15BdkTigl0hlJXcvsxdI8G+emFl+l7cXzPLP
+F0Zz5RA56eX/n9Vgq3K+55u2ZBBM0JoXVj7grdMdM2ML1VylG3bUY7FDx84APTd/
+ssWsUbJP9KfCXc4F8E8Yg6xV1396V2xQYc2IAqXEd7mi1Gg1uZhyja2lsImouc9k
+T4I6v0R4h72/nkDpqLmbtHtQhfiraISzNBdAm8E2YeMERz4bKy4/SWgYMiL6JeOG
+Zew4G46dnjg38ou7miWaS4ww5MSxRLDHUSkGaXopAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQB/KzmM0phLQGmVqYyNblCv
+pfDon4MvkitEFdikXcs0dKkToDiJhHp1qWlRCfEMpi1IgwJxCDKMvpSam2ZALnX5
+XBhX+eLOSA+9MvDrAldbuNG7O5yiPhsRr4cGWDeug2HXxxyXihZfXeSxKXZ3XW66
+zINzVu6t8mE1sX0afqxUt+QmJmivVqFSIcCEUwNZLH6JNlwIG6LKcHg9nwzMQwZ8
+pqQpjOxM1hw2OOXvL8cmuSL7zIjRcyFiN3Rr/69LPSgRn8NxSWsFhtxJ2zFmOwgW
+jiBSC+3gwUvMoiaw9VM1xjb13P25JuS5gOS/+Km4x3c6BXIoz7Omw/N9KsScpBD2
+-----END CERTIFICATE-----
+"""
+
+# This is not a public key in the sense of public/private key pairs.
+# This is the private key for the public-facing introducer service.
+SSL_TEST_INTRODUCER_PUBLIC_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEA0TlpeFhnddj/S7XFmgS1BjPyn4l/eqwn/3IuWnD27OKZlDxk
+0mMbVW/ADe++Ji9xgZhqhj3VD9eQXZE4oJdIZSV3L7MXSPBvnphZfpe3F8zyzxdG
+c+UQOenl/5/VYKtyvuebtmQQTNCaF1Y+4K3THTNjC9VcpRt21GOxQ8fOAD03f7LF
+rFGyT/Snwl3OBfBPGIOsVdd/eldsUGHNiAKlxHe5otRoNbmYco2tpbCJqLnPZE+C
+Or9EeIe9v55A6ai5m7R7UIX4q2iEszQXQJvBNmHjBEc+GysuP0loGDIi+iXjhmXs
+OBuOnZ44N/KLu5olmkuMMOTEsUSwx1EpBml6KQIDAQABAoIBAHJzH3jPkzjqDS1T
+L9bCwGu2OwB+bJekWPTpduXOaaTHiA+IwfY8dJVV3g9BmBi3VzX3ND5e0JAr8TLd
+38YpO1bpGbukEha6P7TXzgzr3SJN4HzcVJPNOAUWJ9SfkE+jOc+oTouFTU1XxxMB
+AMBTFeshUwsEGfvPfD9OkYdsYwnJdcD3YFpigBHnYhqsIwBs01qJjH32Neq9LK2r
+6Q55MUdZcDdumSuBJhezI2DgqCoXkhy+t+iyoBOvs6ljq2Z2uuP99tPdHdytnOB7
+7lw7WZ0q7VQ2kshfuFSV22gOQJRQOUn4jPm6fQZZ9RfBb8QEv3V0v2gYKsyBE+JY
+utVc9SECgYEA5+2qIm0AvN9iyN/iqODmGBVuvqeHV9/2uZxQ666vex37PNYhTNE5
+uppUo3v3/nzEqzQLETtgjGjyGrSDkHcuMXZVtNE2ZvQh6m+Wsulf/ajWIlqR4Ntz
+/+FT/G8xY/9i2GwE2orCW003hnMjKv0WrvzNaNjAvZobDnvKC/wgt/UCgYEA5vB/
+0tX0Lm9quXAGiX+WWUrw42bMqecbDNufRA/HgeEX54VQUOQltXp4AAmARCSwqLTa
+XcdLzfAx4jfL63ylc/ma2k6q6sc7c6VII2aLqC934habeoixDJpTgjYuJKICbbPl
+BoVoAVYXsR0nL3Y64yenF4b8465oMw8KT665vOUCgYBf4fuSW+oQK3IVhamZE9FM
+Z5/vJidoBuljduJlbUSS66QwVH5T2bO6F4+iPuAZz88m0E87Aoc5xTFCJRq3IO5x
++HAaXtvU2F0lJJjywlSy85gDf9oLUe60/JzSIc4Tf0OIIbAoAXG0eUnZRcRmQ1eb
+ZFwvWlzkhc9lv3uaVNPZ+QKBgDS0nKeUltbmLLhHneZRjRGx7cooUvtPuDe2A+I3
+q7OzmI4JOexMNWL2oV54zKJAsWS/abrPWjiU4f2b+Fk1KFmQlMvP+mf8sk/RX+Zc
+Z/EpbDXYLQHJIocazYZBMUTBCMbasKFNXxA3As80NRY66HOhQBw5fYvE6RkGDLdk
+zBUVAoGAUYar8QIH2J3bEYVBoPA5NRZPy0mEsmxbPBpHyxKj1BHhJ5k2GYP8yT8x
+g/WvvRvzlvBPdLLplRtfvha4/UVF1Ug1pKG28zz2J1H+kaoudovlGNx9F/I+WmE7
+RTd9fNJR6jQ4J7aNrHDKnbaS9fmPxvnuH5ikZ7kOe/DiE6wug0I=
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Timelord Private/Public Certificates and Keys
+# ---------------------------------------------------------------------------
+
+SSL_TEST_TIMELORD_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUIGTKUqN4DwJ9I4oLNHveWynKTAMwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDjKWhW4cvNin3IRoA4fKCR23wPWESnoGwNplHXJ8ut5cI1
+fXNCckfHBYIbWjNHOCKPCo78l14QY+dl/aQwdlIcOfsGT1KjF0OcgK3rj/Gie69s
+r4JfUEYRHV5drYpw6diFZWXP9HT7x8Zp2BCFmZQFg2LB9m4EJCeeqmdG4qxJZVsk
+0tsKhU5SaALRh5HVkDj6eQ0zOclujVnarmDJ9bXrr9mQ5a2RlvK3YnNrg6TyQJrZ
+FSCmO37Ap28Y3jdl9pzNm/5/I+7aNn8tHLAyfb1BqOqTYRmLrWW+N8+vjO8AXobX
+OLKl2A1zt35lQ8Cxh8yMTeEX5RK7hMotmDE82VXlAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQB6XaFu4M3VkCbKLPupPAlS
+RJWv12/4EgVJqHQKcIEUqGdGwexXZNdP2kRE1yQ0I4QQpdAgLVGdudNDGI6/RlKo
+V6aZiPY+UXCKUIpxsUpf2Mz5/09XlI7jYfZBRfMUlL165kqehN6h74E9GEwFRchg
+U81vzuSd5ERw+2FM8jin/RU0oX1B1Kjv77y/7Ujxt2W4DnxrvpL1Ky1HtkhqRTOP
+n1Kbuo2qDDSS4UmrIecVQMNNqO2fSjG4NI1qVmfyl89qPvdoFP4wDIxmsS858HiE
+xe1+1kvtu5yfaIS/iQ72nu1MV77sUvFvVi/phKeWE9EXz/PAbBQg4KR717BWssLT
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_TIMELORD_PUBLIC_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIULLuoGG4qQt1h+8ExMWSnGHmBUn8wDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQC9TrWjfUauLhz+oG1+GDCAwPomtaUXua1ZvErifJpipXjK
+Z/s3iLAqNmB2NCAaLxfkCG08ocrMdzI+IjGGK6sLH1fvJQphyh8yajl09f/yaHyw
+b1y3dBgtpmT0cFmu6jvtJB4Bk2pDvnk1QLzKI8QMa4xxcWD8xz9whGNepbiuCpXA
+Hm0c0RBfG4K05JnnrmiElruMP7hm2W41MDNBui7tCV0plpGa8goDShi79dSfon/c
+C4ARArVlS682SVkAswa9aN6uC16cWh8xMVFHhZVX10OKcTn3ME623nGnJJeLjVpR
+hgFPAn0CvB799qwGZtlzICpAKc7GLLhoUuXdJjQVAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQB+4l8xGc7V99B6JsTHLuQ/
+pC3BdU9iO15wSZ4SO7H0O+mWHZ2dky4CGwJpSbOyfyCMbP7MRRKMq4DDsgQ1Luj/
+pRQ31PieopONs+JtLrVU+LchZD1l8m/uTTJDiEjpuxIUphw0Hid+gspgOD6glbJm
+HRDO9INzb9Dy77/4K0ObTqPL62P0h7EyAV4kj0NRPX4U8E150aYfe9gXyuRhMfrN
+mGgkw0iKdnM5gB5BWS9vChY3npg1y2Id+Wz1AI0W3qlGZ2IHAj0GU3UDEzU2xRRA
+Tq+Cnqsy4oHE4BMw2+U0QDOXh1bGJF5CU7BT3Xttj2YLKHD5EWYeFyKib92XVNVr
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_TIMELORD_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA4yloVuHLzYp9yEaAOHygkdt8D1hEp6BsDaZR1yfLreXCNX1z
+QnJHxwWCG1ozRzgijwqO/JdeEGPnZf2kMHZSHDn7Bk9SoxdDnICt64/xonuvbK+C
+X1BGER1eXa2KcOnYhWVlz/R0+8fGadgQhZmUBYNiwfZuBCQnnqpnRuKsSWVbJNLb
+CoVOUmgC0YeR1ZA4+nkNMznJbo1Z2q5gyfW166/ZkOWtkZbyt2Jza4Ok8kCa2RUg
+pjt+wKdvGN43ZfaczZv+fyPu2jZ/LRywMn29Qajqk2EZi61lvjfPr4zvAF6G1ziy
+pdgNc7d+ZUPAsYfMjE3hF+USu4TKLZgxPNlV5QIDAQABAoIBAFd9RjNYKZ9TPJib
+Fp0q2sjyaLicPWz2K0eijBi6ugaS3Bav52lrDFwJsg+I0QEYDK9c2K9OOStE3wV4
+B/mmSH+YkSbf/CrWNfMb2GBGg0EaM/k/K448I5BJ6GNaCFzuo7bU076hH0Etsyxm
+zA44lTr+XFXp7Htp1VyVssspWEO3rPdSPhLcZHWetwC8PjqggsGl2FrQYLLM9LvC
+/JBWMHZhHeQQsh198gjqYlC41U9vPx1Tc40HKQoru0Vm9FZ5iIJo/H+tWxa3oMpE
+vDKeaI3CRsExKZItT3zxcAqO+kYUfAzi8GQZ3fz2rg7WvZgyMCgl05HvwHViZfbI
+qIZqKQ0CgYEA9UoqNOqvsM/0zaR0eqrPwivmR9GXgcoBnMZptgiPWAZLf7HpqVut
+aIAHE0I+BsRVaCh0dfwde+KcQbAxRf7ZeeLUuYY5evMkx0Q5d7pBgkGk8akx0YLd
+ZjPguZWjCkS4NoIyBrw7c+zl08Ov95I+9vxPvTqbFdsV7y6k8qNfI8MCgYEA7RSb
+/1/6s8BYpifrea4Ge24f8NBZZIF3psyv7YyFUqmwX9z9mMg+ZQQVbrbYhxpjqW3q
+mtFHgJt7h0xQyxdbTFvb9eL6y1PwUzVlLaojl97puqrL7jYeeNbAovypy9qBOOuM
+B2UhnThaGX2YPmrwBnmb58OTQFI1wuVn3exNTTcCgYBV1TcBv2HtWEfMshCEYENF
+KgFx/jirFRoNVyzkowguAD3pGEOwnMEIgUx4g8Sar5dHVGi0ZJ2YnUqafeIwISbO
+zP4tUXfJu02SYSBO8iE8SGZEnjUtoEKDIgIwTtl3nWZsxJBm5PVU8n/V43MvCcD4
+wn/QsrJUKo75XHQh5+NB6wKBgD/yWCVosQl87yxaBiS68NqoGItu1z3JwglGmolb
+ZramOIGS7QAhutqqYFGNlhfS4WDY2ffKTRv+VDJpPj2ZXjHZcRoAkB751A/Nji3j
+/1e+c5K68OiexldXrXwI5I+sr0A4IHv6Jjfu9DZ97uufEoDcmlXIJdaqlf+suvhb
+/Xm/AoGBAOryE9lbAdCj/8cc126ultXGt7d2zuk9+vnJTVW8fGfLIF5BRErhSHXF
+Cv70GjwcLzIgtEBdQjlHVBIQ2h4Pp1w19pWJ3zTdc6wgjMhz0AStzMzxp2gtNPOT
+TLNdkU7z+pCIGfNHxPHYLSIZjN9MUVwLeNNEVlQ4LI3aj0MZ3R56
+-----END RSA PRIVATE KEY-----
+"""
+
+# This is not a public key in the sense of public/private key pairs.
+# This is the private key for the public-facing timelord service.
+SSL_TEST_TIMELORD_PUBLIC_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAvU61o31Gri4c/qBtfhgwgMD6JrWlF7mtWbxK4nyaYqV4ymf7
+N4iwKjZgdjQgGi8X5AhtPKHKzHcyPiIxhiurCx9X7yUKYcofMmo5dPX/8mh8sG9c
+t3QYLaZk9HBZruo77SQeAZNqQ755NUC8yiPEDGuMcXFg/Mc/cIRjXqW4rgqVwB5t
+HNEQXxuCtOSZ565ohJa7jD+4ZtluNTAzQbou7QldKZaRmvIKA0oYu/XUn6J/3AuA
+EQK1ZUuvNklZALMGvWjergtenFofMTFRR4WVV9dDinE59zBOtt5xpySXi41aUYYB
+TwJ9Arwe/fasBmbZcyAqQCnOxiy4aFLl3SY0FQIDAQABAoIBAD2kT4j41fcJlO9k
+lcKlZcXHEK1iIGvlTgkWQtwU7sCIWRivWyHuJE7affZ/aqScCQ97nvZLSJnjhjyt
+LasetQdeIWgBi6vkANyNsj/fioQIefGJkYs7BlR3BhCCNPG729+QDyU8NzHv58/r
+UI4Rr1jL/GNEI+yrhIDC2wiKteQVhuRGrrb0zgisRWd9OsuTlcCHoc1OdtrhdNEt
+i1iRkoMPt12hYj47GXu8sT9pY1r9kLXw42aPZwRTATWUy1bha6yC6Tgncn1zBPoU
+/CLeAEcBCN5bU5QyQ4mHWE2GAq8AFq7JUzf54bPeQPRZF/9l8HM7r8xS6Kki+ejk
+AmBxGAECgYEA3yuGyNfPqKg3U+VfzERuOi5IcMW52L0Zttwxszo3zwZUpDydGlqg
+cmCJdQ8h5i6aTHa0ZQnp7+gFFogrbGIfJmIb7s54JaOLTbXryY8DwkvmQUxcms+H
+vkga97c4065QxNijR07yNPjVvivCcnZyeRsu3eBV2KFEOgZd/IjraIECgYEA2Sfv
+d2JIOBh3Foh4J+NIOf8BJveoCX1oMfc4aWcuLAWU4RKug8erFnldArtugYLSzArF
++5qqPjkQmEoLS4mlpe+LDowGc2gpuIQgE0NNVs0pS/Rr1dDIkslTHxdWPcgvm5Rt
+z6A5brGPXxxErffRoxOcO4gODz1ih+7p4jjJ4ZUCgYEAkRSt2fGamS1KUqsiHRw7
+gG1IQK/6ArHkfqElWju1vkuCSQbypwhVmCW0FrqQsiCHxL/CxJCuWX0/mYdKm3oq
+f/x15kipiOaKECn9MBpeOji3Zqnq5eWWfJhJl9KwCcUf0uh3NUtYYCGIasnt7hWc
+k6idTjah+GPWg9ZR0XN9foECgYBPW6bJjCM0TMyIcYrnmMm2WBiFsw+3mBrR17TH
+4Cshb1C/B+K6yeceKW/yJaj2r2Z1pqI/loAMiTIlVTnXexAMGgRJZqac2j4U7kQC
+hh/nTsZ+uW4HD2udKPG1dQPRRC0RwCZ5L+aNK1pnuZ7nrJ7x56K6prfsndQ6NPdH
+8tTkGQKBgQCBRJaK9V8IrzQY4kaOhGeJ6zoRXarMBbFhKhSxfeKO9yYVJQKXqWJ+
+/M8lAZx5HNKS6wMMCC+Ul7Dyqu2H1Tv6RADw7zmdCq0sU0xeeUnF3420Z9Juzfrl
+3BgwI0exU0tBM7t6IxKu+eYdPZ0XUxwhi1z0qaZWB3iyKRQLS7bFFg==
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Wallet Private/Public Certificates and Keys
+# ---------------------------------------------------------------------------
+
+SSL_TEST_WALLET_PRIVATE_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUcxawHkoJkCBKzYLtkzj6FWAjS7cwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQCm/XAa+ixvtL1VADGyRRBCkVv+FWuxtzeqaXw5QgUPnese
+Fl34xmhQX0XrfICwwYEgmoKDxfnYSILXq3oZf3+6oZ+OjasmfsdIPYPGKuAfUVnW
+XPYyFvE5G0IeqA0yCTVfeDg60ATS9HFIzw6CawhMQiOgVgtCO9pWni5iC/WZfVAa
+J2pXd0D9hJJGFpuSip6ANzmQHGKrOpkUtg3zHwueFdKofwbf/ybRJUf73SKTKbyg
+4x+YvUO40oXEkELD/QVQMxkZxYqAoBP/p1xaS8rrxnNd8+tyCWoERQLA3p3xL/zd
+DDBoL8pTlLu97KzR2j83Hea61Pe98JtxB8sKm8avAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQARHzcFosasfIbHXvIBLQZB
+BaZtlvn9EuvpdEzg3FqUxDOAmy8nE3pFptsB49UOwrZWkPDvwAIWfbyr9WA7ftcr
+QGUbGjsCK2wuxrqP8ihu/bfR1fwGM6UsMMYc3k0qfghcNLuoNZth3Xmn+fcYwhl9
+EOMeSeT9MzQzxk9xBx2m8BnqmtKMxwYe9RIDKSKTi9oENCVAG3LO6n2j71pLCIfE
+UQ9uflWAXAwNh1EHkR3sTIUGCXz4bq4Rg/mcEdi8ffarJEHPynPHvTbjmY0rj1lv
+B2qTX87m6c3qDO3CF7fEF//OwdfSzQgR+RhZtuS//JNsaByWu6RfX40YLNHGhp37
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_WALLET_PUBLIC_CRT = b"""-----BEGIN CERTIFICATE-----
+MIIDLDCCAhSgAwIBAgIUUVPP5iy0qwtAwYU90xGQtMBvE8MwDQYJKoZIhvcNAQEL
+BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
+T3JnYW5pYyBGYXJtaW5nIERpdmlzaW9uMCAXDTIyMDMyMDE0MTQxOFoYDzIxMDAw
+ODAyMDAwMDAwWjBBMQ0wCwYDVQQDDARDaGlhMQ0wCwYDVQQKDARDaGlhMSEwHwYD
+VQQLDBhPcmdhbmljIEZhcm1pbmcgRGl2aXNpb24wggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQDfdCvSLrtCzUOdPPkFzbkeZRzVEVQRE22F5hKBJBIC1IIJ
+PLFh0Zpgl62XByRKl4MelmoFsx9nGi07OAY+cF4LJhQCMh+8rc+6+MkfF2GIdFJa
+DIiYlKuLNFIxYUMkLCyRD5iiTB4Yx0J6BVXfWDcB5zhSvy+O6K7AUo3FNCMhkIOu
+TCkZF+2l5Xyz1kBjRDAM4Ri4Sd92yS0P8cKsg3/89ZaHjDUu8a2GK92pwmmw41z5
+YN5ig/nakLdPZ5lJZYqH3K/6GWgLJBkAULChPZzrGS6IrqaWThUJSmJ7IZMVwnN6
+VDVDsiWSoPDevXpvhYx4CEgJrze9fazvzgJqwa/vAgMBAAGjFzAVMBMGA1UdEQQM
+MAqCCGNoaWEubmV0MA0GCSqGSIb3DQEBCwUAA4IBAQCMmLfJN+3maDCJI+C9Wdzc
+WKfnKf7R8La8IE/Q9W74D0Hszo8HqsYQu3sezEaeuWQKJBz7KdBzbaP6G9ENDkRE
+nFgzwdxS8AaVSqhuTjLKr4b9OlWfRLywlJjJzxAMe+hJ3WbocdStVzIIjotZLfKC
+MwWzWcEUk7Tt1pjLO656ouYvZl2hgPr0r/II99A1yUAYLBc8T3qHRFcOZ1dgJyA+
+BMEk2ym9UowNS1u1enLjIw1Hq75fAcCWB4sOtXHBFhR+yiWV325JENIvDhnFY3Rl
+0t8cVnmZS76nbyd5NYB0V4YPYtLSnOBpNWehsWUV3cOm5uow/x6qACEJAlJ25JGB
+-----END CERTIFICATE-----
+"""
+
+SSL_TEST_WALLET_PRIVATE_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEApv1wGvosb7S9VQAxskUQQpFb/hVrsbc3qml8OUIFD53rHhZd
++MZoUF9F63yAsMGBIJqCg8X52EiC16t6GX9/uqGfjo2rJn7HSD2DxirgH1FZ1lz2
+MhbxORtCHqgNMgk1X3g4OtAE0vRxSM8OgmsITEIjoFYLQjvaVp4uYgv1mX1QGidq
+V3dA/YSSRhabkoqegDc5kBxiqzqZFLYN8x8LnhXSqH8G3/8m0SVH+90ikym8oOMf
+mL1DuNKFxJBCw/0FUDMZGcWKgKAT/6dcWkvK68ZzXfPrcglqBEUCwN6d8S/83Qww
+aC/KU5S7veys0do/Nx3mutT3vfCbcQfLCpvGrwIDAQABAoIBAFfx85+Rj+OIyYnB
+n2qmqsiUK2GmQGCJAJ0UDuNM3MN7xL7EwtrpCzkA5B8AI/py/qGAHipuEoYQsjAJ
+VDWni0psIk7+V1vfuu5Vz1eHbx+vRWP684IvyPztWSYyFTj71osgEmUO9utu51aU
+Da0r12PqFT808ZsBUJz7k6v5ZnBdz/2Cf+NGPvZ4aXfCYK29N03rMOjLqvFO4puL
+emFI/cv/cJr36Gg2pxpPE62Z3+vqrwUgI8SclMbDx+weJ/m4XWk5CZl8NVB22QeT
+lbL1fh8tiR1UsaSEqjskCCS2FyHt0aTGCtGZIl5xh8eNrDUDMA28xPxq1TAxjB/S
+8ZpoKxECgYEA1Dw0Tt8IpCalizddJrWPfgiriPNL0IdrlWxN7vrnihpSFTAh9F4s
+nB6fSPQbAOsEYEzo8m1P1f/GmH4MlJxOIzogWxDOeNLKAqiAblTSsVZ3YKbAvB4q
+qZyxiQZ6+6mI++RrV1avwdMkFEPn45H/FOZfGKxVuu3Lxyj7vzSdbIkCgYEAyWzC
+97T/tBnyx5iI3xjSl50cAy3uyFJcA2juS9ZRbY4y261F6dakvxllk4mEChJ1KUzP
+qaE8zo62mIlGWQ9YYH+R+dmKtQy8gT73xwadJXIQxmcF3ACzRkyERLZ6iflZy5nc
+4JO8meiz1hmE8ocZ/MKmh+l8ueEhgu2luYLk+3cCgYB+g8D+vy9sgukt+vvZZmO6
+UrrGcZnhHcjBEwXGDuVVSulhXgbvn+/hxNNY7sLmIjLCoTY/xW/Q9p7RKlqfgCmI
+EE9XWcZq+eSX/xBINOI/+nZBNEYyHZ167EBcmXNYb7CLz5c5QiCVXyLjvbMO0moH
+cGiB0cFtI/HUsBaZ3Wh2WQKBgDWdAXg1cSpbDcgazbO0Q7mfU+l0vG4Nnfg6YdNF
+xH7IrrjSMh2/yDIlbGgM3lxf9Vd83nlkNW81hVysjVD/SKLG0fAS+1ydez9bp1AO
+bp2c8uIcYe7hMNaxXzN67rry5/fNiIEuUbEVw2hleoGjfENO/EyI1W4Ugnr7DnWG
+ZbSZAoGAHsZ0W6UsPniR06syokWVfAa0EkzrE/Lpf03Gy2zM/o3yuW+YU9bq1rsD
+y4oG0AazSl4unsiWxfMxNHxpOT7aIib0MNiTEDqkIdbjYBC0o/TS9GCqx7SOD6B0
+6303iJ+qx02v6PRPpFXpfWZEJKwwKYslLUsLLk9+qs7yU4NFcu0=
+-----END RSA PRIVATE KEY-----
+"""
+
+# This is not a public key in the sense of public/private key pairs.
+# This is the private key for the public-facing wallet service.
+SSL_TEST_WALLET_PUBLIC_KEY = b"""-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA33Qr0i67Qs1DnTz5Bc25HmUc1RFUERNtheYSgSQSAtSCCTyx
+YdGaYJetlwckSpeDHpZqBbMfZxotOzgGPnBeCyYUAjIfvK3PuvjJHxdhiHRSWgyI
+mJSrizRSMWFDJCwskQ+YokweGMdCegVV31g3Aec4Ur8vjuiuwFKNxTQjIZCDrkwp
+GRftpeV8s9ZAY0QwDOEYuEnfdsktD/HCrIN//PWWh4w1LvGthivdqcJpsONc+WDe
+YoP52pC3T2eZSWWKh9yv+hloCyQZAFCwoT2c6xkuiK6mlk4VCUpieyGTFcJzelQ1
+Q7IlkqDw3r16b4WMeAhICa83vX2s784CasGv7wIDAQABAoIBAE+NaFx3zqtFsKC2
+KGHsj89GaDFi7e72X7Of6U6YrODdDz6CoRQWL0PcPCzcmgsETeYB3tUQpElshFXk
+6DQqhRCrCcyOU8Y0ixQhplivVkXiQ79TXv4TT89LXUe/PMwP/f3W85w0RTLFHeGb
+LKtLGKpQyziKYEAcjrphqZ9fpHI5+jbaIOQ/5MB/+izDOzDozHMIHG6akDKMHuQ7
+QEWUtQslJYTPjj7de0UIHuZ1A5sUZ9NC6yEL1jf2XOWV9OEduEYx/tbHEUK8pOhT
+MeFCqYtbTxV7LstQrGyaTiwuWFidBBu6DqpWtc6TTofPE8n+irImC0uPJGi9j7n7
+w6PNjOECgYEA/+g8USorGa7Bc+8NBSlJ0QqzHT2IIh/JTTjji+6z+67sBFxQyP9/
+vh2qTCcF6XzXunmb0rXrXn5cdg40zNnEfjnXZYhoczqi85vpmkaeSLKrqrsfrAFf
+ybJLydUtKZ/SCPq/KAURjUfT3xg64IYH+ENAOhgS/sIrFIpu8JjqjqsCgYEA34jr
+/VgHXo9hiUPqMSFx0ejk05lm3DmXReBWGONpfeYWBydFOFOn5O9s2pmlnMYEfjUK
+tsA5uoXkPLwZGM/NtgV+D1F01DrH5dTX2xmS9zL57i3phGhCKuR1z2S7LQm9Xbf/
+rIK6DGgEtSMYv0sHSue/4BtddnhtJH3/jRAEU80CgYBBRa781NChgF1/gJ3Fjz5w
+v1XoQ2WRrqHdvIDtlDj8HSW+Bv3kBqdCiraBLgLoBxvPSG1iVVxvgbN7uSvmhDUG
+LSKvlxdtLKubj00KOLDuwgPfTFNLwB36iCukk2ctksIz4CEZyBEuBAAai0eZNRab
+UCv1pWZS7JuoZZbeb2KEeQKBgQCLEb9oNY0YKnIPGR6phFowswkyEB0rY/UWNxS5
+lTo7ZptLxgXNnlY1GzQI6FBdseB3uH465mrD/arakle21QnxdYdQ9meN5igZeAr3
+N/j0LFXL9epzQv3ve4VECzJcOdQDa4b4h7hCIbDUFMq/sGkQFBCO19eU7iVQ78a+
+tzlJ/QKBgFQ/GSPgiA4McE6jPNTA2ME8RbI1qttkh15ZortN+NMWsrPt3MEe212C
+fZa3xaAhCQrr2pzVPPcf/wOex7MPxTyuczcQT3Q6FAYAXx3atsUggpJhCaKcly5x
+wnOIeICHf9er22mo38SzU7Js7VQmtv4p+YKS0XO9U0nkD8fa0YBr
+-----END RSA PRIVATE KEY-----
+"""
+
+# ---------------------------------------------------------------------------
+# Node -> cert/key mappings
+# ---------------------------------------------------------------------------
+
+SSL_TEST_NODE_CERTS_AND_KEYS = {
+    "crawler": {"private": {"crt": SSL_TEST_CRAWLER_PRIVATE_CRT, "key": SSL_TEST_CRAWLER_PRIVATE_KEY}},
+    "daemon": {"private": {"crt": SSL_TEST_DAEMON_PRIVATE_CRT, "key": SSL_TEST_DAEMON_PRIVATE_KEY}},
+    "farmer": {
+        "private": {"crt": SSL_TEST_FARMER_PRIVATE_CRT, "key": SSL_TEST_FARMER_PRIVATE_KEY},
+        "public": {"crt": SSL_TEST_FARMER_PUBLIC_CRT, "key": SSL_TEST_FARMER_PUBLIC_KEY},
+    },
+    "full_node": {
+        "private": {"crt": SSL_TEST_FULLNODE_PRIVATE_CRT, "key": SSL_TEST_FULLNODE_PRIVATE_KEY},
+        "public": {"crt": SSL_TEST_FULLNODE_PUBLIC_CRT, "key": SSL_TEST_FULLNODE_PUBLIC_KEY},
+    },
+    "harvester": {"private": {"crt": SSL_TEST_HARVESTER_PRIVATE_CRT, "key": SSL_TEST_HARVESTER_PRIVATE_KEY}},
+    "introducer": {"public": {"crt": SSL_TEST_INTRODUCER_PUBLIC_CRT, "key": SSL_TEST_INTRODUCER_PUBLIC_KEY}},
+    "timelord": {
+        "private": {"crt": SSL_TEST_TIMELORD_PRIVATE_CRT, "key": SSL_TEST_TIMELORD_PRIVATE_KEY},
+        "public": {"crt": SSL_TEST_TIMELORD_PUBLIC_CRT, "key": SSL_TEST_TIMELORD_PUBLIC_KEY},
+    },
+    "wallet": {
+        "private": {"crt": SSL_TEST_WALLET_PRIVATE_CRT, "key": SSL_TEST_WALLET_PRIVATE_KEY},
+        "public": {"crt": SSL_TEST_WALLET_PUBLIC_CRT, "key": SSL_TEST_WALLET_PUBLIC_KEY},
+    },
+}
