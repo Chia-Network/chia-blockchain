@@ -1125,6 +1125,7 @@ class WalletNode:
         # Only use the cache if we are talking about states before the fork point. If we are evaluating something
         # in a reorg, we cannot use the cache, since we don't know if it's actually in the new chain after the reorg.
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
+            self.log.debug("Return false 1")
             return True
 
         spent_height = coin_state.spent_height
@@ -1152,6 +1153,7 @@ class WalletNode:
         if confirmed_height is None:
             if current is None:
                 # Coin does not exist in local DB, so no need to do anything
+                self.log.debug("Return false 2")
                 return False
             # This coin got reorged
             reorg_mode = True
@@ -1163,6 +1165,7 @@ class WalletNode:
             request = RequestHeaderBlocks(confirmed_height, confirmed_height)
             res = await peer.request_header_blocks(request)
             if res is None:
+                self.log.debug("Return false 3")
                 return False
             state_block = res.header_blocks[0]
             assert state_block is not None
@@ -1188,6 +1191,7 @@ class WalletNode:
         if coin_state.spent_height is None:
             validated = await self.validate_block_inclusion(state_block, peer, peer_request_cache)
             if not validated:
+                self.log.debug("Return false 4")
                 return False
 
         # TODO: make sure all cases are covered
@@ -1216,6 +1220,7 @@ class WalletNode:
                     return False
                 validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
                 if not validated:
+                    self.log.debug("Return false 5")
                     return False
 
         if spent_height is not None:
@@ -1242,6 +1247,7 @@ class WalletNode:
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
             if not validated:
+                self.log.debug("Return false 6")
                 return False
         peer_request_cache.add_to_states_validated(coin_state)
 
@@ -1400,7 +1406,9 @@ class WalletNode:
 
         assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
+        self.log.debug(f"Registering for coin updates for: {msg} to peer: {peer.get_peer_info()} {peer.version}")
         coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+        self.log.debug(f"Response: {coin_state}")
         assert coin_state is not None
 
         if not self.is_trusted(peer):
