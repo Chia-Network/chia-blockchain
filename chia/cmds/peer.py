@@ -1,11 +1,11 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import click
 
 from chia.util.network import is_trusted_inner
 
 
-async def print_connections(client, time, NodeType, trusted_peers: Dict):
+async def print_connections(client, time, NodeType, trusted_peers: Dict[str, str]) -> None:
     connections = await client.get_connections()
     print("Connections:")
     print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
@@ -59,9 +59,11 @@ async def peer_async(
     remove_connection: str,
     rpc_port: Optional[int],
 ) -> None:
-    import aiohttp
-    import traceback
     import time
+    import traceback
+
+    import aiohttp
+
     from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.server.outbound_message import NodeType
     from chia.util.config import load_config
@@ -75,7 +77,7 @@ async def peer_async(
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
         if show_connections:
-            trusted_peers: Dict = config["full_node"].get("trusted_peers", {})
+            trusted_peers: Dict[str, str] = config["full_node"].get("trusted_peers", {})
             await print_connections(client, time, NodeType, trusted_peers)
         if add_connection:
             if ":" not in add_connection:
