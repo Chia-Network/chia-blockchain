@@ -608,8 +608,13 @@ class WalletNode:
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(6)
 
-        # If there is a fork, we need to ensure that we roll back to properly handle reorgs
-        if fork_height is not None and height is not None and fork_height != height - 1:
+        # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
+        # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX dissapear.
+        # wallet_short_sync_backtrack can safely rollback because we validated the weight for the new peak so we
+        # know the peer is telling the truth about the reorg.
+
+        # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
+        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
             await self.perform_atomic_rollback(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
 
