@@ -843,7 +843,14 @@ class DataStore:
 
         return
 
-    async def insert_batch(self, tree_id: bytes32, changelist: List[Dict[str, Any]], *, lock: bool = True) -> None:
+    async def insert_batch(
+        self,
+        tree_id: bytes32,
+        changelist: List[Dict[str, Any]],
+        status: Status = Status.PENDING,
+        *,
+        lock: bool = True,
+    ) -> None:
         hint_keys_values = await self.get_keys_values_dict(tree_id, lock=lock)
         old_root = await self.get_tree_root(tree_id, lock=lock)
         for change in changelist:
@@ -864,11 +871,6 @@ class DataStore:
         root = await self.get_tree_root(tree_id, lock=lock)
         # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
         await self.rollback_to_generation(tree_id, old_root.generation, lock=lock)
-        await self.insert_root_for_processed_batch(tree_id, root, lock=lock)
-
-    async def insert_root_for_processed_batch(
-        self, tree_id: bytes32, root: Root, status: Status = Status.PENDING, *, lock: bool = True
-    ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
             new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
@@ -1014,7 +1016,7 @@ class DataStore:
         else:
             assert isinstance(node, TerminalNode)
             with open(filename, "a") as writer:
-                writer.write(f"2 {node.key.hex()} {node.value.hex()}")
+                writer.write(f"2 {node.key.hex()} {node.value.hex()}\n")
 
     async def get_left_to_right_ordering(
         self,
@@ -1028,7 +1030,7 @@ class DataStore:
         nodes: List[Node] = []
         while len(nodes) < num_nodes:
             try:
-                node = await self.get_node(node_hash)
+                node = await self.get_node(node_hash, lock=lock)
             except Exception:
                 return []
             if isinstance(node, TerminalNode):
