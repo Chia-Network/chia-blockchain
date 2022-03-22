@@ -75,7 +75,7 @@ async def peer_async(
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
 
         if show_connections:
-            trusted_peers: Dict = config["full_node"].get("trusted_peers", {})
+            trusted_peers: Dict[str, str] = config["full_node"].get("trusted_peers", {})
             await print_connections(client, time, NodeType, trusted_peers)
         if add_connection:
             if ":" not in add_connection:
