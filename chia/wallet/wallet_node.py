@@ -467,15 +467,18 @@ class WalletNode:
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
 
-    async def perform_atomic_rollback(self, fork_height: int):
+    async def perform_atomic_rollback(self, fork_height: int, cache: PeerRequestCache):
         assert self.wallet_state_manager is not None
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
                 await self.wallet_state_manager.reorg_rollback(fork_height)
-                self.rollback_request_caches(fork_height)
                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
+                if cache is None:
+                    self.rollback_request_caches(fork_height)
+                else:
+                    cache.clear_after_height(fork_height)
                 await self.wallet_state_manager.db_wrapper.commit_transaction()
             except Exception as e:
                 tb = traceback.format_exc()
@@ -519,7 +522,8 @@ class WalletNode:
         start_time = time.time()
 
         if rollback:
-            await self.perform_atomic_rollback(fork_height)
+            # we should clear all peers since this is a full rollback
+            await self.perform_atomic_rollback(fork_height, None)
             await self.update_ui()
 
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
@@ -614,9 +618,15 @@ class WalletNode:
         # know the peer is telling the truth about the reorg.
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
-        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
-            await self.perform_atomic_rollback(fork_height)
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
+        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
+            # only one peer told us to rollback so only clear for that peer
+            await self.perform_atomic_rollback(fork_height, cache)
+        else:
+            if fork_height is not None:
+                # only one peer told us to rollback so only clear for that peer
+                cache.clear_after_height(fork_height)
+                self.log.info(f"clear_after_height {fork_height} for peer {peer}")
 
         all_tasks: List[asyncio.Task] = []
         target_concurrent_tasks: int = 20
@@ -1047,7 +1057,8 @@ class WalletNode:
         peak_height = self.wallet_state_manager.blockchain.get_peak_height()
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
-            await self.perform_atomic_rollback(fork_height)
+            # we should clear all peers since this is a full rollback
+            await self.perform_atomic_rollback(fork_height, None)
             await self.update_ui()
 
         if peak is not None:
