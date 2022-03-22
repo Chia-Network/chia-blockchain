@@ -134,21 +134,17 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt-get install -y python3-venv
   elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
+    # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
     echo "Installing on Arch Linux."
-    echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
     case $(uname -m) in
-      x86_64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
-        ;;
-      aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
+      x86_64|aarch64)
+        sudo pacman ${PACMAN_AUTOMATED} -S --needed git
         ;;
       *)
         echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
         exit 1
         ;;
-      esac
-    sudo pacman ${PACMAN_AUTOMATED} -S --needed git
+    esac
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
@@ -192,8 +188,12 @@ find_python() {
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
           if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.9"
+            echo "Chia requires Python version <= 3.9.10"
             echo "Current Python version = $PY3_VERSION"
+            # If Arch, direct to Arch Wiki
+            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support."
+            fi
             exit 1
           fi
         fi
