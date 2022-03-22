@@ -86,7 +86,7 @@ from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert
 from tests.wallet_tools import WalletTool
 from tests.util.socket import find_available_listen_port
-from tests.util.ssl_certs import SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY, SSL_TEST_NODE_CERTS_AND_KEYS
+from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
@@ -147,8 +147,8 @@ class BlockTools:
         create_default_chia_config(root_path)
         create_all_ssl(
             root_path,
-            private_ca_crt_and_key=(SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY),
-            node_certs_and_keys=SSL_TEST_NODE_CERTS_AND_KEYS,
+            private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+            node_certs_and_keys=get_next_nodes_certs_and_keys(),
         )
 
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
