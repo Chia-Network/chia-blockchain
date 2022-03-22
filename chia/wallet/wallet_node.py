@@ -467,7 +467,7 @@ class WalletNode:
         if self.wallet_peers is not None:
             await self.wallet_peers.on_connect(peer)
 
-    async def perform_atomic_rollback(self, fork_height: int, cache: PeerRequestCache):
+    async def perform_atomic_rollback(self, fork_height: int, cache: Optional[PeerRequestCache] = None):
         assert self.wallet_state_manager is not None
         self.log.info(f"perform_atomic_rollback to {fork_height}")
         async with self.wallet_state_manager.db_wrapper.lock:
@@ -523,7 +523,7 @@ class WalletNode:
 
         if rollback:
             # we should clear all peers since this is a full rollback
-            await self.perform_atomic_rollback(fork_height, None)
+            await self.perform_atomic_rollback(fork_height)
             await self.update_ui()
 
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
@@ -621,7 +621,7 @@ class WalletNode:
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
         if trusted and fork_height is not None and height is not None and fork_height != height - 1:
             # only one peer told us to rollback so only clear for that peer
-            await self.perform_atomic_rollback(fork_height, cache)
+            await self.perform_atomic_rollback(fork_height, cache=cache)
         else:
             if fork_height is not None:
                 # only one peer told us to rollback so only clear for that peer
@@ -1058,7 +1058,7 @@ class WalletNode:
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
             # we should clear all peers since this is a full rollback
-            await self.perform_atomic_rollback(fork_height, None)
+            await self.perform_atomic_rollback(fork_height)
             await self.update_ui()
 
         if peak is not None:
