@@ -16,7 +16,6 @@ from chia.util.config import (
     load_config,
     save_config,
 )
-from chia.util.path import mkdir
 from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
@@ -192,7 +191,7 @@ class TestConfig:
         # When: using a clean directory
         root_path: Path = Path(tmpdir)
         config_file_path: Path = root_path / "config" / "config.yaml"
-        mkdir(config_file_path.parent)
+        config_file_path.parent.mkdir(parents=True, exist_ok=True)
         # When: config.yaml already exists with content
         with open(config_file_path, "w") as f:
             f.write("Some config content")
@@ -235,7 +234,7 @@ class TestConfig:
         root_path: Path = tmpdir
         config_file_path: Path = root_path / "config" / "config.yaml"
         # When: config file path points to a directory
-        mkdir(config_file_path)
+        config_file_path.mkdir(parents=True, exist_ok=True)
         # When: exit_on_error is True
         # Expect: load_config will exit
         with pytest.raises(SystemExit):

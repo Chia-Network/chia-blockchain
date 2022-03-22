@@ -18,7 +18,6 @@ from chia.plotting.util import (
     remove_plot_directory,
 )
 from chia.util.config import create_default_chia_config
-from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
@@ -46,7 +45,7 @@ class TestDirectory:
 
     def __init__(self, path: Path, plots_origin: List[Path]):
         self.path = path
-        mkdir(path)
+        path.mkdir(parents=True, exist_ok=True)
         # Drop the existing files in the test directories
         for plot in path.iterdir():
             unlink(plot)

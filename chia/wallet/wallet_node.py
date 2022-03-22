@@ -52,7 +52,7 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyringIsLocked, Keychain
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.wallet.util.new_peak_queue import NewPeakQueue, NewPeakQueueTypes, NewPeakItem
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
 from chia.wallet.util.wallet_sync_utils import (
@@ -201,7 +201,7 @@ class WalletNode:
             .replace("KEY", db_path_key_suffix)
         )
         path = path_from_root(self.root_path, db_path_replaced.replace("v1", "v2"))
-        mkdir(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2', 'v1')}_new")
         if not path.exists():
