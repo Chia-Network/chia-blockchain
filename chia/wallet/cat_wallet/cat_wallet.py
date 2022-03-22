@@ -328,6 +328,9 @@ class CATWallet:
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
                         [coin.parent_coin_info], None, node
                     )
+                    # check for empty list and continue on to next node
+                    if not coin_state:
+                        continue
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                         node, coin_state[0].spent_height, coin_state[0].coin
