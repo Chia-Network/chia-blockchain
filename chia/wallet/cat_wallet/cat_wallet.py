@@ -335,12 +335,12 @@ class CATWallet:
                     coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                         node, coin_state[0].spent_height, coin_state[0].coin
                     )
-                    await self.puzzle_solution_received(coin_spend, coin_states=coin_state)
+                    await self.puzzle_solution_received(coin_spend, coin_state=coin_state[0])
                     break
                 except Exception as e:
                     self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend, coin_states: List[CoinState]):
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, coin_state: CoinState):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         matched, curried_args = match_cat_puzzle(puzzle)
@@ -349,8 +349,8 @@ class CATWallet:
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
             parent_coin = None
             coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-            if coin_record is None and coin_states:
-                parent_coin = coin_states[0].coin
+            if coin_record is None:
+                parent_coin = coin_state.coin
             if coin_record is not None:
                 parent_coin = coin_record.coin
             if parent_coin is None:
