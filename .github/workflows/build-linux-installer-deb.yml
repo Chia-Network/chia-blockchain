@@ -49,7 +49,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       env:
         cache-name: cache-node-modules
       with:
@@ -67,7 +67,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
