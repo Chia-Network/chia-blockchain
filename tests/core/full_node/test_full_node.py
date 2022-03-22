@@ -121,7 +121,7 @@ async def setup_four_nodes(db_version):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes(db_version):
+async def setup_two_nodes_fixture(db_version):
     async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
@@ -1422,8 +1422,8 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
 
     @pytest.mark.asyncio
-    async def test_slot_catch_up_genesis(self, setup_two_nodes, bt, self_hostname):
-        nodes, _ = setup_two_nodes
+    async def test_slot_catch_up_genesis(self, setup_two_nodes_fixture, bt, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
         full_node_1 = nodes[0]
@@ -1512,8 +1512,8 @@ class TestFullNodeProtocol:
         await _validate_and_add_block(full_node_1.full_node.blockchain, valid_block)
 
     @pytest.mark.asyncio
-    async def test_compact_protocol(self, setup_two_nodes, bt):
-        nodes, _ = setup_two_nodes
+    async def test_compact_protocol(self, setup_two_nodes_fixture, bt):
+        nodes, _ = setup_two_nodes_fixture
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         blocks = bt.get_consecutive_blocks(num_blocks=10, skip_slots=3)
@@ -1630,8 +1630,8 @@ class TestFullNodeProtocol:
             assert full_node_2.full_node.blockchain.get_peak().height == height
 
     @pytest.mark.asyncio
-    async def test_compact_protocol_invalid_messages(self, setup_two_nodes, bt, self_hostname):
-        nodes, _ = setup_two_nodes
+    async def test_compact_protocol_invalid_messages(self, setup_two_nodes_fixture, bt, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         blocks = bt.get_consecutive_blocks(num_blocks=1, skip_slots=3)

@@ -49,7 +49,7 @@ async def get_daemon_with_temp_keyring(get_b_tools):
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt, get_b_tools, get_b_tools_1):
+async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
     async for _ in setup_full_system(
         test_constants_modified,
         bt,
@@ -63,8 +63,8 @@ async def simulation(bt, get_b_tools, get_b_tools_1):
 
 class TestDaemon:
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, self_hostname, simulation, bt, get_b_tools, get_b_tools_1):
-        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
+    async def test_daemon_simulation(self, self_hostname, daemon_simulation, bt, get_b_tools, get_b_tools_1):
+        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = daemon_simulation
         node2_port = node2.full_node.config["port"]
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
