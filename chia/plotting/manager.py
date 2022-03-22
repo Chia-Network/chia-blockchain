@@ -204,11 +204,11 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def start_refreshing(self):
+    def start_refreshing(self, sleep_interval_ms: Optional[int] = 1000):
         self._refreshing_enabled = True
         if self._refresh_thread is None or not self._refresh_thread.is_alive():
             self.cache.load()
-            self._refresh_thread = threading.Thread(target=self._refresh_task)
+            self._refresh_thread = threading.Thread(target=self._refresh_task, args=(sleep_interval_ms,))
             self._refresh_thread.start()
 
     def stop_refreshing(self):
@@ -221,11 +221,11 @@ class PlotManager:
         log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
-    def _refresh_task(self):
+    def _refresh_task(self, sleep_interval_ms: int):
         while self._refreshing_enabled:
             try:
                 while not self.needs_refresh() and self._refreshing_enabled:
-                    time.sleep(1)
+                    time.sleep(sleep_interval_ms / 1000.0)
 
                 if not self._refreshing_enabled:
                     return

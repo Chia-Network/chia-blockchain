@@ -142,11 +142,20 @@ async def resolve_plot_keys(
 
 
 async def create_plots(
-    args, keys: PlotKeys, root_path, use_datetime=True, test_private_keys: Optional[List] = None
+    args,
+    keys: PlotKeys,
+    root_path,
+    use_datetime=True,
+    test_private_keys: Optional[List] = None,
+    test_config_cache: Optional[Dict] = None,
 ) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
 
-    config_filename = config_path_for_filename(root_path, "config.yaml")
-    config = load_config(root_path, config_filename)
+    if test_config_cache is None:
+        config_filename = config_path_for_filename(root_path, "config.yaml")
+        config = load_config(root_path, config_filename)
+    else:
+        # Don't re-read config for every plot for tests, for efficiency
+        config = test_config_cache
 
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir

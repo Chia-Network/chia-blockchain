@@ -83,7 +83,7 @@ from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert_custom_interval
 from tests.wallet_tools import WalletTool
 from tests.util.socket import find_available_listen_port
 from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
@@ -310,6 +310,7 @@ class BlockTools:
                 self.root_path,
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
+                test_config_cache=self._config,
             )
             self.created_plots += 1
 
@@ -326,13 +327,14 @@ class BlockTools:
             assert plot_id_new is not None
             assert path_new is not None
 
+            assert path_new is not None
+
             if not exclude_final_dir:
                 self.expected_plots[plot_id_new] = path_new
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
-            self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
-                "plot_directories"
-            ]
+            if str(path_new.parent.resolve()) not in self._config["harvester"]["plot_directories"]:
+                self._config["harvester"]["plot_directories"].append(str(path_new.parent.resolve()))
 
             return plot_id_new
 
@@ -346,8 +348,8 @@ class BlockTools:
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
-        self.plot_manager.start_refreshing()
-        await time_out_assert(10, self.plot_manager.needs_refresh, value=False)
+        self.plot_manager.start_refreshing(sleep_interval_ms=1)
+        await time_out_assert_custom_interval(10, 0.001, self.plot_manager.needs_refresh, value=False)
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
