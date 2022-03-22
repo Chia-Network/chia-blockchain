@@ -87,6 +87,10 @@ def generate_replacements(conf, dir):
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
+    if "CHECK_RESOURCE_USAGE" in conf:
+        replacements["DISABLE_PYTEST_MONITOR"] = ""
+    else:
+        replacements["DISABLE_PYTEST_MONITOR"] = "-p no:monitor"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
     return replacements
@@ -135,6 +139,8 @@ for os in testconfig.oses:
         conf = update_config(module_dict(testconfig), dir_config(dir))
         replacements = generate_replacements(conf, dir)
         txt = transform_template(template_text, replacements)
+        # remove trailing whitespace from lines and assure a single EOF at EOL
+        txt = "\n".join(line.rstrip() for line in txt.rstrip().splitlines()) + "\n"
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_path: Path = workflow_yaml_file(args.output_dir, os, test_name(dir))
         if workflow_yaml_path not in current_workflows or current_workflows[workflow_yaml_path] != txt:
