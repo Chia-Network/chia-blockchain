@@ -204,7 +204,7 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def start_refreshing(self, sleep_interval_ms: Optional[int] = 1000):
+    def start_refreshing(self, sleep_interval_ms: int = 1000):
         self._refreshing_enabled = True
         if self._refresh_thread is None or not self._refresh_thread.is_alive():
             self.cache.load()
@@ -264,12 +264,13 @@ class PlotManager:
                         continue
 
                     paths_to_remove: List[str] = []
-                    for path in duplicated_paths:
-                        loaded_plot = Path(path) / Path(plot_filename)
+                    for path_str in duplicated_paths:
+                        loaded_plot = Path(path_str) / Path(plot_filename)
                         if loaded_plot not in plot_paths:
-                            paths_to_remove.append(path)
-                    for path in paths_to_remove:
-                        duplicated_paths.remove(path)
+                            paths_to_remove.append(path_str)
+                            total_result.removed.append(loaded_plot)
+                    for path_str in paths_to_remove:
+                        duplicated_paths.remove(path_str)
 
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
