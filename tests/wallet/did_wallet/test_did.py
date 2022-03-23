@@ -15,12 +15,6 @@ pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
     async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _

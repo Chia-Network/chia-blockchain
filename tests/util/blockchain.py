@@ -1,6 +1,5 @@
 import os
 import pickle
-from os import path
 from pathlib import Path
 from typing import List
 
@@ -53,9 +52,7 @@ def persistent_blocks(
     if ci is not None and not file_path.exists():
         raise Exception(f"Running in CI and expected path not found: {file_path!r}")
 
-    if not path.exists(block_path_dir):
-        mkdir(block_path_dir.parent)
-        mkdir(block_path_dir)
+    mkdir(block_path_dir)
 
     if file_path.exists():
         try:

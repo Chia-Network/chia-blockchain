@@ -29,17 +29,17 @@ from tests.util.socket import find_available_listen_port
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes():
+async def two_nodes_sim_and_wallets():
     async for _ in setup_simulators_and_wallets(2, 0, {}):
         yield _
 
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes, bt, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets, bt, self_hostname):
         num_blocks = 5
         test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
@@ -272,9 +272,9 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes, empty_blockchain, bt):
+    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain, bt):
         test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
