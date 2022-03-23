@@ -269,6 +269,9 @@ class WalletNode:
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
             self.wallet_state_manager = None
+        if self.keychain_proxy is not None:
+            await self.keychain_proxy.close()
+            self.keychain_proxy = None
         self.logged_in = False
         self.wallet_peers = None
 
