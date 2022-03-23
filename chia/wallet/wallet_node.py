@@ -271,7 +271,7 @@ class WalletNode:
             self.wallet_state_manager = None
         if self.keychain_proxy is not None:
             await self.keychain_proxy.close()
-            self.keychain_proxy = None
+            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.logged_in = False
         self.wallet_peers = None
 
