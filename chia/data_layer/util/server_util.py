@@ -5,6 +5,7 @@ import tempfile
 import aiosqlite
 from random import Random
 from pathlib import Path
+from typing import List, Dict, Any
 from chia.util.db_wrapper import DBWrapper
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -31,7 +32,7 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
         keys: List[bytes] = []
         counter = 0
         for batch in range(num_batches):
-            changelist: List[Dict[str, Any]] = [] 
+            changelist: List[Dict[str, Any]] = []
             for operation in range(num_ops_per_batch):
                 if random.randint(0, 4) > 0 or len(keys) == 0:
                     key = counter.to_bytes(4, byteorder="big")
@@ -51,8 +52,9 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
             root = await data_store.get_tree_root(tree_id)
             print(f"Batch: {batch}. Root hash: {root.node_hash}")
             print(f"Full tree: {filename_full_tree}. Diff tree: {filename_diff_tree}.")
-            await data_store.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
-            await data_store.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
+            if root.node_hash is not None:
+                await data_store.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
+                await data_store.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
 
         await connection.close()
 
