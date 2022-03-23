@@ -42,7 +42,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import ClientSession, web, WSMsgType
+    from aiohttp import ClientSession, WSMsgType, web
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")

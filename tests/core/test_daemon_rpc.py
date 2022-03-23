@@ -1,9 +1,9 @@
 import pytest
 import pytest_asyncio
 
-from tests.setup_nodes import setup_daemon
-from chia.daemon.client import connect_to_daemon
 from chia import __version__
+from chia.daemon.client import connect_to_daemon
+from tests.setup_nodes import setup_daemon
 
 
 @pytest_asyncio.fixture(scope="function")
