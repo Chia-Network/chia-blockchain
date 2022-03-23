@@ -216,7 +216,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
-    res = await wallet_client.get_next_address(wallet_id, False)
+    new_address: bool = args.get("new_address", False)
+    res = await wallet_client.get_next_address(wallet_id, new_address)
     print(res)
 
 
