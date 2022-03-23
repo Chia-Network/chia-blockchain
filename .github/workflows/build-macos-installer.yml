@@ -143,6 +143,7 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
+        python -m sysconfig
         cd ./chia-blockchain-gui
         git status
         cd ../build_scripts
