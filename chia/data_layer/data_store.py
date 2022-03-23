@@ -851,30 +851,42 @@ class DataStore:
         *,
         lock: bool = True,
     ) -> None:
-        hint_keys_values = await self.get_keys_values_dict(tree_id, lock=lock)
-        old_root = await self.get_tree_root(tree_id, lock=lock)
-        for change in changelist:
-            if change["action"] == "insert":
-                key = change["key"]
-                value = change["value"]
-                reference_node_hash = change.get("reference_node_hash")
-                side = change.get("side")
-                if reference_node_hash or side:
-                    await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=lock)
-                else:
-                    await self.autoinsert(key, value, tree_id, hint_keys_values, lock=lock)
-            else:
-                assert change["action"] == "delete"
-                key = change["key"]
-                await self.delete(key, tree_id, hint_keys_values, lock=lock)
-
-        root = await self.get_tree_root(tree_id, lock=lock)
-        # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
-        await self.rollback_to_generation(tree_id, old_root.generation, lock=lock)
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
+            hint_keys_values = await self.get_keys_values_dict(tree_id, lock=False)
+            old_root = await self.get_tree_root(tree_id, lock=False)
+            for change in changelist:
+                if change["action"] == "insert":
+                    key = change["key"]
+                    value = change["value"]
+                    reference_node_hash = change.get("reference_node_hash")
+                    side = change.get("side")
+                    if reference_node_hash or side:
+                        await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=False)
+                    else:
+                        await self.autoinsert(key, value, tree_id, hint_keys_values, lock=False)
+                else:
+                    assert change["action"] == "delete"
+                    key = change["key"]
+                    await self.delete(key, tree_id, hint_keys_values, lock=False)
+
+            root = await self.get_tree_root(tree_id, lock=False)
+            # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
+            await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
+            await self.insert_batch_root(tree_id, root.node_hash, status, lock=False)
+            new_root = await self.get_tree_root(tree_id, lock=False)
+            assert new_root.node_hash == root.node_hash
+
+    async def insert_batch_root(
+        self,
+        tree_id: bytes32,
+        node_hash: Optional[bytes32],
+        status: Status,
+        *,
+        lock: bool = True,
+    ) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status)
             new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            assert root.node_hash == new_root.node_hash
             if new_root.node_hash is None:
                 return
             nodes = await self.get_left_to_right_ordering(new_root.node_hash, tree_id, lock=False)

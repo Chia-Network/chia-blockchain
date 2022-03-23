@@ -22,7 +22,7 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
         temp_directory_path = Path(temp_directory)
         db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
         print(f"Writing DB to {db_path}")
-
+        print(f"Writing files to {foldername}")
         connection = await aiosqlite.connect(db_path)
         db_wrapper = DBWrapper(connection)
         data_store = await DataStore.create(db_wrapper=db_wrapper)
@@ -46,18 +46,17 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
                     keys.remove(key)
                     changelist.append({"action": "delete", "key": key})
                 counter += 1
-            print(f"Inserting batch {batch}.")
             await data_store.insert_batch(tree_id, changelist)
-            print(f"Inserted batch {batch}.")
             filename_full_tree = foldername + f"/{batch}.dat"
             filename_diff_tree = foldername + f"/{batch}-delta.dat"
+            filename_roots = foldername + "/roots.dat"
             root = await data_store.get_tree_root(tree_id)
             print(f"Batch: {batch}. Root hash: {root.node_hash}")
-            print(f"Full tree: {filename_full_tree}. Diff tree: {filename_diff_tree}.")
             if root.node_hash is not None:
                 await data_store.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
                 await data_store.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
-
+                with open(filename_roots, "a") as writer:
+                    writer.write(f"{root.node_hash.hex()}\n")
         await connection.close()
 
 
