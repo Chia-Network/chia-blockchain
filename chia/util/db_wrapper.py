@@ -45,6 +45,7 @@ class DBWrapper2:
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
+        assert c != self._write_connection
         await c.execute("pragma query_only")
         self._read_connections.put_nowait(c)
         self._num_read_connections += 1

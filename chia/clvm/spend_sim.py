@@ -101,22 +101,22 @@ class SpendSim:
 
         # Load the next data if there is any
         async with self.db_wrapper.write_db() as conn:
-             await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
-             cursor = await conn.execute("SELECT * from block_data")
-             row = await cursor.fetchone()
-             await cursor.close()
-             if row is not None:
-                 store_data = SimStore.from_bytes(row[0])
-                 self.timestamp = store_data.timestamp
-                 self.block_height = store_data.block_height
-                 self.block_records = store_data.block_records
-                 self.blocks = store_data.blocks
-             else:
-                 self.timestamp = 1
-                 self.block_height = 0
-                 self.block_records = []
-                 self.blocks = []
-             return self
+            await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+            cursor = await conn.execute("SELECT * from block_data")
+            row = await cursor.fetchone()
+            await cursor.close()
+            if row is not None:
+                store_data = SimStore.from_bytes(row[0])
+                self.timestamp = store_data.timestamp
+                self.block_height = store_data.block_height
+                self.block_records = store_data.block_records
+                self.blocks = store_data.blocks
+            else:
+                self.timestamp = 1
+                self.block_height = 0
+                self.block_records = []
+                self.blocks = []
+            return self
 
     async def close(self):
         async with self.db_wrapper.write_db() as conn:
