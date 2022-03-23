@@ -31,7 +31,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node():
+async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
