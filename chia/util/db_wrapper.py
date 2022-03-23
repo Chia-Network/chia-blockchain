@@ -15,7 +15,7 @@ class DBWrapper:
     db: aiosqlite.Connection
     lock: asyncio.Lock
 
-    def __init__(self, connection: aiosqlite.Connection, db_version: int = 1):
+    def __init__(self, connection: aiosqlite.Connection):
         self.db = connection
         self.lock = asyncio.Lock()
 
