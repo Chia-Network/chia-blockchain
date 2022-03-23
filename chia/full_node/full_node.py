@@ -838,8 +838,10 @@ class FullNode:
             if weight_proof_v2:
                 request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_height)
                 ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=10)
-                #todo move salt to member/config
-                seed = std_hash(os.urandom(32) + bytes(ses_response.sub_epoch_summary.get_hash()))
+                salt = bytes32.from_bytes(os.urandom(32))
+                ses_hash = ses_response.sub_epoch_summary.get_hash()
+                seed = std_hash(salt + bytes(ses_hash))
+                self.log.info(f"wp salt is {salt}, ses hash is {ses_hash}, salted seed is {seed}")
                 request = full_node_protocol.RequestProofOfWeightV2(heaviest_peak_height, heaviest_peak_hash, seed)
                 response = await weight_proof_peer.request_proof_of_weight_v2(request, timeout=wp_timeout)
             else:

@@ -36,10 +36,7 @@ class BlockCache(BlockchainInterface):
 
     def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
         header_hash = self.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "block_record" of "BlockCache" has incompatible type "Optional[bytes32]"; expected
-        #       "bytes32"  [arg-type]
-        return self.block_record(header_hash)  # type: ignore[arg-type]
+        return self.block_record(header_hash)
 
     def get_ses_heights(self) -> List[uint32]:
         return sorted(self._sub_epoch_summaries.keys())
