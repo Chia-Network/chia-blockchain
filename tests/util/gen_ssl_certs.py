@@ -17,7 +17,7 @@ from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, ma
     help="Suffix to append to the generated cert/key symbols.",
     required=True,
 )
-def gen_ssl(suffix: str) -> None:
+def gen_ssl(suffix: str = "") -> None:
     captured_crt: Optional[bytes] = None
     captured_key: Optional[bytes] = None
     capture_cert_and_key = False
