@@ -205,6 +205,12 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
+        jobs = []
+        for service_name in self.services.keys():
+            jobs.append(kill_service(self.root_path, self.services, service_name))
+        if jobs:
+            await asyncio.wait(jobs)
+        self.services.clear()
         asyncio.create_task(self.exit())
         return {"success": True}
 
@@ -244,7 +250,7 @@ class WebSocketServer:
                 if msg.type == WSMsgType.CLOSE:
                     self.log.info(f"ConnectionClosed. Closing websocket with {service_name}")
                 elif msg.type == WSMsgType.ERROR:
-                    print(f"Websocket exception. Closing websocket with {service_name}. {ws.exception()}")
+                    self.log.info(f"Websocket exception. Closing websocket with {service_name}. {ws.exception()}")
 
                 self.remove_connection(ws)
                 await ws.close()
@@ -1127,12 +1133,6 @@ class WebSocketServer:
         return response
 
     async def exit(self) -> None:
-        jobs = []
-        for k in self.services.keys():
-            jobs.append(kill_service(self.root_path, self.services, k))
-        if jobs:
-            await asyncio.wait(jobs)
-        self.services.clear()
         if self.websocket_runner is not None:
             await self.websocket_runner.cleanup()
         self.shutdown_event.set()
@@ -1323,7 +1323,6 @@ async def kill_service(
     if process is None:
         return False
     del services[service_name]
-
     result = await kill_process(process, root_path, service_name, "", delay_before_kill)
     return result
 
@@ -1331,68 +1330,6 @@ async def kill_service(
 def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
-
-
-def create_server_for_daemon(root_path: Path):
-    routes = web.RouteTableDef()
-
-    services: Dict = dict()
-
-    @routes.get("/daemon/ping/")
-    async def ping(request: web.Request) -> web.Response:
-        return web.Response(text="pong")
-
-    @routes.get("/daemon/service/start/")
-    async def start_service(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None or not validate_service(service_name):
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-
-        if is_running(services, service_name):
-            r = f"{service_name} already running"
-            return web.Response(text=str(r))
-
-        try:
-            process, pid_path = launch_service(root_path, service_name)
-            services[service_name] = process
-            r = f"{service_name} started"
-        except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")
-            r = f"{service_name} start failed"
-
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/service/stop/")
-    async def stop_service(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None:
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-        r = str(await kill_service(root_path, services, service_name))
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/service/is_running/")
-    async def is_running_handler(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None:
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-
-        r = str(is_running(services, service_name))
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/exit/")
-    async def exit(request: web.Request):
-        jobs = []
-        for k in services.keys():
-            jobs.append(kill_service(root_path, services, k))
-        if jobs:
-            await asyncio.wait(jobs)
-        services.clear()
-
-        # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
-        # request to exit
 
 
 def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
@@ -1449,7 +1386,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     shutdown_event = asyncio.Event()
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
-    create_server_for_daemon(root_path)
     ws_server = WebSocketServer(
         root_path,
         ca_crt_path,
