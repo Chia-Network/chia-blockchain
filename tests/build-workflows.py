@@ -68,6 +68,10 @@ def generate_replacements(conf, dir):
         "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
             Path(root_path / "runner_templates/checkout-test-plots.include.yml")
         ).rstrip(),
+        "CHECK_RESOURCE_USAGE": read_file(
+            Path(root_path / "runner_templates/check-resource-usage.include.yml")
+        ).rstrip(),
+        "DISABLE_PYTEST_MONITOR": "",
         "TEST_DIR": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
@@ -87,9 +91,8 @@ def generate_replacements(conf, dir):
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
-    if "CHECK_RESOURCE_USAGE" in conf:
-        replacements["DISABLE_PYTEST_MONITOR"] = ""
-    else:
+    if not conf["check_resource_usage"]:
+        replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
         replacements["DISABLE_PYTEST_MONITOR"] = "-p no:monitor"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
