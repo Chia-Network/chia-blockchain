@@ -46,6 +46,7 @@ steps:
   - script: |
       python3 -m venv ../venv
       . ../venv/bin/activate
+      python -m sysconfig
       pip install setuptools_scm
       touch $(System.DefaultWorkingDirectory)/build_scripts/version.txt
       python ./build_scripts/installer-version.py > $(System.DefaultWorkingDirectory)/build_scripts/version.txt
