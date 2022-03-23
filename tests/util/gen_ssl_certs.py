@@ -1,10 +1,10 @@
-import click
-
-from chia.ssl.create_ssl import generate_ca_signed_cert, make_ca_cert
 from pathlib import Path
-from pytest import MonkeyPatch
 from typing import Optional
 
+import click
+from pytest import MonkeyPatch
+
+from chia.ssl.create_ssl import generate_ca_signed_cert, get_chia_ca_crt_key, make_ca_cert
 
 # NOTE: This is a standalone tool that can be used to generate a CA cert/key as well as node certs/keys.
 
@@ -17,12 +17,12 @@ from typing import Optional
     help="Suffix to append to the generated cert/key symbols.",
     required=True,
 )
-def gen_ssl(suffix: str):
+def gen_ssl(suffix: str) -> None:
     captured_crt: Optional[bytes] = None
     captured_key: Optional[bytes] = None
     capture_cert_and_key = False
 
-    def patched_write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes):
+    def patched_write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes) -> None:
         nonlocal capture_cert_and_key, captured_crt, captured_key
 
         if capture_cert_and_key:
@@ -37,18 +37,18 @@ def gen_ssl(suffix: str):
     patch = MonkeyPatch()
     patch.setattr("chia.ssl.create_ssl.write_ssl_cert_and_key", patched_write_ssl_cert_and_key)
 
-    ca_crt: Optional[bytes] = None
-    ca_key: Optional[bytes] = None
+    private_ca_crt: Optional[bytes] = None
+    private_ca_key: Optional[bytes] = None
     capture_cert_and_key = True
 
-    print("from typing import Dict, List, Tuple")
+    print("from typing import Dict, Tuple")
     print()
 
     make_ca_cert(Path("SSL_TEST_PRIVATE_CA_CRT"), Path("SSL_TEST_PRIVATE_CA_KEY"))
 
     capture_cert_and_key = False
-    ca_crt = captured_crt
-    ca_key = captured_key
+    private_ca_crt = captured_crt
+    private_ca_key = captured_key
 
     node_certs_and_keys = {
         "full_node": {
@@ -75,33 +75,37 @@ def gen_ssl(suffix: str):
         },
     }
 
+    chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
+
     for node_name, cert_type_dict in node_certs_and_keys.items():
-        for _, cert_dict in cert_type_dict.items():
+        for cert_type, cert_dict in cert_type_dict.items():
             crt = cert_dict["crt"]
             key = cert_dict["key"]
-            generate_ca_signed_cert(ca_crt, ca_key, crt, key)
+            ca_crt = chia_ca_crt if cert_type == "public" else private_ca_crt
+            ca_key = chia_ca_key if cert_type == "public" else private_ca_key
+
+            generate_ca_signed_cert(ca_crt, ca_key, Path(crt), Path(key))
 
     patch.undo()
 
     append_str = "" if suffix == "" else f"_{suffix}"
     print(
-        f"SSL_TEST_PRIVATE_CA_CERT_AND_KEY{append_str}: List[Tuple[bytes, bytes]] = "
+        f"SSL_TEST_PRIVATE_CA_CERT_AND_KEY{append_str}: Tuple[bytes, bytes] = "
         "(SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)"
     )
     print()
-    print(f"SSL_TEST_NODE_CERTS_AND_KEYS{append_str}: Dict[str, Dict[str, bytes]] = {{")
+    print(f"SSL_TEST_NODE_CERTS_AND_KEYS{append_str}: Dict[str, Dict[str, Dict[str, bytes]]] = {{")
     for node_name, cert_type_dict in node_certs_and_keys.items():
         print(f'    "{node_name}": {{')
         for cert_type, cert_dict in cert_type_dict.items():
             crt = cert_dict["crt"]
             key = cert_dict["key"]
-            print(f'       "{cert_type}": {{"crt": {crt}, "key": {key}}},')
+            print(f'        "{cert_type}": {{"crt": {crt}, "key": {key}}},')
         print("    },")
     print("}")
-    print()
 
 
-def main():
+def main() -> None:
     gen_ssl()
 
 
