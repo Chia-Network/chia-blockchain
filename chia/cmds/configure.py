@@ -4,7 +4,6 @@ from typing import Dict, Optional
 import click
 
 from chia.util.config import get_config_lock, load_config, save_config, str2bool
-from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
 def configure(
@@ -25,7 +24,7 @@ def configure(
     seeder_nameserver: str,
 ):
     with get_config_lock(root_path, "config.yaml"):
-        config: Dict = load_config(DEFAULT_ROOT_PATH, "config.yaml", acquire_lock=False)
+        config: Dict = load_config(root_path, "config.yaml", acquire_lock=False)
         change_made = False
         if set_node_introducer:
             try:
@@ -75,7 +74,7 @@ def configure(
             levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
             if set_log_level in levels:
                 config["logging"]["log_level"] = set_log_level
-                print(f"Logging level updated. Check {DEFAULT_ROOT_PATH}/log/debug.log")
+                print(f"Logging level updated. Check {root_path}/log/debug.log")
                 change_made = True
             else:
                 print(f"Logging level not updated. Use one of: {levels}")

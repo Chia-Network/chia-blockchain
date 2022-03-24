@@ -23,7 +23,13 @@ from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node_sim_and_wallet():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
@@ -35,19 +41,19 @@ async def wallet_node_100_pk():
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_five_freeze():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def three_sim_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}, True):
+    async for _ in setup_simulators_and_wallets(3, 2, {}):
         yield _
 
 
@@ -57,9 +63,9 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node, trusted, self_hostname):
+    async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, trusted, self_hostname):
         num_blocks = 10
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -170,9 +176,9 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase_reorg(self, wallet_node, trusted, self_hostname):
+    async def test_wallet_coinbase_reorg(self, wallet_node_sim_and_wallet, trusted, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]

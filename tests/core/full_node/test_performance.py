@@ -40,7 +40,7 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_nodes(bt):
+async def wallet_nodes_perf(bt):
     async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -55,8 +55,9 @@ async def wallet_nodes(bt):
 
 class TestPerformance:
     @pytest.mark.asyncio
-    async def test_full_block_performance(self, bt, wallet_nodes, self_hostname):
-        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes
+    @pytest.mark.benchmark
+    async def test_full_block_performance(self, bt, wallet_nodes_perf, self_hostname):
+        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 
@@ -146,8 +147,10 @@ class TestPerformance:
 
             if req is None:
                 break
+        end = time.time()
         log.warning(f"Num Tx: {num_tx}")
-        log.warning(f"Time for mempool: {time.time() - start}")
+        log.warning(f"Time for mempool: {end - start:f}")
+        assert end - start < 0.001
         pr.create_stats()
         pr.dump_stats("./mempool-benchmark.pstats")
 
@@ -188,8 +191,10 @@ class TestPerformance:
 
         start = time.time()
         res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
+        end = time.time()
         log.warning(f"Res: {res}")
-        log.warning(f"Time for unfinished: {time.time() - start}")
+        log.warning(f"Time for unfinished: {end - start:f}")
+        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./unfinished-benchmark.pstats")
@@ -201,8 +206,10 @@ class TestPerformance:
         # No transactions generator, the full node already cached it from the unfinished block
         block_small = dataclasses.replace(block, transactions_generator=None)
         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
+        end = time.time()
         log.warning(f"Res: {res}")
-        log.warning(f"Time for full block: {time.time() - start}")
+        log.warning(f"Time for full block: {end - start:f}")
+        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./full-block-benchmark.pstats")

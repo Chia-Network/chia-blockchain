@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
+import sqlite3
 from blspy import AugSchemeMPL
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
@@ -74,7 +75,7 @@ from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version
+from chia.util.db_version import lookup_db_version, set_db_version_async
 
 
 class FullNode:
@@ -165,10 +166,21 @@ class FullNode:
         # create the store (db) and full node instance
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("pragma journal_mode=wal")
-
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
         await self.connection.execute("pragma synchronous={}".format(db_sync))
+
+        async with self.connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+        ) as conn:
+            if len(await conn.fetchall()) == 0:
+                try:
+                    # this is a new DB file. Make it v2
+                    await set_db_version_async(self.connection, 2)
+                except sqlite3.OperationalError:
+                    # it could be a database created with "chia init", which is
+                    # empty except it has the database_version table
+                    pass
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")

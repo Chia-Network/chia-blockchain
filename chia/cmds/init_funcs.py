@@ -1,5 +1,6 @@
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -23,6 +24,7 @@ from chia.util.config import (
     unflatten_properties,
     get_config_lock,
 )
+from chia.util.db_version import set_db_version
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir, path_from_root
 from chia.util.ssl_check import (
@@ -463,24 +465,29 @@ def chia_init(
 
     config: Dict
 
-    if v1_db:
-        with get_config_lock(root_path, "config.yaml"):
+    with get_config_lock(root_path, "config.yaml"):
+        db_path_replaced: str
+        if v1_db:
             config = load_config(root_path, "config.yaml", acquire_lock=False)
             db_pattern = config["full_node"]["database_path"]
             new_db_path = db_pattern.replace("_v2_", "_v1_")
             config["full_node"]["database_path"] = new_db_path
-            save_config(root_path, "config.yaml", config)
-    else:
-        config = load_config(root_path, "config.yaml")["full_node"]
-        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(db_path.parent)
-        import sqlite3
+            db_path_replaced = new_db_path.replace("CHALLENGE", config["selected_network"])
+            db_path = path_from_root(root_path, db_path_replaced)
 
-        with sqlite3.connect(db_path) as connection:
-            connection.execute("CREATE TABLE database_version(version int)")
-            connection.execute("INSERT INTO database_version VALUES (2)")
-            connection.commit()
+            with sqlite3.connect(db_path) as connection:
+                set_db_version(connection, 1)
+
+            save_config(root_path, "config.yaml", config)
+
+        else:
+            config = load_config(root_path, "config.yaml", acquire_lock=False)["full_node"]
+            db_path_replaced = config["database_path"].replace("CHALLENGE", config["selected_network"])
+            db_path = path_from_root(root_path, db_path_replaced)
+            mkdir(db_path.parent)
+
+            with sqlite3.connect(db_path) as connection:
+                set_db_version(connection, 2)
 
     print("")
     print("To see your keys, run 'chia keys show --show-mnemonic-seed'")

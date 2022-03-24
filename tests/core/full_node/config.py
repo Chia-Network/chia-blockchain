@@ -1,4 +1,5 @@
 # flake8: noqa: E501
+parallel = True
 job_timeout = 50
 CHECK_RESOURCE_USAGE = """
     - name: Check resource usage

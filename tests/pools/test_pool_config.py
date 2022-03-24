@@ -4,7 +4,7 @@ from pathlib import Path
 from blspy import AugSchemeMPL, PrivateKey
 
 from chia.pools.pool_config import PoolWalletConfig
-from chia.util.config import load_config, save_config, create_default_chia_config
+from chia.util.config import get_config_lock, load_config, save_config, create_default_chia_config
 
 
 def test_pool_config():
@@ -37,6 +37,8 @@ def test_pool_config():
     config_b["wallet"]["pool_list"] = [pwc.to_json_dict()]
 
     print(config["wallet"]["pool_list"])
-    save_config(test_root, "test_pool_config_a.yaml", config_a)
-    save_config(test_root, "test_pool_config_b.yaml", config_b)
+    with get_config_lock(test_root, "test_pool_config_a.yaml"):
+        save_config(test_root, "test_pool_config_a.yaml", config_a)
+    with get_config_lock(test_root, "test_pool_config_b.yaml"):
+        save_config(test_root, "test_pool_config_b.yaml", config_b)
     assert config_a == config_b
