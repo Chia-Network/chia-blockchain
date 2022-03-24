@@ -230,7 +230,7 @@ class FarmerAPI:
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
-
+                self.farmer.log.debug(f"POST /partial request {post_partial_request}")
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(

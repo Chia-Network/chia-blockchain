@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -28,32 +27,9 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
+                {"fingerprint": fingerprint, "type": "start"},
             )
 
-        except ValueError as e:
-            return e.args[0]
-
-    async def log_in_and_restore(self, fingerprint: int, file_path) -> Dict:
-        try:
-            return await self.fetch(
-                "log_in",
-                {
-                    "host": "https://backup.chia.net",
-                    "fingerprint": fingerprint,
-                    "type": "restore_backup",
-                    "file_path": file_path,
-                },
-            )
-        except ValueError as e:
-            return e.args[0]
-
-    async def log_in_and_skip(self, fingerprint: int) -> Dict:
-        try:
-            return await self.fetch(
-                "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
-            )
         except ValueError as e:
             return e.args[0]
 
@@ -194,9 +170,6 @@ class WalletRpcClient(RpcClient):
         )
         return None
 
-    async def create_backup(self, file_path: Path) -> None:
-        return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
-
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
@@ -255,7 +228,6 @@ class WalletRpcClient(RpcClient):
             "backup_dids": [],
             "num_of_backup_ids_needed": 0,
             "amount": amount,
-            "host": f"{self.hostname}:{self.port}",
         }
         response = await self.fetch("create_new_wallet", request)
         return response
@@ -265,7 +237,6 @@ class WalletRpcClient(RpcClient):
             "wallet_type": "did_wallet",
             "did_type": "recovery",
             "filename": filename,
-            "host": f"{self.hostname}:{self.port}",
         }
         response = await self.fetch("create_new_wallet", request)
         return response
@@ -306,7 +277,6 @@ class WalletRpcClient(RpcClient):
         request: Dict[str, Any] = {
             "wallet_type": "pool_wallet",
             "mode": mode,
-            "host": backup_host,
             "initial_target_state": {
                 "target_puzzle_hash": target_puzzlehash.hex() if target_puzzlehash else None,
                 "relative_lock_height": relative_lock_height,
@@ -365,7 +335,6 @@ class WalletRpcClient(RpcClient):
             "wallet_type": "cat_wallet",
             "mode": "new",
             "amount": amount,
-            "host": f"{self.hostname}:{self.port}",
         }
         return await self.fetch("create_new_wallet", request)
 
@@ -374,7 +343,6 @@ class WalletRpcClient(RpcClient):
             "wallet_type": "cat_wallet",
             "asset_id": asset_id.hex(),
             "mode": "existing",
-            "host": f"{self.hostname}:{self.port}",
         }
         return await self.fetch("create_new_wallet", request)
 
