@@ -87,6 +87,7 @@ class RpcServer:
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
             "/get_routes": self._get_routes,
+            "/healthz": self.healthz,
         }
 
     async def _get_routes(self, request: Dict) -> Dict:
@@ -182,6 +183,11 @@ class RpcServer:
         if self.stop_cb is not None:
             self.stop_cb()
         return {}
+
+    async def healthz(self, request: Dict) -> Dict:
+        return {
+            "success": "true",
+        }
 
     async def ws_api(self, message):
         """

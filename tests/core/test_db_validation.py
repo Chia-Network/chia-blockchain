@@ -1,14 +1,11 @@
-import asyncio
 import random
 import sqlite3
-from asyncio.events import AbstractEventLoop
 from contextlib import closing
 from pathlib import Path
-from typing import Iterator, List
+from typing import List
 
 import aiosqlite
 import pytest
-import pytest_asyncio
 
 from chia.cmds.db_validate_func import validate_v2
 from chia.consensus.blockchain import Blockchain
@@ -23,12 +20,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
-
-
-@pytest_asyncio.fixture(scope="session")
-def event_loop() -> Iterator[AbstractEventLoop]:
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def rand_hash() -> bytes32:

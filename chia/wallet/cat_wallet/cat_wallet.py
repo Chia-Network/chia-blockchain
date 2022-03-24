@@ -11,7 +11,6 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -328,34 +327,26 @@ class CATWallet:
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
                         [coin.parent_coin_info], None, node
                     )
+                    # check for empty list and continue on to next node
+                    if not coin_state:
+                        continue
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                         node, coin_state[0].spent_height, coin_state[0].coin
                     )
-                    await self.puzzle_solution_received(coin_spend)
+                    await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
                     break
                 except Exception as e:
                     self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend):
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         matched, curried_args = match_cat_puzzle(puzzle)
         if matched:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
-            parent_coin = None
-            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-            if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin_name]
-                )
-                if coin_states is not None:
-                    parent_coin = coin_states[0].coin
-            if coin_record is not None:
-                parent_coin = coin_record.coin
-            if parent_coin is None:
-                raise ValueError("Error in finding parent")
+
             await self.add_lineage(
                 coin_name,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),

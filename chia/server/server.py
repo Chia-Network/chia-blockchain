@@ -42,7 +42,7 @@ def ssl_context_for_server(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
@@ -70,7 +70,7 @@ def ssl_context_for_server(
 
 def ssl_context_for_root(
     ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
 
@@ -86,7 +86,7 @@ def ssl_context_for_client(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
