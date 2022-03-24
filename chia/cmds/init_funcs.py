@@ -254,7 +254,7 @@ def create_all_ssl(
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(
-            ssl_dir, ca_crt, ca_key, nodes=private_node_names, private=True, node_certs_and_keys=node_certs_and_keys
+            ssl_dir, ca_crt, ca_key, prefix="private", nodes=private_node_names, node_certs_and_keys=node_certs_and_keys
         )
     else:
         # This is entered when user copied over private CA
@@ -262,7 +262,7 @@ def create_all_ssl(
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(
-            ssl_dir, ca_crt, ca_key, nodes=private_node_names, private=True, node_certs_and_keys=node_certs_and_keys
+            ssl_dir, ca_crt, ca_key, prefix="private", nodes=private_node_names, node_certs_and_keys=node_certs_and_keys
         )
 
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
@@ -270,8 +270,8 @@ def create_all_ssl(
         ssl_dir,
         chia_ca_crt,
         chia_ca_key,
+        prefix="public",
         nodes=public_node_names,
-        private=False,
         overwrite=False,
         node_certs_and_keys=node_certs_and_keys,
     )
@@ -282,18 +282,14 @@ def generate_ssl_for_nodes(
     ca_crt: bytes,
     ca_key: bytes,
     *,
+    prefix: str,
     nodes: List[str],
-    private: bool,
     overwrite: bool = True,
     node_certs_and_keys: Optional[Dict[str, Dict]] = None,
 ):
     for node_name in nodes:
         node_dir = ssl_dir / node_name
         ensure_ssl_dirs([node_dir])
-        if private:
-            prefix = "private"
-        else:
-            prefix = "public"
         key_path = node_dir / f"{prefix}_{node_name}.key"
         crt_path = node_dir / f"{prefix}_{node_name}.crt"
         if node_certs_and_keys is not None:
