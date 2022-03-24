@@ -3,7 +3,7 @@ import itertools
 from typing import Collection, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock

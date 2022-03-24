@@ -11,6 +11,7 @@ from operator import attrgetter
 import logging
 
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -22,7 +23,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.hash import std_hash
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -32,14 +33,16 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
 
 class TestWalletRpc:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
@@ -50,9 +53,9 @@ class TestWalletRpc:
     )
     @pytest.mark.asyncio
     async def test_wallet_rpc(self, two_wallet_nodes, trusted):
-        test_rpc_port = uint16(21529)
-        test_rpc_port_2 = uint16(21536)
-        test_rpc_port_node = uint16(21530)
+        test_rpc_port = find_available_listen_port()
+        test_rpc_port_2 = find_available_listen_port()
+        test_rpc_port_node = find_available_listen_port()
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -168,6 +171,7 @@ class TestWalletRpc:
             async def eventual_balance_det(c, wallet_id: str):
                 return (await c.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
 
+            await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
             # Checks that the memo can be retrieved
             tx_confirmed = await client.get_transaction("1", transaction_id)
             assert tx_confirmed.confirmed
@@ -378,6 +382,17 @@ class TestWalletRpc:
             assert [b"SeMemo"] in memos.values()
             assert list(memos.keys())[0] in [a.name() for a in send_tx_res.spend_bundle.additions()]
             assert list(memos.keys())[1] in [a.name() for a in send_tx_res.spend_bundle.additions()]
+
+            # Test get_transactions to address
+            ph_by_addr = await wallet.get_new_puzzlehash()
+            await client.send_transaction("1", 1, encode_puzzle_hash(ph_by_addr, "xch"))
+            await client.farm_block(encode_puzzle_hash(ph_by_addr, "xch"))
+            await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+            tx_for_address = await wallet_rpc_api.get_transactions(
+                {"wallet_id": "1", "to_address": encode_puzzle_hash(ph_by_addr, "xch")}
+            )
+            assert len(tx_for_address["transactions"]) == 1
+            assert decode_puzzle_hash(tx_for_address["transactions"][0]["to_address"]) == ph_by_addr
 
             ##############
             # CATS       #

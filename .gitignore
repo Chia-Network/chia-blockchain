@@ -92,6 +92,8 @@ build/
 
 # data layer
 **/dl_server_files*
+# Temporal `n` (node version manager) directory
+.n/
 
 # pytest-monitor
 # https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage

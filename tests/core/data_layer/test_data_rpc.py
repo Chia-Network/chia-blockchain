@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Tuple, Set
 import pytest
+import pytest_asyncio
 
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -21,31 +22,34 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
 
 
-async def init_data_layer(root_path: Path) -> AsyncIterator[DataLayer]:
-    test_rpc_port = uint16(21529)
+async def init_data_layer(wallet_rpc_port: int) -> AsyncIterator[DataLayer]:
     config = bt.config
-    kwargs = service_kwargs_for_data_layer(root_path, config, test_rpc_port)
+    config["data_layer"]["wallet_peer"]["port"] = wallet_rpc_port
+    config["data_layer"]["port"] = find_available_listen_port("data_layer")
+    config["data_layer"]["rpc_port"] = find_available_listen_port("data_layer_rpc")
+    kwargs = service_kwargs_for_data_layer(root_path=bt.root_path, config=config)
     kwargs.update(parse_cli_args=False)
-    service = Service(**kwargs)
+    service = Service(**kwargs, handle_signals=False)
     await service.start()
     yield service._api.data_layer
     service.stop()
     await service.wait_closed()
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def one_wallet_node() -> AsyncIterator[nodes]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
         full_nodes, wallets = nodes
@@ -53,12 +57,11 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(21529)
         rpc_cleanup = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
             daemon_port,
-            test_rpc_port,
+            wallet_node_0.config["port"],
             lambda x: None,
             bt.root_path,
             config,
@@ -85,7 +88,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
@@ -141,7 +144,7 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -204,7 +207,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
     # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -288,7 +291,7 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -363,7 +366,7 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -441,7 +444,7 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -532,7 +535,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(root_path):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None

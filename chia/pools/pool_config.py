@@ -58,6 +58,25 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     return ret_list
 
 
+# TODO: remove this a few versions after 1.3, since authentication_public_key is deprecated. This is here to support
+# downgrading to versions older than 1.3.
+def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1Element):
+    config = load_config(root_path, "config.yaml")
+    pool_list = config["pool"].get("pool_list", [])
+    if pool_list is not None:
+        for pool_config_dict in pool_list:
+            try:
+                if (
+                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"]))
+                    == config_entry.owner_public_key
+                ):
+                    pool_config_dict["authentication_public_key"] = bytes(auth_key).hex()
+            except Exception as e:
+                log.error(f"Exception updating config: {pool_config_dict} {e}")
+    config["pool"]["pool_list"] = pool_list
+    save_config(root_path, "config.yaml", config)
+
+
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
     full_config = load_config(root_path, "config.yaml")
     full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
