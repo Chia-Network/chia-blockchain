@@ -289,7 +289,7 @@ class DataLayerWallet:
         while len(puzzle_hashes_to_search_for) != 0:
             coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
                 [launcher_id, new_singleton.puzzle_hash]
-            )is:pr is:open sort:updated-desc base:a
+            )
             state_set = set(
                 filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)
             )  # Sanity check for troublemakers
