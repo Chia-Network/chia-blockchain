@@ -90,7 +90,6 @@ jobs:
         . ./activate
         ./venv/bin/py.test tests/core/full_node/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
 
-
     - name: Check resource usage
       run: |
         sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out

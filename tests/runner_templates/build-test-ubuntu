@@ -75,9 +75,10 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark"
+        ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
 
 CHECK_RESOURCE_USAGE
+
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

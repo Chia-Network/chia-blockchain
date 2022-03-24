@@ -88,8 +88,9 @@ jobs:
     - name: Test pools code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/pools/test_*.py -s -v --durations 0 -n 0 -m "not benchmark"
+        ./venv/bin/py.test tests/pools/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
