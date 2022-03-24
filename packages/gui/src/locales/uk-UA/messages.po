@@ -222,7 +222,7 @@ msgstr "Файл резервної копії використовується 
 #~ msgid "Balance"
 #~ msgstr "Баланс"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "Базова сума винагороди фермера"
 
@@ -239,15 +239,15 @@ msgstr "Найкраща оцінка за останні 24 години"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "Блок"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Перевірка блоку"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "VDF ітерацій блоку"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Блок на висоті {0} в блокчейні Chia"
 
@@ -267,15 +267,15 @@ msgstr "Блок на висоті {0} в блокчейні Chia"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "Блок з хешем {headerHash}"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Блок з хешем {headerHash} не існує."
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "Блоки"
 
@@ -749,7 +749,7 @@ msgstr "Розробник"
 msgid "Developer Tools"
 msgstr "Інструменти розробника"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Складність"
@@ -926,7 +926,7 @@ msgstr "Ферма"
 msgid "Farmer Public Key"
 msgstr "Відкритий ключ фермера"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "Хеш головоломки фермера"
 
@@ -1005,7 +1005,7 @@ msgstr "Комісія"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "Сума збору"
 
@@ -1028,8 +1028,8 @@ msgstr "Ім'я файлу"
 msgid "Final folder location"
 msgstr "Розташування кінцевої теки"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "Завершено"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "Найчастіші питання"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "Повний вузол"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr ""
 
@@ -1082,16 +1082,16 @@ msgstr ""
 msgid "Harvester Plots"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "Хеш заголовка"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "Хеш заголовка"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Висота"
@@ -1142,7 +1142,7 @@ msgstr "Якщо нічого не вибрано, за замовчування
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Імпортувати за допомогою мнемоніки (24 слова)"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "Виконується"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "Далі"
 
@@ -1777,7 +1777,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "Кількість ділянок"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "ID ділянки"
 
@@ -1798,7 +1798,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "Публічний ключ ділянки"
 
@@ -1895,12 +1895,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Публічний ключ пулу"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "Хеш головоломки пула"
 
@@ -1920,7 +1920,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "Кількість винагороди пула"
 
@@ -1971,7 +1971,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "Попередній"
 
@@ -1979,7 +1979,7 @@ msgstr "Попередній"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "Хеш попереднього заголовка"
 
@@ -1999,7 +1999,7 @@ msgstr "Хеш попереднього заголовка"
 #~ msgid "Private key:"
 #~ msgstr "Закритий ключ:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "Розмір Доказу простору"
 
@@ -2385,7 +2385,7 @@ msgstr "Мовлення"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "Стан"
 
@@ -2547,19 +2547,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Зерно, яке використовувалося для створення ділянки. Зерно залежить від публічного ключа пулу і публічного ключа ділянки."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Загальна кількість ітерації VDF (від англ. Verifiable Delay Function - перевіряєма функція затримки) або доказів тимчасових ітерацій по всьому ланцюжку до цього підблока."
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Загальна кількість VDF (від англ. Verifiable Delay Function - перевіряємо функція затримки), іншими словами загальна кількість доказів часових ітерацій в цьому блоці."
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Загальна комісія за транзакції в цьому блоці, що була отримана фермерами."
 
@@ -2600,7 +2600,7 @@ msgstr "Ця функція доступна лише з графічного і
 msgid "This is the time of the latest peak sub block."
 msgstr "Це час останнього пікового блоку."
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Це час, коли блок був створений фермером, який до того, як він буде опрацьований доказом часу"
 
@@ -2658,7 +2658,7 @@ msgstr "Ця таблиця показує вам останній раз, ко�
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "Час створення"
 
@@ -2666,7 +2666,7 @@ msgstr "Час створення"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "Часова мітка"
 
@@ -2680,7 +2680,7 @@ msgstr "Часова мітка"
 #~ msgid "Total Balance"
 #~ msgstr "Загальний баланс"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "Загальний обсяг ділянок:"
 msgid "Total Size of Plots"
 msgstr "Загальний розмір ділянок"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "Загальна кількість VDF ітерацій"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "Історія торгів"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "Хеш фільтру транзакцій"
 
@@ -2761,7 +2761,7 @@ msgstr "Хеш фільтру транзакцій"
 msgid "Unclaimed Rewards"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "Незавершений"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "Публічний ключ користувача"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "Вага"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Вага - це загальна додана складність усіх підблоків до цього, та включно з цим"
 
@@ -2965,7 +2965,7 @@ msgstr "Вага - це загальна додана складність ус�
 msgid "Window"
 msgstr "Вікно"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "Без комісії"
 

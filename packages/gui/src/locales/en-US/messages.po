@@ -222,7 +222,7 @@ msgstr "Backup file is used to restore smart wallets."
 #~ msgid "Balance"
 #~ msgstr "Balance"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "Base Farmer Reward Amount"
 
@@ -239,15 +239,15 @@ msgstr "Best estimate over last 24 hours"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "Block"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr "Block Rewards"
 
@@ -255,11 +255,11 @@ msgstr "Block Rewards"
 #~ msgid "Block Test"
 #~ msgstr "Block Test"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "Block VDF Iterations"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Block at height {0} in the Chia blockchain"
 
@@ -267,15 +267,15 @@ msgstr "Block at height {0} in the Chia blockchain"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "Block with hash {headerHash}"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Block with hash {headerHash} does not exist."
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "Blocks"
 
@@ -749,7 +749,7 @@ msgstr "Developer"
 msgid "Developer Tools"
 msgstr "Developer Tools"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Difficulty"
@@ -926,7 +926,7 @@ msgstr "Farm"
 msgid "Farmer Public Key"
 msgstr "Farmer Public Key"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "Farmer Puzzle Hash"
 
@@ -1005,7 +1005,7 @@ msgstr "Fee"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr "Fee is used TWICE: once to leave pool, once to join."
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "Fees Amount"
 
@@ -1028,8 +1028,8 @@ msgstr "Filename"
 msgid "Final folder location"
 msgstr "Final folder location"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "Finished"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "Frequently Asked Questions"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr "Full Node Overview"
 
@@ -1082,16 +1082,16 @@ msgstr "Grid view"
 msgid "Harvester Plots"
 msgstr "Harvester Plots"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "Header Hash"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "Header hash"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Height"
@@ -1142,7 +1142,7 @@ msgstr "If none selected, then it will default to the temporary directory."
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Import from Mnemonics (24 words)"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "In Progress"
 
@@ -1428,7 +1428,7 @@ msgstr "New Passphrase"
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr "New passphrase is the same as your current passphrase"
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "Next"
 
@@ -1777,7 +1777,7 @@ msgstr "Please wait for wallet synchronization"
 msgid "Plot Count"
 msgstr "Plot Count"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "Plot Id"
 
@@ -1798,7 +1798,7 @@ msgstr "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exist"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "Plot Public Key"
 
@@ -1895,12 +1895,12 @@ msgstr "Pool Login Link"
 msgid "Pool Payout Instructions"
 msgstr "Pool Payout Instructions"
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Pool Public Key"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "Pool Puzzle Hash"
 
@@ -1920,7 +1920,7 @@ msgstr "Pool Reward Address is not properly formatted."
 msgid "Pool Reward Address must not be empty."
 msgstr "Pool Reward Address must not be empty."
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "Pool Reward Amount"
 
@@ -1971,7 +1971,7 @@ msgstr "Preparing Plot NFT"
 msgid "Preparing standard wallet"
 msgstr "Preparing standard wallet"
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "Previous"
 
@@ -1979,7 +1979,7 @@ msgstr "Previous"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "Previous Header Hash"
 
@@ -1999,7 +1999,7 @@ msgstr "Previous Header Hash"
 #~ msgid "Private key:"
 #~ msgstr "Private key:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "Proof of Space Size"
 
@@ -2385,7 +2385,7 @@ msgstr "Speech"
 msgid "Starting services"
 msgstr "Starting services"
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "State"
 
@@ -2547,19 +2547,19 @@ msgstr "The pool switching operation was cancelled, please try again by changing
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr "The provided passphrase and confirmation do not match"
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "The seed used to create the plot. This depends on the pool pk and plot pk."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "The total transactions fees in this block. Rewarded to the farmer."
 
@@ -2600,7 +2600,7 @@ msgstr "This feature is available only from the GUI."
 msgid "This is the time of the latest peak sub block."
 msgstr "This is the time of the latest peak sub block."
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
@@ -2658,7 +2658,7 @@ msgstr "This table shows you the last time your farm attempted to win a block ch
 msgid "Thread Multiplier for Phase 2"
 msgstr "Thread Multiplier for Phase 2"
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "Time Created"
 
@@ -2666,7 +2666,7 @@ msgstr "Time Created"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "Timestamp"
 
@@ -2680,7 +2680,7 @@ msgstr "Timestamp"
 #~ msgid "Total Balance"
 #~ msgstr "Total Balance"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "Total Plot Size:"
 msgid "Total Size of Plots"
 msgstr "Total Size of Plots"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "Total VDF Iterations"
 
@@ -2744,7 +2744,7 @@ msgstr "Trade tokens"
 #~ msgid "Trading History"
 #~ msgstr "Trading History"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "Transactions Filter Hash"
 
@@ -2761,7 +2761,7 @@ msgstr "Transactions Filter Hash"
 msgid "Unclaimed Rewards"
 msgstr "Unclaimed Rewards"
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "Unfinished"
 
@@ -2786,7 +2786,7 @@ msgstr "Unlock Keyring"
 #~ msgid "User Pubkey"
 #~ msgstr "User Pubkey"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr "User Transaction Fees"
 
@@ -2941,11 +2941,11 @@ msgstr "Warm start"
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "Weight"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
 
@@ -2965,7 +2965,7 @@ msgstr "Weight is the total added difficulty of all sub blocks up to and includi
 msgid "Window"
 msgstr "Window"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "Without fees"
 

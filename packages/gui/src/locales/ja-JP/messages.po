@@ -222,7 +222,7 @@ msgstr "バックアップファイルはスマートウォレットの復元に
 #~ msgid "Balance"
 #~ msgstr "残高"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "農家への基本報酬額"
 
@@ -239,15 +239,15 @@ msgstr "過去24時間を基に推定"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "ブロック"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "ブロックテスト"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "ブロック VDF 評価回数"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "チアブロックチェーン内の高さ {0} のブロック"
 
@@ -267,15 +267,15 @@ msgstr "チアブロックチェーン内の高さ {0} のブロック"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "ハッシュ値 {headerHash} のブロック"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "ハッシュ値 {headerHash} のブロックは存在しません。"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "ブロック"
 
@@ -749,7 +749,7 @@ msgstr "開発者"
 msgid "Developer Tools"
 msgstr "開発者向けツール"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "難易度"
@@ -926,7 +926,7 @@ msgstr "農家"
 msgid "Farmer Public Key"
 msgstr "農家公開鍵"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "農家パズルハッシュ値"
 
@@ -1005,7 +1005,7 @@ msgstr "手数料"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "全手数料"
 
@@ -1028,8 +1028,8 @@ msgstr "ファイル名"
 msgid "Final folder location"
 msgstr "最終フォルダの場所"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "完成"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "よくある質問"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "フルノード"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr ""
 
@@ -1082,16 +1082,16 @@ msgstr ""
 msgid "Harvester Plots"
 msgstr "収穫機上の耕地"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "ヘッダーのハッシュ値"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "ヘッダーのハッシュ値"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "高さ"
@@ -1142,7 +1142,7 @@ msgstr "空欄の場合、1つ目の一時ディレクトリを使用します�
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "合言葉 (24語) で鍵をインポート"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "進行中"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "次へ"
 
@@ -1777,7 +1777,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "耕地数"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "耕地 Id"
 
@@ -1798,7 +1798,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "耕地公開鍵"
 
@@ -1895,12 +1895,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "プール公開鍵"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "プールパズルハッシュ値"
 
@@ -1920,7 +1920,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "プール報酬額"
 
@@ -1971,7 +1971,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "前へ"
 
@@ -1979,7 +1979,7 @@ msgstr "前へ"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "前ヘッダーハッシュ値"
 
@@ -1999,7 +1999,7 @@ msgstr "前ヘッダーハッシュ値"
 #~ msgid "Private key:"
 #~ msgstr "秘密鍵:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "空間証明の大きさ"
 
@@ -2385,7 +2385,7 @@ msgstr "スピーチ"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "状態"
 
@@ -2547,19 +2547,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "耕地作成に使用する種。プール pk 及び耕地 pk に依存した値です。"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "このブロックまでに全ブロックチェーンに行った VDF (検証可能遅延関数)、つまり時間証明の評価回数"
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "このブロックに行った VDF (検証可能遅延関数)、つまり時間証明の評価回数"
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "このブロック内の取引手数料の合計。農家への報酬となります。"
 
@@ -2600,7 +2600,7 @@ msgstr "この機能は GUI 限定です。"
 msgid "This is the time of the latest peak sub block."
 msgstr "最新のピークサブブロックの日時です。"
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "これが農家がブロックを作成した日時です。時間証明によって完成する前の段階です。"
 
@@ -2658,7 +2658,7 @@ msgstr "この表には、最後にあなたの畑がブロックチャレンジ
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "作成日時"
 
@@ -2666,7 +2666,7 @@ msgstr "作成日時"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "タイムスタンプ"
 
@@ -2680,7 +2680,7 @@ msgstr "タイムスタンプ"
 #~ msgid "Total Balance"
 #~ msgstr "全残高"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "全耕地容量:"
 msgid "Total Size of Plots"
 msgstr "全ての耕地の容量の合計"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "全 VDF 評価回数"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "交換履歴"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "取引フィルターハッシュ値"
 
@@ -2761,7 +2761,7 @@ msgstr "取引フィルターハッシュ値"
 msgid "Unclaimed Rewards"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "未完成"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "ユーザー公開鍵"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr "注意: この鍵はプール報酬アドレスに使われています。この鍵を削除すると、今後のプール報酬を失くすかもしれません。"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "重さ"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "ブロック重とはこのブロックを含めた全てのブロックの難易度の合計です。"
 
@@ -2965,7 +2965,7 @@ msgstr "ブロック重とはこのブロックを含めた全てのブロック
 msgid "Window"
 msgstr "ウィンドウ"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "手数料抜き"
 

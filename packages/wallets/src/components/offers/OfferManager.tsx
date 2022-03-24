@@ -23,6 +23,7 @@ import {
   mojoToCATLocaleString,
   useShowSaveDialog,
   Tooltip,
+  LayoutDashboardSub,
 } from '@chia/core';
 import { OfferTradeRecord } from '@chia/api';
 import fs from 'fs';
@@ -512,9 +513,9 @@ export function OfferManager() {
   return (
     <Flex flexDirection="column" gap={3}>
       <Flex flexGrow={1}>
-        <Back variant="h5" to="/dashboard/wallets">
+        <Typography variant="h5">
           <Trans>Manage Offers</Trans>
-        </Back>
+        </Typography>
       </Flex>
       <Grid container>
         <Grid xs={12} md={6} lg={5} item>
@@ -565,23 +566,25 @@ export function CreateOffer() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="create"
-        element={<CreateOfferEditor onOfferCreated={handleOfferCreated} />}
-      />
-      <Route path="import" element={<OfferImport />} />
-
-      <Route path="view" element={(
-        <OfferViewer
-          tradeRecord={location?.state?.tradeRecord}
-          offerData={location?.state?.offerData}
-          offerSummary={location?.state?.offerSummary}
-          offerFilePath={location?.state?.offerFilePath}
-          imported={location?.state?.imported}
+    <LayoutDashboardSub>
+      <Routes>
+        <Route
+          path="create"
+          element={<CreateOfferEditor onOfferCreated={handleOfferCreated} />}
         />
-      )} />
-      <Route path="manage" element={<OfferManager />} />
-    </Routes>
+        <Route path="import" element={<OfferImport />} />
+
+        <Route path="view" element={(
+          <OfferViewer
+            tradeRecord={location?.state?.tradeRecord}
+            offerData={location?.state?.offerData}
+            offerSummary={location?.state?.offerSummary}
+            offerFilePath={location?.state?.offerFilePath}
+            imported={location?.state?.imported}
+          />
+        )} />
+        <Route path="manage" element={<OfferManager />} />
+      </Routes>
+    </LayoutDashboardSub>
   );
 }

@@ -222,7 +222,7 @@ msgstr "يستخدم ملف النسخ الاحتياطي لاستعادة ال�
 #~ msgid "Balance"
 #~ msgstr "الرصيد"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "مبلغ مكافأة المزرعة الأساسي"
 
@@ -239,15 +239,15 @@ msgstr "أفضل تقدير على مدى اخر 24 ساعة"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "كتلة"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "اختبار الكتلة"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "عدد دورات VDF في المربع"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "المربع عند الارتفاع {0} في سلسلة مربعات شيا"
 
@@ -267,15 +267,15 @@ msgstr "المربع عند الارتفاع {0} في سلسلة مربعات ش
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "عنوان الكتلة {headerHash}"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "{headerHash}"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "المربعات"
 
@@ -749,7 +749,7 @@ msgstr "المطور"
 msgid "Developer Tools"
 msgstr "أدوات المطورين"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "مستوى الصعوبة"
@@ -926,7 +926,7 @@ msgstr "المزرعة"
 msgid "Farmer Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "عناوين المزارع المشفرة"
 
@@ -1005,7 +1005,7 @@ msgstr "الرسوم"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "قيمة الرسوم"
 
@@ -1028,8 +1028,8 @@ msgstr "اسم الملف"
 msgid "Final folder location"
 msgstr "موقع الملف النهائي"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "انتهت"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "الأسئلة المتكررة"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "العقد المنتهية"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr ""
 
@@ -1082,16 +1082,16 @@ msgstr ""
 msgid "Harvester Plots"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "تجزئة رأس الصفحة"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "تجزئة رأس الصفحة"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "ارتفاع"
@@ -1142,7 +1142,7 @@ msgstr "إذا لم يتم اختيار أي منها, فسيكون هو الد�
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "إستيراد من Mnemonics (24 كلمة)"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "قيد التقدم"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "التالي"
 
@@ -1777,7 +1777,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "عدد القطع"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "رقم القطعة"
 
@@ -1798,7 +1798,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "مفتاح الكتابة العمومي"
 
@@ -1895,12 +1895,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "المفتاح العام للتجمع"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "تجمع لغز تجزئة"
 
@@ -1920,7 +1920,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "مبلغ مكافأة المجمع"
 
@@ -1971,7 +1971,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "السابق"
 
@@ -1979,7 +1979,7 @@ msgstr "السابق"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "تجزئة العنوان السابق"
 
@@ -1999,7 +1999,7 @@ msgstr "تجزئة العنوان السابق"
 #~ msgid "Private key:"
 #~ msgstr "المفتاح الخاص:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "إثبات مساحة القرص الصلب"
 
@@ -2385,7 +2385,7 @@ msgstr "خطاب"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "الحالة"
 
@@ -2547,19 +2547,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "البذور المستخدمة لإنشاء الحزمة. يعتمد هذا على حوض الحوض وحوض الحزم."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "العدد الإجمالي لـ VDF (وظيفة تأخير يمكن التحقق منها) أو دليل على تكرار الوقت على السلسلة بأكملها حتى هذه الكتلة الفرعية."
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "العدد الإجمالي لـ VDF (وظيفة تأخير يمكن التحقق منها) أو دليل على تكرار الوقت على السلسلة بأكملها حتى هذه الكتلة الفرعية."
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "مجموع رسوم المعاملات في هذه الكتلة. مكافأة للمزارع."
 
@@ -2600,7 +2600,7 @@ msgstr "هذه الميزة متاحة فقط من واجهة المستخدم �
 msgid "This is the time of the latest peak sub block."
 msgstr "هذا هو وقت آخر كتلة فرعية في ذروتها."
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "هذا هو الوقت الذي قام فيه المزارع بإنشاء الكتلة، وهو الوقت الذي يسبق وضعها في صيغتها النهائية بإثبات الوقت"
 
@@ -2658,7 +2658,7 @@ msgstr "هذا الجدول يظهر لك آخر مرة حاولت فيها مز
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "وقت الإنشاء"
 
@@ -2666,7 +2666,7 @@ msgstr "وقت الإنشاء"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "التوقيت الزمني"
 
@@ -2680,7 +2680,7 @@ msgstr "التوقيت الزمني"
 #~ msgid "Total Balance"
 #~ msgstr "الرصيد الإجمالي"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "حجم الجداول الكلي:"
 msgid "Total Size of Plots"
 msgstr "الحجم الإجمالي للأراضي"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "مجموع التعديلات"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "سجل التداول"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "تصفية المعاملات هاش"
 
@@ -2761,7 +2761,7 @@ msgstr "تصفية المعاملات هاش"
 msgid "Unclaimed Rewards"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "غير مكتمل"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "المفتاح العام للمستخدم"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "الوزن/الأهمية"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "الوزن هو الصعوبة المضافة الكلية لجميع الكتل الفرعية حتى و بما في ذلك هذه"
 
@@ -2965,7 +2965,7 @@ msgstr "الوزن هو الصعوبة المضافة الكلية لجميع ا
 msgid "Window"
 msgstr "نافذة"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "بدون رسوم"
 

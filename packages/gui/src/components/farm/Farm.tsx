@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AdvancedOptions, Flex, DashboardTitle } from '@chia/core';
+import { AdvancedOptions, Flex, DashboardTitle, LayoutDashboardSub } from '@chia/core';
 import { useGetHarvesterConnectionsQuery } from '@chia/api-react';
 import FarmOverview from './overview/FarmOverview';
 import FarmLatestBlockChallenges from './FarmLatestBlockChallenges';
@@ -14,7 +14,7 @@ export default function Farm() {
   const { data: connections, isLoading } = useGetHarvesterConnectionsQuery();
 
   return (
-    <> 
+    <LayoutDashboardSub> 
       <DashboardTitle>
         <Trans>Farming</Trans>
       </DashboardTitle>
@@ -45,6 +45,6 @@ export default function Farm() {
           </>
         )}
       </Flex>
-    </>
+    </LayoutDashboardSub>
   );
 }

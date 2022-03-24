@@ -222,7 +222,7 @@ msgstr "El fitxer de còpia de seguretat es fa servir per restaurar els moneders
 #~ msgid "Balance"
 #~ msgstr "Saldo"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "Quantitat base de la recompensa del pagès"
 
@@ -239,15 +239,15 @@ msgstr "Millor estimació sobre les últimes 24 hores"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "Bloc"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Prova de bloc"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "Iteracions de bloc VDF"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Bloc a la alçada {0} a la cadena de blocs de Chia"
 
@@ -267,15 +267,15 @@ msgstr "Bloc a la alçada {0} a la cadena de blocs de Chia"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "Bloc amb hash {headerHash}"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "No existeix el bloc amb hash {headerHash}."
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "Blocs"
 
@@ -749,7 +749,7 @@ msgstr "Desenvolupador"
 msgid "Developer Tools"
 msgstr "Eines de desenvolupament"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Dificultat"
@@ -926,7 +926,7 @@ msgstr "Cultiu"
 msgid "Farmer Public Key"
 msgstr "Clau pública de pagès"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "Enigma Hash de pagès"
 
@@ -1005,7 +1005,7 @@ msgstr "Taxa"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "Cost de les comissions"
 
@@ -1028,8 +1028,8 @@ msgstr "Nom del fitxer"
 msgid "Final folder location"
 msgstr "Ubicació de la carpeta definitiva"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "Acabat"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "Preguntes Freqüents"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "Node complet"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr ""
 
@@ -1082,16 +1082,16 @@ msgstr ""
 msgid "Harvester Plots"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "Capçalera de hash"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "Hash de capçalera"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Alçada"
@@ -1142,7 +1142,7 @@ msgstr "Si no en selecciones cap, anirà al directori temporal per defecte."
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Importar des de mnemotècnics (24 mots)"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "En curs"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "Següent"
 
@@ -1777,7 +1777,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "Recompte de parcel·les"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "Id de parcel·la"
 
@@ -1798,7 +1798,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "Clau pública de parcel·la"
 
@@ -1895,12 +1895,12 @@ msgstr ""
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Clau pública de l'agrupació de pagesos"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "El Puzzle Hash de l'agrupació de pagesos"
 
@@ -1920,7 +1920,7 @@ msgstr ""
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "Quantitat de recompensa de l'agrupació de pagesos"
 
@@ -1971,7 +1971,7 @@ msgstr ""
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "Anterior"
 
@@ -1979,7 +1979,7 @@ msgstr "Anterior"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "Hash del bloc previ"
 
@@ -1999,7 +1999,7 @@ msgstr "Hash del bloc previ"
 #~ msgid "Private key:"
 #~ msgstr "Clau privada:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "Mida de la prova d'espai (Proof of Space)"
 
@@ -2385,7 +2385,7 @@ msgstr "Parlar"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "Estat"
 
@@ -2547,19 +2547,19 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "La llavor feta servir per crear la parcel·la. Això depèn de l'agrupació de pagesos pk i la parcel·la pk."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "El nombre total de VDF (funció de retard verificable) o iteracions de prova de temps a tota la cadena fins a aquest sub bloc."
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "El nombre total de VDF (funció de retard verificable) o d'iteracions de prova de temps en aquest bloc."
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Comissions per transacció totals en aquest bloc. Recompensades al pagès."
 
@@ -2600,7 +2600,7 @@ msgstr "Aquesta característica només està disponible a la interfície gràfic
 msgid "This is the time of the latest peak sub block."
 msgstr "Aquesta és l'hora de l'últim sub bloc de punt més alt."
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Moment en què el bloc ha estat creat pel pagès, abans de ser finalitzat amb una prova de temps"
 
@@ -2658,7 +2658,7 @@ msgstr "Aquesta taula mostra l'última vegada que el teu cultiu va intentar guan
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "Moment en que va ser creat"
 
@@ -2666,7 +2666,7 @@ msgstr "Moment en que va ser creat"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "Segell de temps"
 
@@ -2680,7 +2680,7 @@ msgstr "Segell de temps"
 #~ msgid "Total Balance"
 #~ msgstr "Saldo total"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "Mida total de la parcel·la:"
 msgid "Total Size of Plots"
 msgstr "Mida total de les parcel·les"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "Iteracions VDF totals"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "Historial de transaccions"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "Hash de filtre de transaccions"
 
@@ -2761,7 +2761,7 @@ msgstr "Hash de filtre de transaccions"
 msgid "Unclaimed Rewards"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "Inacabat"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "Clau pública de l'usuari"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "Pes"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "El pes és la dificultat afegida total de tots els sub blocs incloent l'actual"
 
@@ -2965,7 +2965,7 @@ msgstr "El pes és la dificultat afegida total de tots els sub blocs incloent l'
 msgid "Window"
 msgstr "Finestra"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "Sense comissions"
 

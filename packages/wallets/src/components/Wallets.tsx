@@ -8,8 +8,9 @@ import { CreateOffer } from './offers/OfferManager';
 // import RateLimitedWallet from './rateLimited/WalletRateLimited';
 // import DistributedWallet from './did/WalletDID';
 import { WalletType } from '@chia/api';
-import { DashboardTitle, Suspender } from '@chia/core';
+import { DashboardTitle, Suspender, LayoutDashboardSub } from '@chia/core';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import WalletsSidebar from './WalletsSidebar';
 // import WalletsList from './WalletsList';
 
 // <Trans>Loading list of wallets</Trans>}
@@ -35,25 +36,27 @@ export default function Wallets() {
           <Route path="*" element={<Navigate to="1" />} />
         )}
         {wallets?.map((wallet) => (
-          <Route path={wallet.id.toString()} key={wallet.id} element={(
-            <>
-              {wallet.type === WalletType.STANDARD_WALLET && (
-                <StandardWallet walletId={wallet.id} />
-              )}
+          <Route key={wallet.id} element={<LayoutDashboardSub sidebar={<WalletsSidebar />} outlet />}>
+            <Route path={wallet.id.toString()}  element={(
+                <>
+                  {wallet.type === WalletType.STANDARD_WALLET && (
+                    <StandardWallet walletId={wallet.id} />
+                  )}
 
-              {wallet.type === WalletType.CAT && (
-                <WalletCAT walletId={wallet.id} />
-              )}
+                  {wallet.type === WalletType.CAT && (
+                    <WalletCAT walletId={wallet.id} />
+                  )}
 
-              {/* wallet.type === WalletType.RATE_LIMITED && (
-                <RateLimitedWallet wallet_id={wallet.id} />
-              ) */}
+                  {/* wallet.type === WalletType.RATE_LIMITED && (
+                    <RateLimitedWallet wallet_id={wallet.id} />
+                  ) */}
 
-              {/* wallet.type === WalletType.DISTRIBUTED_ID && (
-                <DistributedWallet walletId={wallet.id} />
-              ) */}
-            </>
-          )} />
+                  {/* wallet.type === WalletType.DISTRIBUTED_ID && (
+                    <DistributedWallet walletId={wallet.id} />
+                  ) */}
+                </>
+              )} />
+          </Route>
         ))}
       </Routes>
     </>

@@ -222,7 +222,7 @@ msgstr "備份檔案可用於復原智慧錢包。"
 #~ msgid "Balance"
 #~ msgstr "餘額"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "基礎塊農獎勵數量"
 
@@ -239,15 +239,15 @@ msgstr "已過 24 小時最佳預估值"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "區塊"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "區塊測試"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "區塊 VDF 疊代次數"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Chia 區塊鏈區塊高度 {0}"
 
@@ -267,15 +267,15 @@ msgstr "Chia 區塊鏈區塊高度 {0}"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "帶雜湊值 {headerHash} 的區塊"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "帶雜湊值 {headerHash} 的區塊不存在。"
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "區塊"
 
@@ -749,7 +749,7 @@ msgstr "開發者"
 msgid "Developer Tools"
 msgstr "開發者工具"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "難度"
@@ -926,7 +926,7 @@ msgstr "耕種"
 msgid "Farmer Public Key"
 msgstr "農夫公鑰"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "塊農拼圖雜湊值"
 
@@ -1005,7 +1005,7 @@ msgstr "費用"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "費用數量"
 
@@ -1028,8 +1028,8 @@ msgstr "檔案名稱"
 msgid "Final folder location"
 msgstr "最終資料夾位置"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "已完成"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "完整節點"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr "完整節點概觀"
 
@@ -1082,16 +1082,16 @@ msgstr "網格檢視"
 msgid "Harvester Plots"
 msgstr "耕地收割機"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "表頭雜湊值"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "表頭雜湊值"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "高度"
@@ -1142,7 +1142,7 @@ msgstr "如無選擇，將會預設至臨時資料夾。"
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "從助記詞(24 字) 匯入"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "進行中"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "下一步"
 
@@ -1777,7 +1777,7 @@ msgstr "請等候錢包同步"
 msgid "Plot Count"
 msgstr "耕地數量"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "耕地 ID"
 
@@ -1798,7 +1798,7 @@ msgstr "耕地 NFT 的 p2_singleton_puzzle_hash {plotNFTId} 不存在"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "耕地公鑰"
 
@@ -1895,12 +1895,12 @@ msgstr "農會登入連結"
 msgid "Pool Payout Instructions"
 msgstr "查看農會支付說明"
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "礦池公鑰"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "池拼圖雜湊值"
 
@@ -1920,7 +1920,7 @@ msgstr "農會獎勵地址並不符合格式。"
 msgid "Pool Reward Address must not be empty."
 msgstr "農會獎勵地址不能為空。"
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "礦池勵數量"
 
@@ -1971,7 +1971,7 @@ msgstr "正在準備農場"
 msgid "Preparing standard wallet"
 msgstr "正在準備標準錢包"
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "上一個"
 
@@ -1979,7 +1979,7 @@ msgstr "上一個"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "前一個表頭雜湊值"
 
@@ -1999,7 +1999,7 @@ msgstr "前一個表頭雜湊值"
 #~ msgid "Private key:"
 #~ msgstr "私鑰："
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "空間證明的大小"
 
@@ -2385,7 +2385,7 @@ msgstr "語音"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "狀態"
 
@@ -2547,19 +2547,19 @@ msgstr "切換農會操作已被取消，請重試切換農會或自己的農會
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "用來建立耕地的種子。這取決於池主鍵和耕地主鍵。"
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "總 VDF（可驗證的延遲函數）數量或整個鏈上直到此子區塊的時間疊代證明。"
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "VDF（可驗證的延遲函數）數量或此區塊上的時間疊代證明。"
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "在這個區塊的總交易費用。是獎勵給塊農的。"
 
@@ -2600,7 +2600,7 @@ msgstr "這個功能只能在 GUI 中提供。"
 msgid "This is the time of the latest peak sub block."
 msgstr "這是最後的峰值子區塊的時間。"
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "這是塊農建立區塊的時間，這是在用時間證明最終確定之前的時間"
 
@@ -2658,7 +2658,7 @@ msgstr "這個表格顯示上次你的農場試著獲勝的區塊挑戰。<0>了
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "建立時間"
 
@@ -2666,7 +2666,7 @@ msgstr "建立時間"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "時間戳記"
 
@@ -2680,7 +2680,7 @@ msgstr "時間戳記"
 #~ msgid "Total Balance"
 #~ msgstr "總餘額"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "總耕地大小："
 msgid "Total Size of Plots"
 msgstr "總耕地大小"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "總 VDF 疊代次數"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "貿易歷史"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "交易過濾雜湊值"
 
@@ -2761,7 +2761,7 @@ msgstr "交易過濾雜湊值"
 msgid "Unclaimed Rewards"
 msgstr "尚未領取的獎勵"
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "未完成"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "使用者公鑰"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr "警告：這個金鑰用於你的農會獎勵地址。刪除金鑰後可能會無法領取之後的農會獎勵。"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "權重"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "權重是所有包括這個的子區塊的總增加難度"
 
@@ -2965,7 +2965,7 @@ msgstr "權重是所有包括這個的子區塊的總增加難度"
 msgid "Window"
 msgstr "視窗"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "未計雜費"
 

@@ -1,23 +1,46 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { List } from '@material-ui/core';
+import { List, Box } from '@material-ui/core';
 import {
   Wallet as WalletIcon,
-  Farm as FarmIcon,
-  Home as HomeIcon,
-  Plot as PlotIcon,
-  Pool as PoolIcon,
+  Farming as FarmingIcon,
+  FullNode as FullNodeIcon,
+  Plots as PlotsIcon,
+  Pooling as PoolingIcon,
+  NFTs as NFTsIcon,
+  Offers as OffersIcon,
+  Tokens as TokensIcon,
+  Settings as SettingsIcon,
 } from '@chia/icons';
 import { Flex, SideBarItem } from '@chia/core';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
   overflow-y: auto;
+  padding-top: ${({ theme }) => `${theme.spacing(5)}px`};
 `;
 
 const StyledList = styled(List)`
   width: 100%;
+`;
+
+const StyledSideBarDivider = styled(Box)`
+  height: 1px;
+  background: radial-gradient(36.59% 100.8% at 50% 50%, rgba(0, 0, 0, 0.18) 99.54%, rgba(255, 255, 255, 0) 100%);
+  margin: ${({ theme }) => `${theme.spacing(2)}px 0 ${theme.spacing(2)}px 0`};
+`;
+
+const StyledSettingsContainer = styled(Box)`
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: ${({ theme }) => theme.palette.background.paper};
+`;
+
+const StyledInvisible = styled(Box)`
+  visibility: hidden;
 `;
 
 export default function DashboardSideBar() {
@@ -25,32 +48,71 @@ export default function DashboardSideBar() {
     <StyledRoot>
       <StyledList disablePadding>
         <SideBarItem
+          to="/dashboard/wallets"
+          icon={<TokensIcon fontSize="large" />}
+          title={<Trans>Tokens</Trans>}
+          end
+        />
+        <SideBarItem
+          to="/dashboard/nfts"
+          icon={<NFTsIcon fontSize="large" />}
+          title={<Trans>NFTs</Trans>}
+          end
+        />
+        <SideBarItem
+          to="/dashboard/wallets/offers/manage"
+          icon={<OffersIcon fontSize="large" />}
+          title={<Trans>Offers</Trans>}
+          end
+        />
+
+        <StyledSideBarDivider />
+
+        <SideBarItem
           to="/dashboard"
-          icon={<HomeIcon fontSize="large" />}
+          icon={<FullNodeIcon fontSize="large" />}
           title={<Trans>Full Node</Trans>}
           end
         />
+        <SideBarItem
+          to="/dashboard/plot"
+          icon={<PlotsIcon fontSize="large" />}
+          title={<Trans>Plots</Trans>}
+          end
+        />
+        {/*}
         <SideBarItem
           to="/dashboard/wallets"
           icon={<WalletIcon fontSize="large" />}
           title={<Trans>Wallets</Trans>}
         />
-        <SideBarItem
-          to="/dashboard/plot"
-          icon={<PlotIcon fontSize="large" />}
-          title={<Trans>Plots</Trans>}
-        />
+        */}
+
         <SideBarItem
           to="/dashboard/farm"
-          icon={<FarmIcon fontSize="large" />}
-          title={<Trans>Farm</Trans>}
+          icon={<FarmingIcon fontSize="large" />}
+          title={<Trans>Farming</Trans>}
         />
         <SideBarItem
           to="/dashboard/pool"
-          icon={<PoolIcon fontSize="large" />}
-          title={<Trans>Pool</Trans>}
+          icon={<PoolingIcon fontSize="large" />}
+          title={<Trans>Pooling</Trans>}
         />
+        <StyledInvisible>
+          <SideBarItem
+            to="/dashboard/settings"
+            icon={<SettingsIcon fontSize="large" />}
+            title={<Trans>Settings</Trans>}
+          />
+        </StyledInvisible>
       </StyledList>
+      <StyledSettingsContainer>
+        <SideBarItem
+          to="/dashboard/settings"
+          icon={<SettingsIcon fontSize="large" />}
+          title={<Trans>Settings</Trans>}
+        />
+      </StyledSettingsContainer>
     </StyledRoot>
   );
 }

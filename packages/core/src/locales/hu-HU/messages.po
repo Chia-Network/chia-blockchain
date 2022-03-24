@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/Amount/Amount.tsx:113
+#: src/components/Amount/Amount.tsx:114
 msgid "Amount"
 msgstr "Összeg"
 
@@ -948,7 +948,7 @@ msgstr "Farmolás"
 #~ msgid "Farming Status"
 #~ msgstr "Farmer státusz"
 
-#: src/components/Fee/Fee.tsx:54
+#: src/components/Fee/Fee.tsx:53
 msgid "Fee"
 msgstr "Díj"
 
@@ -1114,7 +1114,7 @@ msgstr "Importálás a memonikából (24 szó)"
 #~ msgid "Incoming"
 #~ msgstr "Bejövő"
 
-#: src/components/Fee/Fee.tsx:42
+#: src/components/Fee/Fee.tsx:41
 msgid "Incorrect value"
 msgstr ""
 
@@ -2808,7 +2808,7 @@ msgstr ""
 #~ msgid "Value is too high"
 #~ msgstr "Value is too high"
 
-#: src/components/Fee/Fee.tsx:34
+#: src/components/Fee/Fee.tsx:33
 msgid "Value seems high"
 msgstr ""
 
@@ -3153,6 +3153,10 @@ msgstr ""
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr ""
 
+#: src/components/Amount/Amount.tsx:96
+msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
+
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
 #~ msgstr "{0} Block Rewards"
@@ -3187,8 +3191,8 @@ msgid "{minPassphraseLength, plural, one {Passphrases must be at least # charact
 msgstr ""
 
 #: src/components/Amount/Amount.tsx:95
-msgid "{mojo, plural, one {mojo} other {mojos}}"
-msgstr ""
+#~ msgid "{mojo, plural, one {mojo} other {mojos}}"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"

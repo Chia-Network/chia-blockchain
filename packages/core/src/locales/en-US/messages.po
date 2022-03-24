@@ -149,7 +149,7 @@ msgstr ""
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
-#: src/components/Amount/Amount.tsx:113
+#: src/components/Amount/Amount.tsx:114
 msgid "Amount"
 msgstr "Amount"
 
@@ -948,7 +948,7 @@ msgstr "Farming"
 #~ msgid "Farming Status"
 #~ msgstr "Farming Status"
 
-#: src/components/Fee/Fee.tsx:54
+#: src/components/Fee/Fee.tsx:53
 msgid "Fee"
 msgstr "Fee"
 
@@ -1114,7 +1114,7 @@ msgstr "Import from Mnemonics (24 words)"
 #~ msgid "Incoming"
 #~ msgstr "Incoming"
 
-#: src/components/Fee/Fee.tsx:42
+#: src/components/Fee/Fee.tsx:41
 msgid "Incorrect value"
 msgstr "Incorrect value"
 
@@ -2806,7 +2806,7 @@ msgstr "Using a passphrase is strongly recommended to protect your keys. Are you
 #~ msgid "Value is too high"
 #~ msgstr "Value is too high"
 
-#: src/components/Fee/Fee.tsx:34
+#: src/components/Fee/Fee.tsx:33
 msgid "Value seems high"
 msgstr "Value seems high"
 
@@ -3151,6 +3151,10 @@ msgstr "Your keys have not been migrated to a new keyring. You will be unable to
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 
+#: src/components/Amount/Amount.tsx:96
+msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr "{0, plural, one {mojo} other {mojos}}"
+
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
 #~ msgstr "{0} Block Rewards"
@@ -3185,8 +3189,8 @@ msgid "{minPassphraseLength, plural, one {Passphrases must be at least # charact
 msgstr "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 
 #: src/components/Amount/Amount.tsx:95
-msgid "{mojo, plural, one {mojo} other {mojos}}"
-msgstr "{mojo, plural, one {mojo} other {mojos}}"
+#~ msgid "{mojo, plural, one {mojo} other {mojos}}"
+#~ msgstr "{mojo, plural, one {mojo} other {mojos}}"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"

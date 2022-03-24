@@ -14,14 +14,12 @@ import {
   Typography,
   ListItemIcon,
   MenuItem,
-  Button,
 } from '@material-ui/core';
 import {
   Delete as DeleteIcon,
 } from '@material-ui/icons';
 import { useDeleteUnconfirmedTransactionsMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
-import WalletsDropdodown from './WalletsDropdown';
 
 type StandardWalletProps = {
   walletId: number;
@@ -70,20 +68,7 @@ export default function WalletHeader(props: StandardWalletProps) {
   return (
     <Flex gap={1} alignItems="center">
       <Flex flexGrow={1} gap={1}>
-        <WalletsDropdodown walletId={walletId} />
-        <Button
-          color="primary"
-          onClick={handleAddToken}
-        >
-          <Trans>+ Add Token</Trans>
-        </Button>
-        <Button
-          color="primary"
-          variant="outlined"
-          onClick={handleManageOffers}
-        >
-          <Trans>Manage Offers</Trans>
-        </Button>
+
       </Flex>
       <Flex gap={1} alignItems="center">
         <Flex alignItems="center">

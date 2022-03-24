@@ -8,6 +8,7 @@ import {
   Suspender,
   useOpenDialog,
   useSkipMigration,
+  LayoutDashboardSub,
 } from '@chia/core';
 import { useGetKeyringStatusQuery } from '@chia/api-react';
 import {
@@ -236,11 +237,11 @@ const SecurityCard = () => {
 
 export default function Settings() {
   return (
-    <>
+    <LayoutDashboardSub>
       <DashboardTitle>
         <Trans>Settings</Trans>
       </DashboardTitle>
       <SecurityCard />
-    </>
+    </LayoutDashboardSub>
   );
 }

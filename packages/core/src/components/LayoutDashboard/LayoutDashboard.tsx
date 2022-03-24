@@ -25,9 +25,7 @@ const StyledContainer = styled(Container)`
 `;
 
 const StyledAppBar = styled(AppBar)`
-  background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#424242' : 'white'};
-  box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid #E0E0E0;
   width: ${({ theme, drawer }) => drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};
   margin-left: ${({ theme, drawer }) => drawer ? theme.drawer.width : 0};
   z-index: ${({ theme }) => theme.zIndex.drawer + 1};};
@@ -56,8 +54,8 @@ const StyledBrandWrapper = styled(Flex)`
 `;
 
 const StyledToolbar = styled(Toolbar)`
-  padding-left: 0;
-  padding-right: 0;
+  padding-left: ${({ theme }) => theme.spacing(4)}px;
+  padding-right: ${({ theme }) => theme.spacing(4)}px;
 `;
 
 export type LayoutDashboardProps = {
@@ -86,8 +84,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
           <>
             <StyledAppBar position="fixed" color="transparent" elevation={0} drawer>
               <StyledToolbar>
-                <Container maxWidth="lg">
-                  <Flex alignItems="center">
+                  <Flex alignItems="center" width="100%">
                     <DashboardTitleTarget />
                     <Flex flexGrow={1} />
                     <Tooltip title={<Trans>Logout</Trans>}>
@@ -95,18 +92,10 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                         <ExitToAppIcon />
                       </IconButton>
                     </Tooltip>
-                    <Settings>
-                      {settings}
-                    </Settings>
                   </Flex>
-                </Container>
               </StyledToolbar>
             </StyledAppBar>
             <StyledDrawer variant="permanent">
-              <StyledBrandWrapper>
-                <Logo width={2 / 3} />
-              </StyledBrandWrapper>
-              <Divider />
               {sidebar}
             </StyledDrawer>
           </>
@@ -133,14 +122,12 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
 
         <StyledBody flexDirection="column" flexGrow={1}>
           <ToolbarSpacing />
-          <StyledContainer maxWidth="lg">
-            <Flex flexDirection="column" gap={2}>
-              <Suspense fallback={<Loading center />}>
-                {outlet ? <Outlet /> : children}
-              </Suspense>
-              {/* <LayoutFooter /> */}
-            </Flex>
-          </StyledContainer>
+          <Flex flexDirection="column" gap={2}>
+            <Suspense fallback={<Loading center />}>
+              {outlet ? <Outlet /> : children}
+            </Suspense>
+            {/* <LayoutFooter /> */}
+          </Flex>
         </StyledBody>
       </Suspense>
     </StyledRoot>

@@ -10,6 +10,7 @@ import {
   StateColor,
   Table,
   DashboardTitle,
+  LayoutDashboardSub,
 } from '@chia/core';
 import { Status } from '@chia/icons';
 import { useGetLatestBlocksQuery, useGetUnfinishedBlockHeadersQuery } from '@chia/api-react';
@@ -131,11 +132,11 @@ const BlocksCard = () => {
 
 export default function FullNode() {
   return (
-    <>
+    <LayoutDashboardSub>
       <DashboardTitle><Trans>Full Node</Trans></DashboardTitle>
       <Flex gap={1}>
         <Typography variant="h5" gutterBottom>
-          <Trans>Full Node Overview</Trans>
+          <Trans>Full Node</Trans>
         </Typography>
       </Flex>
       <Flex flexDirection="column" gap={3}>
@@ -143,6 +144,6 @@ export default function FullNode() {
         <BlocksCard />
         <FullNodeConnections />
       </Flex>
-    </>
+    </LayoutDashboardSub>
   );
 }

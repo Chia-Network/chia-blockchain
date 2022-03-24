@@ -222,7 +222,7 @@ msgstr "Záložní soubor se používá k obnovení chytrých peněženek."
 #~ msgid "Balance"
 #~ msgstr "Zůstatek"
 
-#: src/components/block/Block.jsx:306
+#: src/components/block/Block.jsx:304
 msgid "Base Farmer Reward Amount"
 msgstr "Výše základu odměny farmáře"
 
@@ -239,15 +239,15 @@ msgstr "Odhad za posledních 24 hodin"
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:116
-#: src/components/block/Block.jsx:125
-#: src/components/block/Block.jsx:142
-#: src/components/block/Block.jsx:146
-#: src/components/block/Block.jsx:322
+#: src/components/block/Block.jsx:114
+#: src/components/block/Block.jsx:123
+#: src/components/block/Block.jsx:140
+#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:320
 msgid "Block"
 msgstr "Blok"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:30
+#: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
 msgstr ""
 
@@ -255,11 +255,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "Test bloku"
 
-#: src/components/block/Block.jsx:224
+#: src/components/block/Block.jsx:222
 msgid "Block VDF Iterations"
 msgstr "VDF iterace bloku"
 
-#: src/components/block/Block.jsx:326
+#: src/components/block/Block.jsx:324
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Blok v Chia blockchainu ve výšce {0}"
 
@@ -267,15 +267,15 @@ msgstr "Blok v Chia blockchainu ve výšce {0}"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:129
+#: src/components/block/Block.jsx:127
 msgid "Block with hash {headerHash}"
 msgstr "Blok s hashem {headerHash}"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:149
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok s hashem {headerHash} neexistuje."
 
-#: src/components/fullNode/FullNode.jsx:124
+#: src/components/fullNode/FullNode.jsx:122
 msgid "Blocks"
 msgstr "Bloky"
 
@@ -749,7 +749,7 @@ msgstr "Vývojář"
 msgid "Developer Tools"
 msgstr "Vývojářské nástroje"
 
-#: src/components/block/Block.jsx:210
+#: src/components/block/Block.jsx:208
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "Obtížnost"
@@ -926,7 +926,7 @@ msgstr "Farma"
 msgid "Farmer Public Key"
 msgstr "Veřejný klíč farmáře"
 
-#: src/components/block/Block.jsx:256
+#: src/components/block/Block.jsx:254
 msgid "Farmer Puzzle Hash"
 msgstr "Hash hádanek pro farmáře"
 
@@ -1005,7 +1005,7 @@ msgstr "Poplatek"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:310
+#: src/components/block/Block.jsx:308
 msgid "Fees Amount"
 msgstr "Výše poplatků"
 
@@ -1028,8 +1028,8 @@ msgstr "Název souboru"
 msgid "Final folder location"
 msgstr "Umístění konečné složky"
 
-#: src/components/fullNode/FullNode.jsx:42
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:40
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Finished"
 msgstr "Dokončeno"
 
@@ -1042,11 +1042,11 @@ msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky"
 
 #: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/fullNode/FullNode.jsx:135
 msgid "Full Node"
 msgstr "Uzel"
 
-#: src/components/fullNode/FullNode.jsx:140
+#: src/components/fullNode/FullNode.jsx:138
 msgid "Full Node Overview"
 msgstr "Přehled uzlu"
 
@@ -1082,16 +1082,16 @@ msgstr "Mřížkové zobrazení"
 msgid "Harvester Plots"
 msgstr "Sklízecí pole"
 
-#: src/components/fullNode/FullNode.jsx:60
+#: src/components/fullNode/FullNode.jsx:58
 msgid "Header Hash"
 msgstr "Hash hlavičky"
 
-#: src/components/block/Block.jsx:174
+#: src/components/block/Block.jsx:172
 msgid "Header hash"
 msgstr "Hash hlavičky"
 
-#: src/components/block/Block.jsx:190
-#: src/components/fullNode/FullNode.jsx:78
+#: src/components/block/Block.jsx:188
+#: src/components/fullNode/FullNode.jsx:76
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Výška"
@@ -1142,7 +1142,7 @@ msgstr "Pokud žádnou složku nezvolíte, bude použita výchozí složka s do�
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Import pomocí 24 slov"
 
-#: src/components/fullNode/FullNode.jsx:44
+#: src/components/fullNode/FullNode.jsx:42
 msgid "In Progress"
 msgstr "Probíhá"
 
@@ -1428,7 +1428,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:340
+#: src/components/block/Block.jsx:338
 msgid "Next"
 msgstr "Další"
 
@@ -1777,7 +1777,7 @@ msgstr "Počkejte prosím na synchronizaci peněženky"
 msgid "Plot Count"
 msgstr "Počet polí"
 
-#: src/components/block/Block.jsx:288
+#: src/components/block/Block.jsx:286
 msgid "Plot Id"
 msgstr "ID pole"
 
@@ -1798,7 +1798,7 @@ msgstr "NFT pole s p2_singleton_puzzle_hash {plotNFTId} neexistuje"
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:248
+#: src/components/block/Block.jsx:246
 msgid "Plot Public Key"
 msgstr "Veřejný klíč pole"
 
@@ -1895,12 +1895,12 @@ msgstr "Přihlašovací odkaz do poolu"
 msgid "Pool Payout Instructions"
 msgstr "Pokyny k výplatě z poolu"
 
-#: src/components/block/Block.jsx:252
+#: src/components/block/Block.jsx:250
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "Veřejný klíč poolu"
 
-#: src/components/block/Block.jsx:272
+#: src/components/block/Block.jsx:270
 msgid "Pool Puzzle Hash"
 msgstr "Hádankový klíč"
 
@@ -1920,7 +1920,7 @@ msgstr "Adresa odměny pole není správně formátována."
 msgid "Pool Reward Address must not be empty."
 msgstr "Adresa odměny pole nesmí být prázdná."
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:300
 msgid "Pool Reward Amount"
 msgstr "Částka odměny sdružení"
 
@@ -1971,7 +1971,7 @@ msgstr "Připravuji NFT pole"
 msgid "Preparing standard wallet"
 msgstr "Připravuji standardní peněženku"
 
-#: src/components/block/Block.jsx:337
+#: src/components/block/Block.jsx:335
 msgid "Previous"
 msgstr "Předchozí"
 
@@ -1979,7 +1979,7 @@ msgstr "Předchozí"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:202
 msgid "Previous Header Hash"
 msgstr "Hash předchozího záhlaví"
 
@@ -1999,7 +1999,7 @@ msgstr "Hash předchozího záhlaví"
 #~ msgid "Private key:"
 #~ msgstr "Soukromý klíč:"
 
-#: src/components/block/Block.jsx:240
+#: src/components/block/Block.jsx:238
 msgid "Proof of Space Size"
 msgstr "Velikost vloženého prostoru"
 
@@ -2385,7 +2385,7 @@ msgstr "Řeč"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:98
+#: src/components/fullNode/FullNode.jsx:96
 msgid "State"
 msgstr "Stav"
 
@@ -2547,19 +2547,19 @@ msgstr "Operace změny poolu byla zrušena, zkuste to prosím znovu změnou pool
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:289
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "Seed použitý k vytvoření pole. To závisí na pk poolu a pk pole."
 
-#: src/components/block/Block.jsx:217
+#: src/components/block/Block.jsx:215
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "Celkový počet VDF (verifiable delay function) nebo tzv. proof of time opakování v celém blockchainu až po aktuální blok."
 
-#: src/components/block/Block.jsx:233
+#: src/components/block/Block.jsx:231
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "Celkový počet VDF (verifiable delay function) nebo tzv. proof of time opakování v celém blockchainu až po aktuální blok."
 
-#: src/components/block/Block.jsx:313
+#: src/components/block/Block.jsx:311
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "Souhrnná výše transakčních poplatků v tomto bloku. Vyplaceno farmářům."
 
@@ -2600,7 +2600,7 @@ msgstr "Tato funkce je dostupná pouze v grafickém rozhraní."
 msgid "This is the time of the latest peak sub block."
 msgstr "Čas dosažní dosud nejvyššího bloku."
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:181
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "Čas vytvoření bloku farmářem ještě před jeho dokončením důkazem času (proof of time)"
 
@@ -2658,7 +2658,7 @@ msgstr "Seznam pokusů vaší farmy o vítězství blokové výzvy. <0>Dozvědě
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:90
+#: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
 msgstr "Vytvořeno"
 
@@ -2666,7 +2666,7 @@ msgstr "Vytvořeno"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:178
+#: src/components/block/Block.jsx:176
 msgid "Timestamp"
 msgstr "Časová značka"
 
@@ -2680,7 +2680,7 @@ msgstr "Časová značka"
 #~ msgid "Total Balance"
 #~ msgstr "Celkový zůstatek"
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:26
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
 msgstr ""
 
@@ -2700,7 +2700,7 @@ msgstr "Celková velikost pole:"
 msgid "Total Size of Plots"
 msgstr "Celková velikost polí"
 
-#: src/components/block/Block.jsx:214
+#: src/components/block/Block.jsx:212
 msgid "Total VDF Iterations"
 msgstr "Celkové VDF iterace"
 
@@ -2744,7 +2744,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "Historie transakce"
 
-#: src/components/block/Block.jsx:298
+#: src/components/block/Block.jsx:296
 msgid "Transactions Filter Hash"
 msgstr "Hash filtru transakcí"
 
@@ -2761,7 +2761,7 @@ msgstr "Hash filtru transakcí"
 msgid "Unclaimed Rewards"
 msgstr "Nevyzvednuté odměny"
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
 msgstr "Nedokončeno"
 
@@ -2786,7 +2786,7 @@ msgstr ""
 #~ msgid "User Pubkey"
 #~ msgstr "Uživatelský veřejný klíč"
 
-#: src/components/farm/card/FarmCardUserFees.tsx:26
+#: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
@@ -2941,11 +2941,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr "Varování: Tento klíč se používá pro vaši poolovou adresu odměny. Odstraněním tohoto klíče můžete ztratit přístup k jakýmkoli budoucím odměnám z poolu"
 
-#: src/components/block/Block.jsx:194
+#: src/components/block/Block.jsx:192
 msgid "Weight"
 msgstr "Váha"
 
-#: src/components/block/Block.jsx:197
+#: src/components/block/Block.jsx:195
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "Váha je celková přidaná obtížnost všech dílčích bloků až po tento blok včetně"
 
@@ -2965,7 +2965,7 @@ msgstr "Váha je celková přidaná obtížnost všech dílčích bloků až po 
 msgid "Window"
 msgstr "Okno"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:31
+#: src/components/farm/card/FarmCardBlockRewards.tsx:32
 msgid "Without fees"
 msgstr "Bez poplatků"
 

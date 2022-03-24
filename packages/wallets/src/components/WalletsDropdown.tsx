@@ -18,11 +18,9 @@ function getPrimaryTitle(wallet: Wallet): string {
 }
 
 type Props = {
-  walletId: number;
 };
 
 export default function WalletsDropdown(props: Props) {
-  const { walletId } = props;
   const navigate = useNavigate();
   const trans = useTrans();
   const { data: wallets, isLoading } = useGetWalletsQuery();
@@ -63,7 +61,7 @@ export default function WalletsDropdown(props: Props) {
           ),
         };
       });
-  }, [wallets, walletId, isLoading]);
+  }, [wallets, isLoading]);
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
@@ -78,7 +76,7 @@ export default function WalletsDropdown(props: Props) {
   return (
     <Dropdown 
       options={options}
-      selected={walletId}
+      selected={1}
       onSelect={handleSelectWallet}
     >
       {(option) => !!option?.wallet && (

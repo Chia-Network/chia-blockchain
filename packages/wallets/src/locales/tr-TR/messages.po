@@ -194,10 +194,10 @@ msgstr "Adres / Puzzle hash"
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:163
+#: src/components/WalletHistory.tsx:165
 #: src/components/WalletSend.tsx:161
 #: src/components/cat/WalletCATSend.tsx:205
-#: src/components/offers/OfferEditorConditionsPanel.tsx:112
+#: src/components/offers/OfferEditorConditionsPanel.tsx:118
 #: src/components/offers/OfferViewer.tsx:226
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
@@ -211,7 +211,7 @@ msgstr "Miktar"
 msgid "Amount For Initial Coin"
 msgstr "İlk Coin için Miktar"
 
-#: src/components/offers/OfferEditor.tsx:113
+#: src/components/offers/OfferEditor.tsx:117
 msgid "Amount exceeds spendable balance"
 msgstr ""
 
@@ -219,7 +219,7 @@ msgstr ""
 msgid "Amount must be an even amount."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:109
+#: src/components/offers/OfferManager.tsx:110
 msgid "Are you sure you want to cancel your offer?"
 msgstr ""
 
@@ -394,9 +394,9 @@ msgstr ""
 msgid "Cancel"
 msgstr "İptal Et"
 
-#: src/components/offers/OfferManager.tsx:103
-#: src/components/offers/OfferManager.tsx:175
-#: src/components/offers/OfferManager.tsx:432
+#: src/components/offers/OfferManager.tsx:104
+#: src/components/offers/OfferManager.tsx:176
+#: src/components/offers/OfferManager.tsx:433
 msgid "Cancel Offer"
 msgstr ""
 
@@ -404,7 +404,7 @@ msgstr ""
 #~ msgid "Cancel and Spend"
 #~ msgstr "İptal Et ve Harca"
 
-#: src/components/offers/OfferManager.tsx:130
+#: src/components/offers/OfferManager.tsx:131
 msgid "Cancel on blockchain"
 msgstr ""
 
@@ -479,7 +479,7 @@ msgstr "Chia Cüzdanı"
 #~ msgid "Claim Rewards"
 #~ msgstr "Ödülleri Al"
 
-#: src/components/offers/OfferManager.tsx:168
+#: src/components/offers/OfferManager.tsx:169
 #: src/components/offers/OfferShareDialog.tsx:380
 #: src/components/offers/OfferShareDialog.tsx:523
 #: src/components/offers/OfferShareDialog.tsx:727
@@ -557,7 +557,7 @@ msgstr "Doğrulama"
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:287
+#: src/components/WalletHistory.tsx:291
 #: src/components/offers/OfferViewer.tsx:188
 msgid "Confirmed at Height"
 msgstr ""
@@ -709,12 +709,12 @@ msgstr "İşlem Oluşturun"
 #~ msgid "Create admin wallet"
 #~ msgstr "{0} cüzdanı oluştur"
 
-#: src/components/offers/OfferEditor.tsx:227
-#: src/components/offers/OfferManager.tsx:528
+#: src/components/offers/OfferEditor.tsx:231
+#: src/components/offers/OfferManager.tsx:529
 msgid "Create an Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:523
+#: src/components/offers/OfferManager.tsx:524
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 msgstr ""
 
@@ -750,7 +750,7 @@ msgstr ""
 #~ msgid "Created by us:"
 #~ msgstr "%@ tarafından oluşturuldu:"
 
-#: src/components/offers/OfferManager.tsx:132
+#: src/components/offers/OfferManager.tsx:133
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
 msgstr ""
 
@@ -762,7 +762,7 @@ msgstr ""
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:348
+#: src/components/offers/OfferManager.tsx:349
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
 msgstr ""
@@ -912,7 +912,7 @@ msgstr ""
 #~ msgid "Disconnect"
 #~ msgstr "Bağlantıyı Kes"
 
-#: src/components/offers/OfferManager.tsx:402
+#: src/components/offers/OfferManager.tsx:403
 msgid "Display Offer Data"
 msgstr ""
 
@@ -1123,12 +1123,12 @@ msgstr "Çiftlik"
 #~ msgid "Farming Status"
 #~ msgstr "Üretim Durumu"
 
-#: src/components/WalletHistory.tsx:173
+#: src/components/WalletHistory.tsx:177
 #: src/components/WalletSend.tsx:172
 #: src/components/cat/WalletCATSend.tsx:218
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
-#: src/components/offers/OfferManager.tsx:147
+#: src/components/offers/OfferManager.tsx:148
 #: src/components/offers/OfferViewer.tsx:469
 #: src/components/rateLimited/WalletRateLimited.jsx:732
 msgid "Fee"
@@ -1294,7 +1294,7 @@ msgstr "IP adresi"
 msgid "If selected, your offer will be not be shared publicly."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:116
+#: src/components/offers/OfferManager.tsx:117
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 msgstr ""
 
@@ -1314,7 +1314,7 @@ msgstr "Cüzdanı Mnemonics'ten içe aktar"
 #~ msgid "In Progress"
 #~ msgstr "İşlem Sürüyor"
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:242
+#: src/components/offers/OfferEditorConditionsPanel.tsx:248
 #: src/components/offers/OfferViewer.tsx:454
 msgid "In exchange for"
 msgstr ""
@@ -1368,7 +1368,7 @@ msgid ""
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:164
+#: src/components/offers/OfferEditor.tsx:168
 msgid ""
 "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
@@ -1549,7 +1549,7 @@ msgstr ""
 #~ msgstr "İşleme ödüllerini yönet"
 
 #: src/components/WalletHeader.tsx:85
-#: src/components/offers/OfferManager.tsx:515
+#: src/components/offers/OfferManager.tsx:516
 msgid "Manage Offers"
 msgstr ""
 
@@ -1566,7 +1566,7 @@ msgstr ""
 msgid "Memo"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:291
+#: src/components/WalletHistory.tsx:295
 msgid "Memos"
 msgstr ""
 
@@ -1673,11 +1673,11 @@ msgstr "Kullanıcı adı"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Herhangi bir blok işlenmedi"
 
-#: src/components/offers/OfferManager.tsx:468
+#: src/components/offers/OfferManager.tsx:469
 msgid "No current offers"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:322
+#: src/components/WalletHistory.tsx:326
 msgid "No previous transactions"
 msgstr "Daha önce yapılmış bir işlem yok"
 
@@ -1705,8 +1705,8 @@ msgstr "Node ID'si"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "Henüz plot'larınızdan hiçbiri plot filtresinden geçemedi."
 
-#: src/components/WalletHistory.tsx:283
-#: src/components/WalletHistory.tsx:288
+#: src/components/WalletHistory.tsx:287
+#: src/components/WalletHistory.tsx:292
 msgid "Not Available"
 msgstr "Uygun Değil"
 
@@ -1796,7 +1796,7 @@ msgstr ""
 msgid "OfferBin URL"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:309
+#: src/components/offers/OfferManager.tsx:310
 msgid "Offered"
 msgstr ""
 
@@ -1804,11 +1804,11 @@ msgstr ""
 #~ msgid "Offers Created"
 #~ msgstr "Teklif Oluşturuldu"
 
-#: src/components/offers/OfferManager.tsx:542
+#: src/components/offers/OfferManager.tsx:543
 msgid "Offers you accepted"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:537
+#: src/components/offers/OfferManager.tsx:538
 msgid "Offers you created"
 msgstr ""
 
@@ -1911,17 +1911,17 @@ msgstr ""
 msgid "Pending"
 msgstr "Beklemede"
 
-#: src/components/card/WalletCardPendingBalance.tsx:39
+#: src/components/card/WalletCardPendingBalance.tsx:36
 #: src/components/rateLimited/WalletRateLimited.jsx:572
 msgid "Pending Balance"
 msgstr "Bekleyen Bakiye"
 
-#: src/components/card/WalletCardPendingChange.tsx:40
+#: src/components/card/WalletCardPendingChange.tsx:37
 #: src/components/rateLimited/WalletRateLimited.jsx:577
 msgid "Pending Change"
 msgstr "Bekleyen Değişiklik"
 
-#: src/components/card/WalletCardPendingTotalBalance.tsx:40
+#: src/components/card/WalletCardPendingTotalBalance.tsx:37
 #: src/components/rateLimited/WalletRateLimited.jsx:567
 msgid "Pending Total Balance"
 msgstr "Bekleyen Toplam Bakiye"
@@ -2011,7 +2011,7 @@ msgstr "Lütfen geçerli bir herkese açık anahtar giriniz"
 msgid "Please enter a valid token name"
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:110
+#: src/components/offers/OfferEditor.tsx:114
 msgid "Please enter an amount for each row"
 msgstr ""
 
@@ -2047,7 +2047,7 @@ msgstr ""
 #~ msgid "Please select amount"
 #~ msgstr "Lütfen miktar seçin"
 
-#: src/components/offers/OfferEditor.tsx:107
+#: src/components/offers/OfferEditor.tsx:111
 msgid "Please select an asset for each row"
 msgstr ""
 
@@ -2472,11 +2472,11 @@ msgstr ""
 #~ msgid "Report an Issue..."
 #~ msgstr "Sorun Bildirin..."
 
-#: src/components/offers/OfferManager.tsx:332
+#: src/components/offers/OfferManager.tsx:333
 msgid "Requested"
 msgstr ""
 
-#: src/components/offers/OfferEditor.tsx:194
+#: src/components/offers/OfferEditor.tsx:198
 msgid "Reset"
 msgstr ""
 
@@ -2505,11 +2505,11 @@ msgstr ""
 msgid "Save"
 msgstr "Kaydet"
 
-#: src/components/offers/OfferEditor.tsx:202
+#: src/components/offers/OfferEditor.tsx:206
 msgid "Save Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:417
+#: src/components/offers/OfferManager.tsx:418
 msgid "Save Offer File"
 msgstr ""
 
@@ -2650,7 +2650,7 @@ msgstr "Yayın anahtarınızı Rate Limited Cüzdan yöneticinize gönderin:"
 #~ msgid "Settings"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:363
+#: src/components/offers/OfferManager.tsx:364
 #: src/components/offers/OfferShareDialog.tsx:437
 #: src/components/offers/OfferShareDialog.tsx:566
 #: src/components/offers/OfferShareDialog.tsx:806
@@ -2690,7 +2690,7 @@ msgstr ""
 msgid "Show Asset Id"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:388
+#: src/components/offers/OfferManager.tsx:389
 msgid "Show Details"
 msgstr ""
 
@@ -2752,7 +2752,7 @@ msgstr "Kullanilabilir Miktar"
 msgid "Spendable Amount Per Interval"
 msgstr "Aralık Başına Kullanilabilir Tutar"
 
-#: src/components/card/WalletCardSpendableBalance.tsx:40
+#: src/components/card/WalletCardSpendableBalance.tsx:37
 #: src/components/rateLimited/WalletRateLimited.jsx:547
 msgid "Spendable Balance"
 msgstr "Kullanilabilir Bakiye"
@@ -2784,7 +2784,7 @@ msgstr ""
 #~ msgstr "Durum"
 
 #: src/components/WalletStatusCard.tsx:22
-#: src/components/offers/OfferManager.tsx:286
+#: src/components/offers/OfferManager.tsx:287
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
 msgstr "Durum"
@@ -3103,7 +3103,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/card/WalletCardTotalBalance.tsx:48
+#: src/components/card/WalletCardTotalBalance.tsx:45
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Toplam Bakiye"
@@ -3173,7 +3173,7 @@ msgstr "Toplam Bakiye"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/WalletHistory.tsx:240
+#: src/components/WalletHistory.tsx:244
 msgid "Transactions"
 msgstr ""
 
@@ -3214,8 +3214,8 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr "Bilinmeyen"
 
-#: src/components/offers/OfferManager.tsx:293
-#: src/components/offers/OfferManager.tsx:316
+#: src/components/offers/OfferManager.tsx:294
+#: src/components/offers/OfferManager.tsx:317
 #: src/components/offers/OfferSummaryRow.tsx:66
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
@@ -3281,7 +3281,7 @@ msgstr "Herkese Açık Kullanıcı Anahtarı"
 #~ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:153
-#: src/components/offers/OfferManager.tsx:531
+#: src/components/offers/OfferManager.tsx:532
 msgid "View an Offer"
 msgstr ""
 
@@ -3514,7 +3514,7 @@ msgstr ""
 #~ msgid "You need {currencyCode} to join a pool."
 #~ msgstr ""
 
-#: src/components/offers/OfferEditorConditionsPanel.tsx:241
+#: src/components/offers/OfferEditorConditionsPanel.tsx:247
 msgid "You will offer"
 msgstr ""
 
