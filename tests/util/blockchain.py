@@ -1,6 +1,5 @@
 import os
 import pickle
-from os import path
 from pathlib import Path
 from typing import List
 
@@ -14,6 +13,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import mkdir
 from tests.block_tools import BlockTools
 
@@ -46,16 +46,14 @@ def persistent_blocks(
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
-    block_path_dir = Path("~/.chia/blocks").expanduser()
-    file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
+    block_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("blocks")
+    file_path = block_path_dir.joinpath(db_name)
 
     ci = os.environ.get("CI")
     if ci is not None and not file_path.exists():
         raise Exception(f"Running in CI and expected path not found: {file_path!r}")
 
-    if not path.exists(block_path_dir):
-        mkdir(block_path_dir.parent)
-        mkdir(block_path_dir)
+    mkdir(block_path_dir)
 
     if file_path.exists():
         print(f"File found at: {file_path}")

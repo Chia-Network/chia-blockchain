@@ -104,7 +104,7 @@ async def setup_wallet_node(
             service_name_prefix="test_",
         )
 
-        service = Service(**kwargs, handle_signals=False)
+        service = Service(**kwargs, running_new_process=False)
 
         await service.start()
 
@@ -227,6 +227,7 @@ async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
+    *,
     starting_height=None,
     key_seed=None,
     initial_num_public_keys=5,

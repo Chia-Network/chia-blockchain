@@ -1,5 +1,6 @@
 import aiosqlite
 
+from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple, Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -9,6 +10,7 @@ from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.util.errors import Err, ValidationError
 from chia.util.db_wrapper import DBWrapper
+from chia.util.streamable import Streamable, streamable
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
@@ -35,21 +37,44 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-class SimFullBlock:
-    def __init__(self, generator: Optional[BlockGenerator], height: uint32):
-        self.height = height  # Note that height is not on a regular FullBlock
-        self.transactions_generator = generator
+@dataclass(frozen=True)
+@streamable
+class SimFullBlock(Streamable):
+    transactions_generator: Optional[BlockGenerator]
+    height: uint32  # Note that height is not on a regular FullBlock
 
 
-class SimBlockRecord:
-    def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
-        self.reward_claims_incorporated = rci
-        self.height = height
-        self.prev_transaction_block_height = uint32(height - 1) if height > 0 else 0
-        self.timestamp = timestamp
-        self.is_transaction_block = True
-        self.header_hash = std_hash(bytes(height))
-        self.prev_transaction_block_hash = std_hash(std_hash(height))
+@dataclass(frozen=True)
+@streamable
+class SimBlockRecord(Streamable):
+    reward_claims_incorporated: List[Coin]
+    height: uint32
+    prev_transaction_block_height: uint32
+    timestamp: uint64
+    is_transaction_block: bool
+    header_hash: bytes32
+    prev_transaction_block_hash: bytes32
+
+    @classmethod
+    def create(cls, rci: List[Coin], height: uint32, timestamp: uint64):
+        return cls(
+            rci,
+            height,
+            uint32(height - 1 if height > 0 else 0),
+            timestamp,
+            True,
+            std_hash(bytes(height)),
+            std_hash(std_hash(height)),
+        )
+
+
+@dataclass(frozen=True)
+@streamable
+class SimStore(Streamable):
+    timestamp: uint64
+    block_height: uint32
+    block_records: List[SimBlockRecord]
+    blocks: List[SimFullBlock]
 
 
 class SpendSim:
@@ -63,20 +88,41 @@ class SpendSim:
     defaults: ConsensusConstants
 
     @classmethod
-    async def create(cls, defaults=DEFAULT_CONSTANTS):
+    async def create(cls, db_path=":memory:", defaults=DEFAULT_CONSTANTS):
         self = cls()
-        self.connection = await aiosqlite.connect(":memory:")
-        coin_store = await CoinStore.create(DBWrapper(self.connection))
+        self.connection = DBWrapper(await aiosqlite.connect(db_path))
+        coin_store = await CoinStore.create(self.connection)
         self.mempool_manager = MempoolManager(coin_store, defaults)
-        self.block_records = []
-        self.blocks = []
-        self.timestamp = 1
-        self.block_height = 0
         self.defaults = defaults
+
+        # Load the next data if there is any
+        await self.connection.db.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+        cursor = await self.connection.db.execute("SELECT * from block_data")
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            store_data = SimStore.from_bytes(row[0])
+            self.timestamp = store_data.timestamp
+            self.block_height = store_data.block_height
+            self.block_records = store_data.block_records
+            self.blocks = store_data.blocks
+        else:
+            self.timestamp = 1
+            self.block_height = 0
+            self.block_records = []
+            self.blocks = []
         return self
 
     async def close(self):
-        await self.connection.close()
+        c = await self.connection.db.execute("DELETE FROM block_data")
+        await c.close()
+        c = await self.connection.db.execute(
+            "INSERT INTO block_data VALUES(?)",
+            (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+        )
+        await c.close()
+        await self.connection.db.commit()
+        await self.connection.db.close()
 
     async def new_peak(self):
         await self.mempool_manager.new_peak(self.block_records[-1], [])
@@ -158,7 +204,7 @@ class SpendSim:
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
         self.block_records.append(
-            SimBlockRecord(
+            SimBlockRecord.create(
                 [pool_coin, farmer_coin],
                 next_block_height,
                 self.timestamp,

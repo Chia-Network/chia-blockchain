@@ -75,6 +75,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
 from chia.util.config import get_config_lock, load_config, save_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -1375,7 +1376,7 @@ def get_challenges(
 
 
 def get_plot_dir() -> Path:
-    cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists():
