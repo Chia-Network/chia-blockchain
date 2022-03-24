@@ -90,6 +90,9 @@ win_code_sign_cert.p12
 # chia-blockchain wheel build folder
 build/
 
+# data layer
+**/dl_server_files*
+
 # pytest-monitor
 # https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage
 .pymon

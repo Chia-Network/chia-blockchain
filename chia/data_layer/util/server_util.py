@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 from random import Random
 from typing import Any, Dict, List
@@ -33,6 +34,7 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
 
         keys: List[bytes] = []
         counter = 0
+        tot = 0.0
         for batch in range(num_batches):
             changelist: List[Dict[str, Any]] = []
             for operation in range(num_ops_per_batch):
@@ -46,17 +48,26 @@ async def generate_server_files(num_batches: int, num_ops_per_batch: int, folder
                     keys.remove(key)
                     changelist.append({"action": "delete", "key": key})
                 counter += 1
+            t1 = time.time()
             await data_store.insert_batch(tree_id, changelist)
+            t2 = time.time()
+            tot += t2 - t1
             filename_full_tree = foldername + f"/{batch}.dat"
             filename_diff_tree = foldername + f"/{batch}-delta.dat"
             filename_roots = foldername + "/roots.dat"
             root = await data_store.get_tree_root(tree_id)
-            print(f"Batch: {batch}. Root hash: {root.node_hash}")
+            print(
+                f"Batch: {batch}. "
+                f"Root hash: {root.node_hash}. "
+                f"Time: {t2 - t1}s. "
+                f"Per operation: {(t2 - t1) / num_ops_per_batch}s."
+            )
             if root.node_hash is not None:
                 await data_store.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
                 await data_store.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
                 with open(filename_roots, "a") as writer:
                     writer.write(f"{root.node_hash.hex()}\n")
+        print(f"Total time: {tot}")
         await connection.close()
 
 
