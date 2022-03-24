@@ -489,18 +489,19 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             typ = WalletType(int(summary["type"]))
             address_prefix, scale = wallet_coin_unit(typ, address_prefix)
             total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+            unconfirmed_wallet_balance: str = print_balance(
+                balances["unconfirmed_wallet_balance"], scale, address_prefix
+            )
+            spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
             print()
             print(f"{summary['name']}:")
-            print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
+            print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
+            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
+            print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
             if len(asset_id) > 0:
                 print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
-            print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
-            print(
-                f"{indent}{'-Pending Total Balance:'.ljust(23)} "
-                f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
-            )
-            print(f"{indent}{'-Spendable:'.ljust(23)} {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+            print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
