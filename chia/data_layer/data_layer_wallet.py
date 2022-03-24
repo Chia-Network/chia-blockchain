@@ -416,9 +416,11 @@ class DataLayerWallet:
     async def create_tandem_xch_tx(
         self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True, in_transaction: bool = False
     ) -> TransactionRecord:
+        puzzle_hash = await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction)
+
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction),
+            puzzle_hash=puzzle_hash,
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
@@ -445,7 +447,7 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to update Singleton with launcher ID {launcher_id}")
 
         # Make the child's puzzles
-        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
+        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=True)
         next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle.get_tree_hash(), root_hash)
         next_full_puz = create_host_fullpuz(next_inner_puzzle.get_tree_hash(), root_hash, launcher_id)
 
@@ -514,7 +516,7 @@ class DataLayerWallet:
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=True
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=True,
             )
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
@@ -756,7 +758,7 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
