@@ -10,6 +10,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
+from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -19,6 +20,7 @@ from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.check_spend_bundle import check_spend_bundle
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -366,16 +368,23 @@ class TradeManager:
                 self.log.info(f"Creating wallet for asset ID: {key}")
                 await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
-        all_removals: List[Coin] = offer.bundle.removals()
-        all_removal_names: List[bytes32] = [c.name() for c in all_removals]
-        non_ephemeral_removals: List[Coin] = list(
-            filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
+    async def check_offer_validity(self, offer: Offer, raise_error: bool = False) -> bool:
+        error: Optional[Err] = await check_spend_bundle(
+            offer.bundle,
+            self.wallet_state_manager.constants,
+            await self.wallet_state_manager.blockchain.get_finished_sync_up_to(),
+            self.wallet_state_manager.blockchain.get_latest_timestamp(),
+            self.wallet_state_manager.wallet_node.get_coin_state,
+            self.wallet_state_manager.wallet_node.get_timestamp_for_height,
         )
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [c.name() for c in non_ephemeral_removals]
-        )
-        return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
+
+        if error is not None:
+            self.log.warning(f"Validation offer with id {offer.name()} failed with error {error}")
+            if raise_error:
+                raise ValidationError(error)
+            else:
+                return False
+        return True
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:

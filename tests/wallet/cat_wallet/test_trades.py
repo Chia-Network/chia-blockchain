@@ -1,15 +1,24 @@
 import asyncio
+import dataclasses
+from blspy import G2Element
 from secrets import token_bytes
-from typing import List
+from typing import Callable, List, Tuple
 
 import pytest
 import pytest_asyncio
 
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
+from chia.util.errors import ValidationError
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -526,3 +535,336 @@ class TestCATTrades:
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+    @pytest.mark.asyncio
+    async def test_malicious_trades(self, wallets_prefarm):
+        wallet_node_maker, _, full_node = wallets_prefarm
+        wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+        trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
+
+        ACS: Program = Program.to(1)
+        ACS_PH: Program = ACS.get_tree_hash()
+
+        # Fund an "anyone can spend" coin for use with these malicious trades
+        tx = await wallet_maker.generate_signed_transaction(100, ACS_PH, 0)
+        parent_acs_coin: Coin = next(c for c in tx.spend_bundle.additions() if c.amount == 100)
+        # Spend it once so we have the previous one to try and double spend
+        additional_spend = SpendBundle(
+            [CoinSpend(parent_acs_coin, ACS, Program.to([[51, ACS_PH, parent_acs_coin.amount]]))], G2Element()
+        )
+        tx = dataclasses.replace(tx, spend_bundle=SpendBundle.aggregate([tx.spend_bundle, additional_spend]))
+        await wallet_node_maker.wallet_state_manager.add_pending_transaction(tx)
+        await time_out_assert(15, tx_in_pool, True, full_node.full_node.mempool_manager, tx.spend_bundle.name())
+
+        for i in range(0, 2):
+            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await asyncio.sleep(0.5)
+
+        async def check_for_coin_creation(get_coin_state: Callable, coin: Coin):
+            states = await get_coin_state([coin.name()])
+            if len(states) > 0:
+                return True
+            else:
+                return False
+
+        acs_coin: Coin = next(c for c in tx.spend_bundle.additions() if c.amount == 100 and c != parent_acs_coin)
+        await time_out_assert(15, check_for_coin_creation, True, wallet_node_maker.get_coin_state, acs_coin)
+
+        # First let's test forgetting to offer or request something
+        with pytest.raises(Exception, match="not requesting anything"):
+            await trade_manager_maker.create_offer_for_ids({1: -100})
+        with pytest.raises(Exception, match="not offering anything"):
+            await trade_manager_maker.create_offer_for_ids({1: 100})
+
+        # Next let's make an honest offer of the ACS for some imaginary CAT type
+        honest_coin_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to([[51, Offer.ph(), acs_coin.amount]]),
+        )
+        requested_payments = Offer.notarize_payments({bytes32([0] * 32): [Payment(ACS_PH, 100, [])]}, [acs_coin])
+        honest_offer = Offer(
+            requested_payments,
+            SpendBundle([honest_coin_spend], G2Element()),
+        )
+        assert await trade_manager_maker.check_offer_validity(honest_offer, raise_error=True)
+
+        # Test bad aggregated_signature
+        bad_agg_sig_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [50, wallet_node_maker.wallet_state_manager.private_key.get_g1(), b"$"],
+                ]
+            ),
+        )
+        bad_agg_sig_offer = Offer(
+            requested_payments,
+            SpendBundle([bad_agg_sig_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="BAD_AGGREGATE_SIGNATURE"):
+            await trade_manager_maker.check_offer_validity(bad_agg_sig_offer, raise_error=True)
+
+        # Test coin amount negative
+        negative_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), -1],
+                ]
+            ),
+        )
+        with pytest.raises(ValueError, match="does not fit into uint64"):
+            Offer(
+                requested_payments,
+                SpendBundle([negative_spend], G2Element()),
+            )
+
+        # Test more than maximum amount
+        too_large_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), wallet_node_maker.wallet_state_manager.constants.MAX_COIN_AMOUNT + 1],
+                ]
+            ),
+        )
+        with pytest.raises(ValueError, match="does not fit into uint64"):
+            Offer(
+                requested_payments,
+                SpendBundle([too_large_spend], G2Element()),
+            )
+
+        # Test duplicate outputs
+        duplicate_output_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), 1],
+                    [51, Offer.ph(), 1],
+                ]
+            ),
+        )
+        duplicate_output_offer = Offer(
+            requested_payments,
+            SpendBundle([duplicate_output_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="DUPLICATE_OUTPUT"):
+            await trade_manager_maker.check_offer_validity(duplicate_output_offer, raise_error=True)
+
+        # Test double spend
+        double_spend_offer = Offer(
+            requested_payments,
+            SpendBundle([honest_coin_spend, honest_coin_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="DOUBLE_SPEND"):
+            await trade_manager_maker.check_offer_validity(double_spend_offer, raise_error=True)
+
+        # Test minting value
+        minting_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to([[51, Offer.ph(), acs_coin.amount + 1]]),
+        )
+        minting_offer = Offer(
+            requested_payments,
+            SpendBundle([minting_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="MINTING_COIN"):
+            await trade_manager_maker.check_offer_validity(minting_offer, raise_error=True)
+
+        # Test invalid fee reservation
+        bad_reserve_fee_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [52, 1],
+                ]
+            ),
+        )
+        bad_reserve_fee_offer = Offer(
+            requested_payments,
+            SpendBundle([bad_reserve_fee_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
+            await trade_manager_maker.check_offer_validity(bad_reserve_fee_offer, raise_error=True)
+
+        # Test unknown unspent
+        unknown_unspent_spend = CoinSpend(
+            dataclasses.replace(acs_coin, parent_coin_info=bytes32([0] * 32)),
+            ACS,
+            Program.to([[51, Offer.ph(), acs_coin.amount]]),
+        )
+        unknown_unspent_offer = Offer(
+            requested_payments,
+            SpendBundle([unknown_unspent_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="UNKNOWN_UNSPENT"):
+            await trade_manager_maker.check_offer_validity(unknown_unspent_offer, raise_error=True)
+
+        # Test double spend
+        double_spend = CoinSpend(
+            parent_acs_coin,
+            ACS,
+            Program.to([[51, Offer.ph(), acs_coin.amount]]),
+        )
+        double_spend_offer = Offer(
+            requested_payments,
+            SpendBundle([double_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="DOUBLE_SPEND"):
+            await trade_manager_maker.check_offer_validity(double_spend_offer, raise_error=True)
+
+        # Test incorrect puzzle reveal
+        wrong_ph_spend = CoinSpend(
+            dataclasses.replace(acs_coin, puzzle_hash=bytes32([0] * 32)),
+            ACS,
+            Program.to([[51, Offer.ph(), acs_coin.amount]]),
+        )
+        wrong_ph_offer = Offer(
+            requested_payments,
+            SpendBundle([wrong_ph_spend], G2Element()),
+        )
+        with pytest.raises(ValidationError, match="INVALID_SPEND_BUNDLE"):
+            await trade_manager_maker.check_offer_validity(wrong_ph_offer, raise_error=True)
+
+        # Test a bunch of invalid conditions
+        error_spend_items: List[Tuple[str, CoinSpend]] = []
+
+        assert_coin_announcement_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [61, bytes32([0] * 32)],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_ANNOUNCE_CONSUMED_FAILED", assert_coin_announcement_spend))
+
+        assert_puzzle_announcement_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [63, bytes32([0] * 32)],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_ANNOUNCE_CONSUMED_FAILED", assert_puzzle_announcement_spend))
+
+        assert_my_coin_id_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [70, bytes32([0] * 32)],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_MY_COIN_ID_FAILED", assert_my_coin_id_spend))
+
+        assert_my_parent_id_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [71, bytes32([0] * 32)],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_MY_PARENT_ID_FAILED", assert_my_parent_id_spend))
+
+        assert_my_puzzle_hash_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [72, bytes32([0] * 32)],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_MY_PUZZLEHASH_FAILED", assert_my_puzzle_hash_spend))
+
+        assert_my_amount_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [73, 0],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_MY_AMOUNT_FAILED", assert_my_amount_spend))
+
+        max_uint64 = uint64(18446744073709551615)
+        assert_seconds_relative_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [80, max_uint64],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_SECONDS_RELATIVE_FAILED", assert_seconds_relative_spend))
+
+        assert_seconds_absolute_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [81, max_uint64],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_SECONDS_ABSOLUTE_FAILED", assert_seconds_absolute_spend))
+
+        max_uint32 = uint32(4294967295)
+        assert_height_relative_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [82, max_uint32],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_HEIGHT_RELATIVE_FAILED", assert_height_relative_spend))
+
+        max_uint32 = uint32(4294967295)
+        assert_height_absolute_spend = CoinSpend(
+            acs_coin,
+            ACS,
+            Program.to(
+                [
+                    [51, Offer.ph(), acs_coin.amount],
+                    [83, max_uint32],
+                ]
+            ),
+        )
+        error_spend_items.append(("ASSERT_HEIGHT_ABSOLUTE_FAILED", assert_height_absolute_spend))
+
+        for error, spend in error_spend_items:
+            error_offer = Offer(
+                requested_payments,
+                SpendBundle([spend], G2Element()),
+            )
+            with pytest.raises(ValidationError, match=error):
+                await trade_manager_maker.check_offer_validity(error_offer, raise_error=True)
