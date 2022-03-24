@@ -265,6 +265,7 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
+        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
                 new_singleton,
@@ -288,7 +289,7 @@ class DataLayerWallet:
         while len(puzzle_hashes_to_search_for) != 0:
             coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
                 [launcher_id, new_singleton.puzzle_hash]
-            )
+            )is:pr is:open sort:updated-desc base:a
             state_set = set(
                 filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)
             )  # Sanity check for troublemakers
@@ -413,15 +414,16 @@ class DataLayerWallet:
         return dl_record, std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True
+        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True, in_transaction: bool = False
     ) -> TransactionRecord:
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
+            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction),
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
             puzzle_announcements_to_consume=None if coin_announcement else {announcement_to_assert},
+            in_transaction=in_transaction,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
@@ -512,7 +514,7 @@ class DataLayerWallet:
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=True
             )
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
@@ -537,7 +539,7 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
+        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, True)
         return txs
 
     async def create_report_spend(
@@ -823,7 +825,7 @@ class DataLayerWallet:
 
                             all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
                 for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx)
+                    await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=True)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created
