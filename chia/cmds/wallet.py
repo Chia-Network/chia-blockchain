@@ -167,7 +167,9 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-@click.option("-n", "--new-address", help="Create a new wallet receive address", is_flag=True, default=False, show_default=True)
+@click.option(
+    "-n", "--new-address", help="Create a new wallet receive address", is_flag=True, default=False, show_default=True
+)
 def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_address: bool) -> None:
     extra_params = {"id": id, "new_address": new_address}
     import asyncio
