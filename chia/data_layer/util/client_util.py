@@ -23,7 +23,7 @@ async def download_client_data(delta: bool, foldername: str) -> None:
         tree_id = bytes32(b"0" * 32)
         await data_store.create_tree(tree_id)
         generation = 0
-        tot = 0
+        tot = 0.0
         with open(foldername + "/roots.dat", "r") as reader:
             while True:
                 root_entry = reader.readline()
