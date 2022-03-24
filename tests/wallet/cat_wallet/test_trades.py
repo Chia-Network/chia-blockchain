@@ -1,19 +1,19 @@
 import asyncio
 import dataclasses
-from blspy import G2Element
 from secrets import token_bytes
 from typing import Callable, List, Tuple
 
 import pytest
 import pytest_asyncio
+from blspy import G2Element
 
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
 from chia.types.coin_spend import CoinSpend
+from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ValidationError
 from chia.util.ints import uint16, uint32, uint64
