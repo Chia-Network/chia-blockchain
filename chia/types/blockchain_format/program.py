@@ -63,10 +63,6 @@ class Program(SExp):
     def to_serialized_program(self) -> "SerializedProgram":
         return SerializedProgram.from_bytes(bytes(self))
 
-    @classmethod
-    def from_serialized_program(cls, sp: "SerializedProgram") -> "Program":
-        return cls.from_bytes(bytes(sp))
-
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
         self.stream(f)  # noqa
