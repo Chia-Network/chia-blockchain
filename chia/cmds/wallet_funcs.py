@@ -482,12 +482,18 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         else:
             print(f"Balances, fingerprint: {fingerprint}")
         for summary in summaries_response:
+            asset_id = summary["data"]
             wallet_id = summary["id"]
             balances = await wallet_client.get_wallet_balance(wallet_id)
             typ = WalletType(int(summary["type"]))
             address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-            print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-            print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
+            total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+            print(f"{summary['name']}: {total_balance}")
+            print(f"   -Wallet ID: {wallet_id}")
+            print(f"   -Type: {typ.name}")
+            if len(asset_id) > 0:
+                print(f"   -Asset ID: {asset_id}")
+            print(f"   -Total Balance: {total_balance}")
             print(
                 f"   -Pending Total Balance: "
                 f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
@@ -512,9 +518,21 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     if fingerprint is not None:
         log_in_response = await wallet_client.log_in(fingerprint)
     else:
+        logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+        current_sync_status: str = ""
+        if logged_in_fingerprint is not None:
+            if await wallet_client.get_synced():
+                current_sync_status = "Synced"
+            elif await wallet_client.get_sync_status():
+                current_sync_status = "Syncing"
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i+1}) {fp}", end="")
+            if logged_in_fingerprint == fp:
+                print("*", end="")
+                if len(current_sync_status) > 0:
+                    print(f" ({current_sync_status})", end="")
+            print()
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
