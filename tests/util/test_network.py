@@ -1,3 +1,6 @@
+import os
+import sys
+
 import pytest
 from chia.util.network import get_host_addr
 
@@ -13,6 +16,10 @@ class TestNetwork:
         assert get_host_addr("example.net", prefer_ipv6) == "93.184.216.34"
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform == "darwin"),
+        reason="macOS runners in GitHub Actions do not seem to support IPv6",
+    )
     async def test_get_host_addr6(self):
         # Run these tests forcing IPv6 resolution
         prefer_ipv6 = True
