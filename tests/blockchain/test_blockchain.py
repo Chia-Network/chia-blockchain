@@ -62,12 +62,6 @@ log = logging.getLogger(__name__)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_block_tools_proofs_400(self, default_400_blocks):

@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 import pytest_asyncio
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -13,18 +12,6 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 pytestmark = pytest.mark.skip("TODO: Fix tests")
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
 
 
 @pytest_asyncio.fixture(scope="function")
