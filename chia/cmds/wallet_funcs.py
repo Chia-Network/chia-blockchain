@@ -483,17 +483,26 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         else:
             print(f"Balances, fingerprint: {fingerprint}")
         for summary in summaries_response:
+            indent: str = "   "
+            asset_id = summary["data"]
             wallet_id = summary["id"]
             balances = await wallet_client.get_wallet_balance(wallet_id)
             typ = WalletType(int(summary["type"]))
             address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-            print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-            print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-            print(
-                f"   -Pending Total Balance: "
-                f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+            total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+            unconfirmed_wallet_balance: str = print_balance(
+                balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
-            print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+            spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            print()
+            print(f"{summary['name']}:")
+            print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
+            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
+            print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
+            print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
+            if len(asset_id) > 0:
+                print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
+            print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
@@ -513,9 +522,24 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     if fingerprint is not None:
         log_in_response = await wallet_client.log_in(fingerprint)
     else:
+        logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+        spacing: str = "  " if logged_in_fingerprint is not None else ""
+        current_sync_status: str = ""
+        if logged_in_fingerprint is not None:
+            if await wallet_client.get_synced():
+                current_sync_status = "Synced"
+            elif await wallet_client.get_sync_status():
+                current_sync_status = "Syncing"
+            else:
+                current_sync_status = "Not Synced"
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            row: str = f"{i+1}) "
+            row += "* " if fp == logged_in_fingerprint else spacing
+            row += f"{fp}"
+            if fp == logged_in_fingerprint and len(current_sync_status) > 0:
+                row += f" ({current_sync_status})"
+            print(row)
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
