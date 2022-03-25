@@ -40,7 +40,7 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_nodes(bt):
+async def wallet_nodes_perf(bt):
     async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -56,8 +56,8 @@ async def wallet_nodes(bt):
 class TestPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_full_block_performance(self, bt, wallet_nodes, self_hostname):
-        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes
+    async def test_full_block_performance(self, bt, wallet_nodes_perf, self_hostname):
+        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 

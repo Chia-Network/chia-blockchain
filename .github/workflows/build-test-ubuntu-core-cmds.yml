@@ -77,13 +77,6 @@ jobs:
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -95,8 +88,9 @@ jobs:
     - name: Test core-cmds code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0 -m "not benchmark"
+        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
