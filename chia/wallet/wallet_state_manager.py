@@ -618,7 +618,11 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def new_coin_state(
-        self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32]
+        self,
+        coin_states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+        in_transaction: bool = False,
     ) -> None:
         # TODO: add comment about what this method does
 
@@ -855,7 +859,11 @@ class WalletStateManager:
                         peer, coin_state.spent_height, coin_state.coin
                     )
                     dl_wallet = self.wallets[uint32(record.wallet_id)]
-                    await dl_wallet.singleton_removed(singleton_spend, coin_state.spent_height)
+                    await dl_wallet.singleton_removed(
+                        singleton_spend,
+                        coin_state.spent_height,
+                        in_transaction=in_transaction,
+                    )
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -1074,17 +1082,17 @@ class WalletStateManager:
         await self.create_more_puzzle_hashes(in_transaction=True)
         return coin_record_1
 
-    async def add_pending_transaction(self, tx_record: TransactionRecord):
+    async def add_pending_transaction(self, tx_record: TransactionRecord, in_transaction: bool = False):
         """
         Called from wallet before new transaction is sent to the full_node
         """
         # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        await self.tx_store.add_transaction_record(tx_record, False)
+        await self.tx_store.add_transaction_record(tx_record, in_transaction=in_transaction)
         all_coins_names = []
         all_coins_names.extend([coin.name() for coin in tx_record.additions])
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+        await self.add_interested_coin_ids(all_coins_names, in_transaction=in_transaction)
         self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
