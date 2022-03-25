@@ -50,6 +50,9 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
 
 @contextlib.contextmanager
 def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
+    # TODO: This is presently used in some tests to lock the saving of the
+    #       configuration file without having loaded it right there.  This usage
+    #       should probably be removed and this function made private.
     config_path = config_path_for_filename(root_path, filename)
     lock_path: Path = config_path.with_name(config_path.name + ".lock")
     with FileLock(lock_path):
@@ -59,7 +62,7 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
 @contextlib.contextmanager
 def lock_and_load_config(root_path: Path, filename: Union[str, Path]) -> Iterator[Dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
-        config = load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
+        config = _load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
         yield config
         # TODO: would need to be fancier to integrate this since it is conditional
         # save_config(root_path=root_path, filename=filename, config_data=config)
@@ -84,12 +87,12 @@ def load_config(
     sub_config: Optional[str] = None,
     exit_on_error: bool = True,
 ) -> Dict:
-    return load_config_maybe_locked(
-        root_path=root_path, filename=filename, sub_config=sub_config, exit_on_error=exit_on_error, acquire_lock=True
+    return _load_config_maybe_locked(
+        root_path=root_path, filename=filename, sub_config=sub_config, exit_on_error=exit_on_error, acquire_lock=True,
     )
 
 
-def load_config_maybe_locked(
+def _load_config_maybe_locked(
     root_path: Path,
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
