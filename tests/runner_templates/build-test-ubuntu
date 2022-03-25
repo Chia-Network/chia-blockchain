@@ -66,13 +66,6 @@ jobs:
 
 CHECKOUT_TEST_BLOCKS_AND_PLOTS
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -84,7 +77,7 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
 
     - name: Process coverage data
       run: |
@@ -103,6 +96,7 @@ INSTALL_TIMELORD
         if-no-files-found: error
 
 CHECK_RESOURCE_USAGE
+
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

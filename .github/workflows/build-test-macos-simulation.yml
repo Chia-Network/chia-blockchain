@@ -86,6 +86,14 @@ jobs:
         brew install boost
         sh install.sh -d
 
+    - name: Install Ubuntu dependencies
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get install software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+
     - name: Install timelord
       run: |
         . ./activate
@@ -95,6 +103,7 @@ jobs:
     - name: Test simulation code with pytest
       run: |
         . ./activate
+<<<<<<< HEAD
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0 -m "not benchmark"
 
     - name: Process coverage data
@@ -112,6 +121,9 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
+=======
+        ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0 -n 0 -m "not benchmark"
+>>>>>>> main
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

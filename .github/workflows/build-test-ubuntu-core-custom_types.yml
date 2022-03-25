@@ -79,13 +79,6 @@ jobs:
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -97,6 +90,7 @@ jobs:
     - name: Test core-custom_types code with pytest
       run: |
         . ./activate
+<<<<<<< HEAD
         venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/custom_types/test_*.py -s -v --durations 0 -m "not benchmark"
 
     - name: Process coverage data
@@ -114,7 +108,11 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
+=======
+        ./venv/bin/py.test tests/core/custom_types/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
+>>>>>>> main
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
