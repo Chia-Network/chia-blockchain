@@ -19,7 +19,8 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
 
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 
@@ -40,7 +41,9 @@ class TestWalletRpc:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_wallet_make_transaction(
+        self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, bt: BlockTools, self_hostname: str
+    ) -> None:
         test_rpc_port = uint16(21529)
         test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)

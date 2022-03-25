@@ -20,7 +20,8 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
-from tests.setup_nodes import setup_simulators_and_wallets, bt
+from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
@@ -29,7 +30,7 @@ pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
 
 
-async def init_data_layer(wallet_rpc_port: int) -> AsyncIterator[DataLayer]:
+async def init_data_layer(wallet_rpc_port: int, bt: BlockTools) -> AsyncIterator[DataLayer]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = wallet_rpc_port
     config["data_layer"]["port"] = find_available_listen_port("data_layer")
@@ -50,7 +51,7 @@ async def one_wallet_node() -> AsyncIterator[nodes]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
+async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes]:
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
         full_nodes, wallets = nodes
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -72,7 +73,7 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes]:
 
 
 @pytest.mark.asyncio
-async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
+async def test_create_insert_get(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -88,7 +89,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
@@ -128,7 +129,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_double_insert(one_wallet_node_and_rpc: nodes) -> None:
+async def test_create_double_insert(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -144,7 +145,7 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -190,7 +191,7 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
+async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -207,7 +208,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
     # TODO: with this being a pseudo context manager'ish thing it doesn't actually handle shutdown
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -275,7 +276,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
+async def test_get_roots(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -291,7 +292,7 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -350,7 +351,7 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
+async def test_get_root_history(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -366,7 +367,7 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -428,7 +429,7 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
+async def test_get_kv_diff(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -444,7 +445,7 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -519,7 +520,7 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes) -> None:
 
 
 @pytest.mark.asyncio
-async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes) -> None:
+async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes, bt: BlockTools) -> None:
     root_path = bt.root_path
     wallet_node, full_node_api = one_wallet_node_and_rpc
     num_blocks = 15
@@ -535,7 +536,7 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_node.server._port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
