@@ -1,8 +1,6 @@
 import pytest
-import pytest_asyncio
 import aiosqlite
 import random
-import asyncio
 from pathlib import Path
 from typing import List, Tuple
 
@@ -25,12 +23,6 @@ def rand_bytes(num) -> bytes:
     for i in range(num):
         ret[i] = random.getrandbits(8)
     return bytes(ret)
-
-
-@pytest_asyncio.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestDbUpgrade:

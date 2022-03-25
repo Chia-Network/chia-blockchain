@@ -22,7 +22,7 @@ jobs:
   build:
     name: Ubuntu core-full_node Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 4

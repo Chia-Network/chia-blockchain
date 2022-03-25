@@ -12,7 +12,6 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
-    self_hostname,
     setup_full_node,
     setup_full_system,
     test_constants,
@@ -38,30 +37,30 @@ test_constants_modified = test_constants.replace(
 )
 
 
-class TestSimulation:
-
-    # TODO: Ideally, the db_version should be the (parameterized) db_version
-    # fixture, to test all versions of the database schema. This doesn't work
-    # because of a hack in shutting down the full node, which means you cannot run
-    # more than one simulations per process.
-    @pytest_asyncio.fixture(scope="function")
-    async def extra_node(self):
-        with TempKeyring() as keychain:
-            b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-            async for _ in setup_full_node(
-                test_constants_modified,
-                "blockchain_test_3.db",
-                find_available_listen_port(),
-                find_available_listen_port(),
-                b_tools,
-                db_version=1,
-            ):
-                yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def simulation(self):
-        async for _ in setup_full_system(test_constants_modified, db_version=1):
+# TODO: Ideally, the db_version should be the (parameterized) db_version
+# fixture, to test all versions of the database schema. This doesn't work
+# because of a hack in shutting down the full node, which means you cannot run
+# more than one simulations per process.
+@pytest_asyncio.fixture(scope="function")
+async def extra_node(self_hostname):
+    with TempKeyring() as keychain:
+        b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
+        async for _ in setup_full_node(
+            test_constants_modified,
+            "blockchain_test_3.db",
+            self_hostname,
+            find_available_listen_port(),
+            find_available_listen_port(),
+            b_tools,
+            db_version=1,
+        ):
             yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def simulation(bt):
+    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
+        yield _
 
     @pytest_asyncio.fixture(scope="function")
     async def one_wallet_node(
@@ -70,8 +69,10 @@ class TestSimulation:
         async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
             yield _
 
+
+class TestSimulation:
     @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation, extra_node):
+    async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
 
         node1_port = node1.full_node.config["port"]

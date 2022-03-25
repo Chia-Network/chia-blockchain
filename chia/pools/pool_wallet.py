@@ -296,7 +296,7 @@ class PoolWallet:
         await self.update_pool_config()
         return True
 
-    async def rewind(self, block_height: int) -> bool:
+    async def rewind(self, block_height: int, in_transaction: bool) -> bool:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         Returns True if the wallet should be removed.
@@ -306,7 +306,7 @@ class PoolWallet:
                 self.wallet_id
             ).copy()
             prev_state: PoolWalletInfo = await self.get_current_state()
-            await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
+            await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id, in_transaction)
 
             if len(history) > 0 and history[0][0] > block_height:
                 return True

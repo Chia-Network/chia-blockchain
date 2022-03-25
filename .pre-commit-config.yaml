@@ -54,10 +54,10 @@ repos:
     hooks:
     - id: flake8
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.930
+    rev: v0.940
     hooks:
     - id: mypy
-      additional_dependencies: [pytest, pytest-asyncio, types-aiofiles, types-click, types-setuptools, types-PyYAML]
+      additional_dependencies: [filelock, pytest, pytest-asyncio, types-aiofiles, types-click, types-setuptools, types-PyYAML]
       # This intentionally counters the settings in mypy.ini to allow a loose local
       # check and a strict CI check. This difference may or may not be retained long
       # term.

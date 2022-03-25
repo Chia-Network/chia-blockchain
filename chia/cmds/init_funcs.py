@@ -21,6 +21,7 @@ from chia.util.config import (
     load_config,
     save_config,
     unflatten_properties,
+    get_config_lock,
 )
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir, path_from_root
@@ -74,88 +75,90 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return None
 
-    config: Dict = load_config(new_root, "config.yaml")
-    pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
-    all_targets = []
-    stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
-    stop_searching_for_pool = "xch_target_address" not in config["pool"]
-    number_of_ph_to_search = 50
-    selected = config["selected_network"]
-    prefix = config["network_overrides"]["config"][selected]["address_prefix"]
+    with get_config_lock(new_root, "config.yaml"):
+        config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
+        pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
+        all_targets = []
+        stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
+        stop_searching_for_pool = "xch_target_address" not in config["pool"]
+        number_of_ph_to_search = 50
+        selected = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
-    intermediates = {}
-    for sk, _ in all_sks:
-        intermediates[bytes(sk)] = {
-            "observer": master_sk_to_wallet_sk_unhardened_intermediate(sk),
-            "non-observer": master_sk_to_wallet_sk_intermediate(sk),
-        }
-
-    for i in range(number_of_ph_to_search):
-        if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
-            break
+        intermediates = {}
         for sk, _ in all_sks:
-            intermediate_n = intermediates[bytes(sk)]["non-observer"]
-            intermediate_o = intermediates[bytes(sk)]["observer"]
+            intermediates[bytes(sk)] = {
+                "observer": master_sk_to_wallet_sk_unhardened_intermediate(sk),
+                "non-observer": master_sk_to_wallet_sk_intermediate(sk),
+            }
 
-            all_targets.append(
-                encode_puzzle_hash(
-                    create_puzzlehash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()), prefix
+        for i in range(number_of_ph_to_search):
+            if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
+                break
+            for sk, _ in all_sks:
+                intermediate_n = intermediates[bytes(sk)]["non-observer"]
+                intermediate_o = intermediates[bytes(sk)]["observer"]
+
+                all_targets.append(
+                    encode_puzzle_hash(
+                        create_puzzlehash_for_pk(_derive_path_unhardened(intermediate_o, [i]).get_g1()), prefix
+                    )
                 )
+                all_targets.append(
+                    encode_puzzle_hash(create_puzzlehash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
+                )
+                if all_targets[-1] == config["farmer"].get("xch_target_address") or all_targets[-2] == config[
+                    "farmer"
+                ].get("xch_target_address"):
+                    stop_searching_for_farmer = True
+                if all_targets[-1] == config["pool"].get("xch_target_address") or all_targets[-2] == config["pool"].get(
+                    "xch_target_address"
+                ):
+                    stop_searching_for_pool = True
+
+        # Set the destinations, if necessary
+        updated_target: bool = False
+        if "xch_target_address" not in config["farmer"]:
+            print(
+                f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling)"
+                f" to {all_targets[0]}"
             )
-            all_targets.append(
-                encode_puzzle_hash(create_puzzlehash_for_pk(_derive_path(intermediate_n, [i]).get_g1()), prefix)
+            config["farmer"]["xch_target_address"] = all_targets[0]
+            updated_target = True
+        elif config["farmer"]["xch_target_address"] not in all_targets:
+            print(
+                f"WARNING: using a farmer address which we might not have the private"
+                f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
+                f"{config['farmer']['xch_target_address']} with {all_targets[0]}"
             )
-            if all_targets[-1] == config["farmer"].get("xch_target_address") or all_targets[-2] == config["farmer"].get(
-                "xch_target_address"
-            ):
-                stop_searching_for_farmer = True
-            if all_targets[-1] == config["pool"].get("xch_target_address") or all_targets[-2] == config["pool"].get(
-                "xch_target_address"
-            ):
-                stop_searching_for_pool = True
 
-    # Set the destinations, if necessary
-    updated_target: bool = False
-    if "xch_target_address" not in config["farmer"]:
-        print(
-            f"Setting the xch destination for the farmer reward (1/8 plus fees, solo and pooling) to {all_targets[0]}"
-        )
-        config["farmer"]["xch_target_address"] = all_targets[0]
-        updated_target = True
-    elif config["farmer"]["xch_target_address"] not in all_targets:
-        print(
-            f"WARNING: using a farmer address which we might not have the private"
-            f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['farmer']['xch_target_address']} with {all_targets[0]}"
-        )
+        if "pool" not in config:
+            config["pool"] = {}
+        if "xch_target_address" not in config["pool"]:
+            print(f"Setting the xch destination address for pool reward (7/8 for solo only) to {all_targets[0]}")
+            config["pool"]["xch_target_address"] = all_targets[0]
+            updated_target = True
+        elif config["pool"]["xch_target_address"] not in all_targets:
+            print(
+                f"WARNING: using a pool address which we might not have the private"
+                f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
+                f"{config['pool']['xch_target_address']} with {all_targets[0]}"
+            )
+        if updated_target:
+            print(
+                f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
+                f" {(new_root / 'config' / 'config.yaml').absolute()}."
+            )
 
-    if "pool" not in config:
-        config["pool"] = {}
-    if "xch_target_address" not in config["pool"]:
-        print(f"Setting the xch destination address for pool reward (7/8 for solo only) to {all_targets[0]}")
-        config["pool"]["xch_target_address"] = all_targets[0]
-        updated_target = True
-    elif config["pool"]["xch_target_address"] not in all_targets:
-        print(
-            f"WARNING: using a pool address which we might not have the private"
-            f" keys for. We searched the first {number_of_ph_to_search} addresses. Consider overriding "
-            f"{config['pool']['xch_target_address']} with {all_targets[0]}"
-        )
-    if updated_target:
-        print(
-            f"To change the XCH destination addresses, edit the `xch_target_address` entries in"
-            f" {(new_root / 'config' / 'config.yaml').absolute()}."
-        )
+        # Set the pool pks in the farmer
+        pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
+        if "pool_public_keys" in config["farmer"]:
+            for pk_hex in config["farmer"]["pool_public_keys"]:
+                # Add original ones in config
+                pool_pubkeys_hex.add(pk_hex)
 
-    # Set the pool pks in the farmer
-    pool_pubkeys_hex = set(bytes(pk).hex() for pk in pool_child_pubkeys)
-    if "pool_public_keys" in config["farmer"]:
-        for pk_hex in config["farmer"]["pool_public_keys"]:
-            # Add original ones in config
-            pool_pubkeys_hex.add(pk_hex)
-
-    config["farmer"]["pool_public_keys"] = pool_pubkeys_hex
-    save_config(new_root, "config.yaml", config)
+        config["farmer"]["pool_public_keys"] = pool_pubkeys_hex
+        save_config(new_root, "config.yaml", config)
 
 
 def copy_files_rec(old_path: Path, new_path: Path):
@@ -193,13 +196,15 @@ def migrate_from(
         copy_files_rec(old_path, new_path)
 
     # update config yaml with new keys
-    config: Dict = load_config(new_root, "config.yaml")
-    config_str: str = initial_config_file("config.yaml")
-    default_config: Dict = yaml.safe_load(config_str)
-    flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
-    dict_add_new_default(config, default_config, flattened_keys)
 
-    save_config(new_root, "config.yaml", config)
+    with get_config_lock(new_root, "config.yaml"):
+        config: Dict = load_config(new_root, "config.yaml", acquire_lock=False)
+        config_str: str = initial_config_file("config.yaml")
+        default_config: Dict = yaml.safe_load(config_str)
+        flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
+        dict_add_new_default(config, default_config, flattened_keys)
+
+        save_config(new_root, "config.yaml", config)
 
     create_all_ssl(new_root)
 
@@ -457,12 +462,14 @@ def chia_init(
         check_keys(root_path)
 
     config: Dict
+
     if v1_db:
-        config = load_config(root_path, "config.yaml")
-        db_pattern = config["full_node"]["database_path"]
-        new_db_path = db_pattern.replace("_v2_", "_v1_")
-        config["full_node"]["database_path"] = new_db_path
-        save_config(root_path, "config.yaml", config)
+        with get_config_lock(root_path, "config.yaml"):
+            config = load_config(root_path, "config.yaml", acquire_lock=False)
+            db_pattern = config["full_node"]["database_path"]
+            new_db_path = db_pattern.replace("_v2_", "_v1_")
+            config["full_node"]["database_path"] = new_db_path
+            save_config(root_path, "config.yaml", config)
     else:
         config = load_config(root_path, "config.yaml")["full_node"]
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])

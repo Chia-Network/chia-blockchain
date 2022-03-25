@@ -41,6 +41,9 @@ jobs:
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
+    - uses: Chia-Network/actions/enforce-semver@main
+      if: startsWith(github.ref, 'refs/tags/')
+
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
       id: version_number

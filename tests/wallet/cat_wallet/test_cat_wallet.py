@@ -19,7 +19,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -30,28 +30,31 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
     return True
 
 
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node():
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 2, {}):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_wallet_nodes():
+    async for _ in setup_simulators_and_wallets(1, 3, {}):
+        yield _
+
+
 class TestCATWallet:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_creation(self, two_wallet_nodes, trusted):
+    async def test_cat_creation(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -120,7 +123,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_spend(self, two_wallet_nodes, trusted):
+    async def test_cat_spend(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -221,7 +224,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_get_wallet_for_asset_id(self, two_wallet_nodes, trusted):
+    async def test_get_wallet_for_asset_id(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -274,7 +277,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_doesnt_see_eve(self, two_wallet_nodes, trusted):
+    async def test_cat_doesnt_see_eve(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -377,7 +380,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_spend_multiple(self, three_wallet_nodes, trusted):
+    async def test_cat_spend_multiple(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -518,7 +521,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_max_amount_send(self, two_wallet_nodes, trusted):
+    async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -650,7 +653,7 @@ class TestCATWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_cat_hint(self, two_wallet_nodes, trusted, autodiscovery):
+    async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]

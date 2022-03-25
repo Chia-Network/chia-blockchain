@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict
 
@@ -25,7 +26,7 @@ class TestPeerStoreResolver:
         # Expect: peers.dat path has the same directory as the legacy db
         assert resolver.peers_file_path == root_path / Path("db/peers.dat")
         # Expect: the config is updated with the new value
-        assert config["peers_file_path"] == "db/peers.dat"
+        assert config["peers_file_path"] == os.fspath(Path("db/peers.dat"))
         # Expect: the config retains the legacy peer_db_path value
         assert config["peer_db_path"] == "db/peer_table_node.sqlite"
 
@@ -49,7 +50,7 @@ class TestPeerStoreResolver:
         # Expect: peers.dat path has the same directory as the legacy db
         assert resolver.peers_file_path == root_path / Path("some/modified/db/path/peers.dat")
         # Expect: the config is updated with the new value
-        assert config["peers_file_path"] == "some/modified/db/path/peers.dat"
+        assert config["peers_file_path"] == os.fspath(Path("some/modified/db/path/peers.dat"))
         # Expect: the config retains the legacy peer_db_path value
         assert config["peer_db_path"] == "some/modified/db/path/peer_table_node.sqlite"
 
@@ -173,7 +174,7 @@ class TestPeerStoreResolver:
         # Expect: peers.dat Path is set to the default location
         assert resolver.peers_file_path == root_path / Path("db/peers.dat")
         # Expect: the config is updated with the new value
-        assert config["peers_file_path"] == "db/peers.dat"
+        assert config["peers_file_path"] == os.fspath(Path("db/peers.dat"))
         # Expect: the config doesn't add a legacy peer_db_path value
         assert config.get("peer_db_path") is None
 
@@ -197,7 +198,7 @@ class TestPeerStoreResolver:
         # Expect: resolved file path has testnet in the name
         assert resolver.peers_file_path == root_path / Path("db/peers_testnet123.dat")
         # Expect: the config is updated with the new value
-        assert config["peers_file_path"] == "db/peers_testnet123.dat"
+        assert config["peers_file_path"] == os.fspath(Path("db/peers_testnet123.dat"))
         # Expect: the config doesn't add a legacy peer_db_path value
         assert config.get("peer_db_path") is None
 
