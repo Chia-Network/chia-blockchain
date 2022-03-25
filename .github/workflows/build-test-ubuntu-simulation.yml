@@ -102,8 +102,7 @@ jobs:
     - name: Test simulation code with pytest
       run: |
         . ./activate
-<<<<<<< HEAD
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 
     - name: Process coverage data
       run: |
@@ -120,9 +119,6 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
-=======
-        ./venv/bin/py.test tests/simulation/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
->>>>>>> main
 
 # Omitted resource usage check
 
