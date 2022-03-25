@@ -213,7 +213,6 @@ class DataLayerWallet:
             CoinSpend(launcher_coin, response.puzzle, response.solution),
             height=response.height,
         )
-        await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def new_launcher_spend(
         self,
