@@ -96,13 +96,13 @@ def configure(
             print("Target peer count updated")
             change_made = True
         if enable_data_server:
-        config["data_layer"]["run_server"] = str2bool(enable_data_server)
-        if str2bool(enable_data_server):
-            print("Data Server enabled.")
-        else:
-            print("Data Server disabled.")
-        change_made = True
-    if testnet:
+            config["data_layer"]["run_server"] = str2bool(enable_data_server)
+            if str2bool(enable_data_server):
+                print("Data Server enabled.")
+            else:
+                print("Data Server disabled.")
+            change_made = True
+        if testnet:
             if testnet == "true" or testnet == "t":
                 print("Setting Testnet")
                 testnet_port = "58444"
@@ -129,7 +129,7 @@ def configure(
                 config["ui"]["selected_network"] = testnet
                 config["introducer"]["selected_network"] = testnet
                 config["wallet"]["selected_network"] = testnet
-            config["data_layer"]["selected_network"] = testnet
+                config["data_layer"]["selected_network"] = testnet
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(testnet_port)
