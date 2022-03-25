@@ -88,7 +88,11 @@ def load_config(
     exit_on_error: bool = True,
 ) -> Dict:
     return _load_config_maybe_locked(
-        root_path=root_path, filename=filename, sub_config=sub_config, exit_on_error=exit_on_error, acquire_lock=True,
+        root_path=root_path,
+        filename=filename,
+        sub_config=sub_config,
+        exit_on_error=exit_on_error,
+        acquire_lock=True,
     )
 
 
