@@ -321,7 +321,7 @@ class DataLayerWallet:
                     cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                         peer, next_coin_state.spent_height, next_coin_state.coin
                     )
-                    await self.singleton_removed(cs, next_coin_state.spent_height)
+                    await self.singleton_removed(cs, next_coin_state.spent_height, in_transaction=in_transaction)
                     previous_coin_id = next_coin_state.coin.name()
 
     ################
@@ -437,6 +437,7 @@ class DataLayerWallet:
         launcher_id: bytes32,
         root_hash: bytes32,
         fee: uint64 = uint64(0),
+        in_transaction: bool = False,
     ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
@@ -673,7 +674,7 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
+    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
         parent_name = parent_spend.coin.name()
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
@@ -761,9 +762,9 @@ class DataLayerWallet:
                 )
             )
             await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction=in_transaction)
-            await self.potentially_handle_resubmit(singleton_record.launcher_id)
+            await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
 
-    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
+    async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
@@ -827,7 +828,7 @@ class DataLayerWallet:
                             else:
                                 fee = uint64(0)
 
-                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
+                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee, in_transaction=in_transaction))
                 for tx in all_txs:
                     await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=in_transaction)
             except Exception as e:
