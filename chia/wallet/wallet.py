@@ -463,7 +463,7 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
-            in_transaction=in_transaction
+            in_transaction=in_transaction,
         )
         assert len(transaction) > 0
 

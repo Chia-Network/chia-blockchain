@@ -414,13 +414,15 @@ class DataLayerWallet:
         return dl_record, std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True, in_transaction: bool = False
+        self,
+        fee: uint64,
+        announcement_to_assert: Announcement,
+        coin_announcement: bool = True,
+        in_transaction: bool = False,
     ) -> TransactionRecord:
-        puzzle_hash = await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction)
-
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=puzzle_hash,
+            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction),
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
@@ -447,7 +449,7 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to update Singleton with launcher ID {launcher_id}")
 
         # Make the child's puzzles
-        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=True)
+        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)
         next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle.get_tree_hash(), root_hash)
         next_full_puz = create_host_fullpuz(next_inner_puzzle.get_tree_hash(), root_hash, launcher_id)
 
@@ -516,7 +518,7 @@ class DataLayerWallet:
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=True,
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=in_transaction
             )
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
@@ -541,7 +543,7 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, True)
+        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, in_transaction=in_transaction)
         return txs
 
     async def create_report_spend(
@@ -758,7 +760,7 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], True)
+            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction=in_transaction)
             await self.potentially_handle_resubmit(singleton_record.launcher_id)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
@@ -827,7 +829,7 @@ class DataLayerWallet:
 
                             all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
                 for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=True)
+                    await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=in_transaction)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created
