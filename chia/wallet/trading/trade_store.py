@@ -205,31 +205,6 @@ class TradeStore:
         await self.add_trade_record(tx, False)
         return True
 
-    async def set_not_sent(self, id: bytes32):
-        """
-        Updates trade sent count to 0.
-        """
-
-        current: Optional[TradeRecord] = await self.get_trade_record(id)
-        if current is None:
-            return None
-
-        tx: TradeRecord = TradeRecord(
-            confirmed_at_index=current.confirmed_at_index,
-            accepted_at_time=current.accepted_at_time,
-            created_at_time=current.created_at_time,
-            is_my_offer=current.is_my_offer,
-            sent=uint32(0),
-            offer=current.offer,
-            taken_offer=current.taken_offer,
-            coins_of_interest=current.coins_of_interest,
-            trade_id=current.trade_id,
-            status=uint32(TradeStatus.PENDING_CONFIRM.value),
-            sent_to=[],
-        )
-
-        await self.add_trade_record(tx, False)
-
     async def get_trades_count(self) -> Tuple[int, int, int]:
         """
         Returns the number of trades in the database broken down by is_my_offer status
@@ -447,10 +422,10 @@ class TradeStore:
         return records
 
     async def rollback_to_block(self, block_index):
-
-        # Delete from storage
-        cursor = await self.db_connection.execute(
-            "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.lock:
+            # Delete from storage
+            cursor = await self.db_connection.execute(
+                "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
+            )
+            await cursor.close()
+            await self.db_connection.commit()
