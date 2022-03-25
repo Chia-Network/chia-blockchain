@@ -544,7 +544,10 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, in_transaction=in_transaction)
+        await self.wallet_state_manager.dl_store.add_singleton_record(
+            new_singleton_record,
+            in_transaction=in_transaction,
+        )
         return txs
 
     async def create_report_spend(
@@ -761,7 +764,10 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction=in_transaction)
+            await self.wallet_state_manager.add_interested_coin_ids(
+                [new_singleton.name()],
+                in_transaction=in_transaction,
+            )
             await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
@@ -828,7 +834,14 @@ class DataLayerWallet:
                             else:
                                 fee = uint64(0)
 
-                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee, in_transaction=in_transaction))
+                            all_txs.extend(
+                                await self.create_update_state_spend(
+                                    launcher_id,
+                                    singleton.root,
+                                    fee,
+                                    in_transaction=in_transaction,
+                                )
+                            )
                 for tx in all_txs:
                     await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=in_transaction)
             except Exception as e:

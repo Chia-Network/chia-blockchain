@@ -632,7 +632,12 @@ class WalletNode:
                             try:
                                 await self.wallet_state_manager.db_wrapper.commit_transaction()
                                 await self.wallet_state_manager.db_wrapper.begin_transaction()
-                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height, in_transaction=True)
+                                await self.wallet_state_manager.new_coin_state(
+                                    valid_states,
+                                    peer,
+                                    fork_height,
+                                    in_transaction=True,
+                                )
 
                                 if update_finished_height:
                                     if len(cs_heights) == 1:

@@ -618,7 +618,11 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def new_coin_state(
-        self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32], in_transaction: bool = False,
+        self,
+        coin_states: List[CoinState],
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
+        in_transaction: bool = False,
     ) -> None:
         # TODO: add comment about what this method does
 
@@ -855,7 +859,11 @@ class WalletStateManager:
                         peer, coin_state.spent_height, coin_state.coin
                     )
                     dl_wallet = self.wallets[uint32(record.wallet_id)]
-                    await dl_wallet.singleton_removed(singleton_spend, coin_state.spent_height, in_transaction=in_transaction)
+                    await dl_wallet.singleton_removed(
+                        singleton_spend,
+                        coin_state.spent_height,
+                        in_transaction=in_transaction,
+                    )
 
                 # Check if a child is a singleton launcher
                 if children is None:
