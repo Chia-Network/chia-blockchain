@@ -2,92 +2,100 @@
     "name": "root",
     "private": true,
     "scripts": {
-      "clean": "lerna clean",
-      "bootstrap": "lerna bootstrap",
-      "version:major": "lerna version major",
-      "version:minor": "lerna version minor",
-      "version:patch": "lerna version patch",
-      "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-      "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
-      "publish": "lerna publish",
-      "postinstall": "npm run bootstrap",
-      "build": "lerna run build",
-      "build:watch": "lerna run build:watch",
-      "start:gui": "lerna run start --scope @chia/gui",
-      "start:wallet": "lerna run start --scope @chia/wallet",
-      "dev:gui": "lerna run dev --scope @chia/gui --stream",
-      "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
-      "wallet": "npm run start:wallet",
-      "electron": "npm run start:gui",
-      "locale:extract": "lerna run locale:extract",
-      "audit": "lerna exec -- npm audit",
-      "audit:fix": "lerna exec -- npm audit fix"
+        "clean": "lerna clean",
+        "bootstrap": "lerna bootstrap",
+        "version:major": "lerna version major",
+        "version:minor": "lerna version minor",
+        "version:patch": "lerna version patch",
+        "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+        "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+        "publish": "lerna publish",
+        "postinstall": "npm run bootstrap",
+        "build": "lerna run build",
+        "build:watch": "lerna run build:watch",
+        "start:gui": "lerna run start --scope @chia/gui",
+        "start:wallet": "lerna run start --scope @chia/wallet",
+        "dev:gui": "lerna run dev --scope @chia/gui --stream",
+        "dev:wallet": "lerna run dev --scope @chia/wallet --stream",
+        "wallet": "npm run start:wallet",
+        "electron": "npm run start:gui",
+        "locale:extract": "lerna run locale:extract",
+        "audit": "lerna exec -- npm audit",
+        "audit:fix": "lerna exec -- npm audit fix"
     },
     "dependencies": {
-      "lerna": "^4.0.0"
+        "lerna": "^4.0.0"
     },
     "devDependencies": {
-      "@typescript-eslint/eslint-plugin": "5.9.0",
-      "@typescript-eslint/parser": "5.9.0",
-      "lerna-audit": "^1.3.3",
-      "eslint": "8.6.0",
-      "eslint-config-prettier": "8.3.0",
-      "eslint-plugin-react": "^7.28.0",
-      "eslint-plugin-react-hooks": "^4.3.0",
-      "prettier": "2.5.1",
-      "typescript": "^4.5.4"
+        "@typescript-eslint/eslint-plugin": "5.9.0",
+        "@typescript-eslint/parser": "5.9.0",
+        "eslint": "8.6.0",
+        "eslint-config-prettier": "8.3.0",
+        "eslint-plugin-react": "^7.28.0",
+        "eslint-plugin-react-hooks": "^4.3.0",
+        "lerna-audit": "^1.3.3",
+        "prettier": "2.5.1",
+        "typescript": "^4.5.4"
     },
     "lint-staged": {
-      "./{*,{api,packages,test,utils}/**/*}.{js,ts,jsx,tsx}": [
-        "prettier --write",
-        "eslint",
-        "git add"
-      ],
-      "*.{json,md}": [
-        "prettier --write",
-        "git add"
-      ]
+        "./{*,{api,packages,test,utils}/**/*}.{js,ts,jsx,tsx}": [
+            "prettier --write",
+            "eslint",
+            "git add"
+        ],
+        "*.{json,md}": [
+            "prettier --write",
+            "git add"
+        ]
     },
     "prettier": {
-      "trailingComma": "es5",
-      "singleQuote": true,
-      "arrowParens": "avoid"
+        "trailingComma": "es5",
+        "singleQuote": true,
+        "arrowParens": "avoid"
     },
     "eslintConfig": {
-      "root": true,
-      "parser": "@typescript-eslint/parser",
-      "parserOptions": {
-        "ecmaVersion": 2018,
-        "sourceType": "module",
-        "modules": true
-      },
-      "extends": [
-        "eslint:recommended",
-        "plugin:@typescript-eslint/eslint-recommended",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:react/recommended",
-        "plugin:react-hooks/recommended",
-        "prettier"
-      ],
-      "env": {
-        "node": true,
-        "es6": true
-      },
-      "rules": {
-        "require-atomic-updates": 0,
-        "@typescript-eslint/ban-ts-comment": 0,
-        "@typescript-eslint/explicit-module-boundary-types": 0,
-        "@typescript-eslint/no-empty-function": 0,
-        "@typescript-eslint/no-explicit-any": 0,
-        "@typescript-eslint/no-unused-vars": 2,
-        "@typescript-eslint/no-var-requires": 0,
-        "react/jsx-filename-extension": [ "warn", {"extensions": [".jsx", ".tsx"]} ]
-      },
-      "settings": {
-        "react": {
-          "version": "17.0"
+        "root": true,
+        "parser": "@typescript-eslint/parser",
+        "parserOptions": {
+            "ecmaVersion": 2018,
+            "sourceType": "module",
+            "modules": true
+        },
+        "extends": [
+            "eslint:recommended",
+            "plugin:@typescript-eslint/eslint-recommended",
+            "plugin:@typescript-eslint/recommended",
+            "plugin:react/recommended",
+            "plugin:react-hooks/recommended",
+            "prettier"
+        ],
+        "env": {
+            "node": true,
+            "es6": true
+        },
+        "rules": {
+            "require-atomic-updates": 0,
+            "@typescript-eslint/ban-ts-comment": 0,
+            "@typescript-eslint/explicit-module-boundary-types": 0,
+            "@typescript-eslint/no-empty-function": 0,
+            "@typescript-eslint/no-explicit-any": 0,
+            "@typescript-eslint/no-unused-vars": 2,
+            "@typescript-eslint/no-var-requires": 0,
+            "react/jsx-filename-extension": [
+                "warn",
+                {
+                    "extensions": [
+                        ".jsx",
+                        ".tsx"
+                    ]
+                }
+            ]
+        },
+        "settings": {
+            "react": {
+                "version": "17.0"
+            }
         }
-      }
     },
     "version": "1.2.10-dev132"
-  }
+}

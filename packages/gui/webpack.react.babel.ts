@@ -132,6 +132,10 @@ export default {
   ].filter(Boolean),
   module: {
     rules: [{
+      test: /\.js$/,
+      enforce: "pre",
+      use: ["source-map-loader"],
+    }, {
       test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
       resolve: {
         aliasFields: ['main'],

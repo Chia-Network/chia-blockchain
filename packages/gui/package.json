@@ -12,7 +12,7 @@
     "scripts": {
         "start": "npm run electron",
         "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
-        "dev:react": "cross-env NODE_ENV=development NODE_OPTIONS=--max_old_space_size=4096 webpack serve --config webpack.react.babel.ts --mode development",
+        "dev:react": "cross-env NODE_ENV=development NODE_OPTIONS=--max_old_space_size=8192 webpack serve --config webpack.react.babel.ts --mode development",
         "dev": "npm run locale && concurrently --kill-others \"npm run dev:react\" \"npm run dev:electron\"",
         "dev:fast": "concurrently --kill-others \"npm run dev:react\" \"npm run dev:electron\"",
         "build:electron": "cross-env NODE_ENV=production webpack --config ./webpack.electron.babel.ts",
@@ -24,10 +24,10 @@
         "locale": "lingui extract && lingui compile"
     },
     "dependencies": {
-        "@chia/core": "1.0.0",
-        "@chia/icons": "1.0.0",
         "@chia/api": "1.0.0",
         "@chia/api-react": "1.0.0",
+        "@chia/core": "1.0.0",
+        "@chia/icons": "1.0.0",
         "@chia/wallets": "1.0.0",
         "@electron/remote": "2.0.1",
         "@lingui/core": "3.13.0",
@@ -113,6 +113,7 @@
         "html-webpack-plugin": "5.5.0",
         "lodash-webpack-plugin": "0.11.6",
         "react-refresh": "0.11.0",
+        "source-map-loader": "^3.0.1",
         "style-loader": "3.3.1",
         "terser-webpack-plugin": "5.3.0",
         "typescript": "4.5.4",
