@@ -72,7 +72,7 @@ class ConsensusConstants:
         filtered_changes = {}
         for k, v in changes.items():
             if not hasattr(self, k):
-                log.warn(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
+                log.warning(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
                 continue
             if isinstance(v, str):
                 filtered_changes[k] = hexstr_to_bytes(v)
