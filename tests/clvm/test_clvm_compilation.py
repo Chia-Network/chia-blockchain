@@ -5,50 +5,48 @@ from clvm_tools.clvmc import compile_clvm
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 
-wallet_program_files = set(
-    [
-        "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cat.clvm",
-        "chia/wallet/puzzles/chialisp_deserialisation.clvm",
-        "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
-        "chia/wallet/puzzles/generator_for_single_coin.clvm",
-        "chia/wallet/puzzles/lock.inner.puzzle.clvm",
-        "chia/wallet/puzzles/p2_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_conditions.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle.clvm",
-        "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
-        "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
-        "chia/wallet/puzzles/p2_puzzle_hash.clvm",
-        "chia/wallet/puzzles/rl_aggregation.clvm",
-        "chia/wallet/puzzles/rl.clvm",
-        "chia/wallet/puzzles/sha256tree_module.clvm",
-        "chia/wallet/puzzles/singleton_top_layer.clvm",
-        "chia/wallet/puzzles/did_innerpuz.clvm",
-        "chia/wallet/puzzles/decompress_puzzle.clvm",
-        "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm",
-        "chia/wallet/puzzles/decompress_coin_spend_entry.clvm",
-        "chia/wallet/puzzles/block_program_zero.clvm",
-        "chia/wallet/puzzles/test_generator_deserialize.clvm",
-        "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
-        "chia/wallet/puzzles/p2_singleton.clvm",
-        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
-        "chia/wallet/puzzles/pool_member_innerpuz.clvm",
-        "chia/wallet/puzzles/singleton_launcher.clvm",
-        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
-        "chia/wallet/puzzles/genesis_by_puzzle_hash.clvm",
-        "chia/wallet/puzzles/everything_with_signature.clvm",
-        "chia/wallet/puzzles/delegated_tail.clvm",
-        "chia/wallet/puzzles/settlement_payments.clvm",
-        "chia/wallet/puzzles/genesis_by_coin_id.clvm",
-        "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
-        "chia/wallet/puzzles/delegated_genesis_checker.clvm",
-        "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
-    ]
-)
+wallet_program_files = {
+    "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
+    "chia/wallet/puzzles/cat.clvm",
+    "chia/wallet/puzzles/chialisp_deserialisation.clvm",
+    "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
+    "chia/wallet/puzzles/generator_for_single_coin.clvm",
+    "chia/wallet/puzzles/lock.inner.puzzle.clvm",
+    "chia/wallet/puzzles/p2_conditions.clvm",
+    "chia/wallet/puzzles/p2_delegated_conditions.clvm",
+    "chia/wallet/puzzles/p2_delegated_puzzle.clvm",
+    "chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm",
+    "chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm",
+    "chia/wallet/puzzles/p2_puzzle_hash.clvm",
+    "chia/wallet/puzzles/rl_aggregation.clvm",
+    "chia/wallet/puzzles/rl.clvm",
+    "chia/wallet/puzzles/sha256tree_module.clvm",
+    "chia/wallet/puzzles/singleton_top_layer.clvm",
+    "chia/wallet/puzzles/did_innerpuz.clvm",
+    "chia/wallet/puzzles/decompress_puzzle.clvm",
+    "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm",
+    "chia/wallet/puzzles/decompress_coin_spend_entry.clvm",
+    "chia/wallet/puzzles/block_program_zero.clvm",
+    "chia/wallet/puzzles/test_generator_deserialize.clvm",
+    "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
+    "chia/wallet/puzzles/p2_singleton.clvm",
+    "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
+    "chia/wallet/puzzles/pool_member_innerpuz.clvm",
+    "chia/wallet/puzzles/singleton_launcher.clvm",
+    "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
+    "chia/wallet/puzzles/genesis_by_puzzle_hash.clvm",
+    "chia/wallet/puzzles/everything_with_signature.clvm",
+    "chia/wallet/puzzles/delegated_tail.clvm",
+    "chia/wallet/puzzles/settlement_payments.clvm",
+    "chia/wallet/puzzles/genesis_by_coin_id.clvm",
+    "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
+    "chia/wallet/puzzles/delegated_genesis_checker.clvm",
+    "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
+}
 
-clvm_include_files = set(
-    ["chia/wallet/puzzles/create-lock-puzzlehash.clvm", "chia/wallet/puzzles/condition_codes.clvm"]
-)
+clvm_include_files = {
+    "chia/wallet/puzzles/create-lock-puzzlehash.clvm", "chia/wallet/puzzles/condition_codes.clvm"
+}
 
 CLVM_PROGRAM_ROOT = "chia/wallet/puzzles"
 
