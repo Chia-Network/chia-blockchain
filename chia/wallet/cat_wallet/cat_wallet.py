@@ -59,7 +59,7 @@ import traceback
 
 
 class CATWallet:
-    wallet_state_manager: "WalletStateManager"
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     cat_info: CATInfo
@@ -73,7 +73,7 @@ class CATWallet:
 
     @staticmethod
     async def create_new_cat_wallet(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
@@ -173,7 +173,7 @@ class CATWallet:
 
     @staticmethod
     async def create_wallet_for_cat(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name=None,
@@ -217,7 +217,7 @@ class CATWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
     ) -> CATWallet:

@@ -66,7 +66,7 @@ class PoolWallet:
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
 
-    wallet_state_manager: "WalletStateManager"
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     target_state: Optional[PoolState]
@@ -324,7 +324,7 @@ class PoolWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
@@ -368,7 +368,7 @@ class PoolWallet:
 
     @staticmethod
     async def create_from_db(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
@@ -389,7 +389,7 @@ class PoolWallet:
 
     @staticmethod
     async def create_new_pool_wallet_transaction(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         main_wallet: Wallet,
         initial_target_state: PoolState,
         fee: uint64 = uint64(0),

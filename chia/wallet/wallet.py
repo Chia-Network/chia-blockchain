@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
 
 class Wallet:
-    wallet_state_manager: "WalletStateManager"
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
@@ -56,7 +56,7 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         info: WalletInfo,
         name: str = None,
     ):

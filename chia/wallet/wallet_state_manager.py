@@ -17,10 +17,9 @@ from blspy import G1Element, PrivateKey
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from chia.pools.pool_wallet import PoolWallet
+
+from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, RespondPuzzleSolution, CoinState
 from chia.server.ws_connection import WSChiaConnection

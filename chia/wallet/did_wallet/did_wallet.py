@@ -34,7 +34,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 
 
 class DIDWallet:
-    wallet_state_manager: "WalletStateManager"
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
@@ -45,7 +45,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         amount: uint64,
         backups_ids: List = [],
@@ -142,7 +142,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         filename: str,
         name: str = None,
@@ -169,7 +169,7 @@ class DIDWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,

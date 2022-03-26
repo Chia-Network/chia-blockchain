@@ -30,13 +30,13 @@ if TYPE_CHECKING:
 
 
 class TradeManager:
-    wallet_state_manager: "WalletStateManager"
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     trade_store: TradeStore
 
     @staticmethod
     async def create(
-        wallet_state_manager: "WalletStateManager",
+        wallet_state_manager: WalletStateManager,
         db_wrapper: DBWrapper,
         name: str = None,
     ):
