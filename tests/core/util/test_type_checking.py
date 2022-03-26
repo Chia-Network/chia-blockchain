@@ -57,7 +57,7 @@ class TestStrictClass(unittest.TestCase):
         assert TestClass2(25)
 
         with raises(TypeError):
-            TestClass2(1, 2)
+            TestClass2(1, 2)  # pylint: disable=too-many-function-args
 
     def test_StrictDataClassLists(self):
         @dataclass(frozen=True)
