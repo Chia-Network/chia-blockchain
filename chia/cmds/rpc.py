@@ -31,7 +31,7 @@ async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], co
     try:
         result = await client.fetch(endpoint, request)
     except ClientResponseError as e:
-        if e.code == 404:
+        if e.status == 404:
             raise Exception(f"Invalid endpoint for {service}: {endpoint}")
         raise e
     except Exception as e:
