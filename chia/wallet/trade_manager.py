@@ -1,8 +1,9 @@
+from __future__ import annotations
 import dataclasses
 import logging
 import time
 import traceback
-from typing import Any, Dict, List, Optional, Tuple, Union, Set
+from typing import Dict, List, Optional, Tuple, Union, Set, TYPE_CHECKING
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
@@ -24,15 +25,18 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 class TradeManager:
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     log: logging.Logger
     trade_store: TradeStore
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         db_wrapper: DBWrapper,
         name: str = None,
     ):

@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 import asyncio
 import pytest
 import pytest_asyncio
@@ -15,7 +18,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool

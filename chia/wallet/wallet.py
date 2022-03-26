@@ -1,6 +1,7 @@
+from __future__ import annotations
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, TYPE_CHECKING
 
 from blspy import G1Element
 
@@ -42,9 +43,12 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.compute_memos import compute_memos
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 class Wallet:
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
@@ -52,7 +56,7 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         info: WalletInfo,
         name: str = None,
     ):

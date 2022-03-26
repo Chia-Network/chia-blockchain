@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -47,6 +47,10 @@ from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 from chia.wallet.util.compute_memos import compute_memos
 import traceback
 
@@ -55,7 +59,7 @@ import traceback
 
 
 class CATWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     log: logging.Logger
     wallet_info: WalletInfo
     cat_info: CATInfo
@@ -69,7 +73,11 @@ class CATWallet:
 
     @staticmethod
     async def create_new_cat_wallet(
-        wallet_state_manager: Any, wallet: Wallet, cat_tail_info: Dict[str, Any], amount: uint64, name=None
+        wallet_state_manager: "WalletStateManager",
+        wallet: Wallet,
+        cat_tail_info: Dict[str, Any],
+        amount: uint64,
+        name=None,
     ):
         self = CATWallet()
         self.cost_of_single_tx = None
@@ -165,7 +173,7 @@ class CATWallet:
 
     @staticmethod
     async def create_wallet_for_cat(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name=None,
@@ -209,7 +217,7 @@ class CATWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         wallet_info: WalletInfo,
     ) -> CATWallet:

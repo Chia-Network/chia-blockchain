@@ -1,8 +1,9 @@
+from __future__ import annotations
 import logging
 import time
 import json
 
-from typing import Dict, Optional, List, Any, Set, Tuple
+from typing import Dict, Optional, List, Set, Tuple, TYPE_CHECKING
 from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
 from chia.protocols import wallet_protocol
@@ -15,6 +16,9 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32, uint8, uint128
 from chia.wallet.util.transaction_type import TransactionType
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
@@ -30,7 +34,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 
 
 class DIDWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
@@ -41,7 +45,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         amount: uint64,
         backups_ids: List = [],
@@ -138,7 +142,7 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         filename: str,
         name: str = None,
@@ -165,7 +169,7 @@ class DIDWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,

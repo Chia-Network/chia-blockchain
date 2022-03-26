@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 import json
 import logging
@@ -6,7 +7,7 @@ import time
 import traceback
 from asyncio import CancelledError
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Any, Iterator
+from typing import Callable, Dict, List, Optional, Set, Tuple, Iterator, Any
 
 from blspy import PrivateKey, AugSchemeMPL
 from packaging.version import Version

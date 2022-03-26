@@ -1,9 +1,10 @@
 # RLWallet is subclass of Wallet
+from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
@@ -33,6 +34,9 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 @dataclass(frozen=True)
 @streamable
@@ -49,7 +53,7 @@ class RLInfo(Streamable):
 
 
 class RLWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     wallet_info: WalletInfo
     rl_coin_record: Optional[WalletCoinRecord]
     rl_info: RLInfo
@@ -58,7 +62,7 @@ class RLWallet:
 
     @staticmethod
     async def create_rl_admin(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
     ):
         unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
         if unused is None:
@@ -97,7 +101,7 @@ class RLWallet:
 
     @staticmethod
     async def create_rl_user(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
     ):
         async with wallet_state_manager.puzzle_store.lock:
             unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
@@ -132,7 +136,7 @@ class RLWallet:
             return self
 
     @staticmethod
-    async def create(wallet_state_manager: Any, info: WalletInfo):
+    async def create(wallet_state_manager: "WalletStateManager", info: WalletInfo):
         self = RLWallet()
 
         self.private_key = wallet_state_manager.private_key

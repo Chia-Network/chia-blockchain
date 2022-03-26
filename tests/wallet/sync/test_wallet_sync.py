@@ -1,5 +1,8 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
+from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
@@ -10,7 +13,10 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from chia.wallet.wallet_state_manager import WalletStateManager
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import setup_node_and_wallet, setup_simulators_and_wallets, test_constants

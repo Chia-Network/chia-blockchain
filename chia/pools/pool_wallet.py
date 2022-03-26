@@ -1,7 +1,8 @@
+from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Any, Optional, Set, Tuple, List, Dict
+from typing import Optional, Set, Tuple, List, Dict, TYPE_CHECKING
 
 from blspy import PrivateKey, G2Element, G1Element
 
@@ -56,13 +57,16 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
 
-    wallet_state_manager: Any
+    wallet_state_manager: "WalletStateManager"
     log: logging.Logger
     wallet_info: WalletInfo
     target_state: Optional[PoolState]
@@ -320,7 +324,7 @@ class PoolWallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
@@ -364,7 +368,7 @@ class PoolWallet:
 
     @staticmethod
     async def create_from_db(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
@@ -385,7 +389,7 @@ class PoolWallet:
 
     @staticmethod
     async def create_new_pool_wallet_transaction(
-        wallet_state_manager: Any,
+        wallet_state_manager: "WalletStateManager",
         main_wallet: Wallet,
         initial_target_state: PoolState,
         fee: uint64 = uint64(0),
