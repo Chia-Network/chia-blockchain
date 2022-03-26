@@ -1256,7 +1256,7 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction, test=False) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
         await self.full_node.transaction_queue.put(
             (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
