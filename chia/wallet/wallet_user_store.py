@@ -72,7 +72,7 @@ class WalletUserStore:
 
         return await self.get_last_wallet()
 
-    async def delete_wallet(self, id: int, in_transaction: bool):
+    async def delete_wallet(self, id: int, *, in_transaction: bool):
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:

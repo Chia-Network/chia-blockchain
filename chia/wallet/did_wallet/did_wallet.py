@@ -83,11 +83,11 @@ class DIDWallet:
         try:
             spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
+            await wallet_state_manager.user_store.delete_wallet(self.id(), in_transaction=False)
             raise
 
         if spend_bundle is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
+            await wallet_state_manager.user_store.delete_wallet(self.id(), in_transaction=False)
             raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         assert self.did_info.origin_coin is not None
