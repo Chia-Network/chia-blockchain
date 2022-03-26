@@ -62,12 +62,11 @@ async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 
-    @pytest_asyncio.fixture(scope="function")
-    async def one_wallet_node(
-        self,
-    ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]]:
-        async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
-            yield _
+
+@pytest_asyncio.fixture(scope="function")
+async def one_wallet_node() -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]]:
+    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
+        yield _
 
 
 class TestSimulation:
