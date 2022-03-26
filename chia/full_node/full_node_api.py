@@ -1256,11 +1256,10 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
-
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
+            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
