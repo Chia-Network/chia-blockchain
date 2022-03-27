@@ -2775,6 +2775,64 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
+    async def test_reorg_new_ref(self, empty_blockchain, bt):
+        b = empty_blockchain
+        wallet_a = WalletTool(b.constants)
+        WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+        blocks = bt.get_consecutive_blocks(
+            20,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+        )
+
+        for block in blocks:
+            await _validate_and_add_block(b, block)
+        assert b.get_peak().height == 19
+
+        print("first chain done")
+
+        # Make sure a ref back into the reorg chain itself works as expected
+
+        all_coins = []
+        for spend_block in blocks[:10]:
+            for coin in list(spend_block.get_included_reward_coins()):
+                if coin.puzzle_hash == coinbase_puzzlehash:
+                    all_coins.append(coin)
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            3,
+            blocks[:10],
+            seed=b"2",
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            transaction_data=spend_bundle,
+        )
+
+        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            4, blocks_reorg_chain, seed=b"2", previous_generator=[uint32(12)], transaction_data=spend_bundle2
+        )
+        blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
+
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            blocks_reorg_chain, {}, validate_signatures=True
+        )
+        for i, block in enumerate(blocks_reorg_chain):
+            if i < 10:
+                expected = ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            elif i < 20:
+                expected = ReceiveBlockResult.ADDED_AS_ORPHAN
+            else:
+                expected = ReceiveBlockResult.NEW_PEAK
+            await _validate_and_add_block(b, block, expected_result=expected)
+        assert b.get_peak().height == 20
+
+    @pytest.mark.asyncio
     async def test_long_reorg(self, empty_blockchain, default_10000_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
