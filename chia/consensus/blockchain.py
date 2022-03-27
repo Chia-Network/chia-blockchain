@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import multiprocessing
 import traceback
+from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
@@ -47,6 +48,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
+from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import recurse_jsonify
@@ -86,7 +88,7 @@ class Blockchain(BlockchainInterface):
     # Store
     block_store: BlockStore
     # Used to verify blocks in parallel
-    pool: ProcessPoolExecutor
+    pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
     _seen_compact_proofs: Set[Tuple[VDFInfo, uint32]]
 
@@ -107,6 +109,8 @@ class Blockchain(BlockchainInterface):
         blockchain_dir: Path,
         reserved_cores: int,
         multiprocessing_context: Optional[BaseContext] = None,
+        *,
+        single_threaded: bool = False,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -116,17 +120,20 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
         self.compact_proof_lock = asyncio.Lock()
-        cpu_count = multiprocessing.cpu_count()
-        if cpu_count > 61:
-            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        num_workers = max(cpu_count - reserved_cores, 1)
-        self.pool = ProcessPoolExecutor(
-            max_workers=num_workers,
-            mp_context=multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
-        )
-        log.info(f"Started {num_workers} processes for block validation")
+        if single_threaded:
+            self.pool = InlineExecutor()
+        else:
+            cpu_count = multiprocessing.cpu_count()
+            if cpu_count > 61:
+                cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+            num_workers = max(cpu_count - reserved_cores, 1)
+            self.pool = ProcessPoolExecutor(
+                max_workers=num_workers,
+                mp_context=multiprocessing_context,
+                initializer=setproctitle,
+                initargs=(f"{getproctitle()}_worker",),
+            )
+            log.info(f"Started {num_workers} processes for block validation")
 
         self.constants = consensus_constants
         self.coin_store = coin_store
