@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures.process import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -17,6 +17,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -169,11 +170,11 @@ async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
     constants_json: Dict,
     block_records: BlockchainInterface,
-    blocks: Sequence[Union[FullBlock, HeaderBlock]],
+    blocks: Sequence[FullBlock],
     pool: ProcessPoolExecutor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Optional[Callable],
+    get_block_generator: Callable[[BlockInfo, Optional[Dict[bytes32, FullBlock]]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
@@ -288,7 +289,7 @@ async def pre_validate_blocks_multiprocessing(
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
-    block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
+    block_dict: Dict[bytes32, FullBlock] = {}
     for i, block in enumerate(blocks):
         block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
@@ -314,8 +315,8 @@ async def pre_validate_blocks_multiprocessing(
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
             # generator references
-            prev_blocks_dict: Dict[uint32, Union[FullBlock, HeaderBlock]] = {}
-            curr_b: Union[FullBlock, HeaderBlock] = block
+            prev_blocks_dict: Dict[bytes32, FullBlock] = {}
+            curr_b: FullBlock = block
 
             while curr_b.prev_header_hash in block_dict:
                 curr_b = block_dict[curr_b.prev_header_hash]
