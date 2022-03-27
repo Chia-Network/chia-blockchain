@@ -346,7 +346,7 @@ async def validate_block_body(
                 )
             if curr.height == 0:
                 break
-            curr = reorg_blocks[curr.height - 1]
+            curr = reorg_blocks[uint32(curr.height - 1)]
             assert curr is not None
 
     removal_coin_records: Dict[bytes32, CoinRecord] = {}

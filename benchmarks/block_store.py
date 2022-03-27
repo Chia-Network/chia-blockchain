@@ -288,10 +288,10 @@ async def run_add_block_benchmark(version: int):
             print("profiling get_full_blocks_at")
 
         start = monotonic()
-        for h in range(1, block_height):
-            blocks = await block_store.get_full_blocks_at([h])
+        for hi in range(1, block_height):
+            blocks = await block_store.get_full_blocks_at([hi])
             assert len(blocks) == 1
-            assert blocks[0].height == h
+            assert blocks[0].height == hi
 
         stop = monotonic()
         total_time += stop - start
@@ -352,8 +352,8 @@ async def run_add_block_benchmark(version: int):
 
         start = monotonic()
         for i in range(100):
-            h = random.randint(1, block_height - 100)
-            blocks = await block_store.get_block_records_in_range(h, h + 99)
+            hi = random.randint(1, block_height - 100)
+            blocks = await block_store.get_block_records_in_range(hi, hi + 99)
             assert len(blocks) == 100
 
         stop = monotonic()

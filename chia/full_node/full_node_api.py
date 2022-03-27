@@ -1196,11 +1196,12 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
+        peak_height = self.full_node.blockchain.get_peak_height()
         if (
             block is None
             or block.is_transaction_block() is False
             or block.height != request.height
-            or block.height > self.full_node.blockchain.get_peak_height()
+            or (peak_height is not None and block.height > peak_height)
             or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
