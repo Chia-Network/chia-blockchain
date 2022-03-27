@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
@@ -16,6 +16,7 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -45,7 +46,7 @@ async def validate_block_body(
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
-    get_block_generator: Callable,
+    get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature=True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
