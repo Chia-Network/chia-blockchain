@@ -380,6 +380,7 @@ class Blockchain(BlockchainInterface):
         # Rollback sub_epoch_summaries
         self.__height_map.rollback(fork_height)
         await self.block_store.rollback(fork_height)
+        self._peak_height = None if fork_height < 0 else uint32(fork_height)
 
         # Collect all blocks from fork point to new peak
         blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
