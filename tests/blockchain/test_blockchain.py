@@ -539,7 +539,7 @@ class TestBlockHeaderValidation:
             constants=test_constants.replace(SUB_SLOT_ITERS_STARTING=(2 ** 12), DIFFICULTY_STARTING=(2 ** 14)),
             keychain=keychain,
         )
-        bc1, connection, db_path = await create_blockchain(bt_high_iters.constants, db_version)
+        bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
         blocks = bt_high_iters.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
@@ -611,7 +611,7 @@ class TestBlockHeaderValidation:
 
             await _validate_and_add_block(bc1, block)
 
-        await connection.close()
+        await db_wrapper.close()
         bc1.shut_down()
         db_path.unlink()
 
@@ -2324,7 +2324,7 @@ class TestBodyValidation:
         #     new_test_constants = test_constants.replace(
         #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
         #     )
-        #     b, connection, db_path = await create_blockchain(new_test_constants, db_version)
+        #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
         #     bt_2.constants = bt_2.constants.replace(
         #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
@@ -2358,7 +2358,7 @@ class TestBodyValidation:
         #         assert False
         #     except Exception as e:
         #         pass
-        #     await connection.close()
+        #     await db_wrapper.close()
         #     b.shut_down()
         #     db_path.unlink()
 

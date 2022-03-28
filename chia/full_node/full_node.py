@@ -67,7 +67,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
@@ -85,7 +85,6 @@ class FullNode:
     sync_store: Any
     coin_store: CoinStore
     mempool_manager: MempoolManager
-    connection: aiosqlite.Connection
     _sync_task: Optional[asyncio.Task]
     _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
@@ -164,23 +163,8 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
-        self.connection = await aiosqlite.connect(self.db_path)
-        await self.connection.execute("pragma journal_mode=wal")
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
-        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-        await self.connection.execute("pragma synchronous={}".format(db_sync))
-
-        async with self.connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-        ) as conn:
-            if len(await conn.fetchall()) == 0:
-                try:
-                    # this is a new DB file. Make it v2
-                    await set_db_version_async(self.connection, 2)
-                except sqlite3.OperationalError:
-                    # it could be a database created with "chia init", which is
-                    # empty except it has the database_version table
-                    pass
+        db_connection = await aiosqlite.connect(self.db_path)
+        db_version: int = await lookup_db_version(db_connection)
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -192,11 +176,37 @@ class FullNode:
                 log.write(timestamp + " " + req + "\n")
                 log.close()
 
-            await self.connection.set_trace_callback(sql_trace_callback)
+            await db_connection.set_trace_callback(sql_trace_callback)
 
-        db_version: int = await lookup_db_version(self.connection)
+        self.db_wrapper = DBWrapper2(db_connection, db_version=db_version)
 
-        self.db_wrapper = DBWrapper(self.connection, db_version=db_version)
+        # add reader threads for the DB
+        for i in range(self.config.get("db_readers", 4)):
+            c = await aiosqlite.connect(self.db_path)
+            if self.config.get("log_sqlite_cmds", False):
+                await c.set_trace_callback(sql_trace_callback)
+            await self.db_wrapper.add_connection(c)
+
+        await (await db_connection.execute("pragma journal_mode=wal")).close()
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
+
+        if db_version != 2:
+            async with self.db_wrapper.read_db() as conn:
+                async with conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+                ) as cur:
+                    if len(await cur.fetchall()) == 0:
+                        try:
+                            # this is a new DB file. Make it v2
+                            async with self.db_wrapper.write_db() as w_conn:
+                                await set_db_version_async(w_conn, 2)
+                        except sqlite3.OperationalError:
+                            # it could be a database created with "chia init", which is
+                            # empty except it has the database_version table
+                            pass
+
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self.hint_store = await HintStore.create(self.db_wrapper)
@@ -770,7 +780,7 @@ class FullNode:
     async def _await_closed(self):
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
-        await self.connection.close()
+        await self.db_wrapper.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
         if hasattr(self, "_blockchain_lock_queue"):
@@ -2225,14 +2235,11 @@ class FullNode:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.lock:
+        async with self.db_wrapper.write_db():
             try:
-                await self.block_store.db_wrapper.begin_transaction()
                 await self.block_store.replace_proof(header_hash, new_block)
-                await self.block_store.db_wrapper.commit_transaction()
                 return True
             except BaseException as e:
-                await self.block_store.db_wrapper.rollback_transaction()
                 self.log.error(
                     f"_replace_proof error while adding block {block.header_hash} height {block.height},"
                     f" rolling back: {e} {traceback.format_exc()}"
