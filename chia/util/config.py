@@ -64,8 +64,6 @@ def lock_and_load_config(root_path: Path, filename: Union[str, Path]) -> Iterato
     with lock_config(root_path=root_path, filename=filename):
         config = _load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
         yield config
-        # TODO: would need to be fancier to integrate this since it is conditional
-        # save_config(root_path=root_path, filename=filename, config_data=config)
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
