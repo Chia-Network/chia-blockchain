@@ -30,9 +30,12 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
 
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -63,19 +66,12 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
         ref: '0.28.0'
         fetch-depth: 1
-
-    - name: Link home directory
-      run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
 
     - name: Run install script
       env:
@@ -88,8 +84,9 @@ jobs:
     - name: Test wallet-cat_wallet code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0 -n 0 -m "not benchmark"
+        ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme

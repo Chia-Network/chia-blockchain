@@ -30,9 +30,12 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
 
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -75,8 +78,9 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
+        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme

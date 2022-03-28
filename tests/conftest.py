@@ -54,10 +54,10 @@ async def empty_blockchain(request):
     from tests.util.blockchain import create_blockchain
     from tests.setup_nodes import test_constants
 
-    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
 
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 

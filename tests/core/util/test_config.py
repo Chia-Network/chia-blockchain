@@ -11,9 +11,10 @@ import yaml
 from chia.util.config import (
     config_path_for_filename,
     create_default_chia_config,
-    get_config_lock,
     initial_config_file,
     load_config,
+    lock_and_load_config,
+    lock_config,
     save_config,
 )
 from chia.util.path import mkdir
@@ -54,11 +55,11 @@ def write_config(
             if atomic_write:
                 # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
                 # leading to a non-atomic operation.
-                with get_config_lock(root_path, "config.yaml"):
+                with lock_config(root_path, "config.yaml"):
                     save_config(root_path=root_path, filename="config.yaml", config_data=config)
             else:
                 path: Path = config_path_for_filename(root_path, filename="config.yaml")
-                with get_config_lock(root_path, "config.yaml"):
+                with lock_config(root_path, "config.yaml"):
                     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
                         tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
                         with open(tmp_path, "w") as f:
@@ -88,8 +89,7 @@ def read_and_compare_config(
             if do_sleep:
                 sleep(random.random())
 
-            with get_config_lock(root_path, "config.yaml"):
-                config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
+            with lock_and_load_config(root_path, "config.yaml") as config:
                 assert config == default_config
     except Exception as e:
         if error_queue is not None:
@@ -257,7 +257,7 @@ class TestConfig:
         # Sanity check that we didn't modify the default config
         assert config["harvester"]["farmer_peer"]["host"] != default_config_dict["harvester"]["farmer_peer"]["host"]
         # When: saving the modified config
-        with get_config_lock(root_path, "config.yaml"):
+        with lock_config(root_path, "config.yaml"):
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
 
         # Expect: modifications should be preserved in the config read from disk
@@ -274,7 +274,7 @@ class TestConfig:
         # multiple writes were observed, leading to read failures when data was partially written.
         default_config_dict["xyz"] = "x" * 32768
         root_path: Path = root_path_populated_with_config
-        with get_config_lock(root_path, "config.yaml"):
+        with lock_config(root_path, "config.yaml"):
             save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
         num_workers: int = 30
         args = list(map(lambda _: (root_path, default_config_dict), range(num_workers)))
@@ -296,7 +296,7 @@ class TestConfig:
 
         default_config_dict["xyz"] = "x" * 32768
         root_path: Path = root_path_populated_with_config
-        with get_config_lock(root_path, "config.yaml"):
+        with lock_config(root_path, "config.yaml"):
             save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
 
         with ProcessPoolExecutor(max_workers=4) as pool:

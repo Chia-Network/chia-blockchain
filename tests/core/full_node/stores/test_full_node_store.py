@@ -49,18 +49,18 @@ log = logging.getLogger(__name__)
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
-    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain_with_original_constants(request):
-    bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 

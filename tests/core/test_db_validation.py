@@ -16,7 +16,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
@@ -129,29 +129,27 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
 
 async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
-    async with aiosqlite.connect(db_file) as conn:
+    db_wrapper = DBWrapper2(await aiosqlite.connect(db_file), 2)
+    try:
+        await db_wrapper.add_connection(await aiosqlite.connect(db_file))
 
-        await conn.execute("pragma journal_mode=OFF")
-        await conn.execute("pragma synchronous=OFF")
-        await conn.execute("pragma locking_mode=exclusive")
+        async with db_wrapper.write_db() as conn:
+            # this is done by chia init normally
+            await conn.execute("CREATE TABLE database_version(version int)")
+            await conn.execute("INSERT INTO database_version VALUES (2)")
 
-        # this is done by chia init normally
-        await conn.execute("CREATE TABLE database_version(version int)")
-        await conn.execute("INSERT INTO database_version VALUES (2)")
-        await conn.commit()
-
-        db_wrapper = DBWrapper(conn, 2)
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper, uint32(0))
         hint_store = await HintStore.create(db_wrapper)
 
         bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, Path("."), reserved_cores=0)
-        await db_wrapper.commit_transaction()
 
         for block in blocks:
             results = PreValidationResult(None, uint64(1), None, False)
             result, err, _, _ = await bc.receive_block(block, results)
             assert err is None
+    finally:
+        await db_wrapper.close()
 
 
 @pytest.mark.asyncio
