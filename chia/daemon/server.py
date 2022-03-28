@@ -1156,9 +1156,7 @@ class WebSocketServer:
             await asyncio.wait(jobs)
         self.services.clear()
 
-        # TODO: fix this hack
-        asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
+        log.info("chia daemon exiting")
 
         response = {"success": True}
         return response
