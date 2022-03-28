@@ -214,6 +214,7 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
+        single_threaded = self.config.get("single_threaded", False)
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.blockchain = await Blockchain.create(
@@ -224,11 +225,13 @@ class FullNode:
             blockchain_dir=self.db_path.parent,
             reserved_cores=reserved_cores,
             multiprocessing_context=self.multiprocessing_context,
+            single_threaded=single_threaded,
         )
         self.mempool_manager = MempoolManager(
             coin_store=self.coin_store,
             consensus_constants=self.constants,
             multiprocessing_context=self.multiprocessing_context,
+            single_threaded=single_threaded,
         )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will

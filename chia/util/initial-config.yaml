@@ -366,6 +366,11 @@ full_node:
   # this reserved core count.
   reserved_cores: 0
 
+  # set this to true to not offload heavy lifting into separate child processes.
+  # this option is mostly useful when profiling, since only the main process is
+  # profiled.
+  single_threaded: False
+
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # How long to wait for a peer connection
