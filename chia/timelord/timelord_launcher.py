@@ -1,9 +1,9 @@
 import asyncio
 import logging
+import os
 import pathlib
 import signal
 import time
-import os
 from typing import Dict, List, Optional
 
 import pkg_resources
@@ -11,6 +11,7 @@ import pkg_resources
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 from chia.util.network import get_host_addr
 from chia.util.setproctitle import setproctitle
 
@@ -40,7 +41,7 @@ def find_vdf_client() -> pathlib.Path:
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optional[bool]):
+async def spawn_process(host: str, port: uint16, counter: int, prefer_ipv6: Optional[bool]):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()

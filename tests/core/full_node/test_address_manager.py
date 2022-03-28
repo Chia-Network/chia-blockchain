@@ -78,14 +78,14 @@ class TestPeerManager:
     async def test_addr_manager_ports(self):
         addrman = AddressManagerTest()
         assert await addrman.size() == 0
-        source = PeerInfo("252.2.2.2", 8444)
+        source = PeerInfo("252.2.2.2", uint16(8444))
 
         # Test: Addr with same IP but diff port does not replace existing addr.
-        peer1 = PeerInfo("250.1.1.1", 8444)
+        peer1 = PeerInfo("250.1.1.1", uint16(8444))
         assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 1
 
-        peer2 = PeerInfo("250.1.1.1", 8445)
+        peer2 = PeerInfo("250.1.1.1", uint16(8445))
         assert not await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 1
         peer3 = await addrman.select_peer()
@@ -103,10 +103,10 @@ class TestPeerManager:
     @pytest.mark.asyncio
     async def test_addrman_select(self):
         addrman = AddressManagerTest()
-        source = PeerInfo("252.2.2.2", 8444)
+        source = PeerInfo("252.2.2.2", uint16(8444))
 
         # Test: Select from new with 1 addr in new.
-        peer1 = PeerInfo("250.1.1.1", 8444)
+        peer1 = PeerInfo("250.1.1.1", uint16(8444))
         assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 1
 

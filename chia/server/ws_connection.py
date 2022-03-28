@@ -109,7 +109,9 @@ class WSChiaConnection:
         self.version = None
         self.protocol_version = ""
 
-    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
+    async def perform_handshake(
+        self, network_id: str, protocol_version: str, server_port: uint16, local_type: NodeType
+    ):
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,

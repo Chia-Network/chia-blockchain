@@ -1,6 +1,6 @@
 import asyncio
 from ssl import SSLContext
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
@@ -58,8 +58,8 @@ class RpcClient:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
         return response["connections"]
 
-    async def open_connection(self, host: str, port: int) -> Dict:
-        return await self.fetch("open_connection", {"host": host, "port": int(port)})
+    async def open_connection(self, host: str, port: uint16) -> Dict:
+        return await self.fetch("open_connection", {"host": host, "port": port})
 
     async def close_connection(self, node_id: bytes32) -> Dict:
         return await self.fetch("close_connection", {"node_id": node_id.hex()})

@@ -261,7 +261,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port):
+async def setup_introducer(bt: BlockTools, port: uint16):
     kwargs = service_kwargs_for_introducer(
         bt.root_path,
         bt.config["introducer"],
@@ -283,7 +283,7 @@ async def setup_introducer(bt: BlockTools, port):
     await service.wait_closed()
 
 
-async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
+async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: uint16):
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
 
     def stop():
@@ -296,7 +296,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
     await kill_processes()
 
 
-async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
+async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: uint16):
     vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
     vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, bt.config.get("prefer_ipv6")))
     vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, bt.config.get("prefer_ipv6")))
@@ -313,7 +313,13 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_timelord(
-    port, full_node_port, rpc_port, vdf_port, sanitizer, consensus_constants: ConsensusConstants, b_tools: BlockTools
+    port: uint16,
+    full_node_port: uint16,
+    rpc_port: uint16,
+    vdf_port: uint16,
+    sanitizer,
+    consensus_constants: ConsensusConstants,
+    b_tools: BlockTools,
 ):
     config = b_tools.config["timelord"]
     config["port"] = port

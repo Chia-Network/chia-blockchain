@@ -400,7 +400,9 @@ async def setup_full_system(
                 db_version=db_version,
             ),
             setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
-            setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
+            setup_timelord(
+                timelord1_port, uint16(1000), timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1
+            ),
         ]
 
         if connect_to_daemon:

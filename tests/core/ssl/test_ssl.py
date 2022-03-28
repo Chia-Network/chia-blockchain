@@ -18,7 +18,7 @@ from tests.setup_nodes import setup_harvester_farmer
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> bool:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    dummy_port = 5  # this does not matter
+    dummy_port = uint16(5)  # this does not matter
     try:
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"

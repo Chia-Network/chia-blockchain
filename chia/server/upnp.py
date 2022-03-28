@@ -3,6 +3,8 @@ import threading
 from queue import Queue
 from typing import Optional
 
+from chia.util.ints import uint16
+
 try:
     import miniupnpc
 except ImportError:
@@ -54,7 +56,7 @@ class UPnP:
         self.thread = threading.Thread(target=run)
         self.thread.start()
 
-    def remap(self, port):
+    def remap(self, port: uint16):
         self.queue.put(("remap", port))
 
     def release(self, port):
