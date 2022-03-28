@@ -14,7 +14,7 @@ from chia.util.ints import uint16
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
     timeout = aiohttp.ClientTimeout(total=10)
-    dummy_port = 5  # this does not matter
+    dummy_port = uint16(5)  # this does not matter
     async with aiohttp.ClientSession(timeout=timeout) as session:
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"

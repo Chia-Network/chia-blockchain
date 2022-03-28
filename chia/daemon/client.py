@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 import aiohttp
 
 from chia.util.config import load_config
+from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -151,7 +152,7 @@ class DaemonProxy:
 
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext
+    self_hostname: str, daemon_port: uint16, max_message_size: int, ssl_context: ssl.SSLContext
 ) -> DaemonProxy:
     """
     Connect to the local daemon.

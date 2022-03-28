@@ -118,7 +118,7 @@ class WSChiaConnection:
         self,
         network_id: str,
         protocol_version: str,
-        server_port: int,
+        server_port: uint16,
         local_type: NodeType,
     ) -> None:
         if self.is_outbound:

@@ -8,6 +8,8 @@ from typing import Optional, Tuple, Union
 
 from typing_extensions import Literal
 
+from chia.util.ints import uint16
+
 try:
     import miniupnpc
 except ImportError:
@@ -61,7 +63,7 @@ class UPnP:
             log.info("UPnP failed. This is not required to run chia, it allows incoming connections from other peers.")
             log.info(e)
 
-    def remap(self, port: int) -> None:
+    def remap(self, port: uint16) -> None:
         self.queue.put(("remap", port))
 
     def release(self, port: int) -> None:

@@ -334,7 +334,7 @@ async def setup_full_system(
         vdf1_port = uint16(find_available_listen_port("vdf1"))
         vdf2_port = uint16(find_available_listen_port("vdf2"))
         timelord_iter = setup_timelord(full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
-        timelord_bluebox_iter = setup_timelord(1000, True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
+        timelord_bluebox_iter = setup_timelord(uint16(1000), True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
 
         harvester_service = await harvester_iter.__anext__()
         harvester = harvester_service._node
