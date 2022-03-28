@@ -12,7 +12,7 @@ from chia.util.ints import uint64
 from chia.util.network import is_trusted_inner
 
 
-def print_coins(
+def print_coin_record(
     verbose: bool,
     name: str,
     address_prefix: str,
@@ -20,20 +20,20 @@ def print_coins(
     coin_record: CoinRecord,
 ) -> None:
     if verbose:
-        print(coin_record)
+        print(coin_record.to_json_dict())
     else:
         chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
         coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
         confirmed_block = coin_record.confirmed_block_index
-        print(f"Coin 0x{coin_record.name}")
+        print(f"Coin 0x{coin_record.name.hex()}")
         print(f"Wallet Address: {coin_address}")
         print(
             "Status: "
-            f"{f'Confirmed at block: {confirmed_block}' if coin_record.confirmed_block_index != 0 else 'Pending'}"
+            f"{f'Confirmed at block: {confirmed_block}' if coin_record.confirmed_block_index != 0 else 'Not Found'}"
         )
-        print(f"Spent: {f'At Block {coin_record}' if not coin_record.spent else 'No'}")
+        print(f"Spent: {f'at Block {coin_record.spent_block_index}' if not coin_record.spent else 'No'}")
         print(f"Amount {'sent'}: {chia_amount} {name}")
-        print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info}")
+        print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info.hex()}")
         print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
 
@@ -94,16 +94,16 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
     import aiohttp
 
+    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
-    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    self_hostname = config["self_hostname"]
+    if rpc_port is None:
+        rpc_port = config["full_node"]["rpc_port"]
     try:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
-        if rpc_port is None:
-            rpc_port = config["full_node"]["rpc_port"]
         node_client: FullNodeRpcClient = await FullNodeRpcClient.create(
             self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config
         )
@@ -373,7 +373,7 @@ async def show_async(
                 for j in range(0, num_per_screen):
                     if i + j >= len(coin_records):
                         break
-                    print_coins(
+                    print_coin_record(
                         coin_record=coin_records[i + j],
                         verbose=(verbose > 0),
                         name=name,
