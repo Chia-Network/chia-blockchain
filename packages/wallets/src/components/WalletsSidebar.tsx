@@ -1,25 +1,42 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate, useParams } from 'react-router';
-import { Box, ListItemIcon, ListItemText, Typography, List, ListItem } from '@material-ui/core';
-import { Button, Flex, Loading, useTrans } from '@chia/core';
+import { Box, ListItemIcon, ListItemText, Typography, List, ListItem } from '@mui/material';
+import { Button, Flex, Loading, useTrans, useColorModeValue } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';
+import styled from 'styled-components';
 import WalletName from '../constants/WalletName';
 import WalletIcon from './WalletIcon';
 import WalletBadge from './WalletBadge';
-import styled from 'styled-components';
+import WalletsManageTokens from './WalletsManageTokens';
 
 const StyledRoot = styled(Box)`
-  padding-left: ${({ theme }) => theme.spacing(4)}px;
   min-width: 330px;
+  height: 100%;
+  display: flex;
+  padding-top: ${({ theme }) => `${theme.spacing(3)}`};
 `;
 
 const StyledListItem = styled(ListItem)`
-  border-radius: ${({ theme }) => theme.spacing(1)}px;
-  border: ${({ selected }) => `1px solid ${selected ? '#00C853' : '#E0E0E0'}`};
-  margin-bottom: ${({ theme }) => theme.spacing(1)}px;
-  background-color: ${({ selected }) => selected ? 'white' : 'white'};
+  border-radius: ${({ theme }) => theme.spacing(1)};
+  border: ${({ theme }) => `1px solid ${useColorModeValue(theme, 'border')}`};
+  margin-bottom: ${({ theme }) => theme.spacing(1)};
+  background-color: ${({ selected, theme }) => selected ? theme.palette.action.selected : theme.palette.action.hover};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.palette.highlight.main};
+  }
+`;
+
+const StyledContent = styled(Box)`
+  padding-left: ${({ theme }) => theme.spacing(4)};
+  padding-right: ${({ theme }) => theme.spacing(4)};
+`;
+
+const StyledBody = styled(Box)`
+  flex-grow: 1;
+  position: relative;
 `;
 
 function getPrimaryTitle(wallet: Wallet): string {
@@ -86,20 +103,27 @@ export default function WalletsSidebar() {
 
   return (
     <StyledRoot>
-      <Flex gap={2} flexDirection="column">
-        <Typography variant="h5">
-          <Trans>Tokens</Trans>
-          &nbsp;
-          <Button
-            color="primary"
-            onClick={handleAddToken}
-          >
-            <Trans>+</Trans>
-          </Button>
-        </Typography>
-        <List>
-          {items}
-        </List>
+      <Flex gap={2} flexDirection="column" width="100%">
+        <StyledContent>
+          <Typography variant="h5">
+            <Trans>Tokens</Trans>
+            &nbsp;
+            <Button
+              color="primary"
+              onClick={handleAddToken}
+            >
+              <Trans>+</Trans>
+            </Button>
+          </Typography>
+        </StyledContent>
+        <StyledBody>
+          <StyledContent>
+            <List>
+              {items}
+            </List>
+          </StyledContent>
+          <WalletsManageTokens />
+        </StyledBody>
       </Flex>
     </StyledRoot>
   );

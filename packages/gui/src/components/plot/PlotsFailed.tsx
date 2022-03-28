@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Card, Table } from '@chia/core';
 import { useGetCombinedFailedToOpenFilenamesQuery } from '@chia/api-react';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import PlotAction from './PlotAction';
 import type { Plot } from '@chia/api';
 

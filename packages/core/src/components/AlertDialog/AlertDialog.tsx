@@ -1,11 +1,11 @@
 import React, { ReactNode } from 'react';
 import {
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-} from '@material-ui/core';
+} from '@mui/material';
+import DialogActions from '../DialogActions';
+import Button from '../Button';
 
 type Props = {
   title?: ReactNode;
@@ -44,8 +44,8 @@ export default function AlertDialog(props: Props) {
       )}
 
       <DialogActions>
-        <Button onClick={handleClose} autoFocus>
-          Ok
+        <Button onClick={handleClose} variant="outlined" autoFocus>
+          OK
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,8 +1,8 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { Typography, TypographyProps } from '@material-ui/core';
-import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
+import { Typography, TypographyProps } from '@mui/material';
+import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import Flex from '../Flex';
 
 function getIconSize(size: string): string {

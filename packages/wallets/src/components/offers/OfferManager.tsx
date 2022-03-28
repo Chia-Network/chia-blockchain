@@ -7,6 +7,7 @@ import BigNumber from 'bignumber.js';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Back,
+  Button,
   ButtonLoading,
   Card,
   CardHero,
@@ -30,7 +31,6 @@ import fs from 'fs';
 import { Remote } from 'electron';
 import {
   Box,
-  Button,
   Checkbox,
   Chip,
   Dialog,
@@ -43,8 +43,8 @@ import {
   ListItemIcon,
   MenuItem,
   Typography
-} from '@material-ui/core';
-import { Cancel, GetApp as Download, Info, Reply as Share, Visibility } from '@material-ui/icons';
+} from '@mui/material';
+import { Cancel, GetApp as Download, Info, Reply as Share, Visibility } from '@mui/icons-material';
 import { Trade as TradeIcon } from '@chia/icons';
 import { useCancelOfferMutation, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
 import { colorForOfferState, displayStringForOfferState, formatAmountForWalletType, suggestedFilenameForOffer } from './utils';
@@ -529,7 +529,7 @@ export function OfferManager() {
             <Button onClick={handleCreateOffer} variant="contained" color="primary">
               <Trans>Create an Offer</Trans>
             </Button>
-            <Button onClick={handleImportOffer} variant="contained" color="secondary">
+            <Button onClick={handleImportOffer} variant="outlined">
               <Trans>View an Offer</Trans>
             </Button>
           </CardHero>

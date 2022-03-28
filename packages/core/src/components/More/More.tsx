@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
-import { Menu, MenuProps } from '@material-ui/core';
-import { MoreVert as MoreVertIcon } from '@material-ui/icons';
+import { Menu, MenuProps } from '@mui/material';
+import { MoreVert as MoreVertIcon } from '@mui/icons-material';
 import IconButton from '../IconButton';
 
 // anchorOrigin={{ vertical: "bottom", horizontal: "right" }}

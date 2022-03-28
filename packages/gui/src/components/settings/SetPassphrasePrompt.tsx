@@ -1,22 +1,20 @@
 import React, { useEffect } from 'react';
 import {
   Box,
-  Button,
   Checkbox,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
   FormControlLabel,
   TextField,
   Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Help as HelpIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { t, Trans } from '@lingui/macro';
-import { AlertDialog, useValidateChangePassphraseParams, useOpenDialog, Suspender } from '@chia/core';
+import { AlertDialog, Button, DialogActions, useValidateChangePassphraseParams, useOpenDialog, Suspender } from '@chia/core';
 import { useGetKeyringStatusQuery, useSetKeyringPassphraseMutation } from '@chia/api-react';
 
 type Props = {
@@ -200,9 +198,7 @@ export default function SetPassphrasePrompt(props: Props) {
         <Button
           disabled={isLoadingSetKeyringPassphrase}
           onClick={handleCancel}
-          color="secondary"
-          variant="contained"
-          style={{ marginBottom: '8px', marginRight: '8px' }}
+          variant="outlined"
         >
           <Trans>Cancel</Trans>
         </Button>
@@ -211,7 +207,6 @@ export default function SetPassphrasePrompt(props: Props) {
           onClick={handleSubmit}
           color="primary"
           variant="contained"
-          style={{ marginBottom: '8px', marginRight: '8px' }}
         >
           <Trans>Set Passphrase</Trans>
         </Button>

@@ -3,7 +3,7 @@ import { useCurrencyCode } from '@chia/core';
 import styled from 'styled-components';
 import { useGetCatListQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 
 const StyledSymbol = styled(Typography)`
   font-size: 1rem;

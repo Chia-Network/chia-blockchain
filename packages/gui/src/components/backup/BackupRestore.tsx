@@ -3,17 +3,16 @@ import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
   Box,
-  Button,
   Paper,
   Grid,
   Typography,
   Container,
-} from '@material-ui/core';
+} from '@mui/material';
 import moment from 'moment';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router';
-import { Flex, Link } from '@chia/core';
+import { Button, Flex, Link } from '@chia/core';
 import {
   add_new_key_action,
   add_and_restore_from_backup,
@@ -35,7 +34,7 @@ import LayoutHero from '../layout/LayoutHero';
 
 const StyledDropPaper = styled(Paper)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#424242' : '#F0F0F0'};
+    theme.palette.mode === 'dark' ? '#424242' : '#F0F0F0'};
   height: 300px;
   width: 100%;
   display: flex;

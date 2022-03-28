@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { SvgIcon, SvgIconProps } from '@material-ui/core';
+import { SvgIcon, SvgIconProps } from '@mui/material';
 import NFTsIcon from './images/NFTs.svg';
 
 export default function NFTs(props: SvgIconProps) {

@@ -6,12 +6,11 @@ import {
   DialogActions,
   TextField,
   Typography,
-  Button,
-} from '@material-ui/core';
+} from '@mui/material';
 import { Trans, t } from '@lingui/macro';
 import { PassphrasePromptReason } from '@chia/api';
 import { useUnlockKeyringMutation, useGetKeyringStatusQuery } from '@chia/api-react';
-import { Flex, TooltipIcon, useShowError, Suspender, ButtonLoading } from '@chia/core';
+import { Button, Flex, TooltipIcon, useShowError, Suspender, ButtonLoading } from '@chia/core';
 
 type Props = {
   reason: PassphrasePromptReason;

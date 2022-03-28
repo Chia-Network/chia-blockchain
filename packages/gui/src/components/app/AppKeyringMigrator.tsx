@@ -2,7 +2,6 @@ import React, { ReactElement } from 'react';
 import { t, Trans } from '@lingui/macro';
 import {
   Box,
-  Button,
   Checkbox,
   CircularProgress,
   Dialog,
@@ -14,12 +13,12 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Help as HelpIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { useGetKeyringStatusQuery, useMigrateKeyringMutation } from '@chia/api-react';
-import { AlertDialog, ConfirmDialog, useOpenDialog, useValidateChangePassphraseParams, Suspender, useSkipMigration } from '@chia/core';
+import { Button, AlertDialog, ConfirmDialog, useOpenDialog, useValidateChangePassphraseParams, Suspender, useSkipMigration } from '@chia/core';
 
 export default function AppKeyringMigrator() {
   const [validateChangePassphraseParams] = useValidateChangePassphraseParams();

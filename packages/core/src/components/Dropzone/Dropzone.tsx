@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Paper, CircularProgress } from '@material-ui/core';
+import { Paper, CircularProgress } from '@mui/material';
 import styled from 'styled-components';
 import { useDropzone, DropzoneOptions } from 'react-dropzone';
 import AspectRatio from '../AspectRatio';
@@ -7,7 +7,7 @@ import Flex from '../Flex';
 
 const StyledPaper = styled(Paper)`
   background-color: #999999;
-  padding: ${({ theme }) => `${theme.spacing(1)}px ${theme.spacing(2)}px`};
+  padding: ${({ theme }) => `${theme.spacing(1)} ${theme.spacing(2)}`};
 `;
 
 type ChildrenRender = (input: { isDragActive: boolean }) => ReactNode;

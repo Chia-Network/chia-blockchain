@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import Loading from '../Loading';
 import LayoutHero from '../LayoutHero';
 

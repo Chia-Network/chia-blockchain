@@ -1,12 +1,12 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import styled from 'styled-components';
 import {
   KeyboardArrowUp as KeyboardArrowUpIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import Flex from '../Flex';
 import Accordion from '../Accordion';
 

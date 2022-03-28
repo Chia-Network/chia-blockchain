@@ -9,7 +9,7 @@ import {
   Flex,
   TextField,
 } from '@chia/core';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import useSelectDirectory from '../../../hooks/useSelectDirectory';
 import Plotter from '../../../types/Plotter';
 import PlotLocalStorageKeys from '../../../constants/plotLocalStorage';

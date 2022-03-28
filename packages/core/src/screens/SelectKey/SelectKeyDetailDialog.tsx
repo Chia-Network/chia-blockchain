@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetPrivateKeyQuery } from '@chia/api-react';
-import { Grid, Typography } from '@material-ui/core';
+import { Grid, Typography } from '@mui/material';
 import styled from 'styled-components';
 import AlertDialog from '../../components/AlertDialog';
 import Loading from '../../components/Loading';

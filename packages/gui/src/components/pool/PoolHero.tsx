@@ -2,8 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router-dom';
-import { Button, Grid, Typography } from '@material-ui/core';
-import { CardHero } from '@chia/core';
+import { Grid, Typography } from '@mui/material';
+import { Button, CardHero } from '@chia/core';
 import { Pool as PoolIcon } from '@chia/icons';
 
 const StyledPoolIcon = styled(PoolIcon)`

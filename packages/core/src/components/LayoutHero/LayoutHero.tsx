@@ -1,18 +1,18 @@
 import React, { type ReactNode } from 'react';
-import { AppBar, Toolbar, Box } from '@material-ui/core';
+import { AppBar, Toolbar, Box } from '@mui/material';
 import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
 import Flex from '../Flex';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
 import Settings from '../Settings';
 
 const StyledWrapper = styled(Box)`
-  padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(3)}`};
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   background: ${({ theme }) =>
-    theme.palette.type === 'dark'
+    theme.palette.mode === 'dark'
       ? `linear-gradient(45deg, #222222 30%, #333333 90%)`
       : `linear-gradient(45deg, #ffffff 30%, #fdfdfd 90%)`};
 `;

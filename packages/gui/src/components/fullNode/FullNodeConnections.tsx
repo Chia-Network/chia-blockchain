@@ -1,8 +1,9 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Delete as DeleteIcon } from '@material-ui/icons';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import styled from 'styled-components';
 import {
+  Button,
   Card,
   FormatBytes,
   FormatLargeNumber,
@@ -12,7 +13,7 @@ import {
   useOpenDialog,
 } from '@chia/core';
 import { useGetFullNodeConnectionsQuery } from '@chia/api-react';
-import { Button, Tooltip } from '@material-ui/core';
+import { Tooltip } from '@mui/material';
 import { service_connection_types } from '../../util/service_names';
 import Connection from '../../types/Connection';
 import FullNodeCloseConnection from './FullNodeCloseConnection';

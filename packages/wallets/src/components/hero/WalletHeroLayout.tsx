@@ -10,9 +10,9 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-} from '@material-ui/core';
+} from '@mui/material';
 import styled from 'styled-components';
-import { ChevronRight as ChevronRightIcon, Eco as EcoIcon } from '@material-ui/icons';
+import { ChevronRight as ChevronRightIcon, EnergySavingsLeaf as EcoIcon } from '@mui/icons-material';
 import {  useSelector } from 'react-redux';
 import { Back, Flex, FormatLargeNumber, Loading, Logo } from '@chia/core';
 import StandardWallet from '../standard/WalletStandard';

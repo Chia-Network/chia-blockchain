@@ -9,7 +9,7 @@ import {
   DialogContent,
   InputAdornment,
   TextField,
-} from '@material-ui/core';
+} from '@mui/material';
 import { CopyToClipboard, DialogActions } from '@chia/core';
 
 type Props = {
@@ -70,7 +70,7 @@ export default function OfferDataDialog(props: Props) {
         <Button
           onClick={handleClose}
           color="primary"
-          variant="contained"
+          variant="outlined"
         >
           <Trans>OK</Trans>
         </Button>

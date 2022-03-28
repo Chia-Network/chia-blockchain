@@ -1,6 +1,6 @@
 import React from 'react';
 import Flex from '../Flex';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import styled from 'styled-components';
 import { default as walletPackageJson } from '../../../package.json';
 import useAppVersion from '../../hooks/useAppVersion';

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Button, Dialog, DialogContent, DialogContentText, DialogTitle, DialogActions, Modal, Typography } from '@material-ui/core';
+import { Button } from '@chia/core';
+import { Dialog, DialogContent, DialogContentText, DialogTitle, DialogActions, Modal, Typography } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../modules/rootReducer';
 import { showCreateBackup, create_backup_action } from '../../modules/message';

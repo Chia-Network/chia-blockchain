@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Tooltip as BaseTooltip, TooltipProps } from '@material-ui/core';
+import { Box, Tooltip as BaseTooltip, TooltipProps } from '@mui/material';
 import Flex from '../Flex';
 import CopyToClipboard from '../CopyToClipboard';
 

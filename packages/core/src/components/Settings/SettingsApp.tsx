@@ -4,13 +4,13 @@ import useDarkMode from 'use-dark-mode';
 import { type Shell } from 'electron';
 import Button from '../Button';
 import Link from '../Link';
-import { ButtonGroup } from '@material-ui/core';
+import { ButtonGroup } from '@mui/material';
 import { 
   WbSunny as WbSunnyIcon, 
   NightsStay as NightsStayIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
-  Eco as EcoIcon,
-} from '@material-ui/icons';
+  EnergySavingsLeaf as EcoIcon,
+} from '@mui/icons-material';
 import useMode from '../../hooks/useMode';
 import SettingsLabel from './SettingsLabel';
 import Flex from '../Flex';

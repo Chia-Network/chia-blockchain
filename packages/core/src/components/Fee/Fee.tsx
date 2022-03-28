@@ -1,7 +1,7 @@
 import React from 'react';
 import BigNumber from 'bignumber.js';
 import { Trans } from '@lingui/macro';
-import { Box } from '@material-ui/core';
+import { Box } from '@mui/material';
 import styled from 'styled-components';
 import StateColor from '../../constants/StateColor';
 import Amount, { AmountProps } from '../Amount';

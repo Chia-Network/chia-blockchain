@@ -7,11 +7,11 @@ import {
   ListItemIcon,
   MenuItem,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   DeleteForever as DeleteForeverIcon,
   Info as InfoIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { useStopPlottingMutation } from '@chia/api-react';
 import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';

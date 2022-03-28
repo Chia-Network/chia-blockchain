@@ -1,11 +1,11 @@
 import React, { useMemo, ReactNode } from 'react';
-import { CssBaseline } from '@material-ui/core';
+import { CssBaseline } from '@mui/material';
 import {
   ThemeProvider as MaterialThemeProvider,
-  StylesProvider,
   createTheme,
-} from '@material-ui/core/styles';
-import * as materialLocales from '@material-ui/core/locale';
+} from '@mui/material/styles';
+import { StylesProvider } from '@mui/styles';
+import * as materialLocales from '@mui/material/locale';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
 import Fonts from '../Fonts';
 import useLocale from '../../hooks/useLocale';
@@ -53,7 +53,7 @@ export default function ThemeProvider(props: ThemeProviderProps) {
   }, [theme, locale]);
 
   return (
-    <StylesProvider injectFirst>
+
       <StyledThemeProvider theme={finallTheme}>
         <MaterialThemeProvider theme={finallTheme}>
           <>
@@ -68,7 +68,6 @@ export default function ThemeProvider(props: ThemeProviderProps) {
           </>
         </MaterialThemeProvider>
       </StyledThemeProvider>
-    </StylesProvider>
   );
 }
 

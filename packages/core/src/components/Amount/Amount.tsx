@@ -7,7 +7,7 @@ import {
   InputAdornment,
   FormControl,
   FormHelperText,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
 import chiaToMojo from '../../utils/chiaToMojo';

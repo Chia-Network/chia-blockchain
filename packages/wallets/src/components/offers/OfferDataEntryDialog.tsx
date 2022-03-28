@@ -2,14 +2,13 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
   Box,
-  Button,
   Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   TextField,
-} from '@material-ui/core';
-import { DialogActions } from '@chia/core';
+} from '@mui/material';
+import { Button, DialogActions } from '@chia/core';
 
 type Props ={
   open: boolean;
@@ -63,8 +62,7 @@ export default function OfferDataEntryDialog(props: Props) {
       <DialogActions>
         <Button
           onClick={handleClose}
-          color="secondary"
-          variant="contained"
+          variant="outlined"
         >
           <Trans>Cancel</Trans>
         </Button>

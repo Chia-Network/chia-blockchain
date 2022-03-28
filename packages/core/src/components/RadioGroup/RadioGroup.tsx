@@ -3,7 +3,7 @@ import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import {
   RadioGroup as MaterialRadioGroup,
   RadioGroupProps,
-} from '@material-ui/core';
+} from '@mui/material';
 
 type ReactRules<T> =
   | ControllerProps<ReactElement<T>>['rules']

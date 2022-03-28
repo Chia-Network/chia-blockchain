@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Flex } from '@chia/core';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import BigNumber from 'bignumber.js';
-// import { Tooltip } from '@material-ui/core';
+// import { Tooltip } from '@mui/material';
 import useLocale from '../../hooks/useLocale';
 import bigNumberToLocaleString from '../../utils/bigNumberToLocaleString';
 

@@ -5,8 +5,8 @@ import {
 import {
   TextField,
   Typography,
-} from '@material-ui/core';
-import { ImportExport } from '@material-ui/icons';
+} from '@mui/material';
+import { ImportExport } from '@mui/icons-material';
 import { AssetIdMapEntry } from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
 

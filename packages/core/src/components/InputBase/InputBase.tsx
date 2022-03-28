@@ -4,7 +4,7 @@ import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import {
   InputBase as MaterialInputBase,
   InputBaseProps,
-} from '@material-ui/core';
+} from '@mui/material';
 
 type ReactRules<T> =
   | ControllerProps<ReactElement<T>>['rules']

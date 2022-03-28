@@ -16,7 +16,7 @@ import {
   Typography,
   FormControlLabel,
   Radio,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useFormContext } from 'react-hook-form';
 import Plotter from '../../../types/Plotter';
 

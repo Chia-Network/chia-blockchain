@@ -1,7 +1,7 @@
 import React from 'react';
 import Button from '../Button';
 import type { ButtonProps } from '../Button';
-import { Check as CheckIcon } from '@material-ui/icons';
+import { Check as CheckIcon } from '@mui/icons-material';
 
 type Props = ButtonProps & {
   selected?: boolean;

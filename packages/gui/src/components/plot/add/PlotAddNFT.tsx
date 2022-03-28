@@ -8,7 +8,7 @@ import {
   InputLabel,
   MenuItem,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useFormContext } from 'react-hook-form';
 import usePlotNFTs from '../../../hooks/usePlotNFTs';
 import PlotNFTName from '../../plotNFT/PlotNFTName';

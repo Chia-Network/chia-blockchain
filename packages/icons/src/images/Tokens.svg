@@ -1,8 +1,8 @@
 <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="17.9356" cy="22.9976" r="10.4356" stroke="white" stroke-width="3" stroke-linecap="round"/>
-<circle cx="17.9356" cy="22.9976" r="8.93556" fill="white" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="24.9809" cy="27.0644" r="10.4356" stroke="white" stroke-width="3" stroke-linecap="round"/>
-<circle cx="24.9809" cy="27.0644" r="8.93556" fill="white" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="31.0525" cy="20.9356" r="10.4356" stroke="white" stroke-width="3" stroke-linecap="round"/>
-<circle cx="31.0525" cy="20.9356" r="8.93556" fill="white" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
+<circle cx="17.9356" cy="22.9976" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
+<circle cx="17.9356" cy="22.9976" r="8.93556" fill="transparent" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
+<circle cx="24.9809" cy="27.0644" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
+<circle cx="24.9809" cy="27.0644" r="8.93556" fill="transparent" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
+<circle cx="31.0525" cy="20.9356" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
+<circle cx="31.0525" cy="20.9356" r="8.93556" fill="transparent" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

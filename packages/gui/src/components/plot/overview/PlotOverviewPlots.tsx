@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Warning as WarningIcon } from '@material-ui/icons';
+import { Warning as WarningIcon } from '@mui/icons-material';
 import {
   Card,
   Flex,
@@ -16,7 +16,7 @@ import {
   TableCell,
   TableRow,
   Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 import type Plot from '../../../types/Plot';
 import PlotStatusEnum from '../../../constants/PlotStatus';
 import PlotStatus from '../PlotStatus';
@@ -29,7 +29,7 @@ import usePlots from '../../../hooks/usePlots';
 
 const StyledTableRowQueue = styled(TableRow)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#1C87FB' : '#F6EEDF'};
+    theme.palette.mode === 'dark' ? '#1C87FB' : '#F6EEDF'};
 `;
 
 const StyledWarningIcon = styled(WarningIcon)`

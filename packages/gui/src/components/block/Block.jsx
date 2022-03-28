@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
+  Alert,
   Paper,
   TableRow,
   Table,
   TableBody,
   TableCell,
   TableContainer,
-} from '@material-ui/core';
+} from '@mui/material';
 import moment from 'moment';
-import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
 import { useGetBlockQuery, useGetBlockRecordQuery  } from '@chia/api-react'
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Back,
+  Button,
   Card,
   FormatLargeNumber,
   Link,

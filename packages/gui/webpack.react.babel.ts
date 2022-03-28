@@ -78,6 +78,7 @@ export default {
       'node_modules',
     ],
     alias: {
+      '@mui/styled-engine': '@mui/styled-engine-sc',
       crypto: 'crypto-browserify',
       stream: 'stream-browserify',
     },

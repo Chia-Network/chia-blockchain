@@ -3,13 +3,13 @@ import {
   CircularProgress,
   CircularProgressProps,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import styled from 'styled-components';
 import Flex from '../Flex';
 
 const StyledCircularProgress = styled(CircularProgress)`
   color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? 'white' : 'inherit'}; ;
+    theme.palette.mode === 'dark' ? 'white' : 'inherit'}; ;
 `;
 
 type Props = CircularProgressProps & {

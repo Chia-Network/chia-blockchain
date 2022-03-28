@@ -10,7 +10,7 @@ import {
   Typography,
   TypographyProps,
   CircularProgress,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const StyledCard = styled(Card)`
   height: 100%;

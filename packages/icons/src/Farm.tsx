@@ -1,5 +1,5 @@
 import React from 'react';
-import { SvgIcon, SvgIconProps } from '@material-ui/core';
+import { SvgIcon, SvgIconProps } from '@mui/material';
 import FarmIcon from './images/farm.svg';
 
 export default function Farm(props: SvgIconProps) {

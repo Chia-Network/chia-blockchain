@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router';
 import {
+  Button,
   TooltipTypography,
   Flex,
   State,
@@ -19,19 +20,18 @@ import {
 } from '@chia/core';
 import {
   Box,
-  Button,
   Grid,
   Card,
   CardContent,
   Typography,
   MenuItem,
   ListItemIcon,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Delete as DeleteIcon,
   Link as LinkIcon,
   Payment as PaymentIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { Plot as PlotIcon } from '@chia/icons';
 import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import type PlotNFT from '../../types/PlotNFT';
@@ -61,7 +61,7 @@ const StyledCardContent = styled(CardContent)`
 
 const StyledSyncingFooter = styled(CardContent)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#515151' : '#F6F6F6'};
+    theme.palette.mode === 'dark' ? '#515151' : '#F6F6F6'};
   padding: 2rem 3rem;
   text-align: center;
   borer-top: 1px solid #d8d6d6;

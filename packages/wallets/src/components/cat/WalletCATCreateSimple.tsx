@@ -1,8 +1,8 @@
 import React from 'react';
 import { useRouteMatch, useNavigate } from 'react-router-dom';
 import { Trans, t } from '@lingui/macro';
-import { Grid } from '@material-ui/core';
-import { Add as AddIcon } from '@material-ui/icons';
+import { Grid } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { Back, Flex, Loading, useShowError } from '@chia/core';
 import { useGetWalletsQuery, useAddCATTokenMutation, useGetCatListQuery } from '@chia/api-react';
 import WalletCreateCard from '../create/WalletCreateCard';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { get } from 'lodash';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Select as MaterialSelect, SelectProps } from '@material-ui/core';
+import { Select as MaterialSelect, SelectProps } from '@mui/material';
 
 type Props = SelectProps & {
   hideError?: boolean;

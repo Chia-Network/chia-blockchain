@@ -1,5 +1,5 @@
 import React from 'react';
-import { SvgIcon, SvgIconProps } from '@material-ui/core';
+import { SvgIcon, SvgIconProps } from '@mui/material';
 import WalletIcon from './images/wallet.svg';
 
 export default function Wallet(props: SvgIconProps) {

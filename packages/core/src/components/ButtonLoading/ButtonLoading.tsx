@@ -1,32 +1,13 @@
 import React from 'react';
-import styled from 'styled-components';
-import { Box, CircularProgress } from '@material-ui/core';
-import Button, { ButtonProps } from '../Button';
+import { LoadingButton, type LoadingButtonProps } from '@mui/lab';
 
-const StyledWrapper = styled(Box)`
-  position: relative;
-  display: ${({ fullWidth }) => fullWidth ?'block' : 'inline-block'};
-`;
-
-const StyledLoading = styled(CircularProgress)`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -12px;
-  margin-left: -12px;
-`;
-
-const StyledButtonContent = styled.span`
-  visibility: ${({ hide }) => (hide ? 'hidden' : 'visible')};
-`;
-
-type Props = ButtonProps & {
+export type ButtonLoadingProps = LoadingButtonProps & {
   loading?: boolean;
   mode?: 'autodisable' | 'hidecontent';
 };
 
-export default function ButtonLoading(props: Props) {
-  const { loading, onClick, mode, children, disabled, ...rest } = props;
+export default function ButtonLoading(props: ButtonLoadingProps) {
+  const { loading, onClick, ...rest } = props;
 
   function handleClick(...args: any[]) {
     if (!loading && onClick) {
@@ -34,21 +15,8 @@ export default function ButtonLoading(props: Props) {
     }
   }
 
-  const disabledButton = mode === 'autodisable' && loading ? true : disabled;
-
   return (
-    <StyledWrapper {...rest}>
-      <Button onClick={handleClick} {...rest} disabled={disabledButton}>
-        <StyledButtonContent hide={mode === 'hidecontent' && loading}>
-          {children}
-        </StyledButtonContent>
-      </Button>
-      {loading && <StyledLoading size={24} />}
-    </StyledWrapper>
+    <LoadingButton onClick={handleClick} loading={loading} {...rest} />
   );
 }
 
-ButtonLoading.defaultProps = {
-  loading: false,
-  mode: 'autodisable',
-};

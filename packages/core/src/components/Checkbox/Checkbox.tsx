@@ -1,6 +1,6 @@
 import React, { ChangeEvent, ReactNode } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Checkbox as MaterialCheckbox, CheckboxProps } from '@material-ui/core';
+import { Checkbox as MaterialCheckbox, CheckboxProps } from '@mui/material';
 
 const ParseBoolean = (props: CheckboxProps) => {
   const { onChange, ...rest } = props;

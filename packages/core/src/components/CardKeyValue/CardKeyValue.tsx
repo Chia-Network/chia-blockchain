@@ -6,7 +6,7 @@ import {
   TableBody,
   TableCell,
   TableRow,
-} from '@material-ui/core';
+} from '@mui/material';
 import styled from 'styled-components';
 
 const StyledTableCell= styled(({ hideDivider, ...rest }) => (

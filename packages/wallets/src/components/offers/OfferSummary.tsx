@@ -13,8 +13,8 @@ import {
   Box,
   Divider,
   Typography,
-} from '@material-ui/core';
-import { useTheme } from '@material-ui/core/styles';
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import styled from 'styled-components';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import OfferExchangeRate from './OfferExchangeRate';

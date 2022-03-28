@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import styled from 'styled-components';
-import { Box } from '@material-ui/core';
+import { Box } from '@mui/material';
 import Flex from '../Flex';
 import { Outlet } from 'react-router';
 
@@ -11,19 +11,20 @@ const StyledRoot = styled(Flex)`
 
 const StyledSidebar = styled(Box)`
   height: 100%;
-  padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
+  position: relative;
 `;
 
 const StyledContent = styled(Box)`
   height: 100%;
-  overflow: auto;
   flex-grow: 1;
-  width: 100%;
-  padding-left: ${({ theme }) => theme.spacing(4)}px;
-  padding-right: ${({ theme }) => theme.spacing(4)}px;
-  padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
+  overflow-y: scroll;
+
+  padding-top: ${({ theme }) => `${theme.spacing(3)}`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(3)}`};
+  padding-right: ${({ theme }) => `${theme.spacing(4)}`};
+
+  padding-left: ${({ theme, sidebar }) => !sidebar ? `${theme.spacing(4)}` : '10px'};
+  margin-left: ${({ sidebar }) => !sidebar ? `0` : '-10px'};
 `;
 
 export type DashboardLayoutProps = {
@@ -37,13 +38,13 @@ export default function DashboardLayout(props: DashboardLayoutProps) {
   // two layout column with always visible left column
   // and right column with content
   return (
-    <StyledRoot gap="md">
+    <StyledRoot>
       {sidebar && (
         <StyledSidebar>
           {sidebar}
         </StyledSidebar>
       )}
-      <StyledContent>
+      <StyledContent sidebar={!!sidebar}>
         {outlet ? <Outlet /> : children}
       </StyledContent>
     </StyledRoot> 

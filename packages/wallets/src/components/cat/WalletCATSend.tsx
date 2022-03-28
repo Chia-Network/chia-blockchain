@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Trans, t } from '@lingui/macro';
 import {
   AdvancedOptions,
+  Button, 
   Fee,
   Form,
   Flex,
@@ -25,7 +26,7 @@ import {
 import { SyncingStatus } from '@chia/api';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
-import { Button, Grid } from '@material-ui/core';
+import { Grid } from '@mui/material';
 import useWallet from '../../hooks/useWallet';
 import useWalletState from '../../hooks/useWalletState';
 import CreateWalletSendTransactionResultDialog from '../WalletSendTransactionResultDialog';

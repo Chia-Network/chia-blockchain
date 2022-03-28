@@ -1,24 +1,23 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
-import { Flex, UnitFormat, More, Table, mojoToChiaLocaleString, Suspender } from '@chia/core';
+import { Button, Flex, UnitFormat, More, Table, mojoToChiaLocaleString, Suspender } from '@chia/core';
 import { useNavigate } from 'react-router';
 import {
   ViewList as ViewListIcon,
   ViewModule as ViewModuleIcon,
   Payment as PaymentIcon,
   Power as PowerIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import {
   Box,
-  Button,
   ListItemIcon,
   MenuItem,
   IconButton,
   Grid,
   Tooltip,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import PlotNFTCard from '../plotNFT/PlotNFTCard';
 import PlotExternalNFTCard from '../plotNFT/PlotExternalNFTCard';
 import PlotNFTName from '../plotNFT/PlotNFTName';

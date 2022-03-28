@@ -7,7 +7,7 @@ import {
   Box,
   TextField,
   Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   createState,
 } from '../../../modules/createWallet';
@@ -15,7 +15,7 @@ import { useDispatch } from 'react-redux';
 import { create_did_action } from '../../../modules/message';
 import { openDialog } from '../../../modules/dialog';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
-import { Help as HelpIcon } from '@material-ui/icons';
+import { Help as HelpIcon } from '@mui/icons-material';
 import { divide } from 'lodash';
 import { useHistory } from 'react-router';
 
@@ -189,6 +189,7 @@ export default function WalletDIDCreate() {
                   <Button
                     onClick={() => remove(index)}
                     variant="contained"
+                    color="danger"
                   >
                     <Trans>Delete</Trans>
                   </Button>
@@ -199,7 +200,7 @@ export default function WalletDIDCreate() {
                   onClick={() => {
                     append({ backupid: 'Backup ID' });
                   }}
-                  variant="contained"
+                  variant="outlined"
                 >
                   <Trans>Add Backup ID</Trans>
                 </Button>

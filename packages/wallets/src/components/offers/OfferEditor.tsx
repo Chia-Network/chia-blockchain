@@ -6,6 +6,7 @@ import { useLocalStorage } from '@rehooks/local-storage';
 import { Trans, t } from '@lingui/macro';
 import {
   Back,
+  Button,
   ButtonLoading,
   Flex,
   Form,
@@ -14,10 +15,9 @@ import {
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
 import {
-  Button,
   Divider,
   Grid,
-} from '@material-ui/core';
+} from '@mui/material';
 import type OfferEditorRowData from './OfferEditorRowData';
 import { suggestedFilenameForOffer } from './utils';
 import useAssetIdName from '../../hooks/useAssetIdName';
@@ -29,7 +29,7 @@ import { chiaToMojo, catToMojo } from '@chia/core';
 import fs from 'fs';
 
 const StyledEditorBox = styled.div`
-  padding: ${({ theme }) => `${theme.spacing(4)}px`};
+  padding: ${({ theme }) => `${theme.spacing(4)}`};
 `;
 
 type FormData = {
@@ -191,8 +191,7 @@ function OfferEditor(props: OfferEditorProps) {
           <Divider />
           <Flex gap={3}>
             <Button
-              variant="contained"
-              color="secondary"
+              variant="outlined"
               type="reset"
               onClick={handleReset}
               disabled={processing}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
@@ -31,13 +31,12 @@ type Props = {
 export default function FarmManageFarmingRewards(props: Props) {
   const { onClose, open } = props;
   const [setRewardTargets] = useSetRewardTargetsMutation();
-  const { data, isLoading } = useGetRewardTargetsQuery({
-    searchForPrivateKey: true,
-  });
+  const { data, isLoading } = useGetRewardTargetsQuery();
   
   const [error, setError] = useState<Error | null>(null);
   const methods = useForm<FormData>({
     mode: 'onChange',
+    shouldUnregister: false,
     defaultValues: {
       farmerTarget: data?.farmerTarget ?? '',
       poolTarget: data?.poolTarget ?? '',
@@ -48,15 +47,6 @@ export default function FarmManageFarmingRewards(props: Props) {
     return !data?.haveFarmerSk || !data?.havePoolSk;
   }, [data?.haveFarmerSk, data?.havePoolSk]);
 
-  useEffect(() => {
-    if (data) {
-      methods.reset({
-        farmerTarget: data.farmerTarget,
-        poolTarget: data.poolTarget,
-      });
-    }
-  }, [data]);
-
   const {
     register,
     formState: { errors },
@@ -65,16 +55,14 @@ export default function FarmManageFarmingRewards(props: Props) {
   function handleClose() {
     onClose();
   }
-
   function handleDialogClose(event: any, reason: any) {
-    if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
+      if (reason !== 'backdropClick' || reason !== 'EscapeKeyDown') {
       onClose();
-    }
-  }
+      }}
 
-  function checkAddress(stringToCheck: string): boolean {
+      function checkAddress(stringToCheck: string): boolean {
     try {
-      fromBech32m(stringToCheck);
+      bech32m.decode(stringToCheck);
       return true;
     }
     catch {

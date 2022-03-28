@@ -1,20 +1,19 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex, More, useOpenDialog } from '@chia/core';
+import { Button, Flex, More, useOpenDialog } from '@chia/core';
 import { createTeleporter } from 'react-teleporter';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Button,
   MenuItem,
   Box,
   ListItemIcon,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Refresh as RefreshIcon,
   Folder as FolderIcon,
   Add as AddIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { useRefreshPlotsMutation } from '@chia/api-react';
 import PlotAddDirectoryDialog from './PlotAddDirectoryDialog';
 

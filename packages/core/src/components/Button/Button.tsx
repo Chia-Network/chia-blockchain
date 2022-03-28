@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button as BaseButton,
   ButtonProps as BaseButtonProps,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const StyledBaseButton = styled(({ nowrap: boolean, selected, ...rest }) => (
   <BaseButton {...rest} />
@@ -15,7 +15,7 @@ const StyledBaseButton = styled(({ nowrap: boolean, selected, ...rest }) => (
       return '';
     }
 
-    const isDark = theme.palette.type === 'dark';
+    const isDark = theme.palette.mode === 'dark';
     const color = isDark ? '255' : '0';
 
     return `
@@ -58,7 +58,7 @@ export type ButtonProps = Omit<BaseButtonProps, 'color'> & {
 };
 
 export default function Button(props: ButtonProps) {
-  const { color, to, onClick, ...rest } = props;
+  const { color = 'secondary', to, onClick, ...rest } = props;
 
   const navigate = useNavigate();
 

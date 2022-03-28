@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import styled from 'styled-components';
 import { StateColor } from '@chia/core';
-import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
+import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 
 const StyledFiberManualRecordIcon = styled(({ color, ...rest }) => (
   <FiberManualRecordIcon {...rest} />

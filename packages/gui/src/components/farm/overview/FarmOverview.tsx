@@ -7,9 +7,9 @@ import {
   CircularProgress,
   ListItemIcon,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useGetCombinedPlotsQuery } from '@chia/api-react';
-import { Settings as SettingsIcon } from '@material-ui/icons';
+import { Settings as SettingsIcon } from '@mui/icons-material';
 import FarmOverviewHero from './FarmOverviewHero';
 import FarmOverviewCards from './FarmOverviewCards';
 import FarmManageFarmingRewards from '../FarmManageFarmingRewards';

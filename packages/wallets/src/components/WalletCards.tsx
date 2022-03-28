@@ -1,5 +1,5 @@
 import React, { ReactElement } from 'react';
-import { Grid } from '@material-ui/core';
+import { Grid } from '@mui/material';
 import WalletCardTotalBalance from './card/WalletCardTotalBalance';
 import WalletCardSpendableBalance from './card/WalletCardSpendableBalance';
 import WalletCardPendingTotalBalance from './card/WalletCardPendingTotalBalance';

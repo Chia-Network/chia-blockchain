@@ -1,9 +1,4 @@
-import { createTheme } from '@material-ui/core/styles';
+import { createTheme } from '@mui/material/styles';
 import theme from './default';
 
-export default createTheme({
-  ...theme,
-  palette: {
-    ...theme.palette,
-  },
-});
+export default createTheme(theme);

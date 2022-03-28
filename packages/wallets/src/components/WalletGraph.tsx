@@ -3,7 +3,7 @@ import { linearGradientDef } from '@nivo/core';
 import { ResponsiveLine } from '@nivo/line';
 import BigNumber from 'bignumber.js';
 import { orderBy, groupBy, map } from 'lodash';
-import { /* Typography, */ Paper } from '@material-ui/core';
+import { /* Typography, */ Paper } from '@mui/material';
 import styled from 'styled-components';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
 import { TransactionType } from '@chia/api';

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@mui/styles';
 import {
+  Button,
   AlertDialog,
   Suspender,
   useOpenDialog,
@@ -17,14 +18,13 @@ import {
   Grid,
   Typography,
   Box,
-  Button,
   Tooltip,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Help as HelpIcon,
   Lock as LockIcon,
   NoEncryption as NoEncryptionIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';

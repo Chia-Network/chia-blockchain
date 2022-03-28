@@ -18,8 +18,8 @@ import {
   Divider,
   IconButton,
   Typography,
-} from '@material-ui/core';
-import { Add, Remove } from '@material-ui/icons';
+} from '@mui/material';
+import { Add, Remove } from '@mui/icons-material';
 import { useGetWalletBalanceQuery, useGetWalletsQuery } from '@chia/api-react';
 import { Wallet, WalletType } from '@chia/api';
 import type OfferEditorRowData from './OfferEditorRowData';

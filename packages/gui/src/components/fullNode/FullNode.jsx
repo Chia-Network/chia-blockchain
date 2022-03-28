@@ -15,8 +15,8 @@ import {
 import { Status } from '@chia/icons';
 import { useGetLatestBlocksQuery, useGetUnfinishedBlockHeadersQuery } from '@chia/api-react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Tooltip, Typography } from '@material-ui/core';
-// import HelpIcon from '@material-ui/icons/Help';
+import { Box, Tooltip, Typography } from '@mui/material';
+// import HelpIcon from '@mui/icons-material/Help';
 import FullNodeConnections from './FullNodeConnections';
 import FullNodeBlockSearch from './FullNodeBlockSearch';
 import FullNodeCards from './card/FullNodeCards';

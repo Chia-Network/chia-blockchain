@@ -4,7 +4,7 @@ import {
   Typography,
   Container,
   Grid,
-} from '@material-ui/core';
+} from '@mui/material';
 // import { shuffle } from 'lodash';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';

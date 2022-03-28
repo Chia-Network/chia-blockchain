@@ -1,9 +1,9 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Divider, Grid, Typography } from '@material-ui/core';
+import { Divider, Grid, Typography } from '@mui/material';
 import styled from 'styled-components';
-import { CardHero, Link, useOpenDialog } from '@chia/core';
+import { Button, CardHero, Link, useOpenDialog } from '@chia/core';
 import heroSrc from './images/hero.svg';
 import PlotAddDirectoryDialog from '../../plot/PlotAddDirectoryDialog';
 

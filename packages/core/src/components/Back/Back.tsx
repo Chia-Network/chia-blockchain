@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import Flex from '../Flex';
-import { Typography } from '@material-ui/core';
-import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { Typography } from '@mui/material';
+import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 

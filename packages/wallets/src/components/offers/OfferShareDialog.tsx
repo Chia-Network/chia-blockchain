@@ -23,7 +23,7 @@ import {
   InputAdornment,
   TextField,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { shortSummaryForOffer, suggestedFilenameForOffer } from './utils';
 import useAssetIdName, { AssetIdMapEntry } from '../../hooks/useAssetIdName';
 import { IncomingMessage, Shell, Remote } from 'electron';
@@ -362,8 +362,7 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
             />
             <Flex>
             <Button
-              color="secondary"
-              variant="contained"
+              variant="outlined"
               onClick={() => openExternal(sharedURL)}
             >
               <Trans>View on OfferBin</Trans>
@@ -430,8 +429,7 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
         </Button>
         <ButtonLoading
           onClick={handleConfirm}
-          color="secondary"
-          variant="contained"
+          variant="outlined"
           loading={isSubmitting}
         >
           <Trans>Share</Trans>
@@ -505,8 +503,7 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
             />
             <Flex>
             <Button
-              color="secondary"
-              variant="contained"
+              variant="outlined"
               onClick={() => openExternal(sharedURL)}
             >
               <Trans>View on Hashgreen DEX</Trans>
@@ -559,8 +556,7 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
         </Button>
         <ButtonLoading
           onClick={handleConfirm}
-          color="secondary"
-          variant="contained"
+          variant="outlined"
           loading={isSubmitting}
         >
           <Trans>Share</Trans>
@@ -714,8 +710,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
         <DialogActions>
           <Button
             onClick={handleKeybaseGoToChannel}
-            color="secondary"
-            variant="contained"
+            variant="outlined"
           >
             <Trans>Go to #{KeybaseChannelName}</Trans>
           </Button>
@@ -754,8 +749,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           <Flex justifyContent="center" flexGrow={0} >
             <Button
               onClick={handleKeybaseInstall}
-              color="secondary"
-              variant="contained"
+              variant="outlined"
             >
               <Trans>Install Keybase</Trans>
             </Button>
@@ -771,8 +765,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           <Flex justifyContent="center" flexGrow={0}>
             <ButtonLoading
               onClick={handleKeybaseJoinTeam}
-              color="secondary"
-              variant="contained"
+              variant="outlined"
               loading={isJoiningTeam}
             >
               <Trans>Join {KeybaseTeamName}</Trans>
@@ -799,8 +792,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
         </Button>
         <ButtonLoading
           onClick={handleKeybaseShare}
-          color="secondary"
-          variant="contained"
+          variant="outlined"
           loading={isSubmitting}
         >
           <Trans>Share</Trans>
@@ -867,8 +859,7 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
         </DialogContent>
         <DialogActions>
           <Button
-            color="secondary"
-            variant="contained"
+            variant="outlined"
             onClick={() => openExternal('https://offerpool.io/')}
           >
             <Trans>Go to Offerpool</Trans>
@@ -914,8 +905,7 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
         </Button>
         <ButtonLoading
           onClick={handleConfirm}
-          color="secondary"
-          variant="contained"
+          variant="outlined"
           loading={isSubmitting}
         >
           <Trans>Share</Trans>
@@ -989,22 +979,19 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
             <Typography variant="subtitle1">Where would you like to share your offer?</Typography>
             <Flex flexDirection="row" gap={3}>
               <Button
-                variant="contained"
-                color="default"
+                variant="outlined"
                 onClick={handleOfferBin}
               >
                 OfferBin
               </Button>
               <Button
-                variant="contained"
-                color="default"
+                variant="outlined"
                 onClick={handleHashgreen}
               >
                 Hashgreen DEX
               </Button>
               <Button
-                variant="contained"
-                color="default"
+                variant="outlined"
                 onClick={handleOfferpool}
               >
                 <Flex flexDirection="column">
@@ -1012,8 +999,7 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
                 </Flex>
               </Button>
               <Button
-                variant="contained"
-                color="secondary"
+                variant="outlined"
                 onClick={handleKeybase}
               >
                 <Flex flexDirection="column">

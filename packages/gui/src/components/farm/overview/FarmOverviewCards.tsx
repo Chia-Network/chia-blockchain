@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid } from '@material-ui/core';
+import { Grid } from '@mui/material';
 import FarmCardStatus from '../card/FarmCardStatus';
 import FarmCardTotalChiaFarmed from '../card/FarmCardTotalChiaFarmed';
 import FarmCardBlockRewards from '../card/FarmCardBlockRewards';

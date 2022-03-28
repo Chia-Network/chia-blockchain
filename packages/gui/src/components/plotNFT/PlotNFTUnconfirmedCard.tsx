@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { Flex, Link, Loading } from '@chia/core';
 import { useGetTransactionQuery } from '@chia/api-react';
-import { Box, Card, CardContent, Typography } from '@material-ui/core';
+import { Box, Card, CardContent, Typography } from '@mui/material';
 import type { UnconfirmedPlotNFT } from '@chia/api';
 import PlotNFTState from '../../constants/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';

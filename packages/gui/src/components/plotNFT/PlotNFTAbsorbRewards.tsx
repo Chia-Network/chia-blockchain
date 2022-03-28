@@ -16,8 +16,8 @@ import {
 } from '@chia/core';
 import { useForm } from 'react-hook-form';
 import { usePwAbsorbRewardsMutation, useGetPlotNFTsQuery } from '@chia/api-react'
-import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
-import { Grid, Typography } from '@material-ui/core';
+import { ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { Grid, Typography } from '@mui/material';
 import { useParams } from 'react-router';
 import { SubmitData } from './select/PlotNFTSelectPool';
 import PlotNFTName from './PlotNFTName';

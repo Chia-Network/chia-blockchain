@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ListItemIcon, ListItemText, Typography } from '@material-ui/core';
+import { ListItemIcon, ListItemText, Typography } from '@mui/material';
 import { Dropdown, Flex, Loading, useTrans } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';

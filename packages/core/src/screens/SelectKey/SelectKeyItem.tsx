@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Alert } from '@material-ui/lab';
 import {
+  Alert,
   Tooltip,
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import {
   useCheckDeleteKeyMutation,
   useDeleteKeyMutation,
@@ -26,7 +26,7 @@ import useSkipMigration from '../../hooks/useSkipMigration';
 import useKeyringMigrationPrompt from '../../hooks/useKeyringMigrationPrompt';
 
 const StyledFingerprintListItem = styled(ListItem)`
-  padding-right: ${({ theme }) => `${theme.spacing(11)}px`};
+  padding-right: ${({ theme }) => `${theme.spacing(11)}`};
 `;
 
 type Props = {
@@ -42,7 +42,7 @@ export default function SelectKeyItem(props: Props) {
   const openDialog = useOpenDialog();
   const [deleteKey] = useDeleteKeyMutation();
   const [checkDeleteKey] = useCheckDeleteKeyMutation();
-  const [skippedMigration, _] = useSkipMigration();
+  const [skippedMigration] = useSkipMigration();
   const [promptForKeyringMigration] = useKeyringMigrationPrompt();
 
   async function handleLogin() {

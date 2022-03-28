@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router';
 import { useGetPlotNFTsQuery, usePwSelfPoolMutation, usePwJoinPoolMutation } from '@chia/api-react';
 import { Flex, State, Loading, StateTypography } from '@chia/core';
-import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
+import { ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { useParams } from 'react-router';
 import PlotNFTSelectPool, { SubmitData } from './select/PlotNFTSelectPool';
 import PlotNFTName from './PlotNFTName';

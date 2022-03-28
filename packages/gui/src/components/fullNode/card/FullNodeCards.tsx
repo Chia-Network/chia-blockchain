@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid } from '@material-ui/core';
+import { Grid } from '@mui/material';
 import FullNodeCardStatus from './FullNodeCardStatus';
 import FullNodeCardConnectionStatus from './FullNodeCardConnectionStatus';
 import FullNodeCardNetworkName from './FullNodeCardNetworkName';

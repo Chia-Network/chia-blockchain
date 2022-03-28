@@ -1,8 +1,8 @@
 import React from 'react';
 import { useHistory, useRouteMatch } from "react-router";
 import { Trans } from '@lingui/macro';
-import { Grid, Typography } from '@material-ui/core';
-import { Share as ShareIcon, Speed as SpeedIcon, HomeWork as HomeWorkIcon } from '@material-ui/icons';
+import { Grid, Typography } from '@mui/material';
+import { Share as ShareIcon, Speed as SpeedIcon, HomeWork as HomeWorkIcon } from '@mui/icons-material';
 import { Flex } from '@chia/core';
 import WalletCreateCard from './WalletCreateCard';
 

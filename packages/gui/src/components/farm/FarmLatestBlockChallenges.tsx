@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import { Link, Table, Card } from '@chia/core';
 import { useGetSignagePointsQuery, useGetCombinedPlotsQuery } from '@chia/api-react';
 import type { Row } from '../core/components/Table/Table';

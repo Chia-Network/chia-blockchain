@@ -2,15 +2,14 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
   Box,
-  Button,
   Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   InputAdornment,
   TextField,
-} from '@material-ui/core';
-import { CopyToClipboard, DialogActions, Loading } from '@chia/core';
+} from '@mui/material';
+import { Button, CopyToClipboard, DialogActions, Loading } from '@chia/core';
 import useWallet from '../../hooks/useWallet';
 
 type Props = {

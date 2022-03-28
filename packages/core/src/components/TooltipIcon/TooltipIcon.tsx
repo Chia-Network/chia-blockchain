@@ -1,11 +1,11 @@
 import React, { ReactElement } from 'react';
 import styled from 'styled-components';
-import { Help as HelpIcon } from '@material-ui/icons';
-import { Tooltip } from '@material-ui/core';
+import { Help as HelpIcon } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 
 const StyledHelpIcon = styled(HelpIcon)`
   color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#c8c8c8' : '#757575'};
+    theme.palette.mode === 'dark' ? '#c8c8c8' : '#757575'};
   font-size: 1rem;
 `;
 

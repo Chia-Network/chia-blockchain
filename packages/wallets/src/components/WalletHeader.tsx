@@ -14,10 +14,10 @@ import {
   Typography,
   ListItemIcon,
   MenuItem,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Delete as DeleteIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { useDeleteUnconfirmedTransactionsMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import WalletStatus from './WalletStatus';
 

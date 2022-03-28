@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
+  Alert,
   Card,
   Typography,
   Container,
   List,
-} from '@material-ui/core';
+} from '@mui/material';
 import { useNavigate } from 'react-router';
-import { Alert } from '@material-ui/lab';
 import {
   useGetKeyringStatusQuery,
   useGetPublicKeysQuery,

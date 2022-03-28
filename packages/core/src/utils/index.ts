@@ -14,3 +14,5 @@ export { default as mojoToChia } from './mojoToChia';
 export { default as mojoToChiaLocaleString } from './mojoToChiaLocaleString';
 export { default as sleep } from './sleep';
 export { default as toBech32m, fromBech32m } from './toBech32m';
+export { default as useColorModeValue } from './useColorModeValue';
+

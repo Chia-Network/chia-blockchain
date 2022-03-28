@@ -1,15 +1,18 @@
 import React, { ReactNode, cloneElement } from 'react';
 import styled from 'styled-components';
 import { useNavigate, useMatch } from 'react-router-dom';
-import { ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
+import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import useColorModeValue from '../../utils/useColorModeValue';
 
 const StyledListItemIcon = styled(ListItemIcon)`
   min-width: auto;
-  background-color: white;
-  border-radius: ${({ theme }) => theme.spacing(1.5)}px;
-  width: ${({ theme }) => theme.spacing(6)}px;
-  height: ${({ theme }) => theme.spacing(6)}px;
-  border: ${({ selected }) => `1px solid ${selected ? '#00C853' : '#E0E0E0'}`};
+  background-color: ${({ theme }) => theme.palette.action.hover};
+  border-radius: ${({ theme }) => theme.spacing(1.5)};
+  width: ${({ theme }) => theme.spacing(6)};
+  height: ${({ theme }) => theme.spacing(6)};
+  border: ${({ selected, theme }) => `1px solid ${selected 
+    ? theme.palette.highlight.main 
+    : useColorModeValue(theme, 'border')}`};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,8 +25,8 @@ const StyledListItem = styled(ListItem)`
   align-items: center;
   padding-left: 0;
   padding-right: 0;
-  padding-top: ${({ theme }) => theme.spacing(1)}px;
-  padding-bottom: ${({ theme }) => theme.spacing(1)}px;
+  padding-top: ${({ theme }) => theme.spacing(1)};
+  padding-bottom: ${({ theme }) => theme.spacing(1)};
 
   &:hover {
     background-color: transparent;

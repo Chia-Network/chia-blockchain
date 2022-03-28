@@ -13,26 +13,25 @@ import {
   Tooltip,
   TablePagination,
   Collapse,
-} from '@material-ui/core';
+} from '@mui/material';
 import LoadingOverlay from '../LoadingOverlay';
 
 
 const StyledTableHead = styled(TableHead)`
-  background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#202020' : '#eeeeee'};
+  background-color: ${({ theme }) => theme.palette.action.selected};
   font-weight: 500;
 `;
 
 export const StyledTableRow = styled(({ odd, ...rest }) => <TableRow {...rest} />)`
   ${({ odd, theme }) => odd 
-    ? `background-color: ${theme.palette.type === 'dark' ? '#515151' : '#FAFAFA'};` 
+    ? `background-color: ${theme.palette.action.hover};` 
     : undefined
   }
 `;
 
 const StyledExpandedTableRow = styled(TableRow)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#1E1E1E' : '#EEEEEE'};
+    theme.palette.mode === 'dark' ? '#1E1E1E' : '#EEEEEE'};
   ${({ isExpanded }) => !isExpanded ? 'display: none;' : undefined}
 `;
 
@@ -44,7 +43,7 @@ const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
   min-width: ${({ minWidth }) => minWidth || '0'};
   width: ${({ width, minWidth }) => (width || minWidth ? width : 'auto')}};
   border-bottom: 1px solid ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#353535' : '#e0e0e0'};
+    theme.palette.mode === 'dark' ? '#353535' : '#e0e0e0'};
 `;
 
 const StyledTableCellContent = styled(Box)`

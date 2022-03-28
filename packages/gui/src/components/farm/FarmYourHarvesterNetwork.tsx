@@ -1,8 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Typography, Tooltip, IconButton } from '@material-ui/core';
-import { Delete as DeleteIcon } from '@material-ui/icons';
+import { Typography, Tooltip, IconButton } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import {
   Flex,
   Table,

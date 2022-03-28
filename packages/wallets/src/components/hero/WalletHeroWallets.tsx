@@ -6,9 +6,9 @@ import {
   List,
   ListItem,
   ListItemText,
-} from '@material-ui/core';
+} from '@mui/material';
 import styled from 'styled-components';
-import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
+import { ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import { Flex, Loading, Logo } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';

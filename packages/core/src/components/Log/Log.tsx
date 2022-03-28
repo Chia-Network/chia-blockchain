@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Paper } from '@material-ui/core';
+import { Paper } from '@mui/material';
 import styled from 'styled-components';
 // @ts-ignore
 import ScrollToBottom from 'react-scroll-to-bottom';
@@ -19,7 +19,7 @@ const StyledPaper = styled(Paper)`
   pre {
     word-break: break-all;
     white-space: pre-wrap;
-    padding: ${({ theme }) => `${theme.spacing(1)}px ${theme.spacing(2)}px`};
+    padding: ${({ theme }) => `${theme.spacing(1)} ${theme.spacing(2)}`};
   }
 `;
 

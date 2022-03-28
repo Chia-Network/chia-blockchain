@@ -1,5 +1,5 @@
 import React, { type ReactNode, useMemo } from 'react';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import { Trans } from '@lingui/macro';
 import { useGetLoggedInFingerprintQuery } from '@chia/api-react';
 import Flex from '../Flex';

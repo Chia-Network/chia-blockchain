@@ -7,8 +7,8 @@ import {
   Typography,
   Button,
   Box,
-} from '@material-ui/core';
-import { Backup as BackupIcon } from '@material-ui/icons';
+} from '@mui/material';
+import { Backup as BackupIcon } from '@mui/icons-material';
 import type { RootState } from '../../../modules/rootReducer';
 import { recover_did_action } from '../../../modules/message';
 import SyncingStatus from '../../../constants/SyncingStatus';
@@ -96,6 +96,7 @@ export default function WalletDIDRecovery() {
                 <Button
                   onClick={handleRemoveFile}
                   variant="contained"
+                  color="danger"
                 >
                   <Trans>Delete</Trans>
                 </Button>

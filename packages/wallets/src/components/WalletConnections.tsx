@@ -6,7 +6,7 @@ import {
   Loading,
   Table,
 } from '@chia/core';
-import { Tooltip } from '@material-ui/core';
+import { Tooltip } from '@mui/material';
 import { Connection, ServiceConnectionName } from '@chia/api';
 import { useGetWalletConnectionsQuery } from '@chia/api-react';
 

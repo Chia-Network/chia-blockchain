@@ -20,6 +20,7 @@ export default function FullNodeAddConnection(props: Props) {
   const [openConnection, { error }] = useOpenFullNodeConnectionMutation();
 
   const methods = useForm<FormData>({
+    shouldUnregister: false,
     defaultValues: {
       host: '',
       port: '',

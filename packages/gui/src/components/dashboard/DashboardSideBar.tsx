@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { List, Box } from '@material-ui/core';
+import { List, Box } from '@mui/material';
 import {
   Wallet as WalletIcon,
   Farming as FarmingIcon,
@@ -18,7 +18,7 @@ import { Flex, SideBarItem } from '@chia/core';
 const StyledRoot = styled(Flex)`
   height: 100%;
   overflow-y: auto;
-  padding-top: ${({ theme }) => `${theme.spacing(5)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(5)}`};
 `;
 
 const StyledList = styled(List)`
@@ -28,7 +28,7 @@ const StyledList = styled(List)`
 const StyledSideBarDivider = styled(Box)`
   height: 1px;
   background: radial-gradient(36.59% 100.8% at 50% 50%, rgba(0, 0, 0, 0.18) 99.54%, rgba(255, 255, 255, 0) 100%);
-  margin: ${({ theme }) => `${theme.spacing(2)}px 0 ${theme.spacing(2)}px 0`};
+  margin: ${({ theme }) => `${theme.spacing(2)} 0 ${theme.spacing(2)} 0`};
 `;
 
 const StyledSettingsContainer = styled(Box)`

@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import {
   Link as BaseLink,
   LinkProps as BaseLinkProps,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Link as RouterLink,
   LinkProps as RouterLinkProps,

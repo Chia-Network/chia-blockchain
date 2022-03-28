@@ -1,13 +1,13 @@
 import React from 'react';
-import { Box, BoxProps } from '@material-ui/core';
-import { useTheme } from '@material-ui/core/styles';
+import { Box, BoxProps } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import styled from 'styled-components';
 
 type GAP_SIZE = number | string | 'small' | 'normal' | 'large';
 
 function getGap(gap: GAP_SIZE, theme: any): string {
   if (typeof gap === 'number') {
-    return `${theme.spacing(gap)}px`;
+    return `${theme.spacing(gap)}`;
   }
 
   switch (gap) {

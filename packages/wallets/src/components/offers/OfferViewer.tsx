@@ -37,7 +37,7 @@ import {
   TableRow,
   Tooltip,
   Typography
-} from '@material-ui/core';
+} from '@mui/material';
 import { OfferSummaryRecord, OfferTradeRecord, OfferCoinOfInterest, WalletType } from '@chia/api';
 import { useCheckOfferValidityMutation, useTakeOfferMutation } from '@chia/api-react';
 import {
@@ -51,19 +51,19 @@ import OfferSummary from './OfferSummary';
 import styled from 'styled-components';
 
 const StyledViewerBox = styled.div`
-  padding: ${({ theme }) => `${theme.spacing(4)}px`};
+  padding: ${({ theme }) => `${theme.spacing(4)}`};
 `;
 
 const StyledSummaryBox = styled.div`
-  padding-left: ${({ theme }) => `${theme.spacing(2)}px`};
-  padding-right: ${({ theme }) => `${theme.spacing(2)}px`};
+  padding-left: ${({ theme }) => `${theme.spacing(2)}`};
+  padding-right: ${({ theme }) => `${theme.spacing(2)}`};
 `;
 
 const StyledHeaderBox = styled.div`
-  padding-top: ${({ theme }) => `${theme.spacing(1)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(1)}px`};
-  padding-left: ${({ theme }) => `${theme.spacing(2)}px`};
-  padding-right: ${({ theme }) => `${theme.spacing(2)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(1)}`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(1)}`};
+  padding-left: ${({ theme }) => `${theme.spacing(2)}`};
+  padding-right: ${({ theme }) => `${theme.spacing(2)}`};
   border-radius: 4px;
   background-color: ${({ theme }) => theme.palette.background.paper};
 `;
@@ -474,8 +474,7 @@ function OfferDetails(props: OfferDetailsProps) {
                 )}
                 <Flex flexDirection="row" gap={3}>
                   <Button
-                    variant="contained"
-                    color="secondary"
+                    variant="outlined"
                     onClick={() => navigate(-1)}
                     disabled={isAccepting}
                   >

@@ -1,14 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { CopyToClipboard, Card, Loading } from '@chia/core';
+import { Button, CopyToClipboard, Card, Loading } from '@chia/core';
 import { useGetCurrentAddressQuery, useGetNextAddressMutation } from '@chia/api-react';
 import {
   Box,
-  Button,
   TextField,
   InputAdornment,
   Grid,
-} from '@material-ui/core';
+} from '@mui/material';
 
 type WalletReceiveAddressProps = {
   walletId: number;

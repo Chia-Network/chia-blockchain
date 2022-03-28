@@ -20,9 +20,9 @@ import {
   Typography,
   MenuItem,
   ListItemIcon,
-} from '@material-ui/core';
+} from '@mui/material';
 import { Plot as PlotIcon } from '@chia/icons';
-import { /* Link as LinkIcon, */ Payment as PaymentIcon } from '@material-ui/icons';
+import { /* Link as LinkIcon, */ Payment as PaymentIcon } from '@mui/icons-material';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
@@ -48,7 +48,7 @@ const StyledCardContent = styled(CardContent)`
 
 const StyledSyncingFooter = styled(CardContent)`
   background-color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? '#515151' : '#F6F6F6'};
+    theme.palette.mode === 'dark' ? '#515151' : '#F6F6F6'};
   padding: 2rem 3rem;
   text-align: center;
   borer-top: 1px solid #d8d6d6;

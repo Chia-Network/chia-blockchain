@@ -1,8 +1,8 @@
 import React, { type ReactNode, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Box, Drawer, Typography, IconButton, Divider } from '@material-ui/core';
-import { Settings as SettingsIcon, Close as CloseIcon } from '@material-ui/icons';
+import { Box, Drawer, Typography, IconButton, Divider } from '@mui/material';
+import { Settings as SettingsIcon, Close as CloseIcon } from '@mui/icons-material';
 import Flex from '../Flex';
 import Tooltip from '../Tooltip';
 import SettingsApp from './SettingsApp';

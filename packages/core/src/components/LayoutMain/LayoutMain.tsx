@@ -1,5 +1,5 @@
 import React, { ReactElement, ReactNode } from 'react';
-import { Container } from '@material-ui/core';
+import { Container } from '@mui/material';
 import styled from 'styled-components';
 import Flex from '../Flex';
 import { Outlet } from 'react-router-dom';
@@ -7,8 +7,8 @@ import DashboardTitle from '../DashboardTitle';
 import LayoutFooter from './LayoutFooter';
 
 const StyledContainer = styled(Container)`
-  padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(3)}`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(3)}`};
   flex-grow: 1;
   display: flex;
 `;

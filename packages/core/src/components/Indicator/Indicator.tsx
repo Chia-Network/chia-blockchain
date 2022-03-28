@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Box, LinearProgress, Typography } from '@material-ui/core';
+import { Box, LinearProgress, Typography } from '@mui/material';
 import styled from 'styled-components';
 import Flex from '../Flex';
 

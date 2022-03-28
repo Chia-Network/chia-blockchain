@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Alert } from '@material-ui/lab';
 // import { uniq } from 'lodash';
 import styled from 'styled-components';
 import { useWatch, useFormContext } from 'react-hook-form';
@@ -14,13 +13,14 @@ import {
   TextField,
 } from '@chia/core';
 import {
+  Alert,
   Grid,
   FormControl,
   FormControlLabel,
   Typography,
   Radio,
   Collapse,
-} from '@material-ui/core';
+} from '@mui/material';
 import PoolInfo from '../../pool/PoolInfo';
 import usePoolInfo from '../../../hooks/usePoolInfo';
 // import usePlotNFTs from '../../../hooks/usePlotNFTs';

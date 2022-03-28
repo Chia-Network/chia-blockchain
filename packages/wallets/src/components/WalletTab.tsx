@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tab, Typography } from '@material-ui/core';
+import { Tab, Typography } from '@mui/material';
 import { Flex } from '@chia/core';
 import Wallet from "../../types/Wallet";
 import WalletName from "../../constants/WalletName";

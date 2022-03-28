@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Loading, State, StateIndicator } from '@chia/core';
 import { useGetSyncStatusQuery } from '@chia/api-react';
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 import getWalletSyncingStatus from '../utils/getWalletSyncingStatus';
 import { SyncingStatus } from '@chia/api';
 import WalletStatusHeight from './WalletStatusHeight';

@@ -2,7 +2,7 @@ import React from 'react';
 import { linearGradientDef } from '@nivo/core';
 import { t } from '@lingui/macro';
 import { ResponsiveLine } from '@nivo/line';
-import { Typography, Paper } from '@material-ui/core';
+import { Typography, Paper } from '@mui/material';
 import { Flex } from '@chia/core';
 import styled from 'styled-components';
 

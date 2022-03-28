@@ -6,12 +6,12 @@ import {
   CardContent,
   Grid,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
 
 const StyledCardTitle = styled(Box)`
-  padding: ${({ theme }) => `${theme.spacing(2)}px ${theme.spacing(2)}px`};
+  padding: ${({ theme }) => `${theme.spacing(2)} ${theme.spacing(2)}`};
 `;
 
 const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, highlight, ...rest }) => (

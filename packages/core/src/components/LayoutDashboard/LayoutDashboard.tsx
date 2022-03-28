@@ -2,14 +2,14 @@ import React, { ReactNode, Suspense } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { t, Trans } from '@lingui/macro';
-import { AppBar, Toolbar, Drawer, Divider, Container, IconButton } from '@material-ui/core';
+import { AppBar, Toolbar, Drawer, Divider, Container, IconButton } from '@mui/material';
 import Flex from '../Flex';
 import Logo from '../Logo';
 import ToolbarSpacing from '../ToolbarSpacing';
 import Loading from '../Loading';
 import { DashboardTitleTarget } from '../DashboardTitle';
 import { useLogout } from '@chia/api-react';
-import { ExitToApp as ExitToAppIcon } from '@material-ui/icons';
+import { ExitToApp as ExitToAppIcon } from '@mui/icons-material';
 import Settings from '../Settings';
 import Tooltip from '../Tooltip';
 // import LayoutFooter from '../LayoutMain/LayoutFooter';
@@ -20,12 +20,12 @@ const StyledRoot = styled(Flex)`
 `;
 
 const StyledContainer = styled(Container)`
-  padding-top: ${({ theme }) => `${theme.spacing(2)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(2)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(2)}`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(2)}`};
 `;
 
 const StyledAppBar = styled(AppBar)`
-  border-bottom: 1px solid #E0E0E0;
+  border-bottom: 1px solid ${({ theme }) => theme.palette.divider};
   width: ${({ theme, drawer }) => drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};
   margin-left: ${({ theme, drawer }) => drawer ? theme.drawer.width : 0};
   z-index: ${({ theme }) => theme.zIndex.drawer + 1};};
@@ -50,12 +50,11 @@ const StyledBrandWrapper = styled(Flex)`
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  // border-right: 1px solid rgba(0, 0, 0, 0.12);
 `;
 
 const StyledToolbar = styled(Toolbar)`
-  padding-left: ${({ theme }) => theme.spacing(4)}px;
-  padding-right: ${({ theme }) => theme.spacing(4)}px;
+  padding-left: ${({ theme }) => theme.spacing(4)};
+  padding-right: ${({ theme }) => theme.spacing(4)};
 `;
 
 export type LayoutDashboardProps = {
@@ -122,7 +121,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
 
         <StyledBody flexDirection="column" flexGrow={1}>
           <ToolbarSpacing />
-          <Flex flexDirection="column" gap={2}>
+          <Flex flexDirection="column" gap={2} flexGrow={1} overflow="auto">
             <Suspense fallback={<Loading center />}>
               {outlet ? <Outlet /> : children}
             </Suspense>

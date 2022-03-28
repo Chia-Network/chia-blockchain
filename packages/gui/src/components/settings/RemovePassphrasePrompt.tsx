@@ -1,16 +1,14 @@
 import React, { useEffect } from 'react';
 import {
-  Button,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
   TextField,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import { Trans, t } from '@lingui/macro';
-import { AlertDialog, Flex, TooltipIcon, useOpenDialog, Suspender } from '@chia/core';
+import { AlertDialog, Button, DialogActions, Flex, TooltipIcon, useOpenDialog, Suspender } from '@chia/core';
 import { useRemoveKeyringPassphraseMutation, useGetKeyringStatusQuery } from '@chia/api-react';
 
 type Props = {
@@ -132,8 +130,7 @@ export default function RemovePassphrasePrompt(props: Props) {
           disabled={isLoadingRemoveKeyringPassphrase}
           onClick={handleCancel}
           color="secondary"
-          variant="contained"
-          style={{ marginBottom: '8px', marginRight: '8px' }}
+          variant="outlined"
         >
           <Trans>Cancel</Trans>
         </Button>
@@ -142,7 +139,6 @@ export default function RemovePassphrasePrompt(props: Props) {
           onClick={handleSubmit}
           color="primary"
           variant="contained"
-          style={{ marginBottom: '8px', marginRight: '8px' }}
         >
           <Trans>Remove Passphrase</Trans>
         </Button>

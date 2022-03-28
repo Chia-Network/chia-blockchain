@@ -10,7 +10,7 @@ import {
   InputLabel,
   MenuItem,
   FormHelperText,
-} from '@material-ui/core';
+} from '@mui/material';
 import { plotSizeOptions } from '../../../constants/plotSizes';
 import Plotter from '../../../types/Plotter';
 

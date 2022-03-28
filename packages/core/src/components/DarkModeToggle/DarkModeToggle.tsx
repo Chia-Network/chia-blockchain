@@ -1,7 +1,7 @@
 import React from 'react';
 import useDarkMode from 'use-dark-mode';
-import { IconButton } from '@material-ui/core';
-import { Brightness4, Brightness7 } from '@material-ui/icons';
+import { IconButton } from '@mui/material';
+import { Brightness4, Brightness7 } from '@mui/icons-material';
 
 export default function DarkModeToggle() {
   const { toggle, value: darkMode } = useDarkMode();

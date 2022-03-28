@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
-import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
+import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import Flex from '../Flex';
 import State from '../../constants/State';
 import StateColor from '../../constants/StateColor';

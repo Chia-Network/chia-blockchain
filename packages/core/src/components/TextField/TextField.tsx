@@ -4,7 +4,7 @@ import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import {
   TextField as MaterialTextField,
   TextFieldProps as MaterialTextFieldProps,
-} from '@material-ui/core';
+} from '@mui/material';
 
 export type ReactRules<T> =
   | ControllerProps<ReactElement<T>>['rules']

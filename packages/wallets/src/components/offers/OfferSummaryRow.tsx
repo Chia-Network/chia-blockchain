@@ -10,7 +10,7 @@ import {
 import {
   Box,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
 import { formatAmountForWalletType } from './utils';
