@@ -75,9 +75,9 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         ./activate
-        ./venv/Scripts/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
+        ./venv/Scripts/py.test tests/clvm/test_*.py -s -v --durations 0 -n 4
 
-
+# Omitted resource usage check
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
