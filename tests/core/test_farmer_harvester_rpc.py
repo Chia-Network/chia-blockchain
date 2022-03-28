@@ -14,7 +14,7 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import get_config_lock, load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -244,8 +244,7 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
     ]
 
     root_path = farmer_api.farmer._root_path
-    with get_config_lock(root_path, "config.yaml"):
-        config = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as config:
         config["pool"]["pool_list"] = pool_list
         save_config(root_path, "config.yaml", config)
     await farmer_api.farmer.update_pool_state()

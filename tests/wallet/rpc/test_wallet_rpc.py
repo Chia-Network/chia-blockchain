@@ -6,7 +6,7 @@ from blspy import G2Element
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.config import get_config_lock, load_config, save_config
+from chia.util.config import lock_and_load_config, save_config
 from operator import attrgetter
 import logging
 
@@ -626,8 +626,7 @@ class TestWalletRpc:
             # set farmer to first private key
             sk = await wallet_node.get_key_for_fingerprint(pks[0])
             test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-            with get_config_lock(wallet_node.root_path, "config.yaml"):
-                test_config = load_config(wallet_node.root_path, "config.yaml", acquire_lock=False)
+            with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
                 test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
                 # set pool to second private key
                 sk = await wallet_node.get_key_for_fingerprint(pks[1])
