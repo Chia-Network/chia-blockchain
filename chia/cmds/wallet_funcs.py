@@ -501,7 +501,9 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
             if len(asset_id) > 0:
-                print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
+                # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
+                # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
+                print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id[:64]}")
             print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
     print(" ")
