@@ -30,6 +30,9 @@ jobs:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
 
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
