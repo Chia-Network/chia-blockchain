@@ -1,10 +1,17 @@
 import socket
-from ipaddress import ip_address, IPv4Network, IPv6Network
-from typing import Iterable, List, Tuple, Union, Any, Optional, Dict
+from ipaddress import IPv4Network, IPv6Network, ip_address
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+
+from chia.farmer.farmer_api import FarmerAPI
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.harvester.harvester_api import HarvesterAPI
+from chia.introducer.introducer_api import IntroducerAPI
 from chia.server.outbound_message import NodeType
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
@@ -19,30 +26,20 @@ def is_localhost(peer_host: str) -> bool:
     return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
 
 
-def class_for_type(type: NodeType) -> Any:
-    if type is NodeType.FULL_NODE:
-        from chia.full_node.full_node_api import FullNodeAPI
-
+def class_for_type(
+    typ: NodeType,
+) -> Union[FullNodeAPI, WalletNodeAPI, IntroducerAPI, TimelordAPI, FarmerAPI, HarvesterAPI]:
+    if typ is NodeType.FULL_NODE:
         return FullNodeAPI
-    elif type is NodeType.WALLET:
-        from chia.wallet.wallet_node_api import WalletNodeAPI
-
+    elif typ is NodeType.WALLET:
         return WalletNodeAPI
-    elif type is NodeType.INTRODUCER:
-        from chia.introducer.introducer_api import IntroducerAPI
-
+    elif typ is NodeType.INTRODUCER:
         return IntroducerAPI
-    elif type is NodeType.TIMELORD:
-        from chia.timelord.timelord_api import TimelordAPI
-
+    elif typ is NodeType.TIMELORD:
         return TimelordAPI
-    elif type is NodeType.FARMER:
-        from chia.farmer.farmer_api import FarmerAPI
-
+    elif typ is NodeType.FARMER:
         return FarmerAPI
-    elif type is NodeType.HARVESTER:
-        from chia.harvester.harvester_api import HarvesterAPI
-
+    elif typ is NodeType.HARVESTER:
         return HarvesterAPI
     raise ValueError("No class for type")
 
