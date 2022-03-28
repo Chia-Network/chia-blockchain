@@ -132,7 +132,9 @@ export default {
   ].filter(Boolean),
   module: {
     rules: [{
-      test: /\.js$/,
+      test: function(path){
+        return DEV ? /\.js$/.test(path) : false;
+      },
       enforce: "pre",
       use: ["source-map-loader"],
     }, {
