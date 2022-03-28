@@ -997,10 +997,7 @@ class FullNode:
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
-        loop = asyncio.get_event_loop()
-        batch_queue: asyncio.Queue[Tuple[ws.WSChiaConnection, List[FullBlock]]] = asyncio.Queue(
-            loop=loop, maxsize=buffer_size
-        )
+        batch_queue: asyncio.Queue[Tuple[ws.WSChiaConnection, List[FullBlock]]] = asyncio.Queue(maxsize=buffer_size)
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue, peers_with_peak))
         validate_task = asyncio.Task(validate_block_batches(batch_queue))
         try:

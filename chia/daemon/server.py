@@ -1015,7 +1015,8 @@ class WebSocketServer:
 
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
-                loop = asyncio.get_event_loop()
+                # TODO: loop gets passed down a lot, review for potential removal
+                loop = asyncio.get_running_loop()
                 loop.create_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
@@ -1058,7 +1059,8 @@ class WebSocketServer:
             self.plots_queue.remove(config)
 
             if run_next:
-                loop = asyncio.get_event_loop()
+                # TODO: review to see if we can remove this
+                loop = asyncio.get_running_loop()
                 self._run_next_serial_plotting(loop, queue)
 
             return {"success": True}
@@ -1486,7 +1488,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
 
 
 def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
-    result = asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, wait_for_unlock))
+    result = asyncio.run(async_run_daemon(root_path, wait_for_unlock))
     return result
 
 
