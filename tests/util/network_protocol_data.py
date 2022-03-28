@@ -488,12 +488,8 @@ request_puzzle_solution = wallet_protocol.RequestPuzzleSolution(
     uint32(3905474497),
 )
 
-program = Program.from_serialized_program(
-    SerializedProgram.from_bytes(
-        bytes.fromhex(
-            "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
-        )
-    ),
+program = Program.fromhex(
+    "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
 )
 
 puzzle_solution_response = wallet_protocol.PuzzleSolutionResponse(
