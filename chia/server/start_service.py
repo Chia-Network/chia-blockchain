@@ -43,6 +43,7 @@ class Service:
         advertised_port: int,
         service_name: str,
         network_id: str,
+        *,
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
@@ -51,7 +52,7 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
-        handle_signals=True,
+        running_new_process=True,
         service_name_prefix="",
     ) -> None:
         self.root_path = root_path
@@ -66,17 +67,24 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
-        self._handle_signals = handle_signals
+        self._running_new_process = running_new_process
 
-        proctitle_name = f"chia_{service_name_prefix}{service_name}"
-        setproctitle(proctitle_name)
+        # when we start this service as a component of an existing process,
+        # don't change its proctitle
+        if running_new_process:
+            proctitle_name = f"chia_{service_name_prefix}{service_name}"
+            setproctitle(proctitle_name)
+
         self._log = logging.getLogger(service_name)
 
         if parse_cli_args:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, service_config["logging"], root_path)
+
+        # only initialize logging once per process
+        if running_new_process:
+            initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
@@ -138,7 +146,7 @@ class Service:
 
         self._did_start = True
 
-        if self._handle_signals:
+        if self._running_new_process:
             self._enable_signals()
 
         await self._node._start(**kwargs)

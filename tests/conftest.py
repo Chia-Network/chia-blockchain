@@ -1,8 +1,11 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 import multiprocessing
+import os
 import pytest
 import pytest_asyncio
 import tempfile
+
+from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 
 # Set spawn after stdlib imports, but before other imports
 multiprocessing.set_start_method("spawn")
@@ -21,7 +24,7 @@ def get_keychain():
 
 
 @pytest.fixture(scope="session", name="bt")
-def bt(get_keychain) -> BlockTools:
+def block_tools_fixture(get_keychain) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
     _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
     return _shared_block_tools
@@ -51,10 +54,10 @@ async def empty_blockchain(request):
     from tests.util.blockchain import create_blockchain
     from tests.setup_nodes import test_constants
 
-    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
 
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
@@ -73,21 +76,21 @@ block_format_version = "rc4"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks():
+def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"alternate2")
 
 
 @pytest.fixture(scope="session")
-def default_1000_blocks():
+def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def pre_genesis_empty_slots_1000_blocks():
+def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
@@ -96,21 +99,21 @@ def pre_genesis_empty_slots_1000_blocks():
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks():
+def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks():
+def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks_compact():
+def default_10000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
@@ -128,3 +131,45 @@ def default_10000_blocks_compact():
 def tmp_dir():
     with tempfile.TemporaryDirectory() as folder:
         yield Path(folder)
+
+
+# For the below see https://stackoverflow.com/a/62563106/15133773
+if os.getenv("_PYTEST_RAISE", "0") != "0":
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_exception_interact(call):
+        raise call.excinfo.value
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_internalerror(excinfo):
+        raise excinfo.value
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallet_node(self_hostname):
+    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes(db_version, self_hostname):
+    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def three_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def four_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def five_nodes(db_version, self_hostname):
+    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
+        yield _

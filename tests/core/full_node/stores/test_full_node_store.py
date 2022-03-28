@@ -44,29 +44,23 @@ test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32
 bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request):
-    bc1, connection, db_path = await create_blockchain(test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain_original(request):
-    bc1, connection, db_path = await create_blockchain(test_constants_original, request.param)
+async def empty_blockchain_with_original_constants(request):
+    bc1, db_wrapper, db_path = await create_blockchain(test_constants_original, request.param)
     yield bc1
-    await connection.close()
+    await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
@@ -745,8 +739,8 @@ class TestFullNodeStore:
         await self.test_basic_store(empty_blockchain, True)
 
     @pytest.mark.asyncio
-    async def test_long_chain_slots(self, empty_blockchain_original, default_1000_blocks):
-        blockchain = empty_blockchain_original
+    async def test_long_chain_slots(self, empty_blockchain_with_original_constants, default_1000_blocks):
+        blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(test_constants_original)
         blocks = default_1000_blocks
         peak = None

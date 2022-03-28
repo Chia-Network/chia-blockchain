@@ -30,9 +30,12 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
 
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -64,13 +67,6 @@ jobs:
 
 # Omitted checking out blocks and plots repo Chia-Network/test-cache
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
@@ -82,8 +78,9 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n auto
+        ./venv/bin/py.test tests/clvm/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme

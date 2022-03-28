@@ -24,12 +24,6 @@ from tests.setup_nodes import test_constants
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self, tmp_dir, db_version, bt):
@@ -124,26 +118,29 @@ class TestBlockStore:
                 # make sure all block heights are unique
                 assert len(set(ret)) == count
 
-            for block in blocks:
-                async with db_wrapper.db.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
-                ) as cursor:
-                    rows = await cursor.fetchall()
-                    assert len(rows) == 1
-                    assert rows[0][0]
+            async with db_wrapper.read_db() as conn:
+                for block in blocks:
+                    async with conn.execute(
+                        "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
+                    ) as cursor:
+                        rows = await cursor.fetchall()
+                        assert len(rows) == 1
+                        assert rows[0][0]
 
             await block_store.rollback(5)
 
             count = 0
-            for block in blocks:
-                async with db_wrapper.db.execute(
-                    "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height", (block.header_hash,)
-                ) as cursor:
-                    rows = await cursor.fetchall()
-                    print(count, rows)
-                    assert len(rows) == 1
-                    assert rows[0][0] == (count <= 5)
-                count += 1
+            async with db_wrapper.read_db() as conn:
+                for block in blocks:
+                    async with conn.execute(
+                        "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height",
+                        (block.header_hash,),
+                    ) as cursor:
+                        rows = await cursor.fetchall()
+                        print(count, rows)
+                        assert len(rows) == 1
+                        assert rows[0][0] == (count <= 5)
+                    count += 1
 
     @pytest.mark.asyncio
     async def test_count_compactified_blocks(self, bt, tmp_dir, db_version):

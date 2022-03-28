@@ -106,6 +106,7 @@ class WalletTool:
         fee: int = 0,
         secret_key: Optional[PrivateKey] = None,
         additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
+        memo: Optional[bytes32] = None,
     ) -> List[CoinSpend]:
         spends = []
 
@@ -116,7 +117,10 @@ class WalletTool:
         if ConditionOpcode.CREATE_COIN_ANNOUNCEMENT not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT] = []
 
-        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [new_puzzle_hash, int_to_bytes(amount)])
+        coin_create = [new_puzzle_hash, int_to_bytes(amount)]
+        if memo is not None:
+            coin_create.append(memo)
+        output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, coin_create)
         condition_dic[output.opcode].append(output)
         if additional_outputs is not None:
             for o in additional_outputs:
@@ -199,11 +203,12 @@ class WalletTool:
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
         fee: int = 0,
         additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
+        memo: Optional[bytes32] = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(
-            amount, new_puzzle_hash, [coin], condition_dic, fee, additional_outputs=additional_outputs
+            amount, new_puzzle_hash, [coin], condition_dic, fee, additional_outputs=additional_outputs, memo=memo
         )
         assert transaction is not None
         return self.sign_transaction(transaction)

@@ -30,9 +30,12 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
 
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -63,26 +66,12 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
         ref: '0.28.0'
         fetch-depth: 1
-
-    - name: Link home directory
-      run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
-
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
       env:
@@ -90,17 +79,14 @@ jobs:
       run: |
         sh install.sh -d
 
-    - name: Install timelord
-      run: |
-        . ./activate
-        sh install-timelord.sh
-        ./vdf_bench square_asm 400000
+# Omitted installing Timelord
 
     - name: Test core-cmds code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0
+        ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
