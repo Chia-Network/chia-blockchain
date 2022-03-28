@@ -8,7 +8,7 @@ dependencies = [
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.9",  # proof of space
     "clvm==0.9.7",
-    "clvm_tools==0.4.3",  # Currying, Program.to, other conveniences
+    "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
     "clvm_rs==0.1.19",
     "clvm-tools-rs==0.1.7",  # Rust implementation of clvm_tools
     "aiohttp==3.7.4",  # HTTP server for full node rpc
@@ -29,7 +29,7 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
     # TODO: when moving to click 8 remove the pinning of black noted below
-    "click==7.1.2",  # For the CLI
+    "click==8.1.0",  # For the CLI
     "dnspythonchia==2.2.0",  # Query DNS seeds
     "watchdog==2.1.6",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.17",  # dns lib
