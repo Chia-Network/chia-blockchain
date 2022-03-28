@@ -146,9 +146,8 @@ async def show_async(
     from chia.util.byte_types import hexstr_to_bytes
     from chia.util.misc import format_bytes
 
-
     if state:
-        blockchain_state = await client.get_blockchain_state()
+        blockchain_state = await node_client.get_blockchain_state()
         if blockchain_state is None:
             print("There is no blockchain found yet. Try again shortly")
             return None
