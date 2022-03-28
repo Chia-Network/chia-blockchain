@@ -29,6 +29,8 @@ jobs:
       matrix:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
+    env:
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_weight_proof
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -85,7 +87,23 @@ jobs:
     - name: Test weight_proof code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/weight_proof/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/weight_proof/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
+
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

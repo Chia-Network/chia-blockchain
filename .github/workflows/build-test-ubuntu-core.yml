@@ -29,6 +29,8 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
+    env:
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_core
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -84,7 +86,23 @@ jobs:
     - name: Test core code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
+
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 
 # Omitted resource usage check
 

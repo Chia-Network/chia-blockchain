@@ -44,6 +44,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
+    "coverage",
     "pre-commit",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
