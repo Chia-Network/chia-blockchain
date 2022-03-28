@@ -8,13 +8,14 @@ dependencies = [
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.9",  # proof of space
     "clvm==0.9.7",
+    "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
     "clvm_rs==0.1.19",
-    "clvm_tools==0.4.3",
+    "clvm-tools-rs==0.1.7",  # Rust implementation of clvm_tools
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.4",  # Colorizes terminal output
-    "colorlog==5.0.1",  # Adds color to logs
+    "colorlog==6.6.0",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.4.7",  # Python cryptography library for TLS - keyring conflict
     "fasteners==0.16.3",  # For interprocess file locking, expected to be replaced by filelock
@@ -43,6 +44,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
+    "coverage",
     "pre-commit",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'

@@ -548,7 +548,7 @@ class KeyringWrapper:
             print("Keys in old keyring left intact")
 
         # Notify the daemon (if running) that migration has completed
-        asyncio.get_event_loop().run_until_complete(async_update_daemon_migration_completed_if_running())
+        asyncio.run(async_update_daemon_migration_completed_if_running())
 
     # Keyring interface
 

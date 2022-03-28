@@ -2,10 +2,8 @@ import io
 from typing import List, Set, Tuple, Optional, Any
 
 from clvm import SExp
-from clvm import run_program as default_run_program
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
-from clvm.operators import OPERATOR_LOOKUP
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator2
 from clvm_tools.curry import curry, uncurry
@@ -16,22 +14,6 @@ from chia.util.ints import uint16
 from chia.util.byte_types import hexstr_to_bytes
 
 from .tree_hash import sha256_treehash
-
-
-def run_program(
-    program,
-    args,
-    max_cost,
-    operator_lookup=OPERATOR_LOOKUP,
-    pre_eval_f=None,
-):
-    return default_run_program(
-        program,
-        args,
-        operator_lookup,
-        max_cost,
-        pre_eval_f=pre_eval_f,
-    )
 
 
 INFINITE_COST = 0x7FFFFFFFFFFFFFFF
@@ -62,10 +44,6 @@ class Program(SExp):
 
     def to_serialized_program(self) -> "SerializedProgram":
         return SerializedProgram.from_bytes(bytes(self))
-
-    @classmethod
-    def from_serialized_program(cls, sp: "SerializedProgram") -> "Program":
-        return cls.from_bytes(bytes(sp))
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
@@ -103,7 +81,7 @@ class Program(SExp):
 
     def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
-        cost, r = run_program(self, prog_args, max_cost)
+        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, 0)
         return cost, Program.to(r)
 
     def run(self, args) -> "Program":

@@ -86,6 +86,7 @@ class WalletRpcApi:
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
+            "/select_coins": self.select_coins,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -415,7 +416,11 @@ class WalletRpcApi:
     async def get_wallets(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
-        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
+        wallet_type: Optional[WalletType] = None
+        if "type" in request:
+            wallet_type = WalletType(request["type"])
+
+        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
 
         return {"wallets": wallets}
 
@@ -815,6 +820,21 @@ class WalletRpcApi:
                 # Update the cache
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
+
+    async def select_coins(self, request) -> Dict[str, List[Dict]]:
+        assert self.service.wallet_state_manager is not None
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before selecting coins")
+
+        amount = uint64(request["amount"])
+        wallet_id = uint32(request["wallet_id"])
+
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        async with self.service.wallet_state_manager.lock:
+            selected_coins = await wallet.select_coins(amount=amount)
+
+        return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
     ##########################################################################################
     # CATs and Trading

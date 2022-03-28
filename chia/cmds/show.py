@@ -146,8 +146,9 @@ async def show_async(
     from chia.util.byte_types import hexstr_to_bytes
     from chia.util.misc import format_bytes
 
+
     if state:
-        blockchain_state = await node_client.get_blockchain_state()
+        blockchain_state = await client.get_blockchain_state()
         if blockchain_state is None:
             print("There is no blockchain found yet. Try again shortly")
             return None
@@ -164,7 +165,7 @@ async def show_async(
         full_node_port = config["full_node"]["port"]
         full_node_rpc_port = config["full_node"]["rpc_port"]
 
-        print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+        print(f"Network: {network_name}    Port: {full_node_port}   RPC Port: {full_node_rpc_port}")
         print(f"Node ID: {node_id}")
 
         print(f"Genesis Challenge: {genesis_challenge}")
@@ -185,6 +186,7 @@ async def show_async(
         else:
             print("\nSearching for an initial chain\n")
             print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+
         if peak is not None:
             if peak.is_transaction_block:
                 peak_time = peak.timestamp
