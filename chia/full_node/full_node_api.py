@@ -312,10 +312,9 @@ class FullNodeAPI:
             msg = make_msg(ProtocolMessageTypes.reject_block, reject)
             return msg
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        block: Optional[FullBlock] = None
+        if header_hash is not None:
+            await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
                 block = dataclasses.replace(block, transactions_generator=None)
@@ -1301,10 +1300,8 @@ class FullNodeAPI:
             return reject_msg
 
         header_hash = self.full_node.blockchain.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        assert header_hash is not None
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
