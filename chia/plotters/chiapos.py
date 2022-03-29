@@ -43,7 +43,7 @@ def plot_chia(args, root_path):
         print("Error: The minimum k size allowed from the cli is k=25.")
         return
 
-    plot_keys = asyncio.get_event_loop().run_until_complete(
+    plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
             args.alt_fingerprint,
@@ -54,4 +54,4 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.get_event_loop().run_until_complete(create_plots(Params(args), plot_keys, root_path))
+    asyncio.run(create_plots(Params(args), plot_keys, root_path))
