@@ -705,7 +705,7 @@ class DIDWallet:
         to_sign = Program.to([innerpuz.get_tree_hash(), coin.amount, messages]).get_tree_hash()
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
-        index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        index: Optional[uint32] = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         if index is None:
             raise RuntimeError(f"Could not find index for pubkey {pubkey}")
         private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
