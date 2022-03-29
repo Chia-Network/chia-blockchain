@@ -419,3 +419,71 @@ class TestBlockHeightMap:
             assert height_map.get_ses(6) == gen_ses(6)
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(8)
+
+
+@pytest.mark.asyncio
+async def test_failed_rollback(tmp_dir, db_version):
+
+    async with DBConnection(db_version) as db_wrapper:
+
+        await setup_db(db_wrapper)
+        await setup_chain(db_wrapper, 10, ses_every=2)
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+        # check initial state
+        for h in range(0, 10, 2):
+            assert height_map.get_ses(h) == gen_ses(h)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(12)
+
+        for h in range(0, 11):
+            assert height_map.get_hash(h) == gen_block_hash(h)
+
+        for h in range(11, 15):
+            assert not height_map.contains_height(h)
+
+        # roll back and check new state
+        restore_point = height_map.rollback(5)
+
+        for h in range(0, 6):
+            assert height_map.contains_height(h)
+            assert height_map.get_hash(h) == gen_block_hash(h)
+
+        for h in range(6, 10):
+            assert not height_map.contains_height(h)
+
+        for h in range(0, 5, 2):
+            assert height_map.get_ses(h) == gen_ses(h)
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(6)
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(8)
+
+        # add a new fork of the chain
+
+        for h in range(6, 10):
+            height_map.update_height(h, gen_block_hash(100 + h), None)
+
+        for h in range(6, 10):
+            assert height_map.contains_height(h)
+            assert height_map.get_hash(h) == gen_block_hash(100 + h)
+
+        # restore state to what it was before the rollback
+
+        height_map.restore(restore_point)
+
+        # check that we're back to the initial state
+
+        for h in range(0, 10, 2):
+            assert height_map.get_ses(h) == gen_ses(h)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(12)
+
+        for h in range(0, 11):
+            assert height_map.get_hash(h) == gen_block_hash(h)
+
+        for h in range(11, 15):
+            assert not height_map.contains_height(h)

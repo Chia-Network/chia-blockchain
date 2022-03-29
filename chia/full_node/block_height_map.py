@@ -19,6 +19,24 @@ class SesCache(Streamable):
     content: List[Tuple[uint32, bytes]]
 
 
+# whenever we start a reorg, the BlockHeightMap is first rolled back, and then
+# the new blocks are added, one at a time. If the reorg fails, we need to
+# restore the BlockHeightMap to its original state. This class holds the state
+# we rolled back, allowing us to restore it
+@dataclass(frozen=True)
+class RestorePoint:
+
+    # the point we rolled back to
+    fork_height: int
+
+    # this is the tail of the height to hash map to restore. Starting one past
+    # fork_height
+    height_to_hash: bytearray
+
+    # this sub epoch summaries we removed in the rollback
+    sub_epoch_summaries: Dict[uint32, bytes]
+
+
 class BlockHeightMap:
     db: DBWrapper
 
@@ -215,16 +233,32 @@ class BlockHeightMap:
     def contains_height(self, height: uint32) -> bool:
         return height * 32 < len(self.__height_to_hash)
 
-    def rollback(self, fork_height: int):
+    def rollback(self, fork_height: int) -> RestorePoint:
         # fork height may be -1, in which case all blocks are different and we
         # should clear all sub epoch summaries
         heights_to_delete = []
         for ses_included_height in self.__sub_epoch_summaries.keys():
             if ses_included_height > fork_height:
                 heights_to_delete.append(ses_included_height)
+
+        removed_ses: Dict[uint32, bytes] = {}
         for height in heights_to_delete:
+            removed_ses[height] = self.__sub_epoch_summaries[height]
             del self.__sub_epoch_summaries[height]
+
+        hash_tail: bytearray = self.__height_to_hash[(fork_height + 1) * 32 :]
         del self.__height_to_hash[(fork_height + 1) * 32 :]
+
+        return RestorePoint(fork_height, hash_tail, removed_ses)
+
+    def restore(self, r: RestorePoint) -> None:
+        assert len(self.__height_to_hash) >= r.fork_height * 32
+        self.rollback(r.fork_height)
+
+        self.__height_to_hash += r.height_to_hash
+
+        for height, ses in r.sub_epoch_summaries.items():
+            self.__sub_epoch_summaries[height] = ses
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
