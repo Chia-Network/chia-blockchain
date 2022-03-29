@@ -3,6 +3,7 @@ import Wallet from '../services/Wallet';
 export default class DIDWallet extends Wallet {
   async createNewWallet(
     amount: string,
+    fee: string,
     backupDids: string,
     numOfBackupIdsNeeded: number,
     host: string = this.client.backupHost,
@@ -10,6 +11,7 @@ export default class DIDWallet extends Wallet {
     return super.createNewWallet('did_wallet', {
       did_type: 'new',
       amount,
+      fee,
       backupDids,
       numOfBackupIdsNeeded,
       host,
@@ -29,6 +31,12 @@ export default class DIDWallet extends Wallet {
       walletId,
       newList,
       numVerificationsRequired,
+    });
+  }
+
+  async getPubKey(walletId: number) {
+    return this.command('did_get_pubkey', {
+      walletId,
     });
   }
 
@@ -77,6 +85,12 @@ export default class DIDWallet extends Wallet {
 
   async getInformationNeededForRecovery(walletId: number) {
     return this.command('did_get_information_needed_for_recovery', {
+      walletId,
+    });
+  }
+
+  async getCurrentCoinInfo(walletId: number) {
+    return this.command('did_get_current_coin_info', {
       walletId,
     });
   }

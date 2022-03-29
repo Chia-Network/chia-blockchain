@@ -1,11 +1,33 @@
-import { Wallet, CAT, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
+import { Wallet, CAT, DID, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
 import type { Transaction, WalletConnections } from '@chia/api';
 import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
 import api, { baseQuery } from '../api';
 
-const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Keys', 'Wallets', 'WalletBalance', 'Address', 'Transactions', 'TransactionCount', 'WalletConnections', 'LoggedInFingerprint', 'PoolWalletStatus', 'NFTs', 'OfferTradeRecord', 'OfferCounts']});
+const apiWithTag = api.enhanceEndpoints(
+  {
+    addTagTypes: [
+      'Address',
+      'DID',
+      'DIDCoinInfo',
+      'DIDPubKey',
+      'DIDRecoveryInfo',
+      'DIDRecoveryList',
+      'Keys',
+      'LoggedInFingerprint',
+      'NFTs',
+      'OfferCounts',
+      'OfferTradeRecord',
+      'PoolWalletStatus',
+      'TransactionCount',
+      'Transactions',
+      'WalletBalance',
+      'WalletConnections',
+      'Wallets',
+    ]
+  }
+);
 
 type OfferCounts = {
   total: number;
@@ -1454,6 +1476,105 @@ export const walletApi = apiWithTag.injectEndpoints({
       },
       providesTags: [{ type: 'NFTs', id: 'LIST' }],
     }),
+
+    // DID
+    createNewDIDWallet: build.mutation<any, {
+      amount: string;
+      fee: string;
+      backupDids?: string[];
+      numOfBackupIdsNeeded?: number;
+      host?: string;
+    }>({
+      query: ({
+        amount,
+        fee,
+        backupDids,
+        numOfBackupIdsNeeded,
+        host
+      }) => ({
+        command: 'createNewWallet',
+        service: DID,
+        args: [amount, fee, backupDids, numOfBackupIdsNeeded, host],
+      }),
+      invalidatesTags: [{ type: 'Wallets', id: 'LIST' }, { type: 'Transactions', id: 'LIST' }],
+    }),
+
+    updateDIDRecoveryIds: build.mutation<any, {
+      walletId: number;
+      newList: string[];
+      numVerificationsRequired: number;
+    }>({
+      query: ({ walletId, newList, numVerificationsRequired }) => ({
+        command: 'updateRecoveryIds',
+        service: DID,
+        args: [walletId],
+      }),
+      invalidatesTags: (_result, _error, { walletId }) => [
+        { type: 'Wallets', id: walletId },
+        { type: 'DIDRecoveryList', id: walletId },
+      ],
+    }),
+
+    getDIDPubKey: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getPubKey',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'DIDPubKey', id: walletId }]
+        : [],
+    }),
+
+    getDID: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getDid',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'DID', id: walletId }]
+        : [],
+    }),
+
+    // spendDIDRecovery: did_recovery_spend needs an RPC change (attest_filenames -> attest_file_contents)
+
+    getDIDRecoveryList: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getRecoveryList',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'DIDRecoveryList', id: walletId }]
+        : [],
+    }),
+
+    // createDIDAttest: did_create_attest needs an RPC change (remove filename param, return file contents)
+
+    getDIDInformationNeededForRecovery: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getInformationNeededForRecovery',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'DIDRecoveryInfo', id: walletId }]
+        : [],
+    }),
+
+    getDIDCurrentCoinInfo: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getCurrentCoinInfo',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'DIDCoinInfo', id: walletId }]
+        : [],
+    }),
+
+    // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
   }),
 });
 
@@ -1522,4 +1643,13 @@ export const {
 
   // NFTS
   useGetPlotNFTsQuery,
+
+  // DID
+  useCreateNewDIDWalletMutation,
+  useUpdateDIDRecoveryIdsQuery,
+  useGetDIDPubKeyQuery,
+  useGetDIDQuery,
+  useGetDIDRecoveryListQuery,
+  useGetDIDInformationNeededForRecoveryQuery,
+  useGetDIDCurrentCoinInfoQuery,
 } = walletApi;
