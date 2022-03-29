@@ -22,7 +22,6 @@ from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -139,7 +138,7 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path) -> Iterator[TestEnvironment]:
+def test_plot_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = get_test_plots()
@@ -163,8 +162,8 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing(test_environment):
-    env: TestEnvironment = test_environment
+async def test_plot_refreshing(test_plot_environment):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     dir_duplicates: TestDirectory = TestDirectory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
 
@@ -359,8 +358,8 @@ async def test_plot_refreshing(test_environment):
 
 
 @pytest.mark.asyncio
-async def test_invalid_plots(test_environment):
-    env: TestEnvironment = test_environment
+async def test_invalid_plots(test_plot_environment):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     # Test re-trying if processing a plot failed
     # First create a backup of the plot
@@ -410,8 +409,8 @@ async def test_invalid_plots(test_environment):
 
 
 @pytest.mark.asyncio
-async def test_keys_missing(test_environment: TestEnvironment) -> None:
-    env: TestEnvironment = test_environment
+async def test_keys_missing(test_plot_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_plot_environment
     not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
     dir_not_in_keychain: TestDirectory = TestDirectory(
         env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots
@@ -448,8 +447,8 @@ async def test_keys_missing(test_environment: TestEnvironment) -> None:
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching(test_environment):
-    env: TestEnvironment = test_environment
+async def test_plot_info_caching(test_plot_environment, bt):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))
     expected_result.loaded = env.dir_1.plot_info_list()
@@ -514,7 +513,7 @@ async def test_plot_info_caching(test_environment):
     ],
 )
 @pytest.mark.asyncio
-async def test_callback_event_raises(test_environment, event_to_raise: PlotRefreshEvents):
+async def test_callback_event_raises(test_plot_environment, event_to_raise: PlotRefreshEvents):
     last_event_fired: Optional[PlotRefreshEvents] = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
@@ -523,7 +522,7 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
         if event == event_to_raise:
             raise Exception(f"run_raise_in_callback {event_to_raise}")
 
-    env: TestEnvironment = test_environment
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     # Load dir_1
     add_plot_directory(env.root_path, str(env.dir_1.path))

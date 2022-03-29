@@ -107,7 +107,7 @@ async def show_async(
             full_node_port = config["full_node"]["port"]
             full_node_rpc_port = config["full_node"]["rpc_port"]
 
-            print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+            print(f"Network: {network_name}    Port: {full_node_port}   RPC Port: {full_node_rpc_port}")
             print(f"Node ID: {node_id}")
 
             print(f"Genesis Challenge: {genesis_challenge}")
@@ -118,7 +118,10 @@ async def show_async(
             elif peak is not None and sync_mode:
                 sync_max_block = blockchain_state["sync"]["sync_tip_height"]
                 sync_current_block = blockchain_state["sync"]["sync_progress_height"]
-                print(f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block}.")
+                print(
+                    f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
+                    f"({sync_max_block - sync_current_block} behind)."
+                )
                 print("Peak: Hash:", peak.header_hash if peak is not None else "")
             elif peak is not None:
                 print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")

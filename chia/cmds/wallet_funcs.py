@@ -41,12 +41,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type == WalletType.STANDARD_WALLET:
+    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
     else:
-        raise LookupError("Only standard wallet and CAT wallets are supported")
+        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
 
     return mojo_per_unit
 
@@ -68,12 +68,12 @@ async def get_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    if wallet_type == WalletType.STANDARD_WALLET:
+    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
-        raise LookupError("Only standard wallet and CAT wallets are supported")
+        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
 
     return name
 
@@ -216,7 +216,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
-    res = await wallet_client.get_next_address(wallet_id, False)
+    new_address: bool = args.get("new_address", False)
+    res = await wallet_client.get_next_address(wallet_id, new_address)
     print(res)
 
 
@@ -457,27 +458,54 @@ def print_balance(amount: int, scale: int, address_prefix: str) -> str:
 
 
 async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    summaries_response = await wallet_client.get_wallets()
+    wallet_type: Optional[WalletType] = None
+    if "type" in args:
+        wallet_type = WalletType(args["type"])
+    summaries_response = await wallet_client.get_wallets(wallet_type)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
+    is_synced: bool = await wallet_client.get_synced()
+    is_syncing: bool = await wallet_client.get_sync_status()
+
     print(f"Wallet height: {await wallet_client.get_height_info()}")
-    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-    print(f"Balances, fingerprint: {fingerprint}")
-    for summary in summaries_response:
-        wallet_id = summary["id"]
-        balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"]))
-        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-        print(
-            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
-        )
-        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+    if is_syncing:
+        print("Sync status: Syncing...")
+    elif is_synced:
+        print("Sync status: Synced")
+    else:
+        print("Sync status: Not synced")
+
+    if not is_syncing and is_synced:
+        if len(summaries_response) == 0:
+            type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
+            print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
+        else:
+            print(f"Balances, fingerprint: {fingerprint}")
+        for summary in summaries_response:
+            indent: str = "   "
+            asset_id = summary["data"]
+            wallet_id = summary["id"]
+            balances = await wallet_client.get_wallet_balance(wallet_id)
+            typ = WalletType(int(summary["type"]))
+            address_prefix, scale = wallet_coin_unit(typ, address_prefix)
+            total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+            unconfirmed_wallet_balance: str = print_balance(
+                balances["unconfirmed_wallet_balance"], scale, address_prefix
+            )
+            spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            print()
+            print(f"{summary['name']}:")
+            print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
+            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
+            print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
+            print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
+            if len(asset_id) > 0:
+                print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
+            print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
     print(" ")
-    trusted_peers: Dict = config.get("trusted_peers", {})
+    trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
     await print_connections(wallet_client, time, NodeType, trusted_peers)
 
 
@@ -494,9 +522,24 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     if fingerprint is not None:
         log_in_response = await wallet_client.log_in(fingerprint)
     else:
+        logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+        spacing: str = "  " if logged_in_fingerprint is not None else ""
+        current_sync_status: str = ""
+        if logged_in_fingerprint is not None:
+            if await wallet_client.get_synced():
+                current_sync_status = "Synced"
+            elif await wallet_client.get_sync_status():
+                current_sync_status = "Syncing"
+            else:
+                current_sync_status = "Not Synced"
         print("Choose wallet key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            row: str = f"{i+1}) "
+            row += "* " if fp == logged_in_fingerprint else spacing
+            row += f"{fp}"
+            if fp == logged_in_fingerprint and len(current_sync_status) > 0:
+                row += f" ({current_sync_status})"
+            print(row)
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
@@ -516,39 +559,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
         log_in_response = await wallet_client.log_in(fingerprint)
 
     if log_in_response["success"] is False:
-        if log_in_response["error"] == "not_initialized":
-            use_cloud = True
-            if "backup_path" in log_in_response:
-                path = log_in_response["backup_path"]
-                print(f"Backup file from backup.chia.net downloaded and written to: {path}")
-                val = input("Do you want to use this file to restore from backup? (Y/N) ")
-                if val.lower() == "y":
-                    log_in_response = await wallet_client.log_in_and_restore(fingerprint, path)
-                else:
-                    use_cloud = False
-
-            if "backup_path" not in log_in_response or use_cloud is False:
-                if use_cloud is True:
-                    val = input(
-                        "No online backup file found,\n Press S to skip restore from backup"
-                        "\n Press F to use your own backup file: "
-                    )
-                else:
-                    val = input(
-                        "Cloud backup declined,\n Press S to skip restore from backup"
-                        "\n Press F to use your own backup file: "
-                    )
-
-                if val.lower() == "s":
-                    log_in_response = await wallet_client.log_in_and_skip(fingerprint)
-                elif val.lower() == "f":
-                    val = input("Please provide the full path to your backup file: ")
-                    log_in_response = await wallet_client.log_in_and_restore(fingerprint, val)
-
-    if "success" not in log_in_response or log_in_response["success"] is False:
-        if "error" in log_in_response:
-            error = log_in_response["error"]
-            print(f"Error: {log_in_response[error]}")
+        print(f"Login failed: {log_in_response}")
         return None
     return wallet_client, fingerprint
 

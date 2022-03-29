@@ -4,6 +4,7 @@ import pathlib
 import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
+from multiprocessing.context import BaseContext
 from typing import IO, List, Tuple, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -42,12 +43,14 @@ class WalletWeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
+        multiprocessing_context: BaseContext,
     ):
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
             self._num_processes,
+            mp_context=multiprocessing_context,
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )

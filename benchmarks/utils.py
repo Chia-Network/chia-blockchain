@@ -12,13 +12,14 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint128
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from typing import Tuple
 from pathlib import Path
 from datetime import datetime
 import aiosqlite
 import click
 import os
+import subprocess
 import sys
 import random
 from blspy import G2Element, G1Element, AugSchemeMPL
@@ -175,7 +176,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: str, db_version: int) -> DBWrapper:
+async def setup_db(name: str, db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -196,4 +197,24 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection, db_version)
+    ret = DBWrapper2(connection, db_version)
+    await ret.add_connection(await aiosqlite.connect(db_filename))
+    return ret
+
+
+def get_commit_hash() -> str:
+    try:
+        os.chdir(Path(os.path.realpath(__file__)).parent)
+        commit_hash = (
+            subprocess.run(["git", "rev-parse", "--short", "HEAD"], check=True, stdout=subprocess.PIPE)
+            .stdout.decode("utf-8")
+            .strip()
+        )
+    except Exception:
+        sys.exit("Failed to get the commit hash")
+    try:
+        if len(subprocess.run(["git", "status", "-s"], check=True, stdout=subprocess.PIPE).stdout) > 0:
+            raise Exception()
+    except Exception:
+        commit_hash += "-dirty"
+    return commit_hash

@@ -17,7 +17,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -33,14 +33,8 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes(db_version):
+async def setup_two_nodes_fixture(db_version):
     async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
@@ -52,8 +46,8 @@ class FakeRateLimiter:
 
 class TestDos:
     @pytest.mark.asyncio
-    async def test_large_message_disconnect_and_ban(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -100,8 +94,8 @@ class TestDos:
         await session.close()
 
     @pytest.mark.asyncio
-    async def test_bad_handshake_and_ban(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -146,8 +140,8 @@ class TestDos:
         await session.close()
 
     @pytest.mark.asyncio
-    async def test_invalid_protocol_handshake(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -179,8 +173,8 @@ class TestDos:
         await asyncio.sleep(1)  # give some time for cleanup to work
 
     @pytest.mark.asyncio
-    async def test_spam_tx(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -232,8 +226,8 @@ class TestDos:
         await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
-    async def test_spam_message_non_tx(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -281,8 +275,8 @@ class TestDos:
         await time_out_assert(15, is_banned)
 
     @pytest.mark.asyncio
-    async def test_spam_message_too_large(self, setup_two_nodes):
-        nodes, _ = setup_two_nodes
+    async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
+        nodes, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server

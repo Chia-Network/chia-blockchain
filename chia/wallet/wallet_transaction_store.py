@@ -71,7 +71,9 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
+        )
 
         await self.db_connection.commit()
         self.tx_record_cache = {}
@@ -235,7 +237,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord):
+    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -257,7 +259,7 @@ class WalletTransactionStore:
             name=record.name,
             memos=record.memos,
         )
-        await self.add_transaction_record(tx, False)
+        await self.add_transaction_record(tx, in_transaction=in_transaction)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """

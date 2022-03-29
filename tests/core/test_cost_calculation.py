@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pathlib
 import time
@@ -13,7 +12,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, 
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 
 from .make_block_generator import make_block_generator
 
@@ -21,12 +20,6 @@ BURN_PUZZLE_HASH = b"0" * 32
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def large_block_generator(size):
@@ -54,7 +47,7 @@ def large_block_generator(size):
 
 class TestCostCalculation:
     @pytest.mark.asyncio
-    async def test_basics(self, softfork_height):
+    async def test_basics(self, softfork_height, bt):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
         num_blocks = 3
@@ -110,7 +103,7 @@ class TestCostCalculation:
         )
 
     @pytest.mark.asyncio
-    async def test_mempool_mode(self, softfork_height):
+    async def test_mempool_mode(self, softfork_height, bt):
         wallet_tool = bt.get_pool_wallet_tool()
         ph = wallet_tool.get_new_puzzlehash()
 
