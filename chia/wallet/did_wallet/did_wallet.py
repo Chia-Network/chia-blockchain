@@ -153,7 +153,7 @@ class DIDWallet:
         self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
+        new_wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
         if new_wallet_info is None:
