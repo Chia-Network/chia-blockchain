@@ -69,11 +69,12 @@ class DIDWallet:
             raise ValueError("Cannot require more IDs than are known.")
         self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
-        if self.wallet_info is None:
+        if new_wallet_info is None:
             raise ValueError("Internal Error")
+        self.wallet_info = new_wallet_info
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
@@ -151,15 +152,18 @@ class DIDWallet:
         self.wallet_state_manager = wallet_state_manager
         self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+
+        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
+        if new_wallet_info is None:
+            raise ValueError("Internal Error")
+        self.wallet_info = new_wallet_info
+
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # load backup will also set our DIDInfo
         await self.load_backup(filename)
 
-        if self.wallet_info is None:
-            raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         return self
 
@@ -223,8 +227,7 @@ class DIDWallet:
         return uint64(addition_amount)
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint128:
-        confirmed = await self.get_confirmed_balance(record_list)
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id())
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
@@ -560,6 +563,8 @@ class DIDWallet:
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        if index is None:
+            raise RuntimeError(f"Could not find index for pubkey {pubkey}")
         private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
@@ -627,6 +632,8 @@ class DIDWallet:
         )
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        if index is None:
+            raise RuntimeError(f"Could not find index for pubkey {pubkey}")
         private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
@@ -699,6 +706,8 @@ class DIDWallet:
         message = to_sign + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        if index is None:
+            raise RuntimeError(f"Could not find index for pubkey {pubkey}")
         private = master_sk_to_wallet_sk_unhardened(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
@@ -901,9 +910,11 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            did_hash
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(did_hash)
+        if record is None:
+            raise RuntimeError(f"Failed to get derivation record for DID puzzle_hash {did_hash}")
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             bytes(record.pubkey),
             self.did_info.backup_ids,
@@ -1011,9 +1022,6 @@ class DIDWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
-
-    async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
