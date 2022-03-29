@@ -907,7 +907,7 @@ class WalletStateManager:
                                 child.coin.name(),
                                 spend=launcher_spend,
                                 height=child.spent_height,
-                                in_transaction=True,
+                                in_transaction=in_transaction,
                             )
                         continue
 
