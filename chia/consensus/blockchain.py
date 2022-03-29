@@ -391,7 +391,16 @@ class Blockchain(BlockchainInterface):
             cm.callback(restore_height_map)
 
             await self.block_store.rollback(fork_height)
+
+            original_peak = self._peak_height
+
+            def restore_peak() -> None:
+                self._peak_height = original_peak
+
             self._peak_height = None if fork_height < 0 else uint32(fork_height)
+
+            # in case of failure during reorg, restore the _peak_height
+            cm.callback(restore_peak)
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
