@@ -206,9 +206,9 @@ class DIDWallet:
         self.log.info(f"Confirmed balance for did wallet is {amount}")
         return uint128(amount)
 
-    async def get_pending_change_balance(self) -> uint64:
+    async def get_pending_change_balance(self) -> uint128:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
-        addition_amount = 0
+        addition_amount: uint128 = uint128(0)
 
         for record in unconfirmed_tx:
             our_spend = False
@@ -224,7 +224,7 @@ class DIDWallet:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     addition_amount += coin.amount
 
-        return uint64(addition_amount)
+        return uint128(addition_amount)
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id())
