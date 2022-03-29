@@ -497,6 +497,7 @@ wallet:
   full_node_peer:
     host: *self_hostname
     port: 8444
+    node_id: ""
 
   multiprocessing_start_method: default
 
@@ -526,9 +527,6 @@ wallet:
     private_key:  "config/ssl/wallet/private_wallet.key"
     public_crt:  "config/ssl/wallet/public_wallet.crt"
     public_key:  "config/ssl/wallet/public_wallet.key"
-
-  trusted_peers:
-    trusted_node_1: "config/ssl/full_node/public_full_node.crt"
 
   short_sync_blocks_behind_threshold: 20
 

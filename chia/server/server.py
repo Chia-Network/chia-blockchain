@@ -800,12 +800,18 @@ class ChiaServer:
             return inbound_count < self.config["max_inbound_timelord"]
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict) -> bool:
-        if trusted_peers is None:
-            return False
-        if not self.config["testing"] and peer.peer_host == "127.0.0.1":
-            return True
-        if peer.peer_node_id.hex() not in trusted_peers:
-            return False
-
-        return True
+    def is_trusted_peer(self, peer: WSChiaConnection, config: Dict) -> bool:
+        full_node_peer = config["full_node_peer"]
+        if peer.peer_host == full_node_peer.get("host", None) or (
+            is_localhost(full_node_peer.get("host", None)) and peer.peer_host == "localhost"
+        ):
+            pinned_node_id = full_node_peer.get("node_id", None)
+            # If node id is not pinned, we skip node id valdiation
+            if pinned_node_id == "" or pinned_node_id is None:
+                return True
+            else:
+                if pinned_node_id == peer.peer_node_id.hex():
+                    return True
+                else:
+                    return False
+        return False

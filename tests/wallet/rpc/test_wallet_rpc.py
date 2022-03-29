@@ -84,11 +84,11 @@ class TestWalletRpc:
         await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         if trusted:
-            wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node.config["full_node_peer"] = {"host": "127.0.0.1"}
+            wallet_node_2.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+            wallet_node.config["full_node_peer"] = {}
+            wallet_node_2.config["full_node_peer"] = {}
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
