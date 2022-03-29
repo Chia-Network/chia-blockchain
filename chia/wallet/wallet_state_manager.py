@@ -886,7 +886,9 @@ class WalletStateManager:
                         pool_state = solution_to_pool_state(launcher_spend)
                         assert pool_state is not None
                     except (AssertionError, ValueError) as e:
-                        self.log.debug(f"Not a pool wallet launcher {e}")
+                        import traceback
+
+                        self.log.debug(f"Not a pool wallet launcher: {e} with the traceback: {traceback.format_exc()}")
                         matched, inner_puzhash = await DataLayerWallet.match_dl_launcher(launcher_spend)
                         if (
                             matched
