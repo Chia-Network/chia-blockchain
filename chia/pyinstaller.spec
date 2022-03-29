@@ -64,7 +64,7 @@ SERVERS = [
 
 # TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
 
-entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
+entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS] + ["chia.seeder.crawler"]
 
 hiddenimports = []
 hiddenimports.extend(entry_points)
