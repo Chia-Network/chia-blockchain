@@ -42,6 +42,17 @@ const StyledBody = styled(Box)`
   position: relative;
 `;
 
+const StyledItemsContainer = styled(Box)`
+  overflow: auto;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: ${({ theme }) => theme.spacing(9)};
+`;
+
 export default function WalletsSidebar() {
   const navigate = useNavigate();
   const trans = useTrans();
@@ -98,11 +109,13 @@ export default function WalletsSidebar() {
           </Typography>
         </StyledContent>
         <StyledBody>
-          <StyledContent>
-            <Flex gap={1} flexDirection="column">
-              {items}
-            </Flex>
-          </StyledContent>
+          <StyledItemsContainer>
+            <StyledContent>
+              <Flex gap={1} flexDirection="column">
+                {items}
+              </Flex>
+            </StyledContent>
+          </StyledItemsContainer>
           <WalletsManageTokens />
         </StyledBody>
       </Flex>
