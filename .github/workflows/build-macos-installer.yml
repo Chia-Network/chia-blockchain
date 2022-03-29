@@ -104,13 +104,13 @@ jobs:
         p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
 
     # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const releases = await github.rest.repos.listReleases({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });

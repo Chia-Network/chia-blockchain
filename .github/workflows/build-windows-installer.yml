@@ -105,13 +105,13 @@ jobs:
         deactivate
 
       # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const releases = await github.rest.repos.listReleases({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });
@@ -124,13 +124,13 @@ jobs:
         Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot_k34.exe"
 
       # Get the most recent release from bladebit
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const releases = await github.rest.repos.listReleases({
             owner: 'Chia-Network',
             repo: 'bladebit',
           });
