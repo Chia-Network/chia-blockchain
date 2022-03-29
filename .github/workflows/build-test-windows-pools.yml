@@ -83,6 +83,7 @@ jobs:
 
     - name: Test pools code with pytest
       run: |
+        dir venv/Scripts/
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc ./venv/Scripts/py.test tests/pools/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 

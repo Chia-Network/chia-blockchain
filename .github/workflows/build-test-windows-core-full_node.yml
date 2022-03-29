@@ -83,6 +83,7 @@ jobs:
 
     - name: Test core-full_node code with pytest
       run: |
+        dir venv/Scripts/
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc ./venv/Scripts/py.test tests/core/full_node/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
 
