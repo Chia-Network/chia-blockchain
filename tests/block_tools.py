@@ -597,9 +597,6 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
-                        # TODO: address hint error and remove ignore
-                        #       error: Argument 27 to "get_full_block_and_block_record" has incompatible type "bool";
-                        #       expected "Optional[bytes32]"  [arg-type]
                         full_block, block_record = get_full_block_and_block_record(
                             constants,
                             blocks,
@@ -627,7 +624,7 @@ class BlockTools:
                             signage_point,
                             latest_block,
                             seed,
-                            normalized_to_identity_cc_ip,  # type: ignore[arg-type]
+                            normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
                         )
                         if block_record.is_transaction_block:
@@ -1499,6 +1496,7 @@ def get_full_block_and_block_record(
     signage_point: SignagePoint,
     prev_block: BlockRecord,
     seed: bytes = b"",
+    *,
     overflow_cc_challenge: bytes32 = None,
     overflow_rc_challenge: bytes32 = None,
     normalized_to_identity_cc_ip: bool = False,
