@@ -381,13 +381,13 @@ class CATWallet:
     async def get_new_cat_puzzle_hash(self):
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    async def get_spendable_balance(self, records=None) -> uint64:
+    async def get_spendable_balance(self, records=None) -> uint128:
         coins = await self.get_cat_spendable_coins(records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
 
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
