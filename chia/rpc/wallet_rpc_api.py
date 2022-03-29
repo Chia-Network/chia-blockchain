@@ -115,6 +115,7 @@ class WalletRpcApi:
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
+            "/did_transfer_did": self.did_transfer_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
@@ -1209,6 +1210,25 @@ class WalletRpcApi:
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         did_wallet.create_backup(request["filename"])
         return {"wallet_id": wallet_id, "success": True}
+
+    async def did_transfer_did(self, request):
+        assert self.service.wallet_state_manager is not None
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+        wallet_id = int(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
+        if "fee" in request:
+            fee = uint64(request["fee"])
+        else:
+            fee = uint64(0)
+        async with self.service.wallet_state_manager.lock:
+            txs: TransactionRecord = await did_wallet.transfer_did(puzzle_hash, fee)
+
+        return {
+            "transaction": txs.to_json_dict_convenience(self.service.config),
+            "transaction_id": txs.name,
+        }
 
     ##########################################################################################
     # NFT Wallet

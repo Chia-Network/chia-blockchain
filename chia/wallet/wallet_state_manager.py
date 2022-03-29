@@ -33,7 +33,7 @@ from chia.util.ints import uint32, uint64, uint128, uint8
 from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
 from chia.wallet.nft_wallet.nft_puzzles import match_nft_puzzle
-from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, get_pubkey_from_innerpuz
+from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, create_fullpuz, DID_INNERPUZ_MOD
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWalletInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -573,7 +573,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         nft_matched, nft_curried_args = match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
         if nft_matched:
-            return await self.handle_nft(nft_curried_args, parent_coin_state, coin_state, coin_spend)
+            return await self.handle_nft(coin_spend)
 
         # Check if the coin is a DID
         did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
@@ -594,6 +594,7 @@ class WalletStateManager:
         :param curried_args: Curried arg of the CAT mod
         :param parent_coin_state: Parent coin state
         :param coin_state: Current coin state
+        :param coin_spend: New coin spend
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None
@@ -649,37 +650,58 @@ class WalletStateManager:
         :param curried_args: Curried arg of the DID mod
         :param parent_coin_state: Parent coin state
         :param coin_state: Current coin state
+        :param coin_spend: New coin spend
         :return: Wallet ID & Wallet Type
         """
-
         wallet_id = None
         wallet_type = None
-        hint_list = coin_spend.hints()
-        for wallet_info in await self.get_all_wallet_info_entries():
-            if wallet_info.type == WalletType.DISTRIBUTED_ID:
-                did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
-                if did_info.current_inner is None:
-                    continue
-                pubkey: G1Element = get_pubkey_from_innerpuz(did_info.current_inner)
-                print(f"Found did pubkey:{pubkey.__bytes__()} hint {hint_list}")
-                for hint in hint_list:
-                    if pubkey.__bytes__() == hint:
-                        wallet_id = wallet_info.id
-                        wallet_type = WalletType.DISTRIBUTED_ID
+        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash = curried_args
+        inner_puzzle_hash = p2_puzzle.get_tree_hash()
+        self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
+
+        hint_list = compute_coin_hints(coin_spend)
+        derivation_record = None
+        for hint in hint_list:
+            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
+            if derivation_record is not None:
+                break
+
+        if derivation_record is None:
+            self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+        else:
+            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
+
+            launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
+            self.log.info(f"Found DID, launch_id {launch_id}.")
+            did_puzzle = DID_INNERPUZ_MOD.curry(
+                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash
+            )
+            full_puzzle = create_fullpuz(did_puzzle, launch_id)
+            if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                return None, None
+            # Create DID wallet
+            response: List[CoinState] = await self.wallet_node.get_coin_state([launch_id])
+            if len(response) == 0:
+                self.log.warning(f"Could not find the launch coin with ID: {launch_id}")
+                return None, None
+            launch_coin: CoinState = response[0]
+            did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
+                self, self.main_wallet, launch_coin.coin, did_puzzle, coin_spend, f"DID {launch_id.hex()}"
+            )
+            wallet_id = did_wallet.id()
+            wallet_type = WalletType(did_wallet.type())
+            self.state_changed("wallet_created")
         return wallet_id, wallet_type
 
     async def handle_nft(
         self,
-        curried_args: Iterator[Program],
-        parent_coin_state: CoinState,
-        coin_state: CoinState,
         coin_spend: CoinSpend,
+        curried_args: Iterator[Program],
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
+        :param coin_spend: New coin spend
         :param curried_args: Curried arg of the NFT mod
-        :param parent_coin_state: Parent coin state
-        :param coin_state: Current coin state
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None

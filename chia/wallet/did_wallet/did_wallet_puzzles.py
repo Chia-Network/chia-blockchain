@@ -16,15 +16,18 @@ DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
 
 
 def create_innerpuz(
-    pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64, singleton_id: bytes32
+    inner_puzzle: Program, identities: List[bytes], num_of_backup_ids_needed: uint64, singleton_id: bytes32
 ) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
     # MOD_HASH MY_PUBKEY RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
-    return DID_INNERPUZ_MOD.curry(pubkey, backup_ids_hash, num_of_backup_ids_needed, singleton_struct)
+    return DID_INNERPUZ_MOD.curry(
+        inner_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, DID_INNERPUZ_MOD_HASH
+    )
 
 
 def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
@@ -32,16 +35,6 @@ def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = Program.to((mod_hash, (genesis_id, LAUNCHER_PUZZLE.get_tree_hash())))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
-
-
-def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
-    ret = uncurry_innerpuz(innerpuz)
-    if ret is not None:
-        pubkey_program = ret[0]
-    else:
-        raise ValueError("Unable to extract pubkey")
-    pubkey = G1Element.from_bytes(pubkey_program.as_atom())
-    return pubkey
 
 
 def is_did_innerpuz(inner_f: Program):
@@ -55,11 +48,7 @@ def is_did_core(inner_f: Program):
     return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
-def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
-    """
-    Take a puzzle and return `None` if it's not a `CAT_MOD` cc, or
-    a triple of `mod_hash, genesis_coin_checker, inner_puzzle` if it is.
-    """
+def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Program, Program]]:
     r = puzzle.uncurry()
     if r is None:
         return r
@@ -67,8 +56,8 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    pubkey, id_list, num_of_backup_ids_needed, singleton_struct = list(args.as_iter())
-    return pubkey, id_list
+    p2_puzzle, id_list, num_of_backup_ids_needed, singleton_struct, _ = list(args.as_iter())
+    return p2_puzzle, id_list, num_of_backup_ids_needed, singleton_struct
 
 
 def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
