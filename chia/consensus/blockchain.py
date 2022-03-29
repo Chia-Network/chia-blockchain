@@ -330,146 +330,130 @@ class Blockchain(BlockchainInterface):
         It returns the height of the fork between the previous chain and the new chain, or returns
         None if there was no update to the heaviest chain.
         """
-        with ExitStack() as cm:
-            peak = self.get_peak()
-            latest_coin_state: Dict[bytes32, CoinRecord] = {}
-            hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
+        peak = self.get_peak()
+        latest_coin_state: Dict[bytes32, CoinRecord] = {}
+        hint_coin_state: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
 
-            if genesis:
-                if peak is None:
-                    block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
-                    assert block is not None
+        if genesis:
+            if peak is None:
+                block: Optional[FullBlock] = await self.block_store.get_full_block(block_record.header_hash)
+                assert block is not None
 
-                    if npc_result is not None:
-                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
-                    else:
-                        tx_removals, tx_additions = [], []
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        added = await self.coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            tx_additions,
-                            tx_removals,
-                        )
-                    else:
-                        added, _ = [], []
-                    await self.block_store.set_in_chain([(block_record.header_hash,)])
-                    await self.block_store.set_peak(block_record.header_hash)
-                    return uint32(0), uint32(0), [block_record], (added, {})
-                return None, None, [], ([], {})
-
-            assert peak is not None
-            if block_record.weight <= peak.weight:
-                # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-                return None, None, [], ([], {})
-
-            # Find the fork. if the block is just being appended, it will return the peak
-            # If no blocks in common, returns -1, and reverts all blocks
-            if block_record.prev_hash == peak.header_hash:
-                fork_height: int = peak.height
-            elif fork_point_with_peak is not None:
-                fork_height = fork_point_with_peak
-            else:
-                fork_height = find_fork_point_in_chain(self, block_record, peak)
-
-            if block_record.prev_hash != peak.header_hash:
-                roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
-                for coin_record in roll_changes:
-                    latest_coin_state[coin_record.name] = coin_record
-
-            # Rollback sub_epoch_summaries
-            restore_point = self.__height_map.rollback(fork_height)
-
-            def restore_height_map() -> None:
-                self.__height_map.restore(restore_point)
-
-            # arm the ExitStack to restore __height_map in case we fail from
-            # now on. Once we've completed the reorg successfully, we disarm the
-            # ExitStack to not call the restore function
-            cm.callback(restore_height_map)
-
-            await self.block_store.rollback(fork_height)
-
-            original_peak = self._peak_height
-
-            def restore_peak() -> None:
-                self._peak_height = original_peak
-
-            self._peak_height = None if fork_height < 0 else uint32(fork_height)
-
-            # in case of failure during reorg, restore the _peak_height
-            cm.callback(restore_peak)
-
-            # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
-            curr = block_record.header_hash
-
-            while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
-                fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
-                fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
-                assert fetched_full_block is not None
-                assert fetched_block_record is not None
-                blocks_to_add.append((fetched_full_block, fetched_block_record))
-                if fetched_full_block.height == 0:
-                    # Doing a full reorg, starting at height 0
-                    break
-                curr = fetched_block_record.prev_hash
-
-            records_to_add = []
-            for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
-                records_to_add.append(fetched_block_record)
-                if not fetched_full_block.is_transaction_block():
-                    continue
-
-                if fetched_block_record.header_hash == block_record.header_hash:
-                    tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
-                        fetched_full_block, npc_result
+                if npc_result is not None:
+                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                else:
+                    tx_removals, tx_additions = [], []
+                if block.is_transaction_block():
+                    assert block.foliage_transaction_block is not None
+                    added = await self.coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        tx_additions,
+                        tx_removals,
                     )
                 else:
-                    tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
-                        fetched_full_block, None
-                    )
+                    added, _ = [], []
+                await self.block_store.set_in_chain([(block_record.header_hash,)])
+                await self.block_store.set_peak(block_record.header_hash)
+                return uint32(0), uint32(0), [block_record], (added, {})
+            return None, None, [], ([], {})
 
-                assert fetched_full_block.foliage_transaction_block is not None
-                added_rec = await self.coin_store.new_block(
-                    fetched_full_block.height,
-                    fetched_full_block.foliage_transaction_block.timestamp,
-                    fetched_full_block.get_included_reward_coins(),
-                    tx_additions,
-                    tx_removals,
+        assert peak is not None
+        if block_record.weight <= peak.weight:
+            # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+            return None, None, [], ([], {})
+
+        # Find the fork. if the block is just being appended, it will return the peak
+        # If no blocks in common, returns -1, and reverts all blocks
+        if block_record.prev_hash == peak.header_hash:
+            fork_height: int = peak.height
+        elif fork_point_with_peak is not None:
+            fork_height = fork_point_with_peak
+        else:
+            fork_height = find_fork_point_in_chain(self, block_record, peak)
+
+        log.warning(f"Fork point: {fork_height}")
+        if fork_height == 1:
+            log.warning(f"fFork point: {fork_height}")
+            pass
+        self.__height_map.rollback(fork_height)
+
+        if block_record.prev_hash != peak.header_hash:
+            roll_changes: List[CoinRecord] = await self.coin_store.rollback_to_block(fork_height)
+            for coin_record in roll_changes:
+                latest_coin_state[coin_record.name] = coin_record
+
+        await self.block_store.rollback(fork_height)
+
+        # Collect all blocks from fork point to new peak
+        blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
+        curr = block_record.header_hash
+
+        while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
+            fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+            fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
+            assert fetched_full_block is not None
+            assert fetched_block_record is not None
+            blocks_to_add.append((fetched_full_block, fetched_block_record))
+            if fetched_full_block.height == 0:
+                # Doing a full reorg, starting at height 0
+                break
+            curr = fetched_block_record.prev_hash
+
+        records_to_add = []
+        for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
+            records_to_add.append(fetched_block_record)
+            if not fetched_full_block.is_transaction_block():
+                continue
+
+            if fetched_block_record.header_hash == block_record.header_hash:
+                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
+                    fetched_full_block, npc_result
                 )
-                removed_rec: List[Optional[CoinRecord]] = [
-                    await self.coin_store.get_coin_record(name) for name in tx_removals
-                ]
+            else:
+                tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(fetched_full_block, None)
 
-                # Set additions first, then removals in order to handle ephemeral coin state
-                # Add in height order is also required
-                record: Optional[CoinRecord]
-                for record in added_rec:
-                    assert record
-                    latest_coin_state[record.name] = record
-                for record in removed_rec:
-                    assert record
-                    latest_coin_state[record.name] = record
+            assert fetched_full_block.foliage_transaction_block is not None
+            log.info(f"Removals: {tx_removals}")
+            if len(tx_removals) > 0:
+                pass
+            added_rec = await self.coin_store.new_block(
+                fetched_full_block.height,
+                fetched_full_block.foliage_transaction_block.timestamp,
+                fetched_full_block.get_included_reward_coins(),
+                tx_additions,
+                tx_removals,
+            )
+            removed_rec: List[Optional[CoinRecord]] = [
+                await self.coin_store.get_coin_record(name) for name in tx_removals
+            ]
 
-                if npc_res is not None:
-                    hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
-                    await self.hint_store.add_hints(hint_list)
-                    # There can be multiple coins for the same hint
-                    for coin_id, hint in hint_list:
-                        key = hint
-                        if key not in hint_coin_state:
-                            hint_coin_state[key] = {}
-                        hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
+            # Set additions first, then removals in order to handle ephemeral coin state
+            # Add in height order is also required
+            record: Optional[CoinRecord]
+            for record in added_rec:
+                assert record
+                latest_coin_state[record.name] = record
+            for record in removed_rec:
+                assert record
+                latest_coin_state[record.name] = record
 
-            await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+            if npc_res is not None:
+                hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
+                await self.hint_store.add_hints(hint_list)
+                # There can be multiple coins for the same hint
+                for coin_id, hint in hint_list:
+                    key = hint
+                    if key not in hint_coin_state:
+                        hint_coin_state[key] = {}
+                    hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
 
-            # Changes the peak to be the new peak
-            await self.block_store.set_peak(block_record.header_hash)
-            # disarm restore function. We completed successfully
-            cm.pop_all()
+        await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
+
+        # Changes the peak to be the new peak
+        await self.block_store.set_peak(block_record.header_hash)
+
         return (
             uint32(max(fork_height, 0)),
             block_record.height,
@@ -915,6 +899,7 @@ class Blockchain(BlockchainInterface):
             self.try_block_record(previous_block_hash)
             and self.height_to_hash(self.block_record(previous_block_hash).height) == previous_block_hash
         ):
+            log.warning(f"Not in reorg, height: {block.height} refs: {ref_list}")
             # We are not in a reorg, no need to look up alternate header hashes
             # (we can get them from height_to_hash)
             if self.block_store.db_wrapper.db_version == 2:
@@ -934,6 +919,7 @@ class Blockchain(BlockchainInterface):
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(ref_gen)
         else:
+            log.warning(f"In reorg, height: {block.height} refs: {ref_list}")
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr = block

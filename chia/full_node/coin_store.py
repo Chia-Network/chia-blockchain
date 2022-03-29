@@ -501,8 +501,9 @@ class CoinStore:
         # if this coin is in the cache, mark it as spent in there
         updates = []
         for coin_name in coin_names:
-            r = self.coin_record_cache.get(coin_name)
+            r: Optional[CoinRecord] = self.coin_record_cache.get(coin_name)
             if r is not None:
+                assert r.spent_block_index == uint32(0)
                 self.coin_record_cache.put(
                     r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
                 )

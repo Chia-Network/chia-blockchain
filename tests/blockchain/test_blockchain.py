@@ -2783,6 +2783,81 @@ class TestReorgs:
         receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
         blocks = bt.get_consecutive_blocks(
+            5,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            guarantee_transaction_block=True,
+        )
+
+        all_coins = []
+        for spend_block in blocks[:5]:
+            for coin in list(spend_block.get_included_reward_coins()):
+                if coin.puzzle_hash == coinbase_puzzlehash:
+                    all_coins.append(coin)
+        spend_bundle_0 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+        blocks = bt.get_consecutive_blocks(
+            15,
+            block_list_input=blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            transaction_data=spend_bundle_0,
+            guarantee_transaction_block=True,
+        )
+
+        for block in blocks:
+            await _validate_and_add_block(b, block)
+        assert b.get_peak().height == 19
+
+        print("first chain done")
+
+        # Make sure a ref back into the reorg chain itself works as expected
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            1,
+            blocks[:10],
+            seed=b"2",
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+        )
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            2,
+            blocks_reorg_chain,
+            seed=b"2",
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            pool_reward_puzzle_hash=receiver_puzzlehash,
+            transaction_data=spend_bundle,
+            guarantee_transaction_block=True,
+        )
+
+        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
+        blocks_reorg_chain = bt.get_consecutive_blocks(
+            4, blocks_reorg_chain, seed=b"2", previous_generator=[uint32(5), uint32(11)], transaction_data=spend_bundle2
+        )
+        blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
+
+        for i, block in enumerate(blocks_reorg_chain):
+            fork_point_with_peak = None
+            if i < 10:
+                expected = ReceiveBlockResult.ALREADY_HAVE_BLOCK
+            elif i < 20:
+                expected = ReceiveBlockResult.ADDED_AS_ORPHAN
+            else:
+                expected = ReceiveBlockResult.NEW_PEAK
+                fork_point_with_peak = uint32(1)
+            await _validate_and_add_block(b, block, expected_result=expected, fork_point_with_peak=fork_point_with_peak)
+        assert b.get_peak().height == 20
+
+    @pytest.mark.asyncio
+    async def test_chain_failed_rollback(self, empty_blockchain, bt):
+        b = empty_blockchain
+        wallet_a = WalletTool(b.constants)
+        WALLET_A_PUZZLE_HASHES = [wallet_a.get_new_puzzlehash() for _ in range(5)]
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+
+        blocks = bt.get_consecutive_blocks(
             20,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             pool_reward_puzzle_hash=receiver_puzzlehash,
@@ -2805,32 +2880,33 @@ class TestReorgs:
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
 
         blocks_reorg_chain = bt.get_consecutive_blocks(
-            3,
+            11,
             blocks[:10],
             seed=b"2",
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             pool_reward_puzzle_hash=receiver_puzzlehash,
             transaction_data=spend_bundle,
+            guarantee_transaction_block=True,
         )
 
-        spend_bundle2 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            4, blocks_reorg_chain, seed=b"2", previous_generator=[uint32(12)], transaction_data=spend_bundle2
-        )
-        blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
+        for block in blocks_reorg_chain[10:-1]:
+            await _validate_and_add_block(b, block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN)
 
-        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            blocks_reorg_chain, {}, validate_signatures=True
-        )
-        for i, block in enumerate(blocks_reorg_chain):
-            if i < 10:
-                expected = ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif i < 20:
-                expected = ReceiveBlockResult.ADDED_AS_ORPHAN
-            else:
-                expected = ReceiveBlockResult.NEW_PEAK
-            await _validate_and_add_block(b, block, expected_result=expected)
-        assert b.get_peak().height == 20
+        # Incorrectly set the height as spent in DB to trigger an error
+        print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+        print(spend_bundle.coin_spends[0].coin.name())
+        async with b.block_store.db_wrapper.lock:
+            await b.block_store.db_wrapper.begin_transaction()
+            await b.coin_store._set_spent([spend_bundle.coin_spends[0].coin.name()], 8)
+            await b.block_store.db_wrapper.commit_transaction()
+        print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
+
+        try:
+            await _validate_and_add_block(b, blocks_reorg_chain[-1], fork_point_with_peak=fork_poin)
+        except AssertionError:
+            pass
+
+        assert b.get_peak().height == 19
 
     @pytest.mark.asyncio
     async def test_long_reorg(self, empty_blockchain, default_10000_blocks, bt):
