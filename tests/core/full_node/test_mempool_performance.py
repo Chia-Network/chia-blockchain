@@ -1,11 +1,9 @@
 # flake8: noqa: F811, F401
 
-import asyncio
+import logging
 import time
 
 import pytest
-import pytest_asyncio
-import logging
 
 from chia.protocols import full_node_protocol
 from chia.types.peer_info import PeerInfo
@@ -13,7 +11,6 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -33,13 +30,6 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 
 
 log = logging.getLogger(__name__)
-
-
-@pytest_asyncio.fixture(scope="module")
-async def wallet_nodes_mempool_perf(bt):
-    key_seed = bt.farmer_master_sk_entropy
-    async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
-        yield _
 
 
 class TestMempoolPerformance:

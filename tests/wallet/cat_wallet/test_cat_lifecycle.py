@@ -1,47 +1,37 @@
-import pytest
-import pytest_asyncio
-
 from typing import List, Tuple, Optional, Dict
+
+import pytest
 from blspy import PrivateKey, AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import SpendSim, SimClient
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import (
     GenesisById,
     GenesisByPuzhash,
     EverythingWithSig,
     DelegatedLimitations,
 )
-
-from tests.clvm.test_puzzles import secret_exponent_for_index
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
+from tests.clvm.test_puzzles import secret_exponent_for_index
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
 NO_LINEAGE_PROOF = LineageProof()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_sim():
-    sim = await SpendSim.create()
-    sim_client = SimClient(sim)
-    await sim.farm_block()
-    return sim, sim_client
 
 
 async def do_spend(

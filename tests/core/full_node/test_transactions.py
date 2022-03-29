@@ -3,7 +3,6 @@ from secrets import token_bytes
 from typing import Optional
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -12,26 +11,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def three_nodes_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}):
-        yield _
 
 
 class TestTransactions:
