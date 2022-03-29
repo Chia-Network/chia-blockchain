@@ -85,7 +85,7 @@ jobs:
       run: |
         dir venv/Scripts/
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc ./venv/Scripts/py.test tests/core/full_node/full_sync/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
+        venv/Scripts/coverage run --rcfile=.coveragerc ./venv/Scripts/pytest tests/core/full_node/full_sync/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 
     - name: Process coverage data
       run: |
