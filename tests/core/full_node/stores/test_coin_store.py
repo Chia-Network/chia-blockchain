@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 from typing import List, Optional, Set, Tuple
 
 import pytest
@@ -161,21 +162,39 @@ class TestCoinStoreWithBlocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
+                    async with db_wrapper.write_db():
+                        if block.is_transaction_block():
+                            assert block.foliage_transaction_block is not None
+                            await coin_store.new_block(
+                                block.height,
+                                block.foliage_transaction_block.timestamp,
+                                block.get_included_reward_coins(),
+                                additions,
+                                removals,
+                            )
 
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        await coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            additions,
-                            removals,
-                        )
-
-                    coins = block.get_included_reward_coins()
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+                        coins = block.get_included_reward_coins()
+                        records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                     await coin_store._set_spent([r.name for r in records], block.height)
+
+                    if len(records) > 0:
+                        for r in records:
+                            assert (await coin_store.get_coin_record(r.name)) is not None
+
+                        if cache_size > 0:
+                            # Check that we can't spend a coin twice in cache
+                            with pytest.raises(ValueError) as exec_info:
+                                await coin_store._set_spent([r2.name for r2 in records], block.height)
+                            assert "Coin already spent" in exec_info.value.args[0]
+
+                            for r3 in records:
+                                coin_store.coin_record_cache.remove(r3.name)
+
+                        # Check that we can't spend a coin twice in DB
+                        with pytest.raises(ValueError) as exec_info:
+                            await coin_store._set_spent([r2.name for r2 in records], block.height)
+                        assert "Invalid operation to set spent" in exec_info.value.args[0]
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
