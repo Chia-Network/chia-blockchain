@@ -1024,7 +1024,7 @@ class DIDWallet:
         return spend_bundle
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+        spendable_am: uint128 = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )
         return spendable_am
