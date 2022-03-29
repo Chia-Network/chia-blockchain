@@ -29,10 +29,13 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
         os: [windows-latest]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_core-consensus
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -81,9 +84,26 @@ jobs:
     - name: Test core-consensus code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        ./venv/Scripts/py.test tests/core/consensus/test_*.py -s -v --durations 0 -n 4
+        venv/Scripts/coverage run --rcfile=.coveragerc ./venv/Scripts/py.test tests/core/consensus/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
+
+    - name: Process coverage data
+      run: |
+        venv/Scripts/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/Scripts/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+        venv/Scripts/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 
 # Omitted resource usage check
+
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
