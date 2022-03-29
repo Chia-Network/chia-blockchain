@@ -77,7 +77,6 @@ INSTALL_TIMELORD
 
     - name: Test TEST_NAME code with pytest
       run: |
-        dir venv/Scripts/
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc --module pytest TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
 

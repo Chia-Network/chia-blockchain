@@ -83,7 +83,6 @@ jobs:
 
     - name: Test util code with pytest
       run: |
-        dir venv/Scripts/
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/util/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 

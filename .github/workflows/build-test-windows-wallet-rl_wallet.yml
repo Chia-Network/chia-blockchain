@@ -83,7 +83,6 @@ jobs:
 
     - name: Test wallet-rl_wallet code with pytest
       run: |
-        dir venv/Scripts/
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/wallet/rl_wallet/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
 
