@@ -69,7 +69,7 @@ class DIDWallet:
             raise ValueError("Cannot require more IDs than are known.")
         self.did_info = DIDInfo(None, backups_ids, num_of_backup_ids_needed, [], None, None, None, None, False)
         info_as_string = json.dumps(self.did_info.to_json_dict())
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
+        new_wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
         if new_wallet_info is None:
