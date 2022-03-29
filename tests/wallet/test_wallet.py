@@ -832,7 +832,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
 
     @pytest.mark.asyncio
-    async def test_trusted_peer_config(self, wallet_node):
+    async def test_trusted_peer_config(self, wallet_node, self_hostname):
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server

@@ -177,11 +177,9 @@ class TestPoolWalletRpc:
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -247,11 +245,9 @@ class TestPoolWalletRpc:
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -319,11 +315,9 @@ class TestPoolWalletRpc:
     async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc, fee, trusted, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -446,11 +440,9 @@ class TestPoolWalletRpc:
     async def test_absorb_self(self, one_wallet_node_and_rpc, fee, trusted, bt, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -559,11 +551,9 @@ class TestPoolWalletRpc:
     async def test_absorb_pooling(self, one_wallet_node_and_rpc, fee, trusted, bt, self_hostname):
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -712,11 +702,9 @@ class TestPoolWalletRpc:
         pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
         if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_node_0.config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_node_0.config["trusted_peers"] = {}
+            wallet_node_0.config["full_node_peer"] = {}
 
         await wallet_node_0.server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -840,11 +828,9 @@ class TestPoolWalletRpc:
         pool_ph = receive_address[1]
         full_node_api = full_nodes[0]
         if trusted:
-            wallet_nodes[0].config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_nodes[0].config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_nodes[0].config["trusted_peers"] = {}
+            wallet_nodes[0].config["full_node_peer"] = {}
 
         await wallet_nodes[0].server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -960,11 +946,9 @@ class TestPoolWalletRpc:
         full_node_api = full_nodes[0]
 
         if trusted:
-            wallet_nodes[0].config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_nodes[0].config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_nodes[0].config["trusted_peers"] = {}
+            wallet_nodes[0].config["full_node_peer"] = {}
 
         await wallet_nodes[0].server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
@@ -1060,11 +1044,9 @@ class TestPoolWalletRpc:
         full_node_api = full_nodes[0]
         WAIT_SECS = 30
         if trusted:
-            wallet_nodes[0].config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
+            wallet_nodes[0].config["full_node_peer"] = {"host": "127.0.0.1"}
         else:
-            wallet_nodes[0].config["trusted_peers"] = {}
+            wallet_nodes[0].config["full_node_peer"] = {}
 
         await wallet_nodes[0].server.start_client(
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
