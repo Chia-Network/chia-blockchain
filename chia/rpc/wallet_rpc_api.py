@@ -90,7 +90,7 @@ class WalletRpcApi:
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
-            "/cat_get_unacknowledged": self.cat_get_unacknowledged,
+            "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
@@ -833,7 +833,7 @@ class WalletRpcApi:
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
-    async def cat_get_unacknowledged(self, request):
+    async def get_stray_cats(self, request):
         """
         Get a list of all unacknowledged CATs
         :param request: RPC request
