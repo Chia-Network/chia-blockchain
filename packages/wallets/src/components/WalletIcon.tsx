@@ -3,30 +3,31 @@ import { useCurrencyCode } from '@chia/core';
 import styled from 'styled-components';
 import { useGetCatListQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';
-import { Typography } from '@mui/material';
+import { Typography, type TypographyProps } from '@mui/material';
 
 const StyledSymbol = styled(Typography)`
   font-size: 1rem;
   font-weight: 600;
 `;
 
-type Props = {
+export type WalletIconProps = TypographyProps & {
   wallet: Wallet;
+  color?: string;
 };
 
-export default function WalletIcon(props: Props) {
-  const { wallet } = props;
+export default function WalletIcon(props: WalletIconProps) {
+  const { wallet, color = 'primary', ...rest } = props;
   const { data: catList = [], isLoading } = useGetCatListQuery();
   const currencyCode = useCurrencyCode();
 
   if (wallet.type === WalletType.STANDARD_WALLET) {
-    return <StyledSymbol color="primary">{currencyCode}</StyledSymbol>;
+    return <StyledSymbol color={color} {...rest}>{currencyCode}</StyledSymbol>;
   }
 
   if (!isLoading && wallet.type === WalletType.CAT) {
     const token = catList.find((token) => token.assetId === wallet.meta?.assetId);
     if (token) {
-      return <StyledSymbol color="primary">{token.symbol}</StyledSymbol>;
+      return <StyledSymbol color={color} {...rest}>{token.symbol}</StyledSymbol>;
     }
   }
 

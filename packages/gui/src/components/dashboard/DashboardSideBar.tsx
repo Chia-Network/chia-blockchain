@@ -51,19 +51,16 @@ export default function DashboardSideBar() {
           to="/dashboard/wallets"
           icon={<TokensIcon fontSize="large" />}
           title={<Trans>Tokens</Trans>}
-          end
         />
         <SideBarItem
           to="/dashboard/nfts"
           icon={<NFTsIcon fontSize="large" />}
           title={<Trans>NFTs</Trans>}
-          end
         />
         <SideBarItem
           to="/dashboard/wallets/offers/manage"
           icon={<OffersIcon fontSize="large" />}
           title={<Trans>Offers</Trans>}
-          end
         />
 
         <StyledSideBarDivider />
@@ -78,7 +75,6 @@ export default function DashboardSideBar() {
           to="/dashboard/plot"
           icon={<PlotsIcon fontSize="large" />}
           title={<Trans>Plots</Trans>}
-          end
         />
         {/*}
         <SideBarItem

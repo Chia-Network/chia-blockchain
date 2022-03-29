@@ -31,7 +31,7 @@ export default deepmerge(greyTheme, {
       default: '#fafafa',
     },
     primary: {
-      main: '#00C853',
+      main: '#3AAC59', // '#00C853',
       contrastText: '#ffffff',
     },
     secondary: {
@@ -52,6 +52,11 @@ export default deepmerge(greyTheme, {
   },
   drawer: {
     width: '100px',
+  },
+  mixins: {
+    toolbar: {
+      minHeight: '90px',
+    },
   },
   components: {
     MuiButton: {

@@ -23,7 +23,7 @@ export { default as Fee } from './Fee';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
 export { default as DashboardTitle } from './DashboardTitle';
-export { default as Dropdown } from './Dropdown';
+export { default as Dropdown, DropdownActions } from './Dropdown';
 export { default as Flex } from './Flex';
 export { default as Fonts } from './Fonts';
 export { default as Form } from './Form';

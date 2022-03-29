@@ -1,12 +1,13 @@
-import React, { ReactNode } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  More,
+  Button,
   Flex,
   ConfirmDialog,
   useOpenDialog,
   useShowDebugInformation,
   AlertDialog,
+  DropdownActions,
 } from '@chia/core';
 import { useNavigate } from 'react-router';
 import {
@@ -14,20 +15,24 @@ import {
   Typography,
   ListItemIcon,
   MenuItem,
+  Tab,
+  Tabs,
+  TabPanel,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useDeleteUnconfirmedTransactionsMutation, useGetSyncStatusQuery } from '@chia/api-react';
-import WalletStatus from './WalletStatus';
+import WalletName from './WalletName';
 
 type StandardWalletProps = {
   walletId: number;
   actions?: ({ onClose } : { onClose: () => void } ) => ReactNode;
+  children?: ReactNode;
 };
 
 export default function WalletHeader(props: StandardWalletProps) {
-  const { walletId, actions } = props;
+  const { walletId, actions, children } = props;
   const openDialog = useOpenDialog();
   const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
   const showDebugInformation = useShowDebugInformation();
@@ -68,9 +73,10 @@ export default function WalletHeader(props: StandardWalletProps) {
   return (
     <Flex gap={1} alignItems="center">
       <Flex flexGrow={1} gap={1}>
-
+        {children}
       </Flex>
       <Flex gap={1} alignItems="center">
+        {/* 
         <Flex alignItems="center">
           <Typography variant="body1" color="textSecondary">
             <Trans>Status:</Trans>
@@ -78,9 +84,11 @@ export default function WalletHeader(props: StandardWalletProps) {
           &nbsp;
           <WalletStatus height={showDebugInformation} />
         </Flex>
-        <More>
+        */}
+        
+        <DropdownActions label={<Trans>Actions</Trans>}>
           {({ onClose }) => (
-            <Box>
+            <>
               <MenuItem
                 onClick={() => {
                   onClose();
@@ -94,10 +102,10 @@ export default function WalletHeader(props: StandardWalletProps) {
                   <Trans>Delete Unconfirmed Transactions</Trans>
                 </Typography>
               </MenuItem>
-              {actions && actions({ onClose })}
-            </Box>
+              {actions?.({ onClose })}
+            </>
           )}
-        </More>
+        </DropdownActions>
       </Flex>
     </Flex>
   );

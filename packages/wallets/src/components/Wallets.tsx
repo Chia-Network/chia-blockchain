@@ -30,7 +30,9 @@ export default function Wallets() {
         {/*
         <Route element={<WalletsList />} index />
         */}
-        <Route path="create/*" element={<WalletCreate />} />
+        <Route element={<LayoutDashboardSub outlet />}>
+          <Route path="create/*" element={<WalletCreate />} />
+        </Route>
         <Route path="offers/*" element={<CreateOffer />} />
         {!!wallets && (
           <Route path="*" element={<Navigate to="1" />} />
