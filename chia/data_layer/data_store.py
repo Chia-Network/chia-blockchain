@@ -23,7 +23,6 @@ from chia.data_layer.data_layer_types import (
     Status,
     InsertionData,
     DeletionData,
-    DownloadMode,
     Subscription,
     DiffData,
     OperationType,

@@ -188,17 +188,16 @@ class DeletionData:
     root_status: Status
 
 
-class DownloadMode(IntEnum):
-    LATEST = 0
-    HISTORY = 1
+@dataclass(frozen=True)
+class DataServerInfo:
+    ip: str
+    port: uint16
 
 
 @dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    mode: DownloadMode
-    ip: str
-    port: uint16
+    data_servers_info: List[DataServerInfo]
 
 
 @dataclass(frozen=True)

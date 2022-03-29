@@ -7,7 +7,6 @@ from pathlib import Path
 
 import aiosqlite
 
-from chia.data_layer.data_layer_types import NodeType, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
@@ -36,16 +35,6 @@ async def download_client_data(delta: bool, foldername: str) -> None:
                 print(f"Parsing file {filename}.")
                 t1 = time.time()
                 generation += 1
-                with open(filename, "r") as tree_reader:
-                    tree = tree_reader.readlines()
-                    for tree_entry in tree:
-                        tree_data = tree_entry.split()
-                        if tree_data[0] == "1":
-                            await data_store.insert_node(NodeType.INTERNAL, tree_data[1], tree_data[2])
-                        else:
-                            assert tree_data[0] == "2"
-                            await data_store.insert_node(NodeType.TERMINAL, tree_data[1], tree_data[2])
-                await data_store.insert_batch_root(tree_id, bytes32.from_hexstr(root_entry), Status.COMMITTED)
                 t2 = time.time()
                 print(f"Inserted root {root_entry.rstrip()}. Total time: {t2 - t1}")
                 tot += t2 - t1

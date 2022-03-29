@@ -16,7 +16,7 @@ from chia.util.ints import uint32, uint64, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
-from chia.data_layer.download_data import download_data
+from chia.data_layer.download_data import download_delta_files, parse_delta_files
 from chia.data_layer.data_layer_server import DataLayerServer
 
 
@@ -161,47 +161,6 @@ class DataLayer:
                 prev = record
         return root_history
 
-    async def _validate_batch(
-        self,
-        tree_id: bytes32,
-        to_check: List[SingletonRecord],
-        min_generation: int,
-    ) -> bool:
-        root: Optional[Root] = await self.data_store.get_tree_root(tree_id=tree_id)
-        assert root is not None
-        if to_check[0].root == (root.node_hash if root.node_hash is not None else self.none_bytes):
-            self.log.info(
-                f"Validated chain hash {to_check[0].root} in downloaded datastore. "
-                f"Wallet generation: {to_check[0].generation}"
-            )
-        else:
-            return False
-
-        max_generation = root.generation
-        last_checked_hash = to_check[0].root
-        to_check.pop(0)
-
-        for record in to_check:
-            # Ignore two consecutive identical root hashes, as we've already validated it.
-            if record.root == last_checked_hash:
-                self.log.info(f"Skipped checking {record.root}, as it matches the previously checked hash.")
-                continue
-            # Pick the latest root in our data store with the desired hash, before our already validated data.
-            root = await self.data_store.get_last_tree_root_by_hash(
-                tree_id, None if record.root == self.none_bytes else record.root, max_generation
-            )
-            if root is None or root.generation < min_generation:
-                return False
-
-            self.log.info(
-                f"Validated chain hash {record.root} in downloaded datastore. "
-                f"Wallet generation: {record.generation}"
-            )
-            max_generation = root.generation
-            last_checked_hash = record.root
-
-        return True
-
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -224,82 +183,57 @@ class DataLayer:
         if wallet_current_generation is not None and uint32(wallet_current_generation) == singleton_record.generation:
             self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
             return
-        to_check: List[SingletonRecord] = []
-        if subscription.mode is DownloadMode.LATEST:
-            to_check = [singleton_record]
-        if subscription.mode is DownloadMode.HISTORY:
-            to_check = await self.wallet_rpc.dl_history(
-                launcher_id=tree_id, min_generation=uint32(wallet_current_generation + 1)
-            )
-        # No root hash changes in the new wallet records, so ignore.
-        # TODO: wallet should handle identical hashes part?
-        if (
-            old_root is not None
-            and to_check[0].root == (old_root.node_hash if old_root.node_hash is not None else self.none_bytes)
-            and len(set(record.root for record in to_check)) == 1
-        ):
-            await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
-            self.log.info(
-                f"Fetch data: fast-forwarded for {tree_id} as all on-chain hashes are identical to our root hash. "
-                f"Current wallet generation saved: {int(singleton_record.generation)}"
-            )
-            return
-        # Delete all identical root hashes to our old root hash, until we detect a change.
-        if old_root is not None:
-            while to_check[-1].root == (old_root.node_hash if old_root.node_hash is not None else self.none_bytes):
-                to_check.pop()
+
+        to_check = await self.wallet_rpc.dl_history(
+            launcher_id=tree_id, min_generation=uint32(wallet_current_generation + 1)
+        )
 
         self.log.info(
-            f"Downloading and validating {subscription.tree_id}. "
+            f"Downloading files {subscription.tree_id}. "
             f"Current wallet generation: {int(wallet_current_generation)}. "
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        try:
-            downloaded = await download_data(self.data_store, subscription, singleton_record.root)
-        except asyncio.CancelledError:
-            raise
-        except aiohttp.client_exceptions.ClientConnectorError:
-            self.log.error(f"Server unavailable for {tree_id}.")
-            downloaded = False
-        except RuntimeError as e:
-            self.log.error(f"Server sended invalid data for {tree_id}: {e}.")
-            downloaded = False
-        except Exception as e:
-            self.log.error(f"Exception while downloading data for {tree_id}: {e}.")
-            downloaded = False
-        if not downloaded:
-            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-            raise RuntimeError("Could not download the data.")
-        self.log.info(f"Successfully downloaded data for {tree_id}.")
-
-        # Light validation: check the new set of operations against the new set of wallet records.
-        # If this matches, we know all data will match, as we've previously checked that data matches
-        # for `min_generation` data store root and `wallet_current_generation` wallet record.
-        min_generation = (0 if old_root is None else old_root.generation) + 1
-        try:
-            is_valid: bool = await self._validate_batch(tree_id, to_check, min_generation)
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            self.log.error(f"Error in validate batch for {tree_id}: {e}")
-            is_valid = False
-
-        # If for some reason we have mismatched data using the light checks, recheck all history as a fallback.
-        if not is_valid:
-            self.log.warning(f"Light validation failed for {tree_id}. Validating all history.")
-            to_check = await self.wallet_rpc.dl_history(launcher_id=tree_id, min_generation=uint32(1))
+        client_download_foldername = self.config.get("client_download_location")
+        downloaded = False
+        for server_info in subscription.data_servers_info:
             try:
-                is_valid = await self._validate_batch(tree_id, to_check, 0)
+                downloaded = await download_delta_files(
+                    subscription.tree_id,
+                    int(wallet_current_generation),
+                    singleton_record.generation,
+                    server_info,
+                    client_download_foldername,
+                )
+                if downloaded:
+                    break
             except asyncio.CancelledError:
                 raise
+            except aiohttp.client_exceptions.ClientConnectorError:
+                self.log.error(f"Server {server_info} unavailable for {tree_id}.")
+                downloaded = False
             except Exception as e:
-                self.log.error(f"Error in validate batch for {tree_id}: {e}")
-                is_valid = False
-            if not is_valid:
-                await self.data_store.set_validated_wallet_generation(tree_id, 0)
-                await self.data_store.rollback_to_generation(tree_id, 0)
-                raise RuntimeError("Could not validate on-chain data. Downloading from scratch as a fallback.")
+                self.log.error(f"Exception while downloading files for {tree_id}: {e}.")
+                downloaded = False
+        if downloaded:
+            self.log.info(f"Successfully downloaded data for {tree_id}.")
+        else:
+            self.log.error(f"Can't download files for {tree_id}.")
+            return
+
+        self.log.info(f"Parsing downloaded files for {subscription.tree_id}.")
+        try:
+            await parse_delta_files(
+                self.data_store,
+                tree_id,
+                int(wallet_current_generation),
+                singleton_record.generation,
+                [record.root for record in to_check],
+                client_download_foldername,
+            )
+        except Exception as e:
+            self.log.error(f"Can't find on-chain hash in our local store. {type(e)} {e}")
+            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
 
         self.log.info(
             f"Finished downloading and validating {subscription.tree_id}. "
