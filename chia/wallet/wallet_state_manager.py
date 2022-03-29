@@ -900,12 +900,14 @@ class WalletStateManager:
                                     dl_wallet = wallet
                                     break
                             else:  # No DL wallet exists yet
-                                dl_wallet = await DataLayerWallet.create_new_dl_wallet(self, self.main_wallet, in_transaction=in_transaction)
+                                dl_wallet = await DataLayerWallet.create_new_dl_wallet(
+                                    self, self.main_wallet, in_transaction=in_transaction
+                                )
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
                                 spend=launcher_spend,
                                 height=child.spent_height,
-                                in_transaction=True,
+                                in_transaction=in_transaction,
                             )
                         continue
 
