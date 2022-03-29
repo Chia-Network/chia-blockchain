@@ -74,7 +74,7 @@ jobs:
 
     - name: Test clvm code with pytest
       run: |
-        ./activate
+        ./venv/Scripts/activate.ps1
         ./venv/Scripts/py.test tests/clvm/test_*.py -s -v --durations 0 -n 4
 
 # Omitted resource usage check

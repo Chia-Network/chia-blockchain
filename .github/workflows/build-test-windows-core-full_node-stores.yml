@@ -80,7 +80,7 @@ jobs:
 
     - name: Test core-full_node-stores code with pytest
       run: |
-        ./activate
+        ./venv/Scripts/activate.ps1
         ./venv/Scripts/py.test tests/core/full_node/stores/test_*.py -s -v --durations 0 -n 4
 
     - name: Check resource usage
