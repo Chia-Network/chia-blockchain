@@ -1426,6 +1426,7 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
+                    in_transaction=True,
                 )
 
         try:
@@ -1459,6 +1460,7 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
+                    in_transaction=True,
                 )
 
         await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]))
