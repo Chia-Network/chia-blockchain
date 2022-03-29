@@ -1,5 +1,4 @@
 import logging
-import sqlite3
 from typing import List, Optional, Set, Tuple
 
 import pytest
