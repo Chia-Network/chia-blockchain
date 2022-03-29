@@ -5,9 +5,12 @@ After `chia plots create` becomes obsolete, consider removing it from there.
 import asyncio
 import logging
 import pkg_resources
-from chia.plotting.create_plots import create_plots, resolve_plot_keys
+from chia.plotting.create_plots import create_plots, resolve_plot_keys, add_plot_dirs_to_config
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from chia.plotting.util import add_plot_directory
+from chia.util.config import load_config, get_config_lock
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ class Params:
         self.exclude_final_dir = args.exclude_final_dir
 
 
-def plot_chia(args, root_path):
+def plot_chia(args, root_path: Path):
     if args.size < 32 and not args.override:
         print("k=32 is the minimum size for farming.")
         print("If you are testing and you want to use smaller size please add the --override flag.")
@@ -54,4 +57,8 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.run(create_plots(Params(args), plot_keys, root_path))
+    config = load_config(root_path, "config.yaml")
+    created_plots, existing_plots = asyncio.run(create_plots(Params(args), plot_keys, config["min_mainnet_k_size"]))
+    add_plot_dirs_to_config(
+        root_path, list(created_plots.values()) + list(existing_plots.values()), args.exclude_final_dir, None
+    )
