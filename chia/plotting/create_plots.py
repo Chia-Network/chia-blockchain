@@ -13,7 +13,8 @@ from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config
+from chia.util.config import config_path_for_filename, load_config, get_config_lock
+from chia.util.ints import uint8
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
@@ -141,29 +142,46 @@ async def resolve_plot_keys(
     ).resolve()
 
 
-async def create_plots(
-    args,
-    keys: PlotKeys,
-    root_path,
-    use_datetime=True,
-    test_private_keys: Optional[List] = None,
-    test_config_cache: Optional[Dict] = None,
-) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
-
+def add_plot_dirs_to_config(
+    root_path: Path, plot_paths: List[Path], dont_add_dir: bool, test_config_cache: Optional[Dict]
+) -> None:
     if test_config_cache is None:
         config_filename = config_path_for_filename(root_path, "config.yaml")
         config = load_config(root_path, config_filename)
     else:
         # Don't re-read config for every plot for tests, for efficiency
         config = test_config_cache
+    for plot_path in plot_paths:
+        with get_config_lock(root_path, "config.yaml"):
+            resolved_final_dir: str = str(plot_path.parent.resolve())
+            plot_directories_list: str = config["harvester"]["plot_directories"]
 
+            if dont_add_dir:
+                log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
+                if resolved_final_dir in plot_directories_list:
+                    log.warning(
+                        f"Directory {resolved_final_dir} already exists for harvester, please remove it manually"
+                    )
+            else:
+                if resolved_final_dir not in plot_directories_list:
+                    # Adds the directory to the plot directories if it is not present
+                    log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
+                    add_plot_directory(root_path, resolved_final_dir)
+
+
+async def create_plots(
+    args,
+    keys: PlotKeys,
+    min_k_size: uint8,
+    use_datetime: bool = True,
+    test_private_keys: Optional[List] = None,
+) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
-
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
     num = args.num
 
-    if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
+    if args.size < min_k_size and test_private_keys is None:
         log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
     if args.size < 22:
         log.warning("k under 22 is not supported. Increasing k to 22")
@@ -238,19 +256,6 @@ async def create_plots(
         else:
             filename = f"plot-k{args.size}-{plot_id}.plot"
         full_path: Path = args.final_dir / filename
-
-        resolved_final_dir: str = str(Path(args.final_dir).resolve())
-        plot_directories_list: str = config["harvester"]["plot_directories"]
-
-        if args.exclude_final_dir:
-            log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
-            if resolved_final_dir in plot_directories_list:
-                log.warning(f"Directory {resolved_final_dir} already exists for harvester, please remove it manually")
-        else:
-            if resolved_final_dir not in plot_directories_list:
-                # Adds the directory to the plot directories if it is not present
-                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                config = add_plot_directory(root_path, resolved_final_dir)
 
         if not full_path.exists():
             log.info(f"Starting plot {i + 1}/{num}")
