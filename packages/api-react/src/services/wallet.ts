@@ -1,4 +1,13 @@
-import { Wallet, CAT, DID, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
+import {
+  CAT,
+  DID,
+  Farmer,
+  NFT,
+  OfferTradeRecord,
+  Pool,
+  Wallet,
+  WalletType,
+} from '@chia/api';
 import type { PlotNFT, PlotNFTExternal, Transaction, WalletBalance, WalletConnections } from '@chia/api';
 import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
@@ -16,9 +25,10 @@ const apiWithTag = api.enhanceEndpoints(
       'DIDRecoveryList',
       'Keys',
       'LoggedInFingerprint',
-      'PlotNFT',
+      'NFT',
       'OfferCounts',
       'OfferTradeRecord',
+      'PlotNFT',
       'PoolWalletStatus',
       'TransactionCount',
       'Transactions',
@@ -1575,6 +1585,68 @@ export const walletApi = apiWithTag.injectEndpoints({
     }),
 
     // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
+
+    // NFTs
+    getCurrentNFTs: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getCurrentNfts',
+        service: NFT,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'NFT', id: walletId }, { type: 'NFT', id: 'LIST' }]
+        : [],
+    }),
+
+    transferNFT: build.mutation<any, {
+      walletId: number;
+      nftCoinInfo: any;
+      newDid: string;
+      newDidParent: string;
+      newDidInnerHash: string;
+      newDidAmount: number;
+      tradePrice: number;
+    }>({
+      query: ({
+        walletId,
+        nftCoinInfo,
+        newDid,
+        newDidParent,
+        newDidInnerHash,
+        newDidAmount,
+        tradePrice,
+      }) => ({
+        command: 'transferNft',
+        service: NFT,
+        args: [
+          walletId,
+          nftCoinInfo,
+          newDid,
+          newDidParent,
+          newDidInnerHash,
+          newDidAmount,
+          tradePrice,
+        ],
+      }),
+      invalidatesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'NFT', id: walletId }]
+        : [],
+    }),
+
+    receiveNFT: build.mutation<any, {
+      walletId: number;
+      spendBundle: any,
+      fee: number;
+    }>({
+      query: ({ walletId, spendBundle, fee }) => ({
+        command: 'receiveNft',
+        service: NFT,
+        args: [walletId, spendBundle, fee],
+      }),
+      invalidatesTags: (result, _error, { walletId }) => result
+        ? [{ type: 'NFT', id: 'LIST' }]
+        : [],
+    })
   }),
 });
 
@@ -1652,4 +1724,9 @@ export const {
   useGetDIDRecoveryListQuery,
   useGetDIDInformationNeededForRecoveryQuery,
   useGetDIDCurrentCoinInfoQuery,
+
+  // NFTs
+  useGetCurrentNFTsQuery,
+  useTransferNFTMutation,
+  useReceiveNFTMutation,
 } = walletApi;
