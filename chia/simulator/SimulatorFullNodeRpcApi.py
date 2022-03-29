@@ -1,11 +1,11 @@
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional, Any
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.util.bech32m import decode_puzzle_hash
 
 
 class SimulatorFullNodeRpcApi(FullNodeRpcApi):
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Any]:
         routes = super().get_routes()
         routes["/farm_tx_block"] = self.farm_tx_block
         return routes
