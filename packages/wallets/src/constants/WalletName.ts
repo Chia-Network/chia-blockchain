@@ -35,6 +35,9 @@ const WalletName = {
   [WalletType.NFT]: defineMessage({
     message: 'NFT Wallet',
   }),
+  [WalletType.DATA_LAYER]: defineMessage({
+    message: 'Datalayer Wallet',
+  }),
 }
 
 export default WalletName;
