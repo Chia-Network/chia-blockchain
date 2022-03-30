@@ -1,6 +1,7 @@
 # flake8: noqa: F811, F401
 
 import logging
+from statistics import mean
 import time
 
 import pytest
@@ -69,12 +70,22 @@ class TestMempoolPerformance:
         blocks = bt.get_consecutive_blocks(3, blocks)
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
+        fast_durations: List[float] = []
+        slow_durations: List[float] = []
+        
         for idx, block in enumerate(blocks):
             start_t_2 = time.time()
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             end_t_2 = time.time()
             duration = end_t_2 - start_t_2
             if idx >= len(blocks) - 3:
+                slow_durations.append(duration)
                 assert duration < 0.1
             else:
+                fast_durations.append(duration)
                 assert duration < 0.0003
+
+        fast_mean = mean(fast_durations)
+        slow_mean = mean(slow_durations)
+
+        assert fast_mean < 0.0002 and slow_mean < 0.1
