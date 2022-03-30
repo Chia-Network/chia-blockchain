@@ -332,6 +332,11 @@ full_node:
   #         the particular system we're running on. Defaults to "full".
   db_sync: "auto"
 
+  # the number of threads used to read from the blockchain database
+  # concurrently. There's always only 1 writer, but the number of readers is
+  # configurable
+  db_readers: 4
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v2_CHALLENGE.sqlite
   # peer_db_path is deprecated and has been replaced by peers_file_path
@@ -360,6 +365,11 @@ full_node:
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
   reserved_cores: 0
+
+  # set this to true to not offload heavy lifting into separate child processes.
+  # this option is mostly useful when profiling, since only the main process is
+  # profiled.
+  single_threaded: False
 
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30

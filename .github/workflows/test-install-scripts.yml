@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -125,6 +125,10 @@ jobs:
       if: ${{ matrix.distribution.type == 'arch' }}
       run: |
         pacman --noconfirm --refresh base --sync git sudo
+        # The behavior we follow in install.sh is unique with Arch in that
+        # we leave it to the user to install the appropriate version of python,
+        # so we need to install python here in order for the test to succeed.
+        pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
 
     - name: Prepare CentOS
       if: ${{ matrix.distribution.type == 'centos' }}
@@ -177,7 +181,7 @@ jobs:
 
     # after installing git so we use that copy
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 

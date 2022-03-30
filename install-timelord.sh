@@ -20,11 +20,12 @@ CHIAVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dep
 ubuntu_cmake_install() {
 	UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
 	if [ "$UBUNTU_PRE_2004" = "True" ]; then
-		echo "Ubuntu version is pre 20.04LTS - installing CMake with snap."
-		sudo apt-get install snap -y
+		echo "Installing CMake with snap."
+		sudo apt-get install snapd -y
 		sudo apt-get remove --purge cmake -y
 		hash -r
 		sudo snap install cmake --classic
+		. /etc/profile
 	else
 		echo "Ubuntu 20.04LTS and newer support CMake 3.16+"
 		sudo apt-get install cmake -y
