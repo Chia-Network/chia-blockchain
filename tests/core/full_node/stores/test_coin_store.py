@@ -183,17 +183,15 @@ class TestCoinStoreWithBlocks:
 
                         if cache_size > 0:
                             # Check that we can't spend a coin twice in cache
-                            with pytest.raises(ValueError) as exec_info:
-                                await coin_store._set_spent([r2.name for r2 in records], block.height)
-                            assert "Coin already spent" in exec_info.value.args[0]
+                            with pytest.raises(ValueError, match="Coin already spent"):
+                                await coin_store._set_spent([r.name for r in records], block.height)
 
-                            for r3 in records:
-                                coin_store.coin_record_cache.remove(r3.name)
+                            for r in records:
+                                coin_store.coin_record_cache.remove(r.name)
 
                         # Check that we can't spend a coin twice in DB
-                        with pytest.raises(ValueError) as exec_info:
-                            await coin_store._set_spent([r2.name for r2 in records], block.height)
-                        assert "Invalid operation to set spent" in exec_info.value.args[0]
+                        with pytest.raises(ValueError, match="Invalid operation to set spent"):
+                            await coin_store._set_spent([r.name for r in records], block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
