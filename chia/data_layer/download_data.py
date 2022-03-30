@@ -2,7 +2,8 @@ import os
 from typing import List
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_types import NodeType, Status, DataServerInfo
+from chia.data_layer.data_layer_types import NodeType, Status
+from chia.types.ints import uint16
 
 
 def get_delta_filename(tree_id: bytes32, generation: int) -> str:
@@ -13,10 +14,11 @@ async def download_delta_files(
     tree_id: bytes32,
     existing_generation: int,
     target_generation: int,
-    server_info: DataServerInfo,
+    ip: str,
+    port: uint16,
     foldername: str,
-) -> None:
-    pass
+) -> bool:
+    return True
     """
     while existing_generation + 1 <= target_generation:
         existing_generation += 1

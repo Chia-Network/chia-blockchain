@@ -26,13 +26,13 @@ from chia.data_layer.data_layer_types import (
     Subscription,
     DiffData,
     OperationType,
+    DataServersInfo,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint16
 
 log = logging.getLogger(__name__)
 
@@ -108,9 +108,7 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    mode INTEGER NOT NULL,
-                    ip TEXT NOT NULL,
-                    port INTEGER NOT NULL,
+                    server_list_bytes BLOB NOT NULL,
                     validated_wallet_generation INTEGER NOT NULL,
                     PRIMARY KEY(tree_id)
                 )
@@ -1193,28 +1191,26 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            server_list_bytes = bytes(subscription.data_servers_info)
             await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, mode, ip, port, validated_wallet_generation) "
-                "VALUES (:tree_id, :mode, :ip, :port, 0)",
+                "INSERT INTO subscriptions(tree_id, server_list_bytes, validated_wallet_generation) "
+                "VALUES (:tree_id, :server_list_bytes, 0)",
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "mode": subscription.mode.value,
-                    "ip": subscription.ip,
-                    "port": subscription.port,
+                    "server_list_bytes": server_list_bytes,
                 },
             )
 
     async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            server_list_bytes = bytes(subscription.data_servers_info)
             await self.db.execute(
                 """
-                UPDATE subscriptions SET ip = :ip, port = :port, mode = :mode WHERE tree_id == :tree_id
+                UPDATE subscriptions SET server_list_bytes = :server_list_bytes WHERE tree_id == :tree_id
                 """,
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "mode": subscription.mode.value,
-                    "ip": subscription.ip,
-                    "port": subscription.port,
+                    "server_list_bytes": server_list_bytes,
                 },
             )
 
@@ -1249,10 +1245,8 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                mode_value = int(row["mode"])
-                ip = row["ip"]
-                port = uint16(row["port"])
-                subscriptions.append(Subscription(tree_id, DownloadMode(mode_value), ip, port))
+                servers_list = DataServersInfo.from_bytes(row["server_list_bytes"])
+                subscriptions.append(Subscription(tree_id, servers_list))
 
         return subscriptions
 

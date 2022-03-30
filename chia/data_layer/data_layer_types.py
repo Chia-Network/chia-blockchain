@@ -8,6 +8,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
+from chia.util.streamable import Streamable, streamable
 
 
 class Status(IntEnum):
@@ -188,16 +189,17 @@ class DeletionData:
     root_status: Status
 
 
+@streamable
 @dataclass(frozen=True)
-class DataServerInfo:
-    ip: str
-    port: uint16
+class DataServersInfo(Streamable):
+    ip: List[str]
+    port: List[uint16]
 
 
 @dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    data_servers_info: List[DataServerInfo]
+    data_servers_info: DataServersInfo
 
 
 @dataclass(frozen=True)

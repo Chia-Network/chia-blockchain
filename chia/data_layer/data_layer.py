@@ -5,7 +5,7 @@ import aiosqlite
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root, DiffData
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, Root, DiffData
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -194,15 +194,19 @@ class DataLayer:
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        client_download_foldername = self.config.get("client_download_location")
+        client_download_foldername: str = self.config.get(
+            "client_download_location",
+            "data_layer/client_downloaded_files",
+        )
         downloaded = False
-        for server_info in subscription.data_servers_info:
+        for ip, port in zip(subscription.data_servers_info.ip, subscription.data_servers_info.port):
             try:
                 downloaded = await download_delta_files(
                     subscription.tree_id,
                     int(wallet_current_generation),
                     singleton_record.generation,
-                    server_info,
+                    ip,
+                    port,
                     client_download_foldername,
                 )
                 if downloaded:
@@ -210,7 +214,7 @@ class DataLayer:
             except asyncio.CancelledError:
                 raise
             except aiohttp.client_exceptions.ClientConnectorError:
-                self.log.error(f"Server {server_info} unavailable for {tree_id}.")
+                self.log.error(f"Server {ip}:{port} unavailable for {tree_id}.")
                 downloaded = False
             except Exception as e:
                 self.log.error(f"Exception while downloading files for {tree_id}: {e}.")
