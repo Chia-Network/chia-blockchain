@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
+
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.util.bech32m import decode_puzzle_hash
