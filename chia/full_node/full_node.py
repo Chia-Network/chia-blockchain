@@ -1297,10 +1297,9 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
-            #       expected "bytes32"  [arg-type]
-            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
+            fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(fork_height)
+            assert fork_hash is not None
+            fork_block = self.blockchain.block_record(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,

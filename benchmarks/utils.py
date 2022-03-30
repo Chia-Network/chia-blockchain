@@ -1,9 +1,11 @@
+from secrets import token_bytes
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.util.ints import uint64, uint32, uint8
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -49,16 +51,11 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
 
 
 def rand_bytes(num) -> bytes:
-    ret = bytearray(num)
-    for i in range(num):
-        ret[i] = random.getrandbits(8)
-    return bytes(ret)
+    return token_bytes(num)
 
 
 def rand_hash() -> bytes32:
-    # TODO: address hint errors and remove ignores
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return rand_bytes(32)  # type: ignore[return-value]
+    return bytes32(rand_bytes(32))
 
 
 def rand_g1() -> G1Element:
@@ -72,9 +69,7 @@ def rand_g2() -> G2Element:
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    # TODO: address hint errors and remove ignores
-    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
-    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
+    return ClassgroupElement(bytes100(rand_bytes(100)))
 
 
 def rand_vdf() -> VDFInfo:

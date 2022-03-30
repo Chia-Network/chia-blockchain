@@ -422,10 +422,8 @@ class TestFullNodeStore:
         )
 
         # Get signage point by hash
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_signage_point" of "FullNodeStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        assert store.get_signage_point(saved_sp_hash) is not None  # type: ignore[arg-type]
+        assert saved_sp_hash is not None
+        assert store.get_signage_point(saved_sp_hash) is not None
         assert store.get_signage_point(std_hash(b"2")) is None
 
         # Test adding signage points before genesis
