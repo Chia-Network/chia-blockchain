@@ -1431,6 +1431,7 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
+                    in_transaction=False,
                 )
 
         try:
@@ -1464,6 +1465,7 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
+                    in_transaction=False,
                 )
 
         await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]))
@@ -1523,8 +1525,7 @@ class WalletRpcApi:
                         bytes32.from_hexstr(request["launcher_id"]),
                         bytes32.from_hexstr(request["new_root"]),
                         fee=uint64(request.get("fee", 0)),
-                        # TODO: kind of...  in the lock anyways
-                        in_transaction=True,
+                        in_transaction=False,
                     )
                     for record in records:
                         await self.service.wallet_state_manager.add_pending_transaction(record)
@@ -1544,9 +1545,8 @@ class WalletRpcApi:
                     #       Otherwise spends are vulnerable to signature subtraction.
                     tx_records: List[TransactionRecord] = []
                     for launcher, root in request["updates"].items():
-                        # TODO: kind of...  in the lock anyways
                         records = await wallet.create_update_state_spend(
-                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root), in_transaction=True
+                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root), in_transaction=False
                         )
                         tx_records.extend(records)
                     # Now that we have all the txs, we need to aggregate them all into just one spend

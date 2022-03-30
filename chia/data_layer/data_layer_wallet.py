@@ -96,6 +96,7 @@ class DataLayerWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         name: Optional[str] = "DataLayer Wallet",
+        in_transaction: bool = False,
     ) -> _T_DataLayerWallet:
         """
         This must be called under the wallet state manager lock
@@ -110,12 +111,17 @@ class DataLayerWallet:
             if wallet.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DATA_LAYER.value, "")
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name,
+            WalletType.DATA_LAYER.value,
+            "",
+            in_transaction=in_transaction,
+        )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = uint8(self.wallet_info.id)
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
 
         return self
 
