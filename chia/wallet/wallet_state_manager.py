@@ -612,7 +612,7 @@ class WalletStateManager:
                         parent_coin_state.spent_height,
                         parent_coin_state.coin.puzzle_hash,
                     )
-                    self.state_changed("added_unacknowledged_token")
+                    self.state_changed("added_stray_cat")
 
         return wallet_id, wallet_type
 
