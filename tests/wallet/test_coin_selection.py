@@ -82,6 +82,30 @@ class TestCoinSelection:
             assert sum([coin.amount for coin in result]) >= target_amount
 
     @pytest.mark.asyncio
+    async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
+        coin_amounts = [5000000000000]
+        for i in range(10000):
+            coin_amounts.append(1)
+
+        spendable_amount = uint128(sum(coin_amounts))
+
+        coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for a in coin_amounts
+        ]
+        target_amount = uint128(10000)
+        result: Set[Coin] = await select_coins(
+            spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            uint128(target_amount),
+        )
+        assert result is not None
+        assert sum([coin.amount for coin in result]) >= target_amount
+
+    @pytest.mark.asyncio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [
