@@ -1,15 +1,18 @@
-import aiosqlite
-import aiohttp
 import json
 import logging
-from typing import Any, Dict
-from aiohttp import web  # lgtm [py/import and import from]
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict
+
+import aiohttp
+import aiosqlite
+from aiohttp import web  # lgtm [py/import and import from]
+
+from chia.data_layer.data_layer_types import InsertionData, TerminalNode
 from chia.data_layer.data_store import DataStore
-from chia.util.db_wrapper import DBWrapper
+from chia.server.upnp import UPnP
 from chia.types.blockchain_format.tree_hash import bytes32
-from chia.data_layer.data_layer_types import TerminalNode, InsertionData
+from chia.util.db_wrapper import DBWrapper
 
 
 @dataclass
@@ -23,15 +26,26 @@ class DataLayerServer:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(db_wrapper=self.db_wrapper)
+        self.port = self.config["host_port"]
+
+        # Setup UPnP for the data_layer_service port
+        self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
+        self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
+
         app = web.Application()
         app.router.add_route("GET", "/ws", self.websocket_handler)
         self.runner = web.AppRunner(app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.config["host_port"])
+        self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.port)
         await self.site.start()
         self.log.info("Started Data Layer Server.")
 
     async def stop(self) -> None:
+
+        self.upnp.release(self.port)  # type: ignore[no-untyped-call]
+        # this is a blocking call, waiting for the UPnP thread to exit
+        self.upnp.shutdown()  # type: ignore[no-untyped-call]
+
         self.log.info("Stopped Data Layer Server.")
         await self.runner.cleanup()
 
