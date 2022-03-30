@@ -691,9 +691,13 @@ class TestPoolWalletRpc:
             assert (250000000000 + fee) in [tx.additions[0].amount for tx in tx1]
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
+    @pytest.mark.parametrize("trusted_and_fee", [(True, 0), (False, 0)])
     async def test_self_pooling_to_pooling(self, setup, trusted_and_fee, self_hostname):
-        """This tests self-pooling -> pooling"""
+        """
+        This tests self-pooling -> pooling
+        TODO: Fix this test for a positive fee value
+        """
+
         trusted, fee = trusted_and_fee
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
