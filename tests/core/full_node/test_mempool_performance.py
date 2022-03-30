@@ -77,4 +77,4 @@ class TestMempoolPerformance:
             if idx >= len(blocks) - 3:
                 assert duration < 0.1
             else:
-                assert duration < 0.0002
+                assert duration < 0.0003
