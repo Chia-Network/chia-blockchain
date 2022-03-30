@@ -83,7 +83,10 @@ def generate_replacements(conf, dir):
         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-    replacements["PYTEST_PARALLEL_ARGS"] = " -n 4" if conf["parallel"] else " -n 0"
+    if conf.get("custom_parallel_n", None):
+        replacements["PYTEST_PARALLEL_ARGS"] = f" -n {conf['custom_parallel_n']}"
+    else:
+        replacements["PYTEST_PARALLEL_ARGS"] = " -n 4" if conf["parallel"] else " -n 0"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
     replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
