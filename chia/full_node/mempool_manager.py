@@ -85,10 +85,10 @@ class MempoolManager:
         self,
         coin_store: CoinStore,
         consensus_constants: ConsensusConstants,
+        fee_tracker: FeeTracker,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
-        fee_tracker
     ):
         self.constants: ConsensusConstants = consensus_constants
 
@@ -539,6 +539,7 @@ class MempoolManager:
         if self.peak == new_peak:
             return []
         assert new_peak.timestamp is not None
+        included_items = []
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -546,43 +547,16 @@ class MempoolManager:
         if use_optimization:
             # We don't reinitialize a mempool, just kick removed items
             for coin_record in coin_changes:
-<<<<<<< HEAD
                 if coin_record.name in self.mempool.removals:
                     item = self.mempool.removals[coin_record.name]
                     self.mempool.remove_from_pool(item)
                     self.remove_seen(item.spend_bundle_name)
+                    included_items.append(item)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)
             for item in old_pool.spends.values():
-                _, result, _ = await self.add_spendbundle(
-=======
-                changed_coins_set.add(coin_record.coin.name())
-
-        old_pool = self.mempool
-        self.mempool = Mempool(self.mempool_max_total_cost)
-        included_items = []
-        for item in old_pool.spends.values():
-            if use_optimization:
-                # If use_optimization, we will automatically re-add all bundles where none of it's removals were
-                # spend (since we only advanced 1 transaction block). This is a nice benefit of the coin set model
-                # vs account model, all spends are guaranteed to succeed.
-                failed = False
-                for removed_coin in item.removals:
-                    if removed_coin.name() in changed_coins_set:
-                        failed = True
-                        break
-                if not failed:
-                    self.mempool.add_to_pool(item)
-                else:
-                    # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                    # successfully added to the new mempool. In this case, remove it from seen, so in the case of a
-                    # reorg, it can be resubmitted
-                    self.remove_seen(item.spend_bundle_name)
-                    included_items.append(item)
-            else:
                 _, result, err = await self.add_spendbundle(
->>>>>>> 37d13cfdd (squash)
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
                 )
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
@@ -603,15 +577,11 @@ class MempoolManager:
             )
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
-            if status == MempoolInclusionStatus.FAILED and error == Err.DOUBLE_SPEND:
-                included_items.append(item)
-
-        self.fee_tracker.process_block(new_peak.height, included_items)
-
         log.info(
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
+        self.fee_tracker.process_block(new_peak.height, included_items)
         return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:

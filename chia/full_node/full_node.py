@@ -233,12 +233,6 @@ class FullNode:
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
         )
-        self.mempool_manager = MempoolManager(
-            coin_store=self.coin_store,
-            consensus_constants=self.constants,
-            multiprocessing_context=self.multiprocessing_context,
-            single_threaded=single_threaded,
-        )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
@@ -253,7 +247,13 @@ class FullNode:
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
 
         self.fee_tracker = await FeeTracker.create(self.log, self.fee_store)
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants, self.config, self.fee_tracker)
+        self.mempool_manager = MempoolManager(
+            coin_store=self.coin_store,
+            consensus_constants=self.constants,
+            fee_tracker=self.fee_tracker,
+            multiprocessing_context=self.multiprocessing_context,
+            single_threaded=single_threaded,
+        )
         self.fee_estimator = SmartFeeEstimator(self.mempool_manager, self.log)
 
         self.weight_proof_handler = None
