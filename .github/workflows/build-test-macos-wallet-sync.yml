@@ -85,7 +85,7 @@ jobs:
     - name: Test wallet-sync code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/sync/test_*.py -s -v --durations 0 -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/sync/test_*.py --durations=10  -n 0 -m "not benchmark"
 
     - name: Process coverage data
       run: |
