@@ -9,7 +9,6 @@ from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
-from chia.server.outbound_message import NodeType
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
@@ -283,52 +282,6 @@ class DataLayerWallet:
                 self.id(),
             )
         )
-
-        # TODO
-        # Below is some out of place sync code
-        # We don't currently have the ability to process coins in the past that have hinted to us
-        # We need to validate these states after receiving them too
-        all_coin_states: Set[CoinState] = set()
-
-        # First we need to make sure we have all of the coin states
-        puzzle_hashes_to_search_for: Set[bytes32] = set({launcher_id})
-        while len(puzzle_hashes_to_search_for) != 0:
-            coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
-                [launcher_id, new_singleton.puzzle_hash]
-            )
-            state_set = set(
-                filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)
-            )  # Sanity check for troublemakers
-            all_coin_states.update(state_set)
-            puzzle_hashes_to_search_for = set()
-            all_coin_ids: Set[bytes32] = {cs.coin.name() for cs in all_coin_states}
-            all_coin_ids.update({launcher_id})
-            for state in coin_states:
-                if state.coin.parent_coin_info not in all_coin_ids:
-                    puzzle_hashes_to_search_for.add(state.coin.puzzle_hash)
-
-        # Force them all to be noticed (len will be zero for newly created singletons, this is only for existing ones)
-        if len(all_coin_states) > 0:
-            # Select a peer for fetching puzzles
-            all_nodes = self.wallet_state_manager.wallet_node.server.connection_by_type[NodeType.FULL_NODE]
-            if len(all_nodes.keys()) == 0:
-                raise ValueError("Not connected to the full node")
-            peer = list(all_nodes.values())[0]
-
-            # Sync the singleton history
-            previous_coin_id: bytes32 = launcher_id
-            while True:
-                next_coin_state: CoinState = list(
-                    filter(lambda cs: cs.coin.parent_coin_info == previous_coin_id, all_coin_states)
-                )[0]
-                if next_coin_state.spent_height is None:
-                    break
-                else:
-                    cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                        peer, next_coin_state.spent_height, next_coin_state.coin
-                    )
-                    await self.singleton_removed(cs, next_coin_state.spent_height, in_transaction=in_transaction)
-                    previous_coin_id = next_coin_state.coin.name()
 
     ################
     # TRANSACTIONS #
