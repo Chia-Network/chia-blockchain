@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
@@ -64,7 +65,9 @@ class TemporaryPoolPlot:
     plot_id: Optional[bytes32] = None
 
     async def __aenter__(self):
-        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, get_pool_plot_dir())
+        self._tmpdir = tempfile.TemporaryDirectory()
+        dirname = self._tmpdir.__enter__()
+        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, Path(dirname), tmp_dir=Path(dirname))
         assert plot_id is not None
         await self.bt.refresh_plots()
         self.plot_id = plot_id
@@ -72,12 +75,7 @@ class TemporaryPoolPlot:
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         await self.bt.delete_plot(self.plot_id)
-
-
-async def create_pool_plot(bt: BlockTools, p2_singleton_puzzle_hash: bytes32) -> Optional[bytes32]:
-    plot_id = await bt.new_plot(p2_singleton_puzzle_hash, get_pool_plot_dir())
-    await bt.refresh_plots()
-    return plot_id
+        self._tmpdir.__exit__(None, None, None)
 
 
 async def wallet_is_synced(wallet_node: WalletNode, full_node_api):
