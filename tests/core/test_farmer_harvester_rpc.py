@@ -115,9 +115,15 @@ async def test_farmer_get_harvesters(harvester_farmer_environment):
     farmer_api = farmer_service._api
     harvester = harvester_service._node
 
-    res = await harvester_rpc_client.get_plots()
-    num_plots = len(res["plots"])
-    assert num_plots > 0
+    num_plots = 0
+
+    async def non_zero_plots() -> bool:
+        res = await harvester_rpc_client.get_plots()
+        nonlocal num_plots
+        num_plots = len(res["plots"])
+        return num_plots > 0
+
+    await time_out_assert(10, non_zero_plots)
 
     # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
     update_interval_before = farmer_api.farmer.update_harvester_cache_interval
