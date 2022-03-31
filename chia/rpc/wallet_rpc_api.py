@@ -811,6 +811,7 @@ class WalletRpcApi:
     async def cc_spend_from_specific_puzzle_hash(self, request):
         """Send CAT token from a specific sender puzzle hash (owned by the current logged in wallet) to a receiver address
         It will only send coins from the given cat_coins_pool
+        The remaining amount will be sent back to the sender puzzle hash (instead of a randomizing derived puzzle hash)
 
         Args:
             request['wallet_id'] : the CAT wallet ID to spend
