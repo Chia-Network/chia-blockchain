@@ -202,6 +202,7 @@ class FullNode:
                             # this is a new DB file. Make it v2
                             async with self.db_wrapper.write_db() as w_conn:
                                 await set_db_version_async(w_conn, 2)
+                                self.db_wrapper.db_version = 2
                         except sqlite3.OperationalError:
                             # it could be a database created with "chia init", which is
                             # empty except it has the database_version table

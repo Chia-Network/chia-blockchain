@@ -11,7 +11,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Callable, Dict, List, Optional, Tuple, Any, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
@@ -265,6 +265,7 @@ class BlockTools:
         self,
         pool_contract_puzzle_hash: Optional[bytes32] = None,
         path: Path = None,
+        tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
@@ -272,14 +273,16 @@ class BlockTools:
         if path is not None:
             final_dir = path
             mkdir(final_dir)
+        if tmp_dir is None:
+            tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
-        args.tmp_dir = self.temp_dir
-        args.tmp2_dir = self.temp_dir
+        args.tmp_dir = tmp_dir
+        args.tmp2_dir = tmp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
@@ -432,7 +435,7 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        previous_generator: CompressorArg = None,
+        previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[FullBlock]:
@@ -585,12 +588,14 @@ class BlockTools:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if type(previous_generator) is CompressorArg:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
+                                if type(previous_generator) is list:
+                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -858,7 +863,7 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if previous_generator is not None and type(previous_generator) is CompressorArg:
                                 block_generator = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
