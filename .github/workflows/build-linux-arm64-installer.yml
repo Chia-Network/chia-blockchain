@@ -1,14 +1,15 @@
 name: Linux ARM64 installer on Python 3.8
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-        - '**'
-  pull_request:
-    branches:
-      - '**'
+  workflow_call:
+    secrets:
+      APPLE_DEV_ID_APP:
+      GITHUB_TOKEN:
+      GLUE_ACCESS_TOKEN:
+      INSTALLER_UPLOAD_KEY:
+      INSTALLER_UPLOAD_SECRET:
+      WIN_CODE_SIGN_CERT:
+  workflow_dispatch:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run

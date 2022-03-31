@@ -1,15 +1,15 @@
 name: Linux .rpm installer on Python 3.9
 
 on:
+  workflow_call:
+    secrets:
+      APPLE_DEV_ID_APP:
+      GITHUB_TOKEN:
+      GLUE_ACCESS_TOKEN:
+      INSTALLER_UPLOAD_KEY:
+      INSTALLER_UPLOAD_SECRET:
+      WIN_CODE_SIGN_CERT:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    tags:
-        - '**'
-  pull_request:
-    branches:
-      - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
