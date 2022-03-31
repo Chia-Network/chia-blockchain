@@ -1,19 +1,26 @@
 import argparse
+import contextlib
 import logging
 import os
 import shutil
 import sys
+import tempfile
+import time
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
 
 import pkg_resources
 import yaml
+from filelock import BaseFileLock, FileLock
 from typing_extensions import Literal
 
 from chia.util.path import mkdir
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
+
+log = logging.getLogger(__name__)
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
@@ -41,24 +48,36 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
+def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock:
+    config_path = config_path_for_filename(root_path, filename)
+    lock_path: Path = config_path.with_name(config_path.name + ".lock")
+    return FileLock(lock_path)
+
+
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
+    # This must be called under an acquired config lock
     path: Path = config_path_for_filename(root_path, filename)
-    tmp_path: Path = path.with_suffix("." + str(os.getpid()))
-    with open(tmp_path, "w") as f:
-        yaml.safe_dump(config_data, f)
-    try:
-        os.replace(str(tmp_path), path)
-    except PermissionError:
-        shutil.move(str(tmp_path), str(path))
+    with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+        tmp_path: Path = Path(tmp_dir) / Path(filename)
+        with open(tmp_path, "w") as f:
+            yaml.safe_dump(config_data, f)
+        try:
+            os.replace(str(tmp_path), path)
+        except PermissionError:
+            shutil.move(str(tmp_path), str(path))
 
 
 def load_config(
     root_path: Path,
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
-    exit_on_error=True,
+    exit_on_error: bool = True,
+    acquire_lock: bool = True,
 ) -> Dict:
+    # This must be called under an acquired config lock, or acquire_lock should be True
+
     path = config_path_for_filename(root_path, filename)
+
     if not path.is_file():
         if not exit_on_error:
             raise ValueError("Config not found")
@@ -66,10 +85,26 @@ def load_config(
         print("** please run `chia init` to migrate or create new config files **")
         # TODO: fix this hack
         sys.exit(-1)
-    r = yaml.safe_load(open(path, "r"))
-    if sub_config is not None:
-        r = r.get(sub_config)
-    return r
+    # This loop should not be necessary due to the config lock, but it's kept here just in case
+    for i in range(10):
+        try:
+            with contextlib.ExitStack() as exit_stack:
+                if acquire_lock:
+                    exit_stack.enter_context(get_config_lock(root_path, filename))
+                with open(path, "r") as opened_config_file:
+                    r = yaml.safe_load(opened_config_file)
+            if r is None:
+                log.error(f"yaml.safe_load returned None: {path}")
+                time.sleep(i * 0.1)
+                continue
+            if sub_config is not None:
+                r = r.get(sub_config)
+            return r
+        except Exception as e:
+            tb = traceback.format_exc()
+            log.error(f"Error loading file: {tb} {e} Retrying {i}")
+            time.sleep(i * 0.1)
+    raise RuntimeError("Was not able to read config file successfully")
 
 
 def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str] = None) -> Dict:

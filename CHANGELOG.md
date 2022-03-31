@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [Unreleased]
+
+
+## 1.3.1 Chia blockchain 2022-3-16
+
+### Fixed
+
+- Improved config.yaml update concurrency to prevent some cases of the wrong pool being used for a PlotNFT.
+- Fixed `chia keys show` displaying non-observer-derived wallet address.
+- Fixed `plotnft claim` returning an error.
+- Fixed invalid DB commit that prevented rollback of coin store changes.
+- Fixed locking issue with `PlotManager.plots` that caused high lookup times on plots.
+- Fixed exception when `chia keys migrate` is run without needing migration.
+- Fixed farmer rewards dialog (GUI).
+- Fixed display of pool payout address (GUI).
+- Fixed display of harvesters status when harvesters are restarted (GUI).
+- Fixed wallet RPC `get_offers_count` returning an error when there are no trades (Thanks, @dkackman!)
+- Fixed spelling of "genrated" (Thanks again, @dkackman!)
+- Fixed typo "log_maxbytessrotation" in initial-config (@skweee made their first contribution!)
+
+### Added
+
+- Added checks to ensure wallet address prefixes are either `xch` or `txch`.
+- Added a better TLS1.3 check to handle cases where python is using a non-openssl TLS library.
+
+### Changed
+
+- Update the database queries for the `block_count_metrics` RPC endpoint to utilize indexes effectively for V2 DBs.
+- Several improvements to tests.
+
+
 ## 1.3.0 Chia blockchain 2022-3-07
 
 ### Added:
@@ -54,6 +85,8 @@ for setuptools_scm/PEP 440 reasons.
 - Removed the option to display "All" rows per page on the transactions page of the GUI.
 - Updated the background image for the MacOS installer.
 - Changed the behavior of what info is displayed if the database is still syncing.
+  - It should not be expected that wallet info, such as payout address, should not reflect what their desired values until everything has completed syncing.
+  - The payout instructions may not be editable via the GUI until syncing has completed.
 
 ### Fixed:
 
@@ -67,7 +100,7 @@ for setuptools_scm/PEP 440 reasons.
 - Thanks to @risner for fixes related to using colorlog.
 - Fixed issues in reading the pool_list from config if set to null.
 - Fixed display info in CLI chia show -c when No Info should be displayed.
-- Thanks to @madMAx42v3r for fixes in chiapos related to a possible race condition when multiple threads call Verifier::ValidateProof.
+- Thanks to @madMAx43v3r for fixes in chiapos related to a possible race condition when multiple threads call Verifier::ValidateProof.
 - Thanks to @PastaPastaPasta for some compiler warning fixes in bls-signatures.
 - Thanks to @random-zebra for fixing a bug in the bls-signature copy assignment operator.
 - Thanks to @lourkeur for fixes in blspy related to pybind11 2.8+.
@@ -76,18 +109,23 @@ for setuptools_scm/PEP 440 reasons.
 - Fixed issue where the DB could lose the peak of the chain when receiving a compressed block.
 - Fixed showing inbound transaction after an offer is cancelled.
 - Fixed blockchain fee "Value seems high" message showing up when it shouldn't.
+- Bugs in pool farming where auth key was being set incorrectly, leading to invalid signature bugs.
+- Memory leak in the full node sync store where peak hashes were stored without being pruned.
+- Fixed a timelord issue which could cause a few blocks to not be infused on chain if a certain proof of space signs conflicting blocks.
 
 ### Known Issues:
 
 - When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created.
   - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
-- If you are installing on a machine for the first time, when the GUI loads and you don’t have any pre-existing wallet keys, the GUI will flicker and not load anything.
-  - Workaround: close and relaunch the GUI.
 - When you close the Chia app, regardless if you are in farmer mode or wallet, the content on the exit dialog isn’t correct.
 - If you start with wallet mode and then switch to farmer mode and back to wallet mode, the full node will continue to sync in the background. To get the full node to stop syncing after switching to wallet mode, you will need to close the Chia and relaunch the Chia app.
 - Wallets with large number of transactions or large number of coins will take longer to sync (more than a few minutes), but should take less time than a full node sync. It could fail in some cases.
 - Huge numbers cannot be put into amount/fee input for transactions in the GUI.
 - Some Linux systems experience excessive memory usage with the value *default*/*python_default*/*fork* configured for *multiprocessing_start_method:*. Setting this value to *spawn* may produce better results, but in some uncommon cases, is know to cause crashes.
+- Sending a TX with too low of a fee can cause an infinite spinner in the GUI when the mempool is full.
+  - Workaround: Restart the GUI, or clear unconfirmed TX.
+- Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
+
 
 ## 1.2.11 Chia blockchain 2021-11-4
 
@@ -122,6 +160,7 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
+
 
 ## 1.2.10 Chia blockchain 2021-10-25
 

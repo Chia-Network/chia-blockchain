@@ -22,7 +22,7 @@ jobs:
   build:
     name: MacOS wallet-cat_wallet Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 4

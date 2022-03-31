@@ -65,69 +65,78 @@ class DummyLegacyKeyring(KeyringBackend):
         del self.service_dict[service][username]
 
 
+@pytest.fixture(scope="function")
+def empty_keyring():
+    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
+
+
+@pytest.fixture(scope="function")
+def keyring_with_one_key(empty_keyring):
+    keychain = empty_keyring
+    keychain.add_private_key(TEST_MNEMONIC_SEED, "")
+    return keychain
+
+
+@pytest.fixture(scope="function")
+def mnemonic_seed_file(tmp_path):
+    seed_file = Path(tmp_path) / "seed.txt"
+    with open(seed_file, "w") as f:
+        f.write(TEST_MNEMONIC_SEED)
+    return seed_file
+
+
+@pytest.fixture(scope="function")
+def setup_keyringwrapper(tmp_path):
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(tmp_path)
+    _ = KeyringWrapper.get_shared_instance()
+    yield
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+
+
+@pytest.fixture(scope="function")
+def setup_legacy_keyringwrapper(tmp_path, monkeypatch):
+    def mock_setup_keyring_file_watcher(_):
+        pass
+
+    # Silence errors in the watchdog module during testing
+    monkeypatch.setattr(FileKeyring, "setup_keyring_file_watcher", mock_setup_keyring_file_watcher)
+
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(tmp_path)
+    KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
+    yield
+    KeyringWrapper.cleanup_shared_instance()
+    KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
+
+
 class TestKeysCommands:
-    @pytest.fixture(scope="function")
-    def empty_keyring(self):
-        with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
-            yield keychain
-            KeyringWrapper.cleanup_shared_instance()
-
-    @pytest.fixture(scope="function")
-    def keyring_with_one_key(self, empty_keyring):
-        keychain = empty_keyring
-        keychain.add_private_key(TEST_MNEMONIC_SEED, "")
-        return keychain
-
-    @pytest.fixture(scope="function")
-    def mnemonic_seed_file(self, tmp_path):
-        seed_file = Path(tmp_path) / "seed.txt"
-        with open(seed_file, "w") as f:
-            f.write(TEST_MNEMONIC_SEED)
-        return seed_file
-
-    @pytest.fixture(scope="function")
-    def setup_keyringwrapper(self, tmp_path):
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        _ = KeyringWrapper.get_shared_instance()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
-
-    @pytest.fixture(scope="function")
-    def setup_legacy_keyringwrapper(self, tmp_path, monkeypatch):
-        def mock_setup_keyring_file_watcher(_):
-            pass
-
-        # Silence errors in the watchdog module during testing
-        monkeypatch.setattr(FileKeyring, "setup_keyring_file_watcher", mock_setup_keyring_file_watcher)
-
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        KeyringWrapper.get_shared_instance().legacy_keyring = DummyLegacyKeyring()
-        yield
-        KeyringWrapper.cleanup_shared_instance()
-        KeyringWrapper.set_keys_root_path(DEFAULT_KEYS_ROOT_PATH)
-
     def test_generate_with_new_config(self, tmp_path, empty_keyring):
         """
         Generate a new config and a new key. Verify that the config has
         the correct xch_target_address entries.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         # Generate the new config
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
-
         assert len(keychain.get_all_private_keys()) == 0
 
         # Generate a new key
         runner = CliRunner()
-        result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "keys", "generate"])
+        result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+        )
 
         assert result.exit_code == 0
         assert len(keychain.get_all_private_keys()) == 1
@@ -147,19 +156,23 @@ class TestKeysCommands:
         the original xch_target_address entries.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         # Generate the new config
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
-
         assert len(keychain.get_all_private_keys()) == 0
 
         # Generate the first key
         runner = CliRunner()
-        generate_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "keys", "generate"])
+        generate_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+        )
 
         assert generate_result.exit_code == 0
         assert len(keychain.get_all_private_keys()) == 1
@@ -175,7 +188,9 @@ class TestKeysCommands:
 
         # Generate the second key
         runner = CliRunner()
-        result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "keys", "generate"])
+        result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+        )
 
         assert result.exit_code == 0
         assert len(keychain.get_all_private_keys()) == 2
@@ -222,18 +237,22 @@ class TestKeysCommands:
         Test adding a key from mnemonic seed using the interactive prompt.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
-
         assert len(keychain.get_all_private_keys()) == 0
 
         runner = CliRunner()
         result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "keys", "add"], input=f"{TEST_MNEMONIC_SEED}\n"
+            cli,
+            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "add"],
+            input=f"{TEST_MNEMONIC_SEED}\n",
         )
 
         assert result.exit_code == 0
@@ -244,18 +263,30 @@ class TestKeysCommands:
         Test adding a key from a mnemonic seed file using the `--filename` flag.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
-
         assert len(keychain.get_all_private_keys()) == 0
 
         runner = CliRunner()
         result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "keys", "add", "--filename", os.fspath(mnemonic_seed_file)]
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "add",
+                "--filename",
+                os.fspath(mnemonic_seed_file),
+            ],
         )
 
         assert result.exit_code == 0
@@ -266,18 +297,30 @@ class TestKeysCommands:
         Test deleting a key using the `--fingerprint` option.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
-
         assert len(keychain.get_all_private_keys()) == 0
 
         runner = CliRunner()
         add_result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "keys", "add", "--filename", os.fspath(mnemonic_seed_file)]
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "add",
+                "--filename",
+                os.fspath(mnemonic_seed_file),
+            ],
         )
 
         assert add_result.exit_code == 0
@@ -285,7 +328,17 @@ class TestKeysCommands:
 
         runner = CliRunner()
         result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "keys", "delete", "--fingerprint", TEST_FINGERPRINT]
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "delete",
+                "--fingerprint",
+                TEST_FINGERPRINT,
+            ],
         )
 
         assert result.exit_code == 0
@@ -454,12 +507,15 @@ class TestKeysCommands:
         Test the `chia keys derive search` command, searching a public and private key
         """
 
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
 
         runner = CliRunner()
@@ -468,6 +524,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -507,12 +565,15 @@ class TestKeysCommands:
         Test the `chia keys derive search` command, searching for a wallet address
         """
 
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
 
         runner = CliRunner()
@@ -521,6 +582,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -550,12 +613,15 @@ class TestKeysCommands:
         Test the `chia keys derive search` command with a failing search.
         """
 
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
 
         runner = CliRunner()
@@ -564,6 +630,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -584,12 +652,15 @@ class TestKeysCommands:
         Test the `chia keys derive search` command, searching under a provided HD path.
         """
 
+        keychain = empty_keyring
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = empty_keyring
         assert len(keychain.get_all_private_keys()) == 0
 
         runner = CliRunner()
@@ -598,6 +669,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--mnemonic-seed-filename",
@@ -629,12 +702,15 @@ class TestKeysCommands:
         Test the `chia keys derive wallet-address` command, generating a couple of wallet addresses.
         """
 
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
 
         runner = CliRunner()
@@ -643,6 +719,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--fingerprint",
@@ -682,12 +760,15 @@ class TestKeysCommands:
         Test the `chia keys derive child-keys` command, generating a couple of derived keys.
         """
 
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
         runner = CliRunner()
-        init_result: Result = runner.invoke(cli, ["--root-path", os.fspath(tmp_path), "init"])
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
 
         assert init_result.exit_code == 0
-
-        keychain = keyring_with_one_key
         assert len(keychain.get_all_private_keys()) == 1
 
         runner = CliRunner()
@@ -696,6 +777,8 @@ class TestKeysCommands:
             [
                 "--root-path",
                 os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
                 "keys",
                 "derive",
                 "--fingerprint",

@@ -22,20 +22,21 @@ from chia.util.ints import uint16, uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import bt, self_hostname, setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import setup_simulators_and_wallets, test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
 
 
-class TestRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_simulators_and_wallets(2, 0, {}):
-            yield _
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes():
+    async for _ in setup_simulators_and_wallets(2, 0, {}):
+        yield _
 
+
+class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes):
+    async def test1(self, two_nodes, bt, self_hostname):
         num_blocks = 5
         test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes
@@ -231,14 +232,18 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes, empty_blockchain):
+    async def test_signage_points(self, two_nodes, empty_blockchain, bt):
         test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
 
-        peer = await connect_and_get_peer(server_1, server_2)
+        config = bt.config
+        self_hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         def stop_node_cb():
             full_node_api_1._close()
@@ -246,13 +251,9 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
-        config = bt.config
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
-
         rpc_cleanup = await start_rpc_server(
             full_node_rpc_api,
-            hostname,
+            self_hostname,
             daemon_port,
             test_rpc_port,
             stop_node_cb,

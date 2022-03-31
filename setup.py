@@ -17,7 +17,8 @@ dependencies = [
     "colorlog==5.0.1",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.4.7",  # Python cryptography library for TLS - keyring conflict
-    "fasteners==0.16.3",  # For interprocess file locking
+    "fasteners==0.16.3",  # For interprocess file locking, expected to be replaced by filelock
+    "filelock==3.4.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.0.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
@@ -44,7 +45,7 @@ dev_dependencies = [
     "build",
     "pre-commit",
     "pytest",
-    "pytest-asyncio",
+    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
