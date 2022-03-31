@@ -760,14 +760,19 @@ class Blockchain(BlockchainInterface):
     ) -> Dict[bytes32, HeaderBlock]:
         blocks: List[FullBlock] = []
         uncached_hashes: List[bytes32] = []
-        for height in range(start, min(stop, self.get_peak_height() + 1):
+
+        peak_height = self.get_peak_height()
+        if peak_height is None:
+            return {}
+
+        for height in range(start, min(stop, peak_height + 1)):
             # TODO: address hint error and remove ignore
             #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
             #       type "bytes32")  [assignment]
             header_hash: bytes32 = self.height_to_hash(uint32(height))  # type: ignore[assignment]
-            block = self.block_store.block_cache.get(hash)
+            block = self.block_store.block_cache.get(header_hash)
             if block is None:
-                uncached_hashes.append(hash)
+                uncached_hashes.append(header_hash)
             else:
                 blocks.append(block)
 
