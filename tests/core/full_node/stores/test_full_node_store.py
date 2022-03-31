@@ -43,7 +43,7 @@ bt = create_block_tools(constants=test_constants, keychain=keychain)
 log = logging.getLogger(__name__)
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function", params=[2])
 async def empty_blockchain(request):
     bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1

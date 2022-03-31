@@ -97,7 +97,7 @@ async def get_block_path(full_node: FullNodeAPI):
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("tx_size", [10000, 3000000000000])
+    @pytest.mark.parametrize("tx_size", [3000000000000])
     async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, bt, self_hostname):
         nodes, wallets = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
@@ -153,7 +153,6 @@ class TestFullNodeBlockCompression:
             return tx.confirmed
 
         await time_out_assert(30, check_transaction_confirmed, True, tr)
-        await asyncio.sleep(2)
 
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -182,7 +181,6 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
 
         await time_out_assert(10, check_transaction_confirmed, True, tr)
-        await asyncio.sleep(2)
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -254,7 +252,6 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
 
         await time_out_assert(10, check_transaction_confirmed, True, tr)
-        await asyncio.sleep(2)
 
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
@@ -300,7 +297,6 @@ class TestFullNodeBlockCompression:
         await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_1)
 
         await time_out_assert(10, check_transaction_confirmed, True, new_tr)
-        await asyncio.sleep(2)
 
         # Confirm generator is not compressed, #CAT creation has a cat spend
         all_blocks = await full_node_1.get_all_full_blocks()
@@ -356,7 +352,7 @@ class TestFullNodeBlockCompression:
         blockchain = empty_blockchain
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
-
+        print(f"height: {height}")
         assert full_node_1.full_node.full_node_store.previous_generator is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
@@ -364,7 +360,7 @@ class TestFullNodeBlockCompression:
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
-                    for batch_size in range(1, height):
+                    for batch_size in range(1, height, 3):
                         results = await blockchain.pre_validate_blocks_multiprocessing(
                             all_blocks[:i], {}, batch_size, validate_signatures=False
                         )
@@ -376,7 +372,7 @@ class TestFullNodeBlockCompression:
                 for block in all_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
-                    for batch_size in range(1, height):
+                    for batch_size in range(1, height, 3):
                         results = await blockchain.pre_validate_blocks_multiprocessing(
                             all_blocks[:i], {}, batch_size, validate_signatures=False
                         )
