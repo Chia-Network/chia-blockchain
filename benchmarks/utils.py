@@ -1,5 +1,3 @@
-from secrets import token_bytes
-
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.util.ints import uint64, uint32, uint8
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
@@ -51,7 +49,10 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
 
 
 def rand_bytes(num) -> bytes:
-    return token_bytes(num)
+    ret = bytearray(num)
+    for i in range(num):
+        ret[i] = random.getrandbits(8)
+    return bytes(ret)
 
 
 def rand_hash() -> bytes32:
