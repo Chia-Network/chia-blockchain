@@ -9,6 +9,7 @@ enum ServiceName {
   TIMELORD = 'chia_timelord',
   INTRODUCER = 'chia_introducer',
   EVENTS = 'wallet_ui',
+  DATALAYER = "chia_data_layer",
 };
 
 export default ServiceName;
