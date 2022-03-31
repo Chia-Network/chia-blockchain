@@ -758,22 +758,20 @@ class Blockchain(BlockchainInterface):
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
-        hashes = []
-        for height in range(start, stop + 1):
-            if self.contains_height(uint32(height)):
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
-                #       type "bytes32")  [assignment]
-                header_hash: bytes32 = self.height_to_hash(uint32(height))  # type: ignore[assignment]
-                hashes.append(header_hash)
-
         blocks: List[FullBlock] = []
-        for hash in hashes.copy():
+        uncached_hashes: List[bytes32] = []
+        for height in range(start, min(stop, self.get_peak_height() + 1):
+            # TODO: address hint error and remove ignore
+            #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
+            #       type "bytes32")  [assignment]
+            header_hash: bytes32 = self.height_to_hash(uint32(height))  # type: ignore[assignment]
             block = self.block_store.block_cache.get(hash)
-            if block is not None:
+            if block is None:
+                uncached_hashes.append(hash)
+            else:
                 blocks.append(block)
-                hashes.remove(hash)
-        blocks_on_disk: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
+
+        blocks_on_disk: List[FullBlock] = await self.block_store.get_blocks_by_hash(uncached_hashes)
         blocks.extend(blocks_on_disk)
         header_blocks: Dict[bytes32, HeaderBlock] = {}
 
