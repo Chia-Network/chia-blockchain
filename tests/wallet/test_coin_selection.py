@@ -80,6 +80,7 @@ class TestCoinSelection:
             )
             assert result is not None
             assert sum([coin.amount for coin in result]) >= target_amount
+            assert len(result) <= 500
 
     @pytest.mark.asyncio
     async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
