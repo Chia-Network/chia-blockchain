@@ -3130,7 +3130,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
 
     try:
         await _validate_and_add_block(b, blocks_reorg_chain[-1])
-    except AssertionError:
+    except ValueError:
         pass
 
     assert b.get_peak().height == 19
