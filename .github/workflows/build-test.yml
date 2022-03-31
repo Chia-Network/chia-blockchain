@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Python environment
         uses: actions/setup-python@v2
         with:
@@ -81,13 +81,15 @@ jobs:
               matrix: '3.7'
 
     env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       # Should match name above
       # TODO: or maybe not quite?
       JOB_NAME: ${{ matrix.configuration.name }}_${{ matrix.os.name }}_${{ matrix.python.name }}
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -129,22 +131,15 @@ jobs:
 
       - name: Checkout test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'Chia-Network/test-cache'
           path: '.chia'
           ref: '0.28.0'
           fetch-depth: 1
 
-      - name: Link home directory
-        run: |
-          cd $HOME
-          ln -s $GITHUB_WORKSPACE/.chia
-          echo "$HOME/.chia"
-          ls -al $HOME/.chia
-
       - name: Install ubuntu dependencies
-        if: matrix.os.matrix == 'ubuntu'
+        if: matrix.os.matrix == 'ubuntu' && matrix.configuration.install_timelord
         run: |
           sudo apt-get install software-properties-common
           sudo add-apt-repository ppa:deadsnakes/ppa
@@ -176,4 +171,26 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          ./venv/bin/py.test tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark"
+          venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/${{ matrix.configuration.path }} -s -v --durations 0 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark" ${{ matrix.configuration.disable_pytest_monitor }}
+
+      - name: Process coverage data
+        run: |
+          venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+          venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+          mkdir coverage_reports
+          cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+          venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+      - name: Publish coverage
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: coverage_reports/*
+          if-no-files-found: error
+
+      - name: Check resource usage
+        if: matrix.configuration.check_resource_usage
+        run: |
+          sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
+          ./tests/check_pytest_monitor_output.py <metrics.out

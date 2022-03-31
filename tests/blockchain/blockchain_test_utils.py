@@ -4,7 +4,7 @@ from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -15,24 +15,25 @@ async def check_block_store_invariant(bc: Blockchain):
 
     in_chain = set()
     max_height = -1
-    async with db_wrapper.db.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
-        rows = await cursor.fetchall()
-        for row in rows:
-            height = row[0]
+    async with db_wrapper.write_db() as conn:
+        async with conn.execute("SELECT height, in_main_chain FROM full_blocks") as cursor:
+            rows = await cursor.fetchall()
+            for row in rows:
+                height = row[0]
 
-            # if this block is in-chain, ensure we haven't found another block
-            # at this height that's also in chain. That would be an invariant
-            # violation
-            if row[1]:
-                # make sure we don't have any duplicate heights. Each block
-                # height can only have a single block with in_main_chain set
-                assert height not in in_chain
-                in_chain.add(height)
-                if height > max_height:
-                    max_height = height
+                # if this block is in-chain, ensure we haven't found another block
+                # at this height that's also in chain. That would be an invariant
+                # violation
+                if row[1]:
+                    # make sure we don't have any duplicate heights. Each block
+                    # height can only have a single block with in_main_chain set
+                    assert height not in in_chain
+                    in_chain.add(height)
+                    if height > max_height:
+                        max_height = height
 
-        # make sure every height is represented in the set
-        assert len(in_chain) == max_height + 1
+            # make sure every height is represented in the set
+            assert len(in_chain) == max_height + 1
 
 
 async def _validate_and_add_block(
@@ -41,6 +42,7 @@ async def _validate_and_add_block(
     expected_result: Optional[ReceiveBlockResult] = None,
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
+    fork_point_with_peak: Optional[uint32] = None,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -73,7 +75,7 @@ async def _validate_and_add_block(
         await check_block_store_invariant(blockchain)
         return None
 
-    result, err, _, _ = await blockchain.receive_block(block, results)
+    result, err, _, _ = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:

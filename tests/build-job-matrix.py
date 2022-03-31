@@ -163,10 +163,16 @@ for path in test_paths:
 
     conf = update_config(module_dict(testconfig), dir_config(dir))
 
+    if conf.get("custom_parallel_n") is not None:
+        pytest_parallel_args = f"-n {conf['custom_parallel_n']}"
+    else:
+        pytest_parallel_args = "-n 4" if conf["parallel"] else "-n 0"
+
     for_matrix = {
-        # TODO: handle CHECK_RESOURCE_USAGE
+        "check_resource_usage": conf["check_resource_usage"],
+        "disable_pytest_monitor": "" if conf["check_resource_usage"] else "-p no:monitor",
         "job_timeout": conf["job_timeout"],
-        "pytest_parallel_args": "-n auto" if conf["parallel"] else "",
+        "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
         "path": os.fspath(path_for_cli),

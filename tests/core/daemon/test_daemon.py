@@ -3,68 +3,22 @@ import asyncio
 import json
 import logging
 import pytest
-import pytest_asyncio
 
 from chia.daemon.server import WebSocketServer
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import BlockTools, create_block_tools_async
+from tests.block_tools import BlockTools
 from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_daemon, setup_full_system
-from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert_custom_interval, time_out_assert
-from tests.util.keyring import TempKeyring
-
-
-@pytest_asyncio.fixture(scope="function")
-async def get_temp_keyring():
-    with TempKeyring() as keychain:
-        yield keychain
-
-
-@pytest_asyncio.fixture(scope="function")
-async def get_b_tools_1(get_temp_keyring):
-    return await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-
-
-@pytest_asyncio.fixture(scope="function")
-async def get_b_tools(get_temp_keyring):
-    local_b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=get_temp_keyring)
-    new_config = local_b_tools._config
-    local_b_tools.change_config(new_config)
-    return local_b_tools
-
-
-@pytest_asyncio.fixture(scope="function")
-async def get_daemon_with_temp_keyring(get_b_tools):
-    async for daemon in setup_daemon(btools=get_b_tools):
-        yield get_b_tools, daemon
-
-
-# TODO: Ideally, the db_version should be the (parameterized) db_version
-# fixture, to test all versions of the database schema. This doesn't work
-# because of a hack in shutting down the full node, which means you cannot run
-# more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
-async def simulation(bt, get_b_tools, get_b_tools_1):
-    async for _ in setup_full_system(
-        test_constants_modified,
-        bt,
-        b_tools=get_b_tools,
-        b_tools_1=get_b_tools_1,
-        connect_to_daemon=True,
-        db_version=1,
-    ):
-        yield _
 
 
 class TestDaemon:
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self, self_hostname, simulation, bt, get_b_tools, get_b_tools_1):
-        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = simulation
+    async def test_daemon_simulation(self, self_hostname, daemon_simulation, bt, get_b_tools, get_b_tools_1):
+        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = daemon_simulation
         node2_port = node2.full_node.config["port"]
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 

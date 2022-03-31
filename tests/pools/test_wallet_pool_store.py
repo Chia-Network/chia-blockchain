@@ -38,7 +38,7 @@ def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) 
 class TestWalletPoolStore:
     @pytest.mark.asyncio
     async def test_store(self):
-        db_filename = Path("wallet_store_test.db")
+        db_filename = Path("wallet_pool_store_test.db")
 
         if db_filename.exists():
             db_filename.unlink()

@@ -2,9 +2,11 @@ import asyncio
 import collections
 import dataclasses
 import logging
+from concurrent.futures import Executor
 from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
+from chia.util.inline_executor import InlineExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
@@ -79,11 +81,15 @@ def validate_clvm_and_signature(
 
 
 class MempoolManager:
+    pool: Executor
+
     def __init__(
         self,
         coin_store: CoinStore,
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
+        *,
+        single_threaded: bool = False,
     ):
         self.constants: ConsensusConstants = consensus_constants
         self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
@@ -105,12 +111,15 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(
-            max_workers=2,
-            mp_context=multiprocessing_context,
-            initializer=setproctitle,
-            initargs=(f"{getproctitle()}_worker",),
-        )
+        if single_threaded:
+            self.pool = InlineExecutor()
+        else:
+            self.pool = ProcessPoolExecutor(
+                max_workers=2,
+                mp_context=multiprocessing_context,
+                initializer=setproctitle,
+                initargs=(f"{getproctitle()}_worker",),
+            )
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
