@@ -308,21 +308,33 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
+async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict, has_fee: bool = False):
     for asset_id, amount in sum_dict.items():
+        description: str = ""
         if asset_id == "xch":
             wid: str = "1"
             name: str = "XCH"
             unit: int = units["chia"]
         else:
-            result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
-            wid = "Unknown"
+            wid: str = ""
             name = asset_id
             unit = units["cat"]
-            if result is not None:
-                wid = str(result[0])
-                name = result[1]
-        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)")
+            if asset_id == "unknown":
+                name = "Unknown"
+                if has_fee:
+                    description = " [May represent change returned from the included fee]"
+            else:
+                result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
+                if result is not None:
+                    wid = str(result[0])
+                    name = result[1]
+        output: str = f"    - {name}"
+        if len(wid) > 0:
+            output += f" (Wallet ID: {wid})"
+        output += f": {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)"
+        if len(description) > 0:
+            output += f" {description}"
+        print(output)
 
 
 async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
@@ -337,13 +349,19 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested = offer.summary()
+        outbound_balances: Dict[str, int] = {
+            asset_id: v
+            for asset_id, v in offer.get_pending_amounts().items()
+            if asset_id in offered or asset_id == "unknown"
+        }
+        fees: int = Decimal(offer.bundle.fees())
         print("  OFFERED:")
         await print_offer_summary(wallet_client, offered)
         print("  REQUESTED:")
         await print_offer_summary(wallet_client, requested)
-        print("Pending Balances:")
-        await print_offer_summary(wallet_client, offer.get_pending_amounts())
-        print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+        print("Pending Outbound Balances:")
+        await print_offer_summary(wallet_client, outbound_balances, has_fee=(fees > 0))
+        print(f"Fees: {fees / units['chia']}")
     print("---------------")
 
 
@@ -543,11 +561,16 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 row += f" ({current_sync_status})"
             print(row)
         val = None
+        prompt: str = "Enter a number to pick or q to quit"
+        prompt += f" [default: {logged_in_fingerprint}]: " if logged_in_fingerprint is not None else ": "
         while val is None:
-            val = input("Enter a number to pick or q to quit: ")
+            val = input(prompt)
             if val == "q":
                 return None
-            if not val.isdigit():
+            elif val == "" and logged_in_fingerprint is not None:
+                fingerprint = logged_in_fingerprint
+                break
+            elif not val.isdigit():
                 val = None
             else:
                 index = int(val) - 1
