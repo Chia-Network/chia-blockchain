@@ -806,9 +806,11 @@ class TestFullNodeProtocol:
         puzzle_hashes = []
 
         # Makes a bunch of coins
+        start_t0 = time.time()
         for i in range(5):
             conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
             # This should fit in one transaction
+            start_t1 = time.time()
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
                 puzzle_hashes.append(receiver_puzzlehash)
@@ -816,16 +818,22 @@ class TestFullNodeProtocol:
 
                 conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
+            log.warning(f"Time for creating PHs: {time.time() - start_t1}")
+            start_t1 = time.time()
             spend_bundle = wallet_a.generate_signed_transaction(
                 100,
                 puzzle_hashes[0],
                 get_future_reward_coins(blocks[1 + i])[0],
                 condition_dic=conditions_dict,
             )
+            log.warning(f"Time for creating bundle: {time.time() - start_t1}")
+            start_t1 = time.time()
             assert spend_bundle is not None
             cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_bundle.name()
             )
+            log.warning(f"Time for validating bundle: {time.time() - start_t1}")
+            start_t1 = time.time()
             log.info(f"Cost result: {cost_result.cost}")
 
             new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
@@ -847,6 +855,9 @@ class TestFullNodeProtocol:
             # Already seen
             await full_node_1.new_transaction(new_transaction, fake_peer)
             await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
+            log.warning(f"Time for rest: {time.time() - start_t1}")
+        log.warning(f"Time for entire loop: {time.time() - start_t0}")
+        start_t0 = time.time()
 
         await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 5)
 
@@ -858,7 +869,9 @@ class TestFullNodeProtocol:
         successful_bundle: Optional[SpendBundle] = None
 
         # Fill mempool
+        log.warning(f"Total n phs: {len(puzzle_hashes)}")
         for puzzle_hash in puzzle_hashes[1:]:
+            start_t1 = time.time()
             coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             if puzzle_hash == puzzle_hashes[-1]:
@@ -867,15 +880,23 @@ class TestFullNodeProtocol:
             else:
                 force_high_fee = False
                 fee = random.randint(1, 100000000)
+            log.info(f"Section 1: {time.time() - start_t1}")
+            start_t1 = time.time()
             spend_bundle = wallet_receiver.generate_signed_transaction(
                 uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
+            log.info(f"Section 2: {time.time() - start_t1}")
+            start_t1 = time.time()
 
             await full_node_1.send_transaction(respond_transaction)
 
+            log.info(f"Section 3: {time.time() - start_t1}")
+            start_t1 = time.time()
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
+            log.info(f"Section 4: {time.time() - start_t1}")
+            start_t1 = time.time()
 
             fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
             fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
@@ -898,6 +919,9 @@ class TestFullNodeProtocol:
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10000000) > 0
                 assert not force_high_fee
                 not_included_tx += 1
+            log.info(f"Section 5: {time.time() - start_t1}")
+        log.warning(f"Time for entire 2nd loop: {time.time() - start_t0}")
+        start_t0 = time.time()
         log.info(f"Included: {included_tx}, not included: {not_included_tx}")
 
         assert included_tx > 0
@@ -949,6 +973,7 @@ class TestFullNodeProtocol:
         )
         assert err is None
         assert status == MempoolInclusionStatus.SUCCESS
+        log.warning(f"Time for entire 3rd section: {time.time() - start_t0}")
 
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, wallet_nodes, bt, self_hostname):
