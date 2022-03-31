@@ -765,7 +765,7 @@ class Blockchain(BlockchainInterface):
         if peak_height is None:
             return {}
 
-        for height in range(start, min(stop, peak_height + 1)):
+        for height in range(start, min(stop, peak_height) + 1):
             # TODO: address hint error and remove ignore
             #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has
             #       type "bytes32")  [assignment]
