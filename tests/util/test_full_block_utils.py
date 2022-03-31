@@ -16,7 +16,9 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.util.full_block_utils import generator_from_block
+from chia.types.header_block import HeaderBlock
+from chia.util.full_block_utils import generator_from_block, header_block_from_block_no_filter
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 test_g2s = [rand_g2() for _ in range(10)]
@@ -239,7 +241,14 @@ class TestFullBlockParser:
         for block in get_full_blocks():
 
             block_bytes = bytes(block)
-            gen = generator_from_block(block_bytes)
+            gen = generator_from_block(memoryview(block_bytes))
             assert gen == block.transactions_generator
             # this doubles the run-time of this test, with questionable utility
             # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
+
+    @pytest.mark.asyncio
+    async def test_header_block(self):
+        for block in get_full_blocks():
+            hb: HeaderBlock = get_block_header(block, [], [])
+            hb_bytes = header_block_from_block_no_filter(memoryview(bytes(block)))
+            assert HeaderBlock.from_bytes(hb_bytes) == hb

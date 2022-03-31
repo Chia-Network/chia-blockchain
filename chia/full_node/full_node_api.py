@@ -42,6 +42,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.full_block_utils import header_block_from_block_no_filter
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1314,6 +1315,9 @@ class FullNodeAPI:
 
     @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        # This method is maintained here for backwards compatibility, since request_header_blocks2 will be used for
+        # future versions. This method is deprecated and should not be used.
+
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
 
@@ -1342,6 +1346,38 @@ class FullNodeAPI:
             wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks),
         )
         return msg
+
+    @api_request
+    async def request_header_blocks2(self, request: wallet_protocol.RequestHeaderBlocks2) -> Optional[Message]:
+        # This method replaces request_header_blocks and should be used instead of it.
+        if request.send_filter:
+            return await self.request_header_blocks(
+                wallet_protocol.RequestHeaderBlocks(request.start_height, request.end_height)
+            )
+        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+            return None
+
+        header_hashes: List[bytes32] = []
+        for i in range(request.start_height, request.end_height + 1):
+            if not self.full_node.blockchain.contains_height(uint32(i)):
+                reject = RejectHeaderBlocks(request.start_height, request.end_height)
+                msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
+                return msg
+            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+            assert header_hash is not None
+            header_hashes.append(header_hash)
+
+        blocks_bytes: List[bytes] = await self.full_node.block_store.get_full_blocks_bytes(header_hashes)
+        header_blocks_bytes: List[bytes] = [header_block_from_block_no_filter(memoryview(b)) for b in blocks_bytes]
+
+        respond_header_blocks_manually_streamed: bytes = (
+            bytes(uint32(request.start_height))
+            + bytes(uint32(request.end_height))
+            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
+        )
+        for block_bytes in header_blocks_bytes:
+            respond_header_blocks_manually_streamed += block_bytes
+        return make_msg(ProtocolMessageTypes.respond_header_blocks, respond_header_blocks_manually_streamed)
 
     @api_request
     async def respond_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime):

@@ -63,6 +63,13 @@ class TestBlockStore:
             block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
             assert len(block_record_records) == len(blocks)
 
+            assert [await store.get_full_block_bytes(blocks[0].header_hash)] == (
+                await store.get_full_blocks_bytes([blocks[0].header_hash])
+            )
+
+            all_blocks_bytes = await store.get_full_blocks_bytes([block.header_hash for block in blocks])
+            assert [bytes(block) for block in blocks] == all_blocks_bytes
+
     @pytest.mark.asyncio
     async def test_deadlock(self, tmp_dir, db_version, bt):
         """

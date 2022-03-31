@@ -293,6 +293,42 @@ class BlockStore:
 
         return None
 
+    async def get_full_blocks_bytes(self, header_hashes_input: List[bytes32]) -> List[bytes]:
+        """
+        Returns a list of FullBlock bytes, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+        if len(header_hashes_input) == 0:
+            return []
+
+        header_hashes: List[bytes32] = []
+        all_blocks: Dict[bytes32, bytes] = {}
+        for hh in header_hashes_input:
+            cached = self.block_cache.get(hh)
+            if cached is not None:
+                all_blocks[hh] = bytes(cached)
+            else:
+                header_hashes.append(hh)
+
+        header_hashes_db: Tuple[Any, ...]
+        if self.db_wrapper.db_version == 2:
+            header_hashes_db = tuple(header_hashes)
+        else:
+            header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        if len(header_hashes_db) > 0:
+            formatted_str = f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+            async with self.db_wrapper.read_db() as conn:
+                async with conn.execute(formatted_str, header_hashes_db) as cursor:
+                    for row in await cursor.fetchall():
+                        header_hash = bytes32(self.maybe_from_hex(row[0]))
+                        all_blocks[header_hash] = row[1]
+        ret: List[bytes] = []
+        for hh in header_hashes_input:
+            if hh not in all_blocks:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+            ret.append(all_blocks[hh])
+        return ret
+
     async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
         if len(heights) == 0:
             return []

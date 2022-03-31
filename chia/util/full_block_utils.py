@@ -1,9 +1,12 @@
-from typing import Callable, Optional
+import io
+from typing import Callable, Optional, Tuple
 
 from blspy import G1Element, G2Element
 from clvm_rs import serialized_length
 
+from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.header_block import HeaderBlock
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
@@ -207,3 +210,33 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
     buf = buf[1:]
     length = serialized_length(buf)
     return SerializedProgram.from_bytes(bytes(buf[:length]))
+
+
+def header_block_from_block_no_filter(buf: memoryview) -> bytes:
+    buf2 = buf
+    buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    buf2 = skip_reward_chain_block(buf2)  # reward_chain_block
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf2 = skip_vdf_proof(buf2)  # challenge_chain_ip_proof
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # reward_chain_sp_proof
+    buf2 = skip_vdf_proof(buf2)  # reward_chain_ip_proof
+    buf2 = skip_optional(buf2, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf2 = skip_foliage(buf2)  # foliage
+    buf2 = skip_optional(buf2, skip_foliage_transaction_block)  # foliage_transaction_block
+
+    # this is the transactions_info optional
+    if buf2[0] == 0:
+        transactions_info = None
+
+    buf3 = buf2[1:]
+
+    transactions_info = TransactionsInfo.parse(io.BytesIO(bytes(buf3)))
+
+    # Takes everything up to but not including transactions info
+    header_block: bytes = bytes(buf[: (len(buf) - len(buf2))])
+    # Transactions filter
+    header_block += (0).to_bytes(4, "big")
+    # Add transactions info
+    header_block += bytes(transactions_info)
+
+    return header_block
