@@ -194,9 +194,9 @@ def create_foliage(
         for coin in removals:
             tx_removals.append(coin.name())
 
-        tx_for_bip158: List[List[int]] = [
-            *(list(coin.puzzle_hash) for coin in additions),
-            *(list(coin.name()) for coin in removals),
+        tx_for_bip158: List[bytes32] = [
+            *(coin.puzzle_hash for coin in additions),
+            *(coin.name() for coin in removals),
         ]
 
         bip158: PyBIP158 = PyBIP158(tx_for_bip158)

@@ -12,11 +12,11 @@ from chia.util.condition_tools import created_outputs_for_conditions_dict
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
     addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
-    tx_for_bip158: List[List[int]]
+    tx_for_bip158: List[bytes32]
     if block.is_transaction_block():
         tx_for_bip158 = [
-            *(list(coin.puzzle_hash) for coin in addition_coins),
-            *(list(name) for name in removals_names),
+            *(coin.puzzle_hash for coin in addition_coins),
+            *(name for name in removals_names),
         ]
     else:
         tx_for_bip158 = []
