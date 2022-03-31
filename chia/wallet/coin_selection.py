@@ -82,18 +82,22 @@ async def select_coins(
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     else:
-        coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
-        log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
-        if coin_set is None or len(coin_set) > 500:  # lots of dust
+        if len(smaller_coins) < 500:
+            coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
+            log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
+            if coin_set is None:
+                raise ValueError("Knapsack algorithm failed to find a solution.")
+
+        else:  # lots of dust
             coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins)
             if coin is None or coin.amount < amount:
                 raise ValueError(
                     "Can't make this transaction because the transaction would use over 500 "
                     "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
                 )
-            else:
-                coin_set = {coin}
-                log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin_set}")
+            coin_set = {coin}
+            log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin_set}")
+
         return coin_set
 
 
