@@ -223,31 +223,6 @@ class WalletStateManager:
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
 
-    async def load_wallets(self):
-        for wallet_info in await self.get_all_wallet_info_entries():
-            if wallet_info.id in self.wallets:
-                continue
-            if wallet_info.type == WalletType.STANDARD_WALLET:
-                if wallet_info.id == 1:
-                    continue
-                wallet = await Wallet.create(self.config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
-            # TODO add RL AND DiD WALLETS HERE
-            elif wallet_info.type == WalletType.CAT:
-                wallet = await CATWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.DISTRIBUTED_ID:
-                wallet = await DIDWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
-                self.wallets[wallet_info.id] = wallet
-
     async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:

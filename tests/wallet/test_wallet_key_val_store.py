@@ -11,7 +11,7 @@ from chia.wallet.key_val_store import KeyValStore
 class TestWalletKeyValStore:
     @pytest.mark.asyncio
     async def test_store(self, bt):
-        db_filename = Path("wallet_store_test.db")
+        db_filename = Path("wallet_kv_store_test.db")
 
         if db_filename.exists():
             db_filename.unlink()

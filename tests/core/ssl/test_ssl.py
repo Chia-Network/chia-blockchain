@@ -10,15 +10,9 @@ from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import test_constants
 from chia.util.ints import uint16
-from tests.setup_nodes import (
-    setup_harvester_farmer,
-    setup_introducer,
-    setup_simulators_and_wallets,
-    setup_timelord,
-)
-from tests.util.socket import find_available_listen_port
+from tests.block_tools import test_constants
+from tests.setup_nodes import setup_harvester_farmer
 
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> bool:
@@ -54,29 +48,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 @pytest_asyncio.fixture(scope="function")
 async def harvester_farmer(bt):
     async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def introducer(bt):
-    introducer_port = find_available_listen_port("introducer")
-    async for _ in setup_introducer(bt, introducer_port):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def timelord(bt):
-    timelord_port = find_available_listen_port("timelord")
-    node_port = find_available_listen_port("node")
-    rpc_port = find_available_listen_port("rpc")
-    vdf_port = find_available_listen_port("vdf")
-    async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
         yield _
 
 

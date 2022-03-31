@@ -12,7 +12,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint128
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from typing import Tuple
 from pathlib import Path
 from datetime import datetime
@@ -176,7 +176,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: str, db_version: int) -> DBWrapper:
+async def setup_db(name: str, db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -197,7 +197,9 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection, db_version)
+    ret = DBWrapper2(connection, db_version)
+    await ret.add_connection(await aiosqlite.connect(db_filename))
+    return ret
 
 
 def get_commit_hash() -> str:

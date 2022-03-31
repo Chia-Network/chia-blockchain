@@ -64,7 +64,7 @@ class Harvester:
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.get_running_loop()
 
     def _close(self):
         self._is_shutdown = True
