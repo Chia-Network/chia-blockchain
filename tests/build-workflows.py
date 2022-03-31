@@ -132,7 +132,9 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
-current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
+current_workflows: Dict[Path, str] = {
+    file: read_file(file) for file in args.output_dir.iterdir() if str(file).endswith(".yml")
+}
 changed: bool = False
 
 for os in testconfig.oses:
