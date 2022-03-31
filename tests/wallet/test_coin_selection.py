@@ -153,7 +153,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert match_3 is not None
-        assert sum([coin.amount for coin in match_3]) == target_amount
+        assert sum([coin.amount for coin in match_3]) >= target_amount
         assert len(match_3) >= 3
 
         # check for match of all
