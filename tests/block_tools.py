@@ -265,6 +265,7 @@ class BlockTools:
         self,
         pool_contract_puzzle_hash: Optional[bytes32] = None,
         path: Path = None,
+        tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
@@ -272,14 +273,16 @@ class BlockTools:
         if path is not None:
             final_dir = path
             mkdir(final_dir)
+        if tmp_dir is None:
+            tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
-        args.tmp_dir = self.temp_dir
-        args.tmp2_dir = self.temp_dir
+        args.tmp_dir = tmp_dir
+        args.tmp2_dir = tmp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
