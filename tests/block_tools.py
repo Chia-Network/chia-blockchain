@@ -11,7 +11,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Callable, Dict, List, Optional, Tuple, Any, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
@@ -66,6 +66,7 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator, CompressorArg
@@ -73,8 +74,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.condition_tools import ConditionOpcode
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, lock_config, save_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
@@ -84,6 +85,8 @@ from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert
 from tests.wallet_tools import WalletTool
+from tests.util.socket import find_available_listen_port
+from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
@@ -142,7 +145,11 @@ class BlockTools:
         self.local_keychain = keychain
 
         create_default_chia_config(root_path)
-        create_all_ssl(root_path)
+        create_all_ssl(
+            root_path,
+            private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+            node_certs_and_keys=get_next_nodes_certs_and_keys(),
+        )
 
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self._config = load_config(self.root_path, "config.yaml")
@@ -150,7 +157,12 @@ class BlockTools:
         self._config["selected_network"] = "testnet0"
         for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
             self._config[service]["selected_network"] = "testnet0"
-        save_config(self.root_path, "config.yaml", self._config)
+
+        # some tests start the daemon, make sure it's on a free port
+        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+
+        with lock_config(self.root_path, "config.yaml"):
+            save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
         if const_dict is not None:
@@ -163,6 +175,7 @@ class BlockTools:
         mkdir(self.plot_dir)
         mkdir(self.temp_dir)
         self.expected_plots: Dict[bytes32, Path] = {}
+        self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
@@ -175,7 +188,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert update_result.loaded <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
@@ -227,33 +240,49 @@ class BlockTools:
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = self.constants.replace_str_to_bytes(**overrides)
         self.constants = updated_constants
-        save_config(self.root_path, "config.yaml", self._config)
+        with lock_config(self.root_path, "config.yaml"):
+            save_config(self.root_path, "config.yaml", self._config)
 
     async def setup_plots(self):
-        assert len(self.expected_plots) == 0
+        assert self.created_plots == 0
         # OG Plots
         for i in range(15):
             await self.new_plot()
         # Pool Plots
         for i in range(5):
             await self.new_plot(self.pool_ph)
+        # Some plots with keys that are not in the keychain
+        for i in range(3):
+            await self.new_plot(
+                path=self.plot_dir / "not_in_keychain",
+                plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_final_dir=True,
+            )
+
         await self.refresh_plots()
 
     async def new_plot(
-        self, pool_contract_puzzle_hash: Optional[bytes32] = None, path: Path = None
+        self,
+        pool_contract_puzzle_hash: Optional[bytes32] = None,
+        path: Path = None,
+        tmp_dir: Path = None,
+        plot_keys: Optional[PlotKeys] = None,
+        exclude_final_dir: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
             mkdir(final_dir)
+        if tmp_dir is None:
+            tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
         args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
-        args.tmp_dir = self.temp_dir
-        args.tmp2_dir = final_dir
+        args.tmp_dir = tmp_dir
+        args.tmp2_dir = tmp_dir
         args.final_dir = final_dir
         args.plotid = None
         args.memo = None
@@ -263,23 +292,26 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
+        args.exclude_final_dir = exclude_final_dir
         try:
-            pool_pk: Optional[G1Element] = None
-            pool_address: Optional[str] = None
-            if pool_contract_puzzle_hash is None:
-                pool_pk = self.pool_pk
-            else:
-                pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
+            if plot_keys is None:
+                pool_pk: Optional[G1Element] = None
+                pool_address: Optional[str] = None
+                if pool_contract_puzzle_hash is None:
+                    pool_pk = self.pool_pk
+                else:
+                    pool_address = encode_puzzle_hash(pool_contract_puzzle_hash, "xch")
 
-            keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
+                plot_keys = PlotKeys(self.farmer_pk, pool_pk, pool_address)
             # No datetime in the filename, to get deterministic filenames and not re-plot
             created, existed = await create_plots(
                 args,
-                keys,
+                plot_keys,
                 self.root_path,
                 use_datetime=False,
-                test_private_keys=[AugSchemeMPL.key_gen(std_hash(len(self.expected_plots).to_bytes(2, "big")))],
+                test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
             )
+            self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
             path_new: Path = Path()
@@ -292,10 +324,11 @@ class BlockTools:
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
 
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-            #       [index]
-            self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
+            if not exclude_final_dir:
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
+                #       [index]
+                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
@@ -305,7 +338,7 @@ class BlockTools:
             return plot_id_new
 
         except KeyboardInterrupt:
-            shutil.rmtree(self.plot_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
             sys.exit(1)
 
     async def refresh_plots(self):
@@ -329,7 +362,7 @@ class BlockTools:
     def config(self) -> Dict:
         return copy.deepcopy(self._config)
 
-    def get_daemon_ssl_context(self) -> Optional[ssl.SSLContext]:
+    def get_daemon_ssl_context(self) -> ssl.SSLContext:
         crt_path = self.root_path / self.config["daemon_ssl"]["private_crt"]
         key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
         ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
@@ -402,7 +435,7 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        previous_generator: CompressorArg = None,
+        previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[FullBlock]:
@@ -449,9 +482,7 @@ class BlockTools:
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
         while not curr.is_transaction_block:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type "uint32"  [index]
-            curr = blocks[curr.prev_hash]  # type: ignore[index]
+            curr = blocks[curr.prev_hash]
         start_timestamp = curr.timestamp
         start_height = curr.height
 
@@ -459,9 +490,7 @@ class BlockTools:
         blocks_added_this_sub_slot = 1
 
         while not curr.first_in_sub_slot:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type "uint32"  [index]
-            curr = blocks[curr.prev_hash]  # type: ignore[index]
+            curr = blocks[curr.prev_hash]
             blocks_added_this_sub_slot += 1
 
         finished_sub_slots_at_sp: List[EndOfSubSlotBundle] = []  # Sub-slots since last block, up to signage point
@@ -494,10 +523,7 @@ class BlockTools:
                     ):
                         if curr.height == 0:
                             break
-                        # TODO: address hint error and remove ignore
-                        #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type
-                        #       "uint32"  [index]
-                        curr = blocks[curr.prev_hash]  # type: ignore[index]
+                        curr = blocks[curr.prev_hash]
                     if curr.total_iters > sub_slot_start_total_iters:
                         finished_sub_slots_at_sp = []
 
@@ -506,12 +532,9 @@ class BlockTools:
                             # Ignore this signage_point because it's in the past
                             continue
 
-                    # TODO: address hint error and remove ignore
-                    #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]";
-                    #       expected "Dict[bytes32, BlockRecord]"  [arg-type]
                     signage_point: SignagePoint = get_signage_point(
                         constants,
-                        BlockCache(blocks),  # type: ignore[arg-type]
+                        BlockCache(blocks),
                         latest_block,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -565,12 +588,14 @@ class BlockTools:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if type(previous_generator) is CompressorArg:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
+                                if type(previous_generator) is list:
+                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -664,15 +689,12 @@ class BlockTools:
             eos_deficit: uint8 = (
                 latest_block.deficit if latest_block.deficit > 0 else constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
             )
-            # TODO: address hint error and remove ignore
-            #       error: Argument 5 to "get_icc" has incompatible type "Dict[uint32, BlockRecord]"; expected
-            #       "Dict[bytes32, BlockRecord]"  [arg-type]
             icc_eos_vdf, icc_ip_proof = get_icc(
                 constants,
                 uint128(sub_slot_start_total_iters + sub_slot_iters),
                 finished_sub_slots_at_ip,
                 latest_block,
-                blocks,  # type: ignore[arg-type]
+                blocks,
                 sub_slot_start_total_iters,
                 eos_deficit,
             )
@@ -704,6 +726,7 @@ class BlockTools:
                 )
                 pending_ses = True
 
+            ses_hash: Optional[bytes32]
             if sub_epoch_summary is not None:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
@@ -711,10 +734,7 @@ class BlockTools:
 
                 log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "None", variable has type
-                #       "bytes32")  [assignment]
-                ses_hash = None  # type: ignore[assignment]
+                ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
 
@@ -724,10 +744,7 @@ class BlockTools:
                     # This means there are blocks in this sub-slot
                     curr = latest_block
                     while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
-                        # TODO: address hint error and remove ignore
-                        #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type
-                        #       "uint32"  [index]
-                        curr = blocks[curr.prev_hash]  # type: ignore[index]
+                        curr = blocks[curr.prev_hash]
                     if curr.is_challenge_block(constants):
                         icc_eos_iters = uint64(sub_slot_start_total_iters + sub_slot_iters - curr.total_iters)
                     else:
@@ -802,12 +819,9 @@ class BlockTools:
                     constants.NUM_SPS_SUB_SLOT,
                 ):
                     # note that we are passing in the finished slots which include the last slot
-                    # TODO: address hint error and remove ignore
-                    #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]";
-                    #       expected "Dict[bytes32, BlockRecord]"  [arg-type]
                     signage_point = get_signage_point(
                         constants,
-                        BlockCache(blocks),  # type: ignore[arg-type]
+                        BlockCache(blocks),
                         latest_block_eos,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -849,7 +863,7 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if previous_generator is not None and type(previous_generator) is CompressorArg:
                                 block_generator = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
@@ -1328,20 +1342,16 @@ def finish_block(
 
 def get_challenges(
     constants: ConsensusConstants,
-    blocks: Dict[uint32, BlockRecord],
+    blocks: Dict[bytes32, BlockRecord],
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_header_hash: Optional[bytes32],
 ) -> Tuple[bytes32, bytes32]:
     if len(finished_sub_slots) == 0:
         if prev_header_hash is None:
             return constants.GENESIS_CHALLENGE, constants.GENESIS_CHALLENGE
-        # TODO: address hint error and remove ignore
-        #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type "uint32"  [index]
-        curr: BlockRecord = blocks[prev_header_hash]  # type: ignore[index]
+        curr: BlockRecord = blocks[prev_header_hash]
         while not curr.first_in_sub_slot:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes32" for "Dict[uint32, BlockRecord]"; expected type "uint32"  [index]
-            curr = blocks[curr.prev_hash]  # type: ignore[index]
+            curr = blocks[curr.prev_hash]
         assert curr.finished_challenge_slot_hashes is not None
         assert curr.finished_reward_slot_hashes is not None
         cc_challenge = curr.finished_challenge_slot_hashes[-1]
@@ -1353,7 +1363,12 @@ def get_challenges(
 
 
 def get_plot_dir() -> Path:
-    cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
+
+    ci = os.environ.get("CI")
+    if ci is not None and not cache_path.exists():
+        raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
+
     mkdir(cache_path)
     return cache_path
 
@@ -1364,10 +1379,10 @@ def get_plot_tmp_dir():
 
 def load_block_list(
     block_list: List[FullBlock], constants: ConsensusConstants
-) -> Tuple[Dict[uint32, bytes32], uint64, Dict[uint32, BlockRecord]]:
+) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord]]:
     difficulty = 0
     height_to_hash: Dict[uint32, bytes32] = {}
-    blocks: Dict[uint32, BlockRecord] = {}
+    blocks: Dict[bytes32, BlockRecord] = {}
     for full_block in block_list:
         if full_block.height == 0:
             difficulty = uint64(constants.DIFFICULTY_STARTING)
@@ -1394,12 +1409,9 @@ def load_block_list(
             sp_hash,
         )
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]"; expected
-        #       "Dict[bytes32, BlockRecord]"  [arg-type]
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
-            BlockCache(blocks),  # type: ignore[arg-type]
+            BlockCache(blocks),
             required_iters,
             full_block,
             None,
@@ -1467,7 +1479,7 @@ def get_icc(
 
 def get_full_block_and_block_record(
     constants: ConsensusConstants,
-    blocks: Dict[uint32, BlockRecord],
+    blocks: Dict[bytes32, BlockRecord],
     sub_slot_start_total_iters: uint128,
     signage_point_index: uint8,
     proof_of_space: ProofOfSpace,
@@ -1507,11 +1519,6 @@ def get_full_block_and_block_record(
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]"; expected
-    #       "Dict[bytes32, BlockRecord]"  [arg-type]
-    #       error: Argument 16 to "create_test_unfinished_block" has incompatible type "bytes"; expected "bytes32"
-    #       [arg-type]
     unfinished_block = create_test_unfinished_block(
         constants,
         sub_slot_start_total_iters,
@@ -1527,7 +1534,7 @@ def get_full_block_and_block_record(
         get_pool_signature,
         signage_point,
         timestamp,
-        BlockCache(blocks),  # type: ignore[arg-type]
+        BlockCache(blocks),
         seed,  # type: ignore[arg-type]
         block_generator,
         aggregate_signature,
@@ -1541,12 +1548,9 @@ def get_full_block_and_block_record(
         slot_cc_challenge = overflow_cc_challenge
         slot_rc_challenge = overflow_rc_challenge
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 2 to "finish_block" has incompatible type "Dict[uint32, BlockRecord]"; expected
-    #       "Dict[bytes32, BlockRecord]"  [arg-type]
     full_block, block_record = finish_block(
         constants,
-        blocks,  # type: ignore[arg-type]
+        blocks,
         height_to_hash,
         finished_sub_slots,
         sub_slot_start_total_iters,
@@ -1568,7 +1572,7 @@ def get_full_block_and_block_record(
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_safe_with_cost(INFINITE_COST, block_program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
@@ -1683,7 +1687,7 @@ def create_test_foliage(
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list()
+            generator_block_heights_list = block_generator.block_height_list
             err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
             assert err is None
 
@@ -1807,17 +1811,12 @@ def create_test_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        # TODO: address hint error and remove ignore
-        #       error: Argument 4 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        #       error: Argument 5 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
             filter_hash,
-            additions_root,  # type: ignore[arg-type]
-            removals_root,  # type: ignore[arg-type]
+            additions_root,
+            removals_root,
             transactions_info.get_hash(),
         )
         assert foliage_transaction_block is not None
@@ -1993,8 +1992,21 @@ def create_test_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list() if block_generator else [],
+        block_generator.block_height_list if block_generator else [],
     )
+
+
+# Remove these counters when `create_block_tools` and `create_block_tools_async` are removed
+create_block_tools_async_count = 0
+create_block_tools_count = 0
+
+# Note: tests that still use `create_block_tools` and `create_block_tools_async` should probably be
+# moved to the bt fixture in conftest.py. Take special care to find out if the users of these functions
+# need different BlockTools instances
+
+# All tests need different root directories containing different config.yaml files.
+# The daemon's listen port is configured in the config.yaml, and the only way a test can control which
+# listen port it uses is to write it to the config file.
 
 
 async def create_block_tools_async(
@@ -2003,7 +2015,15 @@ async def create_block_tools_async(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
-    bt = BlockTools(constants, root_path, const_dict, keychain)
+    global create_block_tools_async_count
+    create_block_tools_async_count += 1
+    print(f"  create_block_tools_async called {create_block_tools_async_count} times")
+    bt = BlockTools(
+        constants,
+        root_path,
+        const_dict,
+        keychain,
+    )
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2016,6 +2036,9 @@ def create_block_tools(
     const_dict=None,
     keychain: Optional[Keychain] = None,
 ) -> BlockTools:
+    global create_block_tools_count
+    create_block_tools_count += 1
+    print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())

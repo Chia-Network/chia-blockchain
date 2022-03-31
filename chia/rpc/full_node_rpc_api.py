@@ -15,7 +15,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
+    coin_record["spent"] = coin_record["spent_block_index"] > 0
+    return coin_record
 
 
 class FullNodeRpcApi:
@@ -30,6 +36,7 @@ class FullNodeRpcApi:
             "/get_blockchain_state": self.get_blockchain_state,
             "/get_block": self.get_block,
             "/get_blocks": self.get_blocks,
+            "/get_block_count_metrics": self.get_block_count_metrics,
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
@@ -47,6 +54,7 @@ class FullNodeRpcApi:
             "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/get_coin_records_by_names": self.get_coin_records_by_names,
             "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
+            "/get_coin_records_by_hint": self.get_coin_records_by_hint,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             # Mempool
@@ -55,7 +63,10 @@ class FullNodeRpcApi:
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
         }
 
-    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
+        if change_data is None:
+            change_data = {}
+
         payloads = []
         if change == "new_peak" or change == "sync_mode":
             data = await self.get_blockchain_state({})
@@ -68,8 +79,19 @@ class FullNodeRpcApi:
                     "wallet_ui",
                 )
             )
-            return payloads
-        return []
+            payloads.append(
+                create_payload_dict(
+                    "get_blockchain_state",
+                    data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+
+        if change in ("block", "signage_point"):
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
+
+        return payloads
 
     # this function is just here for backwards-compatibility. It will probably
     # be removed in the future
@@ -81,6 +103,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
+        node_id = self.service.server.node_id.hex()
         if self.service.initialized is False:
             res: Dict = {
                 "blockchain_state": {
@@ -96,6 +119,13 @@ class FullNodeRpcApi:
                     "sub_slot_iters": 0,
                     "space": 0,
                     "mempool_size": 0,
+                    "mempool_cost": 0,
+                    "mempool_min_fees": {
+                        "cost_5000000": 0,
+                    },
+                    "mempool_max_total_cost": 0,
+                    "block_max_cost": 0,
+                    "node_id": node_id,
                 },
             }
             return res
@@ -140,8 +170,14 @@ class FullNodeRpcApi:
 
         if self.service.mempool_manager is not None:
             mempool_size = len(self.service.mempool_manager.mempool.spends)
+            mempool_cost = self.service.mempool_manager.mempool.total_mempool_cost
+            mempool_min_fee_5m = self.service.mempool_manager.mempool.get_min_fee_rate(5000000)
+            mempool_max_total_cost = self.service.mempool_manager.mempool_max_total_cost
         else:
             mempool_size = 0
+            mempool_cost = 0
+            mempool_min_fee_5m = 0
+            mempool_max_total_cost = 0
         if self.service.server is not None:
             is_connected = len(self.service.server.get_full_node_connections()) > 0
         else:
@@ -163,6 +199,15 @@ class FullNodeRpcApi:
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
                 "mempool_size": mempool_size,
+                "mempool_cost": mempool_cost,
+                "mempool_min_fees": {
+                    # We may give estimates for varying costs in the future
+                    # This Dict sets us up for that in the future
+                    "cost_5000000": mempool_min_fee_5m,
+                },
+                "mempool_max_total_cost": mempool_max_total_cost,
+                "block_max_cost": self.service.constants.MAX_BLOCK_COST_CLVM,
+                "node_id": node_id,
             },
         }
         self.cached_blockchain_state = dict(response["blockchain_state"])
@@ -175,10 +220,7 @@ class FullNodeRpcApi:
 
     async def get_recent_signage_point_or_eos(self, request: Dict):
         if "sp_hash" not in request:
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-            #       [assignment]
-            challenge_hash: bytes32 = hexstr_to_bytes(request["challenge_hash"])  # type: ignore[assignment]
+            challenge_hash: bytes32 = bytes32.from_hexstr(request["challenge_hash"])
             # This is the case of getting an end of slot
             eos_tuple = self.service.full_node_store.recent_eos.get(challenge_hash)
             if not eos_tuple:
@@ -211,10 +253,7 @@ class FullNodeRpcApi:
             return {"eos": eos, "time_received": time_received, "reverted": True}
 
         # Now we handle the case of getting a signage point
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        sp_hash: bytes32 = hexstr_to_bytes(request["sp_hash"])  # type: ignore[assignment]
+        sp_hash: bytes32 = bytes32.from_hexstr(request["sp_hash"])
         sp_tuple = self.service.full_node_store.recent_signage_points.get(sp_hash)
         if sp_tuple is None:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
@@ -271,12 +310,9 @@ class FullNodeRpcApi:
     async def get_block(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
-        header_hash = hexstr_to_bytes(request["header_hash"])
+        header_hash = bytes32.from_hexstr(request["header_hash"])
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
@@ -290,6 +326,9 @@ class FullNodeRpcApi:
         exclude_hh = False
         if "exclude_header_hash" in request:
             exclude_hh = request["exclude_header_hash"]
+        exclude_reorged = False
+        if "exclude_reorged" in request:
+            exclude_reorged = request["exclude_reorged"]
 
         start = int(request["start"])
         end = int(request["end"])
@@ -299,11 +338,35 @@ class FullNodeRpcApi:
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at(block_range)
         json_blocks = []
         for block in blocks:
+            hh: bytes32 = block.header_hash
+            if exclude_reorged and self.service.blockchain.height_to_hash(block.height) != hh:
+                # Don't include forked (reorged) blocks
+                continue
             json = block.to_json_dict()
             if not exclude_hh:
-                json["header_hash"] = block.header_hash.hex()
+                json["header_hash"] = hh.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
+
+    async def get_block_count_metrics(self, request: Dict):
+        compact_blocks = 0
+        uncompact_blocks = 0
+        with log_exceptions(self.service.log, consume=True):
+            compact_blocks = await self.service.block_store.count_compactified_blocks()
+            uncompact_blocks = await self.service.block_store.count_uncompactified_blocks()
+
+        hint_count = 0
+        if self.service.hint_store is not None:
+            with log_exceptions(self.service.log, consume=True):
+                hint_count = await self.service.hint_store.count_hints()
+
+        return {
+            "metrics": {
+                "compact_blocks": compact_blocks,
+                "uncompact_blocks": uncompact_blocks,
+                "hint_count": hint_count,
+            }
+        }
 
     async def get_block_records(self, request: Dict) -> Optional[Dict]:
         if "start" not in request:
@@ -359,17 +422,11 @@ class FullNodeRpcApi:
         if "header_hash" not in request:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
-        header_hash = hexstr_to_bytes(header_hash_str)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "try_block_record" of "BlockchainInterface" has incompatible type "bytes"; expected
-        #       "bytes32"  [arg-type]
-        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)  # type: ignore[arg-type]
+        header_hash = bytes32.from_hexstr(header_hash_str)
+        record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
         if record is None:
             # Fetch from DB
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "get_block_record" of "BlockStore" has incompatible type "bytes"; expected
-            #       "bytes32"  [arg-type]
-            record = await self.service.blockchain.block_store.get_block_record(header_hash)  # type: ignore[arg-type]
+            record = await self.service.blockchain.block_store.get_block_record(header_hash)
         if record is None:
             raise ValueError(f"Block {header_hash.hex()} does not exist")
 
@@ -409,19 +466,13 @@ class FullNodeRpcApi:
         if newer_block_hex == older_block_hex:
             raise ValueError("New and old must not be the same")
 
-        newer_block_bytes = hexstr_to_bytes(newer_block_hex)
-        older_block_bytes = hexstr_to_bytes(older_block_hex)
+        newer_block_bytes = bytes32.from_hexstr(newer_block_hex)
+        older_block_bytes = bytes32.from_hexstr(older_block_hex)
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_block_record" of "BlockStore" has incompatible type "bytes"; expected
-        #       "bytes32"  [arg-type]
-        newer_block = await self.service.block_store.get_block_record(newer_block_bytes)  # type: ignore[arg-type]
+        newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
         if newer_block is None:
             raise ValueError("Newer block not found")
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_block_record" of "BlockStore" has incompatible type "bytes"; expected
-        #       "bytes32"  [arg-type]
-        older_block = await self.service.block_store.get_block_record(older_block_bytes)  # type: ignore[arg-type]
+        older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
             raise ValueError("Newer block not found")
         delta_weight = newer_block.weight - older_block.weight
@@ -455,7 +506,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
         """
@@ -477,7 +528,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
         """
@@ -485,16 +536,13 @@ class FullNodeRpcApi:
         """
         if "name" not in request:
             raise ValueError("Name not in request")
-        name = hexstr_to_bytes(request["name"])
+        name = bytes32.from_hexstr(request["name"])
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_coin_record" of "CoinStore" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)  # type: ignore[arg-type]  # noqa: E501
+        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(name)
         if coin_record is None:
             raise ValueError(f"Coin record 0x{name.hex()} not found")
 
-        return {"coin_record": coin_record}
+        return {"coin_record": coin_record_dict_backwards_compat(coin_record.to_json_dict())}
 
     async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
         """
@@ -516,7 +564,7 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -538,7 +586,36 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_parent_ids(**kwargs)
 
-        return {"coin_records": coin_records}
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
+
+    async def get_coin_records_by_hint(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves coins by hint, by default returns unspent coins.
+        """
+        if "hint" not in request:
+            raise ValueError("Hint not in request")
+
+        if self.service.hint_store is None:
+            return {"coin_records": []}
+
+        names: List[bytes32] = await self.service.hint_store.get_coin_ids(bytes32.from_hexstr(request["hint"]))
+
+        kwargs: Dict[str, Any] = {
+            "include_spent_coins": False,
+            "names": names,
+        }
+
+        if "start_height" in request:
+            kwargs["start_height"] = uint32(request["start_height"])
+        if "end_height" in request:
+            kwargs["end_height"] = uint32(request["end_height"])
+
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+
+        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
@@ -566,20 +643,15 @@ class FullNodeRpcApi:
         }
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])  # type: ignore[assignment]
+        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None or not coin_record.spent or coin_record.spent_block_index != height:
             raise ValueError(f"Invalid height {height}. coin record {coin_record}")
 
         header_hash = self.service.blockchain.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        assert header_hash is not None
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")
@@ -599,12 +671,9 @@ class FullNodeRpcApi:
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
-        header_hash = hexstr_to_bytes(request["header_hash"])
+        header_hash = bytes32.from_hexstr(request["header_hash"])
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
@@ -614,7 +683,10 @@ class FullNodeRpcApi:
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)
             removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block.height)
 
-        return {"additions": additions, "removals": removals}
+        return {
+            "additions": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in additions],
+            "removals": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in removals],
+        }
 
     async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())
@@ -629,10 +701,7 @@ class FullNodeRpcApi:
     async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        tx_id: bytes32 = hexstr_to_bytes(request["tx_id"])  # type: ignore[assignment]
+        tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
 
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:

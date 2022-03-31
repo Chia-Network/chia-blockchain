@@ -138,7 +138,7 @@ def create_cmd(
         print("Error: The minimum k size allowed from the cli is k=25.")
         sys.exit(1)
 
-    plot_keys = asyncio.get_event_loop().run_until_complete(
+    plot_keys = asyncio.run(
         resolve_plot_keys(
             farmer_public_key,
             alt_fingerprint,
@@ -150,7 +150,7 @@ def create_cmd(
         )
     )
 
-    asyncio.get_event_loop().run_until_complete(create_plots(Params(), plot_keys, ctx.obj["root_path"]))
+    asyncio.run(create_plots(Params(), plot_keys, ctx.obj["root_path"]))
 
 
 @plots_cmd.command("check", short_help="Checks plots")

@@ -77,10 +77,7 @@ class FarmerRpcApi:
 
     async def get_signage_points(self, _: Dict) -> Dict[str, Any]:
         result: List[Dict[str, Any]] = []
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes32", variable has type
-        #       "Dict[Any, Any]")  [assignment]
-        for _, sps in self.service.sps.items():  # type: ignore[assignment]
+        for sps in self.service.sps.values():
             for sp in sps:
                 pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
                 result.append(
@@ -121,10 +118,7 @@ class FarmerRpcApi:
         return {"pool_state": pools_list}
 
     async def set_payout_instructions(self, request: Dict) -> Dict:
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-        #       [assignment]
-        launcher_id: bytes32 = hexstr_to_bytes(request["launcher_id"])  # type: ignore[assignment]
+        launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 

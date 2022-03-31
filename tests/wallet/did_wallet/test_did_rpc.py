@@ -1,5 +1,5 @@
-import asyncio
 import logging
+
 import pytest
 
 from chia.rpc.rpc_server import start_rpc_server
@@ -8,31 +8,19 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
-from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
-from tests.time_out_assert import time_out_assert
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-
+from chia.wallet.util.wallet_types import WalletType
+from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
 pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestDIDWallet:
-    @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_create_did(self, three_wallet_nodes):
+    async def test_create_did(self, bt, three_wallet_nodes, self_hostname):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -56,7 +44,7 @@ class TestDIDWallet:
         api_one = WalletRpcApi(wallet_node_0)
         config = bt.config
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(21529)
+        test_rpc_port = uint16(find_available_listen_port("rpc_port"))
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
         rpc_server_cleanup = await start_rpc_server(

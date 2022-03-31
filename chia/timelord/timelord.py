@@ -2,12 +2,14 @@ import asyncio
 import dataclasses
 import io
 import logging
+import multiprocessing
+import os
 import random
 import time
 import traceback
-import os
-from typing import Callable, Dict, List, Optional, Tuple, Set
-from chia.util.streamable import Streamable, streamable
+from concurrent.futures import ProcessPoolExecutor
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+
 from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
@@ -31,8 +33,10 @@ from chia.types.blockchain_format.slots import (
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
+from chia.util.config import process_config_start_method
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from concurrent.futures import ProcessPoolExecutor
+from chia.util.setproctitle import getproctitle, setproctitle
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +67,6 @@ class Timelord:
         self.constants = constants
         self._shut_down = False
         self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
-        self.potential_free_clients: List = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self.server: Optional[ChiaServer] = None
         self.chain_type_to_stream: Dict[Chain, Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
@@ -99,6 +102,9 @@ class Timelord:
         # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
         self.num_resets: int = 0
 
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=log)
+        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+
         self.process_communication_tasks: List[asyncio.Task] = []
         self.main_loop = None
         self.vdf_server = None
@@ -132,7 +138,12 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
-                self.bluebox_pool = ProcessPoolExecutor(max_workers=workers)
+                self.bluebox_pool = ProcessPoolExecutor(
+                    max_workers=workers,
+                    mp_context=self.multiprocessing_context,
+                    initializer=setproctitle,
+                    initargs=(f"{getproctitle()}_worker",),
+                )
                 self.main_loop = asyncio.create_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
                 )
@@ -152,6 +163,13 @@ class Timelord:
     async def _await_closed(self):
         pass
 
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
+
+    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
+        if self.state_changed_callback is not None:
+            self.state_changed_callback(change, change_data)
+
     def set_server(self, server: ChiaServer):
         self.server = server
 
@@ -162,10 +180,6 @@ class Timelord:
             if client_ip in self.ip_whitelist:
                 self.free_clients.append((client_ip, reader, writer))
                 log.debug(f"Added new VDF client {client_ip}.")
-                for ip, end_time in list(self.potential_free_clients):
-                    if ip == client_ip:
-                        self.potential_free_clients.remove((ip, end_time))
-                        break
 
     async def _stop_chain(self, chain: Chain):
         try:
@@ -178,7 +192,6 @@ class Timelord:
                     log.warning(f"Trying to stop a crashed chain: {chain}.")
                     return None
             stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
-            self.potential_free_clients.append((stop_ip, time.time()))
             stop_writer.write(b"010")
             await stop_writer.drain()
             if chain in self.allows_iters:
@@ -951,85 +964,95 @@ class Timelord:
                         self.vdf_failures_count += 1
                     break
 
-                msg = ""
-                try:
-                    msg = data.decode()
-                except Exception:
-                    pass
-                if msg == "STOP":
+                if data == b"STOP":
                     log.debug(f"Stopped client running on ip {ip}.")
                     async with self.lock:
                         writer.write(b"ACK")
                         await writer.drain()
                     break
+                try:
+                    # This must be a proof, 4 bytes is length prefix
+                    length = int.from_bytes(data, "big")
+                    proof = await reader.readexactly(length)
+                    stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
+                except (
+                    asyncio.IncompleteReadError,
+                    ConnectionResetError,
+                    Exception,
+                ) as e:
+                    log.warning(f"{type(e)} {e}")
+                    async with self.lock:
+                        self.vdf_failures.append((chain, proof_label))
+                        self.vdf_failures_count += 1
+                    break
+
+                iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
+
+                y_size_bytes = stdout_bytes_io.read(8)
+                y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
+
+                y_bytes = stdout_bytes_io.read(y_size)
+                witness_type = uint8(int.from_bytes(stdout_bytes_io.read(1), "big", signed=True))
+                proof_bytes: bytes = stdout_bytes_io.read()
+
+                # Verifies our own proof just in case
+                form_size = ClassgroupElement.get_size(self.constants)
+                output = ClassgroupElement.from_bytes(y_bytes[:form_size])
+                # default value so that it's always set for state_changed later
+                ips: float = 0
+                if not self.bluebox_mode:
+                    time_taken = time.time() - self.chain_start_time[chain]
+                    ips = int(iterations_needed / time_taken * 10) / 10
+                    log.info(
+                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
+                        f" iters, "
+                        f"Estimated IPS: {ips}, Chain: {chain}"
+                    )
+
+                vdf_info: VDFInfo = VDFInfo(
+                    challenge,
+                    iterations_needed,
+                    output,
+                )
+                vdf_proof: VDFProof = VDFProof(
+                    witness_type,
+                    proof_bytes,
+                    self.bluebox_mode,
+                )
+
+                if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
+                    log.error("Invalid proof of time!")
+                if not self.bluebox_mode:
+                    async with self.lock:
+                        assert proof_label is not None
+                        self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
+                    self.state_changed(
+                        "finished_pot",
+                        {
+                            "estimated_ips": ips,
+                            "iterations_needed": iterations_needed,
+                            "chain": chain.value,
+                            "vdf_info": vdf_info,
+                            "vdf_proof": vdf_proof,
+                        },
+                    )
                 else:
-                    try:
-                        # This must be a proof, 4 bytes is length prefix
-                        length = int.from_bytes(data, "big")
-                        proof = await reader.readexactly(length)
-                        stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
-                    except (
-                        asyncio.IncompleteReadError,
-                        ConnectionResetError,
-                        Exception,
-                    ) as e:
-                        log.warning(f"{type(e)} {e}")
-                        async with self.lock:
-                            self.vdf_failures.append((chain, proof_label))
-                            self.vdf_failures_count += 1
-                        break
-
-                    iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
-
-                    y_size_bytes = stdout_bytes_io.read(8)
-                    y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
-
-                    y_bytes = stdout_bytes_io.read(y_size)
-                    witness_type = uint8(int.from_bytes(stdout_bytes_io.read(1), "big", signed=True))
-                    proof_bytes: bytes = stdout_bytes_io.read()
-
-                    # Verifies our own proof just in case
-                    form_size = ClassgroupElement.get_size(self.constants)
-                    output = ClassgroupElement.from_bytes(y_bytes[:form_size])
-                    if not self.bluebox_mode:
-                        time_taken = time.time() - self.chain_start_time[chain]
-                        ips = int(iterations_needed / time_taken * 10) / 10
-                        log.info(
-                            f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
-                            f" iters, "
-                            f"Estimated IPS: {ips}, Chain: {chain}"
-                        )
-
-                    vdf_info: VDFInfo = VDFInfo(
-                        challenge,
-                        iterations_needed,
-                        output,
+                    async with self.lock:
+                        writer.write(b"010")
+                        await writer.drain()
+                    assert header_hash is not None
+                    assert field_vdf is not None
+                    assert height is not None
+                    response = timelord_protocol.RespondCompactProofOfTime(
+                        vdf_info, vdf_proof, header_hash, height, field_vdf
                     )
-                    vdf_proof: VDFProof = VDFProof(
-                        witness_type,
-                        proof_bytes,
-                        self.bluebox_mode,
+                    if self.server is not None:
+                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
+                        await self.server.send_to_all([message], NodeType.FULL_NODE)
+                    self.state_changed(
+                        "new_compact_proof", {"header_hash": header_hash, "height": height, "field_vdf": field_vdf}
                     )
 
-                    if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
-                        log.error("Invalid proof of time!")
-                    if not self.bluebox_mode:
-                        async with self.lock:
-                            assert proof_label is not None
-                            self.proofs_finished.append((chain, vdf_info, vdf_proof, proof_label))
-                    else:
-                        async with self.lock:
-                            writer.write(b"010")
-                            await writer.drain()
-                        assert header_hash is not None
-                        assert field_vdf is not None
-                        assert height is not None
-                        response = timelord_protocol.RespondCompactProofOfTime(
-                            vdf_info, vdf_proof, header_hash, height, field_vdf
-                        )
-                        if self.server is not None:
-                            message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
-                            await self.server.send_to_all([message], NodeType.FULL_NODE)
         except ConnectionResetError as e:
             log.debug(f"Connection reset with VDF client {e}")
 

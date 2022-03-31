@@ -1,16 +1,25 @@
 import asyncio
 import random
-from time import time
+from time import monotonic
 from pathlib import Path
 from chia.full_node.block_store import BlockStore
 import os
 import sys
 
-from chia.util.db_wrapper import DBWrapper
+from benchmarks.utils import clvm_generator
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint128, uint64, uint32, uint8
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from utils import rewards, rand_hash, setup_db, rand_g1, rand_g2, rand_bytes
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from utils import (
+    rewards,
+    rand_hash,
+    setup_db,
+    rand_g1,
+    rand_g2,
+    rand_bytes,
+    rand_vdf,
+    rand_vdf_proof,
+    rand_class_group_element,
+)
 from chia.types.full_block import FullBlock
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -19,6 +28,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.foliage import Foliage, FoliageTransactionBlock, TransactionsInfo, FoliageBlockData
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 
 
 NUM_ITERS = 20000
@@ -27,37 +37,18 @@ NUM_ITERS = 20000
 random.seed(123456789)
 
 
-def rand_class_group_element() -> ClassgroupElement:
-    # TODO: address hint errors and remove ignores
-    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
-    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
-
-
-def rand_vdf() -> VDFInfo:
-    return VDFInfo(rand_hash(), uint64(random.randint(100000, 1000000000)), rand_class_group_element())
-
-
-def rand_vdf_proof() -> VDFProof:
-    return VDFProof(
-        uint8(1),  # witness_type
-        rand_hash(),  # witness
-        bool(random.randint(0, 1)),  # normalized_to_identity
-    )
-
-
-with open("clvm_generator.bin", "rb") as f:
-    clvm_generator = f.read()
-
-
 async def run_add_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("block-store-benchmark.db", version)
+    db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
 
     prev_block = bytes32([0] * 32)
+    prev_ses_hash = bytes32([0] * 32)
+
+    header_hashes = []
 
     try:
         block_store = await BlockStore.create(db_wrapper)
@@ -74,13 +65,13 @@ async def run_add_block_benchmark(version: int):
         prev_transaction_block = bytes32([0] * 32)
         prev_transaction_height = uint32(0)
         total_time = 0.0
+        ses_counter = 0
 
         if verbose:
             print("profiling add_full_block", end="")
 
         for height in range(block_height, block_height + NUM_ITERS):
 
-            header_hash = rand_hash()
             is_transaction = transaction_block_counter == 0
             fees = uint64(random.randint(0, 150000))
             farmer_coin, pool_coin = rewards(uint32(height))
@@ -90,35 +81,16 @@ async def run_add_block_benchmark(version: int):
             finished_challenge_slot_hashes = None
             finished_infused_challenge_slot_hashes = None
             finished_reward_slot_hashes = None
-            sub_epoch_summary_included = None
 
-            record = BlockRecord(
-                header_hash,
-                prev_block,
-                uint32(height),
-                weight,
-                iters,
-                sp_index,
-                rand_class_group_element(),
-                None if deficit > 3 else rand_class_group_element(),
-                rand_hash(),  # reward_infusion_new_challenge
-                rand_hash(),  # challenge_block_info_hash
-                sub_slot_iters,
-                rand_hash(),  # pool_puzzle_hash
-                rand_hash(),  # farmer_puzzle_hash
-                required_iters,
-                deficit,
-                deficit == 16,
-                prev_transaction_height,
-                timestamp if is_transaction else None,
-                prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
-                None if fees == 0 else fees,
-                reward_claims_incorporated,
-                finished_challenge_slot_hashes,
-                finished_infused_challenge_slot_hashes,
-                finished_reward_slot_hashes,
-                sub_epoch_summary_included,
-            )
+            sub_epoch_summary_included = None
+            if ses_counter == 0:
+                sub_epoch_summary_included = SubEpochSummary(
+                    prev_ses_hash,
+                    rand_hash(),
+                    uint8(random.randint(0, 255)),  # num_blocks_overflow: uint8
+                    None,  # new_difficulty: Optional[uint64]
+                    None,  # new_sub_slot_iters: Optional[uint64]
+                )
 
             has_pool_pk = random.randint(0, 1)
 
@@ -211,15 +183,43 @@ async def run_add_block_benchmark(version: int):
                 [],  # transactions_generator_ref_list
             )
 
-            start = time()
-            await block_store.add_full_block(
-                header_hash,
-                full_block,
-                record,
-            )
-            await db_wrapper.db.commit()
+            header_hash = full_block.header_hash
 
-            stop = time()
+            record = BlockRecord(
+                header_hash,
+                prev_block,
+                uint32(height),
+                weight,
+                iters,
+                sp_index,
+                rand_class_group_element(),
+                None if deficit > 3 else rand_class_group_element(),
+                rand_hash(),  # reward_infusion_new_challenge
+                rand_hash(),  # challenge_block_info_hash
+                sub_slot_iters,
+                rand_hash(),  # pool_puzzle_hash
+                rand_hash(),  # farmer_puzzle_hash
+                required_iters,
+                deficit,
+                deficit == 16,
+                prev_transaction_height,
+                timestamp if is_transaction else None,
+                prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
+                None if fees == 0 else fees,
+                reward_claims_incorporated,
+                finished_challenge_slot_hashes,
+                finished_infused_challenge_slot_hashes,
+                finished_reward_slot_hashes,
+                sub_epoch_summary_included,
+            )
+
+            start = monotonic()
+            await block_store.add_full_block(header_hash, full_block, record)
+            await block_store.set_in_chain([(header_hash,)])
+            header_hashes.append(header_hash)
+            await block_store.set_peak(header_hash)
+
+            stop = monotonic()
             total_time += stop - start
 
             # 19 seconds per block
@@ -228,6 +228,7 @@ async def run_add_block_benchmark(version: int):
             iters = uint128(iters + 123456)
             sp_index = uint8((sp_index + 1) % 64)
             deficit = uint8((deficit + 3) % 17)
+            ses_counter = (ses_counter + 1) % 384
             prev_block = header_hash
 
             # every 33 blocks is a transaction block
@@ -237,6 +238,9 @@ async def run_add_block_benchmark(version: int):
                 prev_transaction_block = header_hash
                 prev_transaction_height = uint32(height)
 
+            if ses_counter == 0:
+                prev_ses_hash = header_hash
+
             if verbose:
                 print(".", end="")
                 sys.stdout.flush()
@@ -244,7 +248,160 @@ async def run_add_block_benchmark(version: int):
 
         if verbose:
             print("")
-        print(f"{total_time:0.4f}s, add_full_blocks")
+        print(f"{total_time:0.4f}s, add_full_block")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_full_block")
+
+        random.shuffle(header_hashes)
+        start = monotonic()
+        for h in header_hashes:
+            block = await block_store.get_full_block(h)
+            assert block.header_hash == h
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_full_block")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_full_block_bytes")
+
+        start = monotonic()
+        for h in header_hashes:
+            block = await block_store.get_full_block_bytes(h)
+            assert len(block) > 0
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_full_block_bytes")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_full_blocks_at")
+
+        start = monotonic()
+        for hi in range(1, block_height):
+            blocks = await block_store.get_full_blocks_at([hi])
+            assert len(blocks) == 1
+            assert blocks[0].height == hi
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_full_blocks_at")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_block_records_by_hash")
+
+        start = monotonic()
+        for h in header_hashes:
+            blocks = await block_store.get_block_records_by_hash([h])
+            assert len(blocks) == 1
+            assert blocks[0].header_hash == h
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_block_records_by_hash")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_blocks_by_hash")
+
+        start = monotonic()
+        for h in header_hashes:
+            blocks = await block_store.get_blocks_by_hash([h])
+            assert len(blocks) == 1
+            assert blocks[0].header_hash == h
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_blocks_by_hash")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_block_record")
+
+        start = monotonic()
+        for h in header_hashes:
+            blocks = await block_store.get_block_record(h)
+            assert blocks.header_hash == h
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_block_record")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_block_records_in_range")
+
+        start = monotonic()
+        for i in range(100):
+            hi = random.randint(1, block_height - 100)
+            blocks = await block_store.get_block_records_in_range(hi, hi + 99)
+            assert len(blocks) == 100
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_block_records_in_range")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_block_records_close_to_peak")
+
+        start = monotonic()
+        blocks, peak = await block_store.get_block_records_close_to_peak(99)
+        assert len(blocks) == 100
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_block_records_close_to_peak")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling is_fully_compactified")
+
+        start = monotonic()
+        for h in header_hashes:
+            compactified = await block_store.is_fully_compactified(h)
+            assert compactified is False
+
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_block_record")
+        all_test_time += total_time
+
+        total_time = 0.0
+        if verbose:
+            print("profiling get_random_not_compactified")
+
+        start = monotonic()
+        for i in range(1, 5000):
+            blocks = await block_store.get_random_not_compactified(100)
+            assert len(blocks) == 100
+        stop = monotonic()
+        total_time += stop - start
+
+        print(f"{total_time:0.4f}s, get_random_not_compactified")
         all_test_time += total_time
 
         print(f"all tests completed in {all_test_time:0.4f}s")
@@ -253,7 +410,7 @@ async def run_add_block_benchmark(version: int):
         print(f"database size: {db_size/1000000:.3f} MB")
 
     finally:
-        await db_wrapper.db.close()
+        await db_wrapper.close()
 
 
 if __name__ == "__main__":

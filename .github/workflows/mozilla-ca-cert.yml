@@ -8,7 +8,7 @@ jobs:
   update_ca_module:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: "${{ github.event.inputs.chia_ref }}"
@@ -27,6 +27,6 @@ jobs:
           branch: mozilla-ca-updates
           commit-message: "adding ca updates"
           delete-branch: true
-          reviewers: "justinengland,hoffmang9,cmmarslender,nirajpathak13"
+          reviewers: "wjblanke,emlowe"
           title: "CA Cert updates"
           token: "${{ secrets.GITHUB_TOKEN }}"

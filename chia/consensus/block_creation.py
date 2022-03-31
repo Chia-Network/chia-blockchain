@@ -12,7 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -88,10 +88,7 @@ def create_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-    #       [assignment]
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")  # type: ignore[assignment]
+    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
@@ -125,19 +122,21 @@ def create_foliage(
 
     generator_block_heights_list: List[uint32] = []
 
+    foliage_transaction_block_hash: Optional[bytes32]
+
     if is_transaction_block:
         cost = uint64(0)
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list()
+            generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
                 block_generator,
                 constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=constants.COST_PER_BYTE,
-                safe_mode=True,
+                mempool_mode=True,
             )
-            cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
+            cost = result.cost
 
             removal_amount = 0
             addition_amount = 0
@@ -252,31 +251,23 @@ def create_foliage(
             prev_transaction_block_hash = prev_transaction_block.header_hash
 
         assert transactions_info is not None
-        # TODO: address hint error and remove ignore
-        #       error: Argument 4 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
-        #       error: Argument 5 to "FoliageTransactionBlock" has incompatible type "bytes"; expected "bytes32"
-        #       [arg-type]
         foliage_transaction_block: Optional[FoliageTransactionBlock] = FoliageTransactionBlock(
             prev_transaction_block_hash,
             timestamp,
             filter_hash,
-            additions_root,  # type: ignore[arg-type]
-            removals_root,  # type: ignore[arg-type]
+            additions_root,
+            removals_root,
             transactions_info.get_hash(),
         )
         assert foliage_transaction_block is not None
 
-        foliage_transaction_block_hash: bytes32 = foliage_transaction_block.get_hash()
+        foliage_transaction_block_hash = foliage_transaction_block.get_hash()
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
             foliage_transaction_block_hash, reward_block_unfinished.proof_of_space.plot_public_key
         )
         assert foliage_transaction_block_signature is not None
     else:
-        # TODO: address hint error and remove ignore
-        #       error: Incompatible types in assignment (expression has type "None", variable has type "bytes32")
-        #       [assignment]
-        foliage_transaction_block_hash = None  # type: ignore[assignment]
+        foliage_transaction_block_hash = None
         foliage_transaction_block_signature = None
         foliage_transaction_block = None
         transactions_info = None
@@ -433,7 +424,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list() if block_generator else [],
+        block_generator.block_height_list if block_generator else [],
     )
 
 

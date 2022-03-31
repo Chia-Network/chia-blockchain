@@ -936,10 +936,7 @@ class FullNodeAPI:
             if unfinished_block.is_transaction_block():
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Incompatible types in assignment (expression has type "bytes", variable has type
-                #       "Optional[bytes32]")  [assignment]
-                foliage_transaction_block_hash = bytes([0] * 32)  # type: ignore[assignment]
+                foliage_transaction_block_hash = bytes32([0] * 32)
 
             # TODO: address hint error and remove ignore
             #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected
@@ -1199,11 +1196,12 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
+        peak_height = self.full_node.blockchain.get_peak_height()
         if (
             block is None
             or block.is_transaction_block() is False
             or block.height != request.height
-            or block.height > self.full_node.blockchain.get_peak_height()
+            or (peak_height is not None and block.height > peak_height)
             or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
@@ -1259,11 +1257,10 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
-
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
+            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
@@ -1423,6 +1420,7 @@ class FullNodeAPI:
 
         hint_coin_ids = []
         # Add peer to the "Subscribed" dictionary
+        max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for puzzle_hash in request.puzzle_hashes:
             ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash)
             hint_coin_ids.extend(ph_hint_coins)
@@ -1430,7 +1428,7 @@ class FullNodeAPI:
                 self.full_node.ph_subscriptions[puzzle_hash] = set()
             if (
                 peer.peer_node_id not in self.full_node.ph_subscriptions[puzzle_hash]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
                 self.full_node.ph_subscriptions[puzzle_hash].add(peer.peer_node_id)
                 self.full_node.peer_puzzle_hash[peer.peer_node_id].add(puzzle_hash)
@@ -1438,12 +1436,12 @@ class FullNodeAPI:
 
         # Send all coins with requested puzzle hash that have been created after the specified height
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, start_height=request.min_height
+            include_spent_coins=True, puzzle_hashes=request.puzzle_hashes, min_height=request.min_height
         )
 
         if len(hint_coin_ids) > 0:
-            hint_states = await self.full_node.coin_store.get_coin_state_by_ids(
-                include_spent_coins=True, coin_ids=hint_coin_ids, start_height=request.min_height
+            hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
+                include_spent_coins=True, coin_ids=hint_coin_ids, min_height=request.min_height
             )
             states.extend(hint_states)
 
@@ -1461,20 +1459,20 @@ class FullNodeAPI:
 
         if peer.peer_node_id not in self.full_node.peer_sub_counter:
             self.full_node.peer_sub_counter[peer.peer_node_id] = 0
-
+        max_items = self.full_node.config.get("max_subscribe_items", 200000)
         for coin_id in request.coin_ids:
             if coin_id not in self.full_node.coin_subscriptions:
                 self.full_node.coin_subscriptions[coin_id] = set()
             if (
                 peer.peer_node_id not in self.full_node.coin_subscriptions[coin_id]
-                and self.full_node.peer_sub_counter[peer.peer_node_id] < 100000
+                and self.full_node.peer_sub_counter[peer.peer_node_id] < max_items
             ):
                 self.full_node.coin_subscriptions[coin_id].add(peer.peer_node_id)
                 self.full_node.peer_coin_ids[peer.peer_node_id].add(coin_id)
                 self.full_node.peer_sub_counter[peer.peer_node_id] += 1
 
-        states: List[CoinState] = await self.full_node.coin_store.get_coin_state_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, start_height=request.min_height
+        states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
