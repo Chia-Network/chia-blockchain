@@ -4,7 +4,6 @@ on:
   workflow_call:
     secrets:
       APPLE_DEV_ID_APP:
-      GITHUB_TOKEN:
       GLUE_ACCESS_TOKEN:
       INSTALLER_UPLOAD_KEY:
       INSTALLER_UPLOAD_SECRET:
