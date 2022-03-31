@@ -11,7 +11,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Callable, Dict, List, Optional, Tuple, Any, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
@@ -435,7 +435,7 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        previous_generator: CompressorArg = None,
+        previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[FullBlock]:
@@ -588,12 +588,14 @@ class BlockTools:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if type(previous_generator) is CompressorArg:
                                 block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
+                                if type(previous_generator) is list:
+                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -861,7 +863,7 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None:
+                            if previous_generator is not None and type(previous_generator) is CompressorArg:
                                 block_generator = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
