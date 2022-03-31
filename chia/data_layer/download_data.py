@@ -3,7 +3,7 @@ from typing import List
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import NodeType, Status
-from chia.types.ints import uint16
+from chia.util.ints import uint16
 
 
 def get_delta_filename(tree_id: bytes32, generation: int) -> str:
