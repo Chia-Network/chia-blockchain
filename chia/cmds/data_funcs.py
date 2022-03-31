@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional, Tuple, Dict, Type
+from typing import Optional, Tuple, List, Dict, Type
 from types import TracebackType
 
 import aiohttp
@@ -129,13 +129,13 @@ async def get_root_cmd(
 async def subscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
-    ip: str,
-    port: int,
+    ip: List[str],
+    port: List[int],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.subscribe(store_id=store_id_bytes, ip=ip, port=uint16(port))
+            await client.subscribe(store_id=store_id_bytes, ip=ip, port=[uint16(cur_port) for cur_port in port])
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:

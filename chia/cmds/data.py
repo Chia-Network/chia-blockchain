@@ -184,17 +184,17 @@ def get_root(
 @data_cmd.command("subscribe", short_help="")
 @create_data_store_id_option()
 @click.option("-ip", "--ip", help="", type=str)
-@click.option("-port", "--port", help="", type=int)
+@click.option("-port", "--port", help="", type=str)
 @create_rpc_port_option()
 def subscribe(
     id: str,
     ip: str,
-    port: int,
+    port: str,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import subscribe_cmd
 
-    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, ip=ip, port=port))
+    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, ip=json.loads(ip), port=json.loads(port)))
 
 
 @data_cmd.command("unsubscribe", short_help="")

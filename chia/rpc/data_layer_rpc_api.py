@@ -2,7 +2,7 @@ import dataclasses
 from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side, DownloadMode
+from chia.data_layer.data_layer_types import Side, DataServersInfo
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -198,20 +198,14 @@ class DataLayerRpcApi:
         store_id = request.get("id")
         if store_id is None:
             raise Exception("missing store id in request")
-        ip = request.get("ip")
-        if ip is None:
-            raise Exception("missing ip in request")
-        port = request.get("port")
-        if port is None:
-            raise Exception("missing port in request")
-        mode = DownloadMode.HISTORY
-        req_mode = request.get("mode")
-        if req_mode is not None:
-            mode = DownloadMode(req_mode)
+
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        await self.service.subscribe(store_id=store_id_bytes, mode=mode, ip=ip, port=port)
+        ips = request["ips"]
+        ports = request["ports"]
+        data_servers_info = DataServersInfo(ips, ports)
+        await self.service.subscribe(store_id=store_id_bytes, data_servers_info=data_servers_info)
         return {}
 
     async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
