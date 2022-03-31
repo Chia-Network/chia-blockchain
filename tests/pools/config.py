@@ -1,3 +1,2 @@
-custom_parallel_n = 2
-parallel = True
+parallel = 2
 job_timeout = 60
