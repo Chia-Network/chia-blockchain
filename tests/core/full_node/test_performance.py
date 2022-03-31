@@ -1,15 +1,13 @@
 # flake8: noqa: F811, F401
-import asyncio
+import cProfile
 import dataclasses
 import logging
 import random
 import time
 from typing import Dict
 
-from clvm.casts import int_to_bytes
 import pytest
-import pytest_asyncio
-import cProfile
+from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.full_node_api import FullNodeAPI
@@ -18,12 +16,9 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint64
-from tests.wallet_tools import WalletTool
-
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -37,20 +32,6 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
-
-
-@pytest_asyncio.fixture(scope="module")
-async def wallet_nodes_perf(bt):
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
-    nodes, wallets = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    server_1 = full_node_1.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, server_1, wallet_a, wallet_receiver
-
-    async for _ in async_gen:
-        yield _
 
 
 class TestPerformance:

@@ -267,7 +267,7 @@ class RLWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(user_pubkey)
         assert index is not None
         record = DerivationRecord(
-            index,
+            uint32(index),
             rl_puzzle_hash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -277,7 +277,7 @@ class RLWallet:
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
         record2 = DerivationRecord(
-            index + 1,
+            uint32(index + 1),
             aggregation_puzzlehash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -332,6 +332,8 @@ class RLWallet:
         peak = self.wallet_state_manager.blockchain.get_peak()
         height = peak.height if peak else 0
         assert self.rl_info.limit is not None
+        if self.rl_info.interval is None:
+            raise RuntimeError("rl_available_balance: rl_info.interval is undefined")
         unlocked = int(
             ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
         )
@@ -445,6 +447,8 @@ class RLWallet:
         return pubkey, private
 
     async def _get_rl_coin(self) -> Optional[Coin]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -455,6 +459,8 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )

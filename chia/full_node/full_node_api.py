@@ -1196,11 +1196,12 @@ class FullNodeAPI:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
+        peak_height = self.full_node.blockchain.get_peak_height()
         if (
             block is None
             or block.is_transaction_block() is False
             or block.height != request.height
-            or block.height > self.full_node.blockchain.get_peak_height()
+            or (peak_height is not None and block.height > peak_height)
             or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
@@ -1256,11 +1257,10 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
-
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
+            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None

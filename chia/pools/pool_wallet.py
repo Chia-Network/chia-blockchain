@@ -43,7 +43,7 @@ from chia.pools.pool_puzzles import (
     get_delayed_puz_info_from_launcher_spend,
 )
 
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.derive_keys import (
     find_owner_sk,
 )
@@ -919,25 +919,25 @@ class PoolWallet:
         )
         return len(unconfirmed) > 0
 
-    async def get_confirmed_balance(self, _=None) -> uint64:
-        amount: uint64 = uint64(0)
+    async def get_confirmed_balance(self, _=None) -> uint128:
+        amount: uint128 = uint128(0)
         if (await self.get_current_state()).current.state == SELF_POOLING:
             unspent_coin_records: List[WalletCoinRecord] = list(
                 await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
             )
             for record in unspent_coin_records:
                 if record.coinbase:
-                    amount = uint64(amount + record.coin.amount)
+                    amount = uint128(amount + record.coin.amount)
         return amount
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         return await self.get_confirmed_balance(record_list)
 
-    async def get_spendable_balance(self, record_list=None) -> uint64:
+    async def get_spendable_balance(self, record_list=None) -> uint128:
         return await self.get_confirmed_balance(record_list)
 
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, record_list=None) -> uint64:
-        return uint64(0)
+    async def get_max_send_amount(self, record_list=None) -> uint128:
+        return uint128(0)
