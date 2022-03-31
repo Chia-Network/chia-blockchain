@@ -80,24 +80,13 @@ async def select_coins(
             )
             return set(smaller_coins)
         else:
-            target_coins: Set[Coin] = set()
-            coin_sum = 0
-            coins_500: List[Coin] = valid_spendable_coins[: -(len(valid_spendable_coins) - 500)]
-            # remove 500 coins of least value.
-            for coin in coins_500:
-                if coin_sum >= amount:
-                    break
-                target_coins.add(coin)
-                coin_sum += coin.amount
-            log.debug(f"selected largest coins due to the large amount of coins. {target_coins}")
-            return target_coins
+            smallest_coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins)
+            assert smallest_coin is not None
+            log.debug(f"Selected closest greater coin due to the large amount of coins. {smallest_coin.name()}")
+            return {smallest_coin}
 
     elif smaller_coin_sum < amount:
-        if len(smaller_coins) > 0:  # in case we only have bigger coins.
-            greater_coins = valid_spendable_coins[: -len(smaller_coins)]
-        else:
-            greater_coins = valid_spendable_coins
-        smallest_coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
+        smallest_coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins)
         assert smallest_coin is not None
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
@@ -117,6 +106,14 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
         if coin.amount == target:
             return coin
     return None
+
+
+def select_smallest_coin_over_target(smaller_coin_list: List[Coin], valid_spendable_coin_list: List[Coin]) -> Coin:
+    if len(smaller_coin_list) > 0:  # in case we only have bigger coins.
+        greater_coins = valid_spendable_coin_list[: -len(smaller_coin_list)]
+    else:
+        greater_coins = valid_spendable_coin_list
+    return greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
 
 
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
