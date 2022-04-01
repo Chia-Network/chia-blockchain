@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Any, Tuple, TypedDict
 from sortedcontainers import SortedDict
 
 from chia.full_node.fee_estimate import FeeTrackerBackup, FeeStatBackup
@@ -24,6 +24,21 @@ from chia.full_node.fee_estimator_constants import (
 )
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32
+
+
+class BucketResult(TypedDict):
+    start: float
+    end: float
+    within_target: float
+    total_confirmed: float
+    in_mempool: float
+    left_mempool: float
+
+
+class EstimateResult(TypedDict):
+    pass_bucket: BucketResult
+    fail_bucket: BucketResult
+    median: float
 
 
 # Implementation of bitcoin core fee estimation algorithm
@@ -63,7 +78,17 @@ class FeeStat:
     max_confirms: int
     fee_store: FeeStore
 
-    def __init__(self, buckets, sorted_buckets, max_periods, decay, scale, log, fee_store, my_type):
+    def __init__(
+        self,
+        buckets: List[float],
+        sorted_buckets: SortedDict,
+        max_periods: int,
+        decay: float,
+        scale: int,
+        log: Any,
+        fee_store: FeeStore,
+        my_type: str,
+    ):
         self.buckets = buckets
         self.sorted_buckets = sorted_buckets
         self.confirmed_average = [[] for _ in range(0, max_periods)]
@@ -89,15 +114,15 @@ class FeeStat:
 
         self.old_unconf_txs = [0 for _ in range(0, len(buckets))]
 
-    def get_bucket_index(self, feerate) -> int:
+    def get_bucket_index(self, feerate: float) -> int:
         if feerate in self.sorted_buckets:
             bucket_index = self.sorted_buckets[feerate]
         else:
             bucket_index = self.sorted_buckets.bisect_left(feerate) - 1
 
-        return bucket_index
+        return int(bucket_index)
 
-    def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem):
+    def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem) -> None:
         if blocks_to_confirm < 1:
             return
 
@@ -112,7 +137,7 @@ class FeeStat:
         self.tx_ct_avg[bucket_index] += 1
         self.m_feerate_avg[bucket_index] += feerate
 
-    def update_moving_averages(self):
+    def update_moving_averages(self) -> None:
         for j in range(0, len(self.buckets)):
             for i in range(0, len(self.confirmed_average)):
                 self.confirmed_average[i][j] *= self.decay
@@ -121,18 +146,18 @@ class FeeStat:
             self.tx_ct_avg[j] *= self.decay
             self.m_feerate_avg[j] *= self.decay
 
-    def clear_current(self, block_height):
+    def clear_current(self, block_height: uint32) -> None:
         for i in range(0, len(self.buckets)):
             self.old_unconf_txs[i] += self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i]
             self.unconfirmed_txs[block_height % len(self.unconfirmed_txs)][i] = 0
 
-    def new_mempool_tx(self, block_height, fee_rate):
-        bucket_index = self.get_bucket_index(fee_rate)
+    def new_mempool_tx(self, block_height: uint32, fee_rate: float) -> int:
+        bucket_index: int = self.get_bucket_index(fee_rate)
         block_index = block_height % len(self.unconfirmed_txs)
         self.unconfirmed_txs[block_index][bucket_index] += 1
         return bucket_index
 
-    def remove_tx(self, latest_seen_height, item: MempoolItem, bucket_index):
+    def remove_tx(self, latest_seen_height: uint32, item: MempoolItem, bucket_index: int) -> None:
         if item.height_added is None:
             return
         block_ago = latest_seen_height - item.height_added
@@ -187,7 +212,7 @@ class FeeStat:
 
         return FeeStatBackup(self.type, str_tx_ct_abg, str_confirmed_average, str_failed_average, str_m_feerate_avg)
 
-    def import_backup(self, backup: FeeStatBackup):
+    def import_backup(self, backup: FeeStatBackup) -> None:
         for i in range(0, self.max_periods):
             for j in range(0, len(self.confirmed_average[i])):
                 self.confirmed_average[i][j] = float.fromhex(backup.confirmed_average[i][j])
@@ -200,7 +225,9 @@ class FeeStat:
         for i in range(0, len(self.m_feerate_avg)):
             self.m_feerate_avg[i] = float.fromhex(backup.m_feerate_avg[i])
 
-    def estimate_median_val(self, conf_target: int, sufficient_tx_val: float, success_break_point: float, block_height):
+    def estimate_median_val(
+        self, conf_target: int, sufficient_tx_val: float, success_break_point: float, block_height: uint32
+    ) -> EstimateResult:
         n_conf = 0.0  # Number of txs confirmed within conf_target
         total_num = 0.0  # Total number of txs that were
         extra_num = 0.0
@@ -217,8 +244,8 @@ class FeeStat:
         bins = len(self.unconfirmed_txs)
         new_bucket_range = True
         passing = True
-        pass_bucket = {}
-        fail_bucket = {}
+        pass_bucket: BucketResult = {}
+        fail_bucket: BucketResult = {}
         for bucket in range(max_bucket_index, -1, -1):
             if new_bucket_range:
                 cur_near_bucket = bucket
@@ -317,7 +344,11 @@ class FeeStat:
         self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
-        return pass_bucket, fail_bucket, median
+        result: EstimateResult = {}
+        result["pass_bucket"] = pass_bucket
+        result["fail_bucket"] = pass_bucket
+        result["median"] = pass_bucket
+        return result
 
 
 class FeeTracker:
@@ -332,7 +363,7 @@ class FeeTracker:
     buckets: List[float]
 
     @classmethod
-    async def create(cls, log, fee_store: FeeStore):
+    async def create(cls, log: Any, fee_store: FeeStore):
         self = cls()
         self.log = log
         self.sorted_buckets = SortedDict()
@@ -401,7 +432,7 @@ class FeeTracker:
 
         return self
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         short = self.short_horizon.create_backup()
         medium = self.med_horizon.create_backup()
         long = self.long_horizon.create_backup()
@@ -409,7 +440,7 @@ class FeeTracker:
         backup = FeeTrackerBackup(FEE_ESTIMATOR_VERSION, self.first_recorded_height, self.latest_seen_height, stats)
         await self.fee_store.store_fee_data(backup)
 
-    def process_block(self, block_height: uint32, items: List[MempoolItem]):
+    def process_block(self, block_height: uint32, items: List[MempoolItem]) -> None:
         """New block has been farmed and these transaction have been included"""
         if block_height <= self.latest_seen_height:
             # Ignore reorgs
@@ -430,7 +461,7 @@ class FeeTracker:
             self.log.info("Fee Estimator first recorded height")
             self.first_recorded_height = block_height
 
-    def process_block_tx(self, height, item: MempoolItem):
+    def process_block_tx(self, height: uint32, item: MempoolItem) -> None:
         if item.height_added is None:
             return
 
@@ -442,21 +473,21 @@ class FeeTracker:
         self.med_horizon.tx_confirmed(blocks_to_confirm, item)
         self.long_horizon.tx_confirmed(blocks_to_confirm, item)
 
-    def get_bucket_index(self, feerate) -> int:
+    def get_bucket_index(self, feerate: float) -> int:
         if feerate in self.sorted_buckets:
             bucket_index = self.sorted_buckets[feerate]
         else:
             bucket_index = self.sorted_buckets.bisect_left(feerate) - 1
 
-        return bucket_index
+        return int(bucket_index)
 
-    def remove_tx(self, item: MempoolItem):
+    def remove_tx(self, item: MempoolItem) -> None:
         bucket_index = self.get_bucket_index(item.fee_per_k_cost)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.med_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
 
-    def estimate_fee(self):
+    def estimate_fee(self) -> Tuple[EstimateResult, EstimateResult, EstimateResult]:
         """returns the fee estimate for short,medium, and long time horizon"""
         short = self.short_horizon.estimate_median_val(
             conf_target=SHORT_BLOCK_PERIODS * SHORT_SCALE - SHORT_SCALE,
