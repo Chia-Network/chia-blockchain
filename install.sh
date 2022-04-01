@@ -231,6 +231,17 @@ if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLIT
   exit 1
 fi
 
+# Check openssl version python will use
+OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+# There is also ssl.OPENSSL_VERSION_INFO returning a tuple
+# 1.1.1n corresponds to 269488367 as an integer
+echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
+if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
+  echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
+  exit 1
+fi
+
 # If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
 VENV_CLEAR=""
 if [ -e venv/bin/python ]; then
