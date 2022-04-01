@@ -75,8 +75,8 @@ install_python3_and_sqlite3_from_source_with_yum() {
   # Preparing installing Python
   echo 'yum groupinstall -y "Development Tools"'
   sudo yum groupinstall -y "Development Tools"
-  echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
-  sudo yum install -y openssl-devel libffi-devel bzip2-devel wget
+  echo "sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget"
+  sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget
 
   echo "cd $TMP_PATH"
   cd "$TMP_PATH"
@@ -111,7 +111,6 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
-
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
@@ -119,19 +118,21 @@ if [ "$(uname)" = "Linux" ]; then
     # Ubuntu
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
-    sudo apt-get install -y python3.7-venv python3.7-distutils
+    sudo apt-get install -y python3.7-venv python3.7-distutils openssl
+    apt show openssl
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils
+    sudo apt-get install -y python3.8-venv python3-distutils openssl
+    apt show openssl
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.9-venv python3-distutils
+    sudo apt-get install -y python3.9-venv python3-distutils openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
-    sudo apt-get install -y python3-venv
+    sudo apt-get install -y python3-venv openssl
   elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
     # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
@@ -160,16 +161,17 @@ if [ "$(uname)" = "Linux" ]; then
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
     echo "Installing on Rocky."
     # TODO: make this smarter about getting the latest version
-    sudo yum install --assumeyes python39
+    sudo yum install --assumeyes python39 openssl
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
     if ! command -v python3.9 >/dev/null 2>&1; then
-      sudo yum install -y python39
+      sudo yum install -y python39 openssl
     fi
   fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
+  brew install openssl
 elif [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
@@ -229,6 +231,17 @@ echo "SQLite version for Python is ${SQLITE_VERSION}"
 if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
   echo "Only sqlite>=3.8 is supported"
   exit 1
+fi
+
+# Check openssl version python will use
+OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+# There is also ssl.OPENSSL_VERSION_INFO returning a tuple
+# 1.1.1n corresponds to 269488367 as an integer
+echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
+if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
+  echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
+  echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
 # If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
