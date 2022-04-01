@@ -26,7 +26,7 @@ from chia.full_node.bundle_tools import (
 from chia.util.errors import Err
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots, PlotKeys
+from chia.plotting.create_plots import create_plots, PlotKeys, add_plot_dirs_to_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -195,6 +195,7 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
+                log.warning(f"PM plots: {len(self.plot_manager.plots)}  expected: {len(self.expected_plots)}")
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
@@ -334,6 +335,9 @@ class BlockTools:
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             if str(path_new.parent.resolve()) not in self._config["harvester"]["plot_directories"]:
                 self._config["harvester"]["plot_directories"].append(str(path_new.parent.resolve()))
+                add_plot_dirs_to_config(
+                    self.root_path, list(created.values()) + list(existed.values()), exclude_final_dir
+                )
 
             return plot_id_new
 
