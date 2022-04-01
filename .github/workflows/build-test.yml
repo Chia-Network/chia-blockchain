@@ -42,7 +42,6 @@ jobs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
   test:
-    # Should match JOB_NAME below
     name: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
     needs: configure
     runs-on: ${{ matrix.os.runs-on }}
@@ -88,9 +87,6 @@ jobs:
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      # Should match name above
-      # TODO: or maybe not quite?
-      JOB_NAME: ${{ matrix.configuration.name }}_${{ matrix.os.name }}_${{ matrix.python.name }}
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
 
     steps:
