@@ -126,7 +126,7 @@ if THIS_IS_WINDOWS:
             "bladebit"
         ),
         (
-            f"{ROOT}\\libssl-1_1.dll}",
+            f"{ROOT}\\libssl-1_1.dll",
             "."
         ),
     ]
