@@ -87,7 +87,7 @@ jobs:
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{ matrix.configuration.name }}
 
     steps:
       - name: Checkout code
