@@ -834,6 +834,7 @@ class TestFullNodeProtocol:
         await full_node_1.new_transaction(new_transaction, fake_peer)
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
+        print(f"FULL NODE HEIGHT: {start_height + 1} {full_node_1.full_node.blockchain.get_peak_height()}")
         await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 1)
         await time_out_assert(10, node_height_at_least, True, full_node_2, start_height + 1)
 
