@@ -28,8 +28,6 @@ export default function App(props: AppProps) {
   const [isReady, setIsReady] = useState<boolean>(false);
   const { isDarkMode } = useDarkMode();
 
-  console.log('dark mode', isDarkMode);
-
   const theme = isDarkMode ? dark : light;
 
   async function init() {

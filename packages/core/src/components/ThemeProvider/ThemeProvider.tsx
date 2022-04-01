@@ -51,8 +51,6 @@ export default function ThemeProvider(props: ThemeProviderProps) {
     return createTheme(theme, localisedTheme);
   }, [theme, locale]);
 
-  console.log('theme', finallTheme);
-
   return (
     <StyledThemeProvider theme={finallTheme}>
       <MaterialThemeProvider theme={finallTheme}>

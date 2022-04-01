@@ -83,8 +83,6 @@ export default function WalletsSidebar() {
           handleSelectWallet(wallet.id);
         }
 
-        console.log('wallet', wallet.id, Number(walletId), wallet.id === Number(walletId));
-
         return (
           <StyledCard variant="outlined" key={wallet.id} selected={wallet.id === Number(walletId)}>
             <CardActionArea onClick={handleSelect}>
