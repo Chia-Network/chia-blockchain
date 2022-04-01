@@ -117,10 +117,15 @@ install_openssl_ubuntu () {
   wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
   tar -zxvf openssl-1.1.1n.tar.gz
   cd openssl-1.1.1n
-  sudo ./config
+  sudo ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib
   sudo make install
+  echo "Original OpenSSL version"
   which openssl
-  export PATH=:/usr/local/bin:$PATH
+  openssl version -a
+  export PATH=:/usr/local/ssl:$PATH
+  which openssl
+  echo "New OpenSSL version"
+  openssl version -a
 }
 
 # Manage npm and other install requirements on an OS specific basis
