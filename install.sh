@@ -75,7 +75,7 @@ install_python3_and_sqlite3_from_source_with_yum() {
   # Preparing installing Python
   echo 'yum groupinstall -y "Development Tools"'
   sudo yum groupinstall -y "Development Tools"
-  echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
+  echo "sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget"
   sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget
 
   echo "cd $TMP_PATH"
