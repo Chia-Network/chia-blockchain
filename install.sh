@@ -119,10 +119,11 @@ install_openssl_ubuntu () {
   cd openssl-1.1.1n
   sudo ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared zlib
   sudo make install
+  sudo ldconfig /usr/local/ssl/bin/
   echo "Original OpenSSL version"
   which openssl
   openssl version -a
-  export PATH=:/usr/local/ssl/bin/:$PATH
+  export PATH=:/usr/local/ssl/bin:$PATH
   which openssl
   echo "New OpenSSL version"
   openssl version -a
