@@ -1226,9 +1226,10 @@ class TestFullNodeProtocol:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         block_2 = recursive_replace(block_2, "transactions_generator", None)
 
-        await full_node_2.full_node.respond_block(fnp.RespondBlock(block_2), dummy_peer)
+        rb_task = asyncio.create_task(full_node_2.full_node.respond_block(fnp.RespondBlock(block_2), dummy_peer))
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
+        rb_task.cancel()
 
     @pytest.mark.asyncio
     async def test_request_unfinished_block(self, wallet_nodes, bt, self_hostname):
