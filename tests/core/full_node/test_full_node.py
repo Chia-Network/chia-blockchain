@@ -814,10 +814,6 @@ class TestFullNodeProtocol:
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
-        cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
-            spend_bundle, None, spend_bundle.name()
-        )
-
         new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
         await full_node_1.new_transaction(new_transaction, fake_peer)
@@ -880,7 +876,6 @@ class TestFullNodeProtocol:
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
 
-            fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
             fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
             fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000000)
             if fee_rate_for_large > fee_rate_for_med:

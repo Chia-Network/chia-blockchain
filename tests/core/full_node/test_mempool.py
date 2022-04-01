@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple, Callable
 
 from clvm.casts import int_to_bytes
 import pytest
-import pytest_asyncio
 
 import chia.server.ws_connection as ws
 
@@ -39,7 +38,6 @@ from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer, add_dummy_connection
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.cost_calculator import NPCResult
@@ -286,7 +284,7 @@ class TestMempoolManager:
 
         full_node_1, server_1 = one_node_one_block
         _ = await next_block(full_node_1, wallet_a, bt)
-        coin = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
