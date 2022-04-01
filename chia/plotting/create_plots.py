@@ -13,7 +13,7 @@ from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, get_config_lock
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config
 from chia.util.ints import uint8
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
@@ -153,7 +153,7 @@ def add_plot_dirs_to_config(
         config = test_config_cache
     for plot_path in plot_paths:
         add_dir: Optional[str] = None
-        with get_config_lock(root_path, "config.yaml"):
+        with lock_and_load_config(root_path, "config.yaml"):
             resolved_final_dir: str = str(plot_path.parent.resolve())
             plot_directories_list: str = config["harvester"]["plot_directories"]
 

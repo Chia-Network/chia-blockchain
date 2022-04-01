@@ -9,8 +9,7 @@ from chia.plotting.create_plots import create_plots, resolve_plot_keys, add_plot
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.plotting.util import add_plot_directory
-from chia.util.config import load_config, get_config_lock
+from chia.util.config import load_config
 
 log = logging.getLogger(__name__)
 
