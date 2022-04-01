@@ -138,13 +138,15 @@ if [ "$(uname)" = "Linux" ]; then
     # Ubuntu
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
-    sudo apt-get install -y python3.7-venv python3.7-distutils
-    install_openssl_ubuntu
+    sudo apt-get install -y python3.7-venv python3.7-distutils openssl
+    audo apt show openssl
+    # install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils
-    install_openssl_ubuntu
+    sudo apt-get install -y python3.8-venv python3-distutils openssl
+    audo apt show openssl
+    # install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
@@ -261,7 +263,7 @@ OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VER
 echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
 if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
-  exit 1
+  echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
 # If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
