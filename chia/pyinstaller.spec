@@ -125,10 +125,6 @@ if THIS_IS_WINDOWS:
             f"{ROOT}\\bladebit\\bladebit.exe",
             "bladebit"
         ),
-        (
-            "$env:GITHUB_WORKSPACE\\libssl-1_1.dll",
-            "."
-        ),
     ]
 
 

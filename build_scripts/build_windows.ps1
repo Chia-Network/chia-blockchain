@@ -60,6 +60,8 @@ if (Test-Path -Path .\bladebit\) {
     mv .\bladebit\ .\venv\lib\site-packages\
 }
 
+Invoke-WebRequest https://github.com/python/cpython-bin-deps/raw/7bc5363d366acd7f9c130e27cf650d5414723a99/amd64/libssl-1_1.dll -OutFile ".\venv\lib\site-packages\libssl-1_1.dll"
+
 Write-Output "   ---"
 Write-Output "Build chia-blockchain wheels"
 Write-Output "   ---"
