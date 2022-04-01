@@ -14,39 +14,27 @@ jobs:
   linux_arm64:
     uses: ./.github/workflows/build-linux-arm64-installer.yml
     secrets:
-      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
-      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-      WIN_CODE_SIGN_CERT: ${{ secrets.WIN_CODE_SIGN_CERT }}
   linux_deb:
     uses: ./.github/workflows/build-linux-installer-deb.yml
     secrets:
-      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
-      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-      WIN_CODE_SIGN_CERT: ${{ secrets.WIN_CODE_SIGN_CERT }}
   linux_rpm:
     uses: ./.github/workflows/build-linux-installer-rpm.yml
     secrets:
-      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
-      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-      WIN_CODE_SIGN_CERT: ${{ secrets.WIN_CODE_SIGN_CERT }}
   macos_intel:
     uses: ./.github/workflows/build-macos-installer.yml
     secrets:
-      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
-      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-      WIN_CODE_SIGN_CERT: ${{ secrets.WIN_CODE_SIGN_CERT }}
   macos_m1:
     uses: ./.github/workflows/build-macos-m1-installer.yml
     secrets:
@@ -55,12 +43,9 @@ jobs:
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
-      WIN_CODE_SIGN_CERT: ${{ secrets.WIN_CODE_SIGN_CERT }}
   windows:
     uses: ./.github/workflows/build-windows-installer.yml
     secrets:
-      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
-      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}

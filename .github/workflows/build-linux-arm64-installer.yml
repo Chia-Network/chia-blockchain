@@ -3,17 +3,11 @@ name: Linux ARM64 installer on Python 3.8
 on:
   workflow_call:
     secrets:
-      APPLE_DEV_ID_APP:
-        required: true
-      APPLE_DEV_ID_APP_PASS:
-        required: true
       GLUE_ACCESS_TOKEN:
         required: true
       INSTALLER_UPLOAD_KEY:
         required: true
       INSTALLER_UPLOAD_SECRET:
-        required: true
-      WIN_CODE_SIGN_CERT:
         required: true
   workflow_dispatch:
 

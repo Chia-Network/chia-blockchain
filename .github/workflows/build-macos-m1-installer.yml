@@ -13,8 +13,6 @@ on:
         required: true
       INSTALLER_UPLOAD_SECRET:
         required: true
-      WIN_CODE_SIGN_CERT:
-        required: true
   workflow_dispatch:
 
 concurrency:
