@@ -95,10 +95,8 @@ for path in test_paths:
 
     conf = update_config(module_dict(testconfig), dir_config(dir))
 
-    if conf.get("custom_parallel_n") is not None:
-        pytest_parallel_args = f"-n {conf['custom_parallel_n']}"
-    else:
-        pytest_parallel_args = "-n 4" if conf["parallel"] else "-n 0"
+    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    pytest_parallel_args = f" -n {xdist_numprocesses}"
 
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
