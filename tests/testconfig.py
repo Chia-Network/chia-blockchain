@@ -1,10 +1,15 @@
-from typing import List
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Union
+
+if TYPE_CHECKING:
+    from typing_extensions import Literal
 
 # Github actions template config.
 oses = ["ubuntu", "macos"]
 
 # Defaults are conservative.
-parallel = False
+parallel: Union[bool, int, Literal["auto"]] = False
 checkout_blocks_and_plots = True
 install_timelord = False
 check_resource_usage = False

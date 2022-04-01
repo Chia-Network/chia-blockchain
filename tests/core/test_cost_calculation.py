@@ -207,7 +207,7 @@ class TestCostCalculation:
         assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
-        assert duration < 1
+        assert duration < 2
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
