@@ -143,6 +143,10 @@ jobs:
         Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
         rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
 
+    - name: Get openssl
+      run: |
+        Invoke-WebRequest https://github.com/python/cpython-bin-deps/raw/7bc5363d366acd7f9c130e27cf650d5414723a99/amd64/libssl-1_1.dll -OutFile "$env:GITHUB_WORKSPACE\libssl-1_1.dll"
+
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
