@@ -4,7 +4,6 @@ import {
   ThemeProvider as MaterialThemeProvider,
   createTheme,
 } from '@mui/material/styles';
-import { StylesProvider } from '@mui/styles';
 import * as materialLocales from '@mui/material/locale';
 import { ThemeProvider as StyledThemeProvider, createGlobalStyle } from 'styled-components';
 import Fonts from '../Fonts';
@@ -52,22 +51,23 @@ export default function ThemeProvider(props: ThemeProviderProps) {
     return createTheme(theme, localisedTheme);
   }, [theme, locale]);
 
-  return (
+  console.log('theme', finallTheme);
 
-      <StyledThemeProvider theme={finallTheme}>
-        <MaterialThemeProvider theme={finallTheme}>
-          <>
-            <CssBaseline />
-            {global && (
-              <GlobalStyle />
-            )}
-            {fonts && (
-              <Fonts />
-            )}
-            {children}
-          </>
-        </MaterialThemeProvider>
-      </StyledThemeProvider>
+  return (
+    <StyledThemeProvider theme={finallTheme}>
+      <MaterialThemeProvider theme={finallTheme}>
+        <>
+          <CssBaseline />
+          {global && (
+            <GlobalStyle />
+          )}
+          {fonts && (
+            <Fonts />
+          )}
+          {children}
+        </>
+      </MaterialThemeProvider>
+    </StyledThemeProvider>
   );
 }
 

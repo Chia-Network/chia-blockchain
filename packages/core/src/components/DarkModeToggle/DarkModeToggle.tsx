@@ -1,10 +1,10 @@
 import React from 'react';
-import useDarkMode from 'use-dark-mode';
 import { IconButton } from '@mui/material';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
+import useDarkMode from '../../hooks/useDarkMode';
 
 export default function DarkModeToggle() {
-  const { toggle, value: darkMode } = useDarkMode();
+  const { toggle, isDarkMode } = useDarkMode();
 
   function handleClick() {
     toggle();
@@ -12,7 +12,7 @@ export default function DarkModeToggle() {
 
   return (
     <IconButton color="inherit" onClick={handleClick}>
-      {darkMode ? <Brightness7 /> : <Brightness4 />}
+      {isDarkMode ? <Brightness7 /> : <Brightness4 />}
     </IconButton>
   );
 }

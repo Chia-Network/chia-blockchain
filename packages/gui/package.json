@@ -73,7 +73,6 @@
         "stream-browserify": "3.0.0",
         "styled-components": "5.3.3",
         "unique-names-generator": "4.6.0",
-        "use-dark-mode": "2.3.1",
         "validator": "13.7.0",
         "ws": "8.4.2"
     },
