@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import json
 import logging
@@ -58,63 +57,6 @@ def dir_config(dir: Path) -> Dict[str, Any]:
         return {}
 
 
-def read_file(filename: Path) -> str:
-    return filename.read_bytes().decode("utf8")
-
-
-# # Input file
-# def workflow_yaml_template_text(os):
-#     return read_file(Path(root_path / f"runner-templates/build-test-{os}"))
-
-
-# # Output files
-# def workflow_yaml_file(dir, os, test_name):
-#     return Path(dir / f"build-test-{os}-{test_name}.yml")
-
-
-# String function from test dir to test name
-def test_name(dir: Path) -> str:
-    return "-".join(dir.relative_to(root_path).parts)
-
-
-# def transform_template(template_text, replacements):
-#     t = template_text
-#     for r, v in replacements.items():
-#         t = t.replace(r, v)
-#     return t
-
-
-# # Replace with update_config
-# def generate_replacements(conf, dir):
-#     replacements = {
-#         "INSTALL_TIMELORD": read_file(Path(root_path / "runner-templates/install-timelord.include.yml")).rstrip(),
-#         "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
-#             Path(root_path / "runner-templates/checkout-test-plots.include.yml")
-#         ).rstrip(),
-#         "TEST_DIR": "",
-#         "TEST_NAME": "",
-#         "PYTEST_PARALLEL_ARGS": "",
-#     }
-#
-#     if not conf["checkout_blocks_and_plots"]:
-#         replacements[
-#             "CHECKOUT_TEST_BLOCKS_AND_PLOTS"
-#         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
-#     if not conf["install_timelord"]:
-#         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-#     if conf["parallel"]:
-#         replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
-#     if conf["job_timeout"]:
-#         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-#     replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
-#     replacements["TEST_NAME"] = test_name(dir)
-#     if "test_name" in conf:
-#         replacements["TEST_NAME"] = conf["test_name"]
-#     for var in conf["custom_vars"]:
-#         replacements[var] = conf[var] if var in conf else ""
-#     return replacements
-
-
 # Overwrite with directory specific values
 def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, Any]:
     if child is None:
@@ -124,14 +66,6 @@ def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, An
         if k not in child:
             conf[k] = v
     return conf
-
-
-def dir_path(string: str) -> Path:
-    p = Path(root_path / string)
-    if p.is_dir():
-        return p
-    else:
-        raise NotADirectoryError(string)
 
 
 # args
@@ -145,8 +79,6 @@ if args.verbose:
 
 # main
 test_paths = subdirs(per=args.per)
-# current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
-# changed: bool = False
 
 configuration = []
 
