@@ -111,6 +111,16 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
+install_openssl_ubuntu () {
+  sudo apt-get update
+  sudo apt-get install -y build-essential checkinstall zlib1g-dev
+  wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz
+  tar -zxvf openssl-1.1.1n.tar.gz
+  cd openssl-1.1.1n
+  sudo ./config
+  sudo make install
+  which openssl
+}
 
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
@@ -120,10 +130,12 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.7-venv python3.7-distutils
+    install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils
+    install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
