@@ -150,6 +150,7 @@ def configure(
             config["ui"]["selected_network"] = net
             config["introducer"]["selected_network"] = net
             config["wallet"]["selected_network"] = net
+            config["data_layer"]["selected_network"] = net
             print("Default full node port, introducer and network setting updated")
             change_made = True
         else:
