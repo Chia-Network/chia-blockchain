@@ -152,6 +152,7 @@ def add_plot_dirs_to_config(
         # Don't re-read config for every plot for tests, for efficiency
         config = test_config_cache
     for plot_path in plot_paths:
+        add_dir: Optional[str] = None
         with get_config_lock(root_path, "config.yaml"):
             resolved_final_dir: str = str(plot_path.parent.resolve())
             plot_directories_list: str = config["harvester"]["plot_directories"]
@@ -166,7 +167,9 @@ def add_plot_dirs_to_config(
                 if resolved_final_dir not in plot_directories_list:
                     # Adds the directory to the plot directories if it is not present
                     log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                    add_plot_directory(root_path, resolved_final_dir)
+                    add_dir = resolved_final_dir
+        if add_dir is not None:
+            add_plot_directory(root_path, add_dir)
 
 
 async def create_plots(
