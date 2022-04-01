@@ -40,7 +40,7 @@ class Statistics:
     maximum: float
     mean: float
     percentile_90: float
-    data: Tuple[float]
+    data: Tuple[float, ...]
 
     @classmethod
     def create(cls, data: Iterable[float]):
