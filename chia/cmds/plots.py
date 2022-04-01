@@ -154,9 +154,7 @@ def create_cmd(
     )
     config = load_config(root_path, "config.yaml")
     created_plots, existing_plots = asyncio.run(create_plots(Params(), plot_keys, config["min_mainnet_k_size"]))
-    add_plot_dirs_to_config(
-        root_path, list(created_plots.values()) + list(existing_plots.values()), exclude_final_dir, None
-    )
+    add_plot_dirs_to_config(root_path, list(created_plots.values()) + list(existing_plots.values()), exclude_final_dir)
 
 
 @plots_cmd.command("check", short_help="Checks plots")
