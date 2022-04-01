@@ -59,5 +59,5 @@ def plot_chia(args, root_path: Path):
     config = load_config(root_path, "config.yaml")
     created_plots, existing_plots = asyncio.run(create_plots(Params(args), plot_keys, config["min_mainnet_k_size"]))
     add_plot_dirs_to_config(
-        root_path, list(created_plots.values()) + list(existing_plots.values()), args.exclude_final_dir, None
+        root_path, list(created_plots.values()) + list(existing_plots.values()), args.exclude_final_dir
     )
