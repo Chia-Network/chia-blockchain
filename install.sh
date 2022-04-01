@@ -120,6 +120,7 @@ install_openssl_ubuntu () {
   sudo ./config
   sudo make install
   which openssl
+  export PATH=:/usr/local/bin:$PATH
 }
 
 # Manage npm and other install requirements on an OS specific basis
