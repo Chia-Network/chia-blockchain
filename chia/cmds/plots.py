@@ -5,7 +5,6 @@ from pathlib import Path
 
 import click
 
-from chia.plotting.create_plots import add_plot_dirs_to_config
 from chia.util.config import load_config
 
 DEFAULT_STRIPE_SIZE = 65536
@@ -115,7 +114,7 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
-    from chia.plotting.create_plots import create_plots, resolve_plot_keys
+    from chia.plotting.create_plots import create_plots, resolve_plot_keys, add_plot_dirs_to_config
 
     class Params(object):
         def __init__(self):
