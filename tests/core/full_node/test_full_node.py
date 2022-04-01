@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-import logging
 import random
 import time
 from secrets import token_bytes
@@ -51,8 +50,6 @@ from tests.core.node_height import node_height_at_least
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
-
-log = logging.getLogger(__name__)
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -352,7 +349,6 @@ class TestFullNodeBlockCompression:
         blockchain = empty_blockchain
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
-        print(f"height: {height}")
         assert full_node_1.full_node.full_node_store.previous_generator is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
@@ -781,12 +777,9 @@ class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_new_transaction_and_mempool(self, wallet_nodes, bt, self_hostname):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
-        blocks = await full_node_1.get_all_full_blocks()
-
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            10,
-            block_list_input=blocks,
+            3,
             guarantee_transaction_block=True,
             farmer_reward_puzzle_hash=wallet_ph,
             pool_reward_puzzle_hash=wallet_ph,
@@ -802,66 +795,51 @@ class TestFullNodeProtocol:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         fake_peer = server_1.all_connections[node_id]
-        # Mempool has capacity of 100, make 110 unspent coins that we can use
         puzzle_hashes = []
 
         # Makes a bunch of coins
-        start_t0 = time.time()
-        for i in range(5):
-            conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
-            # This should fit in one transaction
-            start_t1 = time.time()
-            for _ in range(100):
-                receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-                puzzle_hashes.append(receiver_puzzlehash)
-                output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(100000000)])
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+        # This should fit in one transaction
+        for _ in range(100):
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            puzzle_hashes.append(receiver_puzzlehash)
+            output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [receiver_puzzlehash, int_to_bytes(10000000000)])
 
-                conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-            log.warning(f"Time for creating PHs: {time.time() - start_t1}")
-            start_t1 = time.time()
-            spend_bundle = wallet_a.generate_signed_transaction(
-                100,
-                puzzle_hashes[0],
-                get_future_reward_coins(blocks[1 + i])[0],
-                condition_dic=conditions_dict,
-            )
-            log.warning(f"Time for creating bundle: {time.time() - start_t1}")
-            start_t1 = time.time()
-            assert spend_bundle is not None
-            cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle.name()
-            )
-            log.warning(f"Time for validating bundle: {time.time() - start_t1}")
-            start_t1 = time.time()
-            log.info(f"Cost result: {cost_result.cost}")
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100,
+            puzzle_hashes[0],
+            get_future_reward_coins(blocks[1])[0],
+            condition_dic=conditions_dict,
+        )
+        assert spend_bundle is not None
+        cost_result = await full_node_1.full_node.mempool_manager.pre_validate_spendbundle(
+            spend_bundle, None, spend_bundle.name()
+        )
 
-            new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+        new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
-            await full_node_1.new_transaction(new_transaction, fake_peer)
-            await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
+        await full_node_1.new_transaction(new_transaction, fake_peer)
+        await time_out_assert(10, new_transaction_requested, True, incoming_queue, new_transaction)
 
-            respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-            await full_node_1.respond_transaction(respond_transaction_2, peer)
+        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
+        await full_node_1.respond_transaction(respond_transaction_2, peer)
 
-            blocks = bt.get_consecutive_blocks(
-                1,
-                block_list_input=blocks,
-                guarantee_transaction_block=True,
-                transaction_data=spend_bundle,
-            )
-            await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), peer)
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=spend_bundle,
+        )
+        await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), None)
 
-            # Already seen
-            await full_node_1.new_transaction(new_transaction, fake_peer)
-            await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
-            log.warning(f"Time for rest: {time.time() - start_t1}")
-        log.warning(f"Time for entire loop: {time.time() - start_t0}")
-        start_t0 = time.time()
+        # Already seen
+        await full_node_1.new_transaction(new_transaction, fake_peer)
+        await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 5)
-
-        spend_bundles = []
+        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 1)
+        await time_out_assert(10, node_height_at_least, True, full_node_2, start_height + 1)
 
         included_tx = 0
         not_included_tx = 0
@@ -869,41 +847,42 @@ class TestFullNodeProtocol:
         successful_bundle: Optional[SpendBundle] = None
 
         # Fill mempool
-        log.warning(f"Total n phs: {len(puzzle_hashes)}")
-        for puzzle_hash in puzzle_hashes[1:]:
-            start_t1 = time.time()
-            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
-            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-            if puzzle_hash == puzzle_hashes[-1]:
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        group_size = 3  # We will generate transaction bundles of this size (* standard transaction of around 3-4M cost)
+        for i in range(1, len(puzzle_hashes), group_size):
+            phs_to_use = [puzzle_hashes[i + j] for j in range(group_size) if (i + j) < len(puzzle_hashes)]
+            coin_records = [
+                (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash))[0]
+                for puzzle_hash in phs_to_use
+            ]
+
+            last_iteration = (i == len(puzzle_hashes) - group_size) or len(phs_to_use) < group_size
+            if last_iteration:
                 force_high_fee = True
-                fee = 100000000  # 100 million (20 fee per cost)
+                fee = 100000000 * group_size  # 100 million * group_size (20 fee per cost)
             else:
                 force_high_fee = False
-                fee = random.randint(1, 100000000)
-            log.info(f"Section 1: {time.time() - start_t1}")
-            start_t1 = time.time()
-            spend_bundle = wallet_receiver.generate_signed_transaction(
-                uint64(500), receiver_puzzlehash, coin_record.coin, fee=fee
-            )
+                fee = random.randint(1, 100000000 * group_size)
+            spend_bundles = [
+                wallet_receiver.generate_signed_transaction(uint64(500), receiver_puzzlehash, coin_record.coin, fee=0)
+                for coin_record in coin_records[1:]
+            ] + [
+                wallet_receiver.generate_signed_transaction(
+                    uint64(500), receiver_puzzlehash, coin_records[0].coin, fee=fee
+                )
+            ]
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            assert spend_bundle.fees() == fee
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
-            log.info(f"Section 2: {time.time() - start_t1}")
-            start_t1 = time.time()
 
             await full_node_1.send_transaction(respond_transaction)
 
-            log.info(f"Section 3: {time.time() - start_t1}")
-            start_t1 = time.time()
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
-            log.info(f"Section 4: {time.time() - start_t1}")
-            start_t1 = time.time()
 
             fee_rate_for_small = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10)
             fee_rate_for_med = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000)
             fee_rate_for_large = full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(50000000)
-            log.info(f"Min fee rate (10): {fee_rate_for_small}")
-            log.info(f"Min fee rate (5000000): {fee_rate_for_med}")
-            log.info(f"Min fee rate (50000000): {fee_rate_for_large}")
             if fee_rate_for_large > fee_rate_for_med:
                 seen_bigger_transaction_has_high_fee = True
 
@@ -915,14 +894,11 @@ class TestFullNodeProtocol:
                 if force_high_fee:
                     successful_bundle = spend_bundle
             else:
-                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000)
-                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10000000) > 0
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(5000000 * group_size)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000 * group_size) > 0
                 assert not force_high_fee
                 not_included_tx += 1
-            log.info(f"Section 5: {time.time() - start_t1}")
-        log.warning(f"Time for entire 2nd loop: {time.time() - start_t0}")
-        start_t0 = time.time()
-        log.info(f"Included: {included_tx}, not included: {not_included_tx}")
+        assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
         assert included_tx > 0
         assert not_included_tx > 0
@@ -931,6 +907,8 @@ class TestFullNodeProtocol:
         # Mempool is full
         new_transaction = fnp.NewTransaction(token_bytes(32), 10000000, uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
+        assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
+        assert full_node_2.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
@@ -960,11 +938,11 @@ class TestFullNodeProtocol:
         # Reorg the blockchain
         blocks = await full_node_1.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(
-            3,
+            2,
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        for block in blocks[-3:]:
+        for block in blocks[-2:]:
             await full_node_1.full_node.respond_block(fnp.RespondBlock(block), peer)
 
         # Can now resubmit a transaction after the reorg
@@ -973,7 +951,6 @@ class TestFullNodeProtocol:
         )
         assert err is None
         assert status == MempoolInclusionStatus.SUCCESS
-        log.warning(f"Time for entire 3rd section: {time.time() - start_t0}")
 
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, wallet_nodes, bt, self_hostname):
