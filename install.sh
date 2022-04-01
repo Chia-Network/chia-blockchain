@@ -139,13 +139,13 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-    audo apt show openssl
+    apt show openssl
     # install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils openssl
-    audo apt show openssl
+    apt show openssl
     # install_openssl_ubuntu
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
