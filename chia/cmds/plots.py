@@ -2,13 +2,11 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Dict
 
 import click
 
-from chia.plotting.create_plots import add_plot_dir_to_config, add_plot_dirs_to_config
-from chia.plotting.util import add_plot_directory
-from chia.util.config import get_config_lock, load_config
+from chia.plotting.create_plots import add_plot_dirs_to_config
+from chia.util.config import load_config
 
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
