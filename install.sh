@@ -170,6 +170,7 @@ if [ "$(uname)" = "Linux" ]; then
   fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
+  brew install openssl
 elif [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
