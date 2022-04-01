@@ -275,6 +275,8 @@ class Blockchain(BlockchainInterface):
 
                 # Then update the memory cache. It is important that this task is not cancelled and does not throw
                 self.add_block_record(block_record)
+                if fork_height is not None:
+                    self.__height_map.rollback(fork_height)
                 for fetched_block_record in records:
                     self.__height_map.update_height(
                         fetched_block_record.height,
@@ -381,10 +383,6 @@ class Blockchain(BlockchainInterface):
             for coin_record in roll_changes:
                 latest_coin_state[coin_record.name] = coin_record
 
-        # Rollback sub_epoch_summaries
-        self.__height_map.rollback(fork_height)
-        await self.block_store.rollback(fork_height)
-
         # Collect all blocks from fork point to new peak
         blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
         curr = block_record.header_hash
@@ -445,6 +443,9 @@ class Blockchain(BlockchainInterface):
                         hint_coin_state[key] = {}
                     hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
 
+        # we made it to the end successfully
+        # Rollback sub_epoch_summaries
+        await self.block_store.rollback(fork_height)
         await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
         # Changes the peak to be the new peak

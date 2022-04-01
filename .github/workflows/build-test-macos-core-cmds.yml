@@ -85,7 +85,7 @@ jobs:
     - name: Test core-cmds code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/cmds/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/cmds/test_*.py --durations=10  -n 4 -m "not benchmark"
 
     - name: Process coverage data
       run: |
