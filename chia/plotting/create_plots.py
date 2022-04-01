@@ -142,15 +142,9 @@ async def resolve_plot_keys(
     ).resolve()
 
 
-def add_plot_dirs_to_config(
-    root_path: Path, plot_paths: List[Path], dont_add_dir: bool, test_config_cache: Optional[Dict]
-) -> None:
-    if test_config_cache is None:
-        config_filename = config_path_for_filename(root_path, "config.yaml")
-        config = load_config(root_path, config_filename)
-    else:
-        # Don't re-read config for every plot for tests, for efficiency
-        config = test_config_cache
+def add_plot_dirs_to_config(root_path: Path, plot_paths: List[Path], dont_add_dir: bool) -> None:
+    config_filename = config_path_for_filename(root_path, "config.yaml")
+    config = load_config(root_path, config_filename)
     for plot_path in plot_paths:
         add_dir: Optional[str] = None
         with lock_and_load_config(root_path, "config.yaml"):
