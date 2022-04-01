@@ -1,6 +1,8 @@
 # flake8: noqa: F811, F401
-
+from dataclasses import dataclass, field
 import logging
+from statistics import mean, quantiles
+from typing import Iterable, List, Tuple
 import time
 
 import pytest
@@ -30,6 +32,27 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Statistics:
+    minimum: float
+    maximum: float
+    mean: float
+    percentile_90: float
+    data: Tuple[float, ...]
+
+    @classmethod
+    def create(cls, data: Iterable[float]):
+        tupled_data = tuple(data)
+
+        return cls(
+            minimum=min(tupled_data),
+            maximum=max(tupled_data),
+            mean=mean(tupled_data),
+            percentile_90=quantiles(tupled_data)[-1],
+            data=tupled_data,
+        )
 
 
 class TestMempoolPerformance:
@@ -69,12 +92,24 @@ class TestMempoolPerformance:
         blocks = bt.get_consecutive_blocks(3, blocks)
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
+        fast_durations: List[float] = []
+        slow_durations: List[float] = []
+
         for idx, block in enumerate(blocks):
             start_t_2 = time.time()
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
             end_t_2 = time.time()
             duration = end_t_2 - start_t_2
             if idx >= len(blocks) - 3:
-                assert duration < 0.1
+                slow_durations.append(duration)
             else:
-                assert duration < 0.0003
+                fast_durations.append(duration)
+
+        fast_statistics = Statistics.create(data=fast_durations)
+        slow_statistics = Statistics.create(data=slow_durations)
+
+        message = f"fast: {fast_statistics}\n\nslow: {slow_statistics}"
+        print(f"\n\n{message}")
+        assert (
+            fast_statistics.percentile_90 < 0.00005 and slow_statistics.percentile_90 < 0.1
+        ), f"90th percentile not in range\n\n{message}"
