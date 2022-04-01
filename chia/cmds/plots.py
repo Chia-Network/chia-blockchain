@@ -114,7 +114,7 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
-    from chia.plotting.create_plots import create_plots, resolve_plot_keys, add_plot_dirs_to_config
+    from chia.plotting.create_plots import add_plot_dirs_to_config, create_plots, resolve_plot_keys
 
     class Params(object):
         def __init__(self):
