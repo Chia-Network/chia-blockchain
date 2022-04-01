@@ -5,10 +5,12 @@ on:
     branches:
       - main
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
+  workflow_dispatch:
+
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -17,21 +19,25 @@ concurrency:
 
 jobs:
   configure:
-    name: Configure
+    name: Configure test matrix
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Setup Python environment
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
+
       - name: Find test paths
         id: configure
         run: |
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
+
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
@@ -88,7 +94,7 @@ jobs:
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -138,7 +144,7 @@ jobs:
           ref: '0.28.0'
           fetch-depth: 1
 
-      - name: Install ubuntu dependencies
+      - name: Install Ubuntu dependencies
         if: matrix.os.matrix == 'ubuntu' && matrix.configuration.install_timelord
         run: |
           sudo apt-get install software-properties-common
