@@ -307,10 +307,9 @@ class BlockTools:
             created, existed = await create_plots(
                 args,
                 plot_keys,
-                self.root_path,
+                uint8(18),
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
-                test_config_cache=self._config,
             )
             self.created_plots += 1
 
