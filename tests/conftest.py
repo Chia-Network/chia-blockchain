@@ -206,7 +206,7 @@ async def five_nodes(db_version, self_hostname):
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(bt):
     async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
