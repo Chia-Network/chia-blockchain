@@ -23,7 +23,9 @@ const StyledRoot = styled(Box)`
 const StyledCard = styled(Card)`
   width: 100%;
   border-radius: ${({ theme }) => theme.spacing(1)};
-  border: ${({ theme }) => `1px solid ${useColorModeValue(theme, 'border')}`};
+  border: ${({ theme, selected }) => `1px solid ${selected 
+    ? theme.palette.action.active
+    : theme.palette.divider}`};
   margin-bottom: ${({ theme }) => theme.spacing(1)};
 
   &:hover {
@@ -80,6 +82,8 @@ export default function WalletsSidebar() {
         function handleSelect() {
           handleSelectWallet(wallet.id);
         }
+
+        console.log('wallet', wallet.id, Number(walletId), wallet.id === Number(walletId));
 
         return (
           <StyledCard variant="outlined" key={wallet.id} selected={wallet.id === Number(walletId)}>

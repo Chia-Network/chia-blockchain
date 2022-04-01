@@ -5,10 +5,12 @@ import theme from './default';
 export default createTheme(deepmerge(theme, {
   palette: {
     background: {
-      default: '#121212',
+      default: '#212121',
+      paper: '#333333',
     },
     secondary: {
       main: '#ffffff',
+      contrastText: '#000000',
     },
     mode: 'dark',
   },

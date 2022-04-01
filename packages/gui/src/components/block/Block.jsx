@@ -25,7 +25,6 @@ import {
   calculateBaseFarmerReward,
   useCurrencyCode,
   mojoToChia,
-  DashboardTitle,
   Suspender,
   toBech32m,
 } from '@chia/core';
@@ -110,46 +109,37 @@ export default function Block() {
 
   if (isLoading) {
     return (
-      <>
-        <DashboardTitle><Trans>Block</Trans></DashboardTitle>
-        <Suspender />
-      </>
+      <Suspender />
     );
   }
 
   if (error) {
     return (
-      <>
-        <DashboardTitle><Trans>Block</Trans></DashboardTitle>
-        <Card
-          title={
-            <BlockTitle>
-              <Trans>Block with hash {headerHash}</Trans>
-            </BlockTitle>
-          }
-        >
-          <Alert severity="error">{error.message}</Alert>
-        </Card>
-      </>
+      <Card
+        title={
+          <BlockTitle>
+            <Trans>Block with hash {headerHash}</Trans>
+          </BlockTitle>
+        }
+      >
+        <Alert severity="error">{error.message}</Alert>
+      </Card>
     );
   }
 
   if (!block) {
     return (
-      <>
-        <DashboardTitle><Trans>Block</Trans></DashboardTitle>
-        <Card
-          title={
-            <BlockTitle>
-              <Trans>Block</Trans>
-            </BlockTitle>
-          }
-        >
-          <Alert severity="warning">
-            <Trans>Block with hash {headerHash} does not exist.</Trans>
-          </Alert>
-        </Card>
-      </>
+      <Card
+        title={
+          <BlockTitle>
+            <Trans>Block</Trans>
+          </BlockTitle>
+        }
+      >
+        <Alert severity="warning">
+          <Trans>Block with hash {headerHash} does not exist.</Trans>
+        </Alert>
+      </Card>
     );
   }
 
@@ -316,48 +306,45 @@ export default function Block() {
   ];
 
   return (
-    <>
-      <DashboardTitle><Trans>Block</Trans></DashboardTitle>
-      <Card
-        title={
-          <Back variant="h5">
-            <Trans>
-              Block at height {blockRecord.height} in the Chia blockchain
-            </Trans>
-          </Back>
-        }
-        action={
-          <Flex gap={1}>
-            <Button
-              onClick={handleShowPreviousBlock}
-              disabled={!hasPreviousBlock}
-            >
-              <Trans>Previous</Trans>
-            </Button>
-            <Button onClick={handleShowNextBlock} disabled={!hasNextBlock}>
-              <Trans>Next</Trans>
-            </Button>
-          </Flex>
-        }
-      >
-        <TableContainer component={Paper}>
-          <Table>
-            <TableBody>
-              {rows.map((row, index) => (
-                <TableRow key={index}>
-                  <TableCell component="th" scope="row">
-                    {row.name}{' '}
-                    {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
-                  </TableCell>
-                  <TableCell onClick={row.onClick} align="right">
-                    {row.value}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
-    </>
+    <Card
+      title={
+        <Back variant="h5">
+          <Trans>
+            Block at height {blockRecord.height} in the Chia blockchain
+          </Trans>
+        </Back>
+      }
+      action={
+        <Flex gap={1}>
+          <Button
+            onClick={handleShowPreviousBlock}
+            disabled={!hasPreviousBlock}
+          >
+            <Trans>Previous</Trans>
+          </Button>
+          <Button onClick={handleShowNextBlock} disabled={!hasNextBlock}>
+            <Trans>Next</Trans>
+          </Button>
+        </Flex>
+      }
+    >
+      <TableContainer component={Paper}>
+        <Table>
+          <TableBody>
+            {rows.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell component="th" scope="row">
+                  {row.name}{' '}
+                  {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
+                </TableCell>
+                <TableCell onClick={row.onClick} align="right">
+                  {row.value}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Card>
   );
 }

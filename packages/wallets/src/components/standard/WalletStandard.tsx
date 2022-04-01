@@ -17,46 +17,34 @@ type StandardWalletProps = {
 export default function StandardWallet(props: StandardWalletProps) {
   const { walletId } = props;
   const showDebugInformation = useShowDebugInformation();
-  const [selectedTab, setSelectedTab] = useState('summary');
+  const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
 
   return (
-      <Flex flexDirection="column" gap={2}>
-        <WalletHeader
-          walletId={walletId}
-          title={<Trans>Chia Wallet</Trans>}
-        >
-          <Tabs
-            value={selectedTab}
-            onChange={(_event, newValue) => setSelectedTab(newValue)}
-            textColor="primary"
-            indicatorColor="primary"
-          >
-            <Tab value="summary" label={<Trans>Summary</Trans>} />
-            <Tab value="send" label={<Trans>Send</Trans>} />
-            <Tab value="recieve" label={<Trans>Recieve</Trans>} />
-          </Tabs>
-        </WalletHeader>
+    <Flex flexDirection="column" gap={2}>
+      <WalletHeader
+        walletId={walletId}
+        tab={selectedTab}
+        onTabChange={setSelectedTab}
+      />
 
+      {selectedTab === 'summary' && (
+        <Flex flexDirection="column" gap={3}>
+          <WalletStandardCards walletId={walletId} />
+          <WalletHistory walletId={walletId} />
+        </Flex>
+      )}
+      {selectedTab === 'send' && (
+        <WalletSend walletId={walletId} />
+      )}
+      {selectedTab === 'receive' && (
+        <WalletReceiveAddress walletId={walletId} />
+      )}
         
-        {selectedTab === 'summary' && (
-          <Flex flexDirection="column" gap={3}>
-            <WalletStandardCards walletId={walletId} />
-            <WalletHistory walletId={walletId} />
-          </Flex>
-        )}
-        {selectedTab === 'send' && (
-          <WalletSend walletId={walletId} />
-        )}
-        {selectedTab === 'recieve' && (
-          <WalletReceiveAddress walletId={walletId} />
-        )}
-          
-          {/* 
-          {showDebugInformation && (
-            <WalletConnections walletId={walletId} />
-          )}
-          */}
-        
-      </Flex>
+      {/* 
+      {showDebugInformation && (
+        <WalletConnections walletId={walletId} />
+      )}
+      */}
+    </Flex>
   );
 }

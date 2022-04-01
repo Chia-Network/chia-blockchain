@@ -1,12 +1,15 @@
-import React, { ReactNode, cloneElement } from 'react';
-import styled from 'styled-components';
+import React, { type ReactNode } from 'react';
 import { useNavigate, useMatch } from 'react-router-dom';
 import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { styled } from '@mui/system'; 
 import useColorModeValue from '../../utils/useColorModeValue';
+import { useTheme } from '@mui/styles';
 
 const StyledListItemIcon = styled(ListItemIcon)`
   min-width: auto;
-  background-color: ${({ theme }) => theme.palette.action.hover};
+  background-color: ${({ theme, selected }) => selected 
+    ? useColorModeValue(theme, 'sidebarBackground')
+    : 'transparent'};
   border-radius: ${({ theme }) => theme.spacing(1.5)};
   width: ${({ theme }) => theme.spacing(6)};
   height: ${({ theme }) => theme.spacing(6)};
@@ -33,8 +36,8 @@ const StyledListItem = styled(ListItem)`
   }
 
   &:hover ${StyledListItemIcon} {
-    border-color: #00C853;
-    box-shadow: 0px 3px 3px -2px rgba(0, 200, 83, 0.17), 0px 3px 4px rgba(93, 225, 12, 0.2), 0px 1px 8px rgba(0, 200, 83, 0.36);
+    border-color: #4CAF50;
+    box-shadow: 0px -2px 4px rgba(104, 249, 127, 0.41), 0px 1px 8px rgba(145, 247, 53, 0.45);
   }
 `;
 
@@ -46,20 +49,22 @@ const StyledListItemText = styled(ListItemText)`
 export type SideBarItemProps = {
   to: string;
   title: ReactNode;
-  icon: ReactNode;
-  exact?: boolean;
+  icon: any;
   onSelect?: () => void;
+  end?: boolean;
 };
 
 export default function SideBarItem(props: SideBarItemProps) {
-  const { to, title, icon, end, onSelect } = props;
+  const { to, title, icon: Icon, end = false, onSelect } = props;
   const navigate = useNavigate();
   const match = useMatch({
     path: to,
     end,
   });
+  const theme = useTheme();
 
   const isSelected = !!match;
+
 
   async function handleClick() {
     if (onSelect) {
@@ -71,16 +76,13 @@ export default function SideBarItem(props: SideBarItemProps) {
   return (
     <StyledListItem button onClick={() => handleClick()}>
       <StyledListItemIcon selected={isSelected}>
-        {cloneElement(icon, {
-          color: isSelected ? 'primary' : 'inherit',
-        })}
+        <Icon
+          stroke={isSelected ? theme.palette.primary.main : theme.palette.text.primary}
+          fill={isSelected ? theme.palette.primary.main : theme.palette.text.primary}
+          fontSize="large"
+        />
       </StyledListItemIcon>
       <StyledListItemText primary={title} />
     </StyledListItem>
   );
 }
-
-SideBarItem.defaultProps = {
-  end: false,
-  onSelect: undefined,
-};

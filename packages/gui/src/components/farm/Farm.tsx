@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AdvancedOptions, Flex, DashboardTitle, LayoutDashboardSub } from '@chia/core';
+import { AdvancedOptions, Flex, LayoutDashboardSub } from '@chia/core';
 import { useGetHarvesterConnectionsQuery } from '@chia/api-react';
 import FarmOverview from './overview/FarmOverview';
 import FarmLatestBlockChallenges from './FarmLatestBlockChallenges';
@@ -15,9 +15,6 @@ export default function Farm() {
 
   return (
     <LayoutDashboardSub> 
-      <DashboardTitle>
-        <Trans>Farming</Trans>
-      </DashboardTitle>
       <Flex flexDirection="column" gap={3}>
         <FarmOverview />
 

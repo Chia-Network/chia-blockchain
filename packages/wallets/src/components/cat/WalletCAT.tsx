@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { Card, CopyToClipboard, Flex, Loading, useOpenDialog } from '@chia/core';
 import { Alert, InputAdornment, Typography } from '@mui/material';
@@ -29,6 +29,7 @@ export default function WalletCAT(props: Props) {
   const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
   const openDialog = useOpenDialog();
   const [setCATName] = useSetCATNameMutation();
+  const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
 
   function handleRename() {
     if (!wallet) {
@@ -72,6 +73,8 @@ export default function WalletCAT(props: Props) {
     <Flex flexDirection="column" gap={2}>
       <WalletHeader 
         walletId={walletId}
+        tab={selectedTab}
+        onTabChange={setSelectedTab}
         actions={({ onClose }) => (
           <>
             {canRename && (
@@ -105,12 +108,18 @@ export default function WalletCAT(props: Props) {
           </>
         )}
       />
-      <Flex flexDirection="column" gap={3}>
-        <WalletCards walletId={walletId} />
-        <WalletReceiveAddress walletId={walletId} />
+      {selectedTab === 'summary' && (
+        <Flex flexDirection="column" gap={3}>
+          <WalletCards walletId={walletId} />
+          <WalletHistory walletId={walletId} />
+        </Flex>
+      )}
+      {selectedTab === 'send' && (
         <WalletCATSend walletId={walletId} />
-        <WalletHistory walletId={walletId} />
-      </Flex>
+      )}
+      {selectedTab === 'receive' && (
+        <WalletReceiveAddress walletId={walletId} />
+      )}
     </Flex>
   );
 }

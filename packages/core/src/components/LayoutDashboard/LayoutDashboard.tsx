@@ -1,17 +1,17 @@
-import React, { ReactNode, Suspense } from 'react';
+import React, { ReactNode, Suspense, useMemo } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { t, Trans } from '@lingui/macro';
-import { AppBar, Toolbar, Drawer, Divider, Container, IconButton } from '@mui/material';
+import { AppBar, Toolbar, Drawer, Container, IconButton, MenuItem, Typography } from '@mui/material';
 import Flex from '../Flex';
 import Logo from '../Logo';
 import ToolbarSpacing from '../ToolbarSpacing';
 import Loading from '../Loading';
-import { DashboardTitleTarget } from '../DashboardTitle';
-import { useLogout } from '@chia/api-react';
-import { ExitToApp as ExitToAppIcon } from '@mui/icons-material';
+import { useLogout, useGetLoggedInFingerprintQuery } from '@chia/api-react';
+import { ExitToApp as ExitToAppIcon, Notifications } from '@mui/icons-material';
 import Settings from '../Settings';
 import Tooltip from '../Tooltip';
+import { DropdownIconButton } from '../Dropdown';
 // import LayoutFooter from '../LayoutMain/LayoutFooter';
 
 const StyledRoot = styled(Flex)`
@@ -38,6 +38,7 @@ const StyledDrawer = styled(Drawer)`
 
   > div {
     width: ${({ theme }) => theme.drawer.width};
+    border-width: 0px;
   }
 `;
 
@@ -65,10 +66,19 @@ export type LayoutDashboardProps = {
 };
 
 export default function LayoutDashboard(props: LayoutDashboardProps) {
-  const { children, sidebar, settings, outlet } = props;
+  const { children, sidebar, settings, outlet = false } = props;
 
   const navigate = useNavigate();
   const logout = useLogout();
+  const { data: fingerprint } = useGetLoggedInFingerprintQuery();
+  const partial = useMemo(() => {
+    if (fingerprint) {
+      // return last 6 digits of fingerprint
+      return `(...${fingerprint.toString().slice(-6)})`;
+    }
+
+    return null;
+  }, [fingerprint]);
 
   async function handleLogout() {
     await logout();
@@ -84,10 +94,27 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
             <StyledAppBar position="fixed" color="transparent" elevation={0} drawer>
               <StyledToolbar>
                   <Flex alignItems="center" width="100%">
-                    <DashboardTitleTarget />
+                    <Typography variant="h4">
+                      <Trans>
+                        Wallet
+                      </Trans>
+                      &nbsp;
+                      {partial}
+                    </Typography>
                     <Flex flexGrow={1} />
+                    <DropdownIconButton
+                      icon={<Notifications />}
+                      title={t`Notifications`}
+                    >
+                      {({ onClose }) => (
+                        <MenuItem onClick={onClose}>
+                          CAT Wallet TEST is now available
+                        </MenuItem>
+                      )}
+                    </DropdownIconButton>
+                    &nbsp;
                     <Tooltip title={<Trans>Logout</Trans>}>
-                      <IconButton color="inherit" onClick={handleLogout} title={t`Log Out`}>
+                      <IconButton onClick={handleLogout} title={t`Log Out`}>
                         <ExitToAppIcon />
                       </IconButton>
                     </Tooltip>
@@ -98,7 +125,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
               {sidebar}
             </StyledDrawer>
           </>
-        ): (
+        ) : (
           <StyledAppBar position="fixed" color="transparent" elevation={0}>
             <StyledToolbar>
               <Container maxWidth="lg">
@@ -132,8 +159,3 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
     </StyledRoot>
   );
 }
-
-LayoutDashboard.defaultProps = {
-  children: undefined,
-  outlet: false,
-};

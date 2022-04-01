@@ -4,7 +4,6 @@ import { makeStyles } from '@mui/styles';
 import {
   AlertDialog,
   Button,
-  DashboardTitle,
   Card,
   Suspender,
   useOpenDialog,
@@ -238,9 +237,6 @@ const SecurityCard = () => {
 export default function Settings() {
   return (
     <LayoutDashboardSub>
-      <DashboardTitle>
-        <Trans>Settings</Trans>
-      </DashboardTitle>
       <SecurityCard />
     </LayoutDashboardSub>
   );

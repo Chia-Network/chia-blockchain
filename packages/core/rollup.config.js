@@ -1,5 +1,6 @@
 import externals from 'rollup-plugin-node-externals';
 import babel from '@rollup/plugin-babel';
+import alias from '@rollup/plugin-alias';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
@@ -10,6 +11,14 @@ const extensions = ['.js', '.jsx', '.ts', '.tsx'];
 export default {
   input: './src/index.ts',
   plugins: [
+    alias({
+      entries: [
+        { 
+          find: '@mui/styled-engine', 
+          replacement: '@mui/styled-engine-sc' },
+      ],
+    }),
+
     json(), 
 
     externals({

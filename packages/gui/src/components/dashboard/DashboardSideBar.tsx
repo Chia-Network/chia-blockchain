@@ -49,17 +49,17 @@ export default function DashboardSideBar() {
       <StyledList disablePadding>
         <SideBarItem
           to="/dashboard/wallets"
-          icon={<TokensIcon fontSize="large" />}
+          icon={TokensIcon}
           title={<Trans>Tokens</Trans>}
         />
         <SideBarItem
           to="/dashboard/nfts"
-          icon={<NFTsIcon fontSize="large" />}
+          icon={NFTsIcon}
           title={<Trans>NFTs</Trans>}
         />
         <SideBarItem
           to="/dashboard/wallets/offers/manage"
-          icon={<OffersIcon fontSize="large" />}
+          icon={OffersIcon}
           title={<Trans>Offers</Trans>}
         />
 
@@ -67,13 +67,13 @@ export default function DashboardSideBar() {
 
         <SideBarItem
           to="/dashboard"
-          icon={<FullNodeIcon fontSize="large" />}
+          icon={FullNodeIcon}
           title={<Trans>Full Node</Trans>}
           end
         />
         <SideBarItem
           to="/dashboard/plot"
-          icon={<PlotsIcon fontSize="large" />}
+          icon={PlotsIcon}
           title={<Trans>Plots</Trans>}
         />
         {/*}
@@ -86,18 +86,18 @@ export default function DashboardSideBar() {
 
         <SideBarItem
           to="/dashboard/farm"
-          icon={<FarmingIcon fontSize="large" />}
+          icon={FarmingIcon}
           title={<Trans>Farming</Trans>}
         />
         <SideBarItem
           to="/dashboard/pool"
-          icon={<PoolingIcon fontSize="large" />}
+          icon={PoolingIcon}
           title={<Trans>Pooling</Trans>}
         />
         <StyledInvisible>
           <SideBarItem
             to="/dashboard/settings"
-            icon={<SettingsIcon fontSize="large" />}
+            icon={SettingsIcon}
             title={<Trans>Settings</Trans>}
           />
         </StyledInvisible>
@@ -105,7 +105,7 @@ export default function DashboardSideBar() {
       <StyledSettingsContainer>
         <SideBarItem
           to="/dashboard/settings"
-          icon={<SettingsIcon fontSize="large" />}
+          icon={SettingsIcon}
           title={<Trans>Settings</Trans>}
         />
       </StyledSettingsContainer>

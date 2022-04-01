@@ -54,7 +54,7 @@ export default function PlotOverviewHero() {
             <Button
               onClick={handleRefreshPlots}
               variant="outlined"
-              color="primary"
+              color="secondary"
               fullWidth
             >
               <Trans>Refresh Plots</Trans>

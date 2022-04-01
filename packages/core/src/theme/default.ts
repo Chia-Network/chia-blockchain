@@ -49,6 +49,10 @@ export default deepmerge(greyTheme, {
       main: '#E0E0E0',
       dark: '#484747',
     },
+    sidebarBackground: {
+      main: '#E8F5E9',
+      dark: '#4a4a4a',
+    },
   },
   drawer: {
     width: '100px',

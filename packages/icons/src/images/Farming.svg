@@ -1,6 +1,6 @@
 <svg width="31" height="34" viewBox="0 0 31 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M25.2279 19.5846L15.2345 25.9448V20.8562C15.2345 17.6789 16.862 14.723 19.5469 13.0239L29.469 6.74484V11.8581C29.469 14.9892 27.8694 17.9034 25.2279 19.5846Z" fill="transparent" stroke="#757575" stroke-width="1.5"/>
-<path d="M5.24113 14.8397L15.2345 21.2V16.1114C15.2345 12.934 13.607 9.97812 10.9221 8.27903L1.00001 2V7.11326C1.00001 10.2444 2.59961 13.1585 5.24113 14.8397Z" fill="transparent" stroke="#757575" stroke-width="1.5"/>
-<path d="M15 20V33" fill="transparent" stroke="#757575" stroke-width="1.5"/>
-<path d="M8 33C8.82963 33 17.679 33 22 33" fill="transparent" stroke="#757575" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M25.2279 19.5846L15.2345 25.9448V20.8562C15.2345 17.6789 16.862 14.723 19.5469 13.0239L29.469 6.74484V11.8581C29.469 14.9892 27.8694 17.9034 25.2279 19.5846Z" fill="transparent" stroke="current" stroke-width="1.5"/>
+<path d="M5.24113 14.8397L15.2345 21.2V16.1114C15.2345 12.934 13.607 9.97812 10.9221 8.27903L1.00001 2V7.11326C1.00001 10.2444 2.59961 13.1585 5.24113 14.8397Z" fill="transparent" stroke="current" stroke-width="1.5"/>
+<path d="M15 20V33" fill="transparent" stroke="current" stroke-width="1.5"/>
+<path d="M8 33C8.82963 33 17.679 33 22 33" fill="transparent" stroke="current" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

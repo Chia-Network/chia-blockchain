@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Route, Routes } from 'react-router-dom';
-import { Flex, Link, DashboardTitle, LayoutDashboardSub } from '@chia/core';
+import { Flex, Link, LayoutDashboardSub } from '@chia/core';
 import PoolOverview from './PoolOverview';
 import PlotNFTAdd from '../plotNFT/PlotNFTAdd';
 import PlotNFTChangePool from '../plotNFT/PlotNFTChangePool';
@@ -12,12 +12,6 @@ import { PoolHeaderSource } from './PoolHeader';
 export default function Pool() {
   return (
     <LayoutDashboardSub>
-      <DashboardTitle>
-        <Link to="/dashboard/pool" color="textPrimary">
-          <Trans>Pool</Trans>
-        </Link>
-        <PoolHeaderTarget />
-      </DashboardTitle>
       <Flex flexDirection="column" gap={3}>
         <Routes>
           <Route element={<PoolOverview />} index />

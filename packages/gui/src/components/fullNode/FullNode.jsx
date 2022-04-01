@@ -9,7 +9,6 @@ import {
   Loading,
   StateColor,
   Table,
-  DashboardTitle,
   LayoutDashboardSub,
 } from '@chia/core';
 import { Status } from '@chia/icons';
@@ -133,7 +132,6 @@ const BlocksCard = () => {
 export default function FullNode() {
   return (
     <LayoutDashboardSub>
-      <DashboardTitle><Trans>Full Node</Trans></DashboardTitle>
       <Flex gap={1}>
         <Typography variant="h5" gutterBottom>
           <Trans>Full Node</Trans>

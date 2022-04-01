@@ -58,7 +58,7 @@ export type ButtonProps = Omit<BaseButtonProps, 'color'> & {
 };
 
 export default function Button(props: ButtonProps) {
-  const { color = 'secondary', to, onClick, ...rest } = props;
+  const { color = 'secondary', to, onClick, disableElevation = true, ...rest } = props;
 
   const navigate = useNavigate();
 
@@ -74,16 +74,16 @@ export default function Button(props: ButtonProps) {
 
   switch (color) {
     case 'danger':
-      return <DangerButton onClick={handleClick} {...rest} />;
+      return <DangerButton onClick={handleClick} disableElevation={disableElevation} {...rest} />;
     case 'primary':
       return (
-        <StyledBaseButton onClick={handleClick} color="primary" {...rest} />
+        <StyledBaseButton onClick={handleClick} disableElevation={disableElevation} color="primary" {...rest} />
       );
     case 'secondary':
       return (
-        <StyledBaseButton onClick={handleClick} color="secondary" {...rest} />
+        <StyledBaseButton onClick={handleClick} disableElevation={disableElevation} color="secondary" {...rest} />
       );
     default:
-      return <StyledBaseButton onClick={handleClick} {...rest} />;
+      return <StyledBaseButton onClick={handleClick} disableElevation={disableElevation} {...rest} />;
   }
 }

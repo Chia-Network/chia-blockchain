@@ -3,7 +3,6 @@ import { Container } from '@mui/material';
 import styled from 'styled-components';
 import Flex from '../Flex';
 import { Outlet } from 'react-router-dom';
-import DashboardTitle from '../DashboardTitle';
 import LayoutFooter from './LayoutFooter';
 
 const StyledContainer = styled(Container)`
@@ -22,20 +21,17 @@ const StyledBody = styled(Flex)`
   min-width: 0;
 `;
 
-type Props = {
+export type LayoutMainProps = {
   children?: ReactElement<any>;
-  title?: ReactNode;
   bodyHeader?: ReactNode;
   outlet?: boolean;
 };
 
-export default function LayoutMain(props: Props) {
-  const { children, title, bodyHeader, outlet } = props;
+export default function LayoutMain(props: LayoutMainProps) {
+  const { children, bodyHeader, outlet = false } = props;
 
   return (
     <>
-      <DashboardTitle>{title}</DashboardTitle>
-
       <StyledInnerContainer flexDirection="column">
         {bodyHeader}
         <StyledContainer maxWidth="lg">
@@ -48,9 +44,3 @@ export default function LayoutMain(props: Props) {
     </>
   );
 }
-
-LayoutMain.defaultProps = {
-  children: undefined,
-  bodyHeader: undefined,
-  outlet: false,
-};
