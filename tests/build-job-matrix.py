@@ -168,19 +168,9 @@ for path in test_paths:
     else:
         pytest_parallel_args = "-n 4" if conf["parallel"] else "-n 0"
 
-    if conf["os"] == "ubuntu":
-        check_resource_usage = conf["check_resource_usage"]
-        if conf["check_resource_usage"]:
-            disable_pytest_monitor = ""
-        else:
-            disable_pytest_monitor = "-p no:monitor"
-    else:
-        check_resource_usage = False
-        disable_pytest_monitor = ""
-
     for_matrix = {
-        "check_resource_usage": check_resource_usage,
-        "disable_pytest_monitor": disable_pytest_monitor,
+        "check_resource_usage": conf["check_resource_usage"],
+        "disable_pytest_monitor": "" if conf["check_resource_usage"] else "-p no:monitor",
         "job_timeout": conf["job_timeout"],
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],

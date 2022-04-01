@@ -1,8 +1,5 @@
 from typing import List
 
-# Github actions template config.
-oses = ["ubuntu", "macos"]
-
 # Defaults are conservative.
 parallel = False
 checkout_blocks_and_plots = True
