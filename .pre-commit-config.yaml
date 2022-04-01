@@ -51,10 +51,9 @@ repos:
     -   id: check-ast
     -   id: debug-statements
 -   repo: https://github.com/psf/black
-    rev: 21.12b0
+    rev: 22.3.0
     hooks:
     -   id: black
-        additional_dependencies: ['click<8.1']
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
     hooks:
