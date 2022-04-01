@@ -122,10 +122,12 @@ install_openssl_ubuntu () {
   echo "Original OpenSSL version"
   which openssl
   openssl version -a
-  export PATH=:/usr/local/ssl:$PATH
+  export PATH=:/usr/local/ssl/bin/:$PATH
   which openssl
   echo "New OpenSSL version"
   openssl version -a
+  echo "Built OpenSSL version"
+  /usr/local/ssl/bin/openssl version -a
 }
 
 # Manage npm and other install requirements on an OS specific basis
