@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 import click
 
@@ -360,3 +360,58 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     from .wallet_funcs import execute_with_wallet, cancel_offer
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
+
+
+@wallet_cmd.group("dump_transactions", short_help="Dump all transactions to parseable formats")
+def dump_transactions_cmd() -> None:
+    pass
+
+
+@dump_transactions_cmd.command("csv", short_help="Dump all transactions to CSV")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-i",
+    "--id",
+    "wallet_ids",
+    help="Id of the wallet to use, unspecified lists all.",
+    multiple=True,
+    type=int,
+)
+@click.option(
+    "-o",
+    "--output",
+    default="-",
+    help="Path to write to, - for stdout.",
+    show_default=True,
+    # TODO: handle the newline="" that the csv module wants
+    type=click.File(
+        mode="w",
+        encoding="utf-8",
+    ),
+)
+def dump_transactions_csv_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_ids: List[int],
+    output: TextIO,
+) -> None:
+    extra_params = {"wallet_ids": wallet_ids, "output": output}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, dump_transactions
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, dump_transactions))
+
+    # The flush/close avoids output like below when piping through `head -n 1`
+    # which will close stdout.
+    #
+    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+    # BrokenPipeError: [Errno 32] Broken pipe
+    sys.stdout.flush()
+    sys.stdout.close()
