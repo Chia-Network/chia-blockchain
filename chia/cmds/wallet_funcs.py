@@ -26,6 +26,20 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 
+transaction_type_descriptions = {
+    TransactionType.INCOMING_TX: "received",
+    TransactionType.OUTGOING_TX: "sent",
+    TransactionType.COINBASE_REWARD: "rewarded",
+    TransactionType.FEE_REWARD: "rewarded",
+    TransactionType.INCOMING_TRADE: "received in trade",
+    TransactionType.OUTGOING_TRADE: "sent in trade",
+}
+
+
+def transaction_description_from_type(tx: TransactionRecord) -> str:
+    return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
+
+
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
     if verbose:
         print(tx)
@@ -34,14 +48,7 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        description = {
-            TransactionType.INCOMING_TX: "received",
-            TransactionType.OUTGOING_TX: "sent",
-            TransactionType.COINBASE_REWARD: "rewarded",
-            TransactionType.FEE_REWARD: "rewarded",
-            TransactionType.INCOMING_TRADE: "received in trade",
-            TransactionType.OUTGOING_TRADE: "sent in trade",
-        }.get(TransactionType(tx.type), "(unknown reason)")
+        description = transaction_description_from_type(tx)
         print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
