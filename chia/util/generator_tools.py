@@ -11,19 +11,13 @@ from chia.util.condition_tools import created_outputs_for_conditions_dict
 
 def get_block_header(block: FullBlock, tx_addition_coins: List[Coin], removals_names: List[bytes32]) -> HeaderBlock:
     # Create filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
     addition_coins = tx_addition_coins + list(block.get_included_reward_coins())
     if block.is_transaction_block():
         for coin in addition_coins:
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
         for name in removals_names:
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(name))  # type: ignore[arg-type]
+            byte_array_tx.append(bytearray(name))
 
     bip158: PyBIP158 = PyBIP158(byte_array_tx)
     encoded_filter: bytes = bytes(bip158.GetEncoded())

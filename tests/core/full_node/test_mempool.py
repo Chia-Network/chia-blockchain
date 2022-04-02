@@ -111,15 +111,13 @@ async def two_nodes_mempool(bt, wallet_a):
 
 
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
-    spend_bundle_name = bytes([idx] * 32)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 5 to "MempoolItem" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
         NPCResult(None, [], cost),
         cost,
-        spend_bundle_name,  # type: ignore[arg-type]
+        spend_bundle_name,
         [],
         [],
         SerializedProgram(),

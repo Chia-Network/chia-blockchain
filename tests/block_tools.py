@@ -314,7 +314,7 @@ class BlockTools:
             self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
-            path_new: Path = Path()
+            path_new: Optional[Path] = None
 
             if len(created):
                 assert len(existed) == 0
@@ -323,12 +323,11 @@ class BlockTools:
             if len(existed):
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
+            assert plot_id_new is not None
+            assert path_new is not None
 
             if not exclude_final_dir:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-                #       [index]
-                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
+                self.expected_plots[plot_id_new] = path_new
 
             # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
             self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
@@ -456,12 +455,9 @@ class BlockTools:
             if force_plot_id is not None:
                 raise ValueError("Cannot specify plot_id for genesis block")
             initial_block_list_len = 0
-            # TODO: address hint error and remove ignore
-            #       error: Argument 2 to "create_genesis_block" of "BlockTools" has incompatible type "bytes"; expected
-            #       "bytes32"  [arg-type]
             genesis = self.create_genesis_block(
                 constants,
-                seed,  # type: ignore[arg-type]
+                seed,
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
                 timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
@@ -477,6 +473,7 @@ class BlockTools:
         if num_blocks == 0:
             return block_list
 
+        blocks: Dict[bytes32, BlockRecord]
         height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
@@ -709,14 +706,9 @@ class BlockTools:
             if pending_ses:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[uint32, BlockRecord]"; expected
-                #       "Dict[bytes32, BlockRecord]"  [arg-type]
-                #       error: Argument 2 to "BlockCache" has incompatible type "Dict[uint32, bytes32]"; expected
-                #       "Optional[Dict[bytes32, HeaderBlock]]"  [arg-type]
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks, height_to_hash),  # type: ignore[arg-type]
+                    BlockCache(blocks, height_to_hash=height_to_hash),
                     latest_block.required_iters,
                     block_list[-1],
                     False,
@@ -940,13 +932,10 @@ class BlockTools:
                 sub_slot_iters = new_sub_slot_iters
                 difficulty = new_difficulty
 
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-    #       [assignment]
     def create_genesis_block(
         self,
         constants: ConsensusConstants,
-        seed: bytes32 = b"",  # type: ignore[assignment]
+        seed: bytes = b"",
         timestamp: Optional[uint64] = None,
         force_overflow: bool = False,
         skip_slots: int = 0,
@@ -1395,12 +1384,10 @@ def load_block_list(
         quality_str = full_block.reward_chain_block.proof_of_space.verify_and_get_quality_string(
             constants, challenge, sp_hash
         )
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "calculate_iterations_quality" has incompatible type "Optional[bytes32]"; expected
-        #       "bytes32"  [arg-type]
+        assert quality_str is not None
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
-            quality_str,  # type: ignore[arg-type]
+            quality_str,
             full_block.reward_chain_block.proof_of_space.size,
             uint64(difficulty),
             sp_hash,
@@ -1533,7 +1520,7 @@ def get_full_block_and_block_record(
         signage_point,
         timestamp,
         BlockCache(blocks),
-        seed,  # type: ignore[arg-type]
+        seed,
         block_generator,
         aggregate_signature,
         additions,
@@ -1589,9 +1576,6 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Op
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_test_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -1607,7 +1591,7 @@ def create_test_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -1642,17 +1626,14 @@ def create_test_foliage(
 
     random.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-    #       [assignment]
-    extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")  # type: ignore[assignment]
+    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
         height = uint32(prev_block.height + 1)
 
     # Create filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
     tx_additions: List[Coin] = []
     tx_removals: List[bytes32] = []
 
@@ -1746,16 +1727,10 @@ def create_test_foliage(
         additions.extend(reward_claims_incorporated.copy())
         for coin in additions:
             tx_additions.append(coin)
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+            byte_array_tx.append(bytearray(coin.puzzle_hash))
         for coin in removals:
             tx_removals.append(coin.name())
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-            #       [arg-type]
-            byte_array_tx.append(bytearray(coin.name()))  # type: ignore[arg-type]
+            byte_array_tx.append(bytearray(coin.name()))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
@@ -1820,10 +1795,9 @@ def create_test_foliage(
         assert foliage_transaction_block is not None
 
         foliage_transaction_block_hash: Optional[bytes32] = foliage_transaction_block.get_hash()
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 has incompatible type "Optional[bytes32]"; expected "bytes32"  [arg-type]
+        assert foliage_transaction_block_hash is not None
         foliage_transaction_block_signature: Optional[G2Element] = get_plot_signature(
-            foliage_transaction_block_hash,  # type: ignore[arg-type]
+            foliage_transaction_block_hash,
             reward_block_unfinished.proof_of_space.plot_public_key,
         )
         assert foliage_transaction_block_signature is not None
@@ -1846,9 +1820,6 @@ def create_test_foliage(
     return foliage, foliage_transaction_block, transactions_info
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_test_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
@@ -1865,7 +1836,7 @@ def create_test_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,
@@ -1914,7 +1885,7 @@ def create_test_unfinished_block(
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
-    cc_sp_hash: Optional[bytes32] = slot_cc_challenge
+    cc_sp_hash: bytes32 = slot_cc_challenge
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:
@@ -1937,10 +1908,8 @@ def create_test_unfinished_block(
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
 
-    # TODO: address hint error and remove ignore
-    #       error: Argument 1 has incompatible type "Optional[bytes32]"; expected "bytes32"  [arg-type]
     cc_sp_signature: Optional[G2Element] = get_plot_signature(
-        cc_sp_hash,  # type: ignore[arg-type]
+        cc_sp_hash,
         proof_of_space.plot_public_key,
     )
     rc_sp_signature: Optional[G2Element] = get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
