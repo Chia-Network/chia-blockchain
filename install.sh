@@ -96,11 +96,11 @@ install_python3_and_sqlite3_from_source_with_yum() {
   sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
   # yum install python3 brings Python3.6 which is not supported by chia
   cd ..
-  echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
-  wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
-  tar xf Python-3.9.9.tgz
-  echo "cd Python-3.9.9"
-  cd Python-3.9.9
+  echo "wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz"
+  wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz
+  tar xf Python-3.9.11.tgz
+  echo "cd Python-3.9.11"
+  cd Python-3.9.11
   echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
   # '| stdbuf ...' seems weird but this makes command outputs stay in single line.
   LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
