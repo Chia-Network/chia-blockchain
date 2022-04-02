@@ -169,6 +169,7 @@ if [ "$(uname)" = "Linux" ]; then
   fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
   echo "Installation currently requires brew on MacOS - https://brew.sh/"
+  exit 1
 elif [ "$(uname)" = "Darwin" ]; then
   echo "Installing OpenSSL"
   brew install openssl
