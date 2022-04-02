@@ -110,8 +110,13 @@ if [ "$(uname)" = "Linux" ]; then
 		# CentOS or Redhat or Fedora
 		echo "Installing on CentOS/Redhat/Fedora."
 	fi
-elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
-	echo "Installation currently requires brew on MacOS - https://brew.sh/"
+elif [ "$(uname)" = "Darwin" ]; then
+	echo "Installing on macOS."
+	if ! type brew >/dev/null 2>&1; then
+		echo "Installation currently requires brew on macOS - https://brew.sh/"
+		exit 1
+	fi
+	echo "Installing OpenSSL"
 	brew install openssl
 elif [ "$(uname)" = "OpenBSD" ]; then
 	export MAKE=${MAKE:-gmake}
