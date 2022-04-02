@@ -397,9 +397,12 @@ async def validate_block_body(
 
     fees = removed - added
     assert fees >= 0
+
+    # reserve fee cannot be greater than UINT64_MAX per consensus rule.
+    # run_generator() would fail
     assert_fee_sum: uint64 = uint64(0)
     if npc_result:
-        assert npc_result.conds
+        assert npc_result.conds is not None
         assert_fee_sum = npc_result.conds.reserve_fee
 
     # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
@@ -422,7 +425,7 @@ async def validate_block_body(
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
     if npc_result is not None:
-        assert npc_result.conds
+        assert npc_result.conds is not None
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
@@ -436,7 +439,7 @@ async def validate_block_body(
     pairs_pks: List[bytes48] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
-        assert npc_result.conds
+        assert npc_result.conds is not None
         pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
 
     # 22. Verify aggregated signature
