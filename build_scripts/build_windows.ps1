@@ -83,6 +83,8 @@ Write-Output "   ---"
 $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --log-level INFO $SPEC_FILE
 
+Invoke-WebRequest https://github.com/python/cpython-bin-deps/raw/7bc5363d366acd7f9c130e27cf650d5414723a99/amd64/libssl-1_1.dll -OutFile ".\dist\daemon\libssl-1_1.dll"
+
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
