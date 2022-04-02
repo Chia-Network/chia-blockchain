@@ -42,7 +42,7 @@ jobs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
   test:
-    name: ${{ matrix.configuration.name }} ${{ matrix.os.emoji }} ${{ matrix.python.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     needs: configure
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
