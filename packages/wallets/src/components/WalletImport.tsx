@@ -9,8 +9,26 @@ import {
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
 import { useNavigate } from 'react-router';
-import { Autocomplete, ButtonLoading, Form, Flex, Logo, useTrans } from '@chia/core';
+import {
+  AlertDialog,
+  Autocomplete,
+  Button,
+  ButtonLoading,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Form,
+  Flex,
+  Logo,
+  TextField,
+  useOpenDialog,
+  useShowError,
+  useTrans
+} from '@chia/core';
 import { english } from '@chia/api';
+import MnemonicPaste from './PasteMnemonic';
 
 /*
 const shuffledEnglish = shuffle(english);
@@ -34,6 +52,8 @@ export default function WalletImport() {
   const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
   const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
   const trans = useTrans();
+  const openDialog = useOpenDialog();
+  const [mnemonicPasteOpen, setMnemonicPasteOpen] = React.useState(false);
 
   const isProcessing = isAddKeyLoading || isLogInLoading;
 
@@ -43,10 +63,48 @@ export default function WalletImport() {
     },
   });
 
-  const { fields } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control: methods.control,
     name: 'mnemonic',
   });
+
+  const submitMnemonicPaste = (mnemonicList: string) => {
+    closeMnemonicPaste();
+
+    let mList = mnemonicList.match(/\b(\w+)\b/g);
+    const intersection = mList.filter(element => options.includes(element));
+
+    if (intersection.length != 24) {
+      openDialog(
+        <AlertDialog>
+          <Trans>
+            Your pasted list does not include 24 valid menmonic words.
+          </Trans>
+        </AlertDialog>
+      );
+    } else {
+      const mnemonic = intersection.map((word) => ({ word }));
+      replace(mnemonic);
+    }
+
+    // above abandon abstract absurd account acid alert alley blast bless blind blanket boost book busy burden burger census chair chalk dinner direct dirt discover
+  };
+
+  function closeMnemonicPaste() {
+    setMnemonicPasteOpen(false);
+  }
+
+  function ActionButtons() {
+    return (
+      <Button
+        onClick={() => setMnemonicPasteOpen(true)}
+        variant="contained"
+        disableElevation
+      >
+        <Trans>Paste Mnemonic</Trans>
+      </Button>
+    )
+  }
 
   async function handleSubmit(values: FormData) {
     if (isProcessing) {
@@ -101,15 +159,26 @@ export default function WalletImport() {
             ))}
           </Grid>
           <Container maxWidth="xs">
-            <ButtonLoading
-              type="submit"
-              variant="contained"
-              color="primary"
-              loading={isProcessing}
-              fullWidth
+            <Flex
+              flexDirection="column"
+              gap={2}
             >
-              <Trans>Next</Trans>
-            </ButtonLoading>
+              <ButtonLoading
+                type="submit"
+                variant="contained"
+                color="primary"
+                loading={isProcessing}
+                fullWidth
+              >
+                <Trans>Next</Trans>
+              </ButtonLoading>
+              <ActionButtons />
+              {mnemonicPasteOpen &&
+                <MnemonicPaste
+                  onSuccess={submitMnemonicPaste}
+                  onCancel={closeMnemonicPaste}
+                />}
+            </Flex>
           </Container>
         </Flex>
       </Container>
