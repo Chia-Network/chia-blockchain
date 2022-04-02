@@ -22,6 +22,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 
@@ -33,7 +34,15 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        description = {
+            TransactionType.INCOMING_TX: "received",
+            TransactionType.OUTGOING_TX: "sent",
+            TransactionType.COINBASE_REWARD: "rewarded",
+            TransactionType.FEE_REWARD: "rewarded",
+            TransactionType.INCOMING_TRADE: "received in trade",
+            TransactionType.OUTGOING_TRADE: "sent in trade",
+        }.get(TransactionType(tx.type), "(unknown reason)")
+        print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
