@@ -8,6 +8,12 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## 1.3.2 Chia blockchain 2022-4-01
+
+### Fixed
+
+- Fixed OpenSSL vulnerability CVE-2022-0778
+
 
 ## 1.3.1 Chia blockchain 2022-3-16
 
