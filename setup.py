@@ -47,9 +47,7 @@ dev_dependencies = [
     "coverage",
     "pre-commit",
     "pytest",
-    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-monitor; sys_platform == 'linux'",
-    "pytest-xdist",
     "twine",
     "isort",
     "flake8",

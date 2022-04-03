@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
 # Github actions template config.
-oses = ["ubuntu", "macos", "windows"]
+oses = ["windows"]
 
 # Defaults are conservative.
 parallel: Union[bool, int, Literal["auto"]] = False
