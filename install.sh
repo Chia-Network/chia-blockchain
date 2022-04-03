@@ -146,7 +146,7 @@ if [ "$(uname)" = "Linux" ]; then
         exit 1
         ;;
       esac
-    sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
+    sudo pacman ${PACMAN_AUTOMATED} -S --needed git
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
