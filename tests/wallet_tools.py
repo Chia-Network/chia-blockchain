@@ -1,13 +1,13 @@
 from typing import Dict, List, Optional, Tuple, Any
 
-from blspy import AugSchemeMPL, G2Element, PrivateKey
+from blspy import AugSchemeMPL, G2Element, PrivateKey, G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.util.hash import std_hash
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -63,21 +63,19 @@ class WalletTool:
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
-    def get_new_puzzle(self) -> bytes32:
+    def get_new_puzzle(self) -> Program:
         next_address_index: uint32 = self.get_next_address_index()
-        pubkey = master_sk_to_wallet_sk(self.private_key, next_address_index).get_g1()
+        pubkey: G1Element = master_sk_to_wallet_sk(self.private_key, next_address_index).get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
 
-        puzzle = puzzle_for_pk(bytes(pubkey))
+        puzzle: Program = puzzle_for_pk(pubkey)
 
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = next_address_index
         return puzzle
 
     def get_new_puzzlehash(self) -> bytes32:
         puzzle = self.get_new_puzzle()
-        # TODO: address hint error and remove ignore
-        #       error: "bytes32" has no attribute "get_tree_hash"  [attr-defined]
-        return puzzle.get_tree_hash()  # type: ignore[attr-defined]
+        return puzzle.get_tree_hash()
 
     def sign(self, value: bytes, pubkey: bytes) -> G2Element:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
@@ -141,15 +139,13 @@ class WalletTool:
             if secret_key is None:
                 secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
             pubkey = secret_key.get_g1()
-            puzzle = puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = puzzle_for_pk(pubkey)
             if n == 0:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
-                    # TODO: address hint error and remove ignore
-                    #       error: Argument 2 to "Coin" has incompatible type "bytes"; expected "bytes32"  [arg-type]
                     coin_to_append = Coin(
                         coin.name(),
-                        outputs.vars[0],  # type: ignore[arg-type]
+                        bytes32(outputs.vars[0]),
                         int_from_bytes(outputs.vars[1]),
                     )
                     message_list.append(coin_to_append.name())
@@ -162,9 +158,19 @@ class WalletTool:
                     ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
                 )
                 main_solution = self.make_solution(condition_dic)
-                spends.append(CoinSpend(coin, puzzle, main_solution))
+                spends.append(
+                    CoinSpend(
+                        coin, SerializedProgram.from_program(puzzle), SerializedProgram.from_program(main_solution)
+                    )
+                )
             else:
-                spends.append(CoinSpend(coin, puzzle, self.make_solution(secondary_coins_cond_dic)))
+                spends.append(
+                    CoinSpend(
+                        coin,
+                        SerializedProgram.from_program(puzzle),
+                        SerializedProgram.from_program(self.make_solution(secondary_coins_cond_dic)),
+                    )
+                )
         return spends
 
     def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:

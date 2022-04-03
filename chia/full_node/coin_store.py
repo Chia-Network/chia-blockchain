@@ -288,7 +288,8 @@ class CoinStore:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                f'WHERE coin_name in ({"?," * (len(names) - 1)}?) '
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 names_db + (start_height, end_height),
