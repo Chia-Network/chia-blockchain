@@ -56,7 +56,7 @@ jobs:
         venv/Scripts/python -c "print(' ==== about to import pkg_resources'); import pkg_resources; print(' ==== just imported pkg_resources')"
         venv/Scripts/python -c "print(' ==== about to import tests.conftest'); import tests.conftest; print(' ==== just imported tests.conftest')"
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/clvm/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/clvm/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor -p no:xdist -p no:asyncio
 
     - name: Process coverage data
       run: |
