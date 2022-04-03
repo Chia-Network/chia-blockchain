@@ -118,12 +118,10 @@ if [ "$(uname)" = "Linux" ]; then
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-    apt show openssl
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils openssl
-    apt show openssl
   elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
@@ -172,8 +170,13 @@ if [ "$(uname)" = "Linux" ]; then
       sudo yum install -y python39 openssl
     fi
   fi
-elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
-  echo "Installation currently requires brew on MacOS - https://brew.sh/"
+elif [ "$(uname)" = "Darwin" ]; then
+  echo "Installing on macOS."
+  if ! type brew >/dev/null 2>&1; then
+    echo "Installation currently requires brew on macOS - https://brew.sh/"
+    exit 1
+  fi
+  echo "Installing OpenSSL"
   brew install openssl
 elif [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
