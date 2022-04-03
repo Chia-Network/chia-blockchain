@@ -187,6 +187,7 @@ class TestCostCalculation:
         assert npc_result.error is None
 
     @pytest.mark.asyncio
+    @pytest.mark.benchmark
     async def test_tx_generator_speed(self, softfork_height):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
@@ -207,7 +208,7 @@ class TestCostCalculation:
         assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
-        assert duration < 1
+        assert duration < 0.5
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
@@ -246,6 +247,7 @@ class TestCostCalculation:
         assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
+    @pytest.mark.benchmark
     async def test_standard_tx(self):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
@@ -270,4 +272,4 @@ class TestCostCalculation:
         duration = time_end - time_start
 
         log.info(f"Time spent: {duration}")
-        assert duration < 3
+        assert duration < 0.1

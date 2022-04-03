@@ -56,9 +56,9 @@ def batch_pre_validate_blocks(
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
 ) -> List[bytes]:
-    blocks: Dict[bytes, BlockRecord] = {}
+    blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
-        blocks[k] = BlockRecord.from_bytes(v)
+        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
@@ -99,12 +99,9 @@ def batch_pre_validate_blocks(
                     continue
 
                 header_block = get_block_header(block, tx_additions, removals)
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
-                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),  # type: ignore[arg-type]
+                    BlockCache(blocks),
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -144,12 +141,9 @@ def batch_pre_validate_blocks(
         for i in range(len(header_blocks_pickled)):
             try:
                 header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
-                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),  # type: ignore[arg-type]
+                    BlockCache(blocks),
                     header_block,
                     check_filter,
                     expected_difficulty[i],

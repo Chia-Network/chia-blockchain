@@ -57,7 +57,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -85,7 +85,7 @@ jobs:
     - name: Test pools code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/pools/test_*.py -s -v --durations 0 -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/pools/test_*.py --durations=10  -n 2 -m "not benchmark"
 
     - name: Process coverage data
       run: |

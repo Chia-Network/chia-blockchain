@@ -104,11 +104,10 @@ class LastState:
         else:
             assert False
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "Tuple[Optional[bytes32], uint128]";
-        #       expected "Tuple[bytes32, uint128]"  [arg-type]
-        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))  # type: ignore[arg-type]  # noqa: E501
-        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
+        reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
+        assert reward_challenge is not None  # Reward chain always has VDFs
+        self.reward_challenge_cache.append((reward_challenge, self.total_iters))
+        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

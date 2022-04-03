@@ -5,11 +5,10 @@ import random
 import time
 from secrets import token_bytes
 from typing import Dict, Optional, List
-from blspy import G2Element
 
-from clvm.casts import int_to_bytes
 import pytest
-import pytest_asyncio
+from blspy import G2Element
+from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
@@ -33,26 +32,24 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import get_signage_point
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.wallet.transaction_record import TransactionRecord
+from tests.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_no_error,
 )
-from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.wallet_tools import WalletTool
-from chia.wallet.transaction_record import TransactionRecord
-
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.full_node.test_mempool_performance import wallet_height_at_least
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_simulators_and_wallets, test_constants
+from tests.pools.test_pool_rpc import wallet_is_synced
+from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 
 log = logging.getLogger(__name__)
@@ -96,56 +93,6 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
-
-
-@pytest_asyncio.fixture(scope="module")
-async def wallet_nodes(bt):
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
-    nodes, wallets = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
-
-    async for _ in async_gen:
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_four_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(5, 0, {}, db_version=db_version):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_nodes_mainnet(bt, db_version):
-    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, db_version=db_version)
-    nodes, wallets = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
-
-    async for _ in async_gen:
-        yield _
 
 
 class TestFullNodeBlockCompression:

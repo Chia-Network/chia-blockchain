@@ -245,18 +245,12 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
 
     for coin in additions + coinbase_additions:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+        byte_array_tx.append(bytearray(coin.puzzle_hash))
     for coin_name in removals:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin_name))  # type: ignore[arg-type]
+        byte_array_tx.append(bytearray(coin_name))
 
     bip158: PyBIP158 = PyBIP158(byte_array_tx)
     encoded_filter = bytes(bip158.GetEncoded())

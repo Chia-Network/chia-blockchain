@@ -484,7 +484,9 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"Balances, fingerprint: {fingerprint}")
         for summary in summaries_response:
             indent: str = "   "
-            asset_id = summary["data"]
+            # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
+            # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
+            asset_id = summary["data"][:64]
             wallet_id = summary["id"]
             balances = await wallet_client.get_wallet_balance(wallet_id)
             typ = WalletType(int(summary["type"]))
