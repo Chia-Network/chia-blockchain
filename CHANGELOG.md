@@ -8,6 +8,16 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## 1.3.3 Chia blockchain 2022-4-02
+
+### Fixed
+
+- In version 1.3.2 our patch for the OpenSSL vulnerability was not complete for the Windows installer. Thank you @xsmolasses of Core-Pool.
+- MacOS would not update openssl when installing via `install.sh`
+- A future version of Arch Linux may not get openssl updates. The current version is secure.
+- Some debugging information remained in `install.sh`
+
+
 ## 1.3.2 Chia blockchain 2022-4-01
 
 ### Fixed
