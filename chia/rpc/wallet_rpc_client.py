@@ -327,8 +327,12 @@ class WalletRpcClient(RpcClient):
         reply = parse_result_transactions(reply)
         return reply
 
-    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> Dict:
-        reply = await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee})
+    async def pw_absorb_rewards(
+        self, wallet_id: str, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
+    ) -> Dict:
+        reply = await self.fetch(
+            "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
+        )
         reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
         reply = parse_result_transactions(reply)
         return reply

@@ -326,6 +326,7 @@ class PoolWallet:
         block_spends: List[CoinSpend],
         block_height: uint32,
         in_transaction: bool,
+        *,
         name: str = None,
     ):
         """
@@ -778,12 +779,20 @@ class PoolWallet:
         travel_tx, fee_tx = await self.generate_travel_transactions(fee)
         return total_fee, travel_tx, fee_tx
 
-    async def claim_pool_rewards(self, fee: uint64) -> Tuple[TransactionRecord, Optional[TransactionRecord]]:
+    async def claim_pool_rewards(
+        self, fee: uint64, max_spends_in_tx: Optional[int]
+    ) -> Tuple[TransactionRecord, Optional[TransactionRecord]]:
         # Search for p2_puzzle_hash coins, and spend them with the singleton
         if await self.have_unconfirmed_transaction():
             raise ValueError(
                 "Cannot claim due to unconfirmed transaction. If this is stuck, delete the unconfirmed transaction."
             )
+
+        if max_spends_in_tx is None:
+            max_spends_in_tx = 100
+        elif max_spends_in_tx <= 0:
+            self.log.info(f"Got bad max_spends_in_tx value of {max_spends_in_tx}. Set to 100.")
+            max_spends_in_tx = 100
 
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
@@ -807,13 +816,16 @@ class PoolWallet:
         all_spends: List[CoinSpend] = []
         total_amount = 0
 
-        current_coin_record = None
+        first_coin_record = None
         for coin_record in unspent_coin_records:
             if coin_record.coin not in coin_to_height_farmed:
                 continue
-            current_coin_record = coin_record
-            if len(all_spends) >= 100:
-                # Limit the total number of spends, so it fits into the block
+            if first_coin_record is None:
+                first_coin_record = coin_record
+            if len(all_spends) >= max_spends_in_tx:
+                # Limit the total number of spends, so the SpendBundle fits into the block
+                self.log.info(f"pool wallet truncating absorb to {max_spends_in_tx} spends to fit into block")
+                print(f"pool wallet truncating absorb to {max_spends_in_tx} spends to fit into block")
                 break
             absorb_spend: List[CoinSpend] = create_absorb_spend(
                 last_solution,
@@ -830,7 +842,7 @@ class PoolWallet:
             self.log.info(
                 f"Farmer coin: {coin_record.coin} {coin_record.coin.name()} {coin_to_height_farmed[coin_record.coin]}"
             )
-        if len(all_spends) == 0 or current_coin_record is None:
+        if len(all_spends) == 0 or first_coin_record is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
         claim_spend: SpendBundle = SpendBundle(all_spends, G2Element())
@@ -840,7 +852,7 @@ class PoolWallet:
 
         fee_tx = None
         if fee > 0:
-            absorb_announce = Announcement(current_coin_record.coin.name(), b"$")
+            absorb_announce = Announcement(first_coin_record.coin.name(), b"$")
             fee_tx = await self.generate_fee_transaction(fee, coin_announcements=[absorb_announce])
             full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
 
