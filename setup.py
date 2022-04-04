@@ -43,27 +43,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build",
-    "coverage",
-    "pre-commit",
     "pytest",
-    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
-    "pytest-monitor; sys_platform == 'linux'",
-    "pytest-xdist",
-    "twine",
-    "isort",
-    "flake8",
-    "mypy",
-    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
-    "black==21.12b0",
-    "aiohttp_cors",  # For blackd
-    "ipython",  # For asyncio debugging
-    "types-aiofiles",
-    "types-click",
-    "types-cryptography",
-    "types-pkg_resources",
-    "types-pyyaml",
-    "types-setuptools",
 ]
 
 kwargs = dict(
