@@ -85,7 +85,7 @@ jobs:
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" /home/altendky/repos/chia-blockchain/tests/core/full_node/test_performance.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_address_manager.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_mempool.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_full_node.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_conditions.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_transactions.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_mempool_performance.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_peer_store_resolver.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_node_load.py /home/altendky/repos/chia-blockchain/tests/core/full_node/test_block_height_map.py
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" tests/core/full_node/test_performance.py tests/core/full_node/test_address_manager.py tests/core/full_node/test_mempool.py tests/core/full_node/test_full_node.py tests/core/full_node/test_conditions.py tests/core/full_node/test_transactions.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_peer_store_resolver.py tests/core/full_node/test_node_load.py tests/core/full_node/test_block_height_map.py
 
     - name: Process coverage data
       run: |

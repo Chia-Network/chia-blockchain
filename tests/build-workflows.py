@@ -89,7 +89,7 @@ def generate_replacements(conf, dir):
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
     test_files = dir.glob("test_*.py")
-    test_file_paths = [file.as_posix() for file in test_files]
+    test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
     replacements["TEST_FILES"] = " ".join(test_file_paths)
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:

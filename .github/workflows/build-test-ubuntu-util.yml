@@ -84,7 +84,7 @@ jobs:
     - name: Test util code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" -p no:monitor /home/altendky/repos/chia-blockchain/tests/util/test_network_protocol_files.py /home/altendky/repos/chia-blockchain/tests/util/test_struct_stream.py /home/altendky/repos/chia-blockchain/tests/util/test_chunks.py /home/altendky/repos/chia-blockchain/tests/util/test_lock_queue.py /home/altendky/repos/chia-blockchain/tests/util/test_full_block_utils.py
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/util/test_network_protocol_files.py tests/util/test_struct_stream.py tests/util/test_chunks.py tests/util/test_lock_queue.py tests/util/test_full_block_utils.py
 
     - name: Process coverage data
       run: |

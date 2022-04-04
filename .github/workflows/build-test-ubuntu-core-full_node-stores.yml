@@ -84,7 +84,7 @@ jobs:
     - name: Test core-full_node-stores code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark"  /home/altendky/repos/chia-blockchain/tests/core/full_node/stores/test_hint_store.py /home/altendky/repos/chia-blockchain/tests/core/full_node/stores/test_full_node_store.py /home/altendky/repos/chia-blockchain/tests/core/full_node/stores/test_sync_store.py /home/altendky/repos/chia-blockchain/tests/core/full_node/stores/test_coin_store.py /home/altendky/repos/chia-blockchain/tests/core/full_node/stores/test_block_store.py
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark"  tests/core/full_node/stores/test_hint_store.py tests/core/full_node/stores/test_full_node_store.py tests/core/full_node/stores/test_sync_store.py tests/core/full_node/stores/test_coin_store.py tests/core/full_node/stores/test_block_store.py
 
     - name: Process coverage data
       run: |

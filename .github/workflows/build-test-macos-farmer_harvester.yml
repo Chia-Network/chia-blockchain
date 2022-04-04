@@ -85,7 +85,7 @@ jobs:
     - name: Test farmer_harvester code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 0 -m "not benchmark" /home/altendky/repos/chia-blockchain/tests/farmer_harvester/test_farmer_harvester.py
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 0 -m "not benchmark" tests/farmer_harvester/test_farmer_harvester.py
 
     - name: Process coverage data
       run: |
