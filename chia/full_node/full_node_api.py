@@ -314,12 +314,6 @@ class FullNodeAPI:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
 
-        # Serialization of wp is slow
-        if self.full_node.full_node_store.serialized_wp_message_tip is not None:
-            if self.full_node.full_node_store.serialized_wp_message_tip == request.tip:
-                if self.full_node.full_node_store.serialized_wp_is_v2 is True:
-                    return self.full_node.full_node_store.serialized_wp_message
-
         wp = await self.full_node.weight_proof_handler_v2.get_proof_of_weight(request.tip, request.seed)
         if wp is None:
             self.log.error(f"failed creating weight proof for peak {request.tip}")

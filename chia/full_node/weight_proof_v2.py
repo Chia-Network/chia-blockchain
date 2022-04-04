@@ -182,9 +182,7 @@ class WeightProofHandlerV2:
         log.debug(f"total weight {last_ses_block.weight} prev weight {prev_prev_ses_block.weight}")
         weight_to_check = _get_weights_for_sampling(rng, last_ses_block.weight, last_l_weight)
         if weight_to_check is None:
-            log.error("failed getting weight list for samples")
-            return None
-
+            log.debug("chain to light, will choose all sub epochs until cap is reached")
         ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
         if ses_blocks is None:
             log.error("failed pulling ses blocks from database")
@@ -508,7 +506,6 @@ def _get_weights_for_sampling(rng: random.Random, total_weight: uint128, last_l_
     for i in range(int(queries) + 1):
         u = rng.random()
         q = 1 - delta**u
-        # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(weight))
     weight_to_check.sort()
@@ -1465,9 +1462,6 @@ def validate_sub_epoch_sampling(rng: random.Random, sub_epoch_weight_list: List[
     last_l_weight = sub_epoch_weight_list[-1] - sub_epoch_weight_list[-3]
     log.debug(f"total weight {total_weight} prev weight {sub_epoch_weight_list[-2]}")
     weight_to_check = _get_weights_for_sampling(rng, total_weight, last_l_weight)
-    if weight_to_check is None:
-        log.error("failed getting weight list for samples")
-        return False
     sampled_sub_epochs: dict[int, bool] = {}
     for idx in range(1, len(sub_epoch_weight_list)):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
