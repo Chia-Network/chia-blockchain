@@ -77,7 +77,7 @@ INSTALL_TIMELORD
 
     - name: Test TEST_NAME code with pytest
       run: |
-        sed -i 's/found = _win32sysloader.GetModuleFilename(filename)/print(f\"GetModuleFilename(\{filename!r\})\"; found = _win32sysloader.GetModuleFilename(filename)/' venv/Lib/site-packages/win32/lib/pywintypes.py
+        sed -i 's/found = _win32sysloader.GetModuleFilename(filename)/print(f"GetModuleFilename({filename!r})"; found = _win32sysloader.GetModuleFilename(filename)/' venv/Lib/site-packages/win32/lib/pywintypes.py
         venv/Scripts/python -c "print(' ==== about to import pkg_resources'); import pkg_resources; print(' ==== just imported pkg_resources')"
         venv/Scripts/python -c "print(' ==== about to import tests.conftest'); import tests.conftest; print(' ==== just imported tests.conftest')"
         ./venv/Scripts/activate.ps1
