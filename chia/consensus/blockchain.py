@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import logging
 import multiprocessing
 import traceback
@@ -46,7 +45,6 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +65,6 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
-    constants_json: Dict
 
     # peak of the blockchain
     _peak_height: Optional[uint32]
@@ -130,7 +127,6 @@ class Blockchain(BlockchainInterface):
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
         self._shut_down = False
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
@@ -625,7 +621,6 @@ class Blockchain(BlockchainInterface):
     ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
-            self.constants_json,
             self,
             blocks,
             self.pool,

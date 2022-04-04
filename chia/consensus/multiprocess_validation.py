@@ -30,7 +30,7 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.streamable import Streamable, dataclass_from_dict, streamable
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class PreValidationResult(Streamable):
 
 
 def batch_pre_validate_blocks(
-    constants_dict: Dict,
+    constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
     full_blocks: Optional[List[FullBlock]],
     header_blocks: Optional[List[HeaderBlock]],
@@ -57,7 +57,6 @@ def batch_pre_validate_blocks(
     validate_signatures: bool,
 ) -> List[PreValidationResult]:
     results: List[PreValidationResult] = []
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks is not None and header_blocks is not None:
         assert ValueError("Only one should be passed here")
 
@@ -158,7 +157,6 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    constants_json: Dict,
     block_records: BlockchainInterface,
     blocks: Sequence[FullBlock],
     pool: Executor,
@@ -177,7 +175,6 @@ async def pre_validate_blocks_multiprocessing(
 
     Args:
         check_filter:
-        constants_json:
         pool:
         constants:
         block_records:
@@ -330,7 +327,7 @@ async def pre_validate_blocks_multiprocessing(
             asyncio.get_running_loop().run_in_executor(
                 pool,
                 batch_pre_validate_blocks,
-                constants_json,
+                constants,
                 final_pickled,
                 full_blocks,
                 header_blocks,
