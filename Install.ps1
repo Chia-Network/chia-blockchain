@@ -56,17 +56,19 @@ else
     }
 }
 
-Write-Output "Python version is:" $pythonVersion
+$fullPythonVersion = (py -$version --version).split(" ")[1]
 
-$openSSLVersionStr = (py -c 'import ssl; print(ssl.OPENSSL_VERSION)')
-$openSSLVersion = (py -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+Write-Output "Python version is:" $fullPythonVersion
+
+$openSSLVersionStr = (py -$version -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+$openSSLVersion = (py -$version -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
 if ($openSSLVersion -lt 269488367)
 {
     Write-Output "Found Python with OpenSSL version:" $openSSLVersionStr
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
 
-py -m venv venv
+py -$version -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
