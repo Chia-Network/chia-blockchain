@@ -162,15 +162,6 @@ def tmp_dir():
         yield Path(folder)
 
 
-@pytest_asyncio.fixture(scope="function")
-async def farmer_multi_harvester(
-    request: pytest.FixtureRequest, tmp_path: Path, bt: BlockTools
-) -> AsyncIterator[Tuple[List[Service], Service]]:
-    marker = request.node.get_closest_marker("harvesters")
-    async for _ in setup_farmer_multi_harvester(bt, marker.kwargs["count"], tmp_path, test_constants):
-        yield _
-
-
 # For the below see https://stackoverflow.com/a/62563106/15133773
 if os.getenv("_PYTEST_RAISE", "0") != "0":
 
@@ -413,6 +404,24 @@ async def two_nodes_one_block(bt, wallet_a):
     yield full_node_1, full_node_2, server_1, server_2
 
     async for _ in async_gen:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_two_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_three_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants):
         yield _
 
 

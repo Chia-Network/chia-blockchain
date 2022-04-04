@@ -261,7 +261,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    bt: BlockTools, tmp_path: Path, farmer_multi_harvester: Tuple[List[Service], Service]
+    bt: BlockTools, tmp_path: Path, farmer_two_harvester: Tuple[List[Service], Service]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
         return TestDirectory(tmp_path / "plots" / name, plot_list)
@@ -289,7 +289,7 @@ async def environment(
 
     harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service = farmer_multi_harvester
+    harvester_services, farmer_service = farmer_two_harvester
     farmer: Farmer = farmer_service._node
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
@@ -316,7 +316,6 @@ async def environment(
     )
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_sync_valid(environment: Environment) -> None:
     env: Environment = environment
@@ -346,7 +345,6 @@ async def test_sync_valid(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_sync_invalid(environment: Environment) -> None:
     env: Environment = environment
@@ -387,7 +385,6 @@ async def test_sync_invalid(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_sync_keys_missing(environment: Environment) -> None:
     env: Environment = environment
@@ -424,7 +421,6 @@ async def test_sync_keys_missing(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_sync_duplicates(environment: Environment) -> None:
     env: Environment = environment
@@ -471,14 +467,12 @@ async def remove_and_validate_all_directories(env: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_add_and_remove_all_directories(environment: Environment) -> None:
     await add_and_validate_all_directories(environment)
     await remove_and_validate_all_directories(environment)
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_harvester_restart(environment: Environment) -> None:
     env: Environment = environment
@@ -505,7 +499,6 @@ async def test_harvester_restart(environment: Environment) -> None:
     await env.run_sync_test()
 
 
-@pytest.mark.harvesters(count=2)
 @pytest.mark.asyncio
 async def test_farmer_restart(environment: Environment) -> None:
     env: Environment = environment
