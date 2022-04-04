@@ -1,5 +1,6 @@
 import logging
 import aiosqlite
+import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, Any
@@ -108,7 +109,8 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    server_list_bytes BLOB NOT NULL,
+                    servers_ip TEXT NOT NULL,
+                    servers_port TEXT NOT NULL,
                     validated_wallet_generation INTEGER NOT NULL,
                     PRIMARY KEY(tree_id)
                 )
@@ -1191,26 +1193,31 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            server_list_bytes = bytes(subscription.data_servers_info)
+            servers_ip = json.dumps(subscription.data_servers_info.ip)
+            servers_port = json.dumps(subscription.data_servers_info.port)
             await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, server_list_bytes, validated_wallet_generation) "
-                "VALUES (:tree_id, :server_list_bytes, 0)",
+                "INSERT INTO subscriptions(tree_id, servers_ip, servers_port, validated_wallet_generation) "
+                "VALUES (:tree_id, :servers_ip, :servers_port, 0)",
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "server_list_bytes": server_list_bytes,
+                    "servers_ip": servers_ip,
+                    "servers_port": servers_port,
                 },
             )
 
     async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            server_list_bytes = bytes(subscription.data_servers_info)
+            servers_ip = json.dumps(subscription.data_servers_info.ip)
+            servers_port = json.dumps(subscription.data_servers_info.port)
             await self.db.execute(
                 """
-                UPDATE subscriptions SET server_list_bytes = :server_list_bytes WHERE tree_id == :tree_id
+                UPDATE subscriptions SET servers_ip = :servers_ip, servers_port = :servers_port
+                WHERE tree_id == :tree_id
                 """,
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "server_list_bytes": server_list_bytes,
+                    "servers_ip": servers_ip,
+                    "servers_port": servers_port,
                 },
             )
 
@@ -1245,8 +1252,9 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                servers_list = DataServersInfo.from_bytes(row["server_list_bytes"])
-                subscriptions.append(Subscription(tree_id, servers_list))
+                servers_ip = json.loads(row["servers_ip"])
+                servers_port = json.loads(row["servers_port"])
+                subscriptions.append(Subscription(tree_id, DataServersInfo(servers_ip, servers_port)))
 
         return subscriptions
 
