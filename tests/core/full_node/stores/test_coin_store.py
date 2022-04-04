@@ -23,7 +23,6 @@ from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
 
-
 constants = test_constants
 
 WALLET_A = WalletTool(constants)
@@ -223,6 +222,7 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
 
             records: List[CoinRecord] = []
+            selected_coin: Optional[CoinRecord] = None
 
             for block in blocks:
                 if block.is_transaction_block():
@@ -239,19 +239,44 @@ class TestCoinStoreWithBlocks:
                             removals,
                         )
 
-                    coins = block.get_included_reward_coins()
+                    coins = list(block.get_included_reward_coins())
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-                    await coin_store._set_spent([r.name for r in records], block.height)
+                    spend_selected_coin = selected_coin is not None
+                    if block.height != 0 and selected_coin is None:
+                        # Select one coin which will be spent later
+                        selected_coin = records[0]
+                        await coin_store._set_spent([r.name for r in records[1:]], block.height)
+                    else:
+                        await coin_store._set_spent([r.name for r in records], block.height)
+
+                    if spend_selected_coin:
+                        assert selected_coin is not None
+                        await coin_store._set_spent([selected_coin.name], block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
                         assert record is not None
-                        assert record.spent
-                        assert record.spent_block_index == block.height
+                        if (
+                            selected_coin is not None
+                            and selected_coin.name == record.name
+                            and not selected_coin.confirmed_block_index < block.height
+                        ):
+                            assert not record.spent
+                        else:
+                            assert record.spent
+                            assert record.spent_block_index == block.height
 
-            reorg_index = 8
-            await coin_store.rollback_to_block(reorg_index)
+                    if spend_selected_coin:
+                        break
+
+            assert selected_coin is not None
+            reorg_index = selected_coin.confirmed_block_index
+
+            # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
+            # creation) of the selected coin.
+            changed_records = await coin_store.rollback_to_block(reorg_index)
+            assert selected_coin in changed_records
 
             for block in blocks:
                 if block.is_transaction_block():
@@ -261,7 +286,7 @@ class TestCoinStoreWithBlocks:
                     if block.height <= reorg_index:
                         for record in records:
                             assert record is not None
-                            assert record.spent
+                            assert record.spent == (record.name != selected_coin.name)
                     else:
                         for record in records:
                             assert record is None
