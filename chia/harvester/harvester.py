@@ -1,5 +1,6 @@
 import asyncio
 import concurrent
+import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
@@ -43,6 +44,9 @@ class Harvester:
                 "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
                 "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
             )
+            refresh_parameter = dataclasses.replace(
+                refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
+            )
         if "plots_refresh_parameter" in config:
             refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
 
@@ -60,7 +64,7 @@ class Harvester:
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.get_running_loop()
 
     def _close(self):
         self._is_shutdown = True

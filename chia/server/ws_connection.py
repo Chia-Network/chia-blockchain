@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import time
 import traceback
@@ -13,7 +14,6 @@ from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
@@ -89,9 +89,8 @@ class WSChiaConnection:
         self.session = session
         self.close_callback = close_callback
 
-        self.pending_requests: Dict[bytes32, asyncio.Event] = {}
-        self.pending_timeouts: Dict[bytes32, asyncio.Task] = {}
-        self.request_results: Dict[bytes32, Message] = {}
+        self.pending_requests: Dict[uint16, asyncio.Event] = {}
+        self.request_results: Dict[uint16, Message] = {}
         self.closed = False
         self.connection_type: Optional[NodeType] = None
         self.capabilities: Optional[List[Tuple[uint16, str]]] = None
@@ -109,6 +108,7 @@ class WSChiaConnection:
 
         # Used by the Chia Seeder.
         self.version = None
+        self.protocol_version = ""
 
     async def perform_handshake(
         self,
@@ -150,7 +150,7 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
             self.version = inbound_handshake.software_version
-
+            self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             self.capabilities = inbound_handshake.capabilities
@@ -223,7 +223,7 @@ class WSChiaConnection:
                 await self.session.close()
             if self.close_event is not None:
                 self.close_event.set()
-            self.cancel_pending_timeouts()
+            self.cancel_pending_requests()
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
@@ -245,9 +245,12 @@ class WSChiaConnection:
         self.log.error(f"Banning peer for {ban_seconds} seconds: {self.peer_host} {log_err_msg}")
         await self.close(ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.INVALID_PROTOCOL_MESSAGE)
 
-    def cancel_pending_timeouts(self):
-        for _, task in self.pending_timeouts.items():
-            task.cancel()
+    def cancel_pending_requests(self):
+        for message_id, event in self.pending_requests.items():
+            try:
+                event.set()
+            except Exception as e:
+                self.log.error(f"Failed setting event for {message_id}: {e} {traceback.format_exc()}")
 
     async def outbound_handler(self):
         try:
@@ -353,53 +356,21 @@ class WSChiaConnection:
             )
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
-
-        # TODO: address hint error and remove ignore
-        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Event]"; expected type "bytes32"
-        #       [index]
-        self.pending_requests[message.id] = event  # type: ignore[index]
+        assert message.id is not None
+        self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        # If the timeout passes, we set the event
-        async def time_out(req_id, req_timeout):
-            try:
-                await asyncio.sleep(req_timeout)
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-            except asyncio.CancelledError:
-                if req_id in self.pending_requests:
-                    self.pending_requests[req_id].set()
-                raise
+        # Either the result is available below or not, no need to detect the timeout error
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(event.wait(), timeout=timeout)
 
-        timeout_task = asyncio.create_task(time_out(message.id, timeout))
-        # TODO: address hint error and remove ignore
-        #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"
-        #       [index]
-        self.pending_timeouts[message.id] = timeout_task  # type: ignore[index]
-        await event.wait()
-
-        # TODO: address hint error and remove ignore
-        #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
-        #       [call-overload]
-        #       note: Possible overload variants:
-        #       note:     def pop(self, key: bytes32) -> Event
-        #       note:     def [_T] pop(self, key: bytes32, default: Union[Event, _T] = ...) -> Union[Event, _T]
-        self.pending_requests.pop(message.id)  # type: ignore[call-overload]
+        self.pending_requests.pop(message.id)
         result: Optional[Message] = None
         if message.id in self.request_results:
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "Optional[uint16]" for "Dict[bytes32, Message]"; expected type "bytes32"
-            #       [index]
-            result = self.request_results[message.id]  # type: ignore[index]
+            result = self.request_results[message.id]
             assert result is not None
             self.log.debug(f"<- {ProtocolMessageTypes(result.type).name} from: {self.peer_host}:{self.peer_port}")
-            # TODO: address hint error and remove ignore
-            #       error: No overload variant of "pop" of "MutableMapping" matches argument type "Optional[uint16]"
-            #       [call-overload]
-            #       note: Possible overload variants:
-            #       note:     def pop(self, key: bytes32) -> Message
-            #       note:     def [_T] pop(self, key: bytes32, default: Union[Message, _T] = ...) -> Union[Message, _T]
-            self.request_results.pop(result.id)  # type: ignore[call-overload]
+            self.request_results.pop(message.id)
 
         return result
 
@@ -499,7 +470,7 @@ class WSChiaConnection:
                     await asyncio.sleep(3)
                     return None
                 else:
-                    self.log.warning(
+                    self.log.debug(
                         f"Peer surpassed rate limit {self.peer_host}, message: {message_type}, "
                         f"port {self.peer_port} but not disconnecting"
                     )
