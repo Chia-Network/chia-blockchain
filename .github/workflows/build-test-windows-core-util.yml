@@ -84,7 +84,7 @@ jobs:
     - name: Test core-util code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/core/util/test_*.py -s -v --durations 0 --numprocesses 0 -m "not benchmark" -p no:monitor
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest -s -v --durations 0 --numprocesses 0 -m "not benchmark" -p no:monitor /home/altendky/repos/chia-blockchain/tests/core/util/test_file_keyring_synchronization.py /home/altendky/repos/chia-blockchain/tests/core/util/test_keyring_wrapper.py /home/altendky/repos/chia-blockchain/tests/core/util/test_cached_bls.py /home/altendky/repos/chia-blockchain/tests/core/util/test_files.py /home/altendky/repos/chia-blockchain/tests/core/util/test_keychain.py /home/altendky/repos/chia-blockchain/tests/core/util/test_streamable.py /home/altendky/repos/chia-blockchain/tests/core/util/test_lru_cache.py /home/altendky/repos/chia-blockchain/tests/core/util/test_db_wrapper.py /home/altendky/repos/chia-blockchain/tests/core/util/test_type_checking.py /home/altendky/repos/chia-blockchain/tests/core/util/test_config.py /home/altendky/repos/chia-blockchain/tests/core/util/test_significant_bits.py
 
     - name: Process coverage data
       run: |

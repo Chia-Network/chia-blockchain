@@ -85,7 +85,7 @@ jobs:
     - name: Test pools code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/pools/test_*.py --durations=10  -n 2 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 2 -m "not benchmark" /home/altendky/repos/chia-blockchain/tests/pools/test_pool_rpc.py /home/altendky/repos/chia-blockchain/tests/pools/test_wallet_pool_store.py /home/altendky/repos/chia-blockchain/tests/pools/test_pool_puzzles_lifecycle.py /home/altendky/repos/chia-blockchain/tests/pools/test_pool_cmdline.py /home/altendky/repos/chia-blockchain/tests/pools/test_pool_config.py /home/altendky/repos/chia-blockchain/tests/pools/test_pool_wallet.py
 
     - name: Process coverage data
       run: |

@@ -85,7 +85,7 @@ jobs:
     - name: Test core-full_node-full_sync code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/full_node/full_sync/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" /home/altendky/repos/chia-blockchain/tests/core/full_node/full_sync/test_full_sync.py
 
     - name: Process coverage data
       run: |

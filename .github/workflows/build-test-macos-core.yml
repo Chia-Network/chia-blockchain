@@ -85,7 +85,7 @@ jobs:
     - name: Test core code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test --durations=10  -n 4 -m "not benchmark" /home/altendky/repos/chia-blockchain/tests/core/test_daemon_rpc.py /home/altendky/repos/chia-blockchain/tests/core/test_cost_calculation.py /home/altendky/repos/chia-blockchain/tests/core/test_filter.py /home/altendky/repos/chia-blockchain/tests/core/test_db_validation.py /home/altendky/repos/chia-blockchain/tests/core/test_setproctitle.py /home/altendky/repos/chia-blockchain/tests/core/test_db_conversion.py /home/altendky/repos/chia-blockchain/tests/core/test_full_node_rpc.py /home/altendky/repos/chia-blockchain/tests/core/test_farmer_harvester_rpc.py /home/altendky/repos/chia-blockchain/tests/core/test_merkle_set.py /home/altendky/repos/chia-blockchain/tests/core/test_crawler_rpc.py
 
     - name: Process coverage data
       run: |

@@ -96,7 +96,7 @@ jobs:
     - name: Test simulation code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/simulation/test_*.py -s -v --durations 0 --numprocesses 0 -m "not benchmark" -p no:monitor
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest -s -v --durations 0 --numprocesses 0 -m "not benchmark" -p no:monitor /home/altendky/repos/chia-blockchain/tests/simulation/test_simulation.py
 
     - name: Process coverage data
       run: |
