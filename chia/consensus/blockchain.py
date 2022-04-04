@@ -643,7 +643,7 @@ class Blockchain(BlockchainInterface):
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
-            self.constants_json,
+            self.constants,
             unfinished_block,
             generator,
             height,
