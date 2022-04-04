@@ -43,7 +43,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "coverage",
     "pytest",
 ]
 
