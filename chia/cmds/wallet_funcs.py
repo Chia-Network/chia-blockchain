@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, List, Optional, Tuple, Dict
+from typing import Any, Callable, Coroutine, List, Optional, Tuple, Dict
 
 import aiohttp
 
@@ -25,7 +25,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
 
-CATNameResolver = Callable[[bytes32], Optional[Tuple[Optional[uint32], str]]]
+CATNameResolver = Callable[[bytes32], Coroutine[None, None, Optional[Tuple[Optional[uint32], str]]]]
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -361,7 +361,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
             for asset_id, v in offer.get_pending_amounts().items()
             if asset_id in offered or asset_id == "unknown"
         }
-        fees: int = Decimal(offer.bundle.fees())
+        fees: Decimal = Decimal(offer.bundle.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
         await print_offer_summary(cat_name_resolver, offered)
