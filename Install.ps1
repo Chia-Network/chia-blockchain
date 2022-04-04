@@ -59,7 +59,10 @@ else
 
     if (-not $pythonVersion)
     {
-        Write-Output "No usable Python version found, supported versions are: " $supportedPythonVersions
+        $reversedPythonVersions = $supportedPythonVersions.clone()
+        [array]::Reverse($reversedPythonVersions)
+        $reversedPythonVersions = $reversedPythonVersions -join ", "
+        Write-Output "No usable Python version found, supported versions are: $reversedPythonVersions"
         Exit 1
     }
 }
