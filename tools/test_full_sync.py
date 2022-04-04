@@ -46,7 +46,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
         pr.dump_stats(f"slow-batch-{counter:05d}.profile")
 
 
-async def run_sync_test(file: Path, db_version, profile: bool) -> None:
+async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bool) -> None:
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
@@ -64,11 +64,14 @@ async def run_sync_test(file: Path, db_version, profile: bool) -> None:
     with tempfile.TemporaryDirectory() as root_dir:
 
         root_path = Path(root_dir)
-        chia_init(root_path, should_check_keys=False)
+        chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
 
         overrides = config["network_overrides"]["constants"][config["selected_network"]]
         constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+        if single_thread:
+            config["full_node"]["single_threaded"] = True
+        config["full_node"]["db_sync"] = "off"
         full_node = FullNode(
             config["full_node"],
             root_path=root_path,
@@ -82,19 +85,21 @@ async def run_sync_test(file: Path, db_version, profile: bool) -> None:
             counter = 0
             async with aiosqlite.connect(file) as in_db:
 
-                rows = await in_db.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+                rows = await in_db.execute(
+                    "SELECT header_hash, height, block FROM full_blocks WHERE in_main_chain=1 ORDER BY height"
+                )
 
                 block_batch = []
 
                 start_time = time.monotonic()
                 async for r in rows:
-                    block = FullBlock.from_bytes(zstd.decompress(r[2]))
-
-                    block_batch.append(block)
-                    if len(block_batch) < 32:
-                        continue
-
                     with enable_profiler(profile, counter):
+                        block = FullBlock.from_bytes(zstd.decompress(r[2]))
+
+                        block_batch.append(block)
+                        if len(block_batch) < 32:
+                            continue
+
                         success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
                             block_batch, None, None  # type: ignore[arg-type]
                         )
@@ -119,10 +124,20 @@ def main() -> None:
 
 @main.command("run", short_help="run simulated full sync from an existing blockchain db")
 @click.argument("file", type=click.Path(), required=True)
-@click.option("--db-version", type=int, required=False, default=2, help="the version of the specified db file")
+@click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
-def run(file: Path, db_version: int, profile: bool) -> None:
-    asyncio.run(run_sync_test(Path(file), db_version, profile))
+@click.option(
+    "--single-thread",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="run node in a single process, to include validation in profiles",
+)
+def run(file: Path, db_version: int, profile: bool, single_thread: bool) -> None:
+    """
+    The FILE parameter should point to an existing blockchain database file (in v2 format)
+    """
+    asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread))
 
 
 @main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")

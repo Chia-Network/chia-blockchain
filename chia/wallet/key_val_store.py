@@ -22,7 +22,7 @@ class KeyValStore:
             "CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value blob)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on key_val_store(key)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS key_val_name on key_val_store(key)")
 
         await self.db_connection.commit()
         return self

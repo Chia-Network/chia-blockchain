@@ -1,7 +1,8 @@
 import asyncio
-import pytest
-import pytest_asyncio
 import time
+
+import pytest
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
@@ -11,44 +12,13 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_100_pk():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_five_freeze():
-    async for _ in setup_simulators_and_wallets(1, 2, {}, True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def three_sim_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}, True):
-        yield _
 
 
 class TestWalletSimulator:
@@ -57,9 +27,9 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node, trusted, self_hostname):
+    async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, trusted, self_hostname):
         num_blocks = 10
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -170,9 +140,9 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_coinbase_reorg(self, wallet_node, trusted, self_hostname):
+    async def test_wallet_coinbase_reorg(self, wallet_node_sim_and_wallet, trusted, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -763,17 +733,17 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[114]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, 2 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 2 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[50]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 8 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 12 * 10 ** 12)
 
     @pytest.mark.parametrize(
         "trusted",

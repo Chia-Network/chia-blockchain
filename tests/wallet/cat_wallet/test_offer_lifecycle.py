@@ -1,17 +1,15 @@
-import pytest
-import pytest_asyncio
-
 from typing import Dict, Optional, List
+
+import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SpendSim, SimClient
-from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
-from chia.types.spend_bundle import SpendBundle
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -21,7 +19,6 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
-
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
@@ -39,14 +36,6 @@ def str_to_tail_hash(tail_str: str) -> bytes32:
 
 def str_to_cat_hash(tail_str: str) -> bytes32:
     return construct_cat_puzzle(CAT_MOD, str_to_tail_hash(tail_str), acs).get_tree_hash()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_sim():
-    sim = await SpendSim.create()
-    sim_client = SimClient(sim)
-    await sim.farm_block()
-    return sim, sim_client
 
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins

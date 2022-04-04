@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
@@ -16,6 +16,7 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -45,7 +46,7 @@ async def validate_block_body(
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
-    get_block_generator: Callable,
+    get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature=True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
@@ -244,18 +245,12 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    byte_array_tx: List[bytes32] = []
+    byte_array_tx: List[bytearray] = []
 
     for coin in additions + coinbase_additions:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin.puzzle_hash))  # type: ignore[arg-type]
+        byte_array_tx.append(bytearray(coin.puzzle_hash))
     for coin_name in removals:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "bytearray"; expected "bytes32"
-        #       [arg-type]
-        byte_array_tx.append(bytearray(coin_name))  # type: ignore[arg-type]
+        byte_array_tx.append(bytearray(coin_name))
 
     bip158: PyBIP158 = PyBIP158(byte_array_tx)
     encoded_filter = bytes(bip158.GetEncoded())
@@ -345,7 +340,7 @@ async def validate_block_body(
                 )
             if curr.height == 0:
                 break
-            curr = reorg_blocks[curr.height - 1]
+            curr = reorg_blocks[uint32(curr.height - 1)]
             assert curr is not None
 
     removal_coin_records: Dict[bytes32, CoinRecord] = {}

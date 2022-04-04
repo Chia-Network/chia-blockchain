@@ -40,7 +40,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, save_config, config_path_for_filename, get_config_lock
+from chia.util.config import load_config, lock_and_load_config, save_config, config_path_for_filename
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
@@ -581,8 +581,7 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]):
-        with get_config_lock(self._root_path, "config.yaml"):
-            config = load_config(self._root_path, "config.yaml", acquire_lock=False)
+        with lock_and_load_config(self._root_path, "config.yaml") as config:
             if farmer_target_encoded is not None:
                 self.farmer_target_encoded = farmer_target_encoded
                 self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
@@ -596,8 +595,7 @@ class Farmer:
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                with get_config_lock(self._root_path, "config.yaml"):
-                    config = load_config(self._root_path, "config.yaml", acquire_lock=False)
+                with lock_and_load_config(self._root_path, "config.yaml") as config:
                     new_list = []
                     pool_list = config["pool"].get("pool_list", [])
                     if pool_list is not None:
