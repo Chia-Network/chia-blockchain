@@ -145,6 +145,9 @@ for os in testconfig.oses:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
+        if conf["install_timelord"] and os == "windows":
+            # TODO: enable timelord for windows
+            continue
         replacements = generate_replacements(conf, dir)
         txt = transform_template(template_text, replacements)
         # remove trailing whitespace from lines and assure a single EOF at EOL
