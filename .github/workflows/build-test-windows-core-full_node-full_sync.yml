@@ -83,8 +83,7 @@ jobs:
 
     - name: Test core-full_node-full_sync code with pytest
       run: |
-        venv/Scripts/python -c "print(' ==== about to import pkg_resources'); import pkg_resources; print(' ==== just imported pkg_resources')"
-        venv/Scripts/python -c "print(' ==== about to import tests.conftest'); import tests.conftest; print(' ==== just imported tests.conftest')"
+        venv/Scripts/python -c "print(' ==== about to import'); import pkg_resources; print(' ==== just imported')"
         ./venv/Scripts/activate.ps1
         venv/Scripts/coverage run --rcfile=.coveragerc --module pytest tests/core/full_node/full_sync/test_*.py -s -v --durations 0 -n 4 -m "not benchmark" -p no:monitor
 
