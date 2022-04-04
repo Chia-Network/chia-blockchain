@@ -63,7 +63,8 @@ jobs:
     - uses: actions/setup-python@v2
       name: Install Python 3.9
       with:
-        python-version: "3.9"
+        # TODO: remove the .11 once it is regularly available
+        python-version: "3.9.11"
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v2.4.1

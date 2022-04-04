@@ -23,13 +23,14 @@ npm install electron-packager@15.4.0 -g
 npm install electron-osx-sign@v0.5.0 -g
 npm install notarize-cli -g
 npm install lerna -g
+npm install appdmg@0.6.4 -g
 
 echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
 echo "Install pyinstaller and build bootloaders for M1"
-pip install pyinstaller==4.5
+pip install pyinstaller==4.9
 
 echo "Create executables with pyinstaller"
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
