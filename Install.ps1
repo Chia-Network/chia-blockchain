@@ -41,8 +41,16 @@ else
 {
     foreach ($version in $supportedPythonVersions)
     {
-        py -$version --version 2>&1 >$null
-        if ($?)
+        try
+        {
+            py -$version --version 2>&1 >$null
+            $result = $?
+        }
+        catch
+        {
+            $result = $false
+        }
+        if ($result)
         {
             $pythonVersion = $version
             break
