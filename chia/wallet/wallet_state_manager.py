@@ -268,9 +268,9 @@ class WalletStateManager:
                 start_index = 0
             last_index = unused + to_generate
             if start_index >= last_index:
-                self.log.debug(f"Nothing to scan for for wallet_id: {wallet_id}, index: {start_index}")
+                self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                scanning_msg = f"Scanning puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                scanning_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
                 self.log.info(f"Start: {scanning_msg}")
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
