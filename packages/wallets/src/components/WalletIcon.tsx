@@ -7,7 +7,6 @@ import { Typography, type TypographyProps } from '@mui/material';
 
 const StyledSymbol = styled(Typography)`
   font-size: 1rem;
-  font-weight: 600;
 `;
 
 export type WalletIconProps = TypographyProps & {
