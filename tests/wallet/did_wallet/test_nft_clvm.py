@@ -303,10 +303,9 @@ def test_update_url_spend():
             did_one_innerpuz.get_tree_hash(),
             trade_price,
             NFT_TRANSFER_PROGRAM,
-            "https://public.newsdirect.com/422529418/bT8ckpSs.png",
+            "https://www.chia.net/img/branding/chia-logo-2.svg",
         ]
     )
-    cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     new_inner = NFT_MOD.curry(
         NFT_MOD_HASH,  # curried in params
         SINGLETON_STRUCT,
@@ -314,10 +313,11 @@ def test_update_url_spend():
         NFT_TRANSFER_PROGRAM.get_tree_hash(),
         transfer_program_curry_params,
         [
-            ('u', ["https://public.newsdirect.com/422529418/bT8ckpSs.png", "https://www.chia.net/img/branding/chia-logo.svg"]),
+            ('u', ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
             ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
         ]
     )
-    new_full = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_inner)
+    cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
+    # new_full = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_inner)
     assert res.rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().first().rest().first().as_atom() == new_full.get_tree_hash()
+    assert res.rest().rest().first().rest().first().as_atom() == new_inner.get_tree_hash()

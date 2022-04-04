@@ -1,12 +1,11 @@
 (mod (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_prices_list my_did_inner_hash new_did new_did_inner_hash solution)
-    ; The above CURRY_PARAMS are not actually curried into the mod hash but are curried into the NFT layer and passed in
+    ; METADATA and CURRY_PARAMS are not actually curried into the mod hash but are curried into the NFT layer and passed in
     ; This effectively achieves the same result - fixing the values - but means that the transfer program mod never changes
-    ; For this transfer_program the CURRY_PARAMS are:
-    ; (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
+    ; CURRY_PARAMS are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
 
-    ;SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    ; SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
 
-    ; solution is empty unless it is a new_url in this transfer program
+    ; For this transfer program solution is empty unless it is a new_url
 
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
@@ -79,11 +78,11 @@
   )
 
   ; once we find 'u' we don't need to continue looping
-    (defun add_url (METADATA solution)
+    (defun add_url (METADATA new_url)
       (if METADATA
         (if (= (f (f METADATA)) 'u')
-          (c (c 'u' (c solution (f METADATA))) (r METADATA))
-          (c (f METADATA) (add_url (r METADATA) solution))
+          (c (c 'u' (c new_url (r (f METADATA)))) (r METADATA))
+          (c (f METADATA) (add_url (r METADATA) new_url))
         )
         ()
       )
