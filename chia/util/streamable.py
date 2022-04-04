@@ -55,7 +55,7 @@ def dataclass_from_dict(klass, d):
     """
     if is_type_SpecificOptional(klass):
         # Type is optional, data is either None, or Any
-        if not d:
+        if d is None:
             return None
         return dataclass_from_dict(get_args(klass)[0], d)
     elif is_type_Tuple(klass):

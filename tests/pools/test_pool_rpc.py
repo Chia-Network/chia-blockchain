@@ -211,7 +211,7 @@ class TestPoolWalletRpc:
                 "b286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
             )
         )
-        assert status.current.pool_url is None
+        assert status.current.pool_url == ""
         assert status.current.relative_lock_height == 0
         assert status.current.version == 1
         # Check that config has been written properly
@@ -893,7 +893,7 @@ class TestPoolWalletRpc:
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
-            assert status.current.pool_url is None
+            assert status.current.pool_url == ""
             assert status.current.relative_lock_height == 0
             assert status.current.state == 1
             assert status.current.version == 1

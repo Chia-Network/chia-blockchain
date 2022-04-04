@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 import io
+import pytest
 
 from clvm_tools import binutils
 from pytest import raises
@@ -69,6 +70,32 @@ def test_json(bt):
     block = bt.create_genesis_block(test_constants, bytes32([0] * 32), uint64(0))
     dict_block = block.to_json_dict()
     assert FullBlock.from_json_dict(dict_block) == block
+
+
+@dataclass(frozen=True)
+@streamable
+class OptionalTestClass(Streamable):
+    a: Optional[str]
+    b: Optional[bool]
+    c: Optional[List[Optional[str]]]
+
+
+@pytest.mark.parametrize(
+    "a, b, c",
+    [
+        ("", True, ["1"]),
+        ("1", False, ["1"]),
+        ("1", True, []),
+        ("1", True, [""]),
+        ("1", True, ["1"]),
+        (None, None, None),
+    ],
+)
+def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[List[Optional[str]]]):
+    obj: OptionalTestClass = OptionalTestClass.from_json_dict({"a": a, "b": b, "c": c})
+    assert obj.a == a
+    assert obj.b == b
+    assert obj.c == c
 
 
 def test_recursive_json():
