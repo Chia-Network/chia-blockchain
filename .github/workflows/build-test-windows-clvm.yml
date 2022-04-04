@@ -48,6 +48,9 @@ jobs:
         venv/scripts/pip install .[dev]
         sed -i 's/found = _win32sysloader.GetModuleFilename(filename)/print(f\"GetModuleFilename(\{filename!r\})\"); found = _win32sysloader.GetModuleFilename(filename)/' venv/Lib/site-packages/win32/lib/pywintypes.py
         ./venv/Scripts/activate.ps1
+        echo checking package resources
         venv/Scripts/python -c "print(' ==== about to import pkg_resources'); import pkg_resources; print(' ==== just imported pkg_resources')"
+        echo checking tests
         venv/Scripts/python -c "print(' ==== about to import tests.conftest'); import tests.conftest; print(' ==== just imported tests.conftest')"
+        echo checking pytest
         venv/Scripts/python -m pytest tests/clvm/test_*.py
