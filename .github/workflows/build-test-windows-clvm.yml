@@ -45,7 +45,7 @@ jobs:
       run: |
         py -m venv venv
         venv/Scripts/python -m pip install --upgrade pip setuptools wheel
-        venv/scripts/pip install .[dev]
+        venv/scripts/pip install .
         sed -i 's/found = _win32sysloader.GetModuleFilename(filename)/print(f\"GetModuleFilename(\{filename!r\})\"); found = _win32sysloader.GetModuleFilename(filename)/' venv/Lib/site-packages/win32/lib/pywintypes.py
         ./venv/Scripts/activate.ps1
         echo checking package resources
