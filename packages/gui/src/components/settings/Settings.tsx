@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { makeStyles } from '@mui/styles';
 import {
   AlertDialog,
   Button,
   Card,
+  Flex,
   Suspender,
   useOpenDialog,
   useSkipMigration,
@@ -16,6 +17,8 @@ import {
   Typography,
   Box,
   Tooltip,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import {
   Help as HelpIcon,
@@ -25,6 +28,7 @@ import {
 import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
+import SettingsGeneral from './SettingsGeneral';
 
 const useStyles = makeStyles((theme) => ({
   passToggleBox: {
@@ -124,7 +128,7 @@ const SecurityCard = () => {
       tooltipTitle = (<Trans>Passphrase support requires migrating your keys to a new keyring</Trans>);
     } else {
       tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
-      
+
       if (userPassphraseIsSet) {
         icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
@@ -235,9 +239,29 @@ const SecurityCard = () => {
 };
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'IDENTITIES'>('GENERAL');
+
   return (
     <LayoutDashboardSub>
-      <SecurityCard />
+      <Typography variant="h5" gutterBottom>
+        <Trans>Settings</Trans>
+      </Typography>
+      <Flex gap={2} flexDirection="column">
+        <Tabs
+          value={activeTab}
+          onChange={(_event, newValue) => setActiveTab(newValue)}
+          textColor="primary"
+          indicatorColor="primary"
+        >
+          <Tab value="GENERAL" label={<Trans>General</Trans>} />
+          <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
+        </Tabs>
+        <Card>
+          {activeTab === 'GENERAL' && (
+            <SettingsGeneral />
+          )}
+        </Card>
+      </Flex>
     </LayoutDashboardSub>
   );
 }

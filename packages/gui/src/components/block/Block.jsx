@@ -19,6 +19,7 @@ import {
   FormatLargeNumber,
   Link,
   Loading,
+  LayoutDashboardSub,
   TooltipIcon,
   Flex,
   calculatePoolReward,
@@ -306,45 +307,47 @@ export default function Block() {
   ];
 
   return (
-    <Card
-      title={
-        <Back variant="h5">
-          <Trans>
-            Block at height {blockRecord.height} in the Chia blockchain
-          </Trans>
-        </Back>
-      }
-      action={
-        <Flex gap={1}>
-          <Button
-            onClick={handleShowPreviousBlock}
-            disabled={!hasPreviousBlock}
-          >
-            <Trans>Previous</Trans>
-          </Button>
-          <Button onClick={handleShowNextBlock} disabled={!hasNextBlock}>
-            <Trans>Next</Trans>
-          </Button>
-        </Flex>
-      }
-    >
-      <TableContainer component={Paper}>
-        <Table>
-          <TableBody>
-            {rows.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell component="th" scope="row">
-                  {row.name}{' '}
-                  {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
-                </TableCell>
-                <TableCell onClick={row.onClick} align="right">
-                  {row.value}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Card>
+    <LayoutDashboardSub>
+      <Card
+        title={
+          <Back variant="h5">
+            <Trans>
+              Block at height {blockRecord.height} in the Chia blockchain
+            </Trans>
+          </Back>
+        }
+        action={
+          <Flex gap={1}>
+            <Button
+              onClick={handleShowPreviousBlock}
+              disabled={!hasPreviousBlock}
+            >
+              <Trans>Previous</Trans>
+            </Button>
+            <Button onClick={handleShowNextBlock} disabled={!hasNextBlock}>
+              <Trans>Next</Trans>
+            </Button>
+          </Flex>
+        }
+      >
+        <TableContainer component={Paper}>
+          <Table>
+            <TableBody>
+              {rows.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell component="th" scope="row">
+                    {row.name}{' '}
+                    {row.tooltip && <TooltipIcon>{row.tooltip}</TooltipIcon>}
+                  </TableCell>
+                  <TableCell onClick={row.onClick} align="right">
+                    {row.value}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+    </LayoutDashboardSub>
   );
 }

@@ -27,10 +27,11 @@ export default function AppRouter() {
             <Route path="wallet/import" element={<WalletImport />} />
           </Route>
           {mode === Mode.WALLET ? (
-            <Route element={<LayoutDashboard settings={<SettingsPanel />} outlet />}>
+            <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar simple />} outlet />}>
               <Route path="dashboard" element={<Navigate to="wallets" />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
               <Route path="dashboard/*" element={<Navigate to="wallets" />} />
+              <Route path="dashboard/settings/*" element={<Settings />} />
             </Route>
           ) : (
             <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar />} outlet />}>

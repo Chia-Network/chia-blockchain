@@ -79,7 +79,7 @@ const cols = [
     field(row) {
       const { isFinished } = row;
 
-      const timestamp = isFinished 
+      const timestamp = isFinished
         ? row.timestamp
         : get(row, 'foliageTransactionBlock.timestamp');
 
@@ -132,11 +132,9 @@ const BlocksCard = () => {
 export default function FullNode() {
   return (
     <LayoutDashboardSub>
-      <Flex gap={1}>
-        <Typography variant="h5" gutterBottom>
-          <Trans>Full Node</Trans>
-        </Typography>
-      </Flex>
+      <Typography variant="h5" gutterBottom>
+        <Trans>Full Node</Trans>
+      </Typography>
       <Flex flexDirection="column" gap={3}>
         <FullNodeCards />
         <BlocksCard />

@@ -36,12 +36,12 @@ export type LayoutHeroProps = {
 };
 
 export default function LayoutHero(props: LayoutHeroProps) {
-  const { 
-    children, 
-    header, 
-    back = false, 
-    outlet = false, 
-    settings, 
+  const {
+    children,
+    header,
+    back = false,
+    outlet = false,
+    settings,
     hideSettings = false,
   } = props;
 
@@ -56,11 +56,11 @@ export default function LayoutHero(props: LayoutHeroProps) {
             </Link>
           )}
           <Flex flexGrow={1} />
-          {!hideSettings && (
+          {/*!hideSettings && (
             <Settings>
               {settings}
             </Settings>
-          )}
+          )*/}
         </Toolbar>
       </AppBar>
       <StyledBody>

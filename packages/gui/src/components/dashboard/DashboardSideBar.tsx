@@ -43,7 +43,13 @@ const StyledInvisible = styled(Box)`
   visibility: hidden;
 `;
 
-export default function DashboardSideBar() {
+export type DashboardSideBarProps = {
+  simple?: boolean;
+};
+
+export default function DashboardSideBar(props: DashboardSideBarProps) {
+  const { simple = false } = props;
+
   return (
     <StyledRoot>
       <StyledList disablePadding>
@@ -63,37 +69,42 @@ export default function DashboardSideBar() {
           title={<Trans>Offers</Trans>}
         />
 
-        <StyledSideBarDivider />
+        {!simple && (
+          <>
+            <StyledSideBarDivider />
 
-        <SideBarItem
-          to="/dashboard"
-          icon={FullNodeIcon}
-          title={<Trans>Full Node</Trans>}
-          end
-        />
-        <SideBarItem
-          to="/dashboard/plot"
-          icon={PlotsIcon}
-          title={<Trans>Plots</Trans>}
-        />
-        {/*}
-        <SideBarItem
-          to="/dashboard/wallets"
-          icon={<WalletIcon fontSize="large" />}
-          title={<Trans>Wallets</Trans>}
-        />
-        */}
+            <SideBarItem
+              to="/dashboard"
+              icon={FullNodeIcon}
+              title={<Trans>Full Node</Trans>}
+              end
+            />
+            <SideBarItem
+              to="/dashboard/plot"
+              icon={PlotsIcon}
+              title={<Trans>Plots</Trans>}
+            />
+            {/*}
+            <SideBarItem
+              to="/dashboard/wallets"
+              icon={<WalletIcon fontSize="large" />}
+              title={<Trans>Wallets</Trans>}
+            />
+            */}
 
-        <SideBarItem
-          to="/dashboard/farm"
-          icon={FarmingIcon}
-          title={<Trans>Farming</Trans>}
-        />
-        <SideBarItem
-          to="/dashboard/pool"
-          icon={PoolingIcon}
-          title={<Trans>Pooling</Trans>}
-        />
+            <SideBarItem
+              to="/dashboard/farm"
+              icon={FarmingIcon}
+              title={<Trans>Farming</Trans>}
+            />
+            <SideBarItem
+              to="/dashboard/pool"
+              icon={PoolingIcon}
+              title={<Trans>Pooling</Trans>}
+            />
+          </>
+        )}
+
         <StyledInvisible>
           <SideBarItem
             to="/dashboard/settings"

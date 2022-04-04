@@ -28,13 +28,12 @@ import WalletName from './WalletName';
 type StandardWalletProps = {
   walletId: number;
   actions?: ({ onClose } : { onClose: () => void } ) => ReactNode;
-  children?: ReactNode;
   tab: 'summary' | 'send' | 'receive';
   onTabChange: (tab: 'summary' | 'send' | 'receive') => void;
 };
 
 export default function WalletHeader(props: StandardWalletProps) {
-  const { walletId, actions, children, tab, onTabChange } = props;
+  const { walletId, actions, tab, onTabChange } = props;
   const openDialog = useOpenDialog();
   const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
   const showDebugInformation = useShowDebugInformation();
@@ -87,7 +86,7 @@ export default function WalletHeader(props: StandardWalletProps) {
         </Tabs>
       </Flex>
       <Flex gap={1} alignItems="center">
-        {/* 
+        {/*
         <Flex alignItems="center">
           <Typography variant="body1" color="textSecondary">
             <Trans>Status:</Trans>
@@ -96,7 +95,7 @@ export default function WalletHeader(props: StandardWalletProps) {
           <WalletStatus height={showDebugInformation} />
         </Flex>
         */}
-        
+
         <DropdownActions label={<Trans>Actions</Trans>}>
           {({ onClose }) => (
             <>
