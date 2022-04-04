@@ -101,7 +101,7 @@ def softfork_height(request):
     return request.param
 
 
-block_format_version = "rc4"
+block_format_version = "rc5"
 
 
 @pytest.fixture(scope="session")
@@ -139,6 +139,20 @@ def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
+
+
+@pytest.fixture(scope="session")
+def test_long_reorg_blocks(bt, default_10000_blocks):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        320,
+        f"test_blocks_long_reorg_{block_format_version}.db",
+        bt,
+        block_list_input=default_10000_blocks[:758],
+        seed=b"2",
+        time_per_block=8,
+    )
 
 
 @pytest.fixture(scope="session")

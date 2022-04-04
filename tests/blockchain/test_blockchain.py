@@ -187,6 +187,7 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
+                log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
                 )
@@ -779,10 +780,19 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2q
-        blocks = bt.get_consecutive_blocks(10)
+        blocks: List[FullBlock] = []
+        found_overflow_slot: bool = False
 
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        while not found_overflow_slot:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+                and block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_overflow_slot = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -798,9 +808,11 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss.challenge_chain.get_hash(),
                 )
+                log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
+                log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
 
                 # Bad output
@@ -845,7 +857,9 @@ class TestBlockHeaderValidation:
                 )
 
                 await _validate_and_add_block_multi_error(
-                    empty_blockchain, block_bad_3, [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH]
+                    empty_blockchain,
+                    block_bad_3,
+                    [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH, Err.INVALID_POSPACE],
                 )
 
                 # Bad proof
@@ -864,9 +878,18 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2p
-        blocks = bt.get_consecutive_blocks(10)
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        blocks: List[FullBlock] = []
+        found_block: bool = False
+
+        while not found_block:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and block.finished_sub_slots[-1].reward_chain.end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_block = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -1011,7 +1034,9 @@ class TestBlockHeaderValidation:
 
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-            if len(blocks[-1].finished_sub_slots) > 0:
+            if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
+                test_constants, blocks[-1].reward_chain_block.signage_point_index
+            ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
                     "challenge_chain",
@@ -2860,7 +2885,7 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, bt):
+    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
@@ -2868,6 +2893,7 @@ class TestReorgs:
         num_blocks_chain_2_start = test_constants.EPOCH_BLOCKS - 20
         num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
+        log.warning(f"Num blocks to make: {num_blocks_chain_2 - num_blocks_chain_2_start}")
         assert num_blocks_chain_1 < 10000
         blocks = default_10000_blocks[:num_blocks_chain_1]
 
@@ -2877,15 +2903,17 @@ class TestReorgs:
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
-        # These blocks will have less time between them (timestamp) and therefore will make difficulty go up
+        print("num block c2start", num_blocks_chain_2_start, num_blocks_chain_2 - num_blocks_chain_2_start)
+
+        # The reorg blocks will have less time between them (timestamp) and therefore will make difficulty go up
         # This means that the weight will grow faster, and we can get a heavier chain with lower height
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            num_blocks_chain_2 - num_blocks_chain_2_start,
-            blocks[:num_blocks_chain_2_start],
-            seed=b"2",
-            time_per_block=8,
-        )
-        for reorg_block in blocks_reorg_chain:
+
+        # If this assert fails, you probably need to change the fixture in test_long_reorg_blocks to create the
+        # right amount of blocks at the right time
+        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_10000_blocks[num_blocks_chain_2_start - 1]
+        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_10000_blocks[num_blocks_chain_2_start]
+
+        for reorg_block in test_long_reorg_blocks:
             if reorg_block.height < num_blocks_chain_2_start:
                 await _validate_and_add_block(
                     b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
