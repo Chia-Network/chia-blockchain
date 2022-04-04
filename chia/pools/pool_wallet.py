@@ -61,6 +61,7 @@ class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
+    DEFAULT_MAX_CLAIM_SPENDS = 300
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -789,10 +790,10 @@ class PoolWallet:
             )
 
         if max_spends_in_tx is None:
-            max_spends_in_tx = 100
+            max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
         elif max_spends_in_tx <= 0:
-            self.log.info(f"Got bad max_spends_in_tx value of {max_spends_in_tx}. Set to 100.")
-            max_spends_in_tx = 100
+            self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
+            max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
         unspent_coin_records: List[CoinRecord] = list(
             await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
