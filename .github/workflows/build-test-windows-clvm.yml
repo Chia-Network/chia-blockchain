@@ -53,4 +53,4 @@ jobs:
         echo checking tests
         venv/Scripts/python -c "print(' ==== about to import tests.conftest'); import tests.conftest; print(' ==== just imported tests.conftest')"
         echo checking pytest
-        venv/Scripts/python -m pytest tests/clvm/test_*.py
+        venv/Scripts/python -m pytest tests/
