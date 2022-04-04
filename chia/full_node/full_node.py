@@ -1337,8 +1337,7 @@ class FullNode:
             # This is a reorg
             fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(fork_height)
             assert fork_hash is not None
-            fork_block = self.blockchain.block_record(
-                fork_hash)
+            fork_block = self.blockchain.block_record(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,

@@ -102,7 +102,6 @@ class CompressibleVDFField(IntEnum):
     CC_IP_VDF = 4
 
 
-
 def compress_future(
     disc: str,
     output: bytes,
@@ -119,6 +118,7 @@ def compress_future(
         proof_type,
     )
 
+
 def compress_output(
     disc_size: int,
     challenge: bytes32,
@@ -128,7 +128,6 @@ def compress_output(
     number_of_iterations: uint64,
     executor: ProcessPoolExecutor,
 ):
-
 
     future = executor.submit(
         compress_future,

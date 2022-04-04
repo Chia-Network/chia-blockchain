@@ -69,10 +69,10 @@ class BlockStore:
 
                 # backward compatible Sub epoch segments for weight proofs
                 await conn.execute(
-                        "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
-                        "ses_block_hash blob PRIMARY KEY,"
-                        "challenge_segments blob)"
-                    )
+                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                    "ses_block_hash blob PRIMARY KEY,"
+                    "challenge_segments blob)"
+                )
 
                 # If any of these indices are altered, they should also be altered
                 # in the chia/cmds/db_upgrade.py file
@@ -102,7 +102,11 @@ class BlockStore:
                 )
 
                 # backward compatible Sub epoch segments for weight proofs
-                await conn.execute("CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(""ses_block_hash blob PRIMARY KEY,""challenge_segments blob)")
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                    "ses_block_hash blob PRIMARY KEY,"
+                    "challenge_segments blob)"
+                )
 
                 # Height index so we can look up in order of height for sync purposes
                 await conn.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")

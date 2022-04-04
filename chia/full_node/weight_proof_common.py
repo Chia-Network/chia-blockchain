@@ -20,7 +20,7 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 log = logging.getLogger(__name__)
 
 
-async def get_recent_chain(blockchain:BlockchainInterface, tip_height: uint32) -> Optional[List[HeaderBlock]]:
+async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) -> Optional[List[HeaderBlock]]:
     recent_chain: List[HeaderBlock] = []
     ses_heights = blockchain.get_ses_heights()
     min_height = 0
@@ -61,6 +61,7 @@ async def get_recent_chain(blockchain:BlockchainInterface, tip_height: uint32) -
         f"end:  {recent_chain[-1].reward_chain_block.height} "
     )
     return recent_chain
+
 
 def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
     if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:

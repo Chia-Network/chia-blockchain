@@ -505,7 +505,7 @@ def _get_weights_for_sampling(rng: random.Random, total_weight: uint128, last_l_
     queries = -WeightProofHandlerV2.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta**u
+        q = 1 - delta ** u
         weight = q * float(total_weight)
         weight_to_check.append(uint128(weight))
     weight_to_check.sort()
@@ -781,7 +781,11 @@ def _validate_sub_epoch_segments(
 
 
 def validate_sub_epoch(
-    constants_dict: Dict, sampled_seg_index: int, segment_bytes: bytes, sub_epoch_n: uint32, summaries_bytes: List[bytes]
+    constants_dict: Dict,
+    sampled_seg_index: int,
+    segment_bytes: bytes,
+    sub_epoch_n: uint32,
+    summaries_bytes: List[bytes],
 ):
     log.info(f"validate sub epoch {sub_epoch_n}")
     prev_ses: Optional[SubEpochSummary] = None
