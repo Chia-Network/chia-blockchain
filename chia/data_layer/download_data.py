@@ -30,9 +30,7 @@ async def download_delta_files(
                     raise RuntimeError("Didn't get 200 response status.")
 
             target_filename = os.path.join(client_foldername, filename)
-            if os.path.exists(target_filename):
-                os.remove(target_filename)
-            with open(target_filename, "a") as writer:
+            with open(target_filename, "wb") as writer:
                 text = await resp.read()
                 writer.write(text)
     return True
