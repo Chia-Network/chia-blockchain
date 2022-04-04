@@ -63,16 +63,16 @@ class BlockStore:
                 await conn.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
 
                 # Sub epoch segments for weight proofs
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
-            )
-
-            # backward compatible Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
-                    "ses_block_hash blob PRIMARY KEY,"
-                    "challenge_segments blob)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
                 )
+
+                # backward compatible Sub epoch segments for weight proofs
+                await conn.execute(
+                        "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                        "ses_block_hash blob PRIMARY KEY,"
+                        "challenge_segments blob)"
+                    )
 
                 # If any of these indices are altered, they should also be altered
                 # in the chia/cmds/db_upgrade.py file
@@ -83,9 +83,7 @@ class BlockStore:
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
                 )
-
             else:
-
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
                     "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -99,16 +97,12 @@ class BlockStore:
                 )
 
                 # Sub epoch segments for weight proofs
-            await self.db.execute(
-                "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
-            )
-
-            # backward compatible Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
-                "ses_block_hash blob PRIMARY KEY,"
-                    "challenge_segments blob)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
                 )
+
+                # backward compatible Sub epoch segments for weight proofs
+                await conn.execute("CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(""ses_block_hash blob PRIMARY KEY,""challenge_segments blob)")
 
                 # Height index so we can look up in order of height for sync purposes
                 await conn.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
@@ -268,23 +262,22 @@ class BlockStore:
     async def persist_sub_epoch_challenge_segments_v2(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
     ) -> None:
-        async with self.db_wrapper.lock:
-            cursor_1 = await self.db.execute(
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute(
                 "INSERT OR REPLACE INTO segments VALUES(?, ?)",
                 (ses_block_hash.hex(), bytes(SubEpochSegmentsV2(segments))),
             )
-            await cursor_1.close()
-            await self.db.commit()
 
     async def get_sub_epoch_challenge_segments_v2(
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegmentV2]]:
-        cursor = await self.db.execute(
-            "SELECT challenge_segments from segments WHERE ses_block_hash=?", (ses_block_hash.hex(),)
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT challenge_segments from segments WHERE ses_block_hash=?", (ses_block_hash.hex(),)
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
         if row is not None:
             challenge_segments = SubEpochSegmentsV2.from_bytes(row[0]).challenge_segments
             return challenge_segments

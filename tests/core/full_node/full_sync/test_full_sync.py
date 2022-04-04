@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 class TestFullSync:
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_1000_blocks):
+    async def test_long_sync_from_zero(self, five_nodes, default_1000_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_1000_blocks)
         blocks: List[FullBlock] = default_1000_blocks
@@ -352,7 +352,7 @@ class TestFullSync:
         assert node_height_between(full_node_2, 320, 400)
 
     @pytest.mark.asyncio
-    async def test_wp_backwards_comp(self, five_nodes, default_1000_blocks):
+    async def test_wp_backwards_comp(self, five_nodes, default_1000_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_1000_blocks)
         blocks: List[FullBlock] = default_1000_blocks

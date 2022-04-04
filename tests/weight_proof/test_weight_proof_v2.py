@@ -30,7 +30,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
 from tests.block_tools import test_constants
-from tests.setup_nodes import bt
 
 try:
     from reprlib import repr
@@ -204,7 +203,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_edge_cases(self, default_1000_blocks):
+    async def test_weight_proof_edge_cases(self, default_1000_blocks, bt):
         blocks: List[FullBlock] = default_1000_blocks
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -356,8 +355,6 @@ class TestWeightProof:
     async def test_weight_proof1000_pre_genesis_empty_slots(self, pre_genesis_empty_slots_1000_blocks):
         blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         block = sub_blocks[height_to_hash[0]]
         block_cache = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
@@ -395,7 +392,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact):
+    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact, bt):
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
             block_list_input=default_10000_blocks_compact,

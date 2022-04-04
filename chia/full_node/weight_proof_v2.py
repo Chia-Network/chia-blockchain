@@ -784,7 +784,7 @@ def _validate_sub_epoch_segments(
 
 
 def validate_sub_epoch(
-    constants_dict: Dict, sampled_seg_index: int, segment_bytes: bytes, sub_epoch_n: uint32, summaries_bytes: bytes
+    constants_dict: Dict, sampled_seg_index: int, segment_bytes: bytes, sub_epoch_n: uint32, summaries_bytes: List[bytes]
 ):
     log.info(f"validate sub epoch {sub_epoch_n}")
     prev_ses: Optional[SubEpochSummary] = None
@@ -970,7 +970,6 @@ def get_cc_sub_slot(
         None if ses is None else ses.new_difficulty,
     )
     log.debug(f"cc sub slot {cc_sub_slot} {cc_sub_slot.get_hash()} icc hash {icc_hash}")
-    assert icc_hash
     return cc_sub_slot.get_hash(), icc_hash
 
 
