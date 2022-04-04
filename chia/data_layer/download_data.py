@@ -1,3 +1,4 @@
+import aiohttp
 import os
 from typing import List
 from chia.data_layer.data_store import DataStore
@@ -16,14 +17,25 @@ async def download_delta_files(
     target_generation: int,
     ip: str,
     port: uint16,
-    foldername: str,
+    client_foldername: str,
 ) -> bool:
-    return True
-    """
     while existing_generation + 1 <= target_generation:
         existing_generation += 1
         filename = get_delta_filename(tree_id, existing_generation)
-    """
+        url = f"http://{ip}:{port}/{filename}"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    raise RuntimeError("Didn't get 200 response status.")
+
+            target_filename = os.path.join(client_foldername, filename)
+            if os.path.exists(target_filename):
+                os.remove(target_filename)
+            with open(target_filename, "a") as writer:
+                text = await resp.read()
+                writer.write(text)
+    return True
 
 
 async def insert_from_delta_file(
