@@ -54,7 +54,8 @@ py -m venv venv
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 # venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 # TODO: add a -d cli option instead of hard coding [dev]
-venv\scripts\pip install --editable .[dev] --extra-index-url https://pypi.chia.net/simple/
+# venv\scripts\pip install --editable .[dev] --extra-index-url https://pypi.chia.net/simple/
+venv\scripts\pip install .[dev]
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
