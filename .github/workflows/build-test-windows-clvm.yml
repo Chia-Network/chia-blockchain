@@ -48,7 +48,9 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        ./Install.ps1
+        venv\Scripts\python -m pip install --upgrade pip setuptools wheel
+        venv\scripts\pip install .[dev]
+
 
     - name: Test clvm code with pytest
       run: |
