@@ -1,6 +1,7 @@
 from setuptools import setup
 
 dependencies = [
+    "pywin32",
 ]
 
 upnp_dependencies = [
