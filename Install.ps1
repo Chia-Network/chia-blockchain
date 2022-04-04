@@ -32,13 +32,30 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$pythonVersion = (py --version).split(" ")[1]
-if ([version]$pythonVersion -lt [version]"3.7.0")
+$supportedPythonVersions = "3.9", "3.8", "3.7"
+if (Test-Path env:INSTALL_PYTHON_VERSION)
 {
-    Write-Output "Found Python version:" $pythonVersion
-    Write-Output "Installation requires Python 3.7 or later"
-    Exit 1
+    $pythonVersion = $env:INSTALL_PYTHON_VERSION
 }
+else
+{
+    foreach ($version in $supportedPythonVersions)
+    {
+        py -$version --version 2>&1 >$null
+        if ($?)
+        {
+            $pythonVersion = $version
+            break
+        }
+    }
+
+    if (-not $pythonVersion)
+    {
+        Write-Output "No usable Python version found, supported versions are: " $supportedPythonVersions
+        Exit 1
+    }
+}
+
 Write-Output "Python version is:" $pythonVersion
 
 $openSSLVersionStr = (py -c 'import ssl; print(ssl.OPENSSL_VERSION)')
