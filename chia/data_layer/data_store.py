@@ -27,7 +27,6 @@ from chia.data_layer.data_layer_types import (
     Subscription,
     DiffData,
     OperationType,
-    DataServersInfo,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -1193,8 +1192,8 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            servers_ip = json.dumps(subscription.data_servers_info.ip)
-            servers_port = json.dumps(subscription.data_servers_info.port)
+            servers_ip = json.dumps(subscription.ip)
+            servers_port = json.dumps(subscription.port)
             await self.db.execute(
                 "INSERT INTO subscriptions(tree_id, servers_ip, servers_port, validated_wallet_generation) "
                 "VALUES (:tree_id, :servers_ip, :servers_port, 0)",
@@ -1207,8 +1206,8 @@ class DataStore:
 
     async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            servers_ip = json.dumps(subscription.data_servers_info.ip)
-            servers_port = json.dumps(subscription.data_servers_info.port)
+            servers_ip = json.dumps(subscription.ip)
+            servers_port = json.dumps(subscription.port)
             await self.db.execute(
                 """
                 UPDATE subscriptions SET servers_ip = :servers_ip, servers_port = :servers_port
@@ -1254,7 +1253,7 @@ class DataStore:
                 tree_id = bytes32.fromhex(row["tree_id"])
                 servers_ip = json.loads(row["servers_ip"])
                 servers_port = json.loads(row["servers_port"])
-                subscriptions.append(Subscription(tree_id, DataServersInfo(servers_ip, servers_port)))
+                subscriptions.append(Subscription(tree_id, servers_ip, servers_port))
 
         return subscriptions
 

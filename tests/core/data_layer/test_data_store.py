@@ -23,7 +23,6 @@ from chia.data_layer.data_layer_types import (
     DeletionData,
     OperationType,
     DiffData,
-    DataServersInfo,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -1133,19 +1132,15 @@ async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -
 
 @pytest.mark.asyncio
 async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) -> None:
-    await data_store.subscribe(Subscription(tree_id, DataServersInfo(["127.0.0.1"], [uint16(8000)])))
-    assert await data_store.get_subscriptions() == [
-        Subscription(tree_id, DataServersInfo(["127.0.0.1"], [uint16(8000)]))
-    ]
-    await data_store.update_existing_subscription(Subscription(tree_id, DataServersInfo(["0.0.0.0"], [uint16(8002)])))
-    assert await data_store.get_subscriptions() == [Subscription(tree_id, DataServersInfo(["0.0.0.0"], [uint16(8002)]))]
-    await data_store.update_existing_subscription(Subscription(tree_id, DataServersInfo(["0.0.0.0"], [uint16(8001)])))
-    assert await data_store.get_subscriptions() == [Subscription(tree_id, DataServersInfo(["0.0.0.0"], [uint16(8001)]))]
+    await data_store.subscribe(Subscription(tree_id, ["127.0.0.1"], [uint16(8000)]))
+    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["127.0.0.1"], [uint16(8000)])]
+    await data_store.update_existing_subscription(Subscription(tree_id, ["0.0.0.0"], [uint16(8002)]))
+    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["0.0.0.0"], [uint16(8002)])]
+    await data_store.update_existing_subscription(Subscription(tree_id, ["0.0.0.0"], [uint16(8001)]))
+    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["0.0.0.0"], [uint16(8001)])]
     await data_store.unsubscribe(tree_id)
     assert await data_store.get_subscriptions() == []
-    await data_store.subscribe(
-        Subscription(tree_id, DataServersInfo(["0.0.0.0", "127.0.0.1"], [uint16(8003), uint16(8004)]))
-    )
+    await data_store.subscribe(Subscription(tree_id, ["0.0.0.0", "127.0.0.1"], [uint16(8003), uint16(8004)]))
     assert await data_store.get_subscriptions() == [
-        Subscription(tree_id, DataServersInfo(["0.0.0.0", "127.0.0.1"], [uint16(8003), uint16(8004)])),
+        Subscription(tree_id, ["0.0.0.0", "127.0.0.1"], [uint16(8003), uint16(8004)]),
     ]

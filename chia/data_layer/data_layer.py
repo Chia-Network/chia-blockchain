@@ -5,14 +5,14 @@ import aiosqlite
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, Root, DiffData, DataServersInfo
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, Root, DiffData
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -199,7 +199,7 @@ class DataLayer:
             "data_layer/client_downloaded_files",
         )
         downloaded = False
-        for ip, port in zip(subscription.data_servers_info.ip, subscription.data_servers_info.port):
+        for ip, port in zip(subscription.ip, subscription.port):
             try:
                 downloaded = await download_delta_files(
                     subscription.tree_id,
@@ -246,8 +246,8 @@ class DataLayer:
         )
         await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
 
-    async def subscribe(self, store_id: bytes32, data_servers_info: DataServersInfo) -> None:
-        subscription = Subscription(store_id, data_servers_info)
+    async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> None:
+        subscription = Subscription(store_id, ip, port)
         subscriptions = await self.get_subscriptions()
         if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
             await self.data_store.update_existing_subscription(subscription)

@@ -2,7 +2,7 @@ import dataclasses
 from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side, DataServersInfo
+from chia.data_layer.data_layer_types import Side
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -204,8 +204,7 @@ class DataLayerRpcApi:
         store_id_bytes = bytes32.from_hexstr(store_id)
         ips = request["ips"]
         ports = request["ports"]
-        data_servers_info = DataServersInfo(ips, ports)
-        await self.service.subscribe(store_id=store_id_bytes, data_servers_info=data_servers_info)
+        await self.service.subscribe(store_id=store_id_bytes, ip=ips, port=ports)
         return {}
 
     async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:

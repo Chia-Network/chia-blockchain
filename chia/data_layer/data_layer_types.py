@@ -189,15 +189,10 @@ class DeletionData:
 
 
 @dataclass(frozen=True)
-class DataServersInfo:
-    ip: List[str]
-    port: List[uint16]
-
-
-@dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    data_servers_info: DataServersInfo
+    ip: List[str]
+    port: List[uint16]
 
 
 @dataclass(frozen=True)
