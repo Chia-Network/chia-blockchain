@@ -69,7 +69,7 @@ else
 
 $fullPythonVersion = (py -$pythonVersion --version).split(" ")[1]
 
-Write-Output "Python version is:" $fullPythonVersion
+Write-Output "Python version is: $fullPythonVersion"
 
 $openSSLVersionStr = (py -$pythonVersion -c 'import ssl; print(ssl.OPENSSL_VERSION)')
 $openSSLVersion = (py -$pythonVersion -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
