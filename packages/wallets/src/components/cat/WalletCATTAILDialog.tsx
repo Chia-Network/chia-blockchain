@@ -9,7 +9,7 @@ import {
   InputAdornment,
   TextField,
 } from '@mui/material';
-import { Button, CopyToClipboard, DialogActions, Loading } from '@chia/core';
+import { Button, CopyToClipboard, DialogActions, Loading, Link, Flex } from '@chia/core';
 import useWallet from '../../hooks/useWallet';
 
 type Props = {
@@ -36,8 +36,9 @@ export default function WalletCATTAILDialog(props: Props) {
       onClose={handleClose}
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
-      maxWidth="lg"
+      maxWidth="md"
       open={open}
+      fullWidth
     >
       <DialogTitle id="alert-dialog-title">
         <Trans>Asset Id</Trans>
@@ -49,27 +50,28 @@ export default function WalletCATTAILDialog(props: Props) {
         )}
 
         {!!wallet && (
-          <Grid item xs={12}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  label={<Trans>Asset Id</Trans>}
-                  value={wallet.meta?.assetId}
-                  variant="filled"
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CopyToClipboard value={wallet.meta?.assetId} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  fullWidth
-                  multiline
-                />
-              </Box>
+          <Flex flexDirection="column" gap={1}>
+            <Box flexGrow={1}>
+              <TextField
+                label={<Trans>Asset Id</Trans>}
+                value={wallet.meta?.assetId}
+                variant="filled"
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <CopyToClipboard value={wallet.meta?.assetId} />
+                    </InputAdornment>
+                  ),
+                }}
+                fullWidth
+                multiline
+              />
             </Box>
-          </Grid>
+            <Link href={`https://www.taildatabase.com/tail/${wallet.meta?.assetId}`} target="_blank" variant="body2">
+              <Trans>Search on Tail Database</Trans>
+            </Link>
+          </Flex>
         )}
       </DialogContent>
       <DialogActions>

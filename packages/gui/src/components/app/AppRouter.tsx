@@ -9,6 +9,7 @@ import Settings from '../settings/Settings';
 import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
 import Pool from '../pool/Pool';
+import NFTs from '../nfts/NFTs';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 import SettingsPanel from '../settings/SettingsPanel';
 
@@ -30,6 +31,7 @@ export default function AppRouter() {
             <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar simple />} outlet />}>
               <Route path="dashboard" element={<Navigate to="wallets" />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
+              <Route path="dashboard/nfts/*" element={<NFTs />} />
               <Route path="dashboard/*" element={<Navigate to="wallets" />} />
               <Route path="dashboard/settings/*" element={<Settings />} />
             </Route>
@@ -38,6 +40,7 @@ export default function AppRouter() {
               <Route path="dashboard" element={<FullNode />} />
               <Route path="dashboard/block/:headerHash" element={<Block />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
+              <Route path="dashboard/nfts/*" element={<NFTs />} />
               <Route path="dashboard/settings/*" element={<Settings />} />
               <Route path="dashboard/plot/*" element={<Plot />} />
               <Route path="dashboard/farm/*" element={<Farm />} />
