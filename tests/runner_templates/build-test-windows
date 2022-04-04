@@ -85,6 +85,7 @@ INSTALL_TIMELORD
         venv/Scripts/coverage combine --rcfile=.coveragerc .coverage.*
         venv/Scripts/coverage xml --rcfile=.coveragerc -o coverage.xml
         mkdir coverage_reports
+        dir
         cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
         cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
         venv/Scripts/coverage report --rcfile=.coveragerc --show-missing
