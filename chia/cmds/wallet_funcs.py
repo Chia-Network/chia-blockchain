@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -24,7 +24,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
-CATNameResolver = Callable[[bytes32], Coroutine[None, None, Optional[Tuple[Optional[uint32], str]]]]
+CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
