@@ -1,18 +1,13 @@
 from setuptools import setup
 
-dependencies = [
-    "pywin32",
-]
-
-dev_dependencies = [
-    "pytest",
-]
-
 kwargs = dict(
     name="chia-blockchain",
     license="Apache License",
     python_requires=">=3.7, <4",
-    install_requires=dependencies,
+    install_requires=[
+        "pytest",
+        "pywin32",
+    ],
     packages=[
         "chia",
     ],
