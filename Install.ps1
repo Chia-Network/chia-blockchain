@@ -35,7 +35,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
 $pythonVersion = (py --version).split(" ")[1]
 if ([version]$pythonVersion -lt [version]"3.7.0")
 {
-    Write-Output "Found Python version:" $pythonVersion
+    Write-Output "Found Python version:" $pythonVersionpy
     Write-Output "Installation requires Python 3.7 or later"
     Exit 1
 }
@@ -52,7 +52,7 @@ if ($openSSLVersion -lt 269488367)
 py -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
+# venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 # TODO: add a -d cli option instead of hard coding [dev]
 venv\scripts\pip install --editable .[dev] --extra-index-url https://pypi.chia.net/simple/
 
