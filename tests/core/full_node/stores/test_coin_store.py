@@ -103,7 +103,7 @@ class TestCoinStoreWithBlocks:
                             mempool_mode=False,
                             height=softfork_height,
                         )
-                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
                         tx_removals, tx_additions = [], []
 

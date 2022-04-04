@@ -10,8 +10,6 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from clvm.casts import int_from_bytes
-
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -38,7 +36,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.coin_record import CoinRecord
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -301,16 +298,14 @@ class Blockchain(BlockchainInterface):
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, ([], {})
 
     def get_hint_list(self, npc_result: NPCResult) -> List[Tuple[bytes32, bytes]]:
+        if npc_result.conds is None:
+            return []
         h_list = []
-        for npc in npc_result.npc_list:
-            for opcode, conditions in npc.conditions:
-                if opcode == ConditionOpcode.CREATE_COIN:
-                    for condition in conditions:
-                        if len(condition.vars) > 2 and condition.vars[2] != b"":
-                            puzzle_hash, amount_bin = bytes32(condition.vars[0]), condition.vars[1]
-                            amount: uint64 = uint64(int_from_bytes(amount_bin))
-                            coin_id: bytes32 = Coin(npc.coin_name, puzzle_hash, amount).name()
-                            h_list.append((coin_id, condition.vars[2]))
+        for spend in npc_result.conds.spends:
+            for puzzle_hash, amount, hint in spend.create_coin:
+                if hint != b"":
+                    coin_id = Coin(spend.coin_id, puzzle_hash, amount).name()
+                    h_list.append((coin_id, hint))
         return h_list
 
     async def _reconsider_peak(
@@ -341,7 +336,7 @@ class Blockchain(BlockchainInterface):
                 assert block is not None
 
                 if npc_result is not None:
-                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 else:
                     tx_removals, tx_additions = [], []
                 if block.is_transaction_block():
@@ -473,7 +468,7 @@ class Blockchain(BlockchainInterface):
                 mempool_mode=False,
                 height=block.height,
             )
-        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+        tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         return tx_removals, tx_additions, npc_result
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
