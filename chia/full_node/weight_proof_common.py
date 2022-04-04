@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Any
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -11,7 +11,7 @@ from chia.consensus.pot_iterations import is_overflow_block, calculate_iteration
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import RecentChainData
+from chia.types.weight_proof import RecentChainData, WeightProofV2
 from chia.util.block_cache import BlockCache
 from chia.util.ints import uint8, uint64, uint128, uint32
 from chia.util.streamable import dataclass_from_dict
@@ -63,7 +63,7 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
     return recent_chain
 
 
-def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
+def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle) -> bool:
     if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
         if sub_slot.proofs.infused_challenge_chain_slot_proof is not None:
             if sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity:
@@ -76,7 +76,7 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
 def _sample_sub_epoch(
     start_of_epoch_weight: uint128,
     end_of_epoch_weight: uint128,
-    weight_to_check: List[uint128],
+    weight_to_check: Optional[List[uint128]],
 ) -> bool:
     """
     weight_to_check: List[uint128] is expected to be sorted
@@ -101,7 +101,9 @@ def _sample_sub_epoch(
     return choose
 
 
-def _validate_recent_blocks(constants_dict: Dict, recent_chain_bytes: bytes, summaries_bytes: List[bytes]) -> bool:
+def _validate_recent_blocks(
+    constants_dict: Dict[str, Any], recent_chain_bytes: bytes, summaries_bytes: List[bytes]
+) -> bool:
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     sub_blocks = BlockCache({})
@@ -207,7 +209,7 @@ def _validate_pospace_recent_chain(
     return required_iters
 
 
-def bytes_to_vars(constants_dict, summaries_bytes):
+def bytes_to_vars(constants_dict, summaries_bytes) -> Tuple[ConsensusConstants, List[SubEpochSummary]]:
     summaries = []
     for summary in summaries_bytes:
         summaries.append(SubEpochSummary.from_bytes(summary))
@@ -240,7 +242,12 @@ def get_deficit(
     return calculate_deficit(constants, uint32(prev_block.height + 1), prev_block, overflow, num_finished_sub_slots)
 
 
-def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_weight, summaries, weight_proof) -> bool:
+def _validate_summaries_weight(
+    constants: ConsensusConstants,
+    sub_epoch_data_weight: uint64,
+    summaries: List[SubEpochSummary],
+    weight_proof: WeightProofV2,
+) -> bool:
     num_over = summaries[-1].num_blocks_overflow
     ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
     curr = None

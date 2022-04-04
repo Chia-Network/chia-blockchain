@@ -127,12 +127,12 @@ class SubSlotDataV2(Streamable):
     ip_iters: Optional[uint64]  # if block
     total_iters: Optional[uint128]  # if block
 
-    def is_challenge(self):
+    def is_challenge(self) -> bool:
         if self.proof_of_space is not None:
             return True
         return False
 
-    def is_end_of_slot(self):
+    def is_end_of_slot(self) -> bool:
         if self.cc_slot_end_output is not None:
             return True
         return False
