@@ -15,7 +15,7 @@ export default function Spinner(props: Props) {
 
   return (
     <StyledBackdrop open={show}>
-      <CircularProgress color="inherit" />
+      <CircularProgress color="inherit" disableShrink />
     </StyledBackdrop>
   );
 }

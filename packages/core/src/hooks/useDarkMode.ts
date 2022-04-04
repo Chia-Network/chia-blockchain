@@ -1,9 +1,7 @@
-import { useCallback } from 'react';
-import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
 import { useMediaQuery } from '@mui/material';
+import useLocalStorage from './useLocalStorage';
 
-const LOCAL_STORAGE_KEY = 'darkMode';
-const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)'
+const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
 
 export default function useDarkMode(defaultValue?: boolean): {
   isDarkMode: boolean;
@@ -11,15 +9,11 @@ export default function useDarkMode(defaultValue?: boolean): {
   enable: () => void;
   disable: () => void;
 } {
-  const isDarkOS = useMediaQuery(COLOR_SCHEME_QUERY)
-  const [isDarkMode] = useLocalStorage<boolean>(
-    LOCAL_STORAGE_KEY, 
+  const isDarkOS = useMediaQuery(COLOR_SCHEME_QUERY);
+  const [isDarkMode, setDarkMode] = useLocalStorage<boolean>(
+    'darkMode',
     defaultValue ?? isDarkOS ?? false,
   );
-
-  const setDarkMode = useCallback((darkMode: boolean) => {
-    writeStorage(LOCAL_STORAGE_KEY, darkMode);
-  }, []);
 
   return {
     isDarkMode,

@@ -1,8 +1,8 @@
 import React, { useMemo, createContext, useCallback, ReactNode, useEffect } from 'react';
 import { I18nProvider } from '@lingui/react';
-import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
 import type { I18n } from '@lingui/core';
 import activateLocale from '../../utils/activateLocale';
+import useLocalStorage from '../../hooks/useLocalStorage';
 
 export const LocaleContext = createContext<{
   defaultLocale: string;
@@ -27,7 +27,7 @@ export type LocaleProviderProps = {
 export default function LocaleProvider(props: LocaleProviderProps) {
   const { children, i18n, locales, defaultLocale } = props;
 
-  let [locale] = useLocalStorage<string>('locale', defaultLocale);
+  let [locale, setLocale] = useLocalStorage<string>('locale', defaultLocale);
   if (typeof locale !== 'string' || (locale && locale.length === 2)) {
     locale = defaultLocale;
   }
@@ -36,8 +36,8 @@ export default function LocaleProvider(props: LocaleProviderProps) {
     if (typeof locale !== 'string') {
       throw new Error(`Locale ${locales} is not a string`);
     }
-    writeStorage('locale', locale);
-  }, []);
+    setLocale(locale);
+  }, [setLocale]);
 
   const context = useMemo(() => ({
     locales,

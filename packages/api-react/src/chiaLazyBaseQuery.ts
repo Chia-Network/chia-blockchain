@@ -25,7 +25,7 @@ async function getServiceInstance(api: BaseQueryApi, ServiceClass: Service): Pro
     const serviceInstance = new ServiceClass(client);
     services.set(ServiceClass, serviceInstance);
   }
-  
+
   return services.get(ServiceClass);
 }
 
@@ -55,16 +55,16 @@ export default function chiaLazyBaseQuery(options: Options = {}): BaseQueryFn<
     args?: any[];
   }
 > {
-  const { 
+  const {
     service: DefaultService,
   } = options;
 
   return async ({ command, service: ServiceClass, client = false, args = [], mockResponse }, api) => {
-    const instance = client 
+    const instance = client
       ? await getClientInstance(api)
       : await getServiceInstance(api, ServiceClass || DefaultService);
 
-    const meta = { 
+    const meta = {
       timestamp: Date.now(),
       command,
       client,
@@ -72,14 +72,12 @@ export default function chiaLazyBaseQuery(options: Options = {}): BaseQueryFn<
     };
 
     try {
-      return { 
-        data: mockResponse 
-          ? mockResponse 
-          : await instance[command](...args),
+      return {
+        data: mockResponse ?? await instance[command](...args),
         meta,
       };
     } catch(error) {
-      return { 
+      return {
         error,
         meta,
       };

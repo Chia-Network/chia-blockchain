@@ -31,7 +31,7 @@ indent_size = 8
 trim_trailing_whitespace = false
 
 # Ideal settings - some plugins might support these.
-[*.js]
+[{*.js,*.jsx,*.ts,*.tsx}]
 quote_type = single
 
 [{*.c,*.cc,*.h,*.hh,*.cpp,*.hpp,*.m,*.mm,*.mpp,*.js,*.java,*.go,*.rs,*.php,*.ng,*.jsx,*.ts,*.d,*.cs,*.swift}]

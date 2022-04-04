@@ -1,9 +1,11 @@
 import React, { type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Box } from '@mui/material';
-import { Button, useColorModeValue } from '@chia/core';
+import { Box, Typography, Switch } from '@mui/material';
+import { Button, useColorModeValue, Spinner, CardListItem, Flex } from '@chia/core';
 import styled from 'styled-components';
 import { useToggle } from 'react-use';
+import useWalletsList from '../hooks/useWalletsList';
+import WalletTokenCard from './WalletTokenCard';
 
 const StyledRoot = styled(Box)`
   position: absolute;
@@ -60,6 +62,7 @@ export type WalletsManageTokensProps = {
 
 export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   const [expanded, toggle] = useToggle(false);
+  const { list, hide, show, isLoading } = useWalletsList();
 
   return (
     <StyledRoot>
@@ -70,7 +73,20 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
       </StyledButtonContainer>
       <StyledBody expanded={expanded}>
         <StyledContent >
-          Tokens list
+          {isLoading ? (
+            <Spinner center />
+          ) : (
+            <Flex gap={1} flexDirection="column">
+              {list?.map((list) => (
+                <WalletTokenCard
+                  item={list}
+                  key={list.id}
+                  onHide={hide}
+                  onShow={show}
+                />
+              ))}
+            </Flex>
+          )}
         </StyledContent>
       </StyledBody>
     </StyledRoot>

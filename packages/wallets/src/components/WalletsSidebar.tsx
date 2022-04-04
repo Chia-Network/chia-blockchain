@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
+import { orderBy } from 'lodash';
 import { useNavigate, useParams } from 'react-router';
 import { Card, CardContent, Box, IconButton, ListItemIcon, ListItemText, Typography, List, ListItem, CardActionArea } from '@mui/material';
 import { Add } from '@mui/icons-material';
-import { Button, Flex, Loading, useTrans, useColorModeValue } from '@chia/core';
+import { Button, Flex, Loading, useTrans, useColorModeValue, CardListItem } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';
 import styled from 'styled-components';
@@ -12,9 +13,10 @@ import WalletIcon from './WalletIcon';
 import WalletBadge from './WalletBadge';
 import getWalletPrimaryTitle from '../utils/getWalletPrimaryTitle';
 import WalletsManageTokens from './WalletsManageTokens';
+import useHiddenWallet from '../hooks/useHiddenWallet';
 
 const StyledRoot = styled(Box)`
-  min-width: 330px;
+  min-width: 390px;
   height: 100%;
   display: flex;
   padding-top: ${({ theme }) => `${theme.spacing(3)}`};
@@ -23,7 +25,7 @@ const StyledRoot = styled(Box)`
 const StyledCard = styled(Card)`
   width: 100%;
   border-radius: ${({ theme }) => theme.spacing(1)};
-  border: ${({ theme, selected }) => `1px solid ${selected 
+  border: ${({ theme, selected }) => `1px solid ${selected
     ? theme.palette.action.active
     : theme.palette.divider}`};
   margin-bottom: ${({ theme }) => theme.spacing(1)};
@@ -58,8 +60,9 @@ const StyledItemsContainer = styled(Box)`
 export default function WalletsSidebar() {
   const navigate = useNavigate();
   const trans = useTrans();
-  const { walletId } = useParams(); 
+  const { walletId } = useParams();
   const { data: wallets, isLoading } = useGetWalletsQuery();
+  const { isHidden, hidden } = useHiddenWallet();
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
@@ -74,8 +77,10 @@ export default function WalletsSidebar() {
       return [];
     }
 
-    return wallets
-      .filter(wallet => ![WalletType.POOLING_WALLET].includes(wallet.type))
+    const orderedWallets = orderBy(wallets, ['type', 'name'], ['asc', 'asc']);
+
+    return orderedWallets
+      .filter(wallet => ![WalletType.POOLING_WALLET].includes(wallet.type) && !isHidden(wallet.id))
       .map((wallet) => {
         const primaryTitle = getWalletPrimaryTitle(wallet);
 
@@ -84,19 +89,15 @@ export default function WalletsSidebar() {
         }
 
         return (
-          <StyledCard variant="outlined" key={wallet.id} selected={wallet.id === Number(walletId)}>
-            <CardActionArea onClick={handleSelect}>
-              <CardContent>
-                <Flex flexDirection="column">
-                  <Typography>{primaryTitle}</Typography>
-                  <WalletIcon wallet={wallet} color="grey" variant="caption" />
-                </Flex>
-              </CardContent>
-            </CardActionArea>
-          </StyledCard>
+          <CardListItem onSelect={handleSelect} key={wallet.id} selected={wallet.id === Number(walletId)}>
+            <Flex flexDirection="column">
+              <Typography>{primaryTitle}</Typography>
+              <WalletIcon wallet={wallet} color="grey" variant="caption" />
+            </Flex>
+          </CardListItem>
         );
       });
-  }, [wallets, walletId, isLoading]);
+  }, [wallets, walletId, isLoading, hidden]);
 
   return (
     <StyledRoot>

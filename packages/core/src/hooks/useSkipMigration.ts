@@ -1,14 +1,7 @@
-import { useCallback } from 'react';
-import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
-
-const LOCAL_STORAGE_KEY = 'skipMigration';
+import useLocalStorage from './useLocalStorage';
 
 export default function useSkipMigration(): [boolean, (skip: boolean) => void] {
-  const [skip] = useLocalStorage<boolean>(LOCAL_STORAGE_KEY, false);
+  const [skip, setSkip] = useLocalStorage<boolean>('skipMigration', false);
 
-  const handleSetSkipMigration = useCallback((newSkip: boolean) => {
-    writeStorage(LOCAL_STORAGE_KEY, newSkip);
-  }, []);
-
-  return [skip, handleSetSkipMigration];
+  return [skip, setSkip];
 }

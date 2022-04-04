@@ -2,8 +2,8 @@ import Wallet from '../services/Wallet';
 
 export default class CATWallet extends Wallet {
   async createNewWallet(
-    amount: string, 
-    fee: string, 
+    amount: string,
+    fee: string,
     host: string = this.client.backupHost,
   ) {
     return super.createNewWallet('cat_wallet', {
@@ -15,8 +15,8 @@ export default class CATWallet extends Wallet {
   }
 
   async createWalletForExisting(
-    assetId: string, 
-    fee: string, 
+    assetId: string,
+    fee: string,
     host: string = this.client.backupHost,
   ) {
     return super.createNewWallet('cat_wallet', {
@@ -58,5 +58,9 @@ export default class CATWallet extends Wallet {
 
   async getCatList() {
     return this.command('get_cat_list');
+  }
+
+  async getStrayCats() {
+    return this.command('get_stray_cats');
   }
 }

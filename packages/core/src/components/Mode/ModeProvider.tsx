@@ -1,8 +1,6 @@
 import React, { createContext, ReactNode, useState, useMemo, useCallback } from 'react';
-import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
+import useLocalStorage from '../../hooks/useLocalStorage';
 import type Mode from '../../constants/Mode';
-
-const LOCAL_STORAGE_KEY = 'mode';
 
 export const ModeContext = createContext<{
   mode?: Mode;
@@ -18,11 +16,11 @@ export type ModeProviderProps = {
 export default function ModeProvider(props: ModeProviderProps) {
   const { mode: defaultMode, children, persist = false } = props;
   const [modeState, setModeState] = useState<Mode | undefined>(defaultMode);
-  const [modeLocalStorage] = useLocalStorage<Mode | undefined>(LOCAL_STORAGE_KEY, defaultMode);
+  const [modeLocalStorage, setModeLocalStorage] = useLocalStorage<Mode | undefined>('mode', defaultMode);
 
   const handleSetMode = useCallback((newMode: Mode) => {
     if (persist) {
-      writeStorage(LOCAL_STORAGE_KEY, newMode);
+      setModeLocalStorage(newMode);
     } else {
       setModeState(newMode);
     }

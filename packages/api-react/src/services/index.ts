@@ -130,6 +130,7 @@ export const {
   useSetCATNameMutation,
   useSpendCATMutation,
   useAddCATTokenMutation,
+  useGetStrayCatsQuery,
 
   // NFTs
   useGetPlotNFTsQuery,
