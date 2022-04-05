@@ -67,7 +67,7 @@ class DaemonProxy:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
         asyncio.create_task(self.websocket.send_str(string))
 
