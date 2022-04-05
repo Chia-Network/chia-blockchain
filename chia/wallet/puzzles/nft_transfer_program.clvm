@@ -47,6 +47,7 @@
           )
     )
 
+    ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
     (defun parse_trade_prices_list ((ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH) trade_prices_list my_nft_id)
       (if trade_prices_list
         (c
@@ -60,6 +61,7 @@
       )
     )
 
+    ; if we are part of a complex trade then we assert an announcement from the recipient of the trade_price and then parse the trade price list
     (defun generate_conditions_for_trade (
       SINGLETON_STRUCT
       CURRENT_OWNER_DID

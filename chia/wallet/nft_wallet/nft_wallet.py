@@ -161,7 +161,7 @@ class NFTWallet:
         matched, curried_args = nft_puzzles.match_nft_puzzle(puzzle)
         nft_transfer_program = None
         if matched:
-            nft_mod_hash, singleton_struct, current_owner, nft_transfer_program_hash = curried_args
+            NFT_MOD_HASH, singleton_struct, current_owner, nft_transfer_program_hash, transfer_program_curry_params, metadata = curried_args
             # check if we already know this hash, if not then try to find reveal in solution
             for hash, reveal in self.nft_wallet_info.known_transfer_programs:
                 if hash == bytes32(nft_transfer_program_hash.as_atom()):
@@ -186,8 +186,12 @@ class NFTWallet:
                 parent_coin = coin_record.coin
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
-            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle(
-                singleton_struct.rest().first().as_atom(), current_owner.as_atom(), nft_transfer_program_hash.as_atom()
+            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle_with_curry_params(
+                singleton_struct.rest().first().as_atom(),
+                current_owner.as_atom(),
+                nft_transfer_program_hash.as_atom(),
+                metadata,
+                transfer_program_curry_params,
             )
             child_coin: Optional[Coin] = None
             for new_coin in coin_spend.additions():
@@ -195,10 +199,15 @@ class NFTWallet:
                     child_coin = new_coin
                     break
             assert child_coin is not None
-            child_puzzle: Program = nft_puzzles.create_full_puzzle(
+
+            metadata = nft_puzzles.update_metadata(metadata, solution)
+            # TODO: add smarter check for -22 to see if curry_params changed and use this for metadata too
+            child_puzzle: Program = nft_puzzles.create_full_puzzle_with_curry_params(
                 singleton_struct.rest().first().as_atom(),
                 self.nft_wallet_info.my_did,
                 nft_transfer_program_hash.as_atom(),
+                metadata,
+                transfer_program_curry_params,
             )
             await self.add_coin(
                 child_coin,
@@ -279,9 +288,14 @@ class NFTWallet:
         genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        nft_transfer_program = nft_puzzles.create_transfer_puzzle(metadata, percentage, backpayment_address)
+        nft_transfer_program = nft_puzzles.get_transfer_puzzle()
         eve_fullpuz = nft_puzzles.create_full_puzzle(
-            launcher_coin.name(), self.nft_wallet_info.my_did, nft_transfer_program.get_tree_hash()
+            launcher_coin.name(),
+            self.nft_wallet_info.my_did,
+            nft_transfer_program.get_tree_hash(),
+            metadata,
+            backpayment_address,
+            percentage,
         )
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, bytes(0x80)]).get_tree_hash()
@@ -324,7 +338,6 @@ class NFTWallet:
         list_of_coinspends = [CoinSpend(eve_coin, eve_fullpuz, fullsol)]
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb, message_sb])
-
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),

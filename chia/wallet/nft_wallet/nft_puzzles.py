@@ -18,25 +18,87 @@ OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 def create_nft_layer_puzzle(
-    singleton_id: bytes32, current_owner_did: bytes32, nft_transfer_program_hash: bytes32
+    singleton_id: bytes32,
+    current_owner_did: bytes32,
+    nft_transfer_program_mod_hash: bytes32,
+    metadata: Program,
+    backpayment_address: bytes32,
+    percentage: uint64,
+) -> Program:
+    # CURRY_PARAMS by default are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
+
+    transfer_program_curry_params = [backpayment_address, percentage, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
+    return create_nft_layer_puzzle_with_curry_params(singleton_id, current_owner_did, nft_transfer_program_mod_hash, metadata, transfer_program_curry_params)
+
+
+def create_nft_layer_puzzle_with_curry_params(
+    singleton_id: bytes32,
+    current_owner_did: bytes32,
+    nft_transfer_program_mod_hash: bytes32,
+    metadata: Program,
+    transfer_program_curry_params: Program,
 ) -> Program:
     # NFT_MOD_HASH
-    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (NFT_SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
     # CURRENT_OWNER_DID
-    # NFT_TRANSFER_PROGRAM_HASH
+    # TRANSFER_PROGRAM_MOD_HASH
+    # TRANSFER_PROGRAM_CURRY_PARAMS
+    # METADATA
+
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
-    return NFT_MOD.curry(NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash)
+    return NFT_MOD.curry(
+        NFT_MOD_HASH,
+        singleton_struct,
+        current_owner_did,
+        nft_transfer_program_mod_hash,
+        transfer_program_curry_params,
+        metadata
+    )
 
 
-def create_full_puzzle(singleton_id, current_owner_did, nft_transfer_program_hash):
+def create_full_puzzle(
+    singleton_id,
+    current_owner_did,
+    nft_transfer_program_hash,
+    metadata: Program,
+    backpayment_address: bytes32,
+    percentage: uint64,
+):
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
-    innerpuz = create_nft_layer_puzzle(singleton_id, current_owner_did, nft_transfer_program_hash)
+    innerpuz = create_nft_layer_puzzle(
+        singleton_id,
+        current_owner_did,
+        nft_transfer_program_hash,
+        metadata,
+        backpayment_address,
+        percentage
+    )
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
-def create_transfer_puzzle(metadata, percentage, backpayment_address):
-    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, metadata, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]))
-    return ret
+def create_full_puzzle_with_curry_params(
+    singleton_id,
+    current_owner_did,
+    nft_transfer_program_hash,
+    metadata: Program,
+    transfer_program_curry_params: Program,
+):
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    innerpuz = create_nft_layer_puzzle_with_curry_params(
+        singleton_id,
+        current_owner_did,
+        nft_transfer_program_hash,
+        metadata,
+        transfer_program_curry_params
+    )
+    return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
+
+
+def get_transfer_puzzle():
+    # to be curried: METADATA CURRY_PARAMS SINGLETON_STRUCT
+    # CURRY_PARAMS by default are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
+
+    return NFT_TRANSFER_PROGRAM
 
 
 def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
@@ -68,6 +130,19 @@ def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     except Exception:
         return None
     return None
+
+
+def update_metadata(metadata, solution):
+    new_url: Program = get_transfer_program_solution_from_solution(solution)
+    if new_url is None or new_url == Program.to(0):
+        return metadata
+    new_metadata = []
+    for kv_pair in metadata.as_iter():
+        if kv_pair.first().as_atom() == b'u':
+            new_metadata.append(['u', kv_pair.rest().cons(new_url)])
+        else:
+            new_metadata.append(kv_pair)
+    return new_metadata
 
 
 def get_transfer_program_from_inner_solution(solution: Program) -> Program:
@@ -133,6 +208,15 @@ def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
         prog = solution.rest().rest().rest().rest().first()
         return prog
+    except Exception:
+        return None
+    return None
+
+
+def get_transfer_program_solution_from_solution(solution: Program) -> Program:
+    try:
+        prog_sol = solution.rest().rest().rest().rest().rest().rest().first()
+        return prog_sol
     except Exception:
         return None
     return None
