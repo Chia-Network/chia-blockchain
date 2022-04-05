@@ -24,7 +24,6 @@ jobs:
 
     steps:
     - name: Prepare Ubuntu
-      if: ${{ matrix.distribution.type == 'ubuntu' }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
