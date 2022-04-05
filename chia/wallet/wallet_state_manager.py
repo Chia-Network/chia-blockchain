@@ -270,8 +270,8 @@ class WalletStateManager:
             if start_index >= last_index:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                scanning_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
-                self.log.info(f"Start: {scanning_msg}")
+                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                self.log.info(f"Start: {creating_msg}")
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
                         continue
@@ -309,7 +309,7 @@ class WalletStateManager:
                             False,
                         )
                     )
-                self.log.info(f"Done: {scanning_msg}")
+                self.log.info(f"Done: {creating_msg}")
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
             await self.add_interested_puzzle_hashes(
                 [record.puzzle_hash for record in derivation_paths],
