@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -27,45 +27,48 @@ jobs:
         python-version: [ 3.9 ]
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
 
-    - name: Install ubuntu dependencies
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install -y python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        sh install.sh -d
+      - name: Install ubuntu dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git
 
-    - name: pytest
-      run: |
-        . ./activate
-        ./venv/bin/py.test -n 0 -m benchmark tests
+      - name: Run install script
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          sh install.sh -d
+
+      - name: pytest
+        run: |
+          . ./activate
+          ./venv/bin/py.test -n 0 -m benchmark tests
