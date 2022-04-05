@@ -1,8 +1,9 @@
 import React from 'react';
-import { Plural, t } from '@lingui/macro';
+import { Plural, t, Trans } from '@lingui/macro';
 import {
   CopyToClipboard,
   Flex,
+  Link,
   FormatLargeNumber,
   TooltipIcon,
   mojoToCATLocaleString,
@@ -84,10 +85,20 @@ export default function OfferSummaryRow(props: Props) {
       <TooltipIcon interactive>
         <Flex flexDirection="column" gap={1}>
           <Flex flexDirection="column" gap={0}>
-            <StyledTitle>Name</StyledTitle>
+            <Flex>
+              <Box flexGrow={1}>
+                <StyledTitle>Name</StyledTitle>
+              </Box>
+              {assetIdInfo?.walletType === WalletType.CAT && (
+                <Link href={`https://www.taildatabase.com/tail/${assetId.toLowerCase()}`} target="_blank">
+                  <Trans>Search on Tail Database</Trans>
+                </Link>
+              )}
+            </Flex>
+
             <StyledValue>{assetIdInfo?.name}</StyledValue>
           </Flex>
-          {assetIdInfo?.walletType !== WalletType.STANDARD_WALLET && (
+          {assetIdInfo?.walletType === WalletType.CAT && (
             <Flex flexDirection="column" gap={0}>
               <StyledTitle>Asset ID</StyledTitle>
               <Flex alignItems="center" gap={1}>
