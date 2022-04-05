@@ -288,7 +288,7 @@ python-versions = "*"
 
 [[package]]
 name = "clvm-tools"
-version = "0.4.3"
+version = "0.4.4"
 description = "CLVM compiler."
 category = "main"
 optional = false
@@ -1217,7 +1217,7 @@ reference = "chia"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7, <3.10"
-content-hash = "ba3623673841bd4d15fbc76f7f192a21735b6be76dcb3d447ffcd6964030e578"
+content-hash = "d3a50cb7be0d726956588a2fcfb49e10cde87cc3eac547b751ee833b8c4824ef"
 
 [metadata.files]
 aiofiles = [
@@ -1501,7 +1501,7 @@ clvm-rs = [
     {file = "clvm_rs-0.1.19-cp37-abi3-win_amd64.whl", hash = "sha256:38005e485db069c197679a3d3afcf9a8f9fe83b89108ce484e2f05069a7e2faf"},
 ]
 clvm-tools = [
-    {file = "clvm_tools-0.4.3-py3-none-any.whl", hash = "sha256:a07fb9befcd7f2866837f606322c81454dff6ff68931ea9d1524bcf5ebbb89d6"},
+    {file = "clvm_tools-0.4.4-py3-none-any.whl", hash = "sha256:f6e1778850f42172fbb49f1dc6096c6fecaa1278f866b280b2374da49e5c67fc"},
 ]
 clvm-tools-rs = [
     {file = "clvm_tools_rs-0.1.7-cp37-abi3-macosx_10_7_x86_64.whl", hash = "sha256:dad83004b47450ba6ec345d7f92c9a6cbba4213e76d541d9f63b470c4cda117c"},
