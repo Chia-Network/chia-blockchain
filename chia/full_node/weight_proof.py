@@ -1278,7 +1278,7 @@ def validate_recent_blocks(
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:
-            prev_challenge = challenge
+            prev_challenge = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             challenge = sub_slot.challenge_chain.get_hash()
             deficit = sub_slot.reward_chain.deficit
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
