@@ -1,4 +1,4 @@
-import React, { Fragment, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Card, CardContent, CardActionArea } from '@mui/material';
 import { styled } from '@mui/system';
 
@@ -25,15 +25,20 @@ export type CardListItemProps = {
 
 export default function CardListItem(props: CardListItemProps) {
   const { children, selected, onSelect } = props;
-  const ActionCard = onSelect ? CardActionArea : Fragment;
+
+  const content = (
+    <CardContent>
+      {children}
+    </CardContent>
+  );
 
   return (
     <StyledCard variant="outlined" selected={selected}>
-      <ActionCard onClick={onSelect}>
-        <CardContent>
-          {children}
-        </CardContent>
-      </ActionCard>
+      {onSelect ? (
+        <CardActionArea onClick={onSelect}>
+          {content}
+        </CardActionArea>
+      ) : content}
     </StyledCard>
   );
 }

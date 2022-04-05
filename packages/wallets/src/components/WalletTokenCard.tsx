@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { WalletType } from '@chia/api';
+import { Trans } from '@lingui/macro';
 import { Typography, Switch, CircularProgress } from '@mui/material';
-import { Tooltip, CardListItem, Flex } from '@chia/core';
+import { Tooltip, CardListItem, Flex, Link } from '@chia/core';
 
 export type WalletTokenCardProps = {
   item: {
@@ -69,6 +70,11 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
                 {subTitle}
               </Typography>
             </Tooltip>
+          )}
+          {assetId && (
+            <Link href={`https://www.taildatabase.com/tail/${assetId}`} target="_blank" variant="caption">
+              <Trans>Search on Tail Database</Trans>
+            </Link>
           )}
         </Flex>
         {isLoading ? (

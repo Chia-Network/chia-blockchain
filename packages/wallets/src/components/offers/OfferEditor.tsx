@@ -72,8 +72,8 @@ function OfferEditor(props: OfferEditorProps) {
         mojoAmount = catToMojo(amount);
       }
 
-      offer[assetWalletId] = debit 
-        ? mojoAmount.negated() 
+      offer[assetWalletId] = debit
+        ? mojoAmount.negated()
         : mojoAmount;
     }
     else {
@@ -228,7 +228,7 @@ export function CreateOfferEditor(props: CreateOfferEditorProps) {
     <Grid container>
       <Flex flexDirection="column" flexGrow={1} gap={3}>
         <Flex>
-          <Back variant="h5" to="/dashboard/wallets/offers/manage">
+          <Back variant="h5" to="/dashboard/offers/manage">
             <Trans>Create an Offer</Trans>
           </Back>
         </Flex>

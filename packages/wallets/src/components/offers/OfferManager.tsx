@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { Trans, t } from '@lingui/macro';
 import moment from 'moment';
 import BigNumber from 'bignumber.js';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   Back,
   Button,
@@ -88,7 +88,7 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
   async function handleConfirm() {
     const { fee: xchFee } = methods.getValues();
 
-    const fee = cancelWithTransaction 
+    const fee = cancelWithTransaction
       ? chiaToMojo(xchFee)
       : new BigNumber(0);
 
@@ -255,7 +255,7 @@ function OfferList(props: OfferListProps) {
   }
 
   function handleRowClick(event: any, row: OfferTradeRecord) {
-    navigate('/dashboard/wallets/offers/view', {
+    navigate('/dashboard/offers/view', {
       state: {
         tradeRecord: row
       },
@@ -503,11 +503,11 @@ export function OfferManager() {
   // }, [data, isLoading]);
 
   function handleCreateOffer() {
-    navigate('/dashboard/wallets/offers/create');
+    navigate('/dashboard/offers/create');
   }
 
   function handleImportOffer() {
-    navigate('/dashboard/wallets/offers/import');
+    navigate('/dashboard/offers/import');
   }
 
   return (
@@ -584,6 +584,7 @@ export function CreateOffer() {
           />
         )} />
         <Route path="manage" element={<OfferManager />} />
+        <Route path="/" element={<Navigate to="manage" /> } />
       </Routes>
     </LayoutDashboardSub>
   );

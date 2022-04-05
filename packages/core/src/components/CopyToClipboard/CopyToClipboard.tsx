@@ -5,16 +5,22 @@ import { Tooltip, IconButton } from '@mui/material';
 import { Assignment as AssignmentIcon } from '@mui/icons-material';
 // @ts-ignore
 import { useTimeout } from 'react-use-timeout';
+import { styled } from '@mui/system';
 
-type Props = {
+const StyledAssignmentIcon = styled(AssignmentIcon)(({ theme, invertColor }) => `
+  color: ${invertColor ? theme.palette.common.white : theme.palette.text.primary};
+`);
+
+export type CopyToClipboardProps = {
   value: string;
-  fontSize: 'default' | 'small' | 'large';
+  fontSize?: 'medium' | 'small' | 'large' | 'inherit';
   size: 'small' | 'medium';
   clearCopiedDelay: number;
+  invertColor?: boolean;
 };
 
-export default function CopyToClipboard(props: Props) {
-  const { value, size, fontSize, clearCopiedDelay } = props;
+export default function CopyToClipboard(props: CopyToClipboardProps) {
+  const { value, size = 'small', fontSize = 'medium', clearCopiedDelay = 1000, invertColor = false } = props;
   const [, copyToClipboard] = useCopyToClipboard();
   const [copied, setCopied] = useState<boolean>(false);
   const timeout = useTimeout(() => {
@@ -36,14 +42,8 @@ export default function CopyToClipboard(props: Props) {
   return (
     <Tooltip title={tooltipTitle}>
       <IconButton onClick={handleCopy} size={size}>
-        <AssignmentIcon fontSize={fontSize} />
+        <StyledAssignmentIcon fontSize={fontSize} invertColor={invertColor} />
       </IconButton>
     </Tooltip>
   );
 }
-
-CopyToClipboard.defaultProps = {
-  fontSize: 'medium',
-  clearCopiedDelay: 1000,
-  size: 'small',
-};

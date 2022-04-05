@@ -35,7 +35,7 @@ async function handleRowClick(event: React.MouseEvent<HTMLTableRowElement>, row:
       const { tradeRecord, success } = response;
 
       if (success === true && tradeRecord) {
-        navigate('/dashboard/wallets/offers/view', {
+        navigate('/dashboard/offers/view', {
           state: { tradeRecord: tradeRecord },
         });
       }
@@ -59,7 +59,7 @@ const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
           <Tooltip
             title={isOutgoing ? <Trans>Outgoing</Trans> : <Trans>Incoming</Trans>}
           >
-            {isOutgoing 
+            {isOutgoing
               ? <CallMadeIcon color="secondary" />
               : <CallReceivedIcon color="primary" />}
           </Tooltip>
@@ -145,8 +145,8 @@ const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
       return (
         <>
           <strong>
-            {isOutgoing 
-              ? <Trans>-</Trans> 
+            {isOutgoing
+              ? <Trans>-</Trans>
               : <Trans>+</Trans>}
           </strong>
           &nbsp;
@@ -154,7 +154,7 @@ const getCols = (type: WalletType, isSyncing, getOfferRecord, navigate) => [
             <FormatLargeNumber
               value={type === WalletType.CAT
                 ? mojoToCAT(row.amount)
-                : mojoToChia(row.amount)} 
+                : mojoToChia(row.amount)}
             />
           </strong>
           &nbsp;
@@ -273,8 +273,8 @@ export default function WalletHistory(props: Props) {
                 return memoHex;
               }
             });
-            
-            const memosDescription = memoValuesDecoded && memoValuesDecoded.length 
+
+            const memosDescription = memoValuesDecoded && memoValuesDecoded.length
               ? (
                 <Flex flexDirection="column">
                   {memoValuesDecoded.map((memo, index) => (

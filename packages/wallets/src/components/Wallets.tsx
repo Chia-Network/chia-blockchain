@@ -13,7 +13,6 @@ export default function Wallets() {
       <Route element={<LayoutDashboardSub outlet />}>
         <Route path="create/*" element={<WalletCreate />} />
       </Route>
-      <Route path="offers/*" element={<CreateOffer />} />
       <Route element={<LayoutDashboardSub sidebar={<WalletsSidebar />} outlet />}>
         <Route path=":walletId" element={<Wallet />} />
         <Route path="*" element={<Navigate to="1" />} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SelectKey, LayoutHero, LayoutMain, LayoutDashboard, Mode, useMode } from '@chia/core';
-import { WalletAdd, WalletImport, Wallets, CreateOffer } from '@chia/wallets';
+import { WalletAdd, WalletImport, Wallets, Offers } from '@chia/wallets';
 import AppProviders from './AppProviders';
 import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
@@ -31,6 +31,7 @@ export default function AppRouter() {
             <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar simple />} outlet />}>
               <Route path="dashboard" element={<Navigate to="wallets" />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
+              <Route path="dashboard/offers/*" element={<Offers />} />
               <Route path="dashboard/nfts/*" element={<NFTs />} />
               <Route path="dashboard/*" element={<Navigate to="wallets" />} />
               <Route path="dashboard/settings/*" element={<Settings />} />
@@ -40,6 +41,7 @@ export default function AppRouter() {
               <Route path="dashboard" element={<FullNode />} />
               <Route path="dashboard/block/:headerHash" element={<Block />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
+              <Route path="dashboard/offers/*" element={<Offers />} />
               <Route path="dashboard/nfts/*" element={<NFTs />} />
               <Route path="dashboard/settings/*" element={<Settings />} />
               <Route path="dashboard/plot/*" element={<Plot />} />

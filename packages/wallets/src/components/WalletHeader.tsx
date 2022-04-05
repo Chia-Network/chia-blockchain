@@ -67,7 +67,7 @@ export default function WalletHeader(props: StandardWalletProps) {
       return;
     }
     else {
-      navigate('/dashboard/wallets/offers/manage');
+      navigate('/dashboard/offers/manage');
     }
   }
 

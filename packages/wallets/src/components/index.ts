@@ -5,4 +5,4 @@ export { default as WalletAdd } from './WalletAdd';
 export { default as WalletImport } from './WalletImport';
 export { default as Wallets } from './Wallets';
 export { default as WalletStatus } from './WalletStatus';
-export { CreateOffer } from './offers/OfferManager';
+export { CreateOffer as Offers } from './offers/OfferManager';

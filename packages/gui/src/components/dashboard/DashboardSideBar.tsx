@@ -64,7 +64,7 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
           title={<Trans>NFTs</Trans>}
         />
         <SideBarItem
-          to="/dashboard/wallets/offers/manage"
+          to="/dashboard/offers"
           icon={OffersIcon}
           title={<Trans>Offers</Trans>}
         />
