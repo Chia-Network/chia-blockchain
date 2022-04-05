@@ -108,14 +108,14 @@ block_format_version = "rc5"
 def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"alternate2")
+    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt)
+    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
@@ -123,35 +123,62 @@ def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", bt, seed=b"alternate2", empty_sub_slots=1
+        1000,
+        f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db",
+        bt,
+        seed=b"empty_slots",
+        empty_sub_slots=1,
     )
+
+
+@pytest.fixture(scope="session")
+def default_1500_blocks(bt):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(1500, f"test_blocks_1500_{block_format_version}.db", bt, seed=b"1500")
 
 
 @pytest.fixture(scope="session")
 def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt)
+    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
 def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
+    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt, seed=b"20000")
 
 
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, default_10000_blocks):
+def test_long_reorg_blocks(bt, default_1500_blocks):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        320,
+        758,
         f"test_blocks_long_reorg_{block_format_version}.db",
         bt,
-        block_list_input=default_10000_blocks[:758],
-        seed=b"2",
+        block_list_input=default_1500_blocks[:320],
+        seed=b"reorg_blocks",
         time_per_block=8,
+    )
+
+
+@pytest.fixture(scope="session")
+def default_2000_blocks_compact(bt):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        2000,
+        f"test_blocks_2000_compact_{block_format_version}.db",
+        bt,
+        normalized_to_identity_cc_eos=True,
+        normalized_to_identity_icc_eos=True,
+        normalized_to_identity_cc_ip=True,
+        normalized_to_identity_cc_sp=True,
+        seed=b"2000_compact",
     )
 
 
@@ -167,6 +194,7 @@ def default_10000_blocks_compact(bt):
         normalized_to_identity_icc_eos=True,
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
+        seed=b"1000_compact",
     )
 
 

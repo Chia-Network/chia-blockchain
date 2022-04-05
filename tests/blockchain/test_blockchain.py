@@ -742,11 +742,12 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
-    async def test_empty_sub_slots_epoch(self, empty_blockchain, bt):
+    async def test_empty_sub_slots_epoch(self, empty_blockchain, default_400_blocks, bt):
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
         # Also tests overflow block in epoch
-        blocks_base = bt.get_consecutive_blocks(test_constants.EPOCH_BLOCKS)
+        blocks_base = default_400_blocks[: test_constants.EPOCH_BLOCKS]
+        assert len(blocks_base) == test_constants.EPOCH_BLOCKS
         blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
         blocks_2 = bt.get_consecutive_blocks(1, skip_slots=3, block_list_input=blocks_base, force_overflow=True)
         for block in blocks_base:
@@ -2885,7 +2886,7 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, test_long_reorg_blocks, bt):
+    async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
@@ -2893,9 +2894,8 @@ class TestReorgs:
         num_blocks_chain_2_start = test_constants.EPOCH_BLOCKS - 20
         num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
-        log.warning(f"Num blocks to make: {num_blocks_chain_2 - num_blocks_chain_2_start}")
         assert num_blocks_chain_1 < 10000
-        blocks = default_10000_blocks[:num_blocks_chain_1]
+        blocks = default_1500_blocks[:num_blocks_chain_1]
 
         for block in blocks:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
@@ -2903,15 +2903,13 @@ class TestReorgs:
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
-        print("num block c2start", num_blocks_chain_2_start, num_blocks_chain_2 - num_blocks_chain_2_start)
-
         # The reorg blocks will have less time between them (timestamp) and therefore will make difficulty go up
         # This means that the weight will grow faster, and we can get a heavier chain with lower height
 
-        # If this assert fails, you probably need to change the fixture in test_long_reorg_blocks to create the
+        # If these assert fail, you probably need to change the fixture in test_long_reorg_blocks to create the
         # right amount of blocks at the right time
-        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_10000_blocks[num_blocks_chain_2_start - 1]
-        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_10000_blocks[num_blocks_chain_2_start]
+        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_1500_blocks[num_blocks_chain_2_start - 1]
+        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_1500_blocks[num_blocks_chain_2_start]
 
         for reorg_block in test_long_reorg_blocks:
             if reorg_block.height < num_blocks_chain_2_start:
@@ -2933,11 +2931,11 @@ class TestReorgs:
         assert b.get_peak().height < chain_1_height
 
     @pytest.mark.asyncio
-    async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
+    async def test_long_compact_blockchain(self, empty_blockchain, default_2000_blocks_compact):
         b = empty_blockchain
-        for block in default_10000_blocks_compact:
+        for block in default_2000_blocks_compact:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
-        assert b.get_peak().height == len(default_10000_blocks_compact) - 1
+        assert b.get_peak().height == len(default_2000_blocks_compact) - 1
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain, bt):

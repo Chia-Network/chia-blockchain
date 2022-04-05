@@ -69,7 +69,7 @@ def persistent_blocks(
             blocks: List[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes(block_bytes))
-            if len(blocks) == num_of_blocks:
+            if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
                 return blocks
         except EOFError:
