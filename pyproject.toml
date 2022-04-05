@@ -93,3 +93,14 @@ pytest-xdist = "^2.5.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version =  ['py37', 'py38', 'py39']
+include = '''
+^/(
+    [^/]*.py
+    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
+)$
+'''
+exclude = ''
