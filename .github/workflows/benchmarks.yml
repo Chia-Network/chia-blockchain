@@ -20,22 +20,21 @@ jobs:
     name: Benchmarks
     runs-on: benchmark
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        python-version: [ 3.9 ]
+    container: "docker://ubuntu:impish"
 
     steps:
+    - name: Prepare Ubuntu
+      if: ${{ matrix.distribution.type == 'ubuntu' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get --yes update
+        apt-get install --yes git lsb-release sudo
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - name: Get pip cache dir
       id: pip-cache
