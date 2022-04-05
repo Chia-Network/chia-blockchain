@@ -103,6 +103,8 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
                         success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
                             block_batch, None, None  # type: ignore[arg-type]
                         )
+                        end_height = block_batch[-1].height
+                        full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                     assert success
                     assert advanced_peak
