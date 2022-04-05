@@ -57,7 +57,7 @@ export default function SelectKey() {
         fingerprint,
       }).unwrap();
 
-      navigate('/dashboard');
+      navigate('/dashboard/wallets');
     } catch (error) {
       showError(error)
     } finally {
