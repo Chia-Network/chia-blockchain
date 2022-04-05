@@ -1,14 +1,19 @@
+from typing import Any
+
 from chia.full_node.fee_estimate import FeeEstimate
+from chia.full_node.fee_tracker import EstimateResult, BucketResult
 from chia.full_node.mempool_manager import MempoolManager
 
 
 class SmartFeeEstimator:
-    def __init__(self, mempool_mgr: MempoolManager, log):
+    def __init__(self, mempool_mgr: MempoolManager, log: Any):
         self.log = log
         self.mempool_manager = mempool_mgr
 
-    def parse(self, fee_result):
-        pass_bucket, fail_bucket, median = fee_result
+    def parse(self, fee_result: EstimateResult) -> float:
+        pass_bucket: BucketResult = fee_result["pass_bucket"]
+        fail_bucket: BucketResult = fee_result["fail_bucket"]
+        median = fee_result["median"]
 
         if median != -1:
             return median
@@ -17,7 +22,7 @@ class SmartFeeEstimator:
 
         # If median is -1 tracker wasn't able to find a passing bucket,
         # Suggest one bucket higher than lowest failing bucket
-        if "start" in fail_bucket:
+        if fail_bucket["start"] != 0:
             # get_bucket_index return left (-1) bucket
             # start value is already -1
             # Thus +3 because we want +1 from the lowest bucket it failed at
@@ -27,9 +32,9 @@ class SmartFeeEstimator:
             fee_val = self.mempool_manager.fee_tracker.buckets[start_index]
             return fee_val
 
-        return -1
+        return -1.0
 
-    def get_estimates(self, ignore_mempool=False) -> FeeEstimate:
+    def get_estimates(self, ignore_mempool: bool = False) -> FeeEstimate:
         if ignore_mempool is False and (self.mempool_manager.fee_tracker.latest_seen_height == 0):
             return FeeEstimate("No enough data", "-1", "-1", "-1")
 

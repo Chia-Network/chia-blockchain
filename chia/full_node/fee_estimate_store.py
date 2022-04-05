@@ -14,7 +14,7 @@ class FeeStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2):  # type: ignore
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.write_db() as conn:
@@ -28,7 +28,7 @@ class FeeStore:
                 row = await cursor.fetchone()
                 await cursor.close()
                 if row is not None:
-                    backup = FeeTrackerBackup.from_bytes(row[1])
+                    backup: FeeTrackerBackup = FeeTrackerBackup.from_bytes(row[1])
                     return backup
                 return None
 

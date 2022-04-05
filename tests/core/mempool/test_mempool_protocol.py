@@ -2,8 +2,9 @@ import asyncio
 import pytest
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from tests.core.full_node.test_conditions import bt
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import bt, setup_simulators_and_wallets
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 

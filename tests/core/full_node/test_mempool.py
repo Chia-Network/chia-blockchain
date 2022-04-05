@@ -87,7 +87,7 @@ def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
         [],
         [],
         SerializedProgram(),
-        None
+        None,
     )
 
 

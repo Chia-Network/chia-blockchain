@@ -244,8 +244,22 @@ class FeeStat:
         bins = len(self.unconfirmed_txs)
         new_bucket_range = True
         passing = True
-        pass_bucket: BucketResult = {}
-        fail_bucket: BucketResult = {}
+        pass_bucket: BucketResult = {
+            "start": 0.0,
+            "end": 0.0,
+            "within_target": 0.0,
+            "total_confirmed": 0.0,
+            "in_mempool": 0.0,
+            "left_mempool": 0.0,
+        }
+        fail_bucket: BucketResult = {
+            "start": 0.0,
+            "end": 0.0,
+            "within_target": 0.0,
+            "total_confirmed": 0.0,
+            "in_mempool": 0.0,
+            "left_mempool": 0.0,
+        }
         for bucket in range(max_bucket_index, -1, -1):
             if new_bucket_range:
                 cur_near_bucket = bucket
@@ -276,7 +290,6 @@ class FeeStat:
                         passing = False
                     continue
                 else:
-                    fail_bucket = {}
                     found_answer = True
                     passing = True
                     pass_bucket["within_target"] = n_conf
@@ -344,10 +357,7 @@ class FeeStat:
         self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
-        result: EstimateResult = {}
-        result["pass_bucket"] = pass_bucket
-        result["fail_bucket"] = pass_bucket
-        result["median"] = pass_bucket
+        result: EstimateResult = {"pass_bucket": pass_bucket, "fail_bucket": fail_bucket, "median": median}
         return result
 
 
@@ -363,7 +373,7 @@ class FeeTracker:
     buckets: List[float]
 
     @classmethod
-    async def create(cls, log: Any, fee_store: FeeStore):
+    async def create(cls, log: Any, fee_store: FeeStore):  # type: ignore
         self = cls()
         self.log = log
         self.sorted_buckets = SortedDict()
