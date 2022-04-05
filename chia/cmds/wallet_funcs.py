@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, List, Optional, Tuple, Dict
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -23,6 +23,8 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
+
+CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -308,21 +310,37 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
+async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False):
     for asset_id, amount in sum_dict.items():
-        if asset_id == "xch":
-            wid: str = "1"
-            name: str = "XCH"
-            unit: int = units["chia"]
-        else:
-            result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
-            wid = "Unknown"
+        description: str = ""
+        unit: int = units["chia"]
+        wid: str = "1" if asset_id == "xch" else ""
+        mojo_amount: int = int(Decimal(amount))
+        name: str = "XCH"
+        if asset_id != "xch":
             name = asset_id
-            unit = units["cat"]
-            if result is not None:
-                wid = str(result[0])
-                name = result[1]
-        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)")
+            if asset_id == "unknown":
+                name = "Unknown"
+                unit = units["mojo"]
+                if has_fee:
+                    description = " [Typically represents change returned from the included fee]"
+            else:
+                unit = units["cat"]
+                result = await cat_name_resolver(bytes32.from_hexstr(asset_id))
+                if result is not None:
+                    wid = str(result[0])
+                    name = result[1]
+        output: str = f"    - {name}"
+        mojo_str: str = f"{mojo_amount} {'mojo' if mojo_amount == 1 else 'mojos'}"
+        if len(wid) > 0:
+            output += f" (Wallet ID: {wid})"
+        if unit == units["mojo"]:
+            output += f": {mojo_str}"
+        else:
+            output += f": {mojo_amount / unit} ({mojo_str})"
+        if len(description) > 0:
+            output += f" {description}"
+        print(output)
 
 
 async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
@@ -337,13 +355,16 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested = offer.summary()
+        outbound_balances: Dict[str, int] = offer.get_pending_amounts()
+        fees: Decimal = Decimal(offer.bundle.fees())
+        cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
-        await print_offer_summary(wallet_client, offered)
+        await print_offer_summary(cat_name_resolver, offered)
         print("  REQUESTED:")
-        await print_offer_summary(wallet_client, requested)
-        print("Pending Balances:")
-        await print_offer_summary(wallet_client, offer.get_pending_amounts())
-        print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+        await print_offer_summary(cat_name_resolver, requested)
+        print("Pending Outbound Balances:")
+        await print_offer_summary(cat_name_resolver, outbound_balances, has_fee=(fees > 0))
+        print(f"Included Fees: {fees / units['chia']}")
     print("---------------")
 
 
@@ -411,12 +432,13 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         return
 
     offered, requested = offer.summary()
+    cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
-    await print_offer_summary(wallet_client, offered)
+    await print_offer_summary(cat_name_resolver, offered)
     print("  REQUESTED:")
-    await print_offer_summary(wallet_client, requested)
-    print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+    await print_offer_summary(cat_name_resolver, requested)
+    print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
 
     if not examine_only:
         confirmation = input("Would you like to take this offer? (y/n): ")
@@ -534,7 +556,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 current_sync_status = "Syncing"
             else:
                 current_sync_status = "Not Synced"
-        print("Choose wallet key:")
+        print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
             row: str = f"{i+1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
@@ -543,15 +565,21 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 row += f" ({current_sync_status})"
             print(row)
         val = None
+        prompt: str = (
+            f"Choose a wallet key [1-{len(fingerprints)}] ('q' to quit, or Enter to use {logged_in_fingerprint}): "
+        )
         while val is None:
-            val = input("Enter a number to pick or q to quit: ")
+            val = input(prompt)
             if val == "q":
                 return None
-            if not val.isdigit():
+            elif val == "" and logged_in_fingerprint is not None:
+                fingerprint = logged_in_fingerprint
+                break
+            elif not val.isdigit():
                 val = None
             else:
                 index = int(val) - 1
-                if index >= len(fingerprints):
+                if index < 0 or index >= len(fingerprints):
                     print("Invalid value")
                     val = None
                     continue
