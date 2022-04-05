@@ -262,7 +262,9 @@ fi
 rm -rf .penv .venv venv
 $INSTALL_PYTHON_PATH -m venv .penv
 .penv/bin/python -m pip install --upgrade pip setuptools wheel
-.penv/bin/python -m pip install --requirement requirements.penv.txt
+# TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
+#.penv/bin/python -m pip install --requirement requirements.penv.txt
+.penv/bin/python -m pip install poetry
 .penv/bin/poetry install
 ln -s .venv venv
 if [ ! -f "activate" ]; then
