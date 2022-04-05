@@ -1,18 +1,95 @@
+[tool.poetry]
+name = "chia-blockchain"
+version = "0.1.0"
+description = "Chia blockchain full node, farmer, timelord, and wallet."
+authors = ["Mariano Sorgente <mariano@chia.net>"]
+license = "Apache License"
+readme = "README.md"
+keywords= ["chia", "blockchain", "node"]
+homepage = "https://chia.net/"
+packages = [{ include = "chia"}]
+
+[tool.poetry.scripts]
+chia = "chia.cmds.chia:main"
+chia_wallet = "chia.server.start_wallet:main"
+chia_full_node = "chia.server.start_full_node:main"
+chia_harvester = "chia.server.start_harvester:main"
+chia_farmer = "chia.server.start_farmer:main"
+chia_introducer = "chia.server.start_introducer:main"
+chia_crawler = "chia.seeder.start_crawler:main"
+chia_seeder = "chia.seeder.dns_server:main"
+chia_timelord = "chia.server.start_timelord:main"
+chia_timelord_launcher = "chia.timelord.timelord_launcher:main"
+chia_full_node_simulator = "chia.simulator.start_simulator:main"
+
+[[tool.poetry.source]]
+name = "chia"
+url = "https://pypi.chia.net/simple/"
+
+[tool.poetry.dependencies]
+python = ">=3.7, <3.10"
+aiofiles = "0.7.0"  # Async IO for files
+aiohttp = "3.7.4"  # HTTP server for full node rpc
+aiosqlite = "0.17.0"  # asyncio wrapper for sqlite, to store blocks
+bitstring = "3.1.9"  # Binary data management library
+blspy = "1.0.9"  # Signature library
+chiabip158 = "1.1"  # bip158-style wallet filters
+chiapos = "1.0.9"  # proof of space
+chiavdf = "1.0.5"  # timelord and vdf verification
+# TODO: when moving to click 8 remove the pinning of black noted below
+click = "7.1.2"  # For the CLI
+clvm = "0.9.7"
+clvm_rs = "0.1.19"
+clvm_tools = "0.4.3"
+clvm_tools_rs = "0.1.7"
+colorama = "0.4.4"  # Colorizes terminal output
+colorlog = "5.0.1"  # Adds color to logs
+concurrent-log-handler = "0.9.19"  # Concurrently log and rotate logs
+cryptography = "3.4.7"  # Python cryptography library for TLS - keyring conflict
+dnspythonchia = "2.2.0"  # Query DNS seeds
+dnslib = "0.9.17"  # dns lib
+fasteners = "0.16.3"  # For interprocess file locking, expected to be replaced by filelock
+filelock = "3.4.2"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+keyring = "23.0.1"  # Store keys in MacOS Keychain, Windows Credential Locker
+# TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
+"keyrings.cryptfile" = "1.3.4"  # Secure storage for keys on Linux (Will be replaced)
+# See.cryptfile = "1.3.8"  # Secure storage for keys on Linux (Will be replaced)
+# See https://github.com/frispete/keyrings.cryptfile/issues/15
+multidict = "5.1.0"  # Avoid 5.2.0 due to Avast
+packaging = "21.0"
+PyYAML = "5.4.1"  # Used for config file format
+# TODO: poetry looks on pypi.chia.net, finds setproctitle, fails because it only has macos for 1.2.2 (i think...)
+# setproctitle = "1.2.2"  # Gives the chia processes readable names
+sortedcontainers = "2.4.0"  # For maintaining sorted mempools
+typing-extensions = "4.0.1"  # typing backports like Protocol and TypedDict
+watchdog = "2.1.6"  # Filesystem event watching - watches keyring.yaml
+websockets = "8.1.0"  # For use in wallet RPC and electron UI
+zstd = "1.5.0.4"
+
+
+[tool.poetry.dev-dependencies]
+aiohttp_cors = "^0.7.0"  # For blackd
+# TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
+black = "21.12b0"
+build = "^0.7"
+coverage = "^6.3.2"
+flake8 = "^3.9.2"
+isort = "^5.10.1"
+mypy = "0.942"
+# ipython = "^8.2.0"  # For asyncio debugging
+pre-commit = "^2.18.1"
+pytest = "^7.1.1"
+pytest-asyncio = "^0.18.1"  # require attribute 'fixture'
+pytest-monitor = "^1.6.3; sys_platform == 'linux'"
+twine = "^4.0.0"
+types-aiofiles = "^0.8.6"
+types-click = "^7.1.8"
+types-cryptography = "^3.3.18"
+types-pkg_resources = "^0.1.3"
+types-pyyaml = "^6.0.5"
+types-setuptools = "^57.4.11"
+pytest-xdist = "^2.5.0"
+
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=4.1.2"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools_scm]
-fallback_version = "unknown-no-.git-directory"
-local_scheme = "no-local-version"
-
-[tool.black]
-line-length = 120
-target-version =  ['py37', 'py38', 'py39']
-include = '''
-^/(
-    [^/]*.py
-    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
-)$
-'''
-exclude = ''
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
