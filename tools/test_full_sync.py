@@ -83,6 +83,7 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
 
             print()
             counter = 0
+            height = 0
             async with aiosqlite.connect(file) as in_db:
 
                 rows = await in_db.execute(
@@ -109,10 +110,16 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
                     assert success
                     assert advanced_peak
                     counter += len(block_batch)
-                    print(f"\rheight {counter} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
+                    height += len(block_batch)
+                    print(f"\rheight {height} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")
+
+                    if counter >= 100000:
+                        start_time = time.monotonic()
+                        counter = 0
+                        print()
         finally:
             print("closing full node")
             full_node._close()
