@@ -244,30 +244,30 @@ class PlotManager:
                     if path not in plot_paths:
                         self.no_key_filenames.remove(path)
 
-                with self:
-                    filenames_to_remove: List[str] = []
-                    for plot_filename, paths_entry in self.plot_filename_paths.items():
-                        loaded_path, duplicated_paths = paths_entry
-                        loaded_plot = Path(loaded_path) / Path(plot_filename)
-                        if loaded_plot not in plot_paths:
-                            filenames_to_remove.append(plot_filename)
+                filenames_to_remove: List[str] = []
+                for plot_filename, paths_entry in self.plot_filename_paths.items():
+                    loaded_path, duplicated_paths = paths_entry
+                    loaded_plot = Path(loaded_path) / Path(plot_filename)
+                    if loaded_plot not in plot_paths:
+                        filenames_to_remove.append(plot_filename)
+                        with self:
                             if loaded_plot in self.plots:
                                 del self.plots[loaded_plot]
+                        total_result.removed.append(loaded_plot)
+                        # No need to check the duplicates here since we drop the whole entry
+                        continue
+
+                    paths_to_remove: List[str] = []
+                    for path in duplicated_paths:
+                        loaded_plot = Path(path) / Path(plot_filename)
+                        if loaded_plot not in plot_paths:
+                            paths_to_remove.append(path)
                             total_result.removed.append(loaded_plot)
-                            # No need to check the duplicates here since we drop the whole entry
-                            continue
+                    for path in paths_to_remove:
+                        duplicated_paths.remove(path)
 
-                        paths_to_remove: List[str] = []
-                        for path in duplicated_paths:
-                            loaded_plot = Path(path) / Path(plot_filename)
-                            if loaded_plot not in plot_paths:
-                                paths_to_remove.append(path)
-                                total_result.removed.append(loaded_plot)
-                        for path in paths_to_remove:
-                            duplicated_paths.remove(path)
-
-                    for filename in filenames_to_remove:
-                        del self.plot_filename_paths[filename]
+                for filename in filenames_to_remove:
+                    del self.plot_filename_paths[filename]
 
                 for remaining, batch in list_to_batches(plot_paths, self.refresh_parameter.batch_size):
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)

@@ -31,7 +31,7 @@ jobs:
     - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         submodules: recursive
@@ -62,13 +62,13 @@ jobs:
         SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
 
       # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const releases = await github.rest.repos.listReleases({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });
@@ -83,13 +83,13 @@ jobs:
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
       # Get the most recent release from bladebit
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const releases = await github.rest.repos.listReleases({
             owner: 'Chia-Network',
             repo: 'bladebit',
           });
@@ -105,7 +105,6 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         sh install.sh
 

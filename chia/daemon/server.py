@@ -157,18 +157,24 @@ class WebSocketServer:
     async def start(self):
         self.log.info("Starting Daemon Server")
 
-        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+        # Note: the minimum_version has been already set to TLSv1_2
+        # in ssl_context_for_server()
+        # Daemon is internal connections, so override to TLSv1_3 only
+        if ssl.HAS_TLSv1_3:
+            try:
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+            except ValueError:
+                # in case the attempt above confused the config, set it again (likely not needed but doesn't hurt)
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+
+        if self.ssl_context.minimum_version is not ssl.TLSVersion.TLSv1_3:
             self.log.warning(
                 (
-                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
                     "A future version of Chia will require TLS1.3."
                 ),
                 ssl.OPENSSL_VERSION,
             )
-        else:
-            if self.ssl_context is not None:
-                # Daemon is internal connections, so override to TLS1.3 only
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())
@@ -291,7 +297,6 @@ class WebSocketServer:
         command = message["command"]
         destination = message["destination"]
         if destination != "daemon":
-            destination = message["destination"]
             if destination in self.connections:
                 sockets = self.connections[destination]
                 return dict_to_json_str(message), sockets
@@ -1011,7 +1016,8 @@ class WebSocketServer:
 
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
-                loop = asyncio.get_event_loop()
+                # TODO: loop gets passed down a lot, review for potential removal
+                loop = asyncio.get_running_loop()
                 loop.create_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
@@ -1054,7 +1060,8 @@ class WebSocketServer:
             self.plots_queue.remove(config)
 
             if run_next:
-                loop = asyncio.get_event_loop()
+                # TODO: review to see if we can remove this
+                loop = asyncio.get_running_loop()
                 self._run_next_serial_plotting(loop, queue)
 
             return {"success": True}
@@ -1152,9 +1159,7 @@ class WebSocketServer:
             await asyncio.wait(jobs)
         self.services.clear()
 
-        # TODO: fix this hack
-        asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
+        log.info("chia daemon exiting")
 
         response = {"success": True}
         return response
@@ -1484,7 +1489,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
 
 
 def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
-    result = asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, wait_for_unlock))
+    result = asyncio.run(async_run_daemon(root_path, wait_for_unlock))
     return result
 
 

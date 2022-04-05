@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import List, Optional, Set, Tuple
 
@@ -20,15 +19,9 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, test_constants
+from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 constants = test_constants
@@ -59,7 +52,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0])
-    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height):
+    async def test_basic_coin_store(self, cache_size: uint32, db_version, softfork_height, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -110,7 +103,7 @@ class TestCoinStoreWithBlocks:
                             mempool_mode=False,
                             height=softfork_height,
                         )
-                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                        tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
                         tx_removals, tx_additions = [], []
 
@@ -157,7 +150,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_set_spent(self, cache_size: uint32, db_version):
+    async def test_set_spent(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(9, [])
 
         async with DBConnection(db_version) as db_wrapper:
@@ -168,21 +161,37 @@ class TestCoinStoreWithBlocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
+                    async with db_wrapper.write_db():
+                        if block.is_transaction_block():
+                            assert block.foliage_transaction_block is not None
+                            await coin_store.new_block(
+                                block.height,
+                                block.foliage_transaction_block.timestamp,
+                                block.get_included_reward_coins(),
+                                additions,
+                                removals,
+                            )
 
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        await coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            additions,
-                            removals,
-                        )
-
-                    coins = block.get_included_reward_coins()
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+                        coins = block.get_included_reward_coins()
+                        records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                     await coin_store._set_spent([r.name for r in records], block.height)
+
+                    if len(records) > 0:
+                        for r in records:
+                            assert (await coin_store.get_coin_record(r.name)) is not None
+
+                        if cache_size > 0:
+                            # Check that we can't spend a coin twice in cache
+                            with pytest.raises(ValueError, match="Coin already spent"):
+                                await coin_store._set_spent([r.name for r in records], block.height)
+
+                            for r in records:
+                                coin_store.coin_record_cache.remove(r.name)
+
+                        # Check that we can't spend a coin twice in DB
+                        with pytest.raises(ValueError, match="Invalid operation to set spent"):
+                            await coin_store._set_spent([r.name for r in records], block.height)
 
                     records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
                     for record in records:
@@ -190,7 +199,7 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
-    async def test_num_unspent(self, db_version):
+    async def test_num_unspent(self, bt, db_version):
         blocks = bt.get_consecutive_blocks(37, [])
 
         expect_unspent = 0
@@ -223,7 +232,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_rollback(self, cache_size: uint32, db_version):
+    async def test_rollback(self, cache_size: uint32, db_version, bt):
         blocks = bt.get_consecutive_blocks(20)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -275,7 +284,7 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_basic_reorg(self, cache_size: uint32, tmp_dir, db_version, bt):
 
         async with DBConnection(db_version) as db_wrapper:
             initial_block_count = 30
@@ -336,20 +345,15 @@ class TestCoinStoreWithBlocks:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("cache_size", [0, 10, 100000])
-    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version):
+    async def test_get_puzzle_hash(self, cache_size: uint32, tmp_dir, db_version, bt):
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
-            farmer_ph = 32 * b"0"
-            pool_ph = 32 * b"1"
-            # TODO: address hint error and remove ignore
-            #       error: Argument "farmer_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
-            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
-            #       error: Argument "pool_reward_puzzle_hash" to "get_consecutive_blocks" of "BlockTools" has
-            #       incompatible type "bytes"; expected "Optional[bytes32]"  [arg-type]
+            farmer_ph = bytes32(32 * b"0")
+            pool_ph = bytes32(32 * b"1")
             blocks = bt.get_consecutive_blocks(
                 num_blocks,
-                farmer_reward_puzzle_hash=farmer_ph,  # type: ignore[arg-type]
-                pool_reward_puzzle_hash=pool_ph,  # type: ignore[arg-type]
+                farmer_reward_puzzle_hash=farmer_ph,
+                pool_reward_puzzle_hash=pool_ph,
                 guarantee_transaction_block=True,
             )
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
