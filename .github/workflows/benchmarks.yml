@@ -25,6 +25,8 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [ 3.9 ]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
 
     steps:
       - name: Clean workspace
@@ -61,6 +63,14 @@ jobs:
           sudo add-apt-repository ppa:deadsnakes/ppa
           sudo apt-get update
           sudo apt-get install -y python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git
+
+      - name: Checkout test blocks and plots
+        uses: actions/checkout@v3
+        with:
+          repository: 'Chia-Network/test-cache'
+          path: '.chia'
+          ref: '0.28.0'
+          fetch-depth: 1
 
       - name: Run install script
         env:
