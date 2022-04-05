@@ -75,8 +75,8 @@ def batch_pre_validate_blocks(
                 if block.height in npc_results:
                     npc_result = NPCResult.from_bytes(npc_results[block.height])
                     assert npc_result is not None
-                    if npc_result.npc_list is not None:
-                        removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    if npc_result.conds is not None:
+                        removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
                         removals, tx_additions = [], []
 
@@ -93,7 +93,7 @@ def batch_pre_validate_blocks(
                         mempool_mode=False,
                         height=block.height,
                     )
-                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
                     results.append(PreValidationResult(uint16(npc_result.error), None, npc_result, False))
                     continue
@@ -120,7 +120,8 @@ def batch_pre_validate_blocks(
                     # validate it later. receive_block will attempt to validate the signature later.
                     if validate_signatures:
                         if npc_result is not None and block.transactions_info is not None:
-                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                            assert npc_result.conds
+                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
                             pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pairs_pks]
                             if not AugSchemeMPL.aggregate_verify(
                                 pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
@@ -387,6 +388,6 @@ def _run_generator(
         )
         return bytes(npc_result)
     except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), [], uint64(0)))
+        return bytes(NPCResult(uint16(e.code.value), None, uint64(0)))
     except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), [], uint64(0)))
+        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0)))

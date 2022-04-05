@@ -101,7 +101,6 @@ jobs:
       - name: Run install script
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-          BUILD_VDF_CLIENT: "N"
         run: |
           arch -arm64 sh install.sh
 
