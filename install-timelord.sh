@@ -17,6 +17,7 @@ export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring sp
 THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distribution("chiavdf").location)' 2>/dev/null)/vdf_client
 #CHIAVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
 # TODO: this isn't the version...  it's the requirement
+.penv/bin/poetry show --no-ansi --no-interaction chiavdf
 CHIAVDF_VERSION="chiavdf==$(.penv/bin/poetry show --no-ansi --no-interaction chiavdf | sed -n 's/version\s*: //p')"
 
 ubuntu_cmake_install() {
