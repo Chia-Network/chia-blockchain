@@ -355,11 +355,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested = offer.summary()
-        outbound_balances: Dict[str, int] = {
-            asset_id: v
-            for asset_id, v in offer.get_pending_amounts().items()
-            if asset_id in offered or asset_id == "unknown"
-        }
+        outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.bundle.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
