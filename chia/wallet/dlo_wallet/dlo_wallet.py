@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -120,8 +120,8 @@ class DLOWallet:
         tr: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             amount, full_puzzle.get_tree_hash()
         )
-        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            full_puzzle.get_tree_hash(), self.wallet_id, True
+        await self.wallet_state_manager.add_interested_puzzle_hashes(
+            [full_puzzle.get_tree_hash()], [self.wallet_id], True
         )
 
         active_coin = None
@@ -254,9 +254,8 @@ class DLOWallet:
         return uint64(amount)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
-        confirmed = await self.get_confirmed_balance(record_list)
         # TODO: should the uint128 be changed?
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), uint128(confirmed))  # type: ignore[return-value]  # noqa: E501
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)  # type: ignore[return-value]  # noqa: E501
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint64:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(

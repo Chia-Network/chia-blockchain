@@ -9,7 +9,6 @@ from blspy import G2Element
 
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
-from chia.server.outbound_message import NodeType
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
@@ -96,6 +95,7 @@ class DataLayerWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         name: Optional[str] = "DataLayer Wallet",
+        in_transaction: bool = False,
     ) -> _T_DataLayerWallet:
         """
         This must be called under the wallet state manager lock
@@ -110,12 +110,17 @@ class DataLayerWallet:
             if wallet.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.DATA_LAYER.value, "")
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            name,
+            WalletType.DATA_LAYER.value,
+            "",
+            in_transaction=in_transaction,
+        )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = uint8(self.wallet_info.id)
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
 
         return self
 
@@ -213,7 +218,6 @@ class DataLayerWallet:
             CoinSpend(launcher_coin, response.puzzle, response.solution),
             height=response.height,
         )
-        await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def new_launcher_spend(
         self,
@@ -265,6 +269,7 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
+        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
                 new_singleton,
@@ -276,52 +281,6 @@ class DataLayerWallet:
                 self.id(),
             )
         )
-
-        # TODO
-        # Below is some out of place sync code
-        # We don't currently have the ability to process coins in the past that have hinted to us
-        # We need to validate these states after receiving them too
-        all_coin_states: Set[CoinState] = set()
-
-        # First we need to make sure we have all of the coin states
-        puzzle_hashes_to_search_for: Set[bytes32] = set({launcher_id})
-        while len(puzzle_hashes_to_search_for) != 0:
-            coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coins_with_puzzle_hash(
-                [launcher_id, new_singleton.puzzle_hash]
-            )
-            state_set = set(
-                filter(lambda cs: cs.coin.puzzle_hash != launcher_id, coin_states)
-            )  # Sanity check for troublemakers
-            all_coin_states.update(state_set)
-            puzzle_hashes_to_search_for = set()
-            all_coin_ids: Set[bytes32] = {cs.coin.name() for cs in all_coin_states}
-            all_coin_ids.update({launcher_id})
-            for state in coin_states:
-                if state.coin.parent_coin_info not in all_coin_ids:
-                    puzzle_hashes_to_search_for.add(state.coin.puzzle_hash)
-
-        # Force them all to be noticed (len will be zero for newly created singletons, this is only for existing ones)
-        if len(all_coin_states) > 0:
-            # Select a peer for fetching puzzles
-            all_nodes = self.wallet_state_manager.wallet_node.server.connection_by_type[NodeType.FULL_NODE]
-            if len(all_nodes.keys()) == 0:
-                raise ValueError("Not connected to the full node")
-            peer = list(all_nodes.values())[0]
-
-            # Sync the singleton history
-            previous_coin_id: bytes32 = launcher_id
-            while True:
-                next_coin_state: CoinState = list(
-                    filter(lambda cs: cs.coin.parent_coin_info == previous_coin_id, all_coin_states)
-                )[0]
-                if next_coin_state.spent_height is None:
-                    break
-                else:
-                    cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                        peer, next_coin_state.spent_height, next_coin_state.coin
-                    )
-                    await self.singleton_removed(cs, next_coin_state.spent_height)
-                    previous_coin_id = next_coin_state.coin.name()
 
     ################
     # TRANSACTIONS #
@@ -413,15 +372,20 @@ class DataLayerWallet:
         return dl_record, std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
-        self, fee: uint64, announcement_to_assert: Announcement, coin_announcement: bool = True
+        self,
+        fee: uint64,
+        announcement_to_assert: Announcement,
+        coin_announcement: bool = True,
+        in_transaction: bool = False,
     ) -> TransactionRecord:
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
+            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction),
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
             puzzle_announcements_to_consume=None if coin_announcement else {announcement_to_assert},
+            in_transaction=in_transaction,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
@@ -431,6 +395,7 @@ class DataLayerWallet:
         launcher_id: bytes32,
         root_hash: bytes32,
         fee: uint64 = uint64(0),
+        in_transaction: bool = False,
     ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
@@ -443,7 +408,7 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to update Singleton with launcher ID {launcher_id}")
 
         # Make the child's puzzles
-        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
+        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)
         next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle.get_tree_hash(), root_hash)
         next_full_puz = create_host_fullpuz(next_inner_puzzle.get_tree_hash(), root_hash, launcher_id)
 
@@ -512,7 +477,7 @@ class DataLayerWallet:
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=in_transaction
             )
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
@@ -537,7 +502,10 @@ class DataLayerWallet:
             ),
             generation=uint32(singleton_record.generation + 1),
         )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
+        await self.wallet_state_manager.dl_store.add_singleton_record(
+            new_singleton_record,
+            in_transaction=in_transaction,
+        )
         return txs
 
     async def create_report_spend(
@@ -667,7 +635,7 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
+    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
         parent_name = parent_spend.coin.name()
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
@@ -754,10 +722,13 @@ class DataLayerWallet:
                     self.id(),
                 )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
-            await self.potentially_handle_resubmit(singleton_record.launcher_id)
+            await self.wallet_state_manager.add_interested_coin_ids(
+                [new_singleton.name()],
+                in_transaction=in_transaction,
+            )
+            await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
 
-    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
+    async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
@@ -821,9 +792,16 @@ class DataLayerWallet:
                             else:
                                 fee = uint64(0)
 
-                            all_txs.extend(await self.create_update_state_spend(launcher_id, singleton.root, fee))
+                            all_txs.extend(
+                                await self.create_update_state_spend(
+                                    launcher_id,
+                                    singleton.root,
+                                    fee,
+                                    in_transaction=in_transaction,
+                                )
+                            )
                 for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx)
+                    await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=in_transaction)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created

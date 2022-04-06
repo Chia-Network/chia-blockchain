@@ -46,19 +46,31 @@ class KeyValStore:
 
         return object_type.from_bytes(row[1])
 
-    async def set_object(self, key: str, obj: Any):
+    async def set_object(self, key: str, obj: Any, in_transaction=False):
         """
         Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
         """
-        async with self.db_wrapper.lock:
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+
+        try:
             cursor = await self.db_connection.execute(
                 "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
                 (key, bytes(obj)),
             )
             await cursor.close()
-            await self.db_connection.commit()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
-    async def remove_object(self, key: str):
-        cursor = await self.db_connection.execute("DELETE FROM key_val_store where key=?", (key,))
-        await cursor.close()
-        await self.db_connection.commit()
+    async def remove_object(self, key: str, in_transaction=False):
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute("DELETE FROM key_val_store where key=?", (key,))
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()

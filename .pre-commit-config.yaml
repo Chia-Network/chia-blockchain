@@ -49,16 +49,16 @@ repos:
     rev: 21.12b0
     hooks:
     -   id: black
+        additional_dependencies: ['click<8.1']
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
     hooks:
     - id: flake8
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.930
+    rev: v0.940
     hooks:
     - id: mypy
-      # TODO: see note in setup.py about types-click pinning
-      additional_dependencies: [pytest, pytest-asyncio, types-aiofiles, types-click==0.1.12, types-setuptools, types-PyYAML]
+      additional_dependencies: [filelock, pytest, pytest-asyncio, types-aiofiles, types-click, types-setuptools, types-PyYAML]
       # This intentionally counters the settings in mypy.ini to allow a loose local
       # check and a strict CI check. This difference may or may not be retained long
       # term.

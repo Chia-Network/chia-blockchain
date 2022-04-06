@@ -48,6 +48,15 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     show_default=True,
     required=True,
 )
+@click.option(
+    "-l",
+    "--limit",
+    help="Max number of transactions to return",
+    type=int,
+    default=(2 ** 32 - 1),
+    show_default=True,
+    required=False,
+)
 @click.option("--verbose", "-v", count=True, type=int)
 @click.option(
     "--paginate/--no-paginate",
@@ -59,10 +68,11 @@ def get_transactions_cmd(
     fingerprint: int,
     id: int,
     offset: int,
+    limit: int,
     verbose: bool,
     paginate: Optional[bool],
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate}
+    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "limit": limit}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
@@ -230,7 +240,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     required=True,
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the genrated offer file to", required=True)
+@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
 def make_offer_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
