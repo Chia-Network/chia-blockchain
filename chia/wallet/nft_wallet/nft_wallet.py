@@ -466,14 +466,13 @@ class NFTWallet:
     async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = 0) -> SpendBundle:
         trade_price_list_discovered = None
         nft_id = None
-        #breakpoint()
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
                 inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
                 nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-                royalty_address = nft_puzzles.get_royalty_address_from_inner_solution(inner_sol)
-                royalty_percentage = nft_puzzles.get_percentage_from_inner_solution(inner_sol)
+                royalty_address = nft_puzzles.get_royalty_address_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+                royalty_percentage = nft_puzzles.get_percentage_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
 
         assert trade_price_list_discovered is not None
         assert nft_id is not None

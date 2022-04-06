@@ -154,25 +154,33 @@ def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     return None
 
 
-def get_royalty_address_from_inner_solution(solution: Program) -> Program:
+def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Program:
     try:
-        transfer_prog = get_transfer_program_from_inner_solution(solution)
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        royalty_address = curried_args.first().first().as_atom()
-        return royalty_address
+        curried_args = match_nft_puzzle(puzzle)[1]
+        NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash, transfer_program_curry_params, metadata = curried_args
+        return transfer_program_curry_params
     except Exception:
         return None
     return None
 
 
-def get_percentage_from_inner_solution(solution: Program) -> uint64:
+def get_royalty_address_from_puzzle(puzzle: Program) -> bytes32:
     try:
-        transfer_prog = get_transfer_program_from_inner_solution(solution)
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        percentage = curried_args.first().rest().first().as_int()
-        return percentage
+        transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
+        ROYALTY_ADDRESS, TRADE_PRICE_PERCENTAGE, SETTLEMENT_MOD_HASH, CAT_MOD_HASH = transfer_program_curry_params.as_iter()
+        assert ROYALTY_ADDRESS is not None
+        return ROYALTY_ADDRESS.as_atom()
+    except Exception:
+        return None
+    return None
+
+
+def get_percentage_from_puzzle(puzzle: Program) -> uint64:
+    try:
+        transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
+        ROYALTY_ADDRESS, TRADE_PRICE_PERCENTAGE, SETTLEMENT_MOD_HASH, CAT_MOD_HASH = transfer_program_curry_params.as_iter()
+        assert TRADE_PRICE_PERCENTAGE is not None
+        return TRADE_PRICE_PERCENTAGE.as_int()
     except Exception:
         return None
     return None
