@@ -1,3 +1,4 @@
+import os
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
@@ -54,7 +55,7 @@ class DataLayer:
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
-        self.data_layer_server = DataLayerServer(self.config, self.db_path, self.log)
+        self.data_layer_server = DataLayerServer(self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
@@ -113,6 +114,13 @@ class DataLayer:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
         assert transaction_record
+        # Write the server files.
+        server_foldername = self.config.get("server_files_location", "data_layer/db/server_files_location")
+        generation = root.generation
+        filename_full_tree = os.path.join(server_foldername, f"/{generation}.dat")
+        filename_diff_tree = os.path.join(server_foldername, f"/{generation}-delta.dat")
+        await self.data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
+        await self.data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
         return transaction_record
@@ -196,7 +204,7 @@ class DataLayer:
 
         client_download_foldername: str = self.config.get(
             "client_download_location",
-            "data_layer/client_downloaded_files",
+            "data_layer/db/client_downloaded_files",
         )
         downloaded = False
         for ip, port in zip(subscription.ip, subscription.port):
