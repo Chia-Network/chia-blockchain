@@ -1,5 +1,6 @@
 import aiohttp
 import os
+from pathlib import Path
 from typing import List
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,7 +18,7 @@ async def download_delta_files(
     target_generation: int,
     ip: str,
     port: uint16,
-    client_foldername: str,
+    client_foldername: Path,
 ) -> bool:
     while existing_generation + 1 <= target_generation:
         existing_generation += 1
@@ -60,7 +61,7 @@ async def parse_delta_files(
     existing_generation: int,
     target_generation: int,
     root_hashes: List[bytes32],
-    foldername: str,
+    foldername: Path,
 ) -> None:
     for root_hash in root_hashes:
         existing_generation += 1

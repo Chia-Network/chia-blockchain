@@ -55,7 +55,15 @@ class DataLayer:
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
-        self.data_layer_server = DataLayerServer(self.config, self.log)
+        server_files_replaced: str = config["server_files_location"].replace("CHALLENGE", config["selected_network"])
+        self.server_files_location = path_from_root(root_path, server_files_replaced)
+        client_download_replaced: str = config["client_download_location"].replace(
+            "CHALLENGE", config["selected_network"]
+        )
+        self.client_download_location = path_from_root(root_path, client_download_replaced)
+        mkdir(self.server_files_location)
+        mkdir(self.client_download_location)
+        self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
@@ -115,10 +123,9 @@ class DataLayer:
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
         assert transaction_record
         # Write the server files.
-        server_foldername = self.config.get("server_files_location", "data_layer/db/server_files_location")
         generation = root.generation
-        filename_full_tree = os.path.join(server_foldername, f"/{generation}.dat")
-        filename_diff_tree = os.path.join(server_foldername, f"/{generation}-delta.dat")
+        filename_full_tree = os.path.join(self.server_files_location, f"/{generation}.dat")
+        filename_diff_tree = os.path.join(self.server_files_location, f"/{generation}-delta.dat")
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
         # todo register callback to change status in data store
@@ -202,10 +209,6 @@ class DataLayer:
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        client_download_foldername: str = self.config.get(
-            "client_download_location",
-            "data_layer/db/client_downloaded_files",
-        )
         downloaded = False
         for ip, port in zip(subscription.ip, subscription.port):
             try:
@@ -215,7 +218,7 @@ class DataLayer:
                     singleton_record.generation,
                     ip,
                     port,
-                    client_download_foldername,
+                    self.client_download_location,
                 )
                 if downloaded:
                     break
@@ -241,7 +244,7 @@ class DataLayer:
                 int(wallet_current_generation),
                 singleton_record.generation,
                 [record.root for record in to_check],
-                client_download_foldername,
+                self.client_download_location,
             )
         except Exception as e:
             self.log.error(f"Can't find on-chain hash in our local store. {type(e)} {e}")

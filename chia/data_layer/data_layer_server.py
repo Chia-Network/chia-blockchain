@@ -1,13 +1,16 @@
 import os
 import logging
 from typing import Any, Dict, Optional
+from pathlib import Path
 from aiohttp import web
 from dataclasses import dataclass
 from chia.server.upnp import UPnP
+from chia.util.path import path_from_root
 
 
 @dataclass
 class DataLayerServer:
+    root_path: Path
     config: Dict[str, Any]
     log: logging.Logger
 
@@ -19,8 +22,13 @@ class DataLayerServer:
         self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
         self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
 
+        server_files_replaced: str = self.config["server_files_location"].replace(
+            "CHALLENGE", self.config["selected_network"]
+        )
+        self.server_dir = path_from_root(self.root_path, server_files_replaced)
+
         app = web.Application()
-        app.add_routes([web.get("/", self.file_handler)])
+        app.add_routes([web.get("/{filename}", self.file_handler)])
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.port)
@@ -35,9 +43,9 @@ class DataLayerServer:
         self.log.info("Stopped Data Layer Server.")
         await self.runner.cleanup()
 
-    async def file_handler(self, filename: str) -> Optional[web.Response]:
-        file_dir = self.config.get("server_files_location", "data_layer/db/server_files_location")
-        file_path = os.path.join(file_dir, filename)
+    async def file_handler(self, request: web.Request) -> Optional[web.Response]:
+        filename = request.match_info["filename"]
+        file_path = os.path.join(self.server_dir, filename)
         if os.path.exists(file_path):
             with open(file_path, "rb") as reader:
                 content = reader.read()

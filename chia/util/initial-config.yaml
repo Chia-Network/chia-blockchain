@@ -545,9 +545,9 @@ data_layer:
 
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
   # The location where the server files will be stored.
-  server_files_location: "data_layer/db/server_files_location"
+  server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The location where the client will download the files.
-  client_download_location: "data_layer/db/client_downloaded_files"
+  client_download_location: "data_layer/db/client_downloaded_files_CHALLENGE"
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575
