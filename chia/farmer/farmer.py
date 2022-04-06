@@ -140,7 +140,7 @@ class Farmer:
         self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
-        if not self.keychain_proxy:
+        if self.keychain_proxy is None:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
@@ -219,6 +219,7 @@ class Farmer:
             await self.update_pool_state_task
         if self.keychain_proxy is not None:
             await self.keychain_proxy.close()
+            self.keychain_proxy = None
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.started = False
 
