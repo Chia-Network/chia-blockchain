@@ -20,7 +20,7 @@ class DataLayerServer:
         self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
 
         app = web.Application()
-        app.router.add_route("GET", "/", self.file_handler)
+        app.add_routes([web.get("/", self.file_handler)])
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.port)
