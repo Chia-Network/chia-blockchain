@@ -272,7 +272,7 @@ def streamable(cls: Any):
     """
 
     correct_usage_string: str = (
-        "Correct usage is:\n\n@streamable\n@dataclass(frozen=True)\nclass Example(Streamable):\n\t..."
+        "Correct usage is:\n\n@streamable\n@dataclass(frozen=True)\nclass Example(Streamable):\n    ..."
     )
 
     if not dataclasses.is_dataclass(cls):
