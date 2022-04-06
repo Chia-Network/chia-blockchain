@@ -6,7 +6,7 @@ from secrets import token_bytes
 from typing import AsyncGenerator, Optional
 
 from chia.consensus.constants import ConsensusConstants
-from chia.daemon.server import WebSocketServer, create_server_for_daemon, daemon_launch_lock_path, singleton
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
 from chia.server.start_farmer import service_kwargs_for_farmer
 from chia.server.start_full_node import service_kwargs_for_full_node
 from chia.server.start_harvester import service_kwargs_for_harvester
@@ -36,8 +36,8 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     assert lockfile is not None
-    create_server_for_daemon(btools.root_path)
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path)
+    shutdown_event = asyncio.Event()
+    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
     await ws_server.start()
 
     yield ws_server
