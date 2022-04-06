@@ -36,7 +36,7 @@ echo "Timelord requires CMake 3.14+ to compile vdf_client."
 PYTHON_VERSION=$(python -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')
 echo "Python version: $PYTHON_VERSION"
 
-if [ $INSTALL_PYTHON_DEV ]; then
+if [ "$INSTALL_PYTHON_DEV" ]; then
   PYTHON_DEV_DEPENDENCY=lib"$PYTHON_VERSION"-dev
 else
   PYTHON_DEV_DEPENDENCY=
@@ -92,16 +92,16 @@ else
 		# If Ubuntu version is older than 20.04LTS then upgrade CMake
 		ubuntu_cmake_install
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
-		echo apt-get install libgmp-dev libboost-python-dev $PYTHON_DEV_DEPENDENCY libboost-system-dev build-essential -y
-		sudo apt-get install libgmp-dev libboost-python-dev $PYTHON_DEV_DEPENDENCY libboost-system-dev build-essential -y
+		echo apt-get install libgmp-dev libboost-python-dev "$PYTHON_DEV_DEPENDENCY" libboost-system-dev build-essential -y
+		sudo apt-get install libgmp-dev libboost-python-dev "$PYTHON_DEV_DEPENDENCY" libboost-system-dev build-essential -y
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
 	elif [ -e venv/bin/python ] && test $RHEL_BASED; then
 		echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
-		echo yum install gcc gcc-c++ gmp-devel $PYTHON_DEV_DEPENDENCY libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
-		sudo yum install gcc gcc-c++ gmp-devel $PYTHON_DEV_DEPENDENCY libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
+		echo yum install gcc gcc-c++ gmp-devel "$PYTHON_DEV_DEPENDENCY" libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
+		sudo yum install gcc gcc-c++ gmp-devel "$PYTHON_DEV_DEPENDENCY" libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 -y
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		symlink_vdf_bench "$PYTHON_VERSION"
