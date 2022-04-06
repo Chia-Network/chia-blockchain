@@ -1,6 +1,5 @@
 import asyncio
 import collections
-import dataclasses
 import logging
 from concurrent.futures import Executor
 from multiprocessing.context import BaseContext
@@ -34,7 +33,6 @@ from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
 from chia.util.setproctitle import getproctitle, setproctitle
-from chia.util.streamable import recurse_jsonify
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 
 log = logging.getLogger(__name__)
@@ -91,7 +89,6 @@ class MempoolManager:
         single_threaded: bool = False,
     ):
         self.constants: ConsensusConstants = consensus_constants
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}

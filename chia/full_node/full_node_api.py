@@ -1320,12 +1320,11 @@ class FullNodeAPI:
 
         header_hashes: List[bytes32] = []
         for i in range(request.start_height, request.end_height + 1):
-            if not self.full_node.blockchain.contains_height(uint32(i)):
+            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+            if header_hash is None:
                 reject = RejectHeaderBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
                 return msg
-            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
-            assert header_hash is not None
             header_hashes.append(header_hash)
 
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
