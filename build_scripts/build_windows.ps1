@@ -26,7 +26,7 @@ else
 Write-Output "   ---"
 Write-Output "Create venv - python3.9 is required in PATH"
 Write-Output "   ---"
-.\Install.ps1
+.\Install.ps1 -d
 . .\venv\Scripts\Activate.ps1
 
 
