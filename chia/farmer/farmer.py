@@ -212,14 +212,15 @@ class Farmer:
     def _close(self):
         self._shut_down = True
 
-    async def _await_closed(self):
+    async def _await_closed(self, shutting_down: bool = True):
         if self.cache_clear_task is not None:
             await self.cache_clear_task
         if self.update_pool_state_task is not None:
             await self.update_pool_state_task
-        if self.keychain_proxy is not None:
-            await self.keychain_proxy.close()
+        if shutting_down and self.keychain_proxy is not None:
+            proxy = self.keychain_proxy
             self.keychain_proxy = None
+            await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.started = False
 

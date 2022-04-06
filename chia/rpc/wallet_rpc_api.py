@@ -157,7 +157,7 @@ class WalletRpcApi:
         """
         if self.service is not None:
             self.service._close()
-            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed()
+            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
             if peers_close_task is not None:
                 await peers_close_task
 

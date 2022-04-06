@@ -259,7 +259,7 @@ class WalletNode:
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
-    async def _await_closed(self):
+    async def _await_closed(self, shutting_down: bool = True):
         self.log.info("self._await_closed")
 
         if self.server is not None:
@@ -269,9 +269,10 @@ class WalletNode:
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
             self.wallet_state_manager = None
-        if self.keychain_proxy is not None:
-            await self.keychain_proxy.close()
+        if shutting_down and self.keychain_proxy is not None:
+            proxy = self.keychain_proxy
             self.keychain_proxy = None
+            await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.logged_in = False
         self.wallet_peers = None
