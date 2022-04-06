@@ -3,7 +3,7 @@ import aiosqlite
 import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, Any
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Any
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -22,8 +22,6 @@ from chia.data_layer.data_layer_types import (
     Side,
     TerminalNode,
     Status,
-    InsertionData,
-    DeletionData,
     Subscription,
     DiffData,
     OperationType,
@@ -1068,74 +1066,6 @@ class DataStore:
                 node_hash = node.left_hash
         return nodes
 
-    # Returns the operation that got us from `root_hash_1` to `root_hash_2`.
-    async def get_single_operation(
-        self,
-        root_hash_begin: Optional[bytes32],
-        root_hash_end: Optional[bytes32],
-        root_status: Status,
-        *,
-        lock: bool = False,
-    ) -> Union[InsertionData, DeletionData]:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            if root_hash_begin is None:
-                assert root_hash_end is not None
-                node = await self.get_node(root_hash_end, lock=False)
-                assert isinstance(node, TerminalNode)
-                return InsertionData(node.hash, node.key, node.value, None, None, root_status)
-            if root_hash_end is None:
-                assert root_hash_begin is not None
-                node = await self.get_node(root_hash_begin, lock=False)
-                assert isinstance(node, TerminalNode)
-                return DeletionData(None, node.key, root_status)
-            copy_root_hash_end = root_hash_end
-            while True:
-                node_1 = await self.get_node(root_hash_begin, lock=False)
-                node_2 = await self.get_node(root_hash_end, lock=False)
-                if isinstance(node_1, TerminalNode):
-                    assert isinstance(node_2, InternalNode)
-                    if node_2.left_hash == node_1.hash:
-                        new_terminal_node = await self.get_node(node_2.right_hash, lock=False)
-                        side = Side.RIGHT
-                    else:
-                        assert node_2.right_hash == node_1.hash
-                        new_terminal_node = await self.get_node(node_2.left_hash, lock=False)
-                        side = Side.LEFT
-                    reference_node_hash = node_1.hash
-                    assert isinstance(new_terminal_node, TerminalNode)
-                    return InsertionData(
-                        copy_root_hash_end,
-                        new_terminal_node.key,
-                        new_terminal_node.value,
-                        reference_node_hash,
-                        side,
-                        root_status,
-                    )
-                elif isinstance(node_2, TerminalNode):
-                    assert isinstance(node_1, InternalNode)
-                    if node_1.left_hash == node_2.hash:
-                        new_terminal_node = await self.get_node(node_1.right_hash, lock=False)
-                    else:
-                        assert node_1.right_hash == node_2.hash
-                        new_terminal_node = await self.get_node(node_1.left_hash, lock=False)
-                    assert isinstance(new_terminal_node, TerminalNode)
-                    return DeletionData(copy_root_hash_end, new_terminal_node.key, root_status)
-                else:
-                    if node_1.left_hash == node_2.left_hash:
-                        root_hash_begin = node_1.right_hash
-                        root_hash_end = node_2.right_hash
-                    elif node_1.right_hash == node_2.right_hash:
-                        root_hash_begin = node_1.left_hash
-                        root_hash_end = node_2.left_hash
-                    else:
-                        assert node_1.left_hash == node_2.hash or node_1.right_hash == node_2.hash
-                        if node_1.left_hash == node_2.hash:
-                            new_terminal_node = await self.get_node(node_1.right_hash, lock=False)
-                        else:
-                            new_terminal_node = await self.get_node(node_1.left_hash, lock=False)
-                        assert isinstance(new_terminal_node, TerminalNode)
-                        return DeletionData(copy_root_hash_end, new_terminal_node.key, root_status)
-
     async def insert_batch_for_generation(
         self,
         batch: List[Tuple[NodeType, str, str]],
@@ -1158,37 +1088,6 @@ class DataStore:
             await self._insert_root(tree_id, root_hash, Status.COMMITTED, generation)
             for left_hash, right_hash, tree_id in insert_ancestors_cache:
                 await self._insert_ancestor_table(left_hash, right_hash, tree_id, generation)
-
-    async def get_operations(
-        self,
-        tree_id: bytes32,
-        generation_begin: int,
-        max_generation: int,
-        num_generations: int = 10000000,
-        *,
-        lock: bool = True,
-    ) -> List[Union[InsertionData, DeletionData]]:
-        result: List[Union[InsertionData, DeletionData]] = []
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            query_generation_begin = max(generation_begin - 1, 0)
-            query_generation_end = min(
-                generation_begin + num_generations, await self.get_tree_generation(tree_id=tree_id, lock=False) + 1
-            )
-            query_generation_end = min(query_generation_end, max_generation + 1)
-            roots = await self.get_roots_between(tree_id, query_generation_begin, query_generation_end, lock=False)
-            previous_root = None
-            for current_root in roots:
-                if previous_root is None:
-                    previous_root = current_root
-                    continue
-                else:
-                    operation = await self.get_single_operation(
-                        previous_root.node_hash, current_root.node_hash, current_root.status, lock=False
-                    )
-                    result.append(operation)
-                previous_root = current_root
-
-        return result
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):

@@ -19,8 +19,6 @@ from chia.data_layer.data_layer_types import (
     Status,
     InternalNode,
     TerminalNode,
-    InsertionData,
-    DeletionData,
     OperationType,
     DiffData,
 )
@@ -987,71 +985,6 @@ async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -
         bytes32.from_hexstr("50e2f97295de32c7b0eaea32bf1969ceab2e4645b17882e8f1080d143aa262ab"),
     ]
     assert [node.hash for node in all_nodes] == expected_nodes
-
-
-@pytest.mark.asyncio
-async def test_get_operation_1(data_store: DataStore, tree_id: bytes32) -> None:
-    key = b"\x01\x02"
-    value = b"abc"
-
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    root = await data_store.get_tree_root(tree_id)
-    status = Status.COMMITTED
-    operation = await data_store.get_single_operation(None, root.node_hash, status)
-    assert isinstance(operation, InsertionData)
-    assert operation.key == b"\x01\x02"
-    assert operation.value == b"abc"
-
-    await data_store.delete(key=key, tree_id=tree_id)
-    root_2 = await data_store.get_tree_root(tree_id)
-    operation_2 = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
-    assert isinstance(operation_2, DeletionData)
-    assert operation_2.key == b"\x01\x02"
-
-
-@pytest.mark.asyncio
-async def test_get_operation_2(data_store: DataStore, tree_id: bytes32) -> None:
-    key = b"\x01\x02"
-    value = b"abc"
-
-    example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
-    terminal_hash = example.terminal_nodes[0]
-    root = await data_store.get_tree_root(tree_id)
-    status = Status.COMMITTED
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=terminal_hash, side=Side.LEFT)
-
-    root_2 = await data_store.get_tree_root(tree_id)
-    operation = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
-    assert isinstance(operation, InsertionData)
-    assert operation.key == b"\x01\x02"
-    assert operation.value == b"abc"
-
-    await data_store.delete(key=key, tree_id=tree_id)
-    root_3 = await data_store.get_tree_root(tree_id)
-    operation_2 = await data_store.get_single_operation(root_2.node_hash, root_3.node_hash, status)
-    assert isinstance(operation_2, DeletionData)
-    assert operation_2.key == b"\x01\x02"
-
-
-@pytest.mark.asyncio
-async def test_get_operation_3(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_0123_example(data_store, tree_id)
-    root = await data_store.get_tree_root(tree_id)
-    status = Status.COMMITTED
-
-    await data_store.delete(key=b"\x00", tree_id=tree_id)
-    root_2 = await data_store.get_tree_root(tree_id)
-    operation = await data_store.get_single_operation(root.node_hash, root_2.node_hash, status)
-    assert isinstance(operation, DeletionData)
-    assert operation.key == b"\x00"
-
-    # Test the special case where both left and right hashes are different within a diff.
-    # This should happen only if deleted subtree has only 1 node and its connected to the root.
-    await data_store.delete(key=b"\x01", tree_id=tree_id)
-    root_3 = await data_store.get_tree_root(tree_id)
-    operation_2 = await data_store.get_single_operation(root_2.node_hash, root_3.node_hash, status)
-    assert isinstance(operation_2, DeletionData)
-    assert operation_2.key == b"\x01"
 
 
 @pytest.mark.asyncio

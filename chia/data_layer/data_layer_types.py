@@ -172,23 +172,6 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 
 
 @dataclass(frozen=True)
-class InsertionData:
-    hash: bytes32
-    key: bytes
-    value: bytes
-    reference_node_hash: Optional[bytes32]
-    side: Optional[Side]
-    root_status: Status
-
-
-@dataclass(frozen=True)
-class DeletionData:
-    hash: Optional[bytes32]
-    key: bytes
-    root_status: Status
-
-
-@dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
     ip: List[str]
