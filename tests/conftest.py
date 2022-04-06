@@ -206,9 +206,9 @@ async def five_nodes(db_version, self_hostname):
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(bt):
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -343,6 +343,66 @@ async def wallet_and_node():
         yield _
 
 
+@pytest_asyncio.fixture(scope="function")
+async def one_node_one_block(bt, wallet_a):
+    async_gen = setup_simulators_and_wallets(1, 0, {})
+    nodes, _ = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    server_1 = full_node_1.full_node.server
+
+    reward_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=reward_ph,
+        pool_reward_puzzle_hash=reward_ph,
+        genesis_timestamp=10000,
+        time_per_block=10,
+    )
+    assert blocks[0].height == 0
+
+    for block in blocks:
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
+
+    yield full_node_1, server_1
+
+    async for _ in async_gen:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes_one_block(bt, wallet_a):
+    async_gen = setup_simulators_and_wallets(2, 0, {})
+    nodes, _ = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+
+    reward_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=reward_ph,
+        pool_reward_puzzle_hash=reward_ph,
+        genesis_timestamp=10000,
+        time_per_block=10,
+    )
+    assert blocks[0].height == 0
+
+    for block in blocks:
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
+
+    yield full_node_1, full_node_2, server_1, server_2
+
+    async for _ in async_gen:
+        yield _
+
+
 # TODO: Ideally, the db_version should be the (parameterized) db_version
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
@@ -448,34 +508,6 @@ async def timelord(bt):
     rpc_port = find_available_listen_port("rpc")
     vdf_port = find_available_listen_port("vdf")
     async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="module")
-async def two_nodes_mempool(bt, wallet_a):
-    async_gen = setup_simulators_and_wallets(2, 1, {})
-    nodes, _ = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-
-    reward_ph = wallet_a.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-    )
-
-    for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
-
-    yield full_node_1, full_node_2, server_1, server_2
-
-    async for _ in async_gen:
         yield _
 
 
