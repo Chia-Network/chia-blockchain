@@ -1,5 +1,6 @@
 import asyncio
 import concurrent
+import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
@@ -43,6 +44,9 @@ class Harvester:
                 "`harvester.plot_loading_frequency_seconds` is deprecated. Consider replacing it with the new section "
                 "`harvester.plots_refresh_parameter`. See `initial-config.yaml`."
             )
+            refresh_parameter = dataclasses.replace(
+                refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
+            )
         if "plots_refresh_parameter" in config:
             refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
 
@@ -60,7 +64,7 @@ class Harvester:
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
-        self.event_loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.get_running_loop()
 
     def _close(self):
         self._is_shutdown = True
@@ -78,13 +82,15 @@ class Harvester:
             self.state_changed_callback(change)
 
     def _plot_refresh_callback(self, event: PlotRefreshEvents, update_result: PlotRefreshResult):
-        self.log.info(
-            f"refresh_batch: event {event.name}, loaded {update_result.loaded}, "
-            f"removed {update_result.removed}, processed {update_result.processed}, "
+        log_function = self.log.debug if event != PlotRefreshEvents.done else self.log.info
+        log_function(
+            f"_plot_refresh_callback: event {event.name}, loaded {len(update_result.loaded)}, "
+            f"removed {len(update_result.removed)}, processed {update_result.processed}, "
             f"remaining {update_result.remaining}, "
-            f"duration: {update_result.duration:.2f} seconds"
+            f"duration: {update_result.duration:.2f} seconds, "
+            f"total plots: {len(self.plot_manager.plots)}"
         )
-        if update_result.loaded > 0:
+        if len(update_result.loaded) > 0:
             self.event_loop.call_soon_threadsafe(self._state_changed, "plots")
 
     def on_disconnect(self, connection: ws.WSChiaConnection):

@@ -1,5 +1,5 @@
 ; build a pay-to delegated puzzle or hidden puzzle
-; coins can be unliked by signing a delegated puzzle and its solution
+; coins can be unlocked by signing a delegated puzzle and its solution
 ; OR by revealing the hidden puzzle and the underlying original key
 
 ; glossary of parameter names:

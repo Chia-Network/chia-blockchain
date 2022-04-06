@@ -3,6 +3,7 @@ import logging
 import pathlib
 import signal
 import time
+import os
 from typing import Dict, List, Optional
 
 import pkg_resources
@@ -82,21 +83,19 @@ async def spawn_all_processes(config: Dict, net_config: Dict):
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
+    if process_count == 0:
+        log.info("Process_count set to 0, stopping TLauncher.")
+        return
     awaitables = [spawn_process(hostname, port, i, net_config.get("prefer_ipv6")) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
-def main():
-    root_path = DEFAULT_ROOT_PATH
-    setproctitle("chia_timelord_launcher")
-    net_config = load_config(root_path, "config.yaml")
-    config = net_config["timelord_launcher"]
-    initialize_logging("TLauncher", config["logging"], root_path)
+def signal_received():
+    asyncio.create_task(kill_processes())
 
-    def signal_received():
-        asyncio.create_task(kill_processes())
 
-    loop = asyncio.get_event_loop()
+async def async_main(config, net_config):
+    loop = asyncio.get_running_loop()
 
     try:
         loop.add_signal_handler(signal.SIGINT, signal_received)
@@ -105,10 +104,22 @@ def main():
         log.info("signal handlers unsupported")
 
     try:
-        loop.run_until_complete(spawn_all_processes(config, net_config))
+        await spawn_all_processes(config, net_config)
     finally:
         log.info("Launcher fully closed.")
-        loop.close()
+
+
+def main():
+    if os.name == "nt":
+        log.info("Timelord launcher not supported on Windows.")
+        return
+    root_path = DEFAULT_ROOT_PATH
+    setproctitle("chia_timelord_launcher")
+    net_config = load_config(root_path, "config.yaml")
+    config = net_config["timelord_launcher"]
+    initialize_logging("TLauncher", config["logging"], root_path)
+
+    asyncio.run(async_main(config=config, net_config=net_config))
 
 
 if __name__ == "__main__":

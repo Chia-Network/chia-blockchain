@@ -9,6 +9,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
 
 
@@ -70,7 +71,9 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
+        )
 
         await self.db_connection.commit()
         self.tx_record_cache = {}
@@ -141,6 +144,17 @@ class WalletTransactionStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
+    async def delete_transaction_record(self, tx_id: bytes32) -> None:
+        if tx_id in self.tx_record_cache:
+            tx_record = self.tx_record_cache.pop(tx_id)
+            if tx_record.wallet_id in self.unconfirmed_for_wallet:
+                tx_cache = self.unconfirmed_for_wallet[tx_record.wallet_id]
+                if tx_id in tx_cache:
+                    tx_cache.pop(tx_id)
+
+        c = await self.db_connection.execute("DELETE FROM transaction_record WHERE bundle_id=?", (tx_id,))
+        await c.close()
+
     async def set_confirmed(self, tx_id: bytes32, height: uint32):
         """
         Updates transaction to be confirmed.
@@ -163,9 +177,10 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
         await self.add_transaction_record(tx, True)
 
@@ -213,15 +228,16 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
+            memos=current.memos,
         )
 
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord):
+    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -238,11 +254,12 @@ class WalletTransactionStore:
             removals=record.removals,
             wallet_id=record.wallet_id,
             sent_to=[],
-            trade_id=None,
+            trade_id=record.trade_id,
             type=record.type,
             name=record.name,
+            memos=record.memos,
         )
-        await self.add_transaction_record(tx, True)
+        await self.add_transaction_record(tx, in_transaction=in_transaction)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -334,45 +351,34 @@ class WalletTransactionStore:
             return []
 
     async def get_transactions_between(
-        self, wallet_id: int, start, end, newest_first: bool, version: int
+        self, wallet_id: int, start, end, sort_key=None, reverse=False, to_puzzle_hash: Optional[bytes32] = None
     ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
 
-        # use rowid as additional order by ensures that the returned list is deterministic
-        # otherwise rows with the same height could be returned in a different order
-
-        # Version 1 and Version 2 queries do not return the same data due to sorting and ordering differences
-        if version == 1:
-            cursor = await self.db_connection.execute(
-                (
-                    "SELECT * from transaction_record where wallet_id=? and confirmed_at_height not in"
-                    " (select confirmed_at_height from transaction_record order by confirmed_at_height"
-                    " ASC LIMIT ?) order by confirmed_at_height DESC LIMIT ?"
-                ),
-                (
-                    wallet_id,
-                    start,
-                    limit,
-                ),
-            )
+        if to_puzzle_hash is None:
+            puzz_hash_where = ""
         else:
-            if newest_first:
-                sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
-            else:
-                sortstring = " order by confirmed_at_height, rowid"
+            puzz_hash_where = f' and to_puzzle_hash="{to_puzzle_hash.hex()}"'
 
-            cursor = await self.db_connection.execute(
-                f"SELECT * from transaction_record where wallet_id=? {sortstring} LIMIT ?,?",
-                (
-                    wallet_id,
-                    start,
-                    limit,
-                ),
-            )
+        if sort_key is None:
+            sort_key = "CONFIRMED_AT_HEIGHT"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
 
+        if reverse:
+            query_str = SortKey[sort_key].descending()
+        else:
+            query_str = SortKey[sort_key].ascending()
+
+        cursor = await self.db_connection.execute(
+            f"SELECT * from transaction_record where wallet_id=?{puzz_hash_where}"
+            f" {query_str}, rowid"
+            f" LIMIT {start}, {limit}",
+            (wallet_id,),
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -380,9 +386,6 @@ class WalletTransactionStore:
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
-
-        if version == 1:
-            records.reverse()  # This doesn't seem logical but leaving in for compatibility
 
         return records
 
@@ -399,32 +402,36 @@ class WalletTransactionStore:
         return count
 
     async def get_all_transactions_for_wallet(
-        self, wallet_id: int, type: int = None, newest_first: bool = True, version: int = 1
+        self, wallet_id: int, type: int = None, sort_key: Optional[str] = None, reverse=False
     ) -> List[TransactionRecord]:
         """
         Returns all stored transactions.
         """
-        if version == 1:
-            sortstring = ""
+
+        if sort_key is None:
+            sort_key = "CONFIRMED_AT_HEIGHT"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
+
+        if reverse:
+            query_str = SortKey[sort_key].descending()
         else:
-            if newest_first:
-                sortstring = " order by confirmed ASC, confirmed_at_height DESC, rowid"
-            else:
-                sortstring = " order by confirmed DESC, confirmed_at_height, rowid"
+            query_str = SortKey[sort_key].ascending()
 
         if type is None:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=?" + sortstring,
+                f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid",
                 (wallet_id,),
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from transaction_record where wallet_id=? and type=?" + sortstring,
+                f"SELECT * from transaction_record where wallet_id=? and type=?" f" {query_str}, rowid",
                 (
                     wallet_id,
                     type,
                 ),
             )
+
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -468,6 +475,18 @@ class WalletTransactionStore:
 
         return records
 
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
     async def rollback_to_block(self, height: int):
         # Delete from storage
         to_delete = []
@@ -476,7 +495,7 @@ class WalletTransactionStore:
                 to_delete.append(tx)
         for tx in to_delete:
             self.tx_record_cache.pop(tx.name)
-
+        self.tx_submitted = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
 

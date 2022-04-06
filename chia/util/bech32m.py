@@ -22,7 +22,7 @@
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
 
 """Reference implementation for Bech32m and segwit addresses."""
-from typing import List, Optional, Tuple
+from typing import List, Iterable, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -65,13 +65,13 @@ def bech32_encode(hrp: str, data: List[int]) -> str:
     return hrp + "1" + "".join([CHARSET[d] for d in combined])
 
 
-def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
+def bech32_decode(bech: str, max_length: int = 90) -> Tuple[Optional[str], Optional[List[int]]]:
     """Validate a Bech32 string, and determine HRP and data."""
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):
         return (None, None)
     bech = bech.lower()
     pos = bech.rfind("1")
-    if pos < 1 or pos + 7 > len(bech) or len(bech) > 90:
+    if pos < 1 or pos + 7 > len(bech) or len(bech) > max_length:
         return (None, None)
     if not all(x in CHARSET for x in bech[pos + 1 :]):
         return (None, None)
@@ -82,7 +82,7 @@ def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
     return hrp, data[:-6]
 
 
-def convertbits(data: List[int], frombits: int, tobits: int, pad: bool = True) -> List[int]:
+def convertbits(data: Iterable[int], frombits: int, tobits: int, pad: bool = True) -> List[int]:
     """General power-of-2 base conversion."""
     acc = 0
     bits = 0
@@ -115,5 +115,5 @@ def decode_puzzle_hash(address: str) -> bytes32:
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
-    decoded_bytes = bytes(decoded)
+    decoded_bytes = bytes32(decoded)
     return decoded_bytes

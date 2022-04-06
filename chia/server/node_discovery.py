@@ -27,6 +27,7 @@ MAX_CONCURRENT_OUTBOUND_CONNECTIONS = 70
 NETWORK_ID_DEFAULT_PORTS = {
     "mainnet": 8444,
     "testnet7": 58444,
+    "testnet10": 58444,
     "testnet8": 58445,
 }
 
@@ -707,7 +708,7 @@ class WalletPeers(FullNodeDiscovery):
         )
 
     async def start(self) -> None:
-        self.initial_wait = 60
+        self.initial_wait = 1
         await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         await self.start_tasks()

@@ -1,70 +1,199 @@
-import asyncio
-import logging
-from typing import List
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, List, Optional, cast
+from unittest.mock import MagicMock
 
 import pytest
-from blspy import PrivateKey
+from blspy import G1Element
 
+from benchmarks.utils import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import PoolState, FARMING_TO_POOL
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.coin_spend import CoinSpend
-from chia.types.full_block import FullBlock
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
-from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk
-from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-log = logging.getLogger(__name__)
+@dataclass
+class MockStandardWallet:
+    canned_puzzlehash: bytes32
+
+    async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
+        return self.canned_puzzlehash
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+@dataclass
+class MockWalletStateManager:
+    root_path: Optional[Path] = None
 
 
-class TestPoolWallet2:
-    @pytest.fixture(scope="function")
-    async def one_wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
+@dataclass
+class MockPoolWalletConfig:
+    launcher_id: bytes32
+    pool_url: str
+    payout_instructions: str
+    target_puzzle_hash: bytes32
+    p2_singleton_puzzle_hash: bytes32
+    owner_public_key: G1Element
 
-    @pytest.mark.asyncio
-    async def test_create_new_pool_wallet(self, one_wallet_node):
-        full_nodes, wallets = one_wallet_node
-        full_node_api = full_nodes[0]
-        full_node_server = full_node_api.server
-        wallet_node_0, wallet_server_0 = wallets[0]
-        wsm: WalletStateManager = wallet_node_0.wallet_state_manager
 
-        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        ph = await wallet_0.get_new_puzzlehash()
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+@dataclass
+class MockPoolState:
+    pool_url: Optional[str]
+    target_puzzle_hash: bytes32
+    owner_pubkey: G1Element
 
-        for i in range(3):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        all_blocks: List[FullBlock] = await full_node_api.get_all_full_blocks()
-        h: uint32 = all_blocks[-1].height
+@dataclass
+class MockPoolWalletInfo:
+    launcher_id: bytes32
+    p2_singleton_puzzle_hash: bytes32
+    current: MockPoolState
 
-        await asyncio.sleep(3)
-        owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(wsm.private_key, 3)
-        initial_state = PoolState(1, FARMING_TO_POOL, ph, owner_sk.get_g1(), "pool.com", uint32(10))
-        tx_record, _, _ = await PoolWallet.create_new_pool_wallet_transaction(wsm, wallet_0, initial_state)
 
-        launcher_spend: CoinSpend = tx_record.spend_bundle.coin_spends[1]
+@pytest.mark.asyncio
+async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
+    """
+    Test that PoolWallet can create a new pool config
+    """
 
-        async with wsm.db_wrapper.lock:
-            pw = await PoolWallet.create(
-                wsm, wallet_0, launcher_spend.coin.name(), tx_record.spend_bundle.coin_spends, h, True
-            )
+    updated_configs: List[MockPoolWalletConfig] = []
+    payout_instructions_ph = rand_hash()
+    launcher_id: bytes32 = rand_hash()
+    p2_singleton_puzzle_hash: bytes32 = rand_hash()
+    pool_url: str = ""
+    target_puzzle_hash: bytes32 = rand_hash()
+    owner_pubkey: G1Element = rand_g1()
+    current: MockPoolState = MockPoolState(
+        pool_url=pool_url,
+        target_puzzle_hash=target_puzzle_hash,
+        owner_pubkey=owner_pubkey,
+    )
+    current_state: MockPoolWalletInfo = MockPoolWalletInfo(
+        launcher_id=launcher_id,
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+        current=current,
+    )
 
-        log.warning(await pw.get_current_state())
+    # No config data
+    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
+        return []
 
-        # Claim rewards
-        # Escape pool
-        # Claim rewards
-        # Self pool
+    monkeypatch.setattr("chia.pools.pool_wallet.load_pool_config", mock_load_pool_config)
+
+    # Mock pool_config.update_pool_config to capture the updated configs
+    async def mock_pool_config_update_pool_config(
+        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
+    ) -> None:
+        nonlocal updated_configs
+        updated_configs = pool_config_list
+
+    monkeypatch.setattr("chia.pools.pool_wallet.update_pool_config", mock_pool_config_update_pool_config)
+
+    # Mock PoolWallet.get_current_state to return our canned state
+    async def mock_get_current_state(self: Any) -> Any:
+        return current_state
+
+    monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
+
+    # Create an empty PoolWallet and populate only the required fields
+    wallet = PoolWallet()
+    # We need a standard wallet to provide a puzzlehash
+    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
+    # We need a wallet state manager to hold a root_path member
+    wallet.wallet_state_manager = MockWalletStateManager()
+    # We need a log object, but we don't care about how it's used
+    wallet.log = MagicMock()
+
+    await wallet.update_pool_config()
+
+    assert len(updated_configs) == 1
+    assert updated_configs[0].launcher_id == launcher_id
+    assert updated_configs[0].pool_url == pool_url
+    assert updated_configs[0].payout_instructions == payout_instructions_ph.hex()
+    assert updated_configs[0].target_puzzle_hash == target_puzzle_hash
+    assert updated_configs[0].p2_singleton_puzzle_hash == p2_singleton_puzzle_hash
+    assert updated_configs[0].owner_public_key == owner_pubkey
+
+
+@pytest.mark.asyncio
+async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any) -> None:
+    """
+    Test that PoolWallet will retain existing payout_instructions when updating the pool config.
+    """
+
+    updated_configs: List[MockPoolWalletConfig] = []
+    payout_instructions_ph = rand_hash()
+    launcher_id: bytes32 = rand_hash()
+    p2_singleton_puzzle_hash: bytes32 = rand_hash()
+    pool_url: str = "https://fake.pool.url"
+    target_puzzle_hash: bytes32 = rand_hash()
+    owner_pubkey: G1Element = rand_g1()
+    current: MockPoolState = MockPoolState(
+        pool_url=pool_url,
+        target_puzzle_hash=target_puzzle_hash,
+        owner_pubkey=owner_pubkey,
+    )
+    current_state: MockPoolWalletInfo = MockPoolWalletInfo(
+        launcher_id=launcher_id,
+        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash,
+        current=current,
+    )
+
+    # Existing config data with different values
+    # payout_instructions should _NOT_ be updated after calling update_pool_config
+    existing_launcher_id: bytes32 = launcher_id
+    existing_pool_url: str = ""
+    existing_payout_instructions_ph: bytes32 = rand_hash()
+    existing_target_puzzle_hash: bytes32 = rand_hash()
+    existing_p2_singleton_puzzle_hash: bytes32 = rand_hash()
+    existing_owner_pubkey: G1Element = rand_g1()
+    existing_config: MockPoolWalletConfig = MockPoolWalletConfig(
+        launcher_id=existing_launcher_id,
+        pool_url=existing_pool_url,
+        payout_instructions=existing_payout_instructions_ph.hex(),
+        target_puzzle_hash=existing_target_puzzle_hash,
+        p2_singleton_puzzle_hash=existing_p2_singleton_puzzle_hash,
+        owner_public_key=existing_owner_pubkey,
+    )
+
+    # No config data
+    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
+        nonlocal existing_config
+        return [existing_config]
+
+    monkeypatch.setattr("chia.pools.pool_wallet.load_pool_config", mock_load_pool_config)
+
+    # Mock pool_config.update_pool_config to capture the updated configs
+    async def mock_pool_config_update_pool_config(
+        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
+    ) -> None:
+        nonlocal updated_configs
+        updated_configs = pool_config_list
+
+    monkeypatch.setattr("chia.pools.pool_wallet.update_pool_config", mock_pool_config_update_pool_config)
+
+    # Mock PoolWallet.get_current_state to return our canned state
+    async def mock_get_current_state(self: Any) -> Any:
+        return current_state
+
+    monkeypatch.setattr(PoolWallet, "get_current_state", mock_get_current_state)
+
+    # Create an empty PoolWallet and populate only the required fields
+    wallet = PoolWallet()
+    # We need a standard wallet to provide a puzzlehash
+    wallet.standard_wallet = cast(Any, MockStandardWallet(canned_puzzlehash=payout_instructions_ph))
+    # We need a wallet state manager to hold a root_path member
+    wallet.wallet_state_manager = MockWalletStateManager()
+    # We need a log object, but we don't care about how it's used
+    wallet.log = MagicMock()
+
+    await wallet.update_pool_config()
+
+    assert len(updated_configs) == 1
+    assert updated_configs[0].launcher_id == launcher_id
+    assert updated_configs[0].pool_url == pool_url
+
+    # payout_instructions should still point to existing_payout_instructions_ph
+    assert updated_configs[0].payout_instructions == existing_payout_instructions_ph.hex()
+
+    assert updated_configs[0].target_puzzle_hash == target_puzzle_hash
+    assert updated_configs[0].p2_singleton_puzzle_hash == p2_singleton_puzzle_hash
+    assert updated_configs[0].owner_public_key == owner_pubkey

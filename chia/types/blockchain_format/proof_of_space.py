@@ -28,6 +28,7 @@ class ProofOfSpace(Streamable):
     def get_plot_id(self) -> bytes32:
         assert self.pool_public_key is None or self.pool_contract_puzzle_hash is None
         if self.pool_public_key is None:
+            assert self.pool_contract_puzzle_hash is not None
             return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)
         return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
