@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from pathlib import Path
 from aiohttp import web
 from dataclasses import dataclass
@@ -43,7 +43,7 @@ class DataLayerServer:
         self.log.info("Stopped Data Layer Server.")
         await self.runner.cleanup()
 
-    async def file_handler(self, request: web.Request) -> Optional[web.Response]:
+    async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
         file_path = os.path.join(self.server_dir, filename)
         if os.path.exists(file_path):
@@ -56,7 +56,5 @@ class DataLayerServer:
                     body=content,
                 )
                 return response
-            else:
-                return None
-        else:
-            return None
+
+        raise RuntimeError("Couldn't find the file.")
