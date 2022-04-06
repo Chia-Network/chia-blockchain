@@ -14,6 +14,7 @@ from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
+    DefinitionError,
     Streamable,
     streamable,
     parse_bool,
@@ -552,7 +553,7 @@ def test_parse_str():
 
 def test_wrong_decorator_order():
 
-    with raises(SyntaxError):
+    with raises(DefinitionError):
 
         @dataclass(frozen=True)
         @streamable
@@ -562,7 +563,7 @@ def test_wrong_decorator_order():
 
 def test_dataclass_not_frozen():
 
-    with raises(SyntaxError):
+    with raises(DefinitionError):
 
         @streamable
         @dataclass(frozen=False)
@@ -572,7 +573,7 @@ def test_dataclass_not_frozen():
 
 def test_dataclass_missing():
 
-    with raises(SyntaxError):
+    with raises(DefinitionError):
 
         @streamable
         class DataclassMissing(Streamable):
@@ -581,7 +582,7 @@ def test_dataclass_missing():
 
 def test_streamable_inheritance_missing():
 
-    with raises(SyntaxError):
+    with raises(DefinitionError):
 
         @streamable
         @dataclass(frozen=True)

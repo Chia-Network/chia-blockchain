@@ -30,6 +30,15 @@ else:
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
+
+class StreamableError(Exception):
+    pass
+
+
+class DefinitionError(StreamableError):
+    pass
+
+
 # TODO: Remove hack, this allows streaming these objects from binary
 size_hints = {
     "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
@@ -267,17 +276,17 @@ def streamable(cls: Any):
     )
 
     if not dataclasses.is_dataclass(cls):
-        raise SyntaxError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
+        raise DefinitionError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
 
     try:
         object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
     except dataclasses.FrozenInstanceError:
         pass
     else:
-        raise SyntaxError(f"dataclass needs to be frozen. {correct_usage_string}")
+        raise DefinitionError(f"dataclass needs to be frozen. {correct_usage_string}")
 
     if not issubclass(cls, Streamable):
-        raise SyntaxError(f"Streamable inheritance required. {correct_usage_string}")
+        raise DefinitionError(f"Streamable inheritance required. {correct_usage_string}")
 
     stream_functions = []
     parse_functions = []
