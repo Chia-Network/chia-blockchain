@@ -61,7 +61,7 @@ class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
-    DEFAULT_MAX_CLAIM_SPENDS = 300
+    DEFAULT_MAX_CLAIM_SPENDS = 100
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -816,6 +816,10 @@ class PoolWallet:
 
         all_spends: List[CoinSpend] = []
         total_amount = 0
+
+        # The coins being claimed are gathered into the `SpendBundle`, :absorb_spend:
+        # We use an announcement in the fee spend to ensure that the claim spend is spent in the same block as the fee
+        # We only need to do this for one of the coins, because each `SpendBundle` can only be spent as a unit
 
         first_coin_record = None
         for coin_record in unspent_coin_records:

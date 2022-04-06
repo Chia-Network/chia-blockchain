@@ -39,7 +39,7 @@ from tests.util.socket import find_available_listen_port
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
 FEE_AMOUNT = 2000000000000
-WAIT_SECS = 200  # A high value for WAIT_SECS is useful when paused in the debugger
+MAX_WAIT_SECS = 20  # A high value for WAIT_SECS is useful when paused in the debugger
 
 
 def get_pool_plot_dir():
@@ -512,7 +512,7 @@ class TestPoolWalletRpc:
             absorb_tx1.spend_bundle.debug()
 
             await time_out_assert(
-                WAIT_SECS,
+                MAX_WAIT_SECS,
                 full_node_api.full_node.mempool_manager.get_spendbundle,
                 absorb_tx1.spend_bundle,
                 absorb_tx1.name,
@@ -941,7 +941,7 @@ class TestPoolWalletRpc:
                 await farm_blocks(full_node_api, our_ph, 1)
                 return (await wallets[0].get_confirmed_balance()) > 0
 
-            await time_out_assert(timeout=WAIT_SECS, function=have_chia)
+            await time_out_assert(timeout=MAX_WAIT_SECS, function=have_chia)
             await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
@@ -998,7 +998,7 @@ class TestPoolWalletRpc:
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
+            await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_farming_to_pool)
 
             await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
@@ -1013,7 +1013,7 @@ class TestPoolWalletRpc:
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving)
+            await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_leaving)
 
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
@@ -1021,7 +1021,7 @@ class TestPoolWalletRpc:
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.SELF_POOLING.value
 
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_self_pooling)
+            await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_self_pooling)
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
         finally:

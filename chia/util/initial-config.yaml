@@ -214,7 +214,6 @@ pool:
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
-  default_max_spends_in_tx: 100
 
 
 farmer:
