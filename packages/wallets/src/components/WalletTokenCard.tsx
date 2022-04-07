@@ -63,7 +63,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
     <CardListItem>
       <Flex gap={1} alignItems="center" width="100%">
         <Flex flexDirection="column" flexGrow={1} flexBasis={0} minWidth={0}>
-          <Typography noWrap>{name}</Typography>
+          <Typography noWrap>{walletType === WalletType.STANDARD_WALLET ? 'Chia' : name}</Typography>
           {!!subTitle && (
             <Tooltip title={subTitle} copyToClipboard>
               <Typography color="textSecondary" variant="caption" noWrap>
