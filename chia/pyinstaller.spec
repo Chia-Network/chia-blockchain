@@ -2,6 +2,7 @@
 import importlib
 import pathlib
 import platform
+import sysconfig
 
 from pkg_resources import get_distribution
 
@@ -137,7 +138,7 @@ datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.append(version_data)
 
-pathex = []
+pathex = [sysconfig.get_path("platlib"), sysconfig.get_path("purelib")]
 
 
 def add_binary(name, path_to_script, collect_args):
