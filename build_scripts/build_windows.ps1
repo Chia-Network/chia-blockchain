@@ -8,10 +8,9 @@ Write-Output "   ---"
 Write-Output "Create venv - python3.9 is required in PATH"
 Write-Output "   ---"
 python -m venv venv
+# TODO: add upnp
+.\Install.ps1 -d
 . .\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-# TODO: make upnp optional?
-python -m pip install .[dev,upnp]
 
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
