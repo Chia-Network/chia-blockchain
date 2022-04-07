@@ -2,9 +2,6 @@
 
 $ErrorActionPreference = "Stop"
 
-mkdir build_scripts\win_build
-Set-Location -Path ".\build_scripts\win_build" -PassThru
-
 git status
 
 Write-Output "   ---"
@@ -15,6 +12,11 @@ python -m venv venv
 python -m pip install --upgrade pip
 # TODO: make upnp optional?
 python -m pip install .[dev,upnp]
+
+mkdir build_scripts\win_build
+Set-Location -Path ".\build_scripts\win_build" -PassThru
+
+git status
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
