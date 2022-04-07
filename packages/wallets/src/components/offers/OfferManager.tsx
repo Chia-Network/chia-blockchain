@@ -511,29 +511,29 @@ export function OfferManager() {
 
   return (
     <Flex flexDirection="column" gap={4}>
-      <Flex flexGrow={1}>
+      <Flex gap={2} flexDirection="column">
         <Typography variant="h5">
           <Trans>Manage Offers</Trans>
         </Typography>
-      </Flex>
-      <Grid container>
-        <Grid xs={12} md={6} lg={5} item>
-          <CardHero>
-            <Offers color="primary" fontSize="extraLarge" />
-            <Typography variant="body1">
-              <Trans>
-                Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party.
-              </Trans>
-            </Typography>
-            <Button onClick={handleCreateOffer} variant="contained" color="primary">
-              <Trans>Create an Offer</Trans>
-            </Button>
-            <Button onClick={handleImportOffer} variant="outlined">
-              <Trans>View an Offer</Trans>
-            </Button>
-          </CardHero>
+        <Grid container>
+          <Grid xs={12} md={6} lg={5} item>
+            <CardHero>
+              <Offers color="primary" fontSize="extraLarge" />
+              <Typography variant="body1">
+                <Trans>
+                  Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party.
+                </Trans>
+              </Typography>
+              <Button onClick={handleCreateOffer} variant="contained" color="primary">
+                <Trans>Create an Offer</Trans>
+              </Button>
+              <Button onClick={handleImportOffer} variant="outlined">
+                <Trans>View an Offer</Trans>
+              </Button>
+            </CardHero>
+          </Grid>
         </Grid>
-      </Grid>
+      </Flex>
       <OfferList
         title={<Trans>Offers you created</Trans>}
         includeMyOffers={true}

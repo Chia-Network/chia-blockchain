@@ -14,8 +14,8 @@ export default function Farm() {
   const { data: connections, isLoading } = useGetHarvesterConnectionsQuery();
 
   return (
-    <LayoutDashboardSub> 
-      <Flex flexDirection="column" gap={3}>
+    <LayoutDashboardSub>
+      <Flex flexDirection="column" gap={4}>
         <FarmOverview />
 
         {hasPlots ? (

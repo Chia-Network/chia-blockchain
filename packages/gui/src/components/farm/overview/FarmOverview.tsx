@@ -26,10 +26,10 @@ export default function FarmOverview() {
   }
 
   return (
-    <>
+    <Flex flexDirection="column" gap={2}>
       <Flex gap={2} alignItems="center">
         <Flex flexGrow={1}>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h5">
             <Trans>Your Farm Overview</Trans>
           </Typography>
         </Flex>
@@ -61,6 +61,6 @@ export default function FarmOverview() {
       ) : (
         <FarmOverviewHero />
       )}
-    </>
+    </Flex>
   );
 }

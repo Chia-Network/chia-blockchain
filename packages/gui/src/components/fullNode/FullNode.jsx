@@ -132,13 +132,15 @@ const BlocksCard = () => {
 export default function FullNode() {
   return (
     <LayoutDashboardSub>
-      <Typography variant="h5" gutterBottom>
-        <Trans>Full Node</Trans>
-      </Typography>
-      <Flex flexDirection="column" gap={4}>
-        <FullNodeCards />
-        <BlocksCard />
-        <FullNodeConnections />
+      <Flex flexDirection="column" gap={2}>
+        <Typography variant="h5" gutterBottom>
+          <Trans>Full Node</Trans>
+        </Typography>
+        <Flex flexDirection="column" gap={4}>
+          <FullNodeCards />
+          <BlocksCard />
+          <FullNodeConnections />
+        </Flex>
       </Flex>
     </LayoutDashboardSub>
   );

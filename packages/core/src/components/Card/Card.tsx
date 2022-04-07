@@ -11,7 +11,7 @@ import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
 
 const StyledCardTitle = styled(Box)`
-  padding: ${({ theme, transparent }) => !transparent ? `${theme.spacing(2)} ${theme.spacing(2)}` : '0'};
+  padding: ${({ theme, transparent }) => !transparent ? `${theme.spacing(2)} ${theme.spacing(2)}` : `0 0 ${theme.spacing(2)} 0`};
 `;
 
 const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, highlight, transparent, ...rest }) => (
@@ -54,6 +54,7 @@ const StyledCardContent = styled(({ fullHeight, transparent, ...rest }) => (
   ${({ transparent }) => transparent ? `
     padding-left: 0;
     padding-right: 0;
+    padding-top: 0;
   ` : ''}
 `;
 
