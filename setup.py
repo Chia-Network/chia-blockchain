@@ -17,7 +17,7 @@ dependencies = [
     "colorama==0.4.4",  # Colorizes terminal output
     "colorlog==6.6.0",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
-    "cryptography==3.4.7",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
     "fasteners==0.16.3",  # For interprocess file locking, expected to be replaced by filelock
     "filelock==3.4.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.0.1",  # Store keys in MacOS Keychain, Windows Credential Locker
