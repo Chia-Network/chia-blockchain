@@ -107,12 +107,12 @@ jobs:
 
     - name: Run install script
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Build .rpm package
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         . ./activate
         ldd --version
