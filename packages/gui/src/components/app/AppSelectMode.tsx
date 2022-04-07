@@ -163,13 +163,11 @@ export default function AppSelectMode() {
           </Grid>
         </Grid>
 
-        <Tooltip title={<Trans>Settings are located at the upper right corner</Trans>}>
-          <Typography>
-            <Trans>You can always change your mode later in the settings</Trans>
-            &nbsp;
-            <StyledSettingsIcon fontSize="small" />
-          </Typography>
-        </Tooltip>
+        <Typography>
+          <Trans>You can always change your mode later in the settings</Trans>
+          &nbsp;
+          <StyledSettingsIcon fontSize="small" />
+        </Typography>
       </Flex>
     </StyledContainer>
   );

@@ -71,7 +71,7 @@ export default function WalletCAT(props: Props) {
 
   return (
     <Flex flexDirection="column" gap={2}>
-      <WalletHeader 
+      <WalletHeader
         walletId={walletId}
         tab={selectedTab}
         onTabChange={setSelectedTab}
@@ -109,7 +109,7 @@ export default function WalletCAT(props: Props) {
         )}
       />
       {selectedTab === 'summary' && (
-        <Flex flexDirection="column" gap={3}>
+        <Flex flexDirection="column" gap={4}>
           <WalletCards walletId={walletId} />
           <WalletHistory walletId={walletId} />
         </Flex>

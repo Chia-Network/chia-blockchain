@@ -1063,7 +1063,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       query: () => ({
         command: 'getStrayCats',
         service: CAT,
-        mockResponse: { strayCats: [{
+        mockResponse: { strayCats: [], /* [{
           assetId: '0000000000000000000000000000000000000001',
           name: 'Unknown CAT 1',
           firstSeenHeight: 0,
@@ -1081,7 +1081,7 @@ export const walletApi = apiWithTag.injectEndpoints({
           firstSeenHeight: 2,
           senderPuzzleHash: '0x0000000000000000000000000000000000000003',
           inTransaction: false,
-        }]},
+        }] */},
       }),
       transformResponse: (response: any) => response?.strayCats,
     }),

@@ -1,24 +1,31 @@
 import React, { type ReactNode } from 'react';
 import { useNavigate, useMatch } from 'react-router-dom';
-import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { styled } from '@mui/system'; 
-import useColorModeValue from '../../utils/useColorModeValue';
+import { ListItem, ListItemIcon, Typography } from '@mui/material';
+import { Flex } from '@chia/core';
+import { styled } from '@mui/system';
 import { useTheme } from '@mui/styles';
+import useColorModeValue from '../../utils/useColorModeValue';
 
 const StyledListItemIcon = styled(ListItemIcon)`
   min-width: auto;
-  background-color: ${({ theme, selected }) => selected 
+  background-color: ${({ theme, selected }) => selected
     ? useColorModeValue(theme, 'sidebarBackground')
     : 'transparent'};
   border-radius: ${({ theme }) => theme.spacing(1.5)};
   width: ${({ theme }) => theme.spacing(6)};
   height: ${({ theme }) => theme.spacing(6)};
-  border: ${({ selected, theme }) => `1px solid ${selected 
-    ? theme.palette.highlight.main 
+  border: ${({ selected, theme }) => `1px solid ${selected
+    ? theme.palette.highlight.main
     : useColorModeValue(theme, 'border')}`};
   display: flex;
   align-items: center;
   justify-content: center;
+
+  svg {
+    color: ${({ selected, theme }) => selected
+      ? useColorModeValue(theme, 'sidebarIconSelected')
+      : useColorModeValue(theme, 'sidebarIcon')};
+  }
 `;
 
 const StyledListItem = styled(ListItem)`
@@ -38,12 +45,16 @@ const StyledListItem = styled(ListItem)`
   &:hover ${StyledListItemIcon} {
     border-color: #4CAF50;
     box-shadow: 0px -2px 4px rgba(104, 249, 127, 0.41), 0px 1px 8px rgba(145, 247, 53, 0.45);
+
+    svg {
+      color: ${({ theme }) => useColorModeValue(theme, 'sidebarIconHover')} !important;
+    }
   }
 `;
 
-const StyledListItemText = styled(ListItemText)`
-  white-space: initial !important;
-  text-align: center;
+const StyledListItemText = styled(Typography)`
+  font-size: ${({ theme }) => theme.typography.pxToRem(10)} !important;
+  font-weight: 500;
 `;
 
 export type SideBarItemProps = {
@@ -74,15 +85,15 @@ export default function SideBarItem(props: SideBarItemProps) {
   }
 
   return (
-    <StyledListItem button onClick={() => handleClick()}>
-      <StyledListItemIcon selected={isSelected}>
-        <Icon
-          stroke={isSelected ? theme.palette.primary.main : theme.palette.text.primary}
-          fill={isSelected ? theme.palette.primary.main : theme.palette.text.primary}
-          fontSize="large"
-        />
-      </StyledListItemIcon>
-      <StyledListItemText primary={title} />
+    <StyledListItem button onClick={() => handleClick()} >
+      <Flex flexDirection="column" alignItems="center" gap={0.5}>
+        <StyledListItemIcon selected={isSelected}>
+          <Icon fontSize="large" />
+        </StyledListItemIcon>
+        <StyledListItemText align="center">
+          {title}
+        </StyledListItemText>
+      </Flex>
     </StyledListItem>
   );
 }

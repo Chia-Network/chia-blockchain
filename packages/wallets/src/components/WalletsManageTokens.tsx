@@ -1,11 +1,13 @@
 import React, { type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Box, Typography, Switch } from '@mui/material';
+import { Box, Typography, Switch, IconButton } from '@mui/material';
 import { Button, useColorModeValue, Spinner, CardListItem, Flex } from '@chia/core';
 import styled from 'styled-components';
+import { Add } from '@mui/icons-material';
 import { useToggle } from 'react-use';
 import useWalletsList from '../hooks/useWalletsList';
 import WalletTokenCard from './WalletTokenCard';
+import { useNavigate } from 'react-router';
 
 const StyledRoot = styled(Box)`
   position: absolute;
@@ -62,13 +64,25 @@ export type WalletsManageTokensProps = {
 
 export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   const [expanded, toggle] = useToggle(false);
+  const navigate = useNavigate();
   const { list, hide, show, isLoading } = useWalletsList();
+
+  function handleAddToken(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    navigate('/dashboard/wallets/create/cat/existing');
+  }
 
   return (
     <StyledRoot>
       <StyledButtonContainer>
         <StyledMainButton onClick={toggle} fullWidth>
           <Trans>Manage token list</Trans>
+          &nbsp;
+          <IconButton onClick={handleAddToken}>
+            <Add />
+          </IconButton>
         </StyledMainButton>
       </StyledButtonContainer>
       <StyledBody expanded={expanded}>

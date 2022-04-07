@@ -11,31 +11,50 @@ import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
 
 const StyledCardTitle = styled(Box)`
-  padding: ${({ theme }) => `${theme.spacing(2)} ${theme.spacing(2)}`};
+  padding: ${({ theme, transparent }) => !transparent ? `${theme.spacing(2)} ${theme.spacing(2)}` : '0'};
 `;
 
-const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, highlight, ...rest }) => (
+const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, highlight, transparent, ...rest }) => (
   <CardMaterial {...rest}/>
 ))`
   cursor: ${({ clickable }) => clickable ? 'pointer' : 'default'};
   opacity: ${({ disabled }) => disabled ? '0.5': '1'};
   height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
   border: ${({ clickable }) => clickable ? '1px solid transparent' : 'none'};
-  border-radius: ${({ theme, highlight }) => highlight 
+  border-radius: ${({ theme, highlight }) => highlight
   ? `0 0 ${theme.shape.borderRadius}px ${theme.shape.borderRadius}px`
   : `${theme.shape.borderRadius}px`};
 
   &:hover {
     border-color: ${({ theme, clickable }) => clickable ? theme.palette.primary.main : 'transparent'};
   }
+
+  ${({ transparent }) => transparent ? `
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+
+    &:hover {
+      border-color: transparent;
+    }
+  }
+  ` : ''}
+
 `;
 
-const StyledCardContent = styled(({ fullHeight, ...rest }) => (
+const StyledCardContent = styled(({ fullHeight, transparent, ...rest }) => (
   <CardContent {...rest}/>
 ))`
   display: flex;
   flex-direction: column;
   height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
+
+  ${({ transparent }) => transparent ? `
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0 !important;
+  ` : ''}
 `;
 
 const StyledRoot = styled(({ fullHeight, ...rest }) => (
@@ -58,7 +77,7 @@ const StyledHighlight = styled(Box)`
   border-radius: ${({ theme }) => theme.shape.borderRadius}px ${({ theme }) => theme.shape.borderRadius}px 0 0;
 `;
 
-type Props = {
+export type CardProps = {
   children?: ReactNode;
   title?: ReactNode;
   tooltip?: ReactElement<any>;
@@ -70,10 +89,11 @@ type Props = {
   disabled?: boolean;
   fullHeight?: boolean;
   highlight?: ReactNode | false;
+  transparent?: boolean;
 };
 
-export default function Card(props: Props) {
-  const { children, highlight, title, tooltip, actions, gap, interactive, action, onSelect, disabled, fullHeight } = props;
+export default function Card(props: CardProps) {
+  const { children, highlight, title, tooltip, actions, gap = 2, interactive = false, action, onSelect, disabled, fullHeight, transparent = false } = props;
 
   const headerTitle = tooltip ? (
     <Flex alignItems="center" gap={1}>
@@ -98,9 +118,9 @@ export default function Card(props: Props) {
       {highlight && (
         <StyledHighlight>{highlight}</StyledHighlight>
       )}
-      <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled} fullHeight={fullHeight} highlight={!!highlight}>
+      <StyledCardMaterial onClick={handleClick} clickable={!!onSelect} disabled={disabled} fullHeight={fullHeight} highlight={!!highlight} transparent={transparent}>
         {title && (
-          <StyledCardTitle>
+          <StyledCardTitle transparent={transparent}>
             <Flex gap={2} alignItems="center" flexWrap="wrap">
               <Box flexGrow={1}>
                 <Typography variant="h5">{headerTitle}</Typography>
@@ -109,7 +129,7 @@ export default function Card(props: Props) {
             </Flex>
           </StyledCardTitle>
         )}
-        <StyledCardContent fullHeight={fullHeight}>
+        <StyledCardContent fullHeight={fullHeight} transparent={transparent}>
           <Flex flexDirection="column" gap={3} flexGrow={1}>
             <Flex flexDirection="column" gap={gap} flexGrow={1}>
               {children}
@@ -125,13 +145,3 @@ export default function Card(props: Props) {
     </StyledRoot>
   );
 }
-
-Card.defaultProps = {
-  gap: 2,
-  children: undefined,
-  title: undefined,
-  tooltip: undefined,
-  actions: undefined,
-  interactive: false,
-  onSelect: undefined,
-};

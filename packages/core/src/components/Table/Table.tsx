@@ -57,6 +57,7 @@ export default function Table(props: Props) {
 }
 
 Table.defaultProps = {
+  rows: [],
   pages: false,
   page: 0,
   rowsPerPageOptions: [10, 25, 100],

@@ -241,91 +241,90 @@ export default function WalletHistory(props: Props) {
   }, [wallet?.type]);
 
   return (
-    <Card title={<Trans>Transactions</Trans>}>
-      {transactions?.length ? (
-        <TableControlled
-          cols={cols}
-          rows={transactions}
-          rowsPerPageOptions={[5, 10, 25, 50, 100]}
-          page={page}
-          rowsPerPage={rowsPerPage}
-          count={count}
-          onPageChange={pageChange}
-          isLoading={isLoading}
-          metadata={metadata}
-          expandedCellShift={1}
-          uniqueField="name"
-          expandedField={(row) => {
-            const { confirmedAtHeight, memos } = row;
-            const memoValues = memos ? Object.values(memos) : [];
-            const memoValuesDecoded = memoValues.map((memoHex) => {
-              try {
-                const buf = new Buffer(memoHex, 'hex');
-                const decodedValue = buf.toString('utf8');
+    <Card title={<Trans>Transactions</Trans>} transparent>
+      <TableControlled
+        cols={cols}
+        rows={transactions ?? []}
+        rowsPerPageOptions={[5, 10, 25, 50, 100]}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        count={count}
+        onPageChange={pageChange}
+        isLoading={isLoading}
+        metadata={metadata}
+        expandedCellShift={1}
+        uniqueField="name"
+        expandedField={(row) => {
+          const { confirmedAtHeight, memos } = row;
+          const memoValues = memos ? Object.values(memos) : [];
+          const memoValuesDecoded = memoValues.map((memoHex) => {
+            try {
+              const buf = new Buffer(memoHex, 'hex');
+              const decodedValue = buf.toString('utf8');
 
-                const bufCheck = Buffer.from(decodedValue, 'utf8');
-                if (bufCheck.toString('hex') !== memoHex) {
-                  throw new Error('Memo is not valid utf8 string');
-                }
-
-                return decodedValue;
-              } catch(error: any) {
-                return memoHex;
+              const bufCheck = Buffer.from(decodedValue, 'utf8');
+              if (bufCheck.toString('hex') !== memoHex) {
+                throw new Error('Memo is not valid utf8 string');
               }
-            });
 
-            const memosDescription = memoValuesDecoded && memoValuesDecoded.length
-              ? (
-                <Flex flexDirection="column">
-                  {memoValuesDecoded.map((memo, index) => (
-                    <Typography variant="inherit" key={index}>
-                      {memo ?? ''}
-                    </Typography>
-                  ))}
-                </Flex>
-              )
-              : <Trans>Not Available</Trans>;
+              return decodedValue;
+            } catch(error: any) {
+              return memoHex;
+            }
+          });
 
-            const rows = [confirmedAtHeight && {
-              key: 'confirmedAtHeight',
-              label: <Trans>Confirmed at Height</Trans>,
-              value: confirmedAtHeight ? confirmedAtHeight : <Trans>Not Available</Trans>,
-            }, {
-              key: 'memos',
-              label: <Trans>Memos</Trans>,
-              value: memosDescription,
-            }].filter((item) => !!item);
+          const memosDescription = memoValuesDecoded && memoValuesDecoded.length
+            ? (
+              <Flex flexDirection="column">
+                {memoValuesDecoded.map((memo, index) => (
+                  <Typography variant="inherit" key={index}>
+                    {memo ?? ''}
+                  </Typography>
+                ))}
+              </Flex>
+            )
+            : <Trans>Not Available</Trans>;
 
-            return (
-              <TableBase size="small">
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.key}>
-                      <StyledTableCellSmall>
-                        <Typography component='div' variant="body2" color="textSecondary" noWrap>
-                          {row.label}
+          const rows = [confirmedAtHeight && {
+            key: 'confirmedAtHeight',
+            label: <Trans>Confirmed at Height</Trans>,
+            value: confirmedAtHeight ? confirmedAtHeight : <Trans>Not Available</Trans>,
+          }, {
+            key: 'memos',
+            label: <Trans>Memos</Trans>,
+            value: memosDescription,
+          }].filter((item) => !!item);
+
+          return (
+            <TableBase size="small">
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.key}>
+                    <StyledTableCellSmall>
+                      <Typography component='div' variant="body2" color="textSecondary" noWrap>
+                        {row.label}
+                      </Typography>
+                    </StyledTableCellSmall>
+                    <StyledTableCellSmallRight>
+                      <Box maxWidth="100%">
+                        <Typography component='div' variant="body2" noWrap>
+                          {row.value}
                         </Typography>
-                      </StyledTableCellSmall>
-                      <StyledTableCellSmallRight>
-                        <Box maxWidth="100%">
-                          <Typography component='div' variant="body2" noWrap>
-                            {row.value}
-                          </Typography>
-                        </Box>
-                      </StyledTableCellSmallRight>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </TableBase>
-            );
-          }}
-          pages
-        />
-      ) : (
-        <Typography variant="body2">
-          <Trans>No previous transactions</Trans>
-        </Typography>
-      )}
+                      </Box>
+                    </StyledTableCellSmallRight>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </TableBase>
+          );
+        }}
+        caption={!transactions?.length && (
+          <Typography variant="body2" align="center">
+            <Trans>No previous transactions</Trans>
+          </Typography>
+        )}
+        pages={!!transactions?.length}
+      />
     </Card>
   );
 }

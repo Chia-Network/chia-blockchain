@@ -38,7 +38,7 @@ const StyledDrawer = styled(Drawer)`
 
   > div {
     width: ${({ theme }) => theme.drawer.width};
-    border-width: 0px;
+    // border-width: 0px;
   }
 `;
 
@@ -56,6 +56,10 @@ const StyledBrandWrapper = styled(Flex)`
 const StyledToolbar = styled(Toolbar)`
   padding-left: ${({ theme }) => theme.spacing(4)};
   padding-right: ${({ theme }) => theme.spacing(4)};
+`;
+
+const StyledInlineTypography = styled(Typography)`
+  display: inline-block;
 `;
 
 export type LayoutDashboardProps = {
@@ -99,7 +103,11 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                         Wallet
                       </Trans>
                       &nbsp;
-                      {partial}
+                      {partial && (
+                        <StyledInlineTypography color="textSecondary" variant="h4">
+                          {partial}
+                        </StyledInlineTypography>
+                      )}
                     </Typography>
                     <Flex flexGrow={1} />
                     <DropdownIconButton

@@ -66,7 +66,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
           <Typography noWrap>{name}</Typography>
           {!!subTitle && (
             <Tooltip title={subTitle} copyToClipboard>
-              <Typography color="grey" variant="caption" noWrap>
+              <Typography color="textSecondary" variant="caption" noWrap>
                 {subTitle}
               </Typography>
             </Tooltip>

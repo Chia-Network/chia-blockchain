@@ -28,7 +28,7 @@ export default function StandardWallet(props: StandardWalletProps) {
       />
 
       {selectedTab === 'summary' && (
-        <Flex flexDirection="column" gap={3}>
+        <Flex flexDirection="column" gap={4}>
           <WalletStandardCards walletId={walletId} />
           <WalletHistory walletId={walletId} />
         </Flex>
@@ -39,8 +39,8 @@ export default function StandardWallet(props: StandardWalletProps) {
       {selectedTab === 'receive' && (
         <WalletReceiveAddress walletId={walletId} />
       )}
-        
-      {/* 
+
+      {/*
       {showDebugInformation && (
         <WalletConnections walletId={walletId} />
       )}

@@ -256,11 +256,10 @@ export default function Settings() {
           <Tab value="GENERAL" label={<Trans>General</Trans>} />
           <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
         </Tabs>
-        <Card>
-          {activeTab === 'GENERAL' && (
-            <SettingsGeneral />
-          )}
-        </Card>
+
+        {activeTab === 'GENERAL' && (
+          <SettingsGeneral />
+        )}
       </Flex>
     </LayoutDashboardSub>
   );

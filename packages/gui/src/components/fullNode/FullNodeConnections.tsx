@@ -110,12 +110,9 @@ export default function Connections() {
           <Trans>Connect to other peers</Trans>
         </Button>
       }
+      transparent
     >
-      {!isLoading ? (
-        <Table cols={cols} rows={connections} />
-      ) : (
-        <Loading center />
-      )}
+      <Table cols={cols} rows={connections} isLoading={isLoading} />
     </Card>
   );
 }

@@ -51,11 +51,23 @@ export default deepmerge(greyTheme, {
     },
     sidebarBackground: {
       main: '#E8F5E9',
-      dark: '#4a4a4a',
+      dark: '#505C4E',
+    },
+    sidebarIconSelected: {
+      main: '#1B5E20',
+      dark: '#3AAC59',
+    },
+    sidebarIcon: {
+      main: '#9E9E9E',
+      dark: '#9E9E9E',
+    },
+    sidebarIconHover: {
+      main: '#424242',
+      dark: 'white',
     },
   },
   drawer: {
-    width: '100px',
+    width: '72px',
   },
   mixins: {
     toolbar: {

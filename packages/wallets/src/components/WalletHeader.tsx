@@ -72,50 +72,53 @@ export default function WalletHeader(props: StandardWalletProps) {
   }
 
   return (
-    <Flex gap={1} alignItems="center">
-      <Flex flexGrow={1} gap={1}>
-        <Tabs
-          value={tab}
-          onChange={(_event, newValue) => onTabChange(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
-        >
-          <Tab value="summary" label={<Trans>Summary</Trans>} />
-          <Tab value="send" label={<Trans>Send</Trans>} />
-          <Tab value="receive" label={<Trans>Receive</Trans>} />
-        </Tabs>
-      </Flex>
+    <Flex flexDirection="column">
+      <WalletName walletId={walletId} variant="h5" />
       <Flex gap={1} alignItems="center">
-        {/*
-        <Flex alignItems="center">
-          <Typography variant="body1" color="textSecondary">
-            <Trans>Status:</Trans>
-          </Typography>
-          &nbsp;
-          <WalletStatus height={showDebugInformation} />
+        <Flex flexGrow={1} gap={1}>
+          <Tabs
+            value={tab}
+            onChange={(_event, newValue) => onTabChange(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
+          >
+            <Tab value="summary" label={<Trans>Summary</Trans>} />
+            <Tab value="send" label={<Trans>Send</Trans>} />
+            <Tab value="receive" label={<Trans>Receive</Trans>} />
+          </Tabs>
         </Flex>
-        */}
+        <Flex gap={1} alignItems="center">
+          {/*
+          <Flex alignItems="center">
+            <Typography variant="body1" color="textSecondary">
+              <Trans>Status:</Trans>
+            </Typography>
+            &nbsp;
+            <WalletStatus height={showDebugInformation} />
+          </Flex>
+          */}
 
-        <DropdownActions label={<Trans>Actions</Trans>}>
-          {({ onClose }) => (
-            <>
-              <MenuItem
-                onClick={() => {
-                  onClose();
-                  handleDeleteUnconfirmedTransactions();
-                }}
-              >
-                <ListItemIcon>
-                  <DeleteIcon />
-                </ListItemIcon>
-                <Typography variant="inherit" noWrap>
-                  <Trans>Delete Unconfirmed Transactions</Trans>
-                </Typography>
-              </MenuItem>
-              {actions?.({ onClose })}
-            </>
-          )}
-        </DropdownActions>
+          <DropdownActions label={<Trans>Actions</Trans>}>
+            {({ onClose }) => (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    onClose();
+                    handleDeleteUnconfirmedTransactions();
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteIcon />
+                  </ListItemIcon>
+                  <Typography variant="inherit" noWrap>
+                    <Trans>Delete Unconfirmed Transactions</Trans>
+                  </Typography>
+                </MenuItem>
+                {actions?.({ onClose })}
+              </>
+            )}
+          </DropdownActions>
+        </Flex>
       </Flex>
     </Flex>
   );

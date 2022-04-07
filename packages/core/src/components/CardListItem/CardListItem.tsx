@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { Card, CardContent, CardActionArea } from '@mui/material';
 import { styled } from '@mui/system';
+import useColorModeValue from '../../utils/useColorModeValue';
 
 const StyledCard = styled(Card, {
   shouldForwardProp: prop => !['selected'].includes(prop.toString()),
@@ -8,8 +9,9 @@ const StyledCard = styled(Card, {
   width: 100%;
   border-radius: ${theme.spacing(1)};
   border: 1px solid ${selected
-    ? theme.palette.action.active
+    ? theme.palette.highlight.main
     : theme.palette.divider};
+  background-color: ${selected ? useColorModeValue(theme, 'sidebarBackground') : theme.palette.background.paper};
   margin-bottom: ${theme.spacing(1)};
 
   &:hover {

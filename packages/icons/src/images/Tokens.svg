@@ -1,8 +1,3 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="17.9356" cy="22.9976" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
-<circle cx="17.9356" cy="22.9976" r="8.93556" fill="transparent" stroke="current" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="24.9809" cy="27.0644" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
-<circle cx="24.9809" cy="27.0644" r="8.93556" fill="transparent" stroke="current" stroke-width="1.5" stroke-linecap="round"/>
-<circle cx="31.0525" cy="20.9356" r="10.4356" fill="transparent" stroke="transparent" stroke-width="3" stroke-linecap="round"/>
-<circle cx="31.0525" cy="20.9356" r="8.93556" fill="transparent" stroke="current" stroke-width="1.5" stroke-linecap="round"/>
+<svg width="37" height="28" viewBox="0 0 37 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M19 10C19 5.58172 22.5817 2 27 2C31.4183 2 35 5.58172 35 10C35 14.4183 31.4183 18 27 18C22.5817 18 19 14.4183 19 10ZM27 0C21.4772 0 17 4.47715 17 10C17 15.5228 21.4772 20 27 20C32.5228 20 37 15.5228 37 10C37 4.47715 32.5228 0 27 0ZM10 3C5.58172 3 2 6.58172 2 11C2 13.7727 3.40977 16.2166 5.55626 17.6534C6.01521 17.9607 6.13822 18.5818 5.83101 19.0407C5.5238 19.4997 4.90269 19.6227 4.44374 19.3155C1.76629 17.5232 0 14.4681 0 11C0 5.47715 4.47715 1 10 1C12.2267 1 14.2861 1.72898 15.9486 2.96097C16.3923 3.28979 16.4854 3.91607 16.1566 4.35979C15.8278 4.80352 15.2015 4.89666 14.7578 4.56783C13.4281 3.58245 11.7835 3 10 3ZM14.3656 9.70333C14.6421 10.1814 14.4788 10.7931 14.0007 11.0697C11.6069 12.4544 10 15.0401 10 18C10 22.4183 13.5817 26 18 26C20.7728 26 23.2166 24.5902 24.6534 22.4438C24.9607 21.9848 25.5818 21.8618 26.0407 22.169C26.4997 22.4762 26.6227 23.0973 26.3155 23.5563C24.5232 26.2337 21.4681 28 18 28C12.4772 28 8 23.5229 8 18C8 14.2973 10.0129 11.066 12.9993 9.33845C13.4773 9.0619 14.0891 9.22527 14.3656 9.70333Z" fill="current" stroke="transparent" />
 </svg>

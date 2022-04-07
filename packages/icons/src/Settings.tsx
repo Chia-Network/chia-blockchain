@@ -3,5 +3,5 @@ import { SvgIcon, SvgIconProps } from '@mui/material';
 import SettingsIcon from './images/Settings.svg';
 
 export default function Settings(props: SvgIconProps) {
-  return <SvgIcon component={SettingsIcon} viewBox="0 0 34 34" {...props} />;
+  return <SvgIcon component={SettingsIcon} viewBox="0 0 30 30" {...props} />;
 }

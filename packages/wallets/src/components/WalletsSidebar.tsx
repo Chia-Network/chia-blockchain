@@ -3,7 +3,6 @@ import { Trans } from '@lingui/macro';
 import { orderBy } from 'lodash';
 import { useNavigate, useParams } from 'react-router';
 import { Card, CardContent, Box, IconButton, ListItemIcon, ListItemText, Typography, List, ListItem, CardActionArea } from '@mui/material';
-import { Add } from '@mui/icons-material';
 import { Button, Flex, Loading, useTrans, useColorModeValue, CardListItem } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { WalletType, type Wallet } from '@chia/api';
@@ -38,7 +37,7 @@ const StyledCard = styled(Card)`
 const StyledContent = styled(Box)`
   padding-left: ${({ theme }) => theme.spacing(4)};
   padding-right: ${({ theme }) => theme.spacing(4)};
-  min-height: ${({ theme }) => theme.spacing(7)};
+  min-height: ${({ theme }) => theme.spacing(5)};
 `;
 
 const StyledBody = styled(Box)`
@@ -92,7 +91,7 @@ export default function WalletsSidebar() {
           <CardListItem onSelect={handleSelect} key={wallet.id} selected={wallet.id === Number(walletId)}>
             <Flex flexDirection="column">
               <Typography>{primaryTitle}</Typography>
-              <WalletIcon wallet={wallet} color="grey" variant="caption" />
+              <WalletIcon wallet={wallet} color="textSecondary" variant="caption" />
             </Flex>
           </CardListItem>
         );
@@ -105,10 +104,6 @@ export default function WalletsSidebar() {
         <StyledContent>
           <Typography variant="h5">
             <Trans>Tokens</Trans>
-            &nbsp;
-            <IconButton onClick={handleAddToken}>
-              <Add />
-            </IconButton>
           </Typography>
         </StyledContent>
         <StyledBody>

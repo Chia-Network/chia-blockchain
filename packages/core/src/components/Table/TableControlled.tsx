@@ -23,8 +23,8 @@ const StyledTableHead = styled(TableHead)`
 `;
 
 export const StyledTableRow = styled(({ odd, ...rest }) => <TableRow {...rest} />)`
-  ${({ odd, theme }) => odd 
-    ? `background-color: ${theme.palette.action.hover};` 
+  ${({ odd, theme }) => odd
+    ? `background-color: ${theme.palette.action.hover};`
     : undefined
   }
 `;
@@ -200,7 +200,7 @@ export default function TableControlled(props: TableControlledProps) {
               </TableRow>
             </StyledTableHead>
           )}
-          
+
           <TableBody>
             {children}
             {preparedRows.map((row, rowIndex) => {
@@ -294,6 +294,8 @@ export default function TableControlled(props: TableControlledProps) {
 }
 
 TableControlled.defaultProps = {
+  rows: [],
+  cols: [],
   pages: false,
   rowsPerPageOptions: [10, 25, 100],
   rowsPerPage: 10,

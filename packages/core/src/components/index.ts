@@ -21,6 +21,7 @@ export { default as Checkbox } from './Checkbox';
 export { default as DialogActions } from './DialogActions';
 export { default as Dropzone } from './Dropzone';
 export { default as Fee } from './Fee';
+export { default as Heading } from './Heading';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
 export { default as Dropdown, DropdownActions, DropdownIconButton } from './Dropdown';

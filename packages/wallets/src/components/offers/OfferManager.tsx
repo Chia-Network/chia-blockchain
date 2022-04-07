@@ -449,28 +449,27 @@ function OfferList(props: OfferListProps) {
     ];
   }, []);
 
+  const hasOffers = !!offers?.length;
+
   return (
-    <Card title={title}>
+    <Card title={title} transparent>
       <LoadingOverlay loading={isWalletOffersLoading || isLoadingWallets}>
-        {offers?.length ? (
-          <TableControlled
-            rows={offers}
-            cols={cols}
-            rowsPerPageOptions={[5, 25, 100]}
-            count={count}
-            rowsPerPage={rowsPerPage}
-            pages={true}
-            page={page}
-            onPageChange={pageChange}
-            isLoading={isWalletOffersLoading}
-          />
-        ) : (
-          !isWalletOffersLoading && !isLoadingWallets && (
-            <Typography variant="body2">
+        <TableControlled
+          rows={offers}
+          cols={cols}
+          rowsPerPageOptions={[5, 25, 100]}
+          count={count}
+          rowsPerPage={rowsPerPage}
+          pages={hasOffers}
+          page={page}
+          onPageChange={pageChange}
+          isLoading={isWalletOffersLoading}
+          caption={!hasOffers && !isWalletOffersLoading && !isLoadingWallets && (
+            <Typography variant="body2" align="center">
               <Trans>No current offers</Trans>
             </Typography>
-          )
-        )}
+          )}
+        />
       </LoadingOverlay>
     </Card>
   );
@@ -511,7 +510,7 @@ export function OfferManager() {
   }
 
   return (
-    <Flex flexDirection="column" gap={3}>
+    <Flex flexDirection="column" gap={4}>
       <Flex flexGrow={1}>
         <Typography variant="h5">
           <Trans>Manage Offers</Trans>

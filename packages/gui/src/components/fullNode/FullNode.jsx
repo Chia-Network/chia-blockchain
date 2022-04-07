@@ -119,7 +119,7 @@ const BlocksCard = () => {
   }
 
   return (
-    <Card title={<Trans>Blocks</Trans>} action={<FullNodeBlockSearch />}>
+    <Card title={<Trans>Blocks</Trans>} action={<FullNodeBlockSearch />} transparent>
       {!isLoading ? (
         <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
       ) : (
@@ -135,7 +135,7 @@ export default function FullNode() {
       <Typography variant="h5" gutterBottom>
         <Trans>Full Node</Trans>
       </Typography>
-      <Flex flexDirection="column" gap={3}>
+      <Flex flexDirection="column" gap={4}>
         <FullNodeCards />
         <BlocksCard />
         <FullNodeConnections />
