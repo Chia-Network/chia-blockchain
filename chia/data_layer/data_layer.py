@@ -17,7 +17,12 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
-from chia.data_layer.download_data import download_delta_files, parse_delta_files
+from chia.data_layer.download_data import (
+    download_delta_files,
+    parse_delta_files,
+    get_full_tree_filename,
+    get_delta_filename,
+)
 from chia.data_layer.data_layer_server import DataLayerServer
 
 
@@ -124,8 +129,8 @@ class DataLayer:
         assert transaction_record
         # Write the server files.
         generation = root.generation
-        filename_full_tree = os.path.join(self.server_files_location, f"/{generation}.dat")
-        filename_diff_tree = os.path.join(self.server_files_location, f"/{generation}-delta.dat")
+        filename_full_tree = os.path.join(self.server_files_location, get_full_tree_filename(tree_id, generation))
+        filename_diff_tree = os.path.join(self.server_files_location, get_delta_filename(tree_id, generation))
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
         # todo register callback to change status in data store

@@ -8,6 +8,10 @@ from chia.data_layer.data_layer_types import NodeType, Status
 from chia.util.ints import uint16
 
 
+def get_full_tree_filename(tree_id: bytes32, generation: int) -> str:
+    return f"{tree_id}-{generation}-v1.0.dat"
+
+
 def get_delta_filename(tree_id: bytes32, generation: int) -> str:
     return f"{tree_id}-delta-{generation}-v1.0.dat"
 
