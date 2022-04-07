@@ -91,6 +91,7 @@ class WalletRpcApi:
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
+            "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
@@ -856,6 +857,16 @@ class WalletRpcApi:
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
+
+    async def get_stray_cats(self, request):
+        """
+        Get a list of all unacknowledged CATs
+        :param request: RPC request
+        :return: A list of unacknowledged CATs
+        """
+        assert self.service.wallet_state_manager is not None
+        cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
+        return {"stray_cats": cats}
 
     async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None
