@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 import click
 
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.transaction_sorting import SortKey
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -65,6 +66,25 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=None,
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
+@click.option(
+    "--sort-by-height",
+    "sort_key",
+    flag_value=SortKey.CONFIRMED_AT_HEIGHT,
+    help="Sort transactions by height",
+)
+@click.option(
+    "--sort-by-relevance",
+    "sort_key",
+    flag_value=SortKey.RELEVANCE,
+    default=True,
+    help="Sort transactions by {confirmed, height, time}",
+)
+@click.option(
+    "--reverse",
+    is_flag=True,
+    default=False,
+    help="Reverse the transaction ordering",
+)
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -73,8 +93,19 @@ def get_transactions_cmd(
     limit: int,
     verbose: bool,
     paginate: Optional[bool],
+    sort_key: SortKey,
+    reverse: bool,
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "limit": limit}
+    extra_params = {
+        "id": id,
+        "verbose": verbose,
+        "offset": offset,
+        "paginate": paginate,
+        "limit": limit,
+        "sort_key": sort_key,
+        "reverse": reverse,
+    }
+
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
