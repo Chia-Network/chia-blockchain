@@ -2,16 +2,6 @@
 
 $ErrorActionPreference = "Stop"
 
-git status
-
-Write-Output "   ---"
-Write-Output "Create venv - python3.9 is required in PATH"
-Write-Output "   ---"
-python -m venv venv
-# TODO: add upnp
-.\Install.ps1 -d
-. .\venv\Scripts\Activate.ps1
-
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
