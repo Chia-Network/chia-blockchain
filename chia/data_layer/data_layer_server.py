@@ -22,9 +22,9 @@ class DataLayerServer:
         self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
         self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
 
-        server_files_replaced: str = self.config["server_files_location"].replace(
-            "CHALLENGE", self.config["selected_network"]
-        )
+        server_files_replaced: str = self.config.get(
+            "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
+        ).replace("CHALLENGE", self.config["selected_network"])
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         app = web.Application()

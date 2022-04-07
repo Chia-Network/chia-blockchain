@@ -60,11 +60,13 @@ class DataLayer:
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
         mkdir(self.db_path.parent)
-        server_files_replaced: str = config["server_files_location"].replace("CHALLENGE", config["selected_network"])
+        server_files_replaced: str = config.get(
+            "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
         self.server_files_location = path_from_root(root_path, server_files_replaced)
-        client_download_replaced: str = config["client_download_location"].replace(
-            "CHALLENGE", config["selected_network"]
-        )
+        client_download_replaced: str = config.get(
+            "client_download_location", "data_layer/db/client_downloaded_files_CHALLENGE"
+        ).replace("CHALLENGE", config["selected_network"])
         self.client_download_location = path_from_root(root_path, client_download_replaced)
         mkdir(self.server_files_location)
         mkdir(self.client_download_location)
