@@ -79,7 +79,7 @@ jobs:
         key: ${{ hashFiles('today.txt') }}
 
     - name: Checkout test blocks and plots
-      if: steps.test-blocks-plots-29.outputs.cache-hit != 'true'
+      if: steps.test-blocks-plots-29.outputs.cache-hit == 'true'
       run: |
         wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
         mkdir ${{ github.workspace }}/.chia
