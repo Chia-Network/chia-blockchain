@@ -329,6 +329,7 @@ export default function Block() {
             </Button>
           </Flex>
         }
+        transparent
       >
         <TableContainer component={Paper}>
           <Table>

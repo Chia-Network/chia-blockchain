@@ -53,7 +53,7 @@ const StyledItemsContainer = styled(Box)`
   left: 0;
   right: 0;
   bottom: 0;
-  padding-bottom: ${({ theme }) => theme.spacing(9)};
+  padding-bottom: ${({ theme }) => theme.spacing(11)};
 `;
 
 export default function WalletsSidebar() {
