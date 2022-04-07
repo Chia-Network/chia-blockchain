@@ -499,7 +499,7 @@ msgstr "Připojeno"
 #~ msgid "Contribute on GitHub"
 #~ msgstr "Pomoci s vývojem na GitHubu"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:31
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:37
 msgid "Copied"
 msgstr "Zkopírováno"
 
@@ -510,7 +510,7 @@ msgstr "Zkopírováno"
 #~ msgid "Copy"
 #~ msgstr "Kopírovat"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:33
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:39
 msgid "Copy to Clipboard"
 msgstr "Zkopírovat do schránky"
 
@@ -1064,7 +1064,7 @@ msgstr "Často kladené otázky"
 msgid "Help"
 msgstr "Nápověda"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:69
+#: src/components/LocaleToggle/LocaleToggle.tsx:70
 msgid "Help translate"
 msgstr "Pomozte s překladem"
 
@@ -1265,8 +1265,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:125
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:144
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1274,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Probíhá přihlašování"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:120
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:143
 msgid "Logout"
 msgstr ""
 
@@ -1490,6 +1490,10 @@ msgstr "Nepřipojeno"
 #: src/components/farm/FarmManageFarmingRewards.tsx:164
 #~ msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 #~ msgstr "Všimněte si, že toto nezmění vaše Pool adresy. To se týká pouze starého formátu polí a odměny 0,25XCH pool polí."
+
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
+msgid "Notifications"
+msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -2773,7 +2777,7 @@ msgstr ""
 #~ msgid "Unique identifier"
 #~ msgstr "Jedinečný identifikátor"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Unknown"
 msgstr "Neznámé"
 
@@ -2863,6 +2867,7 @@ msgstr "Hodnota se zdá vysoká"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Čekání na potvrzení transakce"
 
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:102
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""

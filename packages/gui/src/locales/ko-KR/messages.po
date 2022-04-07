@@ -83,8 +83,8 @@ msgstr "행동"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:68
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:67
-#: src/components/fullNode/FullNodeConnections.tsx:81
-#: src/components/pool/PoolOverview.tsx:66
+#: src/components/fullNode/FullNodeConnections.tsx:82
+#: src/components/pool/PoolOverview.tsx:65
 msgid "Actions"
 msgstr "행동들"
 
@@ -97,7 +97,7 @@ msgstr "행동들"
 #~ msgid "Add Backup ID"
 #~ msgstr ""
 
-#: src/components/plot/PlotHeader.tsx:89
+#: src/components/plot/PlotHeader.tsx:88
 msgid "Add Plot Directory"
 msgstr "플롯 디렉토리를 추가"
 
@@ -109,9 +109,9 @@ msgstr "플롯을 대기열에 추가"
 #~ msgid "Add Wallet"
 #~ msgstr "Add Wallet"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:45
-#: src/components/plot/PlotHeader.tsx:61
-#: src/components/plot/add/PlotAddForm.tsx:178
+#: src/components/farm/overview/FarmOverviewHero.tsx:42
+#: src/components/plot/PlotHeader.tsx:60
+#: src/components/plot/add/PlotAddForm.tsx:176
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -122,11 +122,11 @@ msgstr "플롯 추가"
 msgid "Add a Plot NFT"
 msgstr ""
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:85
+#: src/components/plot/PlotAddDirectoryDialog.tsx:84
 msgid "Add a plot"
 msgstr "플롯 추가"
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:124
+#: src/components/plot/PlotAddDirectoryDialog.tsx:123
 msgid "Add plot directory"
 msgstr "플롯 폴더 추가"
 
@@ -145,7 +145,7 @@ msgstr ""
 #~ msgid "Address / Puzzle hash"
 #~ msgstr "주소 / 퍼즐 해시"
 
-#: src/components/app/AppKeyringMigrator.tsx:199
+#: src/components/app/AppKeyringMigrator.tsx:198
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
 msgstr ""
 
@@ -212,7 +212,7 @@ msgstr ""
 #~ msgid "Back"
 #~ msgstr "뒤로"
 
-#: src/components/backup/BackupCreate.tsx:45
+#: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
 msgstr "백업된 파일은 스마트 월렛을 복구하는데 사용됩니다."
 
@@ -222,7 +222,7 @@ msgstr "백업된 파일은 스마트 월렛을 복구하는데 사용됩니다.
 #~ msgid "Balance"
 #~ msgstr "잔고"
 
-#: src/components/block/Block.jsx:304
+#: src/components/block/Block.jsx:295
 msgid "Base Farmer Reward Amount"
 msgstr "파밍에 대한 보상 지급의 최소 금액"
 
@@ -239,11 +239,7 @@ msgstr "지난 24시간 동안의 최적 예측값입니다."
 #~ msgid "Best estimate over last 5 hours"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:114
-#: src/components/block/Block.jsx:123
-#: src/components/block/Block.jsx:140
-#: src/components/block/Block.jsx:144
-#: src/components/block/Block.jsx:320
+#: src/components/block/Block.jsx:136
 msgid "Block"
 msgstr "블록"
 
@@ -255,11 +251,11 @@ msgstr ""
 #~ msgid "Block Test"
 #~ msgstr "블록 테스트"
 
-#: src/components/block/Block.jsx:222
+#: src/components/block/Block.jsx:213
 msgid "Block VDF Iterations"
 msgstr "블록 VDF 반복"
 
-#: src/components/block/Block.jsx:324
+#: src/components/block/Block.jsx:314
 msgid "Block at height {0} in the Chia blockchain"
 msgstr "Chia 블록체인 높이 {0} 에 있는 블록"
 
@@ -267,11 +263,11 @@ msgstr "Chia 블록체인 높이 {0} 에 있는 블록"
 #~ msgid "Block hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:127
+#: src/components/block/Block.jsx:122
 msgid "Block with hash {headerHash}"
 msgstr "해쉬 {headerHash} 의 블록"
 
-#: src/components/block/Block.jsx:149
+#: src/components/block/Block.jsx:141
 msgid "Block with hash {headerHash} does not exist."
 msgstr "{headerHash} 에 해당하는 블록이 존재하지 않습니다."
 
@@ -311,16 +307,18 @@ msgstr "하지만 당신은 현재 <0/>을 파밍하고 있습니다."
 #~ msgid "Can be backed up to mnemonic seed"
 #~ msgstr "니모닉 시드에 백업할 수 있습니다"
 
-#: src/components/app/AppPassPrompt.tsx:152
-#: src/components/backup/BackupCreate.tsx:50
-#: src/components/farm/FarmManageFarmingRewards.tsx:176
-#: src/components/fullNode/FullNodeAddConnection.tsx:86
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:128
+#: src/components/app/AppPassPrompt.tsx:151
+#: src/components/backup/BackupCreate.tsx:51
+#: src/components/block/FarmManageFarmingRewards.tsx:175
+#: src/components/block/FullNodeAddConnection.tsx:85
+#: src/components/farm/FarmManageFarmingRewards.tsx:187
+#: src/components/fullNode/FullNodeAddConnection.tsx:84
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:29
-#: src/components/settings/ChangePassphrasePrompt.tsx:224
-#: src/components/settings/RemovePassphrasePrompt.tsx:138
-#: src/components/settings/SetPassphrasePrompt.tsx:207
+#: src/components/settings/ChangePassphrasePrompt.tsx:221
+#: src/components/settings/RemovePassphrasePrompt.tsx:135
+#: src/components/settings/SetPassphrasePrompt.tsx:203
 msgid "Cancel"
 msgstr "취소"
 
@@ -344,15 +342,15 @@ msgstr "도전 해시"
 msgid "Change"
 msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:232
-#: src/components/settings/Settings.tsx:160
+#: src/components/settings/ChangePassphrasePrompt.tsx:229
+#: src/components/settings/Settings.tsx:164
 #: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:405
 #: src/components/plotNFT/PlotNFTChangePool.tsx:121
-#: src/components/pool/PoolOverview.tsx:112
+#: src/components/pool/PoolOverview.tsx:111
 msgid "Change Pool"
 msgstr ""
 
@@ -372,7 +370,7 @@ msgstr "치아 블록체인 위키"
 #~ msgid "Chia Wallet"
 #~ msgstr "치아 지갑"
 
-#: src/components/app/AppSelectMode.tsx:163
+#: src/components/app/AppSelectMode.tsx:158
 msgid "Choose Farming Mode"
 msgstr ""
 
@@ -388,17 +386,17 @@ msgstr "플롯 사이즈를 선택해 주십시오."
 msgid "Choose Plotter"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:112
+#: src/components/app/AppSelectMode.tsx:107
 msgid "Choose Wallet Mode"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:381
-#: src/components/pool/PoolOverview.tsx:89
+#: src/components/pool/PoolOverview.tsx:88
 msgid "Claim Rewards"
 msgstr ""
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:131
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:82
+#: src/components/plot/PlotAddDirectoryDialog.tsx:130
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:81
 msgid "Close"
 msgstr "닫기"
 
@@ -447,7 +445,7 @@ msgstr ""
 #~ msgid "Coloured Coin Options"
 #~ msgstr "컬러드 코인 옵션"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:174
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:173
 #: src/electron/main.tsx:266
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
@@ -457,13 +455,13 @@ msgstr "확인"
 msgid "Confirm Disconnect"
 msgstr "연결 해제 확인"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:182
+#: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
 msgstr ""
 
+#: src/components/app/AppKeyringMigrator.tsx:149
 #: src/components/app/AppKeyringMigrator.tsx:150
-#: src/components/app/AppKeyringMigrator.tsx:151
-#: src/components/settings/SetPassphrasePrompt.tsx:162
+#: src/components/settings/SetPassphrasePrompt.tsx:160
 msgid "Confirm Passphrase"
 msgstr ""
 
@@ -479,12 +477,14 @@ msgstr ""
 #~ msgid "Confirmed at height {0}"
 #~ msgstr "높이 {0} 에서 확인됨"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:89
+#: src/components/block/FullNodeAddConnection.tsx:88
+#: src/components/fullNode/FullNodeAddConnection.tsx:87
 msgid "Connect"
 msgstr "연결"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:65
-#: src/components/fullNode/FullNodeConnections.tsx:109
+#: src/components/block/FullNodeAddConnection.tsx:64
+#: src/components/fullNode/FullNodeAddConnection.tsx:63
+#: src/components/fullNode/FullNodeConnections.tsx:110
 msgid "Connect to other peers"
 msgstr "다른 피어에 연결"
 
@@ -514,11 +514,11 @@ msgstr "연결 상태"
 msgid "Connection Status:"
 msgstr "연결 상태:"
 
-#: src/components/fullNode/FullNodeConnections.tsx:74
+#: src/components/fullNode/FullNodeConnections.tsx:75
 msgid "Connection type"
 msgstr "연결 유형"
 
-#: src/components/fullNode/FullNodeConnections.tsx:106
+#: src/components/fullNode/FullNodeConnections.tsx:107
 msgid "Connections"
 msgstr "연결"
 
@@ -541,13 +541,13 @@ msgstr "GitHub에서 기여"
 #~ msgid "Copy to Clipboard"
 #~ msgstr "클립보드에 복사"
 
-#: src/components/backup/BackupCreate.tsx:58
-#: src/components/plot/add/PlotAddForm.tsx:198
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+#: src/components/backup/BackupCreate.tsx:59
+#: src/components/plot/add/PlotAddForm.tsx:196
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:176
 msgid "Create"
 msgstr "생성"
 
-#: src/components/app/AppSelectMode.tsx:145
+#: src/components/app/AppSelectMode.tsx:140
 msgid "Create & Manage plots"
 msgstr ""
 
@@ -597,7 +597,7 @@ msgstr ""
 #~ msgid "Create Transaction"
 #~ msgstr "거래 생성하기"
 
-#: src/components/backup/BackupCreate.tsx:41
+#: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
 msgstr "백업 생성하기"
 
@@ -649,7 +649,7 @@ msgstr ""
 msgid "Creating Plot NFT for Self Pooling"
 msgstr ""
 
-#: src/components/plot/add/PlotAddForm.tsx:109
+#: src/components/plot/add/PlotAddForm.tsx:107
 msgid "Currency code is not defined"
 msgstr ""
 
@@ -658,7 +658,7 @@ msgstr ""
 msgid "Current Difficulty"
 msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:162
+#: src/components/settings/ChangePassphrasePrompt.tsx:160
 msgid "Current Passphrase"
 msgstr ""
 
@@ -699,7 +699,7 @@ msgstr "지연"
 msgid "Delete"
 msgstr "삭제"
 
-#: src/components/app/AppPassPrompt.tsx:93
+#: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
 msgstr ""
 
@@ -729,7 +729,7 @@ msgstr ""
 #~ msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 #~ msgstr "모든 키를 컴퓨터에서 영구적으로 제거합니다. 만일을 대비하여 백업이 준비되었는지 확인하십시오. 계속하시겠습니까?"
 
-#: src/components/app/AppPassPrompt.tsx:89
+#: src/components/app/AppPassPrompt.tsx:88
 msgid "Deleting key"
 msgstr ""
 
@@ -749,7 +749,7 @@ msgstr "개발자"
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
-#: src/components/block/Block.jsx:208
+#: src/components/block/Block.jsx:199
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
 msgid "Difficulty"
 msgstr "난이도"
@@ -795,7 +795,7 @@ msgstr "접속 끊김"
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:51
+#: src/components/farm/overview/FarmOverviewHero.tsx:48
 #: src/components/plot/overview/PlotOverviewHero.tsx:67
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "이 장치에 플롯 파일이 있습니까? <0>플롯 경로 추가하기</0>"
@@ -812,7 +812,7 @@ msgstr "이 장치가 병렬 플로팅을 지원합니까?"
 #~ msgid "Drag and drop offer file"
 #~ msgstr "거래 파일을 끌어서 여기에 놓으세요"
 
-#: src/components/backup/BackupRestore.tsx:173
+#: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
 msgstr "백업 파일을 끌어 놓으세요"
 
@@ -826,7 +826,7 @@ msgstr "편집"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:258
 #: src/components/plotNFT/PlotNFTCard.tsx:298
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:81
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:80
 msgid "Edit Payout Instructions"
 msgstr ""
 
@@ -838,11 +838,11 @@ msgstr ""
 #~ msgid "Enter Passphrase"
 #~ msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:129
+#: src/components/app/AppKeyringMigrator.tsx:128
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
 msgstr ""
 
-#: src/components/settings/SetPassphrasePrompt.tsx:141
+#: src/components/settings/SetPassphrasePrompt.tsx:139
 msgid "Enter a strong passphrase to secure your keys:"
 msgstr ""
 
@@ -850,7 +850,7 @@ msgstr ""
 #~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 #~ msgstr "치아 지갑을 복구하기 위해서 24자로 된 니모닉 단어를 입력하세요."
 
-#: src/components/settings/RemovePassphrasePrompt.tsx:104
+#: src/components/settings/RemovePassphrasePrompt.tsx:102
 msgid "Enter your passphrase:"
 msgstr ""
 
@@ -902,7 +902,7 @@ msgstr "플롯 열기에 실패했습니다. (사유: 유효하지 않은 플롯
 #~ msgid "Failed to remove passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/settings/SetPassphrasePrompt.tsx:85
+#: src/components/settings/SetPassphrasePrompt.tsx:83
 msgid "Failed to set passphrase: {0}"
 msgstr ""
 
@@ -910,7 +910,7 @@ msgstr ""
 #~ msgid "Failed to set passphrase: {error}"
 #~ msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:113
+#: src/components/settings/ChangePassphrasePrompt.tsx:111
 msgid "Failed to update passphrase: {0}"
 msgstr ""
 
@@ -919,22 +919,24 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:46
-msgid "Farm"
-msgstr "농장"
+#~ msgid "Farm"
+#~ msgstr "농장"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:297
 msgid "Farmer Public Key"
 msgstr "파머 공개 키"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:245
 msgid "Farmer Puzzle Hash"
 msgstr "수확기 퍼즐 해시"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:143
+#: src/components/block/FarmManageFarmingRewards.tsx:142
+#: src/components/farm/FarmManageFarmingRewards.tsx:154
 msgid "Farmer Reward Address"
 msgstr "파밍 보상을 수령할 주소"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:117
+#: src/components/block/FarmManageFarmingRewards.tsx:116
+#: src/components/farm/FarmManageFarmingRewards.tsx:128
 msgid "Farmer Reward Address is not properly formatted."
 msgstr ""
 
@@ -942,7 +944,8 @@ msgstr ""
 #~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:111
+#: src/components/block/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:122
 msgid "Farmer Reward Address must not be empty."
 msgstr ""
 
@@ -960,18 +963,18 @@ msgstr "파머가 작동하지 않고 있습니다."
 #~ msgid "Farmer public key:"
 #~ msgstr ""
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:32
+#: src/components/farm/overview/FarmOverviewHero.tsx:29
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "파머(농부)는 남는 공간을 네트워크에 할당하여, 블록 보상과 거래 수수료를 통해 수익을 창출합니다. 이곳에 플롯을 생성하면 농장이 생성됩니다. <0>더 알아보기</0>"
 
-#: src/components/farm/Farm.tsx:19
+#: src/components/dashboard/DashboardSideBar.tsx:100
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr "재배 중"
 
-#: src/components/app/AppSelectMode.tsx:130
+#: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
 msgstr ""
 
@@ -983,7 +986,7 @@ msgstr ""
 msgid "Farming Status"
 msgstr "수확 상태"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:160
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:159
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
 msgid "Fee"
@@ -1005,7 +1008,7 @@ msgstr "수수료"
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:308
+#: src/components/block/Block.jsx:299
 msgid "Fees Amount"
 msgstr "수수료 금액"
 
@@ -1041,14 +1044,14 @@ msgstr "트위터 팔로우하기"
 msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
-#: src/components/dashboard/DashboardSideBar.tsx:30
-#: src/components/fullNode/FullNode.jsx:135
+#: src/components/dashboard/DashboardSideBar.tsx:81
+#: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "전체 노드"
 
 #: src/components/fullNode/FullNode.jsx:138
-msgid "Full Node Overview"
-msgstr ""
+#~ msgid "Full Node Overview"
+#~ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
@@ -1058,6 +1061,10 @@ msgstr ""
 msgid "Full Screen"
 msgstr "전체 화면"
 
+#: src/components/settings/Settings.tsx:256
+msgid "General"
+msgstr ""
+
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
 #~ msgstr "새로운 컬러 만들기"
@@ -1066,7 +1073,7 @@ msgstr "전체 화면"
 #~ msgid "Get Pool Login Link"
 #~ msgstr "Get Pool Login Link"
 
-#: src/components/pool/PoolOverview.tsx:173
+#: src/components/pool/PoolOverview.tsx:172
 msgid "Grid view"
 msgstr ""
 
@@ -1086,13 +1093,13 @@ msgstr ""
 msgid "Header Hash"
 msgstr "헤더 해시"
 
-#: src/components/block/Block.jsx:172
+#: src/components/block/Block.jsx:163
 msgid "Header hash"
 msgstr "해더 해시"
 
-#: src/components/block/Block.jsx:188
+#: src/components/block/Block.jsx:179
 #: src/components/fullNode/FullNode.jsx:76
-#: src/components/fullNode/FullNodeConnections.tsx:78
+#: src/components/fullNode/FullNodeConnections.tsx:79
 msgid "Height"
 msgstr "높이"
 
@@ -1108,8 +1115,8 @@ msgstr "도움말"
 #~ msgid "Hide Advanced Options"
 #~ msgstr "고급 옵션 숨기기"
 
-#: src/components/app/AppPassPrompt.tsx:128
-#: src/components/settings/RemovePassphrasePrompt.tsx:120
+#: src/components/app/AppPassPrompt.tsx:127
+#: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
 msgstr ""
 
@@ -1122,13 +1129,18 @@ msgstr ""
 msgid "Host Name"
 msgstr "호스트 이름"
 
-#: src/components/fullNode/FullNodeConnections.tsx:39
+#: src/components/fullNode/FullNodeConnections.tsx:40
 msgid "IP address"
 msgstr "IP 주소"
 
-#: src/components/fullNode/FullNodeAddConnection.tsx:72
+#: src/components/block/FullNodeAddConnection.tsx:71
+#: src/components/fullNode/FullNodeAddConnection.tsx:70
 msgid "IP address / host"
 msgstr "IP주소 / 호스트"
+
+#: src/components/settings/Settings.tsx:257
+msgid "Identities"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
 msgid "If none selected, then it will default to the temporary directory."
@@ -1187,18 +1199,18 @@ msgstr "인덱스"
 msgid "Invalid state"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:67
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:66
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:403
-#: src/components/pool/PoolOverview.tsx:110
+#: src/components/pool/PoolOverview.tsx:109
 msgid "Join Pool"
 msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/pool/PoolHero.tsx:31
+#: src/components/pool/PoolHero.tsx:27
 msgid "Join a Pool"
 msgstr ""
 
@@ -1214,7 +1226,7 @@ msgstr ""
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:151
+#: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
 msgstr ""
 
@@ -1222,7 +1234,7 @@ msgstr ""
 msgid "K-Size"
 msgstr "K-크기"
 
-#: src/components/app/AppKeyringMigrator.tsx:94
+#: src/components/app/AppKeyringMigrator.tsx:93
 msgid "Keyring migration failed: {0}"
 msgstr ""
 
@@ -1247,6 +1259,10 @@ msgstr "마지막으로 시도한 증명"
 msgid "Last Height Farmed"
 msgstr "마지막 채굴 높이"
 
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
+msgid "Last Transaction Block Time"
+msgstr ""
+
 #: src/components/farm/FarmLatestBlockChallenges.tsx:30
 msgid "Latest Block Challenges"
 msgstr "최신 블록 도전"
@@ -1256,8 +1272,8 @@ msgstr "최신 블록 도전"
 msgid "Launcher Id"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:77
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:119
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:76
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:118
 msgid "Learn More"
 msgstr ""
 
@@ -1265,7 +1281,7 @@ msgstr ""
 msgid "Leaving Pool"
 msgstr ""
 
-#: src/components/pool/PoolOverview.tsx:173
+#: src/components/pool/PoolOverview.tsx:172
 msgid "List view"
 msgstr ""
 
@@ -1273,7 +1289,7 @@ msgstr ""
 #~ msgid "Loading Plot NFTs"
 #~ msgstr ""
 
-#: src/components/app/AppProviders.tsx:66
+#: src/components/app/AppProviders.tsx:65
 msgid "Loading configuration"
 msgstr ""
 
@@ -1285,7 +1301,7 @@ msgstr ""
 #~ msgid "Loading list of wallets"
 #~ msgstr ""
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:35
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "Loading..."
 msgstr "불러오는 중…"
 
@@ -1337,7 +1353,7 @@ msgstr "불러오는 중…"
 #~ msgid "MainWalletList.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:100
+#: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1349,11 +1365,12 @@ msgstr "채굴 보상 관리"
 #~ msgid "Manage Recovery DIDs"
 #~ msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:99
+#: src/components/block/FarmManageFarmingRewards.tsx:98
+#: src/components/farm/FarmManageFarmingRewards.tsx:110
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "채굴 보상 타겟 경로 관리"
 
-#: src/components/fullNode/FullNodeConnections.tsx:67
+#: src/components/fullNode/FullNodeConnections.tsx:68
 msgid "MiB Up/Down"
 msgstr "MiB 업로드/다운로드"
 
@@ -1361,20 +1378,20 @@ msgstr "MiB 업로드/다운로드"
 #~ msgid "Migrate"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:182
+#: src/components/settings/Settings.tsx:186
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:230
+#: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:125
+#: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:123
+#: src/components/settings/Settings.tsx:127
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
 msgstr ""
@@ -1416,7 +1433,7 @@ msgstr "네트워크 이름"
 #~ msgid "New Address"
 #~ msgstr "새 주소"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:172
+#: src/components/settings/ChangePassphrasePrompt.tsx:170
 msgid "New Passphrase"
 msgstr ""
 
@@ -1428,7 +1445,7 @@ msgstr ""
 #~ msgid "New passphrase is the same as your current passphrase"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:338
+#: src/components/block/Block.jsx:328
 msgid "Next"
 msgstr "다음"
 
@@ -1452,13 +1469,14 @@ msgstr "아직 수확한 블록이 없습니다"
 #~ msgid "No previous transactions"
 #~ msgstr "거래 내역이 없습니다"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:136
+#: src/components/block/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:147
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "주소란 한 쪽이나 양쪽에 개인 키를 넣지 마십시오. 다른 가상 지갑으로 보상을 보낼 때에만 안전합니다."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:33
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
-#: src/components/fullNode/FullNodeConnections.tsx:35
+#: src/components/fullNode/FullNodeConnections.tsx:36
 msgid "Node ID"
 msgstr "노드 ID"
 
@@ -1503,7 +1521,8 @@ msgstr "연결되지 않음"
 msgid "Not found Plots"
 msgstr "플롯을 찾지 못했습니다"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:164
+#: src/components/block/FarmManageFarmingRewards.tsx:163
+#: src/components/farm/FarmManageFarmingRewards.tsx:175
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr ""
 
@@ -1524,13 +1543,17 @@ msgstr ""
 msgid "Number of threads"
 msgstr "쓰레드 갯수"
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:88
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:87
 msgid "OK"
 msgstr "확인"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
 #~ msgstr "거래 제안"
+
+#: src/components/dashboard/DashboardSideBar.tsx:71
+msgid "Offers"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1552,28 +1575,28 @@ msgstr "확인"
 #~ msgid "Outgoing"
 #~ msgstr "내보내는 중"
 
+#: src/components/app/AppKeyringMigrator.tsx:138
 #: src/components/app/AppKeyringMigrator.tsx:139
-#: src/components/app/AppKeyringMigrator.tsx:140
-#: src/components/app/AppPassPrompt.tsx:120
-#: src/components/settings/RemovePassphrasePrompt.tsx:112
-#: src/components/settings/SetPassphrasePrompt.tsx:151
+#: src/components/app/AppPassPrompt.tsx:119
+#: src/components/settings/RemovePassphrasePrompt.tsx:110
+#: src/components/settings/SetPassphrasePrompt.tsx:149
 #: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:163
-#: src/components/settings/ChangePassphrasePrompt.tsx:193
-#: src/components/settings/SetPassphrasePrompt.tsx:175
+#: src/components/app/AppKeyringMigrator.tsx:162
+#: src/components/settings/ChangePassphrasePrompt.tsx:191
+#: src/components/settings/SetPassphrasePrompt.tsx:173
 msgid "Passphrase Hint"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:162
-#: src/components/settings/ChangePassphrasePrompt.tsx:192
-#: src/components/settings/SetPassphrasePrompt.tsx:174
+#: src/components/app/AppKeyringMigrator.tsx:161
+#: src/components/settings/ChangePassphrasePrompt.tsx:190
+#: src/components/settings/SetPassphrasePrompt.tsx:172
 msgid "Passphrase Hint (Optional)"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:213
+#: src/components/settings/Settings.tsx:217
 msgid "Passphrase Settings"
 msgstr ""
 
@@ -1582,22 +1605,22 @@ msgstr ""
 #~ msgid "Passphrase is incorrect"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:96
+#: src/components/settings/Settings.tsx:100
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:133
+#: src/components/settings/Settings.tsx:137
 #: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:130
+#: src/components/settings/Settings.tsx:134
 #: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:124
+#: src/components/settings/Settings.tsx:128
 #: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
 msgstr ""
@@ -1615,8 +1638,8 @@ msgstr "최종 높이"
 #~ msgstr "Peak Sub-block Height"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
-msgid "Peak Time"
-msgstr "절정 시간"
+#~ msgid "Peak Time"
+#~ msgstr "절정 시간"
 
 #: src/components/plotNFT/PlotNFTState.tsx:43
 msgid "Pending"
@@ -1637,7 +1660,7 @@ msgstr "대기중"
 #~ msgid "Pending Total Balance"
 #~ msgstr "전체 보류중인 잔고"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:137
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
 #: src/hooks/useAbsorbRewards.tsx:43
 msgid "Please Confirm"
 msgstr ""
@@ -1659,8 +1682,8 @@ msgstr ""
 #~ msgid "Please enter a filename"
 #~ msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:53
-#: src/components/settings/SetPassphrasePrompt.tsx:53
+#: src/components/app/AppPassPrompt.tsx:52
+#: src/components/settings/SetPassphrasePrompt.tsx:51
 msgid "Please enter a passphrase"
 msgstr ""
 
@@ -1711,17 +1734,17 @@ msgstr ""
 #~ msgid "Please enter a valid pubkey"
 #~ msgstr "유효한 공개 키를 입력하십시오"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:75
+#: src/components/settings/ChangePassphrasePrompt.tsx:73
 msgid "Please enter your current passphrase, and a new passphrase"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:80
-#: src/components/app/AppPassPrompt.tsx:96
-#: src/components/settings/RemovePassphrasePrompt.tsx:52
+#: src/components/app/AppPassPrompt.tsx:79
+#: src/components/app/AppPassPrompt.tsx:95
+#: src/components/settings/RemovePassphrasePrompt.tsx:50
 msgid "Please enter your passphrase"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:90
+#: src/components/app/AppPassPrompt.tsx:89
 msgid "Please enter your passphrase to proceed"
 msgstr ""
 
@@ -1777,7 +1800,7 @@ msgstr ""
 msgid "Plot Count"
 msgstr "플롯 수"
 
-#: src/components/block/Block.jsx:286
+#: src/components/block/Block.jsx:277
 msgid "Plot Id"
 msgstr "플롯 ID"
 
@@ -1785,11 +1808,11 @@ msgstr "플롯 ID"
 msgid "Plot Key"
 msgstr "플롯 키"
 
-#: src/components/pool/PoolOverview.tsx:39
+#: src/components/pool/PoolOverview.tsx:38
 msgid "Plot NFT"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:109
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:108
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
 msgstr ""
@@ -1798,7 +1821,7 @@ msgstr ""
 #~ msgid "Plot Name"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:246
+#: src/components/block/Block.jsx:237
 msgid "Plot Public Key"
 msgstr "구성 공개 키"
 
@@ -1826,8 +1849,7 @@ msgstr "{0} 의 복제된 구성"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:41
-#: src/components/plot/Plot.tsx:14
+#: src/components/dashboard/DashboardSideBar.tsx:87
 msgid "Plots"
 msgstr "플롯"
 
@@ -1876,8 +1898,8 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/pool/Pool.tsx:17
-msgid "Pool"
-msgstr ""
+#~ msgid "Pool"
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:100
 msgid "Pool Contract Address"
@@ -1887,28 +1909,30 @@ msgstr ""
 msgid "Pool Key"
 msgstr "풀 키"
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:54
+#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:53
 msgid "Pool Login Link"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:92
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:91
 msgid "Pool Payout Instructions"
 msgstr ""
 
-#: src/components/block/Block.jsx:250
+#: src/components/block/Block.jsx:241
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:308
 msgid "Pool Public Key"
 msgstr "풀 퍼블릭 키"
 
-#: src/components/block/Block.jsx:270
+#: src/components/block/Block.jsx:261
 msgid "Pool Puzzle Hash"
 msgstr "풀 퍼즐 해시"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:153
+#: src/components/block/FarmManageFarmingRewards.tsx:152
+#: src/components/farm/FarmManageFarmingRewards.tsx:164
 msgid "Pool Reward Address"
 msgstr "풀 보상 주소"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:129
+#: src/components/block/FarmManageFarmingRewards.tsx:128
+#: src/components/farm/FarmManageFarmingRewards.tsx:140
 msgid "Pool Reward Address is not properly formatted."
 msgstr ""
 
@@ -1916,11 +1940,12 @@ msgstr ""
 #~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 #~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:124
+#: src/components/block/FarmManageFarmingRewards.tsx:123
+#: src/components/farm/FarmManageFarmingRewards.tsx:135
 msgid "Pool Reward Address must not be empty."
 msgstr ""
 
-#: src/components/block/Block.jsx:300
+#: src/components/block/Block.jsx:291
 msgid "Pool Reward Amount"
 msgstr "풀 보상량"
 
@@ -1950,28 +1975,30 @@ msgstr ""
 msgid "Pool:"
 msgstr ""
 
+#: src/components/dashboard/DashboardSideBar.tsx:105
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
 msgstr ""
 
+#: src/components/block/FullNodeAddConnection.tsx:76
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
-#: src/components/fullNode/FullNodeAddConnection.tsx:77
-#: src/components/fullNode/FullNodeConnections.tsx:45
+#: src/components/fullNode/FullNodeAddConnection.tsx:75
+#: src/components/fullNode/FullNodeConnections.tsx:46
 msgid "Port"
 msgstr "포트"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:94
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:93
 #: src/components/plotNFT/PlotNFTChangePool.tsx:85
 msgid "Preparing Plot NFT"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:102
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:101
 msgid "Preparing standard wallet"
 msgstr ""
 
-#: src/components/block/Block.jsx:335
+#: src/components/block/Block.jsx:325
 msgid "Previous"
 msgstr "이전"
 
@@ -1979,7 +2006,7 @@ msgstr "이전"
 #~ msgid "Previous Block Hash"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:202
+#: src/components/block/Block.jsx:193
 msgid "Previous Header Hash"
 msgstr "이전 해더 해시"
 
@@ -1999,7 +2026,7 @@ msgstr "이전 해더 해시"
 #~ msgid "Private key:"
 #~ msgstr "개인 키:"
 
-#: src/components/block/Block.jsx:238
+#: src/components/block/Block.jsx:229
 msgid "Proof of Space Size"
 msgstr "공간 크기 증명"
 
@@ -2074,7 +2101,7 @@ msgstr "최대 RAM 사용량"
 #~ msgid "Receive Address"
 #~ msgstr "입금 주소"
 
-#: src/components/app/AppSelectMode.tsx:121
+#: src/components/app/AppSelectMode.tsx:116
 msgid "Recommended"
 msgstr ""
 
@@ -2100,7 +2127,7 @@ msgstr ""
 #~ msgid "Recover Wallet"
 #~ msgstr ""
 
-#: src/components/plot/PlotHeader.tsx:76
+#: src/components/plot/PlotHeader.tsx:75
 #: src/components/plot/overview/PlotOverviewHero.tsx:60
 msgid "Refresh Plots"
 msgstr "Plots 새로고침"
@@ -2113,14 +2140,14 @@ msgstr ""
 msgid "Release Notes"
 msgstr "릴리스 노트"
 
-#: src/components/settings/RemovePassphrasePrompt.tsx:100
-#: src/components/settings/RemovePassphrasePrompt.tsx:147
-#: src/components/settings/Settings.tsx:194
+#: src/components/settings/RemovePassphrasePrompt.tsx:98
+#: src/components/settings/RemovePassphrasePrompt.tsx:143
+#: src/components/settings/Settings.tsx:198
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:196
+#: src/components/app/AppKeyringMigrator.tsx:195
 msgid "Remove keys from old keyring upon successful migration"
 msgstr ""
 
@@ -2136,7 +2163,7 @@ msgstr "제거"
 msgid "Report an Issue..."
 msgstr "문제 보고하기..."
 
-#: src/components/backup/BackupRestore.tsx:160
+#: src/components/backup/BackupRestore.tsx:159
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
 msgstr "백업에서 컬러 코인 및 기타 스마트 지갑에 대한 메타 데이터 복원"
 
@@ -2144,7 +2171,7 @@ msgstr "백업에서 컬러 코인 및 기타 스마트 지갑에 대한 메타 
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:157
+#: src/components/app/AppSelectMode.tsx:152
 msgid "Runs the full node"
 msgstr ""
 
@@ -2153,18 +2180,19 @@ msgstr ""
 #~ msgid "SB Height"
 #~ msgstr "SB Height"
 
-#: src/components/backup/BackupRestore.tsx:186
+#: src/components/backup/BackupRestore.tsx:185
 msgid "Safe To Skip"
 msgstr "안전하게 건너 뛰기"
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:179
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:131
+#: src/components/block/FarmManageFarmingRewards.tsx:178
+#: src/components/farm/FarmManageFarmingRewards.tsx:190
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:130
 msgid "Save"
 msgstr "저장"
 
-#: src/components/app/AppKeyringMigrator.tsx:178
-#: src/components/settings/ChangePassphrasePrompt.tsx:208
-#: src/components/settings/SetPassphrasePrompt.tsx:190
+#: src/components/app/AppKeyringMigrator.tsx:177
+#: src/components/settings/ChangePassphrasePrompt.tsx:206
+#: src/components/settings/SetPassphrasePrompt.tsx:188
 msgid "Save passphrase"
 msgstr ""
 
@@ -2172,7 +2200,7 @@ msgstr ""
 #~ msgid "Search"
 #~ msgstr ""
 
-#: src/components/fullNode/FullNodeBlockSearch.tsx:41
+#: src/components/fullNode/FullNodeBlockSearch.tsx:40
 msgid "Search block by header hash"
 msgstr "헤더 해시로 블록 검색"
 
@@ -2180,7 +2208,7 @@ msgstr "헤더 해시로 블록 검색"
 msgid "Second temporary folder location"
 msgstr "두번째 임시 폴더 경로"
 
-#: src/components/settings/Settings.tsx:126
+#: src/components/settings/Settings.tsx:130
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
 msgstr ""
@@ -2217,7 +2245,7 @@ msgstr "플롯 생성을 위한 임시 폴더를 선택"
 #~ msgid "Select Wallet Type"
 #~ msgstr "지갑 종류 선택"
 
-#: src/components/app/AppSelectMode.tsx:70
+#: src/components/app/AppSelectMode.tsx:65
 msgid "Select Your Client Mode"
 msgstr ""
 
@@ -2280,9 +2308,9 @@ msgstr ""
 #~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
 #~ msgstr "이 정보 패킷을 비율 제한 지갑 사용자에게 보냅니다. 이 사용자는 이를 사용하여 지갑 설정을 완료해야합니다."
 
-#: src/components/settings/SetPassphrasePrompt.tsx:137
-#: src/components/settings/SetPassphrasePrompt.tsx:216
-#: src/components/settings/Settings.tsx:205
+#: src/components/settings/SetPassphrasePrompt.tsx:135
+#: src/components/settings/SetPassphrasePrompt.tsx:211
+#: src/components/settings/Settings.tsx:209
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
 msgstr ""
@@ -2291,13 +2319,15 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:241
+#: src/components/dashboard/DashboardSideBar.tsx:114
+#: src/components/dashboard/DashboardSideBar.tsx:122
+#: src/components/settings/Settings.tsx:247
 msgid "Settings"
 msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:171
-msgid "Settings are located at the upper right corner"
-msgstr ""
+#~ msgid "Settings are located at the upper right corner"
+#~ msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
@@ -2316,12 +2346,12 @@ msgstr ""
 #~ msgid "Sign In"
 #~ msgstr "로그인"
 
-#: src/components/app/AppKeyringMigrator.tsx:58
-#: src/components/app/AppKeyringMigrator.tsx:219
+#: src/components/app/AppKeyringMigrator.tsx:57
+#: src/components/app/AppKeyringMigrator.tsx:218
 msgid "Skip"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:57
+#: src/components/app/AppKeyringMigrator.tsx:56
 msgid "Skip Keyring Migration"
 msgstr ""
 
@@ -2337,7 +2367,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "농업용 수확기에 최종 디렉토리 추가 건너뛰기"
 
-#: src/components/pool/PoolHero.tsx:26
+#: src/components/pool/PoolHero.tsx:22
 msgid "Smooth out your XCH farming rewards by joining a pool."
 msgstr ""
 
@@ -2394,7 +2424,7 @@ msgstr "상태"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
 #: src/components/plotNFT/PlotNFTCard.tsx:142
-#: src/components/pool/PoolOverview.tsx:43
+#: src/components/pool/PoolOverview.tsx:42
 msgid "Status"
 msgstr "상태"
 
@@ -2418,7 +2448,7 @@ msgstr "상태"
 #~ msgid "StatusCard.title"
 #~ msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:94
+#: src/components/app/AppSelectMode.tsx:89
 msgid "Store and Send XCH"
 msgstr ""
 
@@ -2434,7 +2464,7 @@ msgstr ""
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/app/AppPassPrompt.tsx:97
+#: src/components/app/AppPassPrompt.tsx:96
 msgid "Submit"
 msgstr "제출"
 
@@ -2547,23 +2577,23 @@ msgstr ""
 #~ msgid "The provided passphrase and confirmation do not match"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:289
+#: src/components/block/Block.jsx:280
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "플롯을 만드는 데 사용 된 시드입니다. 이는 풀 pk 및 플롯 pk에 따라 다릅니다."
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 msgstr "VDF (확인 가능한 지연 함수) 의 전체 수 또는 이 하위 블록까지 전체 체인에 대한 시간 반복의 전체 수 입니다."
 
-#: src/components/block/Block.jsx:231
+#: src/components/block/Block.jsx:222
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr "VDF (확인 가능한 지연 함수) 의 총 수 또는이 블록의 시간 반복 증명입니다."
 
-#: src/components/block/Block.jsx:311
+#: src/components/block/Block.jsx:302
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr "이 블록의 총 거래 수수료. 농부에게 보상."
 
-#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:107
+#: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:106
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr ""
 
@@ -2571,7 +2601,7 @@ msgstr ""
 msgid "These plots are invalid, you might want to delete them."
 msgstr "이러한 플롯은 유효하지 않습니다. 삭제할 수 있습니다."
 
-#: src/components/plot/PlotAddDirectoryDialog.tsx:89
+#: src/components/plot/PlotAddDirectoryDialog.tsx:88
 msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
 msgstr "이렇게하면 플롯이있는 디렉토리를 추가 할 수 있습니다. 플롯을 생성하지 않은 경우 플로팅 화면으로 이동합니다."
 
@@ -2597,12 +2627,16 @@ msgstr "이 기능은 GUI에서만 사용 가능합니다."
 #~ msgstr "이것은 들어오고 나가는 보류 트랜잭션의 합계입니다 (아직 블록 체인에 포함되지 않음). 여기에는 농업 보상이 포함되지 않습니다."
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
-msgid "This is the time of the latest peak sub block."
-msgstr "이것은 최신 피크 서브 블록의 시간입니다."
+#~ msgid "This is the time of the latest peak sub block."
+#~ msgstr "이것은 최신 피크 서브 블록의 시간입니다."
 
-#: src/components/block/Block.jsx:181
+#: src/components/block/Block.jsx:172
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr "이것은 농부가 블록을 만든 시간이며 시간 증명으로 완성되기 전입니다."
+
+#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
+msgid "This is the timestamp of the most recent transaction block."
+msgstr ""
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -2666,13 +2700,17 @@ msgstr "생성 시간"
 #~ msgid "Time this trade was created at this time"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:176
+#: src/components/block/Block.jsx:167
 msgid "Timestamp"
 msgstr "타임스탬프"
 
 #: src/components/_wallet_old/WalletHistory.tsx:42
 #~ msgid "To"
 #~ msgstr "수신"
+
+#: src/components/dashboard/DashboardSideBar.tsx:59
+msgid "Tokens"
+msgstr ""
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
@@ -2700,7 +2738,7 @@ msgstr "전체 플롯의 용량:"
 msgid "Total Size of Plots"
 msgstr "전체 플롯의 용량"
 
-#: src/components/block/Block.jsx:212
+#: src/components/block/Block.jsx:203
 msgid "Total VDF Iterations"
 msgstr "총 VDF 반복"
 
@@ -2728,7 +2766,7 @@ msgstr "블록체인 시작 후 총 반복"
 #~ msgid "Trade Overview"
 #~ msgstr "거래 개요"
 
-#: src/components/app/AppSelectMode.tsx:106
+#: src/components/app/AppSelectMode.tsx:101
 msgid "Trade tokens"
 msgstr ""
 
@@ -2744,7 +2782,7 @@ msgstr ""
 #~ msgid "Trading History"
 #~ msgstr "거래내역"
 
-#: src/components/block/Block.jsx:296
+#: src/components/block/Block.jsx:287
 msgid "Transactions Filter Hash"
 msgstr "거래 필터 해시"
 
@@ -2757,7 +2795,7 @@ msgstr "거래 필터 해시"
 #~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
-#: src/components/pool/PoolOverview.tsx:63
+#: src/components/pool/PoolOverview.tsx:62
 msgid "Unclaimed Rewards"
 msgstr ""
 
@@ -2773,7 +2811,7 @@ msgstr "미완성"
 #~ msgid "Unknown"
 #~ msgstr "알 수 없음"
 
-#: src/components/app/AppPassPrompt.tsx:83
+#: src/components/app/AppPassPrompt.tsx:82
 msgid "Unlock Keyring"
 msgstr ""
 
@@ -2815,7 +2853,7 @@ msgid "View"
 msgstr "보기"
 
 #: src/components/plot/queue/PlotQueueActions.tsx:75
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:56
+#: src/components/plot/queue/PlotQueueLogDialog.tsx:55
 msgid "View Log"
 msgstr "로그 보기"
 
@@ -2859,12 +2897,12 @@ msgstr "동기화 대기 중"
 msgid "Waiting for the transaction to be confirmed"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:86
-#: src/components/app/AppSelectMode.tsx:138
+#: src/components/app/AppSelectMode.tsx:81
+#: src/components/app/AppSelectMode.tsx:133
 msgid "Wallet Mode"
 msgstr ""
 
-#: src/components/pool/PoolOverview.tsx:182
+#: src/components/pool/PoolOverview.tsx:181
 msgid "Wallet Status:"
 msgstr ""
 
@@ -2872,7 +2910,7 @@ msgstr ""
 #~ msgid "Wallet does not exists"
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:70
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
 msgid "Wallet is not defined"
 msgstr ""
 
@@ -2905,8 +2943,8 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:36
-msgid "Wallets"
-msgstr "지갑"
+#~ msgid "Wallets"
+#~ msgstr "지갑"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -2941,11 +2979,11 @@ msgstr ""
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
 #~ msgstr ""
 
-#: src/components/block/Block.jsx:192
+#: src/components/block/Block.jsx:183
 msgid "Weight"
 msgstr "중량"
 
-#: src/components/block/Block.jsx:195
+#: src/components/block/Block.jsx:186
 msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
 msgstr "무게는 이것을 포함하여 모든 서브 블록의 총 추가 난이도입니다."
 
@@ -2983,7 +3021,7 @@ msgstr ""
 msgid "You are not self pooling"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:173
+#: src/components/app/AppSelectMode.tsx:167
 msgid "You can always change your mode later in the settings"
 msgstr ""
 
@@ -3035,7 +3073,7 @@ msgstr ""
 msgid "You need {currencyCode} to join a pool."
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:143
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
 msgid "You will recieve <0/> to {0}"
 msgstr ""
 
@@ -3059,15 +3097,15 @@ msgstr "내 풀 노드 연결"
 msgid "Your Harvester Network"
 msgstr "내 수확기 네트워크"
 
-#: src/components/pool/PoolOverview.tsx:157
+#: src/components/pool/PoolOverview.tsx:156
 msgid "Your Pool Overview"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:79
+#: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:63
+#: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
 msgstr ""
 
@@ -3075,26 +3113,26 @@ msgstr ""
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 #~ msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:106
+#: src/components/app/AppKeyringMigrator.tsx:105
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:112
+#: src/components/app/AppKeyringMigrator.tsx:111
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:181
-#: src/components/settings/ChangePassphrasePrompt.tsx:211
-#: src/components/settings/SetPassphrasePrompt.tsx:193
+#: src/components/app/AppKeyringMigrator.tsx:180
+#: src/components/settings/ChangePassphrasePrompt.tsx:209
+#: src/components/settings/SetPassphrasePrompt.tsx:191
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
 msgstr ""
 
-#: src/components/settings/Settings.tsx:85
+#: src/components/settings/Settings.tsx:89
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:74
+#: src/components/settings/Settings.tsx:78
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
 msgstr ""
@@ -3121,7 +3159,7 @@ msgstr "[오류 22] 파일을 찾을 수 없습니다. config.yaml의 플롯 폴
 #~ msgid "not synced"
 #~ msgstr "동기화 되지 않음"
 
-#: src/components/plot/add/PlotAddForm.tsx:127
+#: src/components/plot/add/PlotAddForm.tsx:125
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 

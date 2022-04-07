@@ -671,7 +671,7 @@ msgstr "Подключен"
 #~ msgid "Contribute on GitHub"
 #~ msgstr "Сотрудничать на GitHub"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:31
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:37
 msgid "Copied"
 msgstr "Скопировано"
 
@@ -682,7 +682,7 @@ msgstr "Скопировано"
 #~ msgid "Copy"
 #~ msgstr "Копировать"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:33
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:39
 msgid "Copy to Clipboard"
 msgstr "Скопировать в буфер обмена"
 
@@ -1236,7 +1236,7 @@ msgstr "Часто задаваемые вопросы"
 msgid "Help"
 msgstr "Помощь"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:69
+#: src/components/LocaleToggle/LocaleToggle.tsx:70
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -1437,8 +1437,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:125
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:144
 msgid "Log Out"
 msgstr ""
 
@@ -1446,8 +1446,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Вход в систему"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:120
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:143
 msgid "Logout"
 msgstr ""
 
@@ -1662,6 +1662,10 @@ msgstr "Нет подключения"
 #: src/components/farm/FarmManageFarmingRewards.tsx:164
 #~ msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 #~ msgstr "Обратите внимание, что это не меняет адреса выплат пула. Это влияет только на старый формат участков и на вознаграждение 0.25XCH за участки в пуле."
+
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
+msgid "Notifications"
+msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -2945,7 +2949,7 @@ msgstr ""
 #~ msgid "Unique identifier"
 #~ msgstr "Уникальный идентификатор"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Unknown"
 msgstr "Неизвестный"
 
@@ -3035,6 +3039,7 @@ msgstr "Значение вероятно завышено"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Ожидание подтверждения транзакции"
 
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:102
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""

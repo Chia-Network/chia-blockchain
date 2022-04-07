@@ -499,7 +499,7 @@ msgstr "연결됨"
 #~ msgid "Contribute on GitHub"
 #~ msgstr "GitHub에서 기여"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:31
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:37
 msgid "Copied"
 msgstr "복사됨"
 
@@ -510,7 +510,7 @@ msgstr "복사됨"
 #~ msgid "Copy"
 #~ msgstr "복사"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:33
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:39
 msgid "Copy to Clipboard"
 msgstr "클립보드에 복사"
 
@@ -1064,7 +1064,7 @@ msgstr "자주 묻는 질문"
 msgid "Help"
 msgstr "도움말"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:69
+#: src/components/LocaleToggle/LocaleToggle.tsx:70
 msgid "Help translate"
 msgstr "번역 돕기"
 
@@ -1265,8 +1265,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:94
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:125
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:144
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1274,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "로그인 중"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:120
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:143
 msgid "Logout"
 msgstr ""
 
@@ -1490,6 +1490,10 @@ msgstr "연결되지 않음"
 #: src/components/farm/FarmManageFarmingRewards.tsx:164
 #~ msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 #~ msgstr ""
+
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
+msgid "Notifications"
+msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -2773,7 +2777,7 @@ msgstr ""
 #~ msgid "Unique identifier"
 #~ msgstr "고유 식별자"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:47
+#: src/components/LocaleToggle/LocaleToggle.tsx:48
 msgid "Unknown"
 msgstr "알 수 없음"
 
@@ -2863,6 +2867,7 @@ msgstr ""
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr ""
 
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:102
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
