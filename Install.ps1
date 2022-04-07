@@ -43,17 +43,47 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$pythonVersion = (py --version).split(" ")[1]
-if ([version]$pythonVersion -lt [version]"3.7.0")
+$supportedPythonVersions = "3.9", "3.8", "3.7"
+if (Test-Path env:INSTALL_PYTHON_VERSION)
 {
-    Write-Output "Found Python version:" $pythonVersion
-    Write-Output "Installation requires Python 3.7 or later"
-    Exit 1
+    $pythonVersion = $env:INSTALL_PYTHON_VERSION
 }
-Write-Output "Python version is:" $pythonVersion
+else
+{
+    foreach ($version in $supportedPythonVersions)
+    {
+        try
+        {
+            py -$version --version 2>&1 >$null
+            $result = $?
+        }
+        catch
+        {
+            $result = $false
+        }
+        if ($result)
+        {
+            $pythonVersion = $version
+            break
+        }
+    }
 
-$openSSLVersionStr = (py -c 'import ssl; print(ssl.OPENSSL_VERSION)')
-$openSSLVersion = (py -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+    if (-not $pythonVersion)
+    {
+        $reversedPythonVersions = $supportedPythonVersions.clone()
+        [array]::Reverse($reversedPythonVersions)
+        $reversedPythonVersions = $reversedPythonVersions -join ", "
+        Write-Output "No usable Python version found, supported versions are: $reversedPythonVersions"
+        Exit 1
+    }
+}
+
+$fullPythonVersion = (py -$pythonVersion --version).split(" ")[1]
+
+Write-Output "Python version is: $fullPythonVersion"
+
+$openSSLVersionStr = (py -$pythonVersion -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+$openSSLVersion = (py -$pythonVersion -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
 if ($openSSLVersion -lt 269488367)
 {
     Write-Output "Found Python with OpenSSL version:" $openSSLVersionStr
@@ -70,7 +100,7 @@ else
     $extras_cli = ""
 }
 
-py -m venv venv
+py -$pythonVersion -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel
 venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
