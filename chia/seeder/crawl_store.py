@@ -359,6 +359,8 @@ class CrawlStore:
             record = self.host_to_records[host]
             if record.version == "undefined":
                 continue
+            if record.handshake_time < time.time() - 5 * 24 * 3600:
+                continue
             versions[host] = record.version
             handshake[host] = record.handshake_time
 
@@ -367,7 +369,8 @@ class CrawlStore:
     def load_best_peer_reliability(self):
         best_timestamp = {}
         for host, record in self.host_to_records.items():
-            best_timestamp[host] = record.best_timestamp
+            if record.best_timestamp > time.time() - 5 * 24 * 3600:
+                best_timestamp[host] = record.best_timestamp
         return best_timestamp
 
     async def update_version(self, host, version, now):

@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union, Callable
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
@@ -8,15 +8,14 @@ from clvm.casts import int_from_bytes
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.block_root_validation import validate_block_merkle_roots
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_conditions_dict
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -29,10 +28,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util import cached_bls
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
-from chia.util.generator_tools import (
-    additions_for_npc,
-    tx_removals_and_additions,
-)
+from chia.util.generator_tools import additions_for_npc, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 
@@ -50,6 +46,7 @@ async def validate_block_body(
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
     get_block_generator: Callable,
+    *,
     validate_signature=True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
@@ -159,7 +156,7 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 10 minutes into the future
+    # In header validation we check that timestamp is not more that 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
@@ -197,7 +194,7 @@ async def validate_block_body(
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         assert npc_result is not None
-        cost = calculate_cost_of_program(block.transactions_generator, npc_result, constants.COST_PER_BYTE)
+        cost = npc_result.cost
         npc_list = npc_result.npc_list
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
@@ -323,6 +320,7 @@ async def validate_block_body(
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
                     cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
+                    height=curr.height,
                 )
                 removals_in_curr, additions_in_curr = tx_removals_and_additions(curr_npc_result.npc_list)
             else:

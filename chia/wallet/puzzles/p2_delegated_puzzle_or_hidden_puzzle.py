@@ -25,10 +25,10 @@ following mechanism:
 - A 'standard coin' coin exists in the blockchain with some puzzle hash.
 
 - The user's wallet contains a primary sk/pk pair which are used to derive to one
-  level a set of auxiliary sk/pk pairs which are used for specific coins.  these
-  can be used for signing in AGG_SIG_ME but the standard coin uses key further
+  level a set of auxiliary sk/pk pairs which are used for specific coins. These
+  can be used for signing in AGG_SIG_ME, but the standard coin uses a key further
   derived from one of these via calculate_synthetic_secret_key as described in
-  https://chialisp.com/docs/standard_transaction .  Therefore when a wallet needs
+  https://chialisp.com/docs/standard_transaction. Therefore, when a wallet needs
   to find a secret key for signing based on a public key, it needs to try repeating
   this derivation as well and see if the G1Element (pk) associated with any of the
   derived secret keys matches the pk requested by the coin.
@@ -40,19 +40,19 @@ following mechanism:
 
   In context, delegated_puzzle_solution here is any *chialisp program*, here one
   simply quoting a list of conditions, and the following argument is the arguments
-  to this program, which here are unused.  Secondly, the actual arguments to the
-  p2_delegated_puzzle_or_hidden_puzzle are given.  The first argument determines
-  wehther a hidden or revealed puzzle is used.  If the puzzle is hidden, then what
-  is required is a signature given a specific syntheic key since the key cannot be
-  derived inline without the puzzle.  In that case, the first arguemnt is this key.
-  In most cases, the puzzle will be revealed and this argument will be the nil object,
+  to this program, which here are unused. Secondly, the actual arguments to the
+  p2_delegated_puzzle_or_hidden_puzzle are given. The first argument determines
+  whether a hidden or revealed puzzle is used. If the puzzle is hidden, then what
+  is required is a signature given a specific synthetic key since the key cannot be
+  derived inline without the puzzle. In that case, the first argument is this key.
+  In most cases, the puzzle will be revealed, and this argument will be the nil object,
   () (represented here by an empty python list).
 
   The second and third arguments are a chialisp program and its corresponding
-  arguments, which will be run inside the standard coin puzzle.  This interacts with
+  arguments, which will be run inside the standard coin puzzle. This interacts with
   sign_coin_spend in that the AGG_SIG_ME condition added by the inner puzzle asks the
   surrounding system to provide a signature over the provided program with a synthetic
-  key whose derivation is within.  Any wallets which intend to use standard coins in
+  key whose derivation is within. Any wallets which intend to use standard coins in
   this way must try to resolve a public key to a secret key via this derivation.
 """
 import hashlib
