@@ -11,6 +11,7 @@ THIS_IS_WINDOWS = platform.system().lower().startswith("win")
 THIS_IS_MAC = platform.system().lower().startswith("darwin")
 
 ROOT = pathlib.Path(importlib.import_module("chia").__file__).absolute().parent.parent
+print(f" ==== {ROOT=}")
 
 
 def solve_name_collision_problem(analysis):
@@ -99,6 +100,7 @@ if THIS_IS_WINDOWS:
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
     dll_paths = ROOT / "*.dll"
+    print(f" ==== {dll_paths=}")
 
     binaries = [
         (
@@ -136,6 +138,8 @@ datas.append((f"{ROOT}/chia/wallet/puzzles/*.hex", "chia/wallet/puzzles"))
 datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.append(version_data)
+
+print(f" ==== {datas=}")
 
 pathex = []
 
