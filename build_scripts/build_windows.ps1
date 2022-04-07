@@ -3,7 +3,6 @@
 $ErrorActionPreference = "Stop"
 
 mkdir build_scripts\win_build
-Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 git status
 
