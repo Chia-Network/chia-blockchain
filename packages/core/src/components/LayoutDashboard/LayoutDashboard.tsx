@@ -20,8 +20,8 @@ const StyledRoot = styled(Flex)`
 `;
 
 const StyledContainer = styled(Container)`
-  padding-top: ${({ theme }) => `${theme.spacing(2)}`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(2)}`};
+  padding-top: ${({ theme }) => theme.spacing(2)};
+  padding-bottom: ${({ theme }) => theme.spacing(2)};
 `;
 
 const StyledAppBar = styled(AppBar)`

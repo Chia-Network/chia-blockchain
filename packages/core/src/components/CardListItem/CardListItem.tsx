@@ -19,6 +19,10 @@ const StyledCard = styled(Card, {
   }
 `);
 
+const StyledCardContent = styled(CardContent)(({ theme }) => `
+  padding-bottom: ${theme.spacing(2)} !important;
+`);
+
 export type CardListItemProps = {
   children: ReactNode;
   selected?: boolean;
@@ -29,9 +33,9 @@ export default function CardListItem(props: CardListItemProps) {
   const { children, selected, onSelect } = props;
 
   const content = (
-    <CardContent>
+    <StyledCardContent>
       {children}
-    </CardContent>
+    </StyledCardContent>
   );
 
   return (

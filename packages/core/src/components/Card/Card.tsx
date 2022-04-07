@@ -49,11 +49,11 @@ const StyledCardContent = styled(({ fullHeight, transparent, ...rest }) => (
   display: flex;
   flex-direction: column;
   height: ${({ fullHeight }) => fullHeight ? '100%': 'auto'};
+  padding-bottom: ${({ theme, transparent }) => !transparent ? theme.spacing(2) : '0'} !important;
 
   ${({ transparent }) => transparent ? `
     padding-left: 0;
     padding-right: 0;
-    padding-bottom: 0 !important;
   ` : ''}
 `;
 
