@@ -14,17 +14,10 @@ import {
   Autocomplete,
   Button,
   ButtonLoading,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Form,
   Flex,
   Logo,
-  TextField,
   useOpenDialog,
-  useShowError,
   useTrans
 } from '@chia/core';
 import { english } from '@chia/api';
@@ -70,15 +63,26 @@ export default function WalletImport() {
 
   const submitMnemonicPaste = (mnemonicList: string) => {
     closeMnemonicPaste();
-
     let mList = mnemonicList.match(/\b(\w+)\b/g);
+
+    if (mList == null) {
+      openDialog(
+        <AlertDialog>
+          <Trans>
+            Your pasted list does not include 24 valid mnemonic words.
+          </Trans>
+        </AlertDialog>
+      );
+      return;
+    }
+
     const intersection = mList.filter(element => options.includes(element));
 
     if (intersection.length != 24) {
       openDialog(
         <AlertDialog>
           <Trans>
-            Your pasted list does not include 24 valid menmonic words.
+            Your pasted list does not include 24 valid mnemonic words.
           </Trans>
         </AlertDialog>
       );
@@ -86,6 +90,8 @@ export default function WalletImport() {
       const mnemonic = intersection.map((word) => ({ word }));
       replace(mnemonic);
     }
+
+    // above abandon abstract absurd account acid alert alley blast bless blind blanket boost book busy burden burger census chair chalk dinner direct dirt discover
   };
 
   function closeMnemonicPaste() {
