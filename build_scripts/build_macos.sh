@@ -2,11 +2,8 @@
 
 set -o errexit -o nounset
 
-pip install setuptools_scm
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined.
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG.
-CHIA_INSTALLER_VERSION=$(python installer-version.py)
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
@@ -25,7 +22,6 @@ sudo rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.9
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
