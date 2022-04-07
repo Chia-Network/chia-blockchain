@@ -75,6 +75,14 @@ export default deepmerge(greyTheme, {
     },
   },
   components: {
+    MuiSvgIcon: {
+      variants: [{
+        props: { fontSize: 'extraLarge' },
+        style: {
+          fontSize: '3rem',
+        },
+      }],
+    },
     MuiButton: {
       variants: [
         {

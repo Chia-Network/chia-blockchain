@@ -45,7 +45,7 @@ import {
   Typography
 } from '@mui/material';
 import { Cancel, GetApp as Download, Info, Reply as Share, Visibility } from '@mui/icons-material';
-import { Trade as TradeIcon } from '@chia/icons';
+import { Trade as TradeIcon, Offers } from '@chia/icons';
 import { useCancelOfferMutation, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
 import { colorForOfferState, displayStringForOfferState, formatAmountForWalletType, suggestedFilenameForOffer } from './utils';
 import useAssetIdName from '../../hooks/useAssetIdName';
@@ -519,7 +519,7 @@ export function OfferManager() {
       <Grid container>
         <Grid xs={12} md={6} lg={5} item>
           <CardHero>
-            <StyledTradeIcon color="primary" />
+            <Offers color="primary" fontSize="extraLarge" />
             <Typography variant="body1">
               <Trans>
                 Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party.

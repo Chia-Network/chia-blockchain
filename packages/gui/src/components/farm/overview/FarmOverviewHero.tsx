@@ -4,12 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Divider, Grid, Typography } from '@mui/material';
 import styled from 'styled-components';
 import { Button, CardHero, Link, useOpenDialog } from '@chia/core';
-import heroSrc from './images/hero.svg';
+import { Farming } from '@chia/icons';
 import PlotAddDirectoryDialog from '../../plot/PlotAddDirectoryDialog';
 
-const StyledImage = styled('img')`
-  max-width: 7rem;
-`;
 
 export default function FarmOverviewHero() {
   const navigate = useNavigate();
@@ -27,7 +24,7 @@ export default function FarmOverviewHero() {
     <Grid container>
       <Grid xs={12} md={6} lg={5} item>
         <CardHero>
-          <StyledImage src={heroSrc} />
+          <Farming color="primary" fontSize="extraLarge" />
           <Typography variant="body1">
             <Trans>
               Farmers earn block rewards and transaction fees by committing
