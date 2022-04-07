@@ -1,22 +1,13 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
-  Box,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
-  FormControlLabel,
   TextField,
-  Tooltip,
 } from '@material-ui/core';
-import {
-  Help as HelpIcon,
-} from '@material-ui/icons';
-import { t, Trans } from '@lingui/macro';
-import { AlertDialog, useOpenDialog } from '@chia/core';
+import { Trans } from '@lingui/macro';
 
 type Props = {
   onSuccess: (mnemonicList: string) => void;
@@ -25,7 +16,6 @@ type Props = {
 
 export default function MnemonicPaste(props: Props) {
   const { onSuccess, onCancel } = props;
-  const openDialog = useOpenDialog();
   let mnemonicListInput: HTMLInputElement | null;
 
   async function handleSubmit() {
