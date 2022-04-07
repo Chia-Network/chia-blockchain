@@ -193,12 +193,6 @@ class Offer:
                 for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
                     pending_dict[name] += addition.amount
 
-        # Then we add a potential fee as pending XCH
-        fee: int = sum(c.amount for c in all_removals) - sum(c.amount for c in all_additions)
-        if fee > 0:
-            pending_dict.setdefault("xch", 0)
-            pending_dict["xch"] += fee
-
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())
         unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far

@@ -33,6 +33,8 @@ from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
+max_message_size = 50 * 1024 * 1024  # 50MB
+
 
 def ssl_context_for_server(
     ca_cert: Path,
@@ -277,7 +279,7 @@ class ChiaServer:
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
-        ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
+        ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
         close_event = asyncio.Event()
         cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
@@ -422,7 +424,7 @@ class ChiaServer:
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=max_message_size
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
