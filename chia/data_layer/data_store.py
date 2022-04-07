@@ -1023,6 +1023,10 @@ class DataStore:
         *,
         lock: bool = True,
     ) -> None:
+        if node_hash == bytes32([0] * 32):
+            open(filename, "a").close()
+            return
+
         if deltas_only:
             generation = await self.get_first_generation(node_hash, tree_id, lock=lock)
             # Root's generation is not the first time we see this hash, so it's not a new delta.
