@@ -27,6 +27,8 @@ if (Test-Path -Path .\bladebit\) {
     mv .\bladebit\ .\venv\lib\site-packages\
 }
 
+Set-Location -Path ".\build_scripts" -PassThru
+
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
