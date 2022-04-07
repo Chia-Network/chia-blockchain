@@ -16,7 +16,7 @@ from chia.types.blockchain_format.program import Program
 # from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_transfer_program
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 
@@ -268,7 +268,7 @@ class TestNFTWallet:
         coins = nft_wallet_0.nft_wallet_info.my_nft_coins
         assert len(coins) == 1
 
-        uri_list = get_uri_list_from_transfer_program(coins[0].transfer_program)
+        uri_list = get_uri_list_from_puzzle(coins[0].full_puzzle)
         assert uri_list[0] == b"https://www.chia.net/img/branding/chia-logo.svg"
 
         coins = nft_wallet_1.nft_wallet_info.my_nft_coins
@@ -403,14 +403,14 @@ class TestNFTWallet:
         )
         assert sb is not None
 
-        full_sb = await nft_wallet_1.receive_nft(sb)
+        # full_sb = await nft_wallet_1.receive_nft(sb)
         # await nft_wallet_1.receive_nft(sb)
-        assert full_sb is not None
-        await asyncio.sleep(3)
+        assert sb is not None
+        await asyncio.sleep(5)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-        await asyncio.sleep(3)
+        await asyncio.sleep(5)
 
         coins = nft_wallet_0.nft_wallet_info.my_nft_coins
         assert len(coins) == 0
@@ -433,9 +433,9 @@ class TestNFTWallet:
         )
         assert sb is not None
 
-        full_sb = await nft_wallet_0.receive_nft(nsb)
+        # full_sb = await nft_wallet_0.receive_nft(nsb)
         # await nft_wallet_0.receive_nft(nsb)
-        assert full_sb is not None
+        assert nsb is not None
         await asyncio.sleep(5)
 
         for i in range(1, num_blocks):

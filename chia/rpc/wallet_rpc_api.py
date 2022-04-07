@@ -28,7 +28,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_transfer_program
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -1184,7 +1184,7 @@ class WalletRpcApi:
         nfts = nft_wallet.get_current_nfts()
         nft_uri_pairs = []
         for nft in nfts:
-            uri = get_uri_list_from_transfer_program(nft.transfer_program)
+            uri = get_uri_list_from_puzzle(nft.full_puzzle)
             nft_uri_pairs.append((nft, uri))
         return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
 

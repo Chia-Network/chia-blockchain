@@ -414,15 +414,13 @@ class NFTWallet:
         new_did_inner_hash,
         new_did_amount,
         trade_prices_list,
+        new_url=0,
     ):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
-        if trade_prices_list == 0 or trade_prices_list == [] or trade_prices_list == Program.to(0):
-            transfer_prog = 0
-            messages = [(2, bytes(new_did))]
-        else:
-            transfer_prog = nft_coin_info.transfer_program
-            # 2 is a puzzle announcement
-            messages = [(2, Program.to(trade_prices_list).get_tree_hash() + bytes(new_did))]
+        transfer_prog = nft_coin_info.transfer_program
+        # 2 is a puzzle announcement
+        # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
+        messages = [(2, Program.to([new_url, bytes(new_did), trade_prices_list]).get_tree_hash())]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -446,7 +444,7 @@ class NFTWallet:
                 new_did_inner_hash,
                 trade_prices_list,
                 transfer_prog,
-                0,  # this should be expanded for other possible transfer_programs
+                new_url,  # this should be expanded for other possible transfer_programs
             ]
         )
         fullsol = Program.to(
@@ -461,6 +459,26 @@ class NFTWallet:
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
         # this full spend should be aggregated with the DID announcement spend of the recipient DID
+        if Program.to(trade_prices_list) == Program.to(0):
+            nft_record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=did_wallet.did_info.origin_coin.name(),
+                amount=uint64(nft_coin_info.coin.amount),
+                fee_amount=uint64(0),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.wallet_info.id,
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=token_bytes(),
+                memos=[],
+            )
+            await self.standard_wallet.push_transaction(nft_record)
         return full_spend
 
     async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = 0) -> SpendBundle:

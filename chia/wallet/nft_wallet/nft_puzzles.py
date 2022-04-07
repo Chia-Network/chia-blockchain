@@ -186,21 +186,20 @@ def get_percentage_from_puzzle(puzzle: Program) -> uint64:
     return None
 
 
-def get_metadata_from_transfer_program(transfer_prog: Program) -> Program:
+def get_metadata_from_puzzle(puzzle: Program) -> Program:
     try:
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        metadata = curried_args.first().rest().rest().first()
+        curried_args = match_nft_puzzle(puzzle)[1]
+        NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash, transfer_program_curry_params, metadata = curried_args
         return metadata
     except Exception:
         return None
     return None
 
 
-def get_uri_list_from_transfer_program(transfer_prog: Program) -> List[str]:
+def get_uri_list_from_puzzle(puzzle: Program) -> List[str]:
     try:
         uri_list = []
-        metadata = get_metadata_from_transfer_program(transfer_prog)
+        metadata = get_metadata_from_puzzle(puzzle)
         assert metadata is not None
         for kv_pair in metadata.as_iter():
             if kv_pair.first().as_atom() == b'u':
