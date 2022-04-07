@@ -1168,10 +1168,12 @@ class WalletRpcApi:
         address = request["artist_address"]
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
-        metadata = Program.to([
-            ('u', request["uris"]),
-            ('h', request["hash"]),
-        ])
+        metadata = Program.to(
+            [
+                ("u", request["uris"]),
+                ("h", request["hash"]),
+            ]
+        )
         if "amount" in request:
             await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
         else:

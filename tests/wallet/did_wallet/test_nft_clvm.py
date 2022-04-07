@@ -5,6 +5,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.coin import Coin
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
@@ -62,8 +63,8 @@ def test_transfer_no_backpayments():
             nft_program.get_tree_hash(),
             0,
             [
-                ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
             uint64(1),
@@ -120,7 +121,6 @@ def test_transfer_with_backpayments():
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
     # ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH
-    # (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_prices_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
 
     trade_price = [[20]]
     # NFT_MOD_HASH
@@ -147,8 +147,8 @@ def test_transfer_with_backpayments():
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
             transfer_program_curry_params,
             [
-                ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
             uint64(1),
@@ -219,8 +219,8 @@ def test_announce():
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
             transfer_program_curry_params,
             [
-                ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
             uint64(1),  # truths
@@ -250,23 +250,22 @@ def test_update_url_spend():
     did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
     did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
-    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
-    did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
-    did_one_amount = 201
+    # did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    # did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
+    # did_one_amount = 201
 
     #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
-    did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    # did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
-    did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
-    did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
-    did_two_amount = 401
+    # did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    # did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
+    # did_two_amount = 401
 
-    did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
-    did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+    # did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
+    # did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
     # ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH
-    # (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_prices_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
 
     trade_price = [[20]]
     # NFT_MOD_HASH
@@ -293,8 +292,8 @@ def test_update_url_spend():
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
             transfer_program_curry_params,
             [
-                ('u', ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
             uint64(1),
@@ -313,9 +312,15 @@ def test_update_url_spend():
         NFT_TRANSFER_PROGRAM.get_tree_hash(),
         transfer_program_curry_params,
         [
-            ('u', ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
-            ('h', 0xd4584ad463139fa8c0d9f68f4b59f185),
-        ]
+            (
+                "u",
+                [
+                    "https://www.chia.net/img/branding/chia-logo-2.svg",
+                    "https://www.chia.net/img/branding/chia-logo.svg",
+                ],
+            ),
+            ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ],
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     # new_full = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_inner)
