@@ -1,5 +1,4 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
 import { AdvancedOptions, Flex, LayoutDashboardSub } from '@chia/core';
 import { useGetHarvesterConnectionsQuery } from '@chia/api-react';
 import FarmOverview from './overview/FarmOverview';
@@ -11,7 +10,7 @@ import usePlots from '../../hooks/usePlots';
 
 export default function Farm() {
   const { hasPlots } = usePlots();
-  const { data: connections, isLoading } = useGetHarvesterConnectionsQuery();
+  const { data: connections } = useGetHarvesterConnectionsQuery();
 
   return (
     <LayoutDashboardSub>

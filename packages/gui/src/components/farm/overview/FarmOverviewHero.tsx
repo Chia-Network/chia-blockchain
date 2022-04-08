@@ -1,8 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Divider, Grid, Typography } from '@mui/material';
-import styled from 'styled-components';
 import { Button, CardHero, Link, useOpenDialog } from '@chia/core';
 import { Farming } from '@chia/icons';
 import PlotAddDirectoryDialog from '../../plot/PlotAddDirectoryDialog';

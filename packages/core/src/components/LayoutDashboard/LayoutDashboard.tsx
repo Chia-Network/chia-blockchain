@@ -19,11 +19,6 @@ const StyledRoot = styled(Flex)`
   // overflow: hidden;
 `;
 
-const StyledContainer = styled(Container)`
-  padding-top: ${({ theme }) => theme.spacing(2)};
-  padding-bottom: ${({ theme }) => theme.spacing(2)};
-`;
-
 const StyledAppBar = styled(AppBar)`
   border-bottom: 1px solid ${({ theme }) => theme.palette.divider};
   width: ${({ theme, drawer }) => drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};
@@ -160,7 +155,6 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
             <Suspense fallback={<Loading center />}>
               {outlet ? <Outlet /> : children}
             </Suspense>
-            {/* <LayoutFooter /> */}
           </Flex>
         </StyledBody>
       </Suspense>

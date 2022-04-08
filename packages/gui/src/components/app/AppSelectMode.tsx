@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Button, Flex, Logo, Card, useMode, Mode, Tooltip } from '@chia/core';
+import { Button, Flex, Logo, Card, useMode, Mode } from '@chia/core';
 import {
   AccountBalanceWallet as AccountBalanceWalletIcon,
   EnergySavingsLeaf as EcoIcon,

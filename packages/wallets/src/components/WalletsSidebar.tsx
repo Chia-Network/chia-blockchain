@@ -2,14 +2,12 @@ import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { orderBy } from 'lodash';
 import { useNavigate, useParams } from 'react-router';
-import { Card, CardContent, Box, IconButton, ListItemIcon, ListItemText, Typography, List, ListItem, CardActionArea } from '@mui/material';
-import { Button, Flex, Loading, useTrans, useColorModeValue, CardListItem } from '@chia/core';
+import { Box, Typography } from '@mui/material';
+import { Flex, CardListItem } from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
-import { WalletType, type Wallet } from '@chia/api';
+import { WalletType } from '@chia/api';
 import styled from 'styled-components';
-import WalletName from '../constants/WalletName';
 import WalletIcon from './WalletIcon';
-import WalletBadge from './WalletBadge';
 import getWalletPrimaryTitle from '../utils/getWalletPrimaryTitle';
 import WalletsManageTokens from './WalletsManageTokens';
 import useHiddenWallet from '../hooks/useHiddenWallet';
@@ -19,19 +17,6 @@ const StyledRoot = styled(Box)`
   height: 100%;
   display: flex;
   padding-top: ${({ theme }) => `${theme.spacing(3)}`};
-`;
-
-const StyledCard = styled(Card)`
-  width: 100%;
-  border-radius: ${({ theme }) => theme.spacing(1)};
-  border: ${({ theme, selected }) => `1px solid ${selected
-    ? theme.palette.action.active
-    : theme.palette.divider}`};
-  margin-bottom: ${({ theme }) => theme.spacing(1)};
-
-  &:hover {
-    border-color: ${({ theme }) => theme.palette.highlight.main};
-  }
 `;
 
 const StyledContent = styled(Box)`
@@ -58,17 +43,12 @@ const StyledItemsContainer = styled(Box)`
 
 export default function WalletsSidebar() {
   const navigate = useNavigate();
-  const trans = useTrans();
   const { walletId } = useParams();
   const { data: wallets, isLoading } = useGetWalletsQuery();
   const { isHidden, hidden } = useHiddenWallet();
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
-  }
-
-  function handleAddToken() {
-    navigate('/dashboard/wallets/create/simple');
   }
 
   const items = useMemo(() => {

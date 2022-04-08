@@ -1,7 +1,5 @@
 import React, { type ReactNode } from 'react';
-import styled from 'styled-components';
 import { Typography } from '@mui/material';
-
 
 export type SettingsLabelProps = {
   children?: ReactNode;

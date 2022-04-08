@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
-import { Button, Flex, Form, TextField, Loading } from '@chia/core';
+import { Button, Flex, Form, TextField, Loading, fromBech32m } from '@chia/core';
 import { useSetRewardTargetsMutation, useGetRewardTargetsQuery } from '@chia/api-react';
 import {
   Alert,
@@ -12,7 +12,6 @@ import {
   DialogContent,
   Typography,
 } from '@mui/material';
-import { bech32m } from 'bech32';
 
 const StyledTextField = styled(TextField)`
   min-width: 640px;
@@ -34,7 +33,7 @@ export default function FarmManageFarmingRewards(props: Props) {
   const { data, isLoading } = useGetRewardTargetsQuery({
     searchForPrivateKey: true,
   });
-  
+
   const [error, setError] = useState<Error | null>(null);
   const methods = useForm<FormData>({
     mode: 'onChange',
@@ -89,7 +88,7 @@ export default function FarmManageFarmingRewards(props: Props) {
 
     try {
       await setRewardTargets({
-        farmerTarget, 
+        farmerTarget,
         poolTarget,
       }).unwrap();
       handleClose();

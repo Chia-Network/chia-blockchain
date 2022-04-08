@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { Trans } from '@lingui/macro';
-import { useShowDebugInformation, Flex } from '@chia/core';
-import { Tab, Tabs } from '@mui/material';
+import { Flex } from '@chia/core';
 import WalletHistory from '../WalletHistory';
 import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletSend from '../WalletSend';
 import WalletHeader from '../WalletHeader';
-import WalletConnections from '../WalletConnections';
-import { values } from 'lodash';
 
 type StandardWalletProps = {
   walletId: number;
@@ -16,7 +12,7 @@ type StandardWalletProps = {
 
 export default function StandardWallet(props: StandardWalletProps) {
   const { walletId } = props;
-  const showDebugInformation = useShowDebugInformation();
+  // const showDebugInformation = useShowDebugInformation();
   const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
 
   return (

@@ -1,5 +1,5 @@
 import { Alert } from '@mui/material';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import { Suspender } from '@chia/core';
 import { WalletType } from '@chia/api';

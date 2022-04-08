@@ -3,7 +3,6 @@ import { useNavigate, useMatch } from 'react-router-dom';
 import { ListItem, ListItemIcon, Typography } from '@mui/material';
 import { Flex } from '@chia/core';
 import { styled } from '@mui/system';
-import { useTheme } from '@mui/styles';
 import useColorModeValue from '../../utils/useColorModeValue';
 
 const StyledListItemIcon = styled(ListItemIcon)`
@@ -72,7 +71,6 @@ export default function SideBarItem(props: SideBarItemProps) {
     path: to,
     end,
   });
-  const theme = useTheme();
 
   const isSelected = !!match;
 

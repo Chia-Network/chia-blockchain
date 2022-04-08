@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { Box, Typography, Switch, IconButton } from '@mui/material';
-import { Button, useColorModeValue, Spinner, CardListItem, Flex } from '@chia/core';
+import { Box, IconButton } from '@mui/material';
+import { Button, useColorModeValue, Spinner, Flex } from '@chia/core';
 import styled from 'styled-components';
 import { Add } from '@mui/icons-material';
 import { useToggle } from 'react-use';

@@ -2,7 +2,6 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import {
   Box,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,

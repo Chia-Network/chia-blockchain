@@ -1,5 +1,4 @@
 import React from 'react';
-import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router-dom';
 import { Grid, Typography } from '@mui/material';

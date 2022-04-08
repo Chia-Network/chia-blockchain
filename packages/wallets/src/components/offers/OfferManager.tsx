@@ -6,7 +6,6 @@ import moment from 'moment';
 import BigNumber from 'bignumber.js';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Back,
   Button,
   ButtonLoading,
   Card,
@@ -45,7 +44,7 @@ import {
   Typography
 } from '@mui/material';
 import { Cancel, GetApp as Download, Info, Reply as Share, Visibility } from '@mui/icons-material';
-import { Trade as TradeIcon, Offers } from '@chia/icons';
+import { Offers } from '@chia/icons';
 import { useCancelOfferMutation, useGetOfferDataMutation, useGetWalletsQuery } from '@chia/api-react';
 import { colorForOfferState, displayStringForOfferState, formatAmountForWalletType, suggestedFilenameForOffer } from './utils';
 import useAssetIdName from '../../hooks/useAssetIdName';
@@ -56,10 +55,6 @@ import { OfferViewer } from './OfferViewer';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
-
-const StyledTradeIcon = styled(TradeIcon)`
-  font-size: 4rem;
-`;
 
 type OfferCancellationOptions = {
   cancelWithTransaction: boolean;

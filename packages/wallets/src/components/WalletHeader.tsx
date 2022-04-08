@@ -1,23 +1,19 @@
-import React, { useState, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  Button,
   Flex,
   ConfirmDialog,
   useOpenDialog,
-  useShowDebugInformation,
   AlertDialog,
   DropdownActions,
 } from '@chia/core';
 import { useNavigate } from 'react-router';
 import {
-  Box,
   Typography,
   ListItemIcon,
   MenuItem,
   Tab,
   Tabs,
-  TabPanel,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -36,7 +32,6 @@ export default function WalletHeader(props: StandardWalletProps) {
   const { walletId, actions, tab, onTabChange } = props;
   const openDialog = useOpenDialog();
   const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery();
-  const showDebugInformation = useShowDebugInformation();
   const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
   const navigate = useNavigate();
 
@@ -51,10 +46,6 @@ export default function WalletHeader(props: StandardWalletProps) {
         <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
     );
-  }
-
-  function handleAddToken() {
-    navigate('/dashboard/wallets/create/simple');
   }
 
   async function handleManageOffers() {

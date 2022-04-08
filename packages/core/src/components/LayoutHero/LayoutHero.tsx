@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import { Outlet, Link } from 'react-router-dom';
 import Flex from '../Flex';
 import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
-import Settings from '../Settings';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}`};
@@ -31,8 +30,6 @@ export type LayoutHeroProps = {
   header?: ReactNode;
   back?: boolean;
   outlet?: boolean;
-  settings?: ReactNode;
-  hideSettings?: boolean;
 };
 
 export default function LayoutHero(props: LayoutHeroProps) {
@@ -41,8 +38,6 @@ export default function LayoutHero(props: LayoutHeroProps) {
     header,
     back = false,
     outlet = false,
-    settings,
-    hideSettings = false,
   } = props;
 
   return (

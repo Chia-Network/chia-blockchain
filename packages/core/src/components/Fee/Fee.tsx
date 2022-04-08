@@ -1,5 +1,4 @@
 import React from 'react';
-import BigNumber from 'bignumber.js';
 import { Trans } from '@lingui/macro';
 import { Box } from '@mui/material';
 import styled from 'styled-components';

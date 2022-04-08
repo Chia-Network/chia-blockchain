@@ -3,12 +3,11 @@ import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { List, Box } from '@mui/material';
 import {
-  Wallet as WalletIcon,
   Farming as FarmingIcon,
   FullNode as FullNodeIcon,
   Plots as PlotsIcon,
   Pooling as PoolingIcon,
-  NFTs as NFTsIcon,
+  // NFTs as NFTsIcon,
   Offers as OffersIcon,
   Tokens as TokensIcon,
   Settings as SettingsIcon,

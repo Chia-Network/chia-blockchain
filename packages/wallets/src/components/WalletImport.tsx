@@ -9,7 +9,7 @@ import {
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
 import { useNavigate } from 'react-router';
-import { Autocomplete, ButtonLoading, Form, Flex, Logo, useShowError, useTrans } from '@chia/core';
+import { Autocomplete, ButtonLoading, Form, Flex, Logo, useTrans } from '@chia/core';
 import { english } from '@chia/api';
 
 /*
