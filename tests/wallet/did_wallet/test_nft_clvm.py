@@ -67,7 +67,6 @@ def test_transfer_no_backpayments():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
-            uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
@@ -151,7 +150,6 @@ def test_transfer_with_backpayments():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
-            uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
@@ -223,7 +221,6 @@ def test_announce():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
-            uint64(1),  # truths
             did_one_innerpuz.get_tree_hash(),
             0,
             0,
@@ -296,7 +293,6 @@ def test_update_url_spend():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
-            uint64(1),
             did_one_innerpuz.get_tree_hash(),
             did_one,
             did_one_innerpuz.get_tree_hash(),

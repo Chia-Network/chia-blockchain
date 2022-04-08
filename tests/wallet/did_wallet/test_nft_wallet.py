@@ -216,9 +216,7 @@ class TestNFTWallet:
         sb = await nft_wallet_0.transfer_nft(
             coins[0],
             nft_wallet_1.nft_wallet_info.my_did,
-            did_coin_threeple[0],
             did_coin_threeple[1],
-            did_coin_threeple[2],
             trade_price_list,
         )
         assert sb is not None
@@ -252,9 +250,7 @@ class TestNFTWallet:
         nsb = await nft_wallet_1.transfer_nft(
             coins[0],
             nft_wallet_0.nft_wallet_info.my_did,
-            did_coin_threeple[0],
             did_coin_threeple[1],
-            did_coin_threeple[2],
             trade_price_list,
         )
         assert sb is not None
@@ -399,9 +395,7 @@ class TestNFTWallet:
         sb = await nft_wallet_0.transfer_nft(
             coins[0],
             nft_wallet_1.nft_wallet_info.my_did,
-            did_coin_threeple[0],
             did_coin_threeple[1],
-            did_coin_threeple[2],
             trade_price_list,
         )
         assert sb is not None
@@ -429,9 +423,7 @@ class TestNFTWallet:
         nsb = await nft_wallet_1.transfer_nft(
             coins[0],
             nft_wallet_0.nft_wallet_info.my_did,
-            did_coin_threeple[0],
             did_coin_threeple[1],
-            did_coin_threeple[2],
             trade_price_list,
         )
         assert sb is not None

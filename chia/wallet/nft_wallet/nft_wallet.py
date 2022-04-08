@@ -280,11 +280,12 @@ class NFTWallet:
         return Program.to([8, pk])
 
     async def generate_new_nft(
-        self, metadata: Program, percentage: uint64, backpayment_address: bytes32, amount: int = 1
+        self, metadata: Program, percentage: uint64, backpayment_address: bytes32
     ) -> Optional[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
         """
+        amount = 1
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
             return None
@@ -328,7 +329,7 @@ class NFTWallet:
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
 
-        innersol = Program.to([eve_coin.amount, did_wallet.did_info.current_inner.get_tree_hash(), 0])
+        innersol = Program.to([did_wallet.did_info.current_inner.get_tree_hash(), 0])
         fullsol = Program.to(
             [
                 [launcher_coin.parent_coin_info, launcher_coin.amount],
@@ -371,7 +372,6 @@ class NFTWallet:
 
         innersol = Program.to(
             [
-                nft_coin_info.coin.amount,
                 did_wallet.did_info.current_inner.get_tree_hash(),
                 0,
             ]
@@ -411,9 +411,7 @@ class NFTWallet:
         self,
         nft_coin_info: NFTCoinInfo,
         new_did,
-        new_did_parent,
         new_did_inner_hash,
-        new_did_amount,
         trade_prices_list,
         new_url=0,
     ):
@@ -425,7 +423,6 @@ class NFTWallet:
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
-        # my_amount
         # my_did_inner_hash
         # my_did_amount
         # my_did_parent
@@ -439,7 +436,6 @@ class NFTWallet:
 
         innersol = Program.to(
             [
-                nft_coin_info.coin.amount,
                 did_wallet.did_info.current_inner.get_tree_hash(),
                 new_did,
                 new_did_inner_hash,

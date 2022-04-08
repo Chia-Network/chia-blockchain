@@ -1174,10 +1174,7 @@ class WalletRpcApi:
                 ("h", request["hash"]),
             ]
         )
-        if "amount" in request:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
-        else:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
+        await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
@@ -1202,9 +1199,7 @@ class WalletRpcApi:
         sb = await nft_wallet.transfer_nft(
             request["nft_coin_info"],
             bytes.fromhex(request["new_did"]),
-            request["new_did_parent"],
             request["new_did_inner_hash"],
-            request["new_did_amount"],
             request["trade_price"],
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}

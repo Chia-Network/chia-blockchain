@@ -5,7 +5,6 @@
   TRANSFER_PROGRAM_MOD_HASH
   TRANSFER_PROGRAM_CURRY_PARAMS
   METADATA
-  my_amount
   my_did_inner_hash
   new_did
   new_did_inner_hash
@@ -48,36 +47,36 @@
 
   ; if we find an update, recreate ourselves with the update
   ; otherwise recreate ourselves as we are
-  (defun parse_transfer_prog_output (NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did my_amount output found_update)
+  (defun parse_transfer_prog_output (NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did output found_update)
     (if output
       (if (= (f (f output)) -22)
         (c
-          (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH new_did (f (r (r (f output)))) (f (r (f output)))) my_amount (list new_did))
-          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did my_amount (r output) 1)
+          (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH new_did (f (r (r (f output)))) (f (r (f output)))) ONE (list new_did))
+          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (r output) 1)
         )
-        (c (f output) (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did my_amount (r output) found_update))
+        (c (f output) (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (r output) found_update))
       )
       (if found_update  ; if we're at the end of the loop, check if we've already recreated ourselves or not
         ()
-        (list (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH new_did TRANSFER_PROGRAM_CURRY_PARAMS METADATA) my_amount (list new_did)))
+        (list (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH new_did TRANSFER_PROGRAM_CURRY_PARAMS METADATA) ONE (list new_did)))
       )
     )
   )
 
   ; main
   (c
-    (list ASSERT_MY_AMOUNT my_amount)
+    (list ASSERT_MY_AMOUNT ONE)
     (if new_did
       (if (= (sha256tree1 transfer_program_reveal) TRANSFER_PROGRAM_MOD_HASH)
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) (sha256tree1 (list transfer_program_solution new_did trade_prices_list))))
                                                                                                                 ; (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_price_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
-          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did my_amount (a transfer_program_reveal (list METADATA TRANSFER_PROGRAM_CURRY_PARAMS SINGLETON_STRUCT CURRENT_OWNER_DID trade_prices_list my_did_inner_hash new_did new_did_inner_hash transfer_program_solution)) 0)
+          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (a transfer_program_reveal (list METADATA TRANSFER_PROGRAM_CURRY_PARAMS SINGLETON_STRUCT CURRENT_OWNER_DID trade_prices_list my_did_inner_hash new_did new_did_inner_hash transfer_program_solution)) 0)
         )
         (x)
       )
       (list
-        (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH CURRENT_OWNER_DID TRANSFER_PROGRAM_CURRY_PARAMS METADATA) my_amount (list CURRENT_OWNER_DID))
+        (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH CURRENT_OWNER_DID TRANSFER_PROGRAM_CURRY_PARAMS METADATA) ONE (list CURRENT_OWNER_DID))
         (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) 'a'))
         (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_OWNER_DID)
       )

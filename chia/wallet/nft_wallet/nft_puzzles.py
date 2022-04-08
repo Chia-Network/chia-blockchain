@@ -145,7 +145,7 @@ def update_metadata(metadata, solution):
 
 def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None
@@ -235,7 +235,7 @@ def get_uri_list_from_puzzle(puzzle: Program) -> List[str]:
 
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().first()
         return prog
     except Exception:
         return None
@@ -244,7 +244,7 @@ def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
 
 def get_transfer_program_solution_from_solution(solution: Program) -> Program:
     try:
-        prog_sol = solution.rest().rest().rest().rest().rest().rest().first()
+        prog_sol = solution.rest().rest().rest().rest().rest().first()
         return prog_sol
     except Exception:
         return None
