@@ -316,7 +316,7 @@ class BlockTools:
             self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
-            path_new: Optional[Path] = None
+            path_new: Path = Path()
 
             if len(created):
                 assert len(existed) == 0
@@ -325,8 +325,6 @@ class BlockTools:
             if len(existed):
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
-
-            assert path_new is not None
 
             if not exclude_plots:
                 # TODO: address hint error and remove ignore
