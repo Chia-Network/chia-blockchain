@@ -26,7 +26,8 @@ from chia.full_node.bundle_tools import (
 from chia.util.errors import Err
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots, PlotKeys, add_plot_dirs_to_config
+from chia.plotting.create_plots import create_plots, PlotKeys
+from chia.plotting.util import add_plot_directory
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -243,7 +244,11 @@ class BlockTools:
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
 
+    def add_plot_directory(self, path: Path) -> None:
+        self._config = add_plot_directory(self.root_path, str(path))
+
     async def setup_plots(self):
+        self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
         for i in range(15):
@@ -256,7 +261,6 @@ class BlockTools:
             await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                exclude_final_dir=True,
             )
 
         await self.refresh_plots()
@@ -267,7 +271,7 @@ class BlockTools:
         path: Path = None,
         tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
-        exclude_final_dir: bool = False,
+        exclude_plots: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -292,7 +296,6 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        args.exclude_final_dir = exclude_final_dir
         try:
             if plot_keys is None:
                 pool_pk: Optional[G1Element] = None
@@ -328,15 +331,13 @@ class BlockTools:
 
             assert path_new is not None
 
+            if not exclude_plots:
+                # TODO: address hint error and remove ignore
+                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
+                #       [index]
+                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
             if not exclude_final_dir:
                 self.expected_plots[plot_id_new] = path_new
-
-            # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
-            if str(path_new.parent.resolve()) not in self._config["harvester"]["plot_directories"]:
-                self._config["harvester"]["plot_directories"].append(str(path_new.parent.resolve()))
-                add_plot_dirs_to_config(
-                    self.root_path, list(created.values()) + list(existed.values()), exclude_final_dir
-                )
 
             return plot_id_new
 

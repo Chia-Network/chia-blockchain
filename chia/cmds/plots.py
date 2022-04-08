@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 
+from chia.plotting.util import add_plot_directory
 from chia.util.config import load_config
 
 DEFAULT_STRIPE_SIZE = 65536
@@ -114,7 +115,7 @@ def create_cmd(
     exclude_final_dir: bool,
     connect_to_daemon: bool,
 ):
-    from chia.plotting.create_plots import add_plot_dirs_to_config, create_plots, resolve_plot_keys
+    from chia.plotting.create_plots import create_plots, resolve_plot_keys
 
     class Params(object):
         def __init__(self):
@@ -152,8 +153,10 @@ def create_cmd(
         )
     )
     config = load_config(root_path, "config.yaml")
-    created_plots, existing_plots = asyncio.run(create_plots(Params(), plot_keys, config["min_mainnet_k_size"]))
-    add_plot_dirs_to_config(root_path, list(created_plots.values()) + list(existing_plots.values()), exclude_final_dir)
+
+    asyncio.run(create_plots(Params(), plot_keys, config["min_mainnet_k_size"]))
+    if not exclude_final_dir:
+        add_plot_directory(root_path, final_dir)
 
 
 @plots_cmd.command("check", short_help="Checks plots")

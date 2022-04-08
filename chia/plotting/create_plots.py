@@ -8,12 +8,10 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import add_plot_directory
 from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config
 from chia.util.ints import uint8
 from chia.util.keychain import Keychain
 from chia.util.path import mkdir
@@ -140,30 +138,6 @@ async def resolve_plot_keys(
     return await PlotKeysResolver(
         farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
     ).resolve()
-
-
-def add_plot_dirs_to_config(root_path: Path, plot_paths: List[Path], dont_add_dir: bool) -> None:
-    config_filename = config_path_for_filename(root_path, "config.yaml")
-    config = load_config(root_path, config_filename)
-    for plot_path in plot_paths:
-        add_dir: Optional[str] = None
-        with lock_and_load_config(root_path, "config.yaml"):
-            resolved_final_dir: str = str(plot_path.parent.resolve())
-            plot_directories_list: str = config["harvester"]["plot_directories"]
-
-            if dont_add_dir:
-                log.info(f"NOT adding directory {resolved_final_dir} to harvester for farming")
-                if resolved_final_dir in plot_directories_list:
-                    log.warning(
-                        f"Directory {resolved_final_dir} already exists for harvester, please remove it manually"
-                    )
-            else:
-                if resolved_final_dir not in plot_directories_list:
-                    # Adds the directory to the plot directories if it is not present
-                    log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                    add_dir = resolved_final_dir
-        if add_dir is not None:
-            add_plot_directory(root_path, add_dir)
 
 
 async def create_plots(

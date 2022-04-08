@@ -864,20 +864,11 @@ class WebSocketServer:
 
     def _post_process_plotting_job(self, job: Dict[str, Any]):
         id: str = job["id"]
-        final_dir: str = job.get("final_dir", "")
-        exclude_final_dir: bool = job.get("exclude_final_dir", False)
-
+        final_dir: str = job["final_dir"]
+        exclude_final_dir: bool = job["exclude_final_dir"]
         log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
-
-        if exclude_final_dir is False and len(final_dir) > 0:
-            resolved_final_dir: str = str(Path(final_dir).resolve())
-            config = load_config(self.root_path, "config.yaml")
-            plot_directories_list: str = config["harvester"]["plot_directories"]
-
-            if resolved_final_dir not in plot_directories_list:
-                # Adds the directory to the plot directories if it is not present
-                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                add_plot_directory(self.root_path, resolved_final_dir)
+        if not exclude_final_dir:
+            add_plot_directory(self.root_path, final_dir)
 
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None

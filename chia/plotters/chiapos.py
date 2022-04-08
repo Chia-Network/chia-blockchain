@@ -5,11 +5,12 @@ After `chia plots create` becomes obsolete, consider removing it from there.
 import asyncio
 import logging
 import pkg_resources
-from chia.plotting.create_plots import create_plots, resolve_plot_keys, add_plot_dirs_to_config
+from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from chia.util.config import load_config
+from chia.plotting.util import add_plot_directory
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ class Params:
         self.plotid = args.id
         self.memo = args.memo
         self.nobitfield = args.nobitfield
-        self.exclude_final_dir = args.exclude_final_dir
 
 
 def plot_chia(args, root_path: Path):
@@ -57,7 +57,6 @@ def plot_chia(args, root_path: Path):
         )
     )
     config = load_config(root_path, "config.yaml")
-    created_plots, existing_plots = asyncio.run(create_plots(Params(args), plot_keys, config["min_mainnet_k_size"]))
-    add_plot_dirs_to_config(
-        root_path, list(created_plots.values()) + list(existing_plots.values()), args.exclude_final_dir
-    )
+    asyncio.run(create_plots(Params(args), plot_keys, config["min_mainnet_k_size"]))
+    if not args.exclude_final_dir:
+        add_plot_directory(root_path, args.finaldir)
