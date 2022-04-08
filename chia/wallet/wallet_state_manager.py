@@ -860,8 +860,8 @@ class WalletStateManager:
                         child.coin.name(),
                         [launcher_spend],
                         child.spent_height,
-                        True,
-                        "pool_wallet",
+                        in_transaction=True,
+                        name="pool_wallet",
                     )
                     launcher_spend_additions = launcher_spend.additions()
                     assert len(launcher_spend_additions) == 1
