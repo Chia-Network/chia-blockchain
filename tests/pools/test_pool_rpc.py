@@ -691,7 +691,7 @@ class TestPoolWalletRpc:
             assert (250000000000 + fee) in [tx.additions[0].amount for tx in tx1]
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("trusted_and_fee", [(True, 0), (False, 0)])
+    @pytest.mark.parametrize("trusted_and_fee", [(True, 0), (False, 250000000000)])
     async def test_self_pooling_to_pooling(self, setup, trusted_and_fee, self_hostname):
         """
         This tests self-pooling -> pooling
@@ -758,7 +758,7 @@ class TestPoolWalletRpc:
             assert len(summaries_response) == 2
             wallet_id: int = summaries_response[0]["id"]
             wallet_id_2: int = summaries_response[1]["id"]
-            await asyncio.sleep(1)
+
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
@@ -898,7 +898,7 @@ class TestPoolWalletRpc:
             assert status.current.state == 1
             assert status.current.version == 1
 
-            assert status.target
+            assert status.target is not None
             assert status.target.pool_url == "https://pool.example.com"
             assert status.target.relative_lock_height == 5
             assert status.target.state == 3
