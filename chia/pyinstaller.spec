@@ -100,7 +100,7 @@ if THIS_IS_WINDOWS:
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
-    dll_paths = pathlib.Path(sysconfig.get("platlib")) / "*.dll"
+    dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
     print(f" ==== {dll_paths=}")
 
     binaries = [
