@@ -123,7 +123,7 @@ jobs:
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Linux-Installers
+        name: chia-installers-linux-rpm-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Configure AWS Credentials
