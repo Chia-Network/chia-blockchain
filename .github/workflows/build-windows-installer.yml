@@ -155,7 +155,7 @@ jobs:
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
-        name: Windows-Exe
+        name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts
