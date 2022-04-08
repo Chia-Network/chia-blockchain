@@ -1,7 +1,10 @@
 import asyncio
+from typing import Any
+
 import pytest
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.util.ints import uint32
 from tests.core.full_node.test_conditions import bt
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -9,13 +12,13 @@ from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
-def event_loop():
+def event_loop() -> Any:
     loop = asyncio.get_event_loop()
     yield loop
 
 
 @pytest.fixture(scope="module")
-async def full_node():
+async def full_node() -> Any:
     async_gen = setup_simulators_and_wallets(1, 1, {})
     nodes, _ = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -28,7 +31,7 @@ async def full_node():
 
 class TestEstimatesProtocol:
     @pytest.mark.asyncio
-    async def test_protocol_messages(self, full_node):
+    async def test_protocol_messages(self, full_node: Any) -> None:
         WALLET_A = bt.get_pool_wallet_tool()
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
@@ -44,7 +47,7 @@ class TestEstimatesProtocol:
 
         await time_out_assert(60, node_height_at_least, True, full_node, blocks[-1].height)
 
-        request: wallet_protocol.RequestFeeEstimates = wallet_protocol.RequestFeeEstimates(0)
+        request: wallet_protocol.RequestFeeEstimates = wallet_protocol.RequestFeeEstimates(uint32(0))
         estimates = await full_node.request_fee_estimates(request)
         assert estimates.type == ProtocolMessageTypes.respond_fee_estimates.value
         response = wallet_protocol.RespondFeeEstimates.from_bytes(estimates.data)

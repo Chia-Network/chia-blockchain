@@ -11,7 +11,6 @@ class SmartFeeEstimator:
         self.mempool_manager = mempool_mgr
 
     def parse(self, fee_result: EstimateResult) -> float:
-        pass_bucket: BucketResult = fee_result["pass_bucket"]
         fail_bucket: BucketResult = fee_result["fail_bucket"]
         median = fee_result["median"]
 

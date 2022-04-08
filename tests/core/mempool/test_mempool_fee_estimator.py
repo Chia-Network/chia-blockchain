@@ -2,7 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 from random import Random
-from typing import Optional
+from typing import Optional, Any
 
 import aiosqlite
 import pytest
@@ -15,52 +15,78 @@ from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.mempool_item import MempoolItem
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
-from tests.setup_nodes import bt
 from tests.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")
-def event_loop():
+def event_loop() -> Any:
     loop = asyncio.get_event_loop()
     yield loop
 
 
 class TestFeeEstimator:
     @pytest.mark.asyncio
-    async def test_basics(self):
+    async def test_basics(self) -> None:
         log = logging.getLogger(__name__)
         path = Path("./fee_test_db")
         db_connection = await aiosqlite.connect(path)
         try:
-            db_wrapper = DBWrapper(db_connection)
+            db_wrapper = DBWrapper2(db_connection)
             fee_store = await FeeStore.create(db_wrapper)
             fee_estimator = await FeeTracker.create(log, fee_store)
 
             wallet_tool = WalletTool(test_constants)
             ph = wallet_tool.get_new_puzzlehash()
-            coin = Coin(ph, ph, 10000)
-            spend_bundle = wallet_tool.generate_signed_transaction(10000, ph, coin)
+            coin = Coin(ph, ph, uint64(10000))
+            spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
+            cost = uint64(5000000)
             for i in range(300, 700):
                 items = []
                 for _ in range(2, 100):
-                    fee = 10000000
+                    fee = uint64(10000000)
                     mempool_item = MempoolItem(
-                        spend_bundle, fee, NPCResult(None, [], 0), 5000000, spend_bundle.name(), [], [], 0, i - 1
+                        spend_bundle,
+                        fee,
+                        NPCResult(None, [], cost),
+                        cost,
+                        spend_bundle.name(),
+                        [],
+                        [],
+                        SerializedProgram(),
+                        uint32(i - 1),
                     )
                     items.append(mempool_item)
 
-                    fee1 = 200000
+                    fee1 = uint64(200000)
                     mempool_item1 = MempoolItem(
-                        spend_bundle, fee1, NPCResult(None, [], 0), 5000000, spend_bundle.name(), [], [], 0, i - 40
+                        spend_bundle,
+                        fee1,
+                        NPCResult(None, [], cost),
+                        cost,
+                        spend_bundle.name(),
+                        [],
+                        [],
+                        SerializedProgram(),
+                        uint32(i - 40),
                     )
                     items.append(mempool_item1)
 
-                    fee2 = 0
+                    fee2 = uint64(0)
                     mempool_item2 = MempoolItem(
-                        spend_bundle, fee2, NPCResult(None, [], 0), 5000000, spend_bundle.name(), [], [], 0, i - 270
+                        spend_bundle,
+                        fee2,
+                        NPCResult(None, [], cost),
+                        cost,
+                        spend_bundle.name(),
+                        [],
+                        [],
+                        SerializedProgram(),
+                        uint32(i - 270),
                     )
                     items.append(mempool_item2)
 
@@ -80,37 +106,37 @@ class TestFeeEstimator:
             path.unlink()
 
     @pytest.mark.asyncio
-    async def test_fee_increase(self):
+    async def test_fee_increase(self) -> None:
         log = logging.getLogger(__name__)
         path = Path("./fee_test_db")
         db_connection = await aiosqlite.connect(path)
         try:
-            db_wrapper = DBWrapper(db_connection)
+            db_wrapper = DBWrapper2(db_connection)
             fee_store = await FeeStore.create(db_wrapper)
             fee_tracker = await FeeTracker.create(log, fee_store)
             coin_store = await CoinStore.create(fee_store)
-            mpool = MempoolManager(coin_store, test_constants, bt.config, fee_tracker)
+            mpool = MempoolManager(coin_store, test_constants, fee_tracker)
             estimator = SmartFeeEstimator(mpool, log)
             wallet_tool = WalletTool(test_constants)
             ph = wallet_tool.get_new_puzzlehash()
-            coin = Coin(ph, ph, 10000)
-            spend_bundle = wallet_tool.generate_signed_transaction(10000, ph, coin)
+            coin = Coin(ph, ph, uint64(10000))
+            spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
             random = Random(x=1)
             for i in range(300, 700):
                 items = []
                 for _ in range(0, 20):
-                    fee = 0
-                    included_height = random.randint(i - 60, i - 1)
-
+                    fee = uint64(0)
+                    included_height = uint32(random.randint(i - 60, i - 1))
+                    cost = uint64(5000000)
                     mempool_item = MempoolItem(
                         spend_bundle,
                         fee,
-                        NPCResult(None, [], 0),
-                        5000000,
+                        NPCResult(None, [], cost),
+                        cost,
                         spend_bundle.name(),
                         [],
                         [],
-                        0,
+                        SerializedProgram(),
                         included_height,
                     )
                     items.append(mempool_item)
@@ -139,37 +165,37 @@ class TestFeeEstimator:
             path.unlink()
 
     @pytest.mark.asyncio
-    async def test_fee_increase_steps(self):
+    async def test_fee_increase_steps(self) -> None:
         log = logging.getLogger(__name__)
         path = Path("./fee_test_db")
         db_connection = await aiosqlite.connect(path)
         try:
-            db_wrapper = DBWrapper(db_connection)
+            db_wrapper = DBWrapper2(db_connection)
             fee_store = await FeeStore.create(db_wrapper)
             fee_tracker = await FeeTracker.create(log, fee_store)
             coin_store = await CoinStore.create(fee_store)
-            mpool = MempoolManager(coin_store, test_constants, bt.config, fee_tracker)
+            mpool = MempoolManager(coin_store, test_constants, fee_tracker)
             estimator = SmartFeeEstimator(mpool, log)
             wallet_tool = WalletTool(test_constants)
             ph = wallet_tool.get_new_puzzlehash()
-            coin = Coin(ph, ph, 10000)
-            spend_bundle = wallet_tool.generate_signed_transaction(10000, ph, coin)
+            coin = Coin(ph, ph, uint64(10000))
+            spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
             random = Random(x=1)
-            fee = 0
+            fee = uint64(0)
             for i in range(300, 1000):
                 items = []
                 for _ in range(0, 20):
-                    included_height = random.randint(1, i - 1)
-
+                    included_height = uint32(random.randint(1, i - 1))
+                    cost = uint64(5000000)
                     mempool_item = MempoolItem(
                         spend_bundle,
                         fee,
-                        NPCResult(None, [], 0),
-                        5000000,
+                        NPCResult(None, [], cost),
+                        cost,
                         spend_bundle.name(),
                         [],
                         [],
-                        0,
+                        SerializedProgram(),
                         included_height,
                     )
                     items.append(mempool_item)
@@ -178,9 +204,9 @@ class TestFeeEstimator:
                 estimates = estimator.get_estimates(ignore_mempool=True)
 
                 if float(estimates.short) == -1:
-                    fee = 0
+                    fee = uint64(0)
                 else:
-                    fee = float(estimates.short) * 5000000
+                    fee = uint64(float(estimates.short) * 5000000)
 
             # With fee updating and included height being random, fee should increase to the max
             assert fee == fee_tracker.buckets[-1] * 5000
@@ -191,53 +217,53 @@ class TestFeeEstimator:
             path.unlink()
 
     @pytest.mark.asyncio
-    async def test_fee_with_throughput(self):
+    async def test_fee_with_throughput(self) -> None:
         log = logging.getLogger(__name__)
         path = Path("./fee_test_db")
         db_connection = await aiosqlite.connect(path)
         new_db_connection: Optional[Connection] = None
         try:
-            db_wrapper = DBWrapper(db_connection)
+            db_wrapper = DBWrapper2(db_connection)
             fee_store = await FeeStore.create(db_wrapper)
             fee_tracker = await FeeTracker.create(log, fee_store)
             coin_store = await CoinStore.create(fee_store)
-            mpool = MempoolManager(coin_store, test_constants, bt.config, fee_tracker)
+            mpool = MempoolManager(coin_store, test_constants, fee_tracker)
             estimator = SmartFeeEstimator(mpool, log)
             wallet_tool = WalletTool(test_constants)
             ph = wallet_tool.get_new_puzzlehash()
-            coin = Coin(ph, ph, 10000)
-            spend_bundle = wallet_tool.generate_signed_transaction(10000, ph, coin)
+            coin = Coin(ph, ph, uint64(10000))
+            spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
             random = Random(x=1)
-            fee = 0
+            fee = uint64(0)
             for i in range(300, 1000):
                 items = []
                 for _ in range(0, 20):
                     estimates = estimator.get_estimates(ignore_mempool=True)
                     if float(estimates.short) == -1:
-                        fee = 0
+                        fee = uint64(0)
                         included_height = random.randint(1, i - 1)
                     else:
                         random_fee = random.randint(0, 3)
                         if random_fee == 0:
-                            fee = float(estimates.short) * 5000000
-                            included_height = random.randint(i - 3, i - 1)
+                            fee = uint64(float(estimates.short) * 5000000)
+                            included_height = uint32(random.randint(i - 3, i - 1))
                         elif random_fee == 1:
-                            fee = float(estimates.medium) * 5000000
-                            included_height = random.randint(i - 30, i - 1)
+                            fee = uint64(float(estimates.medium) * 5000000)
+                            included_height = uint32(random.randint(i - 30, i - 1))
                         else:
-                            fee = float(estimates.long) * 5000000
-                            included_height = random.randint(i - 60, i - 1)
+                            fee = uint64(float(estimates.long) * 5000000)
+                            included_height = uint32(random.randint(i - 60, i - 1))
 
                     mempool_item = MempoolItem(
                         spend_bundle,
                         fee,
-                        NPCResult(None, [], 0),
-                        5000000,
+                        NPCResult(None, [], uint64(5000000)),
+                        uint64(5000000),
                         spend_bundle.name(),
                         [],
                         [],
-                        0,
-                        included_height,
+                        SerializedProgram(),
+                        uint32(included_height),
                     )
                     items.append(mempool_item)
 
@@ -252,10 +278,10 @@ class TestFeeEstimator:
             await db_connection.close()
 
             new_db_connection = await aiosqlite.connect(path)
-            new_db_wrapper = DBWrapper(new_db_connection)
+            new_db_wrapper = DBWrapper2(new_db_connection)
             new_fee_store = await FeeStore.create(new_db_wrapper)
             new_fee_tracker = await FeeTracker.create(log, new_fee_store)
-            new_mpool = MempoolManager(coin_store, test_constants, bt.config, new_fee_tracker)
+            new_mpool = MempoolManager(coin_store, test_constants, new_fee_tracker)
 
             new_estimator = SmartFeeEstimator(new_mpool, log)
             new_estimates = new_estimator.get_estimates(ignore_mempool=True)
