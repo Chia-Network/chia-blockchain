@@ -48,8 +48,8 @@ class CacheEntry:
     plot_public_key: G1Element
     last_use: float
 
-    @staticmethod
-    def from_disk_prover(prover: DiskProver) -> "CacheEntry":
+    @classmethod
+    def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
         (
             pool_public_key_or_puzzle_hash,
             farmer_public_key,
@@ -70,9 +70,7 @@ class CacheEntry:
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
         )
 
-        return CacheEntry(
-            prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time()
-        )
+        return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
 
     def bump_last_use(self) -> None:
         self.last_use = time.time()
