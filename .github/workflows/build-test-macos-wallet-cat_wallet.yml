@@ -70,7 +70,7 @@ jobs:
       run: date +%F > today.txt
 
     - name: Cache test blocks and plots
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       id: test-blocks-plots
       with:
         path: |
