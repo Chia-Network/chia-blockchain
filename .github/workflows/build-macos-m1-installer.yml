@@ -115,10 +115,9 @@ jobs:
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
         run: |
           export PATH=$(brew --prefix node@16)/bin:$PATH
+          git -C ./chia-blockchain-gui status
           . ./activate
-          cd ./chia-blockchain-gui
-          arch -arm64 git status
-          cd ../build_scripts
+          cd ./build_scripts
           arch -arm64 sh build_macos_m1.sh
 
       - name: Upload MacOS artifacts
