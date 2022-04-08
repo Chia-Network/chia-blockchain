@@ -1,12 +1,15 @@
 import asyncio
 import logging
 from secrets import token_bytes
-from typing import Dict, List
+from typing import AsyncIterator, Dict, List, Tuple
+from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
+from chia.cmds.init_funcs import init
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.start_service import Service
 from chia.server.start_wallet import service_kwargs_for_wallet
+from chia.util.config import load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import bytes_to_mnemonic
@@ -294,7 +297,7 @@ async def setup_harvester_farmer(bt: BlockTools, consensus_constants: ConsensusC
     harvester_rpc_port = find_available_listen_port("harvester rpc")
     node_iters = [
         setup_harvester(
-            bt,
+            bt.root_path,
             bt.config["self_hostname"],
             harvester_port,
             harvester_rpc_port,
@@ -318,6 +321,62 @@ async def setup_harvester_farmer(bt: BlockTools, consensus_constants: ConsensusC
     yield harvester_service, farmer_service
 
     await _teardown_nodes(node_iters)
+
+
+async def setup_farmer_multi_harvester(
+    block_tools: BlockTools,
+    harvester_count: int,
+    temp_dir: Path,
+    consensus_constants: ConsensusConstants,
+) -> AsyncIterator[Tuple[List[Service], Service]]:
+    farmer_port = find_available_listen_port("farmer")
+    farmer_rpc_port = find_available_listen_port("farmer rpc")
+
+    node_iterators = [
+        setup_farmer(
+            block_tools, block_tools.config["self_hostname"], farmer_port, farmer_rpc_port, consensus_constants
+        )
+    ]
+
+    for i in range(0, harvester_count):
+        root_path: Path = temp_dir / str(i)
+        init(None, root_path)
+        init(block_tools.root_path / "config" / "ssl" / "ca", root_path)
+        config = load_config(root_path, "config.yaml")
+        config["logging"]["log_stdout"] = True
+        config["selected_network"] = "testnet0"
+        config["harvester"]["selected_network"] = "testnet0"
+        harvester_port = find_available_listen_port("harvester")
+        harvester_rpc_port = find_available_listen_port("harvester rpc")
+        save_config(root_path, "config.yaml", config)
+        node_iterators.append(
+            setup_harvester(
+                root_path,
+                block_tools.config["self_hostname"],
+                harvester_port,
+                harvester_rpc_port,
+                farmer_port,
+                consensus_constants,
+                False,
+            )
+        )
+
+    farmer_service = await node_iterators[0].__anext__()
+    harvester_services = []
+    for node in node_iterators[1:]:
+        harvester_service = await node.__anext__()
+        harvester_services.append(harvester_service)
+
+    yield harvester_services, farmer_service
+
+    for harvester_service in harvester_services:
+        harvester_service.stop()
+        await harvester_service.wait_closed()
+
+    farmer_service.stop()
+    await farmer_service.wait_closed()
+
+    await _teardown_nodes(node_iterators)
 
 
 async def setup_full_system(
@@ -353,7 +412,7 @@ async def setup_full_system(
         node_iters = [
             setup_introducer(shared_b_tools, introducer_port),
             setup_harvester(
-                shared_b_tools,
+                shared_b_tools.root_path,
                 shared_b_tools.config["self_hostname"],
                 harvester_port,
                 harvester_rpc_port,

@@ -110,17 +110,16 @@ jobs:
 
     - name: Build arm64 .deb package
       run: |
-        . ./activate
         ldd --version
-        cd ./chia-blockchain-gui
-        git status
-        cd ../build_scripts
+        git -C ./chia-blockchain-gui status
+        . ./activate
+        cd ./build_scripts
         sh build_linux_deb.sh arm64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Linux-ARM-64-Installer
+        name: chia-installers-linux-deb-arm64
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Configure AWS Credentials

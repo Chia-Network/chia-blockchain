@@ -150,12 +150,13 @@ jobs:
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
+        git -C .\chia-blockchain-gui status
         .\build_scripts\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
-        name: Windows-Exe
+        name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts

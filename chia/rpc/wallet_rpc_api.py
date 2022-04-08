@@ -1408,13 +1408,14 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
         fee = uint64(request.get("fee", 0))
+        max_spends_in_tx = request.get("max_spends_in_tx", None)
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != uint8(WalletType.POOLING_WALLET):
             raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
 
         async with self.service.wallet_state_manager.lock:
-            transaction, fee_tx = await wallet.claim_pool_rewards(fee)
+            transaction, fee_tx = await wallet.claim_pool_rewards(fee, max_spends_in_tx)
             state: PoolWalletInfo = await wallet.get_current_state()
         return {"state": state.to_json_dict(), "transaction": transaction, "fee_transaction": fee_tx}
 
