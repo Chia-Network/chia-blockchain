@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, ItemsView, KeysView, List, Optional, Tuple, ValuesView
 
@@ -81,17 +81,15 @@ class CacheEntry:
         return time.time() - self.last_use > expiry_seconds
 
 
+@dataclass
 class Cache:
-    _changed: bool
-    _data: Dict[Path, CacheEntry]
+    _path: Path
+    _changed: bool = False
+    _data: Dict[Path, CacheEntry] = field(default_factory=dict)
     expiry_seconds: int = 7 * 24 * 60 * 60  # Keep the cache entries alive for 7 days after its last access
 
-    def __init__(self, path: Path) -> None:
-        self._changed = False
-        self._data = {}
-        self._path = path
-        if not path.parent.exists():
-            mkdir(path.parent)
+    def __post_init__(self) -> None:
+        mkdir(self._path.parent)
 
     def __len__(self) -> int:
         return len(self._data)
