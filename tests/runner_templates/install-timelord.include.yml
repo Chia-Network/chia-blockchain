@@ -1,13 +1,5 @@
-    - name: Install Ubuntu dependencies
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Install timelord
       run: |
         . ./activate
-        sh install-timelord.sh
+        sh install-timelord.sh -n
         ./vdf_bench square_asm 400000
