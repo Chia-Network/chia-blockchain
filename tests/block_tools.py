@@ -195,7 +195,6 @@ class BlockTools:
                 assert self.total_result.processed == update_result.processed
                 assert self.total_result.duration == update_result.duration
                 assert update_result.remaining == 0
-                log.warning(f"PM plots: {len(self.plot_manager.plots)}  expected: {len(self.expected_plots)}")
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
