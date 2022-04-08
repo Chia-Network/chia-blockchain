@@ -49,10 +49,9 @@ for setuptools_scm/PEP 440 reasons.
 - Update the database queries for the `block_count_metrics` RPC endpoint to utilize indexes effectively for V2 DBs.
 - Several improvements to tests.
 
-
 ## 1.3.0 Chia blockchain 2022-3-07
 
-### Added:
+### Added
 
 - CAT wallet support - add wallets for your favorite CATs.
 - Offers - make, take, and share your offers.
@@ -72,7 +71,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added *multiprocessing_start_method:* entry in config.yaml that allows setting the python *start method* for multiprocessing (default is *spawn* on Windows & MacOS, *fork* on Unix).
 - Added option to "Cancel transaction" accepted offers that are stuck in "pending".
 
-### Changed:
+### Changed
 
 - Lite wallet client sync updated to only require 3 peers instead of 5.
 - Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added (thanks to @ojura, this behavior can be toggled in config.yaml).
@@ -101,7 +100,7 @@ for setuptools_scm/PEP 440 reasons.
   - It should not be expected that wallet info, such as payout address, should not reflect what their desired values until everything has completed syncing.
   - The payout instructions may not be editable via the GUI until syncing has completed.
 
-### Fixed:
+### Fixed
 
 - Offer history limit has been fixed to show all offers now instead of limiting to just 49 offers.
 - Fixed issues with using madmax CLI options -w, -G, -2, -t and -d (Issue 9163) (thanks @randomisresistance and @lasers8oclockday1).
@@ -126,7 +125,7 @@ for setuptools_scm/PEP 440 reasons.
 - Memory leak in the full node sync store where peak hashes were stored without being pruned.
 - Fixed a timelord issue which could cause a few blocks to not be infused on chain if a certain proof of space signs conflicting blocks.
 
-### Known Issues:
+### Known Issues
 
 - When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created.
   - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
@@ -139,11 +138,10 @@ for setuptools_scm/PEP 440 reasons.
   - Workaround: Restart the GUI, or clear unconfirmed TX.
 - Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
 
-
 ## 1.2.11 Chia blockchain 2021-11-4
 
 Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
-This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for _every_ possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
+This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for *every* possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
 
 ### Added
 
@@ -173,7 +171,6 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
-
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
@@ -1816,7 +1813,7 @@ relic. We will make a patch available for these systems shortly.
 ### Added
 
 - There is now full transaction support on the Chia blockchain. In this initial Beta 1.0 release, all transaction types are supported though the wallets and UIs currently only directly support basic transactions like coinbase rewards and sending coins while paying fees. UI support for our [smart transactions](https://github.com/Chia-Network/wallets/blob/main/README.md) will be available in the UIs shortly.
-- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and _much_ easier. Windows native node/farmer/plotting functionality are coming soon.
+- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and *much* easier. Windows native node/farmer/plotting functionality are coming soon.
 - Install is significantly easier with less dependencies on all supported platforms.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
 - We have continued to make improvements to the speed of VDF squaring, creating a VDF proof, and verifying a VDF proof.
