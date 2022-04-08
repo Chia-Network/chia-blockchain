@@ -156,9 +156,9 @@ async def create_plots(
 
     if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
         log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
-    if args.size < 22:
-        log.warning("k under 22 is not supported. Increasing k to 22")
-        args.size = 22
+    if args.size < 20:
+        log.warning("k under 22 is not supported. Increasing k to 21")
+        args.size = 20
 
     if keys.pool_public_key is not None:
         log.info(

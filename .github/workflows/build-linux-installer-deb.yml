@@ -155,7 +155,6 @@ jobs:
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        . ./activate
         ldd --version
         git -C ./chia-blockchain-gui status
         . ./activate

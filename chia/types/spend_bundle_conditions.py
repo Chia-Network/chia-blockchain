@@ -7,7 +7,7 @@ from chia.util.streamable import Streamable, streamable
 
 
 # the Spend and SpendBundleConditions classes are mirrors of native types, returned by
-# run_generator2
+# run_generator
 @dataclass(frozen=True)
 @streamable
 class Spend(Streamable):
