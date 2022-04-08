@@ -162,7 +162,8 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         .\venv\Scripts\Activate.ps1
-        .\build_scripts\build_windows.ps1
+        cd ..\build_scripts
+        .\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
