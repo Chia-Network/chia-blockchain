@@ -112,6 +112,8 @@ jobs:
         sh install.sh
 
     - name: Build .rpm package
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ldd --version
         git -C ./chia-blockchain-gui status
