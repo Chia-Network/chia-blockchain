@@ -46,10 +46,11 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak_wallet(peak, peer)
+        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request
-    async def reject_block_header(self, response: wallet_protocol.RejectHeaderRequest):
+    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
@@ -101,10 +102,7 @@ class WalletNodeAPI:
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
         if self.wallet_node.wallet_peers is not None:
-            if not self.wallet_node.has_full_node():
-                await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
-            else:
-                await self.wallet_node.wallet_peers.ensure_is_closed()
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
@@ -114,12 +112,10 @@ class WalletNodeAPI:
     async def respond_peers(self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection):
         if self.wallet_node.wallet_peers is None:
             return None
-        if not self.wallet_node.has_full_node():
-            self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
-        else:
-            self.log.info(f"Wallet received {len(request.peer_list)} peers, but ignoring, since we have a full node.")
-            await self.wallet_node.wallet_peers.ensure_is_closed()
+
+        self.log.info(f"Wallet received {len(request.peer_list)} peers.")
+        await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+
         return None
 
     @api_request
@@ -140,10 +136,11 @@ class WalletNodeAPI:
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 
+    @execute_task
     @peer_required
     @api_request
     async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
-        await self.wallet_node.state_update_received(request, peer)
+        await self.wallet_node.new_peak_queue.full_node_state_updated(request, peer)
 
     @api_request
     async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):

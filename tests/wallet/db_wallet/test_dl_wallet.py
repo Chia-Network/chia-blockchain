@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import pytest_asyncio
 from typing import AsyncIterator, Iterator
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -36,27 +37,27 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 
 class TestDLWallet:
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def wallet_node(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 1, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def two_wallet_nodes_five_freeze(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
-    @pytest.fixture(scope="function")
+    @pytest_asyncio.fixture(scope="function")
     async def three_sim_two_wallets(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(3, 2, {}):
             yield _
@@ -343,7 +344,7 @@ class TestDLWallet:
 
         await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-        await full_node_api.process_transaction_records(records=[dl_record, std_record])
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=[dl_record, std_record]), timeout=15)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -369,12 +370,15 @@ class TestDLWallet:
 
         for tx in report_txs:
             await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
+
+        await asyncio.wait_for(full_node_api.wait_transaction_records_entered_mempool(records=report_txs), timeout=15)
+
         for tx in update_txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        for i in range(0, 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=report_txs), timeout=15)
+
+        funds -= 2000000000001
 
         async def is_singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32, generation: int) -> bool:
             latest = await wallet.get_latest_singleton(launcher_id)
@@ -394,8 +398,8 @@ class TestDLWallet:
         latest = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert latest is not None
         assert latest == (await dl_wallet_1.get_latest_singleton(launcher_id))
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 2000000000001)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 2000000000001)
+        await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
         assert (
             len(
                 await dl_wallet_0.get_history(
@@ -408,7 +412,9 @@ class TestDLWallet:
             assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
-        update_txs_1 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([1] * 32))
+        update_txs_1 = await dl_wallet_0.create_update_state_spend(
+            launcher_id, bytes32([1] * 32), fee=uint64(2000000000000)
+        )
         record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_1 is not None
         for tx in update_txs_1:
@@ -420,9 +426,7 @@ class TestDLWallet:
         for tx in update_txs_1:
             await wallet_node_0.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
 
-        update_txs_0 = await dl_wallet_0.create_update_state_spend(
-            launcher_id, bytes32([2] * 32), fee=uint64(2000000000000)
-        )
+        update_txs_0 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32))
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert record_0 != record_1
@@ -430,17 +434,21 @@ class TestDLWallet:
         for tx in update_txs_0:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        for i in range(0, 2):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-            await asyncio.sleep(0.5)
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=update_txs_1), timeout=15)
+
+        async def does_singleton_have_root(wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
+            latest_singleton = await wallet.get_latest_singleton(lid)
+            if latest_singleton is None:
+                return False
+            return latest_singleton.root == root
+
+        funds -= 2000000000000
 
         next_generation += 1
         await time_out_assert(15, is_singleton_generation, True, dl_wallet_0, launcher_id, next_generation)
-        latest = await dl_wallet_0.get_latest_singleton(launcher_id)
-        assert latest is not None
-        assert latest.root == bytes32([1] * 32)
-        await time_out_assert(15, wallet_0.get_confirmed_balance, funds - 2000000000001)
-        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds - 2000000000001)
+        await time_out_assert(15, does_singleton_have_root, True, dl_wallet_0, launcher_id, bytes32([1] * 32))
+        await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(15, wallet_0.get_unconfirmed_balance, funds)
         assert (
             len(
                 await dl_wallet_0.get_history(

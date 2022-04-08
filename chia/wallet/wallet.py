@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from blspy import G1Element
 
-from chia.consensus.cost_calculator import calculate_cost_of_program, NPCResult
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
@@ -40,6 +40,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.util.compute_memos import compute_memos
 
 
 class Wallet:
@@ -83,10 +84,7 @@ class Wallet:
                 cost_per_byte=self.wallet_state_manager.constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost_result: uint64 = calculate_cost_of_program(
-                program.program, result, self.wallet_state_manager.constants.COST_PER_BYTE
-            )
-            self.cost_of_single_tx = cost_result
+            self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
@@ -122,12 +120,15 @@ class Wallet:
         return spendable
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
+        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
+        )
         addition_amount = 0
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
-                self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                if record.spend_bundle is not None:
+                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
                 continue
             our_spend = False
             for coin in record.removals:
@@ -178,8 +179,8 @@ class Wallet:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
         puzzle = puzzle_for_pk(bytes(dr.pubkey))
         await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
         return puzzle
@@ -314,6 +315,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        in_transaction: bool = False,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -378,7 +380,7 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
+                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash(in_transaction=in_transaction)
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -416,7 +418,7 @@ class Wallet:
                 )
             )
 
-        self.log.info(f"Spends is {spends}")
+        self.log.debug(f"Spends is {spends}")
         return spends
 
     async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
@@ -440,6 +442,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        in_transaction: bool = False,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -463,6 +466,7 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
+            in_transaction=in_transaction,
         )
         assert len(transaction) > 0
 
@@ -502,7 +506,7 @@ class Wallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
@@ -510,7 +514,7 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(tx)
         await self.wallet_state_manager.wallet_node.update_ui()
 
-    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
+    # This is to be aggregated together with a CAT offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
         list_of_solutions = []
         utxos = None
