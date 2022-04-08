@@ -8,6 +8,9 @@ import pytest_asyncio
 import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
+from pathlib import Path
+from typing import Any, AsyncIterator, Dict, List, Tuple
+from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
@@ -39,6 +42,7 @@ from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
+from tests.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(scope="session")
@@ -400,6 +404,24 @@ async def two_nodes_one_block(bt, wallet_a):
     yield full_node_1, full_node_2, server_1, server_2
 
     async for _ in async_gen:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_two_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_three_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants):
         yield _
 
 

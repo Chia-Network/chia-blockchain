@@ -1711,6 +1711,86 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
+
+    # TODO: add test for
+    # ASSERT_COIN_ANNOUNCEMENT,
+    # CREATE_COIN_ANNOUNCEMENT,
+    # CREATE_PUZZLE_ANNOUNCEMENT,
+    # ASSERT_PUZZLE_ANNOUNCEMENT,
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_MY_AMOUNT,
+            ConditionOpcode.ASSERT_MY_PUZZLEHASH,
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            ConditionOpcode.ASSERT_MY_PARENT_ID,
+        ],
+    )
+    @pytest.mark.parametrize("with_garbage", [True, False])
+    async def test_conditions(self, empty_blockchain, opcode, with_garbage, bt):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            genesis_timestamp=10000,
+            time_per_block=10,
+        )
+        await _validate_and_add_block(empty_blockchain, blocks[0])
+        await _validate_and_add_block(empty_blockchain, blocks[1])
+        await _validate_and_add_block(empty_blockchain, blocks[2])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx1: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        coin1: Coin = tx1.additions()[0]
+        secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
+        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        public_key = synthetic_secret_key.get_g1()
+
+        if opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
+            args = [int_to_bytes(coin1.amount)]
+        elif opcode == ConditionOpcode.ASSERT_MY_PUZZLEHASH:
+            args = [coin1.puzzle_hash]
+        elif opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
+            args = [coin1.name()]
+        elif opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
+            args = [coin1.parent_coin_info]
+        # elif opcode == ConditionOpcode.RESERVE_FEE:
+        # args = [int_to_bytes(5)]
+        # TODO: since we use the production wallet code, we can't (easily)
+        # create a transaction with fee without also including a valid
+        # RESERVE_FEE condition
+        else:
+            assert False
+
+        conditions = {opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]}
+
+        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
+        assert coin1 in tx2.removals()
+        coin2: Coin = tx2.additions()[0]
+
+        bundles = SpendBundle.aggregate([tx1, tx2])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=bundles,
+            time_per_block=10,
+        )
+
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            [blocks[-1]], {}, validate_signatures=False
+        )
+        # Ignore errors from pre-validation, we are testing block_body_validation
+        repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == (ReceiveBlockResult.NEW_PEAK, None, 2)
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
     @pytest.mark.parametrize(
@@ -1744,9 +1824,7 @@ class TestBodyValidation:
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         public_key = synthetic_secret_key.get_g1()
 
-        args = [public_key, b"msg"]
-        if with_garbage:
-            args.append(b"garbage")
+        args = [public_key, b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
         tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
@@ -1771,27 +1849,32 @@ class TestBodyValidation:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "opcode,lock_value,expected",
+        "opcode,lock_value,expected,with_garbage",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK, False),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK, False),
+            # additional garbage at the end of parameters
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, True),
         ],
     )
-    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, bt):
+    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, with_garbage, bt):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -1807,7 +1890,9 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+        conditions = {
+            opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else []))]
+        }
 
         tx1: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
