@@ -36,7 +36,7 @@ class Params:
         self.nobitfield = args.nobitfield
 
 
-def plot_chia(args, root_path: Path):
+def plot_chia(args, root_path):
     try:
         validate_plot_size(root_path, args.size, args.override)
     except ValueError as e:
