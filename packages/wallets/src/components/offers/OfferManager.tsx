@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import styled from 'styled-components';
 import { Trans, t } from '@lingui/macro';
 import moment from 'moment';
 import BigNumber from 'bignumber.js';
@@ -55,11 +54,6 @@ import { OfferViewer } from './OfferViewer';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
-
-type OfferCancellationOptions = {
-  cancelWithTransaction: boolean;
-  cancellationFee: BigNumber;
-};
 
 type ConfirmOfferCancellationProps = {
   canCancelWithTransaction: boolean;

@@ -43,7 +43,7 @@ export default function WalletImport() {
     },
   });
 
-  const { fields, replace } = useFieldArray({
+  const { fields } = useFieldArray({
     control: methods.control,
     name: 'mnemonic',
   });

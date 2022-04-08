@@ -80,8 +80,8 @@ function OfferEditorConditionRow(props: OfferEditorConditionsRowProps) {
     row.assetWalletId = selectedWalletId;
     row.walletType = selectedWalletType;
     row.spendableBalanceString = spendableBalanceString;
-    row.spendableBalance = walletBalance 
-      ? new BigNumber(walletBalance.spendableBalance) 
+    row.spendableBalance = walletBalance
+      ? new BigNumber(walletBalance.spendableBalance)
       : new BigNumber(0);
 
     updateRow(row);
@@ -238,7 +238,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     { side: 'buy', fields: takerFields, namePrefix: 'takerRows', canAddRow: canAddTakerRow },
     { side: 'sell', fields: makerFields, namePrefix: 'makerRows', canAddRow: canAddMakerRow },
   ];
-  const showAddCATsMessage = !canAddTakerRow && wallets.length === 1;
+  const showAddCATsMessage = !canAddTakerRow && wallets?.length === 1;
   const showExchangeRate = !!makerAssetInfo && !!takerAssetInfo;
 
   if (makerSide === 'sell') {

@@ -243,23 +243,25 @@ export default function Settings() {
 
   return (
     <LayoutDashboardSub>
-      <Typography variant="h5" gutterBottom>
-        <Trans>Settings</Trans>
-      </Typography>
-      <Flex gap={2} flexDirection="column">
-        <Tabs
-          value={activeTab}
-          onChange={(_event, newValue) => setActiveTab(newValue)}
-          textColor="primary"
-          indicatorColor="primary"
-        >
-          <Tab value="GENERAL" label={<Trans>General</Trans>} />
-          <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
-        </Tabs>
+      <Flex flexDirection="column" gap={3}>
+        <Typography variant="h5">
+          <Trans>Settings</Trans>
+        </Typography>
+        <Flex gap={3} flexDirection="column">
+          <Tabs
+            value={activeTab}
+            onChange={(_event, newValue) => setActiveTab(newValue)}
+            textColor="primary"
+            indicatorColor="primary"
+          >
+            <Tab value="GENERAL" label={<Trans>General</Trans>} />
+            <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
+          </Tabs>
 
-        {activeTab === 'GENERAL' && (
-          <SettingsGeneral />
-        )}
+          {activeTab === 'GENERAL' && (
+            <SettingsGeneral />
+          )}
+        </Flex>
       </Flex>
     </LayoutDashboardSub>
   );

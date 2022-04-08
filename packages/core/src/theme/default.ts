@@ -81,6 +81,11 @@ export default deepmerge(greyTheme, {
         style: {
           fontSize: '3rem',
         },
+      }, {
+        props: { fontSize: 'sidebarIcon' },
+        style: {
+          fontSize: '2rem',
+        },
       }],
     },
     MuiButton: {

@@ -86,7 +86,7 @@ export default function SideBarItem(props: SideBarItemProps) {
     <StyledListItem button onClick={() => handleClick()} >
       <Flex flexDirection="column" alignItems="center" gap={0.5}>
         <StyledListItemIcon selected={isSelected}>
-          <Icon fontSize="large" />
+          <Icon fontSize="sidebarIcon" />
         </StyledListItemIcon>
         <StyledListItemText align="center">
           {title}

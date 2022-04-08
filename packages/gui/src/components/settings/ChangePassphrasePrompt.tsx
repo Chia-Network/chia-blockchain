@@ -14,7 +14,7 @@ import {
   Help as HelpIcon,
 } from '@mui/icons-material';
 import { t, Trans } from '@lingui/macro';
-import { AlertDialog, Button, DialogActions, Flex, useOpenDialog, Suspender, useValidateChangePassphraseParams } from '@chia/core';
+import { AlertDialog, Button, DialogActions, useOpenDialog, Suspender, useValidateChangePassphraseParams } from '@chia/core';
 import { useGetKeyringStatusQuery, useRemoveKeyringPassphraseMutation, useSetKeyringPassphraseMutation } from '@chia/api-react';
 
 type Props = {
@@ -28,9 +28,9 @@ export default function ChangePassphrasePrompt(props: Props) {
   const [validateChangePassphraseParams] = useValidateChangePassphraseParams();
   const [removeKeyringPassphrase, { isLoading: isLoadingRemoveKeyringPassphrase }] = useRemoveKeyringPassphraseMutation();
   const [setKeyringPassphrase, { isLoading: isLoadingSetKeyringPassphrase }] = useSetKeyringPassphraseMutation();
-  
+
   const isProcessing = isLoadingRemoveKeyringPassphrase || isLoadingSetKeyringPassphrase;
-  
+
   let currentPassphraseInput: HTMLInputElement | null;
   let passphraseInput: HTMLInputElement | null;
   let confirmationInput: HTMLInputElement | null;
@@ -130,12 +130,12 @@ export default function ChangePassphrasePrompt(props: Props) {
       'Escape' : handleCancel,
     };
     const handler: () => Promise<void> | undefined = keyHandlerMapping[e.key];
-  
+
     if (handler) {
       // Disable default event handling to avoid navigation updates
       e.preventDefault();
       e.stopPropagation();
-  
+
       await handler();
     }
   }

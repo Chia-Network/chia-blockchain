@@ -16,7 +16,7 @@ export default function StandardWallet(props: StandardWalletProps) {
   const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
 
   return (
-    <Flex flexDirection="column" gap={2}>
+    <Flex flexDirection="column" gap={2.5}>
       <WalletHeader
         walletId={walletId}
         tab={selectedTab}

@@ -39,7 +39,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
       if (checked) {
         setIsLoading(true);
         await onShow(id);
-      } else if (!checked) {
+      } else {
         onHide(id);
       }
     } finally {

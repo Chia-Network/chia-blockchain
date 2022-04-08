@@ -41,12 +41,6 @@ const StyledBody = styled(Flex)`
   min-width: 0;
 `;
 
-const StyledBrandWrapper = styled(Flex)`
-  height: 64px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-`;
 
 const StyledToolbar = styled(Toolbar)`
   padding-left: ${({ theme }) => theme.spacing(4)};
@@ -105,6 +99,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                       )}
                     </Typography>
                     <Flex flexGrow={1} />
+                    {/*
                     <DropdownIconButton
                       icon={<Notifications />}
                       title={t`Notifications`}
@@ -116,6 +111,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                       )}
                     </DropdownIconButton>
                     &nbsp;
+                     */}
                     <Tooltip title={<Trans>Logout</Trans>}>
                       <IconButton onClick={handleLogout} title={t`Log Out`}>
                         <ExitToAppIcon />

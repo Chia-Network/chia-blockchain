@@ -80,7 +80,7 @@ export default function WalletsSidebar() {
 
   return (
     <StyledRoot>
-      <Flex gap={1} flexDirection="column" width="100%">
+      <Flex gap={3} flexDirection="column" width="100%">
         <StyledContent>
           <Typography variant="h5">
             <Trans>Tokens</Trans>

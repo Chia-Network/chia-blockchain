@@ -2,7 +2,6 @@ import React from 'react';
 import { LayoutDashboardSub } from '@chia/core';
 import { Navigate } from 'react-router-dom'
 import WalletCreate from './create/WalletCreate';
-import { CreateOffer } from './offers/OfferManager';
 import { Routes, Route } from 'react-router-dom';
 import WalletsSidebar from './WalletsSidebar';
 import Wallet from './Wallet';

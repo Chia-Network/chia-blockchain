@@ -31,6 +31,7 @@ const StyledCardMaterial = styled(({ cursor, opacity, clickable, fullHeight, hig
 
   ${({ transparent }) => transparent ? `
     background-color: transparent;
+    background-image: none;
     border: none;
     box-shadow: none;
     overflow: visible;

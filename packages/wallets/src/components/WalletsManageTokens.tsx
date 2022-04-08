@@ -79,10 +79,14 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
       <StyledButtonContainer>
         <StyledMainButton onClick={toggle} fullWidth>
           <Trans>Manage token list</Trans>
-          &nbsp;
-          <IconButton onClick={handleAddToken}>
-            <Add />
-          </IconButton>
+          {expanded && (
+            <>
+              &nbsp;
+              <IconButton onClick={handleAddToken}>
+                <Add />
+              </IconButton>
+            </>
+          )}
         </StyledMainButton>
       </StyledButtonContainer>
       <StyledBody expanded={expanded}>
