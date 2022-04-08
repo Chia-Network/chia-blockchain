@@ -5,8 +5,8 @@ from pathlib import Path
 
 import click
 
+from chia.plotting.create_plots import validate_plot_size
 from chia.plotting.util import add_plot_directory
-from chia.util.config import load_config
 
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
@@ -132,14 +132,12 @@ def create_cmd(
             self.memo = memo
             self.nobitfield = nobitfield
 
-    if size < 32 and not override_k:
-        print("k=32 is the minimum size for farming.")
-        print("If you are testing and you want to use smaller size please add the --override-k flag.")
-        sys.exit(1)
-    elif size < 25 and override_k:
-        print("Error: The minimum k size allowed from the cli is k=25.")
-        sys.exit(1)
     root_path: Path = ctx.obj["root_path"]
+    try:
+        validate_plot_size(root_path, size, override_k)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
 
     plot_keys = asyncio.run(
         resolve_plot_keys(
@@ -152,9 +150,8 @@ def create_cmd(
             connect_to_daemon,
         )
     )
-    config = load_config(root_path, "config.yaml")
 
-    asyncio.run(create_plots(Params(), plot_keys, config["min_mainnet_k_size"]))
+    asyncio.run(create_plots(Params(), plot_keys))
     if not exclude_final_dir:
         add_plot_directory(root_path, final_dir)
 
