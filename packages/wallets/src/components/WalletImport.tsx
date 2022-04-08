@@ -90,8 +90,6 @@ export default function WalletImport() {
       const mnemonic = intersection.map((word) => ({ word }));
       replace(mnemonic);
     }
-
-    // above abandon abstract absurd account acid alert alley blast bless blind blanket boost book busy burden burger census chair chalk dinner direct dirt discover
   };
 
   function closeMnemonicPaste() {
