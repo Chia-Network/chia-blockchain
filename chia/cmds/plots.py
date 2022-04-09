@@ -5,8 +5,7 @@ from pathlib import Path
 
 import click
 
-from chia.plotting.create_plots import validate_plot_size
-from chia.plotting.util import add_plot_directory
+from chia.plotting.util import add_plot_directory, validate_plot_size
 
 DEFAULT_STRIPE_SIZE = 65536
 log = logging.getLogger(__name__)
