@@ -205,3 +205,15 @@ def find_duplicate_plot_IDs(all_filenames=None) -> None:
         for filename_str in duplicate_filenames:
             log_message += "\t" + filename_str + "\n"
         log.warning(f"{log_message}")
+
+
+def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
+    config = load_config(root_path, "config.yaml")
+    min_k = config["min_mainnet_k_size"]
+    if k < min_k and not override_k:
+        raise ValueError(
+            f"k={min_k} is the minimum size for farming.\n"
+            "If you are testing and you want to use smaller size please add the --override-k flag."
+        )
+    elif k < 25 and override_k:
+        raise ValueError("Error: The minimum k size allowed from the cli is k=25.")

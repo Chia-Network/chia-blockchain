@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.plotting.util import load_config, stream_plot_info_ph, stream_plot_info_pk
+from chia.plotting.util import stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
@@ -137,18 +137,6 @@ async def resolve_plot_keys(
     return await PlotKeysResolver(
         farmer_public_key, alt_fingerprint, pool_public_key, pool_contract_address, root_path, log, connect_to_daemon
     ).resolve()
-
-
-def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
-    config = load_config(root_path, "config.yaml")
-    min_k = config["min_mainnet_k_size"]
-    if k < min_k and not override_k:
-        raise ValueError(
-            f"k={min_k} is the minimum size for farming.\n"
-            "If you are testing and you want to use smaller size please add the --override-k flag."
-        )
-    elif k < 25 and override_k:
-        raise ValueError("Error: The minimum k size allowed from the cli is k=25.")
 
 
 async def create_plots(
