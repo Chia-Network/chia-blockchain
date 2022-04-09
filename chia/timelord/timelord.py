@@ -41,8 +41,8 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True)
 @streamable
+@dataclasses.dataclass(frozen=True)
 class BlueboxProcessData(Streamable):
     challenge: bytes32
     size_bits: uint16

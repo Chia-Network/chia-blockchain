@@ -6,8 +6,8 @@ from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubEpochSummary(Streamable):
     prev_subepoch_summary_hash: bytes32
     reward_chain_hash: bytes32  # hash of reward chain at end of last segment
