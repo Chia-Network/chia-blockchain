@@ -329,11 +329,6 @@ class BlockTools:
             assert path_new is not None
 
             if not exclude_plots:
-                # TODO: address hint error and remove ignore
-                #       error: Invalid index type "Optional[bytes32]" for "Dict[bytes32, Path]"; expected type "bytes32"
-                #       [index]
-                self.expected_plots[plot_id_new] = path_new  # type: ignore[index]
-            if not exclude_final_dir:
                 self.expected_plots[plot_id_new] = path_new
 
             return plot_id_new
