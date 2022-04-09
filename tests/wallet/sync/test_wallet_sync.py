@@ -204,8 +204,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         phs = []
-        for wallet_pair in wallets:
-            wallet_node, wallet_server = wallet_pair
+        for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
             phs.append(await wallet.get_new_puzzlehash())
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
