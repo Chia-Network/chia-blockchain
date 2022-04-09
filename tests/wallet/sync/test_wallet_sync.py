@@ -33,6 +33,12 @@ class TestWalletSync:
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
+        # Trusted node sync
+        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+
+        # Untrusted node sync
+        wallets[1][0].config["trusted_peers"] = {}
+
         for block in default_400_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
