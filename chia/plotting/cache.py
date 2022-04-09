@@ -36,7 +36,13 @@ class DiskCacheEntry(Streamable):
 @dataclass(frozen=True)
 class DiskCache(Streamable):
     version: uint16
-    data: List[Tuple[str, DiskCacheEntry]]
+    data: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class CacheDataV1(Streamable):
+    entries: List[Tuple[str, DiskCacheEntry]]
 
 
 @dataclass
@@ -115,9 +121,10 @@ class Cache:
                 )
                 for path, cache_entry in self.items()
             }
-            disk_cache: DiskCache = DiskCache(
-                uint16(CURRENT_VERSION), [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
+            cache_data: CacheDataV1 = CacheDataV1(
+                [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
             )
+            disk_cache: DiskCache = DiskCache(uint16(CURRENT_VERSION), bytes(cache_data))
             serialized: bytes = bytes(disk_cache)
             self._path.write_bytes(serialized)
             self._changed = False
@@ -128,10 +135,10 @@ class Cache:
     def load(self) -> None:
         try:
             serialized = self._path.read_bytes()
-            version = uint16.from_bytes(serialized[0:2])
             log.info(f"Loaded {len(serialized)} bytes of cached data")
-            if version == CURRENT_VERSION:
-                stored_cache: DiskCache = DiskCache.from_bytes(serialized)
+            stored_cache: DiskCache = DiskCache.from_bytes(serialized)
+            if stored_cache.version == CURRENT_VERSION:
+                cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.data)
                 self._data = {
                     Path(path): CacheEntry(
                         DiskProver.from_bytes(cache_entry.prover_data),
@@ -141,10 +148,10 @@ class Cache:
                         cache_entry.plot_public_key,
                         float(cache_entry.last_use),
                     )
-                    for path, cache_entry in stored_cache.data
+                    for path, cache_entry in cache_data.entries
                 }
             else:
-                raise ValueError(f"Invalid cache version {version}. Expected version {CURRENT_VERSION}.")
+                raise ValueError(f"Invalid cache version {stored_cache.version}. Expected version {CURRENT_VERSION}.")
         except FileNotFoundError:
             log.debug(f"Cache {self._path} not found")
         except Exception as e:
