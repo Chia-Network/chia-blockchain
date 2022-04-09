@@ -519,26 +519,28 @@ def test_parse_tuple() -> None:
         parse_tuple(io.BytesIO(b"\x00"), [parse_bool, parse_bool])
 
 
+class TestFromBytes:
+    b: bytes
+
+    @classmethod
+    def from_bytes(cls, b: bytes) -> TestFromBytes:
+        ret = TestFromBytes()
+        ret.b = b
+        return ret
+
+
+class FailFromBytes:
+    @classmethod
+    def from_bytes(cls, b: bytes) -> FailFromBytes:
+        raise ValueError()
+
+
 def test_parse_size_hints() -> None:
-    class TestFromBytes:
-        b: bytes
-
-        @classmethod
-        def from_bytes(cls, b: bytes) -> TestFromBytes:
-            ret = TestFromBytes()
-            ret.b = b
-            return ret
-
     assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4).b == b"1337"
 
     # EOF
     with raises(AssertionError):
         parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4)
-
-    class FailFromBytes:
-        @classmethod
-        def from_bytes(cls, b: bytes) -> FailFromBytes:
-            raise ValueError()
 
     # error in underlying type
     with raises(ValueError):
