@@ -8,8 +8,8 @@ from chia.util.streamable import Streamable, streamable
 
 # the Spend and SpendBundleConditions classes are mirrors of native types, returned by
 # run_generator
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Spend(Streamable):
     coin_id: bytes32
     puzzle_hash: bytes32
@@ -19,8 +19,8 @@ class Spend(Streamable):
     agg_sig_me: List[Tuple[bytes48, bytes]]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SpendBundleConditions(Streamable):
     spends: List[Spend]
     reserve_fee: uint64
