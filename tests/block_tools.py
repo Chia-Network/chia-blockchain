@@ -316,7 +316,7 @@ class BlockTools:
             self.created_plots += 1
 
             plot_id_new: Optional[bytes32] = None
-            path_new: Path = Path()
+            path_new: Optional[Path] = None
 
             if len(created):
                 assert len(existed) == 0
