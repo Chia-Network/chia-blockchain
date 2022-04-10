@@ -71,7 +71,7 @@ CHECKOUT_TEST_BLOCKS_AND_PLOTS
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        ./Install.ps1
+        ./Install.ps1 -d
 
 INSTALL_TIMELORD
 

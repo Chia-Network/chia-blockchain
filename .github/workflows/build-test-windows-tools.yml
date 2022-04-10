@@ -71,7 +71,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        ./Install.ps1
+        ./Install.ps1 -d
 
 # Omitted installing Timelord
 
