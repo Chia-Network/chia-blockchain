@@ -122,8 +122,6 @@ jobs:
         path: coverage_reports/*
         if-no-files-found: error
 
-# Omitted resource usage check
-
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

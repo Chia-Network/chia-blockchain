@@ -101,8 +101,6 @@ INSTALL_TIMELORD
         path: coverage_reports/*
         if-no-files-found: error
 
-CHECK_RESOURCE_USAGE
-
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

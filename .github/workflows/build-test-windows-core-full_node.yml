@@ -122,11 +122,6 @@ jobs:
         path: coverage_reports/*
         if-no-files-found: error
 
-    - name: Check resource usage
-      run: |
-        sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
-        ./tests/check_pytest_monitor_output.py <metrics.out
-
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
