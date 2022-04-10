@@ -102,7 +102,7 @@ jobs:
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         run: |
-          arch -arm64 sh install.sh
+          arch -arm64 sh install.sh -d
 
       - name: Install node 16.x
         run: |
