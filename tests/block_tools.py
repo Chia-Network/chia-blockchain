@@ -261,6 +261,7 @@ class BlockTools:
             await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_plots=True,
             )
 
         await self.refresh_plots()
