@@ -72,7 +72,7 @@ def generate_replacements(conf, dir):
             Path(root_path / "runner_templates/check-resource-usage.include.yml")
         ).rstrip(),
         "DISABLE_PYTEST_MONITOR": "",
-        "TEST_DIR": "",
+        "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
     }
@@ -88,7 +88,9 @@ def generate_replacements(conf, dir):
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
+    test_files = sorted(dir.glob("test_*.py"))
+    test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
+    replacements["TEST_FILES"] = " ".join(test_file_paths)
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
