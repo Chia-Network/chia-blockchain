@@ -1,7 +1,6 @@
 import logging
-
 from typing import Dict, Optional
-from clvm_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
+from chia_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV, STRICT_ARGS_COUNT
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.cost_calculator import NPCResult
@@ -43,7 +42,8 @@ def get_name_puzzle_conditions(
     assert (MEMPOOL_MODE & NO_NEG_DIV) != 0
 
     if mempool_mode:
-        flags = MEMPOOL_MODE
+        # Don't apply the strict args count rule yet
+        flags = MEMPOOL_MODE & (~STRICT_ARGS_COUNT)
     elif unwrap(height) >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
         # conditions must use integers in canonical encoding (i.e. no redundant
         # leading zeros)

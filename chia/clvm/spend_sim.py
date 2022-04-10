@@ -38,15 +38,15 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimFullBlock(Streamable):
     transactions_generator: Optional[BlockGenerator]
     height: uint32  # Note that height is not on a regular FullBlock
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimBlockRecord(Streamable):
     reward_claims_incorporated: List[Coin]
     height: uint32
@@ -69,8 +69,8 @@ class SimBlockRecord(Streamable):
         )
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimStore(Streamable):
     timestamp: uint64
     block_height: uint32

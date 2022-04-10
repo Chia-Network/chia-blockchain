@@ -98,7 +98,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "MIN_PLOT_SIZE": 18,
         "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
-        "DIFFICULTY_STARTING": 2 ** 12,
+        "DIFFICULTY_STARTING": 2 ** 10,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 170,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -277,7 +277,7 @@ class BlockTools:
             tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = 22
+        args.size = 20
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
