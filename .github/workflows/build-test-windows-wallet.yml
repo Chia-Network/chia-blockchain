@@ -34,6 +34,10 @@ jobs:
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet
 
     steps:
+    - name: Configure git
+      run: |
+        git config --global core.autocrlf false
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
