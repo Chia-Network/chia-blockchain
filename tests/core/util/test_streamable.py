@@ -175,7 +175,8 @@ def test_StrictDataClassOptional() -> None:
         c: Optional[Optional[uint8]]
         d: Optional[Optional[uint8]]
 
-    good = TestClass(12, None, 13, None)  # type: ignore[arg-type] # we want to test invalid here, hence the ignore.
+    # we want to test invalid here, hence the ignore.
+    good = TestClass(12, None, 13, None)  # type: ignore[arg-type]
     assert good
 
 
@@ -603,8 +604,8 @@ def test_dataclass_missing() -> None:
 def test_streamable_inheritance_missing() -> None:
 
     with raises(DefinitionError):
-
+        # we want to test invalid here, hence the ignore.
         @streamable
         @dataclass(frozen=True)
-        class StreamableInheritanceMissing:  # type: ignore[type-var] # we want to test invalid here, hence the ignore.
+        class StreamableInheritanceMissing:  # type: ignore[type-var]
             pass
