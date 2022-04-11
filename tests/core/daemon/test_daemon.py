@@ -85,9 +85,6 @@ class TestDaemon:
         read_handler.cancel()
         assert blockchain_state_found
 
-    # Suppress warning: "The explicit passing of coroutine objects to asyncio.wait() is deprecated since Python 3.8..."
-    # Can be removed when we upgrade to a newer version of websockets (9.1 works)
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.*")
     @pytest.mark.asyncio
     async def test_validate_keyring_passphrase_rpc(self, get_daemon_with_temp_keyring):
         local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
@@ -169,9 +166,6 @@ class TestDaemon:
                 # Expect: validation failure
                 await check_empty_passphrase_case(await ws.receive())
 
-    # Suppress warning: "The explicit passing of coroutine objects to asyncio.wait() is deprecated since Python 3.8..."
-    # Can be removed when we upgrade to a newer version of websockets (9.1 works)
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.*")
     @pytest.mark.asyncio
     async def test_add_private_key(self, get_daemon_with_temp_keyring):
         local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
