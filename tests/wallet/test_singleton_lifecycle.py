@@ -113,8 +113,7 @@ def test_only_odd_coins_0():
     conditions = Program.to(condition_list)
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
-    run = asyncio.get_event_loop().run_until_complete
-    coins_added, coins_removed = run(check_spend_bundle_validity(bt.constants, blocks, spend_bundle))
+    coins_added, coins_removed = asyncio.run(check_spend_bundle_validity(bt.constants, blocks, spend_bundle))
 
     coin_set_added = set([_.coin for _ in coins_added])
     coin_set_removed = set([_.coin for _ in coins_removed])

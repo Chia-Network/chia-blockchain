@@ -77,7 +77,7 @@ def main():
         )
         quit()
 
-    return asyncio.get_event_loop().run_until_complete(run_and_wait(file_path, port))
+    return asyncio.run(run_and_wait(file_path, port))
 
 
 if __name__ == "__main__":

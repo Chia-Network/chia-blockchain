@@ -138,7 +138,7 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     Subprocess entry point. This function spins-off threads to perform read/write tasks
     concurrently, possibly leading to synchronization issues accessing config data.
     """
-    asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config))
+    asyncio.run(create_reader_and_writer_tasks(root_path, default_config))
 
 
 @pytest.fixture(scope="function")
