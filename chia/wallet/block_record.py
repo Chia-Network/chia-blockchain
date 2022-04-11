@@ -6,8 +6,8 @@ from chia.types.header_block import HeaderBlock
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class HeaderBlockRecord(Streamable):
     """
     These are values that are stored in the wallet database, corresponding to information

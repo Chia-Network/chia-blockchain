@@ -64,7 +64,7 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
     with tempfile.TemporaryDirectory() as root_dir:
 
         root_path = Path(root_dir)
-        chia_init(root_path, should_check_keys=False)
+        chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
 
         overrides = config["network_overrides"]["constants"][config["selected_network"]]
@@ -83,9 +83,12 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
 
             print()
             counter = 0
+            height = 0
             async with aiosqlite.connect(file) as in_db:
 
-                rows = await in_db.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+                rows = await in_db.execute(
+                    "SELECT header_hash, height, block FROM full_blocks WHERE in_main_chain=1 ORDER BY height"
+                )
 
                 block_batch = []
 
@@ -101,14 +104,22 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
                         success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
                             block_batch, None, None  # type: ignore[arg-type]
                         )
+                        end_height = block_batch[-1].height
+                        full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                     assert success
                     assert advanced_peak
                     counter += len(block_batch)
-                    print(f"\rheight {counter} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
+                    height += len(block_batch)
+                    print(f"\rheight {height} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")
+
+                    if counter >= 100000:
+                        start_time = time.monotonic()
+                        counter = 0
+                        print()
         finally:
             print("closing full node")
             full_node._close()
@@ -122,7 +133,7 @@ def main() -> None:
 
 @main.command("run", short_help="run simulated full sync from an existing blockchain db")
 @click.argument("file", type=click.Path(), required=True)
-@click.option("--db-version", type=int, required=False, default=2, help="the version of the specified db file")
+@click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
 @click.option(
     "--single-thread",
@@ -132,6 +143,9 @@ def main() -> None:
     help="run node in a single process, to include validation in profiles",
 )
 def run(file: Path, db_version: int, profile: bool, single_thread: bool) -> None:
+    """
+    The FILE parameter should point to an existing blockchain database file (in v2 format)
+    """
     asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread))
 
 
