@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from clvm_tools import binutils
@@ -418,7 +418,7 @@ def test_uint32() -> None:
     assert parse_uint32(io.BytesIO(b"\x01\x00\x00\x00"), "little") == 1
     assert parse_uint32(io.BytesIO(b"\xff\xff\xff\xff"), "little") == 4294967295
 
-    def test_write(value: int, byteorder: Union[Literal["little"], Literal["big"]]) -> None:
+    def test_write(value: int, byteorder: Literal["little", "big"]) -> None:
         f = io.BytesIO()
         write_uint32(f, uint32(value), byteorder)
         f.seek(0)
