@@ -58,11 +58,14 @@ big_ints = [uint64, int64, uint128, int512]
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
+ParseFunctionType = Callable[[BinaryIO], object]
+StreamFunctionType = Callable[[object, BinaryIO], None]
+
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
 FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[Any], Dict[str, Type[Any]]] = {}
-STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any, BinaryIO], Any]]] = {}
-PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[Callable[[Any], Any]]] = {}
+STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[StreamFunctionType]] = {}
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[ParseFunctionType]] = {}
 
 
 def is_type_List(f_type: Type[Any]) -> bool:
@@ -178,7 +181,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
     f.write(value.to_bytes(4, byteorder))
 
 
-def parse_optional(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Optional[Any]:
+def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Optional[Any]:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
@@ -196,7 +199,7 @@ def parse_bytes(f: BinaryIO) -> bytes:
     return bytes_read
 
 
-def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> List[Any]:
+def parse_list(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> List[Any]:
     full_list: List[Any] = []
     # wjb assert inner_type != get_args(List)[0]
     list_size = parse_uint32(f)
@@ -205,7 +208,7 @@ def parse_list(f: BinaryIO, parse_inner_type_f: Callable[[BinaryIO], Any]) -> Li
     return full_list
 
 
-def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[Callable[[BinaryIO], Any]]) -> Tuple[Any, ...]:
+def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -> Tuple[Any, ...]:
     full_list: List[Any] = []
     for parse_f in list_parse_inner_type_f:
         full_list.append(parse_f(f))
@@ -225,7 +228,7 @@ def parse_str(f: BinaryIO) -> str:
     return bytes.decode(str_read_bytes, "utf-8")
 
 
-def stream_optional(stream_inner_type_func: Callable[[Any, BinaryIO], None], item: Any, f: BinaryIO) -> None:
+def stream_optional(stream_inner_type_func: StreamFunctionType, item: Any, f: BinaryIO) -> None:
     if item is None:
         f.write(bytes([0]))
     else:
@@ -238,13 +241,13 @@ def stream_bytes(item: Any, f: BinaryIO) -> None:
     f.write(item)
 
 
-def stream_list(stream_inner_type_func: Callable[[Any, BinaryIO], None], item: Any, f: BinaryIO) -> None:
+def stream_list(stream_inner_type_func: StreamFunctionType, item: Any, f: BinaryIO) -> None:
     write_uint32(f, uint32(len(item)))
     for element in item:
         stream_inner_type_func(element, f)
 
 
-def stream_tuple(stream_inner_type_funcs: List[Callable[[Any, BinaryIO], None]], item: Any, f: BinaryIO) -> None:
+def stream_tuple(stream_inner_type_funcs: List[StreamFunctionType], item: Any, f: BinaryIO) -> None:
     assert len(stream_inner_type_funcs) == len(item)
     for i in range(len(item)):
         stream_inner_type_funcs[i](item[i], f)
@@ -254,6 +257,18 @@ def stream_str(item: Any, f: BinaryIO) -> None:
     str_bytes = item.encode("utf-8")
     write_uint32(f, uint32(len(str_bytes)))
     f.write(str_bytes)
+
+
+def stream_bool(item: Any, f: BinaryIO) -> None:
+    f.write(int(item).to_bytes(1, "big"))
+
+
+def stream_streamable(item: object, f: BinaryIO) -> None:
+    getattr(item, "stream")(f)
+
+
+def stream_byte_convertible(item: object, f: BinaryIO) -> None:
+    f.write(getattr(item, "__bytes__")())
 
 
 def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
@@ -411,7 +426,7 @@ class Streamable:
                 object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
 
     @classmethod
-    def function_to_parse_one_item(cls, f_type: Type[Any]) -> Callable[[BinaryIO], Any]:
+    def function_to_parse_one_item(cls, f_type: Type[Any]) -> ParseFunctionType:
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
@@ -447,7 +462,7 @@ class Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: _T_Streamable = object.__new__(cls)
         fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
-        values: Iterator[Callable[[Any], Any]] = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
+        values: Iterator[object] = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
 
@@ -459,7 +474,7 @@ class Streamable:
         return obj
 
     @classmethod
-    def function_to_stream_one_item(cls, f_type: Type[Any]) -> Callable[[Any, BinaryIO], Any]:
+    def function_to_stream_one_item(cls, f_type: Type[Any]) -> StreamFunctionType:
         inner_type: Type[Any]
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
@@ -468,9 +483,9 @@ class Streamable:
         elif f_type == bytes:
             return stream_bytes
         elif hasattr(f_type, "stream"):
-            return lambda item, f: item.stream(f)
+            return stream_streamable
         elif hasattr(f_type, "__bytes__"):
-            return lambda item, f: f.write(bytes(item))
+            return stream_byte_convertible
         elif is_type_List(f_type):
             inner_type = get_args(f_type)[0]
             stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
@@ -484,7 +499,7 @@ class Streamable:
         elif f_type is str:
             return stream_str
         elif f_type is bool:
-            return lambda item, f: f.write(int(item).to_bytes(1, "big"))
+            return stream_bool
         else:
             raise NotImplementedError(f"can't stream {f_type}")
 
