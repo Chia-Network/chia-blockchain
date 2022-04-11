@@ -84,16 +84,11 @@ class TestCoinSelection:
 
     @pytest.mark.asyncio
     async def test_coin_selection_with_dust(self, a_hash: bytes32) -> None:
-        coin_amounts = [5000000000000]
+        spendable_amount = uint128(5000000000000 + 10000)
+        coin_list: List[WalletCoinRecord] = [WalletCoinRecord(Coin(a_hash, a_hash, uint64(5000000000000)), uint32(1), uint32(1), False, True, WalletType(0), 1)]
         for i in range(10000):
-            coin_amounts.append(1)
-
-        spendable_amount = uint128(sum(coin_amounts))
-
-        coin_list: List[WalletCoinRecord] = [
-            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
-            for a in coin_amounts
-        ]
+            coin_list.append(WalletCoinRecord(Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1))
+        # make sure coins are not identical.
         for target_amount in [10000, 9999]:  # select the first 100 values
             result: Set[Coin] = await select_coins(
                 spendable_amount,
@@ -105,6 +100,7 @@ class TestCoinSelection:
             )
             assert result is not None
             assert sum([coin.amount for coin in result]) >= target_amount
+            assert len(result) <= 500
 
     @pytest.mark.asyncio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
