@@ -5,8 +5,8 @@ from chia.types.blockchain_format.sized_bytes import bytes100
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ClassgroupElement(Streamable):
     """
     Represents a classgroup element (a,b,c) where a, b, and c are 512 bit signed integers. However this is using

@@ -477,6 +477,12 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
+            # Test unacknowledged CAT
+            await wallet_node.wallet_state_manager.interested_store.add_unacknowledged_token(
+                asset_id, "Unknown", uint32(10000), bytes.fromhex("ABCD")
+            )
+            cats = await client.get_stray_cats()
+            assert len(cats) == 1
 
             await time_out_assert(10, eventual_balance_det, 16, client, cat_0_id)
             await time_out_assert(10, eventual_balance_det, 4, client_2, cat_1_id)

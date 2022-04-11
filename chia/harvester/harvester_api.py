@@ -10,7 +10,7 @@ from chia.harvester.harvester import Harvester
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot
+from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -30,8 +30,11 @@ class HarvesterAPI:
     def _set_state_changed_callback(self, callback: Callable):
         self.harvester.state_changed_callback = callback
 
+    @peer_required
     @api_request
-    async def harvester_handshake(self, harvester_handshake: harvester_protocol.HarvesterHandshake):
+    async def harvester_handshake(
+        self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
+    ):
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -40,7 +43,8 @@ class HarvesterAPI:
         self.harvester.plot_manager.set_public_keys(
             harvester_handshake.farmer_public_keys, harvester_handshake.pool_public_keys
         )
-
+        self.harvester.plot_sync_sender.set_connection(peer)
+        await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
     @peer_required
@@ -289,3 +293,7 @@ class HarvesterAPI:
 
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
+
+    @api_request
+    async def plot_sync_response(self, response: PlotSyncResponse):
+        self.harvester.plot_sync_sender.set_response(response)

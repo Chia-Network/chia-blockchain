@@ -1,4 +1,7 @@
 from typing import List, Optional, Set, Dict, Any, Tuple
+
+from aiosqlite import Cursor
+
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -285,7 +288,8 @@ class CoinStore:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                f'WHERE coin_name in ({"?," * (len(names) - 1)}?) '
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 names_db + (start_height, end_height),
@@ -515,16 +519,27 @@ class CoinStore:
         for coin_name in coin_names:
             r = self.coin_record_cache.get(coin_name)
             if r is not None:
+                if r.spent_block_index != uint32(0):
+                    raise ValueError(f"Coin already spent in cache: {coin_name}")
+
                 self.coin_record_cache.put(
                     r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
                 )
             updates.append((index, self.maybe_to_hex(coin_name)))
 
-        if updates != []:
-            async with self.db_wrapper.write_db() as conn:
-                if self.db_wrapper.db_version == 2:
-                    await conn.executemany("UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=?", updates)
-                else:
-                    await conn.executemany(
-                        "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", updates
-                    )
+        assert len(updates) == len(coin_names)
+        async with self.db_wrapper.write_db() as conn:
+            if self.db_wrapper.db_version == 2:
+                ret: Cursor = await conn.executemany(
+                    "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
+                )
+
+            else:
+                ret = await conn.executemany(
+                    "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
+                    updates,
+                )
+            if ret.rowcount != len(coin_names):
+                raise ValueError(
+                    f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}"
+                )
