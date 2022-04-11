@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.harvester.harvester import Harvester

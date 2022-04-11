@@ -11,13 +11,13 @@ from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
     add_plot_directory,
     get_plot_directories,
-    remove_plot_directory,
     remove_plot,
-    PlotsRefreshParameter,
-    PlotRefreshResult,
-    PlotRefreshEvents,
+    remove_plot_directory,
 )
 from chia.util.streamable import dataclass_from_dict
 
