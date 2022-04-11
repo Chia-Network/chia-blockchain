@@ -63,9 +63,9 @@ StreamFunctionType = Callable[[object, BinaryIO], None]
 
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
-FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[Any], Dict[str, Type[Any]]] = {}
-STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[StreamFunctionType]] = {}
-PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[ParseFunctionType]] = {}
+FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Dict[str, Type[object]]] = {}
+STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[StreamFunctionType]] = {}
+PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]] = {}
 
 
 def is_type_List(f_type: object) -> bool:
@@ -181,7 +181,7 @@ def write_uint32(f: BinaryIO, value: uint32, byteorder: Literal["little", "big"]
     f.write(value.to_bytes(4, byteorder))
 
 
-def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Optional[Any]:
+def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Optional[object]:
     is_present_bytes = f.read(1)
     assert is_present_bytes is not None and len(is_present_bytes) == 1  # Checks for EOF
     if is_present_bytes == bytes([0]):
@@ -199,8 +199,8 @@ def parse_bytes(f: BinaryIO) -> bytes:
     return bytes_read
 
 
-def parse_list(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> List[Any]:
-    full_list: List[Any] = []
+def parse_list(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> List[object]:
+    full_list: List[object] = []
     # wjb assert inner_type != get_args(List)[0]
     list_size = parse_uint32(f)
     for list_index in range(list_size):
@@ -208,8 +208,8 @@ def parse_list(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> List[Any]:
     return full_list
 
 
-def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -> Tuple[Any, ...]:
-    full_list: List[Any] = []
+def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -> Tuple[object, ...]:
+    full_list: List[object] = []
     for parse_f in list_parse_inner_type_f:
         full_list.append(parse_f(f))
     return tuple(full_list)
