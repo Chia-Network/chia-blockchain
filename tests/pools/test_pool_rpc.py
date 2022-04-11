@@ -824,15 +824,15 @@ class TestPoolWalletRpc:
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
-            creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
-            )
-
             await time_out_assert(
                 10,
                 full_node_api.full_node.mempool_manager.get_spendbundle,
                 creation_tx.spend_bundle,
                 creation_tx.name,
+            )
+
+            creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
+                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
             await time_out_assert(
                 10,
