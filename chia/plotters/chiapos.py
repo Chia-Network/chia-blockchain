@@ -9,6 +9,8 @@ from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from chia.plotting.util import add_plot_directory, validate_plot_size
+
 log = logging.getLogger(__name__)
 
 
@@ -31,16 +33,13 @@ class Params:
         self.plotid = args.id
         self.memo = args.memo
         self.nobitfield = args.nobitfield
-        self.exclude_final_dir = args.exclude_final_dir
 
 
 def plot_chia(args, root_path):
-    if args.size < 32 and not args.override:
-        print("k=32 is the minimum size for farming.")
-        print("If you are testing and you want to use smaller size please add the --override flag.")
-        return
-    elif args.size < 25 and args.override:
-        print("Error: The minimum k size allowed from the cli is k=25.")
+    try:
+        validate_plot_size(root_path, args.size, args.override)
+    except ValueError as e:
+        print(e)
         return
 
     plot_keys = asyncio.run(
@@ -54,4 +53,6 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.run(create_plots(Params(args), plot_keys, root_path))
+    asyncio.run(create_plots(Params(args), plot_keys))
+    if not args.exclude_final_dir:
+        add_plot_directory(root_path, args.finaldir)
