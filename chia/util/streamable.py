@@ -68,18 +68,18 @@ STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[StreamFunctionType]]
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[ParseFunctionType]] = {}
 
 
-def is_type_List(f_type: Type[Any]) -> bool:
+def is_type_List(f_type: object) -> bool:
     return get_origin(f_type) == list or f_type == list
 
 
-def is_type_SpecificOptional(f_type: Type[Any]) -> bool:
+def is_type_SpecificOptional(f_type: object) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
     return get_origin(f_type) == Union and get_args(f_type)[1]() is None
 
 
-def is_type_Tuple(f_type: Type[Any]) -> bool:
+def is_type_Tuple(f_type: object) -> bool:
     return get_origin(f_type) == tuple or f_type == tuple
 
 

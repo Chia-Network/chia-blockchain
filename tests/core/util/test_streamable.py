@@ -109,10 +109,8 @@ def test_not_lists() -> None:
 
 
 def test_basic_optional() -> None:
-    # Below mypy failure: Argument 1 to "is_type_SpecificOptional" has incompatible type "object"; expected "Type[Any]"
-    assert is_type_SpecificOptional(Optional[int])  # type: ignore[arg-type]
-    # Below mypy failure:  Argument 1 to "is_type_SpecificOptional" has incompatible type "object"; expected "Type[Any]"
-    assert is_type_SpecificOptional(Optional[Optional[int]])  # type: ignore[arg-type]
+    assert is_type_SpecificOptional(Optional[int])
+    assert is_type_SpecificOptional(Optional[Optional[int]])
     assert not is_type_SpecificOptional(List[int])
 
 
