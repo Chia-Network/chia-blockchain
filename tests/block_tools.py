@@ -27,6 +27,7 @@ from chia.util.errors import Err
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import GENERATOR_MOD
 from chia.plotting.create_plots import create_plots, PlotKeys
+from chia.plotting.util import add_plot_directory
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -83,7 +84,7 @@ from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert_custom_interval
 from tests.wallet_tools import WalletTool
 from tests.util.socket import find_available_listen_port
 from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
@@ -243,7 +244,11 @@ class BlockTools:
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
 
+    def add_plot_directory(self, path: Path) -> None:
+        self._config = add_plot_directory(self.root_path, str(path))
+
     async def setup_plots(self):
+        self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
         for i in range(15):
@@ -256,7 +261,7 @@ class BlockTools:
             await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                exclude_final_dir=True,
+                exclude_plots=True,
             )
 
         await self.refresh_plots()
@@ -267,7 +272,7 @@ class BlockTools:
         path: Path = None,
         tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
-        exclude_final_dir: bool = False,
+        exclude_plots: bool = False,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -292,7 +297,6 @@ class BlockTools:
         args.nobitfield = False
         args.exclude_final_dir = False
         args.list_duplicates = False
-        args.exclude_final_dir = exclude_final_dir
         try:
             if plot_keys is None:
                 pool_pk: Optional[G1Element] = None
@@ -307,7 +311,6 @@ class BlockTools:
             created, existed = await create_plots(
                 args,
                 plot_keys,
-                self.root_path,
                 use_datetime=False,
                 test_private_keys=[AugSchemeMPL.key_gen(std_hash(self.created_plots.to_bytes(2, "big")))],
             )
@@ -326,13 +329,8 @@ class BlockTools:
             assert plot_id_new is not None
             assert path_new is not None
 
-            if not exclude_final_dir:
+            if not exclude_plots:
                 self.expected_plots[plot_id_new] = path_new
-
-            # create_plots() updates plot_directories. Ensure we refresh our config to reflect the updated value
-            self._config["harvester"]["plot_directories"] = load_config(self.root_path, "config.yaml", "harvester")[
-                "plot_directories"
-            ]
 
             return plot_id_new
 
@@ -346,8 +344,8 @@ class BlockTools:
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
-        self.plot_manager.start_refreshing()
-        await time_out_assert(10, self.plot_manager.needs_refresh, value=False)
+        self.plot_manager.start_refreshing(sleep_interval_ms=1)
+        await time_out_assert_custom_interval(10, 0.001, self.plot_manager.needs_refresh, value=False)
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
