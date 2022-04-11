@@ -1,13 +1,13 @@
 import asyncio
 import functools
-import os
 import logging
 import logging.config
+import os
 import signal
 from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
-from chia.daemon.server import singleton, service_launch_lock_path
+from chia.daemon.server import service_launch_lock_path, singleton
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 
 try:
@@ -22,11 +22,10 @@ from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
+from chia.util.setproctitle import setproctitle
 
 from .reconnect_task import start_reconnect_task
-
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -40,16 +39,16 @@ class Service:
         node: Any,
         peer_api: Any,
         node_type: NodeType,
-        advertised_port: int,
+        advertised_port: uint16,
         service_name: str,
         network_id: str,
         *,
-        upnp_ports: List[int] = [],
+        upnp_ports: List[uint16] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[Tuple[type, int]] = None,
+        rpc_info: Optional[Tuple[type, uint16]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
         running_new_process=True,

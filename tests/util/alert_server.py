@@ -6,6 +6,8 @@ from typing import Any
 
 from aiohttp import web
 
+from chia.util.ints import uint16
+
 log = logging.getLogger(__name__)
 
 
@@ -18,7 +20,7 @@ class AlertServer:
     port: int
 
     @staticmethod
-    async def create_alert_server(alert_file_path: Path, port):
+    async def create_alert_server(alert_file_path: Path, port: uint16):
         self = AlertServer()
         self.log = log
         self.shut_down = False
@@ -48,7 +50,7 @@ class AlertServer:
         await site.start()
 
 
-async def run_and_wait(file_path, port):
+async def run_and_wait(file_path, port: uint16):
     server = await AlertServer.create_alert_server(Path(file_path), port)
     await server.run()
     await server.shut_down_event.wait()
