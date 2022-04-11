@@ -8,7 +8,6 @@
   my_did_inner_hash
   new_did
   new_did_inner_hash
-  trade_prices_list
   transfer_program_reveal
   transfer_program_solution
 )
@@ -69,9 +68,9 @@
     (if new_did
       (if (= (sha256tree1 transfer_program_reveal) TRANSFER_PROGRAM_MOD_HASH)
         (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) (sha256tree1 (list transfer_program_solution new_did trade_prices_list))))
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) (sha256tree1 (list transfer_program_solution new_did))))
                                                                                                                 ; (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_price_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
-          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (a transfer_program_reveal (list METADATA TRANSFER_PROGRAM_CURRY_PARAMS SINGLETON_STRUCT CURRENT_OWNER_DID trade_prices_list my_did_inner_hash new_did new_did_inner_hash transfer_program_solution)) 0)
+          (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (a transfer_program_reveal (list METADATA TRANSFER_PROGRAM_CURRY_PARAMS SINGLETON_STRUCT CURRENT_OWNER_DID my_did_inner_hash new_did new_did_inner_hash transfer_program_solution)) 0)
         )
         (x)
       )

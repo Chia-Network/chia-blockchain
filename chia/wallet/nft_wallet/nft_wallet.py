@@ -214,6 +214,8 @@ class NFTWallet:
                 metadata,
                 transfer_program_curry_params,
             )
+
+            assert child_puzzle.get_tree_hash() == child_coin.puzzle_hash
             await self.add_coin(
                 child_coin,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
@@ -419,18 +421,13 @@ class NFTWallet:
         transfer_prog = nft_coin_info.transfer_program
         # 2 is a puzzle announcement
         # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
-        messages = [(2, Program.to([new_url, bytes(new_did), trade_prices_list]).get_tree_hash())]
+        messages = [(2, Program.to([[trade_prices_list, new_url], bytes(new_did)]).get_tree_hash())]
         message_sb = await did_wallet.create_message_spend(messages)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         # my_did_inner_hash
-        # my_did_amount
-        # my_did_parent
         # new_did
-        # new_did_parent
         # new_did_inner_hash
-        # new_did_amount
-        # trade_price
         # transfer_program_reveal
         # transfer_program_solution
 
@@ -439,9 +436,8 @@ class NFTWallet:
                 did_wallet.did_info.current_inner.get_tree_hash(),
                 new_did,
                 new_did_inner_hash,
-                trade_prices_list,
                 transfer_prog,
-                new_url,  # this should be expanded for other possible transfer_programs
+                [trade_prices_list, new_url],  # this should be expanded for other possible transfer_programs
             ]
         )
         fullsol = Program.to(

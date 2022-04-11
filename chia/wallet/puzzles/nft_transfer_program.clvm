@@ -1,11 +1,11 @@
-(mod (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_prices_list my_did_inner_hash new_did new_did_inner_hash solution)
+(mod (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner my_did_inner_hash new_did new_did_inner_hash solution)
     ; METADATA and CURRY_PARAMS are not actually curried into the mod hash but are curried into the NFT layer and passed in
     ; This effectively achieves the same result - fixing the values - but means that the transfer program mod never changes
     ; CURRY_PARAMS are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
 
     ; SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
 
-    ; For this transfer program solution is empty unless it is a new_url
+    ; For this transfer program solution is (trade_prices_list new_url)
 
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
@@ -125,7 +125,7 @@
     (check_if_add_url
       METADATA
       CURRY_PARAMS
-      solution
+      (f (r solution))
       (check_if_gift
         SINGLETON_STRUCT
         current_owner
@@ -133,7 +133,7 @@
         my_did_inner_hash
         new_did
         new_did_inner_hash
-        trade_prices_list
+        (f solution)
       )
     )
 )

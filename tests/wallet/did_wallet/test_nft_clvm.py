@@ -49,7 +49,6 @@ def test_transfer_no_backpayments():
     # my_did_inner_hash
     # new_did
     # new_did_inner_hash
-    # trade_prices_list
     # transfer_program_reveal
     # transfer_program_solution
 
@@ -70,14 +69,13 @@ def test_transfer_no_backpayments():
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
-            trade_price,
             nft_program,
-            0,
+            [trade_price, 0],
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
-    ann = Program.to([0, did_two, trade_price]).get_tree_hash()
+    ann = Program.to([[trade_price, 0], did_two]).get_tree_hash()
     announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
     # announcement_two = Announcement(did_two_coin.name(), ann)
     assert res.rest().first().first().as_int() == 63
@@ -106,17 +104,6 @@ def test_transfer_with_backpayments():
 
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
-    # NFT_MOD_HASH
-    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
-    # CURRENT_OWNER_DID
-    # NFT_TRANSFER_PROGRAM_HASH
-    # my_amount
-    # my_did_inner_hash
-    # new_did
-    # new_did_inner_hash
-    # trade_prices_list
-    # transfer_program_reveal
-    # transfer_program_solution
 
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
     # ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE METADATA SETTLEMENT_MOD_HASH CAT_MOD_HASH
@@ -132,7 +119,6 @@ def test_transfer_with_backpayments():
     # my_did_inner_hash
     # new_did
     # new_did_inner_hash
-    # trade_prices_list
     # transfer_program_reveal
     # transfer_program_solution
 
@@ -153,14 +139,13 @@ def test_transfer_with_backpayments():
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
-            trade_price,
             NFT_TRANSFER_PROGRAM,
-            0,
+            [trade_price, 0],
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
 
-    msg = Program.to([0, did_two, trade_price]).get_tree_hash()
+    msg = Program.to([[trade_price, 0], did_two]).get_tree_hash()
     announcement_one = Announcement(did_one_coin.puzzle_hash, msg)
     ann = bytes(bytes(Program.to(trade_price).get_tree_hash()) + did_two)
     announcement_two = Announcement(did_two_coin.puzzle_hash, ann)
@@ -198,13 +183,8 @@ def test_announce():
     # NFT_TRANSFER_PROGRAM_HASH
     # my_amount
     # my_did_inner_hash
-    # my_did_amount
-    # my_did_parent
     # new_did
-    # new_did_parent
     # new_did_inner_hash
-    # new_did_amount
-    # trade_price
     # transfer_program_reveal
     # transfer_program_solution
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
@@ -222,7 +202,6 @@ def test_announce():
             ],
             # below here is the solution
             did_one_innerpuz.get_tree_hash(),
-            0,
             0,
             0,
             0,
@@ -275,7 +254,6 @@ def test_update_url_spend():
     # my_did_inner_hash
     # new_did
     # new_did_inner_hash
-    # trade_prices_list
     # transfer_program_reveal
     # transfer_program_solution
 
@@ -296,9 +274,8 @@ def test_update_url_spend():
             did_one_innerpuz.get_tree_hash(),
             did_one,
             did_one_innerpuz.get_tree_hash(),
-            trade_price,
             NFT_TRANSFER_PROGRAM,
-            "https://www.chia.net/img/branding/chia-logo-2.svg",
+            [trade_price, "https://www.chia.net/img/branding/chia-logo-2.svg"],
         ]
     )
     new_inner = NFT_MOD.curry(

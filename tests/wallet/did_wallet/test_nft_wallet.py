@@ -256,7 +256,7 @@ class TestNFTWallet:
         assert sb is not None
 
         full_sb = await nft_wallet_0.receive_nft(nsb)
-        # await nft_wallet_0.receive_nft(nsb)
+
         assert full_sb is not None
         await asyncio.sleep(5)
 

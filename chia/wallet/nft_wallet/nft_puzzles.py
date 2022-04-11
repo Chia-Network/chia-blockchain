@@ -25,7 +25,6 @@ def create_nft_layer_puzzle(
     backpayment_address: bytes32,
     percentage: uint64,
 ) -> Program:
-    # CURRY_PARAMS by default are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
 
     transfer_program_curry_params = [
         backpayment_address,
@@ -93,9 +92,6 @@ def create_full_puzzle_with_curry_params(
 
 
 def get_transfer_puzzle():
-    # to be curried: METADATA CURRY_PARAMS SINGLETON_STRUCT
-    # CURRY_PARAMS by default are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
-
     return NFT_TRANSFER_PROGRAM
 
 
@@ -131,13 +127,13 @@ def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
 
 
 def update_metadata(metadata, solution):
-    new_url: Program = get_transfer_program_solution_from_solution(solution)
-    if new_url is None or new_url == Program.to(0):
+    tp_solution: Program = get_transfer_program_solution_from_solution(solution)
+    if tp_solution is None or tp_solution.rest().first() == Program.to(0):
         return metadata
     new_metadata = []
     for kv_pair in metadata.as_iter():
         if kv_pair.first().as_atom() == b"u":
-            new_metadata.append(["u", kv_pair.rest().cons(new_url)])
+            new_metadata.append(["u", kv_pair.rest().cons(tp_solution.rest())])
         else:
             new_metadata.append(kv_pair)
     return new_metadata
@@ -145,7 +141,7 @@ def update_metadata(metadata, solution):
 
 def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().first()
+        prog = solution.rest().rest().rest().first()
         return prog
     except Exception:
         return None
@@ -235,7 +231,7 @@ def get_uri_list_from_puzzle(puzzle: Program) -> List[str]:
 
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().first().first()
         return prog
     except Exception:
         return None
@@ -244,7 +240,7 @@ def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
 
 def get_transfer_program_solution_from_solution(solution: Program) -> Program:
     try:
-        prog_sol = solution.rest().rest().rest().rest().rest().first()
+        prog_sol = solution.rest().rest().rest().rest().first()
         return prog_sol
     except Exception:
         return None
