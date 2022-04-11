@@ -9,7 +9,7 @@ from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
-from chia.server.server import ssl_context_for_server
+from chia.server.server import ssl_context_for_client, ssl_context_for_server
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
@@ -40,6 +40,9 @@ class RpcServer:
         self.ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
         self.ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         self.ssl_context = ssl_context_for_server(
+            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
+        )
+        self.ssl_client_context = ssl_context_for_client(
             self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
         )
 
@@ -278,7 +281,7 @@ class RpcServer:
                     autoclose=True,
                     autoping=True,
                     heartbeat=60,
-                    ssl_context=self.ssl_context,
+                    ssl_context=self.ssl_client_context,
                     max_msg_size=max_message_size,
                 )
                 await self.connection(self.websocket)

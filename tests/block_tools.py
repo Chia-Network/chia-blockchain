@@ -50,7 +50,7 @@ from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRefreshEvents, parse_plot_info
 from chia.plotting.manager import PlotManager
-from chia.server.server import ssl_context_for_server
+from chia.server.server import ssl_context_for_client
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -364,7 +364,7 @@ class BlockTools:
         key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
         ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
         ca_key_path = self.root_path / self.config["private_ssl_ca"]["key"]
-        return ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
+        return ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path)
 
     def get_plot_signature(self, m: bytes32, plot_pk: G1Element) -> G2Element:
         """
