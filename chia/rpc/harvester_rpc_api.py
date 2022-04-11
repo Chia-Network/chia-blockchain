@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 from chia.harvester.harvester import Harvester
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -9,7 +9,7 @@ class HarvesterRpcApi:
         self.service = harvester
         self.service_name = "chia_harvester"
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
             "/get_plots": self.get_plots,
             "/refresh_plots": self.refresh_plots,

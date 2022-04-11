@@ -1,18 +1,30 @@
 import asyncio
 import copy
+import shutil
+import tempfile
+from concurrent.futures import ProcessPoolExecutor
+
 import pytest
 import random
 import yaml
 
-from chia.util.config import create_default_chia_config, initial_config_file, load_config, save_config
+from chia.util.config import (
+    config_path_for_filename,
+    create_default_chia_config,
+    get_config_lock,
+    initial_config_file,
+    load_config,
+    save_config,
+)
 from chia.util.path import mkdir
-from multiprocessing import Pool
+from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict
+from typing import Dict, Optional
 
-# Commented-out lines are preserved to aide in debugging the multiprocessing tests
+
+# Commented-out lines are preserved to aid in debugging the multiprocessing tests
 # import logging
 # import os
 # import threading
@@ -20,47 +32,105 @@ from typing import Dict
 # log = logging.getLogger(__name__)
 
 
-def write_config(root_path: Path, config: Dict):
+def write_config(
+    root_path: Path,
+    config: Dict,
+    atomic_write: bool,
+    do_sleep: bool,
+    iterations: int,
+    error_queue: Optional[Queue] = None,
+):
     """
     Wait for a random amount of time and write out the config data. With a large
     config, we expect save_config() to require multiple writes.
     """
-    sleep(random.random())
-    # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] write_config")
-    # save_config(root_path=root_path, filename="config.yaml", config_data=modified_config)
-    save_config(root_path=root_path, filename="config.yaml", config_data=config)
+    try:
+        for i in range(iterations):
+            # This is a small sleep to get interweaving reads and writes
+            sleep(0.05)
+
+            if do_sleep:
+                sleep(random.random())
+            if atomic_write:
+                # Note that this is usually atomic but in certain circumstances in Windows it can copy the file,
+                # leading to a non-atomic operation.
+                with get_config_lock(root_path, "config.yaml"):
+                    save_config(root_path=root_path, filename="config.yaml", config_data=config)
+            else:
+                path: Path = config_path_for_filename(root_path, filename="config.yaml")
+                with get_config_lock(root_path, "config.yaml"):
+                    with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
+                        tmp_path: Path = Path(tmp_dir) / Path("config.yaml")
+                        with open(tmp_path, "w") as f:
+                            yaml.safe_dump(config, f)
+                        shutil.copy2(str(tmp_path), str(path))
+    except Exception as e:
+        if error_queue is not None:
+            error_queue.put(e)
+        raise
 
 
-def read_and_compare_config(root_path: Path, default_config: Dict):
+def read_and_compare_config(
+    root_path: Path, default_config: Dict, do_sleep: bool, iterations: int, error_queue: Optional[Queue] = None
+):
     """
     Wait for a random amount of time, read the config and compare with the
     default config data. If the config file is partially-written or corrupt,
     load_config should fail or return bad data
     """
-    # Wait a moment. The read and write threads are delayed by a random amount
-    # in an attempt to interleave their execution.
-    sleep(random.random())
-    # log.warning(f"[pid:{os.getpid()}:{threading.get_ident()}] read_and_compare_config")
-    config: Dict = load_config(root_path=root_path, filename="config.yaml")
-    assert len(config) > 0
-    # if config != default_config:
-    #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] bad config: {config}")
-    #     log.error(f"[pid:{os.getpid()}:{threading.get_ident()}] default config: {default_config}")
-    assert config == default_config
+    try:
+        for i in range(iterations):
+            # This is a small sleep to get interweaving reads and writes
+            sleep(0.05)
+
+            # Wait a moment. The read and write threads are delayed by a random amount
+            # in an attempt to interleave their execution.
+            if do_sleep:
+                sleep(random.random())
+
+            with get_config_lock(root_path, "config.yaml"):
+                config: Dict = load_config(root_path=root_path, filename="config.yaml", acquire_lock=False)
+                assert config == default_config
+    except Exception as e:
+        if error_queue is not None:
+            error_queue.put(e)
+        raise
 
 
 async def create_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     """
     Spin-off reader and writer threads and wait for completion
     """
-    thread1 = Thread(target=write_config, kwargs={"root_path": root_path, "config": default_config})
-    thread2 = Thread(target=read_and_compare_config, kwargs={"root_path": root_path, "default_config": default_config})
+    error_queue: Queue = Queue()
+    thread1 = Thread(
+        target=write_config,
+        kwargs={
+            "root_path": root_path,
+            "config": default_config,
+            "atomic_write": False,
+            "do_sleep": True,
+            "iterations": 1,
+            "error_queue": error_queue,
+        },
+    )
+    thread2 = Thread(
+        target=read_and_compare_config,
+        kwargs={
+            "root_path": root_path,
+            "default_config": default_config,
+            "do_sleep": True,
+            "iterations": 1,
+            "error_queue": error_queue,
+        },
+    )
 
     thread1.start()
     thread2.start()
 
     thread1.join()
     thread2.join()
+    if not error_queue.empty():
+        raise error_queue.get()
 
 
 def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
@@ -71,26 +141,28 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     asyncio.get_event_loop().run_until_complete(create_reader_and_writer_tasks(root_path, default_config))
 
 
+@pytest.fixture(scope="function")
+def root_path_populated_with_config(tmpdir) -> Path:
+    """
+    Create a temp directory and populate it with a default config.yaml.
+    Returns the root path containing the config.
+    """
+    root_path: Path = Path(tmpdir)
+    create_default_chia_config(root_path)
+    return Path(root_path)
+
+
+@pytest.fixture(scope="function")
+def default_config_dict() -> Dict:
+    """
+    Returns a dictionary containing the default config.yaml contents
+    """
+    content: str = initial_config_file("config.yaml")
+    config: Dict = yaml.safe_load(content)
+    return config
+
+
 class TestConfig:
-    @pytest.fixture(scope="function")
-    def root_path_populated_with_config(self, tmpdir) -> Path:
-        """
-        Create a temp directory and populate it with a default config.yaml.
-        Returns the root path containing the config.
-        """
-        root_path: Path = Path(tmpdir)
-        create_default_chia_config(root_path)
-        return Path(root_path)
-
-    @pytest.fixture(scope="function")
-    def default_config_dict(self) -> Dict:
-        """
-        Returns a dictionary containing the default config.yaml contents
-        """
-        content: str = initial_config_file("config.yaml")
-        config: Dict = yaml.safe_load(content)
-        return config
-
     def test_create_config_new(self, tmpdir):
         """
         Test create_default_chia_config() as in a first run scenario
@@ -195,8 +267,6 @@ class TestConfig:
         """
         Test whether multiple readers/writers encounter data corruption. When using non-atomic operations
         to write to the config, partial/incomplete writes can cause readers to yield bad/corrupt data.
-        Access to config.yaml isn't currently synchronized, so the best we can currently hope for is that
-        the file contents are written-to as a whole.
         """
         # Artifically inflate the size of the default config. This is done to (hopefully) force
         # save_config() to require multiple writes. When save_config() was using shutil.move()
@@ -210,4 +280,34 @@ class TestConfig:
         # read failures are detected, the failing process will assert.
         with Pool(processes=num_workers) as pool:
             res = pool.starmap_async(run_reader_and_writer_tasks, args)
-            res.get(timeout=10)
+            try:
+                res.get(timeout=60)
+            except TimeoutError:
+                pytest.skip("Timed out waiting for reader/writer processes to complete")
+
+    @pytest.mark.asyncio
+    async def test_non_atomic_writes(self, root_path_populated_with_config, default_config_dict):
+        """
+        Test whether one continuous writer (writing constantly, but not atomically) will interfere with many
+        concurrent readers.
+        """
+
+        default_config_dict["xyz"] = "x" * 32768
+        root_path: Path = root_path_populated_with_config
+        save_config(root_path=root_path, filename="config.yaml", config_data=default_config_dict)
+
+        with ProcessPoolExecutor(max_workers=4) as pool:
+            all_tasks = []
+            for i in range(10):
+                all_tasks.append(
+                    asyncio.get_running_loop().run_in_executor(
+                        pool, read_and_compare_config, root_path, default_config_dict, False, 100, None
+                    )
+                )
+                if i % 2 == 0:
+                    all_tasks.append(
+                        asyncio.get_running_loop().run_in_executor(
+                            pool, write_config, root_path, default_config_dict, False, False, 100, None
+                        )
+                    )
+            await asyncio.gather(*all_tasks)

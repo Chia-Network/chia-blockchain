@@ -15,21 +15,17 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-npm install electron-installer-dmg -g
-# Pinning electron-packager and electron-osx-sign to known working versions
-# Current packager uses an old version of osx-sign, so if we install the newer sign package
-# things break
-npm install electron-packager@15.4.0 -g
-npm install electron-osx-sign@v0.5.0 -g
-npm install notarize-cli -g
-npm install lerna -g
+cd npm_macos_m1 || exit
+npm ci
+PATH=$(npm bin):$PATH
+cd .. || exit
 
 echo "Create dist/"
 sudo rm -rf dist
 mkdir dist
 
 echo "Install pyinstaller and build bootloaders for M1"
-pip install pyinstaller==4.5
+pip install pyinstaller==4.9
 
 echo "Create executables with pyinstaller"
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
@@ -45,7 +41,7 @@ cd chia-blockchain-gui || exit
 
 echo "npm build"
 lerna clean -y
-npm install
+npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 npm run build
@@ -94,8 +90,7 @@ cd ../../../build_scripts || exit
 DMG_NAME="Chia-$CHIA_INSTALLER_VERSION-arm64.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
-electron-installer-dmg dist/Chia-darwin-arm64/Chia.app Chia-$CHIA_INSTALLER_VERSION-arm64 \
---overwrite --out final_installer
+NODE_PATH=./npm_macos_m1/node_modules node build_dmg.js dist/Chia-darwin-arm64/Chia.app $CHIA_INSTALLER_VERSION-arm64
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"
