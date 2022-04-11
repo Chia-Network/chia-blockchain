@@ -1,5 +1,5 @@
 import { Wallet, CAT, DID, Pool, Farmer, WalletType, OfferTradeRecord } from '@chia/api';
-import type { Transaction, WalletConnections } from '@chia/api';
+import type { PlotNFT, PlotNFTExternal, Transaction, WalletBalance, WalletConnections } from '@chia/api';
 import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
@@ -16,7 +16,7 @@ const apiWithTag = api.enhanceEndpoints(
       'DIDRecoveryList',
       'Keys',
       'LoggedInFingerprint',
-      'NFTs',
+      'PlotNFT',
       'OfferCounts',
       'OfferTradeRecord',
       'PoolWalletStatus',
@@ -214,7 +214,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [
         { type: 'Transactions', id: 'LIST' },
-        { type: 'NFTs', id: 'LIST' },
+        { type: 'PlotNFT', id: 'LIST' },
       ],
     }),
 
@@ -229,7 +229,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [
         { type: 'Transactions', id: 'LIST' },
-        { type: 'NFTs', id: 'LIST' },
+        { type: 'PlotNFT', id: 'LIST' },
       ],
     }),
 
@@ -1474,7 +1474,7 @@ export const walletApi = apiWithTag.injectEndpoints({
           };
         }
       },
-      providesTags: [{ type: 'NFTs', id: 'LIST' }],
+      providesTags: [{ type: 'PlotNFT', id: 'LIST' }],
     }),
 
     // DID
@@ -1641,7 +1641,7 @@ export const {
   useAddCATTokenMutation,
   useGetStrayCatsQuery,
 
-  // NFTS
+  // PlotNFTS
   useGetPlotNFTsQuery,
 
   // DID
