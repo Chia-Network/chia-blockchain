@@ -5,7 +5,21 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+    overload,
+)
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -120,7 +134,22 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(d)
 
 
-def recurse_jsonify(d: Any) -> Any:
+@overload
+def recurse_jsonify(d: List[Any]) -> List[Any]:
+    ...
+
+
+@overload
+def recurse_jsonify(d: Tuple[Any, ...]) -> Tuple[Any, ...]:
+    ...
+
+
+@overload
+def recurse_jsonify(d: Dict[str, Any]) -> Dict[str, Any]:
+    ...
+
+
+def recurse_jsonify(d):  # type: ignore[no-untyped-def]
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
@@ -537,8 +566,7 @@ class Streamable:
         return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
 
     def to_json_dict(self) -> Dict[str, Any]:
-        # TODO, Remove the ignore, maybe use a wrapper with the correct type for recurse_jsonify?
-        return recurse_jsonify(dataclasses.asdict(self))  # type:ignore[no-any-return]
+        return recurse_jsonify(dataclasses.asdict(self))
 
     @classmethod
     def from_json_dict(cls: Any, json_dict: Dict[str, Any]) -> Any:
