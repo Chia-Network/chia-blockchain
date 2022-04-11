@@ -222,8 +222,10 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
 
             selected_coin: Optional[CoinRecord] = None
+            all_coins: List[Coin] = []
 
             for block in blocks:
+                all_coins += list(block.get_included_reward_coins())
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
@@ -269,10 +271,19 @@ class TestCoinStoreWithBlocks:
             assert selected_coin is not None
             reorg_index = selected_coin.confirmed_block_index
 
+            # Get all CoinRecords.
+            all_records: List[CoinRecord] = [await coin_store.get_coin_record(coin.name()) for coin in all_coins]
+
             # The reorg will revert the creation and spend of many coins. It will also revert the spend (but not the
             # creation) of the selected coin.
             changed_records = await coin_store.rollback_to_block(reorg_index)
+            changed_coin_records = [cr.coin for cr in changed_records]
             assert selected_coin in changed_records
+            for coin_record in all_records:
+                if coin_record.confirmed_block_index > reorg_index:
+                    assert coin_record.coin in changed_coin_records
+                if coin_record.spent_block_index > reorg_index:
+                    assert coin_record.coin in changed_coin_records
 
             for block in blocks:
                 if block.is_transaction_block():
