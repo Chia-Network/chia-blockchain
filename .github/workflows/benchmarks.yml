@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -25,45 +25,51 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [ 3.9 ]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Clean workspace
+        uses: Chia-Network/actions/clean-workspace@main
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        sh install.sh -d
+      - name: Checkout test blocks and plots
+        uses: actions/checkout@v3
+        with:
+          repository: 'Chia-Network/test-cache'
+          path: '.chia'
+          ref: '0.29.0'
+          fetch-depth: 1
 
-    - name: pytest
-      run: |
-        . ./activate
-        ./venv/bin/py.test -n 0 -m benchmark tests
+      - name: Run install script
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          sh install.sh -d
+
+      - name: pytest
+        run: |
+          . ./activate
+          ./venv/bin/py.test -n 0 -m benchmark tests
