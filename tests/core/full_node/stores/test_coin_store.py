@@ -221,30 +221,26 @@ class TestCoinStoreWithBlocks:
         async with DBConnection(db_version) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper, cache_size=uint32(cache_size))
 
-            records: List[CoinRecord] = []
             selected_coin: Optional[CoinRecord] = None
 
             for block in blocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
-
-                    if block.is_transaction_block():
-                        assert block.foliage_transaction_block is not None
-                        await coin_store.new_block(
-                            block.height,
-                            block.foliage_transaction_block.timestamp,
-                            block.get_included_reward_coins(),
-                            additions,
-                            removals,
-                        )
-
+                    assert block.foliage_transaction_block is not None
+                    await coin_store.new_block(
+                        block.height,
+                        block.foliage_transaction_block.timestamp,
+                        block.get_included_reward_coins(),
+                        additions,
+                        removals,
+                    )
                     coins = list(block.get_included_reward_coins())
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+                    records: List[CoinRecord] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
                     spend_selected_coin = selected_coin is not None
                     if block.height != 0 and selected_coin is None:
-                        # Select one coin which will be spent later
+                        # Select the first CoinRecord which will be spent at the next transaction block.
                         selected_coin = records[0]
                         await coin_store._set_spent([r.name for r in records[1:]], block.height)
                     else:
@@ -254,7 +250,7 @@ class TestCoinStoreWithBlocks:
                         assert selected_coin is not None
                         await coin_store._set_spent([selected_coin.name], block.height)
 
-                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+                    records = [await coin_store.get_coin_record(coin.name()) for coin in coins]  # update coin records
                     for record in records:
                         assert record is not None
                         if (
