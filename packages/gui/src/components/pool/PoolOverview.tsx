@@ -26,7 +26,6 @@ import PlotNFTStateEnum from '../../constants/PlotNFTState';
 import PlotNFTUnconfirmedCard from '../plotNFT/PlotNFTUnconfirmedCard';
 import PlotNFTState from '../plotNFT/PlotNFTState';
 import useUnconfirmedPlotNFTs from '../../hooks/useUnconfirmedPlotNFTs';
-import { WalletStatus } from '@chia/wallets';
 
 const groupsCols = [
   {
@@ -129,10 +128,6 @@ export default function PoolOverview() {
 
   function handleAddPool() {
     navigate('/dashboard/pool/add');
-  }
-
-  function handleToggleView() {
-    toggleShowTable();
   }
 
   if (loading) {
