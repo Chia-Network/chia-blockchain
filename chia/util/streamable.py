@@ -468,7 +468,8 @@ class Streamable:
             parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_optional(f, parse_inner_type_f)
         if hasattr(f_type, "parse"):
-            return lambda f: f_type.parse(f)
+            # Ignoring for now as the proper solution isn't obvious
+            return f_type.parse  # type: ignore[no-any-return]
         if f_type == bytes:
             return parse_bytes
         if is_type_List(f_type):
