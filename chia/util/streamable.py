@@ -135,12 +135,7 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
 
 
 @overload
-def recurse_jsonify(d: List[Any]) -> List[Any]:
-    ...
-
-
-@overload
-def recurse_jsonify(d: Tuple[Any, ...]) -> Tuple[Any, ...]:
+def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...]]) -> List[Any]:
     ...
 
 
