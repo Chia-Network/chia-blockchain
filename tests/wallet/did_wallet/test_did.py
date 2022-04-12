@@ -164,10 +164,6 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
     async def test_did_recovery_with_multiple_backup_dids(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
@@ -307,10 +303,6 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
     async def test_did_recovery_with_empty_set(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
@@ -368,10 +360,6 @@ class TestDIDWallet:
         else:
             assert False
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, self_hostname, two_wallet_nodes):
         num_blocks = 5

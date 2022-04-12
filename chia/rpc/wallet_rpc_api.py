@@ -1269,7 +1269,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if isinstance(request["spend_bundle"], str):
-            sending_sb = SpendBundle.from_bytes(bytes.from_hex(request["spend_bundle"]))
+            sending_sb = SpendBundle.from_bytes(bytes.fromhex(request["spend_bundle"]))
         else:
             sending_sb = request["spend_bundle"]
 
