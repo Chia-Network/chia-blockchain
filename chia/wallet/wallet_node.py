@@ -493,6 +493,8 @@ class WalletNode:
                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
+            else:
+                await self.wallet_state_manager.blockchain.clean_block_records()
 
     async def long_sync(
         self,
@@ -686,6 +688,9 @@ class WalletNode:
                                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
+                            else:
+                                await self.wallet_state_manager.blockchain.clean_block_records()
+
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -721,6 +726,9 @@ class WalletNode:
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
+                    else:
+                        await self.wallet_state_manager.blockchain.clean_block_records()
+
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)
