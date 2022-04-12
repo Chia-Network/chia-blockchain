@@ -189,7 +189,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
 @click.option(
     "-wp",
     "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    help="Set the port where the wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
     default=None,
 )
