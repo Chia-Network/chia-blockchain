@@ -20,6 +20,12 @@ def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
     return sk
 
 
+def _derive_path_pub(pk: G1Element, path: List[int]) -> G1Element:
+    for index in path:
+        pk = AugSchemeMPL.derive_child_pk_unhardened(pk, index)
+    return pk
+
+
 def _derive_path_unhardened(sk: PrivateKey, path: List[int]) -> PrivateKey:
     for index in path:
         sk = AugSchemeMPL.derive_child_sk_unhardened(sk, index)
@@ -38,9 +44,18 @@ def master_sk_to_wallet_sk_intermediate(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 2])
 
 
+def master_pk_to_wallet_pk_intermediate(master: G1Element) -> G1Element:
+    return _derive_path_pub(master, [12381, 8444, 2])
+
+
 def master_sk_to_wallet_sk(master: PrivateKey, index: uint32) -> PrivateKey:
     intermediate = master_sk_to_wallet_sk_intermediate(master)
     return _derive_path(intermediate, [index])
+
+
+def master_pk_to_wallet_pk_unhardened(master: G1Element, index: uint32) -> G1Element:
+    intermediate = master_pk_to_wallet_pk_intermediate(master)
+    return _derive_path_pub(intermediate, [index])
 
 
 def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> PrivateKey:
