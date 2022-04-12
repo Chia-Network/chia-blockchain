@@ -18,6 +18,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.types.full_block import FullBlock
 from chia.util.config import load_config
+from tools.test_constants import test_constants as TEST_CONSTANTS
 
 
 class ExitOnError(logging.Handler):
@@ -46,7 +47,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
         pr.dump_stats(f"slow-batch-{counter:05d}.profile")
 
 
-async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bool) -> None:
+async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bool, test_constants: bool) -> None:
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
@@ -67,8 +68,11 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
         chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
 
-        overrides = config["network_overrides"]["constants"][config["selected_network"]]
-        constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+        if test_constants:
+            constants = TEST_CONSTANTS
+        else:
+            overrides = config["network_overrides"]["constants"][config["selected_network"]]
+            constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
         if single_thread:
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = "off"
@@ -85,7 +89,7 @@ async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bo
             counter = 0
             height = 0
             async with aiosqlite.connect(file) as in_db:
-
+                await in_db.execute("pragma query_only")
                 rows = await in_db.execute(
                     "SELECT header_hash, height, block FROM full_blocks WHERE in_main_chain=1 ORDER BY height"
                 )
@@ -136,17 +140,24 @@ def main() -> None:
 @click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
 @click.option(
+    "--test-constants",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="expect the blockchain database to be blocks using the test constants",
+)
+@click.option(
     "--single-thread",
     is_flag=True,
     required=False,
     default=False,
     help="run node in a single process, to include validation in profiles",
 )
-def run(file: Path, db_version: int, profile: bool, single_thread: bool) -> None:
+def run(file: Path, db_version: int, profile: bool, single_thread: bool, test_constants: bool) -> None:
     """
     The FILE parameter should point to an existing blockchain database file (in v2 format)
     """
-    asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread))
+    asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread, test_constants))
 
 
 @main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")
