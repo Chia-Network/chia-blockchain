@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { List, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import {
   Farming as FarmingIcon,
   FullNode as FullNodeIcon,
