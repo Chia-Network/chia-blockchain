@@ -172,12 +172,8 @@ async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
     return (await client.get_wallet_balance(str(wallet_id)))["unconfirmed_wallet_balance"]
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
 @pytest.mark.asyncio
-async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trusted):
+async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     num_blocks = 5
 
@@ -185,10 +181,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     wallet_2: Wallet = env.wallet_2.wallet
 
     wallet_node: WalletNode = env.wallet_1.node
-    wallet_node_2: WalletNode = env.wallet_2.node
 
     full_node_api: FullNodeSimulator = env.full_node.api
-    full_node_server: ChiaServer = env.full_node.server
 
     client: WalletRpcClient = env.wallet_1.rpc_client
     client_2: WalletRpcClient = env.wallet_2.rpc_client
@@ -196,13 +190,6 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
 
     ph = await wallet.get_new_puzzlehash()
     ph_2 = await wallet_2.get_new_puzzlehash()
-
-    if trusted:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
 
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
