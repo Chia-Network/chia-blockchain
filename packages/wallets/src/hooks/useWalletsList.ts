@@ -6,6 +6,7 @@ import { useGetWalletsQuery, useGetStrayCatsQuery, useGetCatListQuery, useAddCAT
 import useHiddenWallet from './useHiddenWallet';
 
 type ListItem = {
+  id: number | string;
   type: 'WALLET' | 'STRAY_CAT' | 'CAT_LIST';
   walletType: WalletType;
   hidden: boolean;
@@ -104,6 +105,7 @@ export default function useWalletsList(search?: string): {
 
     let tokens = [
       ...wallets.map((wallet) => ({
+        id: wallet.id,
         type: 'WALLET',
         walletType: wallet.type,
         hidden: isHidden(wallet.id),
@@ -112,6 +114,7 @@ export default function useWalletsList(search?: string): {
         name: wallet.name,
       })),
       ...nonAddedKnownCats.map((cat) => ({
+        id: cat.assetId,
         type: 'CAT_LIST',
         walletType: WalletType.CAT,
         hidden: true,
@@ -119,6 +122,7 @@ export default function useWalletsList(search?: string): {
         name: cat.name ?? cat.assetId,
       })),
       ...nonAddedStrayCats.map((strayCat) => ({
+        id: strayCat.assetId,
         type: 'STRAY_CAT',
         walletType: WalletType.CAT,
         hidden: true,
@@ -139,7 +143,7 @@ export default function useWalletsList(search?: string): {
     try {
       if (typeof id === 'number') {
         show(id);
-        return;
+        return id;
       }
 
       if (typeof id === 'string') {
@@ -147,7 +151,7 @@ export default function useWalletsList(search?: string): {
 
         const cat = catList.find((cat) => cat.assetId === id);
         if (cat) {
-          await addCATToken({
+          return await addCATToken({
             name: cat.name,
             assetId: cat.assetId,
             fee: '0',
@@ -157,7 +161,7 @@ export default function useWalletsList(search?: string): {
         // assign stray cat
         const strayCat = strayCats.find((cat) => cat.assetId === id);
         if (strayCat) {
-          await addCATToken({
+          return await addCATToken({
             name: strayCat.name,
             assetId: strayCat.assetId,
             fee: '0',

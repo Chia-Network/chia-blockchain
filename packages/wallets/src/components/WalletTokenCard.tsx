@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { WalletType } from '@chia/api';
+import { useSetCATNameMutation } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
-import { Typography, Switch, CircularProgress } from '@mui/material';
-import { Tooltip, CardListItem, Flex, Link } from '@chia/core';
+import { Typography, Switch, CircularProgress, TextField } from '@mui/material';
+import { Tooltip, CardListItem, Flex, Link, useShowError } from '@chia/core';
 
 export type WalletTokenCardProps = {
   item: {
@@ -31,6 +32,44 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
   } = props;
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [setCATName] = useSetCATNameMutation();
+  const showError = useShowError();
+
+  async function handleRename(newName: string) {
+    try {
+      if (!newName || newName === name) {
+        return;
+      }
+
+      setIsLoading(true);
+
+      let currentWalletId = walletId;
+
+      if (!currentWalletId) {
+        if (!assetId) {
+          return;
+        }
+
+        currentWalletId = await onShow(assetId);
+
+        // hide wallet
+        if (hidden) {
+          onHide(currentWalletId);
+        }
+      }
+
+      if (currentWalletId) {
+        await setCATName({
+          walletId: currentWalletId,
+          name: newName,
+        }).unwrap();
+      }
+    } catch (error) {
+      showError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   async function handleVisibleChange(event) {
     try {
@@ -59,11 +98,25 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
     return assetId;
   }, [assetId, type, walletType]);
 
+  const currentName = walletType === WalletType.STANDARD_WALLET ? 'Chia' : name;
+
   return (
     <CardListItem>
       <Flex gap={1} alignItems="center" width="100%">
         <Flex flexDirection="column" flexGrow={1} flexBasis={0} minWidth={0}>
-          <Typography noWrap>{walletType === WalletType.STANDARD_WALLET ? 'Chia' : name}</Typography>
+          {walletType === WalletType.STANDARD_WALLET ? (
+            <Typography noWrap>{name}</Typography>
+          ) : (
+            <TextField
+              label="Name"
+              id="outlined-size-small"
+              defaultValue={currentName}
+              onBlur={(event) => handleRename(event.target.value)}
+              size="small"
+              fullWidth
+              hiddenLabel
+            />
+          )}
           {!!subTitle && (
             <Tooltip title={subTitle} copyToClipboard>
               <Typography color="textSecondary" variant="caption" noWrap>
