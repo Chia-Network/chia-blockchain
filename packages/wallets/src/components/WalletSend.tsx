@@ -17,12 +17,14 @@ import {
   chiaToMojo,
   getTransactionResult,
   useIsSimulator,
+  TooltipIcon,
 } from '@chia/core';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   Button,
   Grid,
+  Typography,
 } from '@mui/material';
 import useWallet from '../hooks/useWallet';
 import CreateWalletSendTransactionResultDialog from './WalletSendTransactionResultDialog';
@@ -128,69 +130,71 @@ export default function WalletSend(props: SendCardProps) {
   }
 
   return (
-    <Card
-      title={<Trans>Create Transaction</Trans>}
-      tooltip={
-        <Trans>
-          On average there is one minute between each transaction block. Unless
-          there is congestion you can expect your transaction to be included in
-          less than a minute.
-        </Trans>
-      }
-    >
-      <Form methods={methods} onSubmit={handleSubmit}>
-        <Grid spacing={2} container>
-          <Grid xs={12} item>
-            <TextField
-              name="address"
-              variant="filled"
-              color="secondary"
-              fullWidth
-              label={<Trans>Address / Puzzle hash</Trans>}
-              required
-            />
+    <Form methods={methods} onSubmit={handleSubmit}>
+      <Flex gap={2} flexDirection="column">
+        <Typography variant="h5">
+          <Trans>Create Transaction</Trans>
+          &nbsp;
+          <TooltipIcon>
+            <Trans>
+              On average there is one minute between each transaction block. Unless
+              there is congestion you can expect your transaction to be included in
+              less than a minute.
+            </Trans>
+          </TooltipIcon>
+        </Typography>
+        <Card>
+          <Grid spacing={2} container>
+            <Grid xs={12} item>
+              <TextField
+                name="address"
+                variant="filled"
+                color="secondary"
+                fullWidth
+                label={<Trans>Address / Puzzle hash</Trans>}
+                required
+              />
+            </Grid>
+            <Grid xs={12} md={6} item>
+              <Amount
+                id="filled-secondary"
+                variant="filled"
+                color="secondary"
+                name="amount"
+                label={<Trans>Amount</Trans>}
+                required
+                fullWidth
+              />
+            </Grid>
+            <Grid xs={12} md={6} item>
+              <Fee
+                id="filled-secondary"
+                variant="filled"
+                name="fee"
+                color="secondary"
+                label={<Trans>Fee</Trans>}
+                fullWidth
+              />
+            </Grid>
           </Grid>
-          <Grid xs={12} md={6} item>
-            <Amount
-              id="filled-secondary"
-              variant="filled"
-              color="secondary"
-              name="amount"
-              label={<Trans>Amount</Trans>}
-              required
-              fullWidth
-            />
-          </Grid>
-          <Grid xs={12} md={6} item>
-            <Fee
-              id="filled-secondary"
-              variant="filled"
-              name="fee"
-              color="secondary"
-              label={<Trans>Fee</Trans>}
-              fullWidth
-            />
-          </Grid>
-          <Grid xs={12} item>
-            <Flex justifyContent="flex-end" gap={1}>
-              {isSimulator && (
-                <Button onClick={farm} variant="outlined">
-                  <Trans>Farm</Trans>
-                </Button>
-              )}
+        </Card>
+        <Flex justifyContent="flex-end" gap={1}>
+          {isSimulator && (
+            <Button onClick={farm} variant="outlined">
+              <Trans>Farm</Trans>
+            </Button>
+          )}
 
-              <ButtonLoading
-                variant="contained"
-                color="primary"
-                type="submit"
-                loading={isSendTransactionLoading}
-              >
-                <Trans>Send</Trans>
-              </ButtonLoading>
-            </Flex>
-          </Grid>
-        </Grid>
-      </Form>
-    </Card>
+          <ButtonLoading
+            variant="contained"
+            color="primary"
+            type="submit"
+            loading={isSendTransactionLoading}
+          >
+            <Trans>Send</Trans>
+          </ButtonLoading>
+        </Flex>
+      </Flex>
+    </Form>
   );
 }

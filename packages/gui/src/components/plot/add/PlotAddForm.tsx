@@ -4,7 +4,7 @@ import { t, Trans } from '@lingui/macro';
 import { defaultPlotter } from '@chia/api';
 import { useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { Back, useShowError, ButtonLoading, Flex, Form, FormBackButton, toBech32m } from '@chia/core';
+import { Back, useShowError, ButtonLoading, Flex, Form, toBech32m } from '@chia/core';
 import PlotAddChoosePlotter from './PlotAddChoosePlotter';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';

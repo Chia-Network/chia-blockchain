@@ -95,9 +95,11 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                         </Trans>
                         &nbsp;
                         {partial && (
-                          <StyledInlineTypography color="textSecondary" variant="h4">
-                            {partial}
-                          </StyledInlineTypography>
+                          <Tooltip title={fingerprint ?? 'Loading...'}>
+                            <StyledInlineTypography color="textSecondary" variant="h4">
+                              {partial}
+                            </StyledInlineTypography>
+                          </Tooltip>
                         )}
                       </Typography>
                     </Box>

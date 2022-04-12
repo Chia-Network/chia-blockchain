@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Box, Link, Typography, Tooltip, IconButton } from '@mui/material';
+import { Link, Typography, Tooltip, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import {
   Table,

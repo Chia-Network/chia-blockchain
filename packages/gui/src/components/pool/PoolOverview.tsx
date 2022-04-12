@@ -4,8 +4,6 @@ import { useToggle } from 'react-use';
 import { Button, Flex, UnitFormat, More, Table, mojoToChiaLocaleString, Suspender } from '@chia/core';
 import { useNavigate } from 'react-router';
 import {
-  ViewList as ViewListIcon,
-  ViewModule as ViewModuleIcon,
   Payment as PaymentIcon,
   Power as PowerIcon,
 } from '@mui/icons-material';
@@ -13,9 +11,7 @@ import {
   Box,
   ListItemIcon,
   MenuItem,
-  IconButton,
   Grid,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import PlotNFTCard from '../plotNFT/PlotNFTCard';

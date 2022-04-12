@@ -16,7 +16,6 @@ import {
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
 import {
-  Divider,
   Grid,
 } from '@mui/material';
 import type OfferEditorRowData from './OfferEditorRowData';
@@ -25,7 +24,6 @@ import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
 import OfferEditorConditionsPanel from './OfferEditorConditionsPanel';
 import OfferLocalStorageKeys from './OfferLocalStorage';
-import styled from 'styled-components';
 import { chiaToMojo, catToMojo } from '@chia/core';
 import fs from 'fs';
 
