@@ -15,7 +15,7 @@ import {
   chiaToMojo,
 } from '@chia/core';
 import { useForm } from 'react-hook-form';
-import { usePwAbsorbRewardsMutation, useGetPlotNFTsQuery } from '@chia/api-react'
+import { usePwAbsorbRewardsMutation, useGetPlotNFTsQuery, useGetCurrentAddressQuery } from '@chia/api-react'
 import { ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { Grid, Typography } from '@mui/material';
 import { useParams } from 'react-router';
@@ -43,6 +43,9 @@ export default function PlotNFTAbsorbRewards(props: Props) {
   const [working, setWorking] = useState<boolean>(false);
   const { wallet, loading: loadingWallet } = useStandardWallet();
   const [pwAbsorbRewards] = usePwAbsorbRewardsMutation();
+  const { data: address, isLoading: isLoadingAddress } = useGetCurrentAddressQuery({
+    walletId: 1,
+  });
   const navigate = useNavigate();
   const nft = useMemo(() => {
     return data?.nfts?.find(
@@ -65,12 +68,12 @@ export default function PlotNFTAbsorbRewards(props: Props) {
       const feeMojos = chiaToMojo(fee);
 
 
-      if (walletId === undefined) { 
+      if (walletId === undefined) {
         throw new Error(t`Wallet is not defined`);
       }
 
       await pwAbsorbRewards({
-        walletId, 
+        walletId,
         fee: feeMojos,
       }).unwrap();
 
@@ -87,7 +90,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingAddress) {
     return (
       <Loading>
         <Trans>Preparing Plot NFT</Trans>
@@ -146,7 +149,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
                   display="inline"
                   state={State.SUCCESS}
                 />{' '}
-                to {wallet?.address}
+                to {address}
               </Trans>
             </Typography>
 
