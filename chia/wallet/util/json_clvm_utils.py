@@ -1,7 +1,8 @@
 from chia.types.blockchain_format.program import Program
+from typing import Any
 
 
-def json_to_chialisp(json_data):
+def json_to_chialisp(json_data: Any) -> Any:
     list_for_chialisp = []
     if isinstance(json_data, list):
         for value in json_data:

@@ -7,7 +7,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -617,7 +617,7 @@ class WalletStateManager:
 
             if matched:
                 NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash = curried_args
-                hint_list = nft_spend.hints()
+                hint_list = cast(List[bytes32], nft_spend.hints())
                 for wallet_info in await self.get_all_wallet_info_entries():
                     if wallet_info.type == WalletType.NFT:
                         nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))

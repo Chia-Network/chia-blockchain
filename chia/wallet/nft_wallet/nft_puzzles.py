@@ -28,14 +28,18 @@ def create_nft_layer_puzzle(
     return NFT_MOD.curry(NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash)
 
 
-def create_full_puzzle(singleton_id, current_owner_did, nft_transfer_program_hash):
+def create_full_puzzle(
+    singleton_id: bytes32, current_owner_did: bytes32, nft_transfer_program_hash: bytes32
+) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     innerpuz = create_nft_layer_puzzle(singleton_id, current_owner_did, nft_transfer_program_hash)
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
-def create_transfer_puzzle(metadata, percentage, backpayment_address):
-    ret = NFT_TRANSFER_PROGRAM.curry(Program.to([backpayment_address, percentage, metadata, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]))
+def create_transfer_puzzle(metadata: Program, percentage: uint64, backpayment_address: bytes32) -> Program:
+    ret = NFT_TRANSFER_PROGRAM.curry(
+        Program.to([backpayment_address, percentage, metadata, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()])
+    )
     return ret
 
 
@@ -64,63 +68,66 @@ def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     try:
         mod, curried_args = puzzle.uncurry()
         if mod == SINGLETON_TOP_LAYER_MOD:
-            return curried_args.first().rest().first().as_atom()
+            nft_id: bytes32 = curried_args.first().rest().first().as_atom()
+            return nft_id
     except Exception:
         return None
     return None
 
 
-def get_transfer_program_from_inner_solution(solution: Program) -> Program:
+def get_transfer_program_from_inner_solution(solution: Program) -> Optional[Program]:
     try:
-        prog = solution.rest().rest().rest().rest().rest().first()
+        prog: Program = solution.rest().rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None
     return None
 
 
-def get_royalty_address_from_inner_solution(solution: Program) -> Program:
+def get_royalty_address_from_inner_solution(solution: Program) -> Optional[bytes32]:
     try:
-        transfer_prog = get_transfer_program_from_inner_solution(solution)
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        royalty_address = curried_args.first().first().as_atom()
-        return royalty_address
+        transfer_prog: Optional[Program] = get_transfer_program_from_inner_solution(solution)
+        if transfer_prog is not None:
+            mod, curried_args = transfer_prog.uncurry()
+            assert mod == NFT_TRANSFER_PROGRAM
+            royalty_address: bytes32 = curried_args.first().first().as_atom()
+            return royalty_address
     except Exception:
         return None
     return None
 
 
-def get_percentage_from_inner_solution(solution: Program) -> uint64:
+def get_percentage_from_inner_solution(solution: Program) -> Optional[uint64]:
     try:
-        transfer_prog = get_transfer_program_from_inner_solution(solution)
-        mod, curried_args = transfer_prog.uncurry()
-        assert mod == NFT_TRANSFER_PROGRAM
-        percentage = curried_args.first().rest().first().as_int()
-        return percentage
+        transfer_prog: Optional[Program] = get_transfer_program_from_inner_solution(solution)
+        if transfer_prog is not None:
+            mod, curried_args = transfer_prog.uncurry()
+            assert mod == NFT_TRANSFER_PROGRAM
+            percentage = uint64(curried_args.first().rest().first().as_int())
+            return percentage
     except Exception:
         return None
     return None
 
 
-def get_metadata_from_transfer_program(transfer_prog: Program) -> Program:
+def get_metadata_from_transfer_program(transfer_prog: Program) -> Optional[Program]:
     try:
         mod, curried_args = transfer_prog.uncurry()
         assert mod == NFT_TRANSFER_PROGRAM
-        metadata = curried_args.first().rest().rest().first()
+        metadata: Program = curried_args.first().rest().rest().first()
         return metadata
     except Exception:
         return None
     return None
 
 
-def get_uri_list_from_transfer_program(transfer_prog: Program) -> List[str]:
+def get_uri_list_from_transfer_program(transfer_prog: Program) -> Optional[List[str]]:
     try:
         uri_list = []
         metadata = get_metadata_from_transfer_program(transfer_prog)
         assert metadata is not None
         for kv_pair in metadata.as_iter():
-            if kv_pair.first().as_atom() == b'u':
+            if kv_pair.first().as_atom() == b"u":
                 for uri in kv_pair.rest().as_iter():
                     uri_list.append(uri.as_atom())
         return uri_list
@@ -129,9 +136,9 @@ def get_uri_list_from_transfer_program(transfer_prog: Program) -> List[str]:
     return None
 
 
-def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
+def get_trade_prices_list_from_inner_solution(solution: Program) -> Optional[Program]:
     try:
-        prog = solution.rest().rest().rest().rest().first()
+        prog: Program = solution.rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None

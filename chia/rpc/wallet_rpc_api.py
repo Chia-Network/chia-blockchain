@@ -1164,7 +1164,7 @@ class WalletRpcApi:
             spend_bundle = await wallet.create_attestment(
                 coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
             )
-        if spend_bundle is not None:
+        if info is not None and spend_bundle is not None:
             return {
                 "success": True,
                 "message_spend_bundle": bytes(spend_bundle).hex(),
@@ -1224,10 +1224,12 @@ class WalletRpcApi:
         address = request["artist_address"]
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
-        metadata = Program.to([
-            ('u', request["uris"]),
-            ('h', request["hash"]),
-        ])
+        metadata = Program.to(
+            [
+                ("u", request["uris"]),
+                ("h", request["hash"]),
+            ]
+        )
         if "amount" in request:
             await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
         else:

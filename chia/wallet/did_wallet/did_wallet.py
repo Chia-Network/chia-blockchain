@@ -111,7 +111,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
             memos=[],
         )
         regular_record = TransactionRecord(
@@ -345,7 +345,9 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), uint64(int(details[2])))
+            origin = Coin(
+                bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2]))
+            )
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))
@@ -438,7 +440,7 @@ class DIDWallet:
             return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)
+            return did_wallet_puzzles.create_fullpuz(innerpuz, bytes32([0] * 32))
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -719,15 +721,17 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
 
-    async def get_info_for_recovery(self) -> Tuple[bytes32, bytes32, uint64]:
+    async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
-        coin = coins.pop()
-        parent = coin.parent_coin_info
-        innerpuzhash = self.did_info.current_inner.get_tree_hash()
-        amount = coin.amount
-        return (parent, innerpuzhash, amount)
+        if coins is not None:
+            coin = coins.pop()
+            parent = coin.parent_coin_info
+            innerpuzhash = self.did_info.current_inner.get_tree_hash()
+            amount = coin.amount
+            return (parent, innerpuzhash, amount)
+        return None
 
     async def load_attest_files_for_recovery_spend(self, filenames):
         spend_bundle_list = []
@@ -886,6 +890,7 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
+        assert self.did_info.origin_coin is not None
         innerpuz = did_wallet_puzzles.create_innerpuz(
             pubkey,
             self.did_info.backup_ids,
@@ -898,6 +903,7 @@ class DIDWallet:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             did_hash
         )
+        assert self.did_info.origin_coin is not None
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             bytes(record.pubkey),
             self.did_info.backup_ids,
