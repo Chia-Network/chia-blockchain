@@ -6,7 +6,7 @@ import React, {
 } from 'react';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
-import { ButtonLoading, Loading, Flex, Form, FormBackButton, chiaToMojo } from '@chia/core';
+import { ButtonLoading, Loading, Flex, Form, Back, chiaToMojo } from '@chia/core';
 import PlotNFTSelectBase from './PlotNFTSelectBase';
 import normalizeUrl from '../../../util/normalizeUrl';
 import getPoolInfo from '../../../util/getPoolInfo';
@@ -125,14 +125,14 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   if (!hasBalance) {
     return (
       <Flex flexDirection="column" gap={3}>
-        <PlotNFTSelectFaucet step={step} onCancel={onCancel} />
         {!onCancel && (
-          <Flex gap={1}>
-            <Form methods={methods} onSubmit={handleSubmit}>
-              <FormBackButton variant="outlined" />
-            </Form>
-          </Flex>
+          <Form methods={methods} onSubmit={handleSubmit}>
+            <Back variant="h5" form>
+              <Trans>Join a Pool</Trans>
+            </Back>
+          </Form>
         )}
+        <PlotNFTSelectFaucet step={step} onCancel={onCancel} />
       </Flex>
     );
   }
@@ -140,6 +140,12 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   return (
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
+        {!onCancel && (
+          <Back variant="h5" form>
+            <Trans>Join a Pool</Trans>
+          </Back>
+        )}
+
         <PlotNFTSelectBase
           step={step}
           onCancel={onCancel}
@@ -149,8 +155,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
           feeDescription={feeDescription}
         />
         {!onCancel && (
-          <Flex gap={1}>
-            <FormBackButton variant="outlined" />
+          <Flex gap={1} justifyContent="right">
             <ButtonLoading
               loading={loading}
               color="primary"

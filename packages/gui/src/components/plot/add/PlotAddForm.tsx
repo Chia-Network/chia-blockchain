@@ -3,10 +3,8 @@ import { useNavigate, useLocation } from 'react-router';
 import { t, Trans } from '@lingui/macro';
 import { defaultPlotter } from '@chia/api';
 import { useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
-import { ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { useShowError, ButtonLoading, Flex, Form, FormBackButton, toBech32m } from '@chia/core';
-import { PlotHeaderSource } from '../PlotHeader';
+import { Back, useShowError, ButtonLoading, Flex, Form, FormBackButton, toBech32m } from '@chia/core';
 import PlotAddChoosePlotter from './PlotAddChoosePlotter';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
@@ -42,7 +40,7 @@ export default function PlotAddForm(props: Props) {
   const [createNewPoolWallet] = useCreateNewPoolWalletMutation();
   const addNFTref = useRef();
   const { state } = useLocation();
-  
+
 
   const otherDefaults = {
     plotCount: 1,
@@ -170,13 +168,10 @@ export default function PlotAddForm(props: Props) {
 
   return (
     <Form methods={methods} onSubmit={handleSubmit}>
-      <PlotHeaderSource>
-        <Flex alignItems="center">
-          <ChevronRightIcon color="secondary" />
-          <Trans>Add a Plot</Trans>
-        </Flex>
-      </PlotHeaderSource>
       <Flex flexDirection="column" gap={3}>
+        <Back variant="h5" form>
+          <Trans>Add a Plot</Trans>
+        </Back>
         <PlotAddChoosePlotter step={step++} onChange={handlePlotterChanged} />
         <PlotAddChooseSize step={step++} plotter={plotter} />
         <PlotAddNumberOfPlots step={step++} plotter={plotter} />
@@ -185,8 +180,7 @@ export default function PlotAddForm(props: Props) {
         )}
         <PlotAddSelectFinalDirectory step={step++} plotter={plotter} />
         <PlotAddNFT ref={addNFTref} step={step++} plotter={plotter} />
-        <Flex gap={1}>
-          <FormBackButton variant="outlined" />
+        <Flex justifyContent="flex-end">
           <ButtonLoading
             loading={loading}
             color="primary"

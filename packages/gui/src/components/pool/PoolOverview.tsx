@@ -166,23 +166,6 @@ export default function PoolOverview() {
         </Flex>
       </Flex>
       <Flex flexDirection="column" gap={1}>
-        <Flex justifyContent="flex-end" alignItems="center" gap={2}>
-          <Tooltip
-            title={
-              showTable ? <Trans>Grid view</Trans> : <Trans>List view</Trans>
-            }
-          >
-            <IconButton size="small" onClick={handleToggleView}>
-              {showTable ? <ViewModuleIcon /> : <ViewListIcon />}
-            </IconButton>
-          </Tooltip>
-          <Flex gap={1}>
-            <Typography variant="body1" color="textSecondary">
-              <Trans>Wallet Status:</Trans>
-            </Typography>
-            <WalletStatus height />
-          </Flex>
-        </Flex>
         {showTable ? (
           <Table
             uniqueField="poolState.p2SingletonPuzzleHash"

@@ -114,6 +114,7 @@ export default function PlotAddSelectTemporaryDirectory(props: Props) {
               onClick={handleSelect2}
               size="large"
               variant="outlined"
+              color="secondary"
               selected={hasWorkspaceLocation2}
               nowrap
             >

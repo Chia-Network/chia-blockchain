@@ -56,32 +56,30 @@ export default function FarmLastAttemptedProof() {
         </Trans>
       }
       interactive
+      transparent
     >
-      {isLoading ? (
-        <Loading center />
-      ) : (
-        <Table
-          cols={cols}
-          rows={reducedLastAttemptedProof}
-          caption={
-            isEmpty && (
-              <Typography>
-                <Trans>None of your plots have passed the plot filter yet.</Trans>
+      <Table
+        cols={cols}
+        rows={reducedLastAttemptedProof}
+        isLoading={isLoading}
+        caption={
+          isEmpty && (
+            <>
+              <Trans>None of your plots have passed the plot filter yet.</Trans>
 
-                {!!size && (
-                  <>
-                    {' '}
-                    <Trans>
-                      But you are currently farming{' '}
-                      <FormatBytes value={size} precision={3} />
-                    </Trans>
-                  </>
-                )}
-              </Typography>
-            )
-          }
-        />
-      )}
+              {!!size && (
+                <>
+                  {' '}
+                  <Trans>
+                    But you are currently farming{' '}
+                    <FormatBytes value={size} precision={3} />
+                  </Trans>
+                </>
+              )}
+            </>
+          )
+        }
+      />
     </Card>
   );
 }

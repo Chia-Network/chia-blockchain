@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { WalletType } from '@chia/api';
 import { useSetCATNameMutation } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
-import { Typography, Switch, CircularProgress, TextField } from '@mui/material';
+import { Box, Typography, Switch, CircularProgress, TextField } from '@mui/material';
 import { Tooltip, CardListItem, Flex, Link, useShowError } from '@chia/core';
 
 export type WalletTokenCardProps = {
@@ -109,7 +109,6 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
           ) : (
             <TextField
               label="Name"
-              id="outlined-size-small"
               defaultValue={currentName}
               onBlur={(event) => handleRename(event.target.value)}
               size="small"
@@ -130,13 +129,14 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
             </Link>
           )}
         </Flex>
-        {isLoading ? (
-          <CircularProgress size={40} />
-        ) : (
-          <Switch checked={!hidden} onChange={handleVisibleChange} />
-        )}
+        <Box width="60px" textAlign="center">
+          {isLoading ? (
+            <CircularProgress size={32} />
+          ) : (
+            <Switch checked={!hidden} onChange={handleVisibleChange} />
+          )}
+        </Box>
       </Flex>
-
     </CardListItem>
   );
 }

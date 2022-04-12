@@ -7,6 +7,7 @@ import { Trans, t } from '@lingui/macro';
 import {
   Back,
   Button,
+  Card,
   ButtonLoading,
   Flex,
   Form,
@@ -28,9 +29,6 @@ import styled from 'styled-components';
 import { chiaToMojo, catToMojo } from '@chia/core';
 import fs from 'fs';
 
-const StyledEditorBox = styled.div`
-  padding: ${({ theme }) => `${theme.spacing(4)}`};
-`;
 
 type FormData = {
   selectedTab: number;
@@ -184,31 +182,29 @@ function OfferEditor(props: OfferEditorProps) {
 
   return (
     <Form methods={methods} onSubmit={onSubmit}>
-      <Divider />
-      <StyledEditorBox>
-        <Flex flexDirection="column" rowGap={3} flexGrow={1}>
+      <Flex flexDirection="column" rowGap={3} flexGrow={1}>
+        <Card>
           <OfferEditorConditionsPanel makerSide="sell" disabled={processing} />
-          <Divider />
-          <Flex gap={3}>
-            <Button
-              variant="outlined"
-              type="reset"
-              onClick={handleReset}
-              disabled={processing}
-            >
-              <Trans>Reset</Trans>
-            </Button>
-            <ButtonLoading
-              variant="contained"
-              color="primary"
-              type="submit"
-              loading={processing}
-            >
-              <Trans>Save Offer</Trans>
-            </ButtonLoading>
-          </Flex>
+        </Card>
+        <Flex justifyContent="flex-end" gap={2}>
+          <Button
+            variant="outlined"
+            type="reset"
+            onClick={handleReset}
+            disabled={processing}
+          >
+            <Trans>Reset</Trans>
+          </Button>
+          <ButtonLoading
+            variant="contained"
+            color="primary"
+            type="submit"
+            loading={processing}
+          >
+            <Trans>Save Offer</Trans>
+          </ButtonLoading>
         </Flex>
-      </StyledEditorBox>
+      </Flex>
     </Form>
   );
 }

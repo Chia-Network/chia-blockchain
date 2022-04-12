@@ -86,7 +86,7 @@ export default function WalletCATCreateExisting() {
             </Grid>
           </Grid>
         </Card>
-        <Box>
+        <Flex justifyContent="flex-end">
           <ButtonLoading
             type="submit"
             variant="contained"
@@ -95,7 +95,7 @@ export default function WalletCATCreateExisting() {
           >
             <Trans>Add</Trans>
           </ButtonLoading>
-        </Box>
+        </Flex>
       </Flex>
     </Form>
   );

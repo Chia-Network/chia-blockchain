@@ -1,15 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import { Link, Typography, Tooltip, IconButton } from '@mui/material';
+import { Box, Link, Typography, Tooltip, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import {
-  Flex,
   Table,
   Card,
   FormatBytes,
   FormatConnectionStatus,
-  Loading,
 } from '@chia/core';
 import { useGetFarmerFullNodeConnectionsQuery, useIsServiceRunningQuery } from '@chia/api-react';
 import type { Connection } from '@chia/api';
@@ -90,6 +88,7 @@ export default function FarmFullNodeConnections() {
 
   return (
     <Card
+      gap={1}
       title={<Trans>Your Full Node Connection</Trans>}
       tooltip={
         <Trans>
@@ -103,18 +102,14 @@ export default function FarmFullNodeConnections() {
         </Trans>
       }
       interactive
+      transparent
     >
-      <Flex justifyContent="flex-end" gap={1}>
-        <Typography variant="caption" color="textSecondary">
-          <Trans>Connection Status:</Trans>
-        </Typography>
+      <Typography variant="caption" color="textSecondary">
+        <Trans>Connection Status:</Trans>
+        &nbsp;
         <FormatConnectionStatus connected={isRunning} />
-      </Flex>
-      {isLoading ? (
-        <Loading center />
-      ) : (
-        <Table cols={cols} rows={connections} />
-      )}
+      </Typography>
+      <Table cols={cols} rows={connections} isLoading={isLoading} />
     </Card>
   );
 }
