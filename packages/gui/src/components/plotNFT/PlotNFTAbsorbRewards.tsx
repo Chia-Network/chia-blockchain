@@ -9,10 +9,10 @@ import {
   Fee,
   Flex,
   Form,
-  FormBackButton,
   State,
   mojoToChiaLocaleString,
   chiaToMojo,
+  Back,
 } from '@chia/core';
 import { useForm } from 'react-hook-form';
 import { usePwAbsorbRewardsMutation, useGetPlotNFTsQuery, useGetCurrentAddressQuery } from '@chia/api-react'
@@ -131,6 +131,11 @@ export default function PlotNFTAbsorbRewards(props: Props) {
 
       <Form methods={methods} onSubmit={handleSubmit}>
         <Flex flexDirection="column" gap={3}>
+          <Back form>
+            <Typography variant="h5">
+              <Trans>Claim Rewards</Trans>
+            </Typography>
+          </Back>
           <CardStep
             step="1"
             title={
@@ -165,8 +170,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
               </Grid>
             </Grid>
           </CardStep>
-          <Flex gap={1}>
-            <FormBackButton variant="outlined" />
+          <Flex gap={1} justifyContent="flex-end">
             <ButtonLoading
               loading={working}
               color="primary"
