@@ -30,10 +30,8 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
     env:
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
-
-    env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_TEST_NAME
 
     steps:
     - name: Checkout Code
@@ -47,7 +45,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -60,7 +58,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -80,7 +78,7 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR -s -v --durations 0PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR --durations=10 PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
 
     - name: Process coverage data
       run: |

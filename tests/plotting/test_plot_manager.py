@@ -236,7 +236,7 @@ async def test_plot_refreshing(test_plot_environment):
         trigger=trigger_remove_plot,
         test_path=drop_path,
         expect_loaded=[],
-        expect_removed=[drop_path],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -262,7 +262,7 @@ async def test_plot_refreshing(test_plot_environment):
         trigger=remove_plot_directory,
         test_path=dir_duplicates.path,
         expect_loaded=[],
-        expect_removed=dir_duplicates.path_list(),
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2),
         expect_duplicates=0,
         expected_directories=2,
@@ -316,7 +316,7 @@ async def test_plot_refreshing(test_plot_environment):
         trigger=trigger_remove_plot,
         test_path=drop_path,
         expect_loaded=[],
-        expect_removed=[drop_path],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(env.dir_1),
         expected_directories=3,
@@ -355,6 +355,17 @@ async def test_plot_refreshing(test_plot_environment):
         expected_directories=0,
         expect_total_plots=0,
     )
+
+
+@pytest.mark.asyncio
+async def test_initial_refresh_flag(test_plot_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_plot_environment
+    assert env.refresh_tester.plot_manager.initial_refresh()
+    for _ in range(2):
+        await env.refresh_tester.run(PlotRefreshResult())
+        assert not env.refresh_tester.plot_manager.initial_refresh()
+    env.refresh_tester.plot_manager.reset()
+    assert env.refresh_tester.plot_manager.initial_refresh()
 
 
 @pytest.mark.asyncio

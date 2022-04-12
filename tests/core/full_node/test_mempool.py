@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple, Callable
 
 from clvm.casts import int_to_bytes
 import pytest
-import pytest_asyncio
 
 import chia.server.ws_connection as ws
 
@@ -18,7 +17,7 @@ from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -31,15 +30,13 @@ from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.name_puzzle_condition import NPC
 from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
 
 from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.connection_utils import connect_and_get_peer
+from tests.connection_utils import connect_and_get_peer, add_dummy_connection
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.cost_calculator import NPCResult
@@ -47,8 +44,8 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.types.blockchain_format.program import SerializedProgram
 from clvm_tools import binutils
 from chia.types.generator_types import BlockGenerator
-from clvm.casts import int_from_bytes
 from blspy import G1Element
+from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
 
 from tests.wallet_tools import WalletTool
 
@@ -79,47 +76,14 @@ def generate_test_spend_bundle(
     return transaction
 
 
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes_mempool(bt, wallet_a):
-    async_gen = setup_simulators_and_wallets(2, 1, {})
-    nodes, _ = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-
-    reward_ph = wallet_a.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-        genesis_timestamp=10000,
-        time_per_block=10,
-    )
-    assert blocks[0].height == 0
-
-    for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
-
-    yield full_node_1, full_node_2, server_1, server_2
-
-    async for _ in async_gen:
-        yield _
-
-
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
-    spend_bundle_name = bytes([idx] * 32)
-    # TODO: address hint error and remove ignore
-    #       error: Argument 5 to "MempoolItem" has incompatible type "bytes"; expected "bytes32"  [arg-type]
+    spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
         uint64(0),
-        NPCResult(None, [], cost),
+        NPCResult(None, None, cost),
         cost,
-        spend_bundle_name,  # type: ignore[arg-type]
+        spend_bundle_name,
         [],
         [],
         SerializedProgram(),
@@ -187,9 +151,12 @@ class TestPendingTxCache:
 
 class TestMempool:
     @pytest.mark.asyncio
-    async def test_basic_mempool(self, bt, two_nodes_mempool, wallet_a):
+    async def test_basic_mempool(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
 
         max_mempool_cost = 40000000 * 5
         mempool = Mempool(max_mempool_cost)
@@ -251,11 +218,12 @@ async def next_block(full_node_1, wallet_a, bt) -> Coin:
 
 class TestMempoolManager:
     @pytest.mark.asyncio
-    async def test_basic_mempool_manager(self, bt, two_nodes_mempool, wallet_a, self_hostname):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_basic_mempool_manager(self, bt, two_nodes_one_block, wallet_a, self_hostname):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_one_block
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         spend_bundle = generate_test_spend_bundle(wallet_a, coin)
         assert spend_bundle is not None
@@ -282,7 +250,7 @@ class TestMempoolManager:
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, MempoolInclusionStatus.PENDING),
             (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, MempoolInclusionStatus.PENDING),
             # the absolute height and seconds tests require fresh full nodes to
-            # run the test on. The fixture (two_nodes_mempool) creates 3 blocks,
+            # run the test on. The fixture (one_node_one_block) creates a block,
             # then condition_tester2 creates another 3 blocks
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, MempoolInclusionStatus.SUCCESS),
             (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 5, MempoolInclusionStatus.SUCCESS),
@@ -295,7 +263,7 @@ class TestMempoolManager:
             (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10052, MempoolInclusionStatus.FAILED),
         ],
     )
-    async def test_ephemeral_timelock(self, bt, two_nodes_mempool, wallet_a, opcode, lock_value, expected):
+    async def test_ephemeral_timelock(self, bt, one_node_one_block, wallet_a, opcode, lock_value, expected):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
 
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
@@ -311,8 +279,10 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([tx1, tx2])
             return bundle
 
-        full_node_1, _, server_1, _ = two_nodes_mempool
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        full_node_1, server_1 = one_node_one_block
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         print(f"status: {status}")
@@ -329,7 +299,7 @@ class TestMempoolManager:
     # this test makes sure that one spend successfully asserts the announce from
     # another spend, even though the assert condition is duplicated 100 times
     @pytest.mark.asyncio
-    async def test_coin_announcement_duplicate_consumed(self, bt, two_nodes_mempool, wallet_a):
+    async def test_coin_announcement_duplicate_consumed(self, bt, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             announce = Announcement(coin_2.name(), b"test")
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
@@ -342,8 +312,8 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
             return bundle
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        full_node_1, server_1 = one_node_one_block
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
@@ -353,7 +323,7 @@ class TestMempoolManager:
     # this test makes sure that one spend successfully asserts the announce from
     # another spend, even though the create announcement is duplicated 100 times
     @pytest.mark.asyncio
-    async def test_coin_duplicate_announcement_consumed(self, bt, two_nodes_mempool, wallet_a):
+    async def test_coin_duplicate_announcement_consumed(self, bt, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             announce = Announcement(coin_2.name(), b"test")
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
@@ -366,8 +336,8 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
             return bundle
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        full_node_1, server_1 = one_node_one_block
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
@@ -375,9 +345,9 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_double_spend(self, bt, two_nodes_mempool, wallet_a, self_hostname):
+    async def test_double_spend(self, bt, two_nodes_one_block, wallet_a, self_hostname):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
@@ -436,10 +406,10 @@ class TestMempoolManager:
         assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
 
     @pytest.mark.asyncio
-    async def test_double_spend_with_higher_fee(self, bt, two_nodes_mempool, wallet_a, self_hostname):
+    async def test_double_spend_with_higher_fee(self, bt, two_nodes_one_block, wallet_a, self_hostname):
         reward_ph = wallet_a.get_new_puzzlehash()
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
@@ -513,10 +483,10 @@ class TestMempoolManager:
         self.assert_sb_not_in_pool(full_node_1, sb3)
 
     @pytest.mark.asyncio
-    async def test_invalid_signature(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_signature(self, bt, one_node_one_block, wallet_a):
         reward_ph = wallet_a.get_new_puzzlehash()
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
@@ -547,7 +517,7 @@ class TestMempoolManager:
     async def condition_tester(
         self,
         bt,
-        two_nodes_mempool,
+        one_node_one_block,
         wallet_a,
         dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
         fee: int = 0,
@@ -555,7 +525,7 @@ class TestMempoolManager:
         coin: Optional[Coin] = None,
     ):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
@@ -565,7 +535,12 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
+        _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
+        dummy_peer = None
+        for node_id, wsc in server_1.all_connections.items():
+            if node_id == dummy_node_id:
+                dummy_peer = wsc
+                break
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -580,13 +555,13 @@ class TestMempoolManager:
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
-        status, err = await respond_transaction(full_node_1, tx1, peer, test=True)
-        return blocks, spend_bundle1, peer, status, err
+        status, err = await respond_transaction(full_node_1, tx1, dummy_peer, test=True)
+        return blocks, spend_bundle1, dummy_peer, status, err
 
     @pytest.mark.asyncio
-    async def condition_tester2(self, bt, two_nodes_mempool, wallet_a, test_fun: Callable[[Coin, Coin], SpendBundle]):
+    async def condition_tester2(self, bt, one_node_one_block, wallet_a, test_fun: Callable[[Coin, Coin], SpendBundle]):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
         blocks = bt.get_consecutive_blocks(
@@ -597,7 +572,12 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
             time_per_block=10,
         )
-        peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
+        _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
+        dummy_peer = None
+        for node_id, wsc in server_1.all_connections.items():
+            if node_id == dummy_node_id:
+                dummy_peer = wsc
+                break
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -610,14 +590,14 @@ class TestMempoolManager:
         bundle = test_fun(coin_1, coin_2)
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
-        status, err = await respond_transaction(full_node_1, tx1, peer, test=True)
+        status, err = await respond_transaction(full_node_1, tx1, dummy_peer, test=True)
 
         return blocks, bundle, status, err
 
     @pytest.mark.asyncio
-    async def test_invalid_block_index(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_block_index(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         cvp = ConditionWithArgs(
@@ -625,7 +605,7 @@ class TestMempoolManager:
             [int_to_bytes(start_height + 5)],
         )
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         # the transaction may become valid later
@@ -633,13 +613,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.PENDING
 
     @pytest.mark.asyncio
-    async def test_block_index_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_block_index_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
         # the transaction may become valid later
@@ -647,49 +627,49 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_correct_block_index(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_block_index(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(1)])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_block_index_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_block_index_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         # garbage at the end of the argument list is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(1), b"garbage"])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_negative_block_index(self, bt, two_nodes_mempool, wallet_a):
+    async def test_negative_block_index(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(-1)])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_invalid_block_age(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_block_age(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(5)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
         assert sb1 is None
@@ -697,12 +677,12 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.PENDING
 
     @pytest.mark.asyncio
-    async def test_block_age_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_block_age_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.INVALID_CONDITION
         assert sb1 is None
@@ -710,13 +690,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_correct_block_age(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_block_age(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, num_blocks=4
+            bt, one_node_one_block, wallet_a, dic, num_blocks=4
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -725,14 +705,14 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_block_age_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_block_age_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         # garbage at the end of the argument list is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, num_blocks=4
+            bt, one_node_one_block, wallet_a, dic, num_blocks=4
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -741,13 +721,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_negative_block_age(self, bt, two_nodes_mempool, wallet_a):
+    async def test_negative_block_age(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, num_blocks=4
+            bt, one_node_one_block, wallet_a, dic, num_blocks=4
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -756,14 +736,17 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_correct_my_id(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_my_id(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -772,15 +755,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_id_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_id_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the argument list is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name(), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -789,15 +775,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_invalid_my_id(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_my_id(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         coin_2 = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin_2.name()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -806,13 +795,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_my_id_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_id_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.INVALID_CONDITION
@@ -820,100 +809,100 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_time_exceeds(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_exceeds(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         # 5 seconds should be before the next block
         time_now = full_node_1.full_node.blockchain.get_peak().timestamp + 5
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_time_fail(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_fail(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_now = full_node_1.full_node.blockchain.get_peak().timestamp + 1000
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_height_pending(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_height_pending(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         print(full_node_1.full_node.blockchain.get_peak())
         current_height = full_node_1.full_node.blockchain.get_peak().height
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(current_height + 4)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
         assert sb1 is None
         assert status == MempoolInclusionStatus.PENDING
 
     @pytest.mark.asyncio
-    async def test_assert_time_negative(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_negative(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_now = -1
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_time_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.INVALID_CONDITION
         assert sb1 is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_time_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_now = full_node_1.full_node.blockchain.get_peak().timestamp + 5
 
         # garbage at the end of the argument list is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now), b"garbage"])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
         assert sb1 is spend_bundle1
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_time_relative_exceeds(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_relative_exceeds(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_relative = 3
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
@@ -933,15 +922,15 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_time_relative_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_relative_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_relative = 0
 
         # garbage at the end of the arguments is ignored
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative), b"garbage"])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
@@ -949,13 +938,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_time_relative_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_relative_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err == Err.INVALID_CONDITION
@@ -963,14 +952,14 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_time_relative_negative(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_time_relative_negative(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         time_relative = -3
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert err is None
@@ -979,7 +968,7 @@ class TestMempoolManager:
 
     # ensure one spend can assert a coin announcement from another spend
     @pytest.mark.asyncio
-    async def test_correct_coin_announcement_consumed(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_coin_announcement_consumed(self, bt, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             announce = Announcement(coin_2.name(), b"test")
             cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name()])
@@ -992,8 +981,8 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
             return bundle
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        full_node_1, server_1 = one_node_one_block
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
@@ -1003,7 +992,7 @@ class TestMempoolManager:
     # ensure one spend can assert a coin announcement from another spend, even
     # though the conditions have garbage (ignored) at the end
     @pytest.mark.asyncio
-    async def test_coin_announcement_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_coin_announcement_garbage(self, bt, one_node_one_block, wallet_a):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             announce = Announcement(coin_2.name(), b"test")
             # garbage at the end is ignored
@@ -1018,8 +1007,8 @@ class TestMempoolManager:
             bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
             return bundle
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        full_node_1, server_1 = one_node_one_block
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
@@ -1027,8 +1016,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_coin_announcement_missing_arg(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_coin_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             # missing arg here
@@ -1041,15 +1030,15 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         assert err == Err.INVALID_CONDITION
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_coin_announcement_missing_arg2(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_coin_announcement_missing_arg2(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.name(), b"test")
@@ -1063,15 +1052,15 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         assert err == Err.INVALID_CONDITION
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_coin_announcement_too_big(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_coin_announcement_too_big(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.name(), bytes([1] * 10000))
@@ -1087,7 +1076,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
         assert full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name()) is None
@@ -1105,8 +1094,8 @@ class TestMempoolManager:
     # ensure an assert coin announcement is rejected if it doesn't match the
     # create announcement
     @pytest.mark.asyncio
-    async def test_invalid_coin_announcement_rejected(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_invalid_coin_announcement_rejected(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.name(), b"test")
@@ -1125,7 +1114,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1134,8 +1123,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_coin_announcement_rejected_two(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_invalid_coin_announcement_rejected_two(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_1.name(), b"test")
@@ -1152,7 +1141,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
@@ -1160,8 +1149,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_correct_puzzle_announcement(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_correct_puzzle_announcement(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, bytes(0x80))
@@ -1177,7 +1166,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1186,8 +1175,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_puzzle_announcement_garbage(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_puzzle_announcement_garbage(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, bytes(0x80))
@@ -1203,7 +1192,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert err is None
@@ -1211,8 +1200,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_puzzle_announcement_missing_arg(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_puzzle_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             # missing arg here
@@ -1228,7 +1217,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1237,8 +1226,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_puzzle_announcement_missing_arg2(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_puzzle_announcement_missing_arg2(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, b"test")
@@ -1256,7 +1245,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1265,8 +1254,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_puzzle_announcement_rejected(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_invalid_puzzle_announcement_rejected(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, bytes("test", "utf-8"))
@@ -1285,7 +1274,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1294,8 +1283,8 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_puzzle_announcement_rejected_two(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_invalid_puzzle_announcement_rejected_two(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, b"test")
@@ -1314,7 +1303,7 @@ class TestMempoolManager:
 
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        blocks, bundle, status, err = await self.condition_tester2(bt, two_nodes_mempool, wallet_a, test_fun)
+        blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
@@ -1323,13 +1312,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_fee_condition(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=10
+            bt, one_node_one_block, wallet_a, dic, fee=10
         )
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1338,14 +1327,14 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_fee_condition_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         # garbage at the end of the arguments is ignored
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=10
+            bt, one_node_one_block, wallet_a, dic, fee=10
         )
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1354,23 +1343,23 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition_missing_arg(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_assert_fee_condition_missing_arg(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=10
+            bt, one_node_one_block, wallet_a, dic, fee=10
         )
         assert err == Err.INVALID_CONDITION
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition_negative_fee(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_assert_fee_condition_negative_fee(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=10
+            bt, one_node_one_block, wallet_a, dic, fee=10
         )
         assert err == Err.RESERVE_FEE_CONDITION_FAILED
         assert status == MempoolInclusionStatus.FAILED
@@ -1383,12 +1372,12 @@ class TestMempoolManager:
         )
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition_fee_too_large(self, bt, two_nodes_mempool, wallet_a):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+    async def test_assert_fee_condition_fee_too_large(self, bt, one_node_one_block, wallet_a):
+        full_node_1, server_1 = one_node_one_block
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=10
+            bt, one_node_one_block, wallet_a, dic, fee=10
         )
         assert err == Err.RESERVE_FEE_CONDITION_FAILED
         assert status == MempoolInclusionStatus.FAILED
@@ -1401,14 +1390,14 @@ class TestMempoolManager:
         )
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition_wrong_fee(self, bt, two_nodes_mempool, wallet_a):
+    async def test_assert_fee_condition_wrong_fee(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
 
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, fee=9
+            bt, one_node_one_block, wallet_a, dic, fee=9
         )
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1417,9 +1406,9 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_stealing_fee(self, bt, two_nodes_mempool, wallet_a):
+    async def test_stealing_fee(self, bt, two_nodes_one_block, wallet_a):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
@@ -1430,7 +1419,6 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
         peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
         for block in blocks:
@@ -1474,9 +1462,9 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_double_spend_same_bundle(self, bt, two_nodes_mempool, wallet_a):
+    async def test_double_spend_same_bundle(self, bt, two_nodes_one_block, wallet_a):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
@@ -1520,9 +1508,9 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_agg_sig_condition(self, bt, two_nodes_mempool, wallet_a):
+    async def test_agg_sig_condition(self, bt, one_node_one_block, wallet_a):
         reward_ph = wallet_a.get_new_puzzlehash()
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height
         blocks = bt.get_consecutive_blocks(
@@ -1568,14 +1556,17 @@ class TestMempoolManager:
         # assert sb is spend_bundle
 
     @pytest.mark.asyncio
-    async def test_correct_my_parent(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_my_parent(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1585,15 +1576,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_parent_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_parent_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info, b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1603,13 +1597,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_parent_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_parent_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1618,15 +1612,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_my_parent(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_my_parent(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         coin_2 = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin_2.parent_coin_info])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1636,14 +1633,17 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_correct_my_puzhash(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_my_puzhash(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [coin.puzzle_hash])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1653,15 +1653,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_puzhash_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_puzhash_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [coin.puzzle_hash, b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1671,13 +1674,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_puzhash_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_puzhash_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1686,14 +1689,17 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_my_puzhash(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_my_puzhash(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [Program.to([]).get_tree_hash()])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1703,14 +1709,17 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_correct_my_amount(self, bt, two_nodes_mempool, wallet_a):
+    async def test_correct_my_amount(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1720,15 +1729,18 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_amount_garbage(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_amount_garbage(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
+
+        _ = await next_block(full_node_1, wallet_a, bt)
+        _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
         # garbage at the end of the arguments list is allowed but stripped
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
-            bt, two_nodes_mempool, wallet_a, dic, coin=coin
+            bt, one_node_one_block, wallet_a, dic, coin=coin
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
@@ -1738,13 +1750,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_my_amount_missing_arg(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_amount_missing_arg(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1753,13 +1765,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_invalid_my_amount(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_my_amount(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1768,13 +1780,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_negative_my_amount(self, bt, two_nodes_mempool, wallet_a):
+    async def test_negative_my_amount(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1783,13 +1795,13 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
-    async def test_my_amount_too_large(self, bt, two_nodes_mempool, wallet_a):
+    async def test_my_amount_too_large(self, bt, one_node_one_block, wallet_a):
 
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
         dic = {cvp.opcode: [cvp]}
-        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, two_nodes_mempool, wallet_a, dic)
+        blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
@@ -1831,13 +1843,8 @@ class TestGeneratorConditions:
         # at are ignored, including the termination of the list
         npc_result = generator_condition_tester("(80 50 . 1)", height=softfork_height)
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        opcode = ConditionOpcode(bytes([80]))
-        assert len(npc_result.npc_list[0].conditions) == 1
-        assert npc_result.npc_list[0].conditions[0][0] == opcode
-        assert len(npc_result.npc_list[0].conditions[0][1]) == 1
-        c = npc_result.npc_list[0].conditions[0][1][0]
-        assert c == ConditionWithArgs(opcode=ConditionOpcode.ASSERT_SECONDS_RELATIVE, vars=[bytes([50])])
+        assert len(npc_result.conds.spends) == 1
+        assert npc_result.conds.spends[0].seconds_relative == 50
 
     @pytest.mark.parametrize(
         "mempool,height,operand,expected",
@@ -1883,13 +1890,17 @@ class TestGeneratorConditions:
         )
         print(npc_result)
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        max_arg = 0
-        assert npc_result.npc_list[0].conditions[0][0] == opcode
-        for c in npc_result.npc_list[0].conditions[0][1]:
-            assert c.opcode == opcode
-            max_arg = max(max_arg, int_from_bytes(c.vars[0]))
-        assert max_arg == 100
+        assert len(npc_result.conds.spends) == 1
+
+        assert len(npc_result.conds.spends) == 1
+        if opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+            assert npc_result.conds.height_absolute == 100
+        elif opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+            assert npc_result.conds.spends[0].height_relative == 100
+        elif opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+            assert npc_result.conds.seconds_absolute == 100
+        elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+            assert npc_result.conds.spends[0].seconds_relative == 100
 
     @pytest.mark.parametrize(
         "opcode",
@@ -1904,10 +1915,9 @@ class TestGeneratorConditions:
         # back. They are either satisified or cause an immediate failure
         npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ' * 50, height=softfork_height)
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.conds.spends) == 1
         # create-announcements and assert-announcements are dropped once
         # validated
-        assert npc_result.npc_list[0].conditions == []
 
     @pytest.mark.parametrize(
         "opcode",
@@ -1925,7 +1935,6 @@ class TestGeneratorConditions:
         npc_result = generator_condition_tester(f'({opcode.value[0]} "{message}") ', height=softfork_height)
         print(npc_result)
         assert npc_result.error == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED.value
-        assert npc_result.npc_list == []
 
     def test_multiple_reserve_fee(self, softfork_height):
         # RESERVE_FEE
@@ -1934,17 +1943,8 @@ class TestGeneratorConditions:
         # with all the fees accumulated
         npc_result = generator_condition_tester(f"({cond} 100) " * 3, height=softfork_height)
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        opcode = ConditionOpcode(bytes([cond]))
-        reserve_fee = 0
-        assert len(npc_result.npc_list[0].conditions) == 1
-        assert npc_result.npc_list[0].conditions[0][0] == opcode
-        for c in npc_result.npc_list[0].conditions[0][1]:
-            assert c.opcode == opcode
-            reserve_fee += int_from_bytes(c.vars[0])
-
-        assert reserve_fee == 300
-        assert len(npc_result.npc_list[0].conditions[0][1]) == 1
+        assert npc_result.conds.reserve_fee == 300
+        assert len(npc_result.conds.spends) == 1
 
     def test_duplicate_outputs(self, softfork_height):
         # CREATE_COIN
@@ -1954,7 +1954,6 @@ class TestGeneratorConditions:
         puzzle_hash = "abababababababababababababababab"
         npc_result = generator_condition_tester(f'(51 "{puzzle_hash}" 10) ' * 2, height=softfork_height)
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
-        assert npc_result.npc_list == []
 
     def test_create_coin_cost(self, softfork_height):
         # CREATE_COIN
@@ -1968,7 +1967,8 @@ class TestGeneratorConditions:
         )
         assert npc_result.error is None
         assert npc_result.cost == 20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
-        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.conds.spends) == 1
+        assert len(npc_result.conds.spends[0].create_coin) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
@@ -1990,7 +1990,7 @@ class TestGeneratorConditions:
         )
         assert npc_result.error is None
         assert npc_result.cost == 20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
-        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.conds.spends) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
@@ -2016,15 +2016,9 @@ class TestGeneratorConditions:
             generator, MAX_BLOCK_COST_CLVM, cost_per_byte=COST_PER_BYTE, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 2
-        opcode = ConditionOpcode.CREATE_COIN
-        for c in npc_result.npc_list:
-            assert c.conditions == [
-                (
-                    opcode.value,
-                    [ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([10])])],
-                )
-            ]
+        assert len(npc_result.conds.spends) == 2
+        for s in npc_result.conds.spends:
+            assert s.create_coin == [(puzzle_hash.encode("ascii"), 10, b"")]
 
     def test_create_coin_different_puzzhash(self, softfork_height):
         # CREATE_COIN
@@ -2035,16 +2029,9 @@ class TestGeneratorConditions:
             f'(51 "{puzzle_hash_1}" 5) (51 "{puzzle_hash_2}" 5)', height=softfork_height
         )
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        opcode = ConditionOpcode.CREATE_COIN
-        assert (
-            ConditionWithArgs(opcode, [puzzle_hash_1.encode("ascii"), bytes([5])])
-            in npc_result.npc_list[0].conditions[0][1]
-        )
-        assert (
-            ConditionWithArgs(opcode, [puzzle_hash_2.encode("ascii"), bytes([5])])
-            in npc_result.npc_list[0].conditions[0][1]
-        )
+        assert len(npc_result.conds.spends) == 1
+        assert (puzzle_hash_1.encode("ascii"), 5, b"") in npc_result.conds.spends[0].create_coin
+        assert (puzzle_hash_2.encode("ascii"), 5, b"") in npc_result.conds.spends[0].create_coin
 
     def test_create_coin_different_amounts(self, softfork_height):
         # CREATE_COIN
@@ -2054,16 +2041,10 @@ class TestGeneratorConditions:
             f'(51 "{puzzle_hash}" 5) (51 "{puzzle_hash}" 4)', height=softfork_height
         )
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        opcode = ConditionOpcode.CREATE_COIN
-        assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([5])])
-            in npc_result.npc_list[0].conditions[0][1]
-        )
-        assert (
-            ConditionWithArgs(opcode, [puzzle_hash.encode("ascii"), bytes([4])])
-            in npc_result.npc_list[0].conditions[0][1]
-        )
+        assert len(npc_result.conds.spends) == 1
+        coins = npc_result.conds.spends[0].create_coin
+        assert (puzzle_hash.encode("ascii"), 5, b"") in coins
+        assert (puzzle_hash.encode("ascii"), 4, b"") in coins
 
     def test_create_coin_with_hint(self, softfork_height):
         # CREATE_COIN
@@ -2071,11 +2052,9 @@ class TestGeneratorConditions:
         hint = "12341234123412341234213421341234"
         npc_result = generator_condition_tester(f'(51 "{puzzle_hash_1}" 5 ("{hint}"))', height=softfork_height)
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        opcode = ConditionOpcode.CREATE_COIN
-        assert npc_result.npc_list[0].conditions[0][1][0] == ConditionWithArgs(
-            opcode, [puzzle_hash_1.encode("ascii"), bytes([5]), hint.encode("ascii")]
-        )
+        assert len(npc_result.conds.spends) == 1
+        coins = npc_result.conds.spends[0].create_coin
+        assert coins == [(puzzle_hash_1.encode("ascii"), 5, hint.encode("ascii"))]
 
     @pytest.mark.parametrize(
         "mempool,height",
@@ -2091,10 +2070,8 @@ class TestGeneratorConditions:
             print(npc_result)
             if mempool:
                 assert npc_result.error == Err.INVALID_CONDITION.value
-                assert npc_result.npc_list == []
             else:
                 assert npc_result.error is None
-                assert npc_result.npc_list[0].conditions == []
 
 
 # the tests below are malicious generator programs
@@ -2233,13 +2210,16 @@ class TestMaliciousGenerators:
             assert npc_result.error == error_for_condition(opcode)
         else:
             assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            assert npc_result.npc_list[0].conditions == [
-                (
-                    opcode,
-                    [ConditionWithArgs(opcode, [int_to_bytes(28)])],
-                )
-            ]
+            assert len(npc_result.conds.spends) == 1
+            if opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                assert npc_result.conds.height_absolute == 28
+            elif opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                assert npc_result.conds.spends[0].height_relative == 28
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                assert npc_result.conds.seconds_absolute == 28
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                assert npc_result.conds.spends[0].seconds_relative == 28
+
         print(f"run time:{run_time}")
         assert run_time < 0.7
 
@@ -2262,13 +2242,17 @@ class TestMaliciousGenerators:
             assert npc_result.error == error_for_condition(opcode)
         else:
             assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            assert npc_result.npc_list[0].conditions == [
-                (
-                    opcode,
-                    [ConditionWithArgs(opcode, [bytes([100])])],
-                )
-            ]
+            assert len(npc_result.conds.spends) == 1
+
+            if opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                assert npc_result.conds.height_absolute == 100
+            elif opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                assert npc_result.conds.spends[0].height_relative == 100
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                assert npc_result.conds.seconds_absolute == 100
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                assert npc_result.conds.spends[0].seconds_relative == 100
+
         print(f"run time:{run_time}")
         assert run_time < 1.1
 
@@ -2291,13 +2275,17 @@ class TestMaliciousGenerators:
             assert npc_result.error == error_for_condition(opcode)
         else:
             assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            assert npc_result.npc_list[0].conditions == [
-                (
-                    opcode,
-                    [ConditionWithArgs(opcode, [bytes([100])])],
-                )
-            ]
+            assert len(npc_result.conds.spends) == 1
+
+            if opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                assert npc_result.conds.height_absolute == 100
+            elif opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                assert npc_result.conds.spends[0].height_relative == 100
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                assert npc_result.conds.seconds_absolute == 100
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                assert npc_result.conds.spends[0].seconds_relative == 100
+
         print(f"run time:{run_time}")
         assert run_time < 1.1
 
@@ -2322,10 +2310,17 @@ class TestMaliciousGenerators:
             assert npc_result.error == error_for_condition(opcode)
         else:
             assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
+            assert len(npc_result.conds.spends) == 1
 
-            print(npc_result.npc_list[0].conditions[0][1])
-            assert ConditionWithArgs(opcode, [int_to_bytes(0xFFFFFFFF)]) in npc_result.npc_list[0].conditions[0][1]
+            if opcode == ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE:
+                assert npc_result.conds.height_absolute == 0xFFFFFFFF
+            elif opcode == ConditionOpcode.ASSERT_HEIGHT_RELATIVE:
+                assert npc_result.conds.spends[0].height_relative == 0xFFFFFFFF
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE:
+                assert npc_result.conds.seconds_absolute == 0xFFFFFFFF
+            elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
+                assert npc_result.conds.spends[0].seconds_relative == 0xFFFFFFFF
+
         print(f"run time:{run_time}")
         assert run_time < 0.3
 
@@ -2345,8 +2340,7 @@ class TestMaliciousGenerators:
         npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert npc_result.npc_list[0].conditions == []
+        assert len(npc_result.conds.spends) == 1
         print(f"run time:{run_time}")
         assert run_time < 1
 
@@ -2361,13 +2355,9 @@ class TestMaliciousGenerators:
             assert npc_result.error == error_for_condition(opcode)
         else:
             assert npc_result.error is None
-            assert len(npc_result.npc_list) == 1
-            assert npc_result.npc_list[0].conditions == [
-                (
-                    opcode.value,
-                    [ConditionWithArgs(opcode, [int_to_bytes(100 * 280000)])],
-                )
-            ]
+            assert len(npc_result.conds.spends) == 1
+            assert npc_result.conds.reserve_fee == 100 * 280000
+
         print(f"run time:{run_time}")
         assert run_time < 1
 
@@ -2381,7 +2371,7 @@ class TestMaliciousGenerators:
         # RESERVE_FEE conditions fail unconditionally if they have a negative
         # amount
         assert npc_result.error == Err.RESERVE_FEE_CONDITION_FAILED.value
-        assert len(npc_result.npc_list) == 0
+        assert npc_result.conds is None
         print(f"run time:{run_time}")
         assert run_time < 0.8
 
@@ -2395,9 +2385,8 @@ class TestMaliciousGenerators:
         npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
+        assert len(npc_result.conds.spends) == 1
         # coin announcements are not propagated to python, but validated in rust
-        assert len(npc_result.npc_list[0].conditions) == 0
         # TODO: optimize clvm to make this run in < 1 second
         print(f"run time:{run_time}")
         assert run_time < 7
@@ -2413,7 +2402,7 @@ class TestMaliciousGenerators:
         npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
-        assert len(npc_result.npc_list) == 0
+        assert npc_result.conds is None
         print(f"run time:{run_time}")
         assert run_time < 0.8
 
@@ -2428,15 +2417,14 @@ class TestMaliciousGenerators:
         npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
         run_time = time() - start_time
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == 1
-        assert len(npc_result.npc_list[0].conditions) == 1
-        assert npc_result.npc_list[0].conditions[0][0] == ConditionOpcode.CREATE_COIN.value
-        assert len(npc_result.npc_list[0].conditions[0][1]) == 6094
+        assert len(npc_result.conds.spends) == 1
+        spend = npc_result.conds.spends[0]
+        assert len(spend.create_coin) == 6094
         print(f"run time:{run_time}")
         assert run_time < 0.2
 
     @pytest.mark.asyncio
-    async def test_invalid_coin_spend_coin(self, bt, two_nodes_mempool, wallet_a):
+    async def test_invalid_coin_spend_coin(self, bt, one_node_one_block, wallet_a):
         reward_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             5,
@@ -2444,7 +2432,7 @@ class TestMaliciousGenerators:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_mempool
+        full_node_1, server_1 = one_node_one_block
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -2475,65 +2463,37 @@ class TestPkmPairs:
     ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
     def test_empty_list(self):
-        npc_list = []
-        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        conds = SpendBundleConditions([], 0, 0, 0, [], 0)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
     def test_no_agg_sigs(self):
-        npc_list = [
-            NPC(self.h1, self.h2, [(self.CCA, [ConditionWithArgs(self.CCA, [b"msg"])])]),
-            NPC(self.h3, self.h4, [(self.CC, [ConditionWithArgs(self.CCA, [self.h1, bytes([1])])])]),
-        ]
-        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        # one create coin: h1 amount: 1 and not hint
+        spends = [Spend(self.h3, self.h4, None, 0, [(self.h1, 1, b"")], [])]
+        conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
     def test_agg_sig_me(self):
-        npc_list = [
-            NPC(
-                self.h1,
-                self.h2,
-                [
-                    (
-                        self.ASM,
-                        [
-                            ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"]),
-                            ConditionWithArgs(self.ASM, [bytes(self.pk2), b"msg2"]),
-                        ],
-                    )
-                ],
-            )
-        ]
-        pks, msgs = pkm_pairs(npc_list, b"foobar")
+
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")])]
+        conds = SpendBundleConditions(spends, 0, 0, 0, [], 0)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
     def test_agg_sig_unsafe(self):
-        npc_list = [
-            NPC(
-                self.h1,
-                self.h2,
-                [
-                    (
-                        self.ASU,
-                        [
-                            ConditionWithArgs(self.ASU, [bytes(self.pk1), b"msg1"]),
-                            ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"]),
-                        ],
-                    )
-                ],
-            )
-        ]
-        pks, msgs = pkm_pairs(npc_list, b"foobar")
+        conds = SpendBundleConditions([], 0, 0, 0, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
-        npc_list = [
-            NPC(self.h1, self.h2, [(self.ASM, [ConditionWithArgs(self.ASM, [bytes(self.pk1), b"msg1"])])]),
-            NPC(self.h1, self.h2, [(self.ASU, [ConditionWithArgs(self.ASU, [bytes(self.pk2), b"msg2"])])]),
-        ]
-        pks, msgs = pkm_pairs(npc_list, b"foobar")
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
-        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2"]
+
+        spends = [Spend(self.h1, self.h2, None, 0, [], [(bytes48(self.pk1), b"msg1")])]
+        conds = SpendBundleConditions(spends, 0, 0, 0, [(bytes48(self.pk2), b"msg2")], 0)
+        pks, msgs = pkm_pairs(conds, b"foobar")
+        assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
+        assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]

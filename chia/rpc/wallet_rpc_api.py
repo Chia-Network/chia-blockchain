@@ -91,6 +91,7 @@ class WalletRpcApi:
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
             "/cat_get_name": self.cat_get_name,
+            "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
             "/cat_get_asset_id": self.cat_get_asset_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
@@ -157,7 +158,7 @@ class WalletRpcApi:
         """
         if self.service is not None:
             self.service._close()
-            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed()
+            peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
             if peers_close_task is not None:
                 await peers_close_task
 
@@ -857,6 +858,16 @@ class WalletRpcApi:
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
 
+    async def get_stray_cats(self, request):
+        """
+        Get a list of all unacknowledged CATs
+        :param request: RPC request
+        :return: A list of unacknowledged CATs
+        """
+        assert self.service.wallet_state_manager is not None
+        cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
+        return {"stray_cats": cats}
+
     async def cat_spend(self, request):
         assert self.service.wallet_state_manager is not None
 
@@ -1397,13 +1408,14 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before collecting rewards")
         fee = uint64(request.get("fee", 0))
+        max_spends_in_tx = request.get("max_spends_in_tx", None)
         wallet_id = uint32(request["wallet_id"])
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != uint8(WalletType.POOLING_WALLET):
             raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
 
         async with self.service.wallet_state_manager.lock:
-            transaction, fee_tx = await wallet.claim_pool_rewards(fee)
+            transaction, fee_tx = await wallet.claim_pool_rewards(fee, max_spends_in_tx)
             state: PoolWalletInfo = await wallet.get_current_state()
         return {"state": state.to_json_dict(), "transaction": transaction, "fee_transaction": fee_tx}
 

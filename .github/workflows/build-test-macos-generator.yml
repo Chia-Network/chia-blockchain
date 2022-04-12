@@ -30,10 +30,8 @@ jobs:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
     env:
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_generator
-
-    env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_generator
 
     steps:
     - name: Checkout Code
@@ -59,7 +57,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -67,13 +65,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v3
-      with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
+# Omitted checking out blocks and plots repo Chia-Network/test-cache
 
     - name: Run install script
       env:
@@ -87,7 +79,7 @@ jobs:
     - name: Test generator code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/generator/test_*.py -s -v --durations 0 -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/generator/test_*.py --durations=10  -n 4 -m "not benchmark"
 
     - name: Process coverage data
       run: |

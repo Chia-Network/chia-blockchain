@@ -79,12 +79,15 @@ class TestCostCalculation:
         assert npc_result.error is None
         assert len(bytes(program.program)) == 433
 
-        coin_name = npc_result.npc_list[0].coin_name
+        coin_name = npc_result.conds.spends[0].coin_id
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
         assert error is None
 
+        assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
+
+        # Create condition + agg_sig_condition + length + cpu_cost
         assert (
             npc_result.cost
             == 404560
@@ -154,7 +157,7 @@ class TestCostCalculation:
         )
         assert npc_result.error is None
 
-        coin_name = npc_result.npc_list[0].coin_name
+        coin_name = npc_result.conds.spends[0].coin_id
         error, puzzle, solution = get_puzzle_and_solution_for_coin(
             generator, coin_name, test_constants.MAX_BLOCK_COST_CLVM
         )
@@ -187,6 +190,7 @@ class TestCostCalculation:
         assert npc_result.error is None
 
     @pytest.mark.asyncio
+    @pytest.mark.benchmark
     async def test_tx_generator_speed(self, softfork_height):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
@@ -204,10 +208,10 @@ class TestCostCalculation:
         end_time = time.time()
         duration = end_time - start_time
         assert npc_result.error is None
-        assert len(npc_result.npc_list) == LARGE_BLOCK_COIN_CONSUMED_COUNT
+        assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
         log.info(f"Time spent: {duration}")
 
-        assert duration < 1
+        assert duration < 0.5
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
@@ -246,6 +250,7 @@ class TestCostCalculation:
         assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
+    @pytest.mark.benchmark
     async def test_standard_tx(self):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
@@ -270,4 +275,4 @@ class TestCostCalculation:
         duration = time_end - time_start
 
         log.info(f"Time spent: {duration}")
-        assert duration < 3
+        assert duration < 0.1

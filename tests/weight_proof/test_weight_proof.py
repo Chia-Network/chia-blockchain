@@ -107,12 +107,9 @@ async def load_blocks_dont_validate(
             cc_sp,
         )
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "BlockCache" has incompatible type "Dict[uint32, bytes32]"; expected
-        #       "Optional[Dict[bytes32, HeaderBlock]]"  [arg-type]
         sub_block = block_to_block_record(
             test_constants,
-            BlockCache(sub_blocks, height_to_hash),  # type: ignore[arg-type]
+            BlockCache(sub_blocks, height_to_hash=height_to_hash),
             required_iters,
             block,
             None,
