@@ -144,7 +144,7 @@ def recurse_jsonify(d: Dict[str, Any]) -> Dict[str, Any]:
     ...
 
 
-def recurse_jsonify(d):  # type: ignore[no-untyped-def]
+def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...], Dict[str, Any]]) -> Union[List[Any], Dict[str, Any]]:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
