@@ -7,7 +7,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 from blspy import G1Element, PrivateKey

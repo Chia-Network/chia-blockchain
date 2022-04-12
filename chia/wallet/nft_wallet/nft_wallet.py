@@ -1,29 +1,23 @@
+import json
 import logging
 import time
-import json
 from dataclasses import dataclass
-from chia.util.streamable import streamable, Streamable
-from typing import Dict, Optional, List, Any, Set, Tuple, Type, TypeVar
-from blspy import AugSchemeMPL, G1Element
 from secrets import token_bytes
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+
+from blspy import AugSchemeMPL, G1Element
+
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.outbound_message import NodeType
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32, uint8
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.nft_wallet import nft_puzzles
-from chia.server.outbound_message import NodeType
-from chia.server.ws_connection import WSChiaConnection
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.util.ints import uint8, uint32, uint64
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -31,14 +25,22 @@ from chia.wallet.cat_wallet.cat_utils import (
     get_innerpuzzle_from_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_info import WalletInfo
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
     coin: Coin
     lineage_proof: LineageProof
@@ -46,8 +48,8 @@ class NFTCoinInfo(Streamable):
     full_puzzle: Program
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     my_did: bytes32
     did_wallet_id: uint64

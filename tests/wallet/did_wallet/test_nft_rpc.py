@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 
+# from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -10,11 +12,8 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert
 from tests.setup_nodes import setup_simulators_and_wallets
-
-# from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")

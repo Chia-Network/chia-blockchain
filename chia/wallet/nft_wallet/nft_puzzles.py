@@ -1,10 +1,10 @@
-from typing import List
+from typing import Iterator, List, Optional, Tuple
+
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from chia.types.blockchain_format.program import Program
-from typing import Tuple, Iterator, Optional
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
