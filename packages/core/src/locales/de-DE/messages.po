@@ -954,7 +954,7 @@ msgstr "Farming"
 #~ msgid "Farming Status"
 #~ msgstr "Farm Status"
 
-#: src/components/Fee/Fee.tsx:53
+#: src/components/Fee/Fee.tsx:52
 msgid "Fee"
 msgstr "Gebühr"
 
@@ -1120,7 +1120,7 @@ msgstr "Import aus Mnemonics (24 Wörter)"
 #~ msgid "Incoming"
 #~ msgstr "Eingehend"
 
-#: src/components/Fee/Fee.tsx:41
+#: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
 msgstr "Ungültiger Wert"
 
@@ -1271,8 +1271,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:125
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:144
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
 msgid "Log Out"
 msgstr ""
 
@@ -1280,8 +1280,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logge ein"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:143
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
 msgid "Logout"
 msgstr ""
 
@@ -1498,8 +1498,8 @@ msgstr "Nicht verbunden"
 #~ msgstr "Beachten Sie, dass dies Ihre Pooling-Auszahlungsadressen nicht ändert. Dies betrifft nur die alten Plots und die 0.25XCH Belohnung für Pooling-Plots."
 
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-msgid "Notifications"
-msgstr ""
+#~ msgid "Notifications"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -2818,7 +2818,7 @@ msgstr ""
 #~ msgid "Value is too high"
 #~ msgstr "Value is too high"
 
-#: src/components/Fee/Fee.tsx:33
+#: src/components/Fee/Fee.tsx:32
 msgid "Value seems high"
 msgstr "Wert scheint hoch"
 
@@ -2875,7 +2875,7 @@ msgstr "Wert scheint hoch"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Warten auf Transaktionsbestätigung"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:102
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""

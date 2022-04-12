@@ -948,7 +948,7 @@ msgstr "Farmer"
 #~ msgid "Farming Status"
 #~ msgstr "Farmer Status"
 
-#: src/components/Fee/Fee.tsx:53
+#: src/components/Fee/Fee.tsx:52
 msgid "Fee"
 msgstr "Gebyr"
 
@@ -1114,7 +1114,7 @@ msgstr "Importer fra mnemonik (24 ord)"
 #~ msgid "Incoming"
 #~ msgstr "Indgående"
 
-#: src/components/Fee/Fee.tsx:41
+#: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
 msgstr "Forkert værdi"
 
@@ -1265,8 +1265,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:125
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:144
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1274,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logger ind"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:143
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
 msgid "Logout"
 msgstr ""
 
@@ -1492,8 +1492,8 @@ msgstr "Ikke forbundet"
 #~ msgstr "Bemærk, at dette ikke ændrer din pulje udbetalingsadresser. Dette påvirker kun gamle plot filer af gammelt format, og 0,25XCH belønning for pulje plots."
 
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-msgid "Notifications"
-msgstr ""
+#~ msgid "Notifications"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -2810,7 +2810,7 @@ msgstr ""
 #~ msgid "Value is too high"
 #~ msgstr "Value is too high"
 
-#: src/components/Fee/Fee.tsx:33
+#: src/components/Fee/Fee.tsx:32
 msgid "Value seems high"
 msgstr "Værdi virker høj"
 
@@ -2867,7 +2867,7 @@ msgstr "Værdi virker høj"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Afventer at transaktionen bekræftes"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:102
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""

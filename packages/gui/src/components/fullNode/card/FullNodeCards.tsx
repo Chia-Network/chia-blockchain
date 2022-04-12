@@ -13,7 +13,7 @@ import FullNodeEstimatedNetworkSpace from './FullNodeEstimatedNetworkSpace';
 export default function FullNodeCards() {
   return (
     <div>
-      <Grid spacing={3} alignItems="stretch" container>
+      <Grid spacing={2} alignItems="stretch" container>
         <Grid xs={12} sm={6} md={4} item>
           <FullNodeCardStatus />
         </Grid>

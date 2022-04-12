@@ -5,6 +5,7 @@ import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
 import WalletSend from '../WalletSend';
 import WalletHeader from '../WalletHeader';
+import WalletConnections from '../WalletConnections';
 
 type StandardWalletProps = {
   walletId: number;

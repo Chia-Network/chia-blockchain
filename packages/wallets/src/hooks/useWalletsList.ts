@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { WalletType, type Wallet } from '@chia/api';
+import { useShowError} from '@chia/core';
 import { orderBy } from 'lodash';
 import { useGetWalletsQuery, useGetStrayCatsQuery, useGetCatListQuery, useAddCATTokenMutation } from '@chia/api-react';
 import useHiddenWallet from './useHiddenWallet';
@@ -33,7 +34,7 @@ function getTypeOrder(item: ListItem) {
   }
 }
 
-export default function useWalletsList(): {
+export default function useWalletsList(search?: string): {
   list?: ListItem[];
   isLoading: boolean;
   hide: (walletId: number) => void;
@@ -41,9 +42,12 @@ export default function useWalletsList(): {
 } {
   const { data: wallets, isLoading: isLoadingGetWallets } = useGetWalletsQuery();
   const { data: catList, isLoading: isLoadingGetCatList } = useGetCatListQuery();
-  const { data: strayCats, isLoading: isLoadingGetStrayCats } = useGetStrayCatsQuery();
+  const { data: strayCats, isLoading: isLoadingGetStrayCats } = useGetStrayCatsQuery(undefined, {
+    pollingInterval: 10000,
+  });
   const { hidden, isHidden, show, hide } = useHiddenWallet();
   const [addCATToken] = useAddCATTokenMutation();
+  const showError = useShowError();
 
   const isLoading = isLoadingGetWallets || isLoadingGetStrayCats || isLoadingGetCatList;
 
@@ -98,7 +102,7 @@ export default function useWalletsList(): {
       (strayCat) => !hasCatAssignedWallet(strayCat.assetId),
     );
 
-    const tokens = [
+    let tokens = [
       ...wallets.map((wallet) => ({
         type: 'WALLET',
         walletType: wallet.type,
@@ -123,37 +127,45 @@ export default function useWalletsList(): {
       })),
     ];
 
+    if (search) {
+      tokens = tokens.filter((token) => token.name.toLowerCase().includes(search.toLowerCase()));
+    }
+
     return orderBy(tokens, [getWalletTypeOrder, getTypeOrder, 'name'], ['asc', 'asc', 'asc']);
-  }, [isLoading, wallets, catList, strayCats, hidden]);
+  }, [isLoading, wallets, catList, strayCats, hidden, search]);
 
 
   async function handleShow(id: number | string) {
-    if (typeof id === 'number') {
-      show(id);
-      return;
-    }
-
-    if (typeof id === 'string') {
-      // assign wallet for CAT
-
-      const cat = catList.find((cat) => cat.assetId === id);
-      if (cat) {
-        await addCATToken({
-          name: cat.name,
-          assetId: cat.assetId,
-          fee: '0',
-        }).unwrap();
+    try {
+      if (typeof id === 'number') {
+        show(id);
+        return;
       }
 
-      // assign stray cat
-      const strayCat = strayCats.find((cat) => cat.assetId === id);
-      if (strayCat) {
-        await addCATToken({
-          name: strayCat.name,
-          assetId: strayCat.assetId,
-          fee: '0',
-        }).unwrap();
+      if (typeof id === 'string') {
+        // assign wallet for CAT
+
+        const cat = catList.find((cat) => cat.assetId === id);
+        if (cat) {
+          await addCATToken({
+            name: cat.name,
+            assetId: cat.assetId,
+            fee: '0',
+          }).unwrap();
+        }
+
+        // assign stray cat
+        const strayCat = strayCats.find((cat) => cat.assetId === id);
+        if (strayCat) {
+          await addCATToken({
+            name: strayCat.name,
+            assetId: strayCat.assetId,
+            fee: '0',
+          }).unwrap();
+        }
       }
+    } catch (error) {
+      showError(error);
     }
   }
 

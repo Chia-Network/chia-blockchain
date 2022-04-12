@@ -1,4 +1,5 @@
 import { WalletType } from '@chia/api';
+import { type ChipProps } from '@mui/material';
 import type { OfferSummaryRecord } from '@chia/api';
 import {
   mojoToChiaLocaleString,
@@ -93,16 +94,7 @@ export function displayStringForOfferState(state: OfferState): string {
   }
 }
 
-type OfferStateColor =
-| 'initial'
-| 'inherit'
-| 'primary'
-| 'secondary'
-| 'textPrimary'
-| 'textSecondary'
-| 'error';
-
-export function colorForOfferState(state: OfferState): OfferStateColor {
+export function colorForOfferState(state: OfferState): ChipProps['color'] {
   switch (state) {
     case OfferState.PENDING_ACCEPT:
       return 'primary';
@@ -111,13 +103,13 @@ export function colorForOfferState(state: OfferState): OfferStateColor {
     case OfferState.PENDING_CANCEL:
       return 'primary';
     case OfferState.CANCELLED:
-      return 'inherit';
+      return 'default';
     case OfferState.CONFIRMED:
       return 'secondary';
     case OfferState.FAILED:
       return 'error';
     default:
-      return 'inherit';
+      return 'default';
   }
 }
 

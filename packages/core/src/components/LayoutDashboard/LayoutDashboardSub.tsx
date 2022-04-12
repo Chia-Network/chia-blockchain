@@ -21,9 +21,9 @@ const StyledContent = styled(Box)`
 
   padding-top: ${({ theme }) => `${theme.spacing(3)}`};
   padding-bottom: ${({ theme }) => `${theme.spacing(3)}`};
-  padding-right: ${({ theme }) => `${theme.spacing(4)}`};
+  padding-right: ${({ theme }) => `${theme.spacing(3)}`};
 
-  padding-left: ${({ theme, sidebar }) => !sidebar ? `${theme.spacing(4)}` : '10px'};
+  padding-left: ${({ theme, sidebar }) => !sidebar ? `${theme.spacing(3)}` : '10px'};
   margin-left: ${({ sidebar }) => !sidebar ? `0` : '-10px'};
 `;
 
@@ -47,6 +47,6 @@ export default function DashboardLayout(props: DashboardLayoutProps) {
       <StyledContent sidebar={!!sidebar}>
         {outlet ? <Outlet /> : children}
       </StyledContent>
-    </StyledRoot> 
+    </StyledRoot>
   );
 }

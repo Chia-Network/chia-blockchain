@@ -2,7 +2,7 @@ import React, { ReactNode, Suspense, useMemo } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { t, Trans } from '@lingui/macro';
-import { AppBar, Toolbar, Drawer, Container, IconButton, MenuItem, Typography } from '@mui/material';
+import { Box, AppBar, Toolbar, Drawer, Container, IconButton, MenuItem, Typography } from '@mui/material';
 import Flex from '../Flex';
 import Logo from '../Logo';
 import ToolbarSpacing from '../ToolbarSpacing';
@@ -43,8 +43,8 @@ const StyledBody = styled(Flex)`
 
 
 const StyledToolbar = styled(Toolbar)`
-  padding-left: ${({ theme }) => theme.spacing(4)};
-  padding-right: ${({ theme }) => theme.spacing(4)};
+  padding-left: ${({ theme }) => theme.spacing(3)};
+  padding-right: ${({ theme }) => theme.spacing(3)};
 `;
 
 const StyledInlineTypography = styled(Typography)`
@@ -56,10 +56,11 @@ export type LayoutDashboardProps = {
   sidebar?: ReactNode;
   outlet?: boolean;
   settings?: ReactNode;
+  actions?: ReactNode;
 };
 
 export default function LayoutDashboard(props: LayoutDashboardProps) {
-  const { children, sidebar, settings, outlet = false } = props;
+  const { children, sidebar, settings, outlet = false, actions } = props;
 
   const navigate = useNavigate();
   const logout = useLogout();
@@ -87,36 +88,40 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
             <StyledAppBar position="fixed" color="transparent" elevation={0} drawer>
               <StyledToolbar>
                   <Flex alignItems="center" width="100%">
-                    <Typography variant="h4">
-                      <Trans>
-                        Wallet
-                      </Trans>
+                    <Box flexGrow={1}>
+                      <Typography variant="h4">
+                        <Trans>
+                          Wallet
+                        </Trans>
+                        &nbsp;
+                        {partial && (
+                          <StyledInlineTypography color="textSecondary" variant="h4">
+                            {partial}
+                          </StyledInlineTypography>
+                        )}
+                      </Typography>
+                    </Box>
+                    <Flex gap={4}>
+                      {actions}
+                      {/*
+                      <DropdownIconButton
+                        icon={<Notifications />}
+                        title={t`Notifications`}
+                      >
+                        {({ onClose }) => (
+                          <MenuItem onClick={onClose}>
+                            CAT Wallet TEST is now available
+                          </MenuItem>
+                        )}
+                      </DropdownIconButton>
                       &nbsp;
-                      {partial && (
-                        <StyledInlineTypography color="textSecondary" variant="h4">
-                          {partial}
-                        </StyledInlineTypography>
-                      )}
-                    </Typography>
-                    <Flex flexGrow={1} />
-                    {/*
-                    <DropdownIconButton
-                      icon={<Notifications />}
-                      title={t`Notifications`}
-                    >
-                      {({ onClose }) => (
-                        <MenuItem onClick={onClose}>
-                          CAT Wallet TEST is now available
-                        </MenuItem>
-                      )}
-                    </DropdownIconButton>
-                    &nbsp;
-                     */}
-                    <Tooltip title={<Trans>Logout</Trans>}>
-                      <IconButton onClick={handleLogout} title={t`Log Out`}>
-                        <ExitToAppIcon />
-                      </IconButton>
-                    </Tooltip>
+                      */}
+                      <Tooltip title={<Trans>Logout</Trans>}>
+                        <IconButton onClick={handleLogout} title={t`Log Out`}>
+                          <ExitToAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Flex>
                   </Flex>
               </StyledToolbar>
             </StyledAppBar>

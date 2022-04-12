@@ -513,12 +513,14 @@ export function OfferManager() {
                   Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party.
                 </Trans>
               </Typography>
-              <Button onClick={handleCreateOffer} variant="contained" color="primary">
-                <Trans>Create an Offer</Trans>
-              </Button>
-              <Button onClick={handleImportOffer} variant="outlined">
-                <Trans>View an Offer</Trans>
-              </Button>
+              <Flex gap={1}>
+                <Button onClick={handleCreateOffer} variant="contained" color="primary" fullWidth>
+                  <Trans>Create an Offer</Trans>
+                </Button>
+                <Button onClick={handleImportOffer} variant="outlined" fullWidth>
+                  <Trans>View an Offer</Trans>
+                </Button>
+              </Flex>
             </CardHero>
           </Grid>
         </Grid>

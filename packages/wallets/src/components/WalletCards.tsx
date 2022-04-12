@@ -27,7 +27,7 @@ export default function WalletCards(props: WalletCardsProps) {
 
   return (
     <div>
-      <Grid spacing={3} alignItems="stretch" container>
+      <Grid spacing={2} alignItems="stretch" container>
         <Grid xs={12} lg={4} item>
           <WalletCardTotalBalance
             walletId={walletId}
@@ -35,7 +35,7 @@ export default function WalletCards(props: WalletCardsProps) {
           />
         </Grid>
         <Grid xs={12} lg={8} item>
-          <Grid spacing={3} alignItems="stretch" container>
+          <Grid spacing={2} alignItems="stretch" container>
             <Grid xs={12} md={6} item>
               <WalletCardSpendableBalance
                 walletId={walletId}

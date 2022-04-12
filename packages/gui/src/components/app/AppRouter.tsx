@@ -1,7 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SelectKey, LayoutHero, LayoutMain, LayoutDashboard, Mode, useMode } from '@chia/core';
-import { WalletAdd, WalletImport, Wallets, Offers } from '@chia/wallets';
+import { SelectKey, LayoutHero, LayoutDashboard, Mode, useMode } from '@chia/core';
+import { WalletAdd, WalletImport, Wallets, Offers, WalletStatusHeader } from '@chia/wallets';
 import AppProviders from './AppProviders';
 import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
@@ -28,7 +28,16 @@ export default function AppRouter() {
             <Route path="wallet/import" element={<WalletImport />} />
           </Route>
           {mode === Mode.WALLET ? (
-            <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar simple />} outlet />}>
+            <Route
+              element={(
+                <LayoutDashboard
+                  settings={<SettingsPanel />}
+                  sidebar={<DashboardSideBar simple />}
+                  actions={<WalletStatusHeader />}
+                  outlet
+                />
+              )}
+            >
               <Route path="dashboard" element={<Navigate to="wallets" />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />
               <Route path="dashboard/offers/*" element={<Offers />} />
@@ -37,7 +46,16 @@ export default function AppRouter() {
               <Route path="dashboard/settings/*" element={<Settings />} />
             </Route>
           ) : (
-            <Route element={<LayoutDashboard settings={<SettingsPanel />} sidebar={<DashboardSideBar />} outlet />}>
+            <Route
+              element={(
+                <LayoutDashboard
+                  settings={<SettingsPanel />}
+                  sidebar={<DashboardSideBar />}
+                  actions={<WalletStatusHeader />}
+                  outlet
+                />
+              )}
+            >
               <Route path="dashboard" element={<FullNode />} />
               <Route path="dashboard/block/:headerHash" element={<Block />} />
               <Route path="dashboard/wallets/*" element={<Wallets />} />

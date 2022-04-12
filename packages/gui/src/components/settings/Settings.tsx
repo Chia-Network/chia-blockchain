@@ -255,7 +255,9 @@ export default function Settings() {
             indicatorColor="primary"
           >
             <Tab value="GENERAL" label={<Trans>General</Trans>} />
+            {/*
             <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
+            */}
           </Tabs>
 
           {activeTab === 'GENERAL' && (

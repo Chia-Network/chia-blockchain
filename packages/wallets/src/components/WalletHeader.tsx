@@ -71,7 +71,7 @@ export default function WalletHeader(props: StandardWalletProps) {
           </Flex>
           */}
 
-          <DropdownActions label={<Trans>Actions</Trans>}>
+          <DropdownActions label={<Trans>Actions</Trans>} variant="outlined">
             {({ onClose }) => (
               <>
                 <MenuItem

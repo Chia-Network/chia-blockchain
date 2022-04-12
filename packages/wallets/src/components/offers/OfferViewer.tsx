@@ -288,7 +288,7 @@ function OfferDetails(props: OfferDetailsProps) {
       <ConfirmDialog
         title={<Trans>Accept Offer</Trans>}
         confirmTitle={<Trans>Accept Offer</Trans>}
-        confirmColor="secondary"
+        confirmColor="primary"
         cancelTitle={<Trans>Cancel</Trans>}
       >
         <Flex flexDirection="column" gap={3}>
