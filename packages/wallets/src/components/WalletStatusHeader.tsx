@@ -8,9 +8,7 @@ import { useTheme } from '@mui/styles';
 
 export default function WalletStatusHeader() {
   const theme = useTheme();
-  const { data: connections } = useGetWalletConnectionsQuery({
-    walletId: 1,
-  });
+  const { data: connections } = useGetWalletConnectionsQuery();
 
   const color = connections?.length >= 1
     ? StateColor.SUCCESS
