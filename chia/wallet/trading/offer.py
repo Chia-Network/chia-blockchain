@@ -94,6 +94,8 @@ class Offer:
         offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
         if offered_coins == {}:
             raise ValueError("Bundle is not offering anything")
+        if self.get_requested_payments() == {}:
+            raise ValueError("Bundle is not requesting anything")
 
         # Verify that there are no duplicate payments
         for payments in self.requested_payments.values():
@@ -190,12 +192,6 @@ class Offer:
 
                 for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
                     pending_dict[name] += addition.amount
-
-        # Then we add a potential fee as pending XCH
-        fee: int = sum(c.amount for c in all_removals) - sum(c.amount for c in all_additions)
-        if fee > 0:
-            pending_dict.setdefault("xch", 0)
-            pending_dict["xch"] += fee
 
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())

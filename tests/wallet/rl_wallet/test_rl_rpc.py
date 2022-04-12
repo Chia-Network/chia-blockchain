@@ -12,15 +12,8 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 async def is_transaction_in_mempool(user_wallet_id, api, tx_id: bytes32) -> bool:
@@ -52,14 +45,9 @@ async def check_balance(api, wallet_id):
 
 
 class TestRLWallet:
-    @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
     @pytest.mark.asyncio
     @pytest.mark.skip
-    async def test_create_rl_coin(self, three_wallet_nodes):
+    async def test_create_rl_coin(self, three_wallet_nodes, self_hostname):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]

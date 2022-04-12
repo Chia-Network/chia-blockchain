@@ -459,7 +459,7 @@ class WSChiaConnection:
                     await asyncio.sleep(3)
                     return None
                 else:
-                    self.log.warning(
+                    self.log.debug(
                         f"Peer surpassed rate limit {self.peer_host}, message: {message_type}, "
                         f"port {self.peer_port} but not disconnecting"
                     )

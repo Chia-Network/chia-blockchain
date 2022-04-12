@@ -1,15 +1,16 @@
 from dataclasses import dataclass
 from typing import Any, List
 
+from clvm.casts import int_to_bytes
+
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.clvm import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Coin(Streamable):
     """
     This structure is used in the body for the reward and fees genesis coins.

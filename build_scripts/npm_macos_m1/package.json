@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "appdmg": "^0.6.4",
     "electron-installer-dmg": "^3.0.0",
     "electron-osx-sign": "^0.5.0",
     "electron-packager": "^15.4.0",

@@ -29,10 +29,13 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_core-daemon
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -42,7 +45,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -55,34 +58,28 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
+    - name: Cache test blocks and plots
+      uses: actions/cache@v2
+      id: test-blocks-plots
       with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
+        path: |
+          ${{ github.workspace }}/.chia/blocks
+          ${{ github.workspace }}/.chia/test-plots
+        key: 0.29.0
 
-    - name: Link home directory
+    - name: Checkout test blocks and plots
+      if: steps.test-blocks-plots.outputs.cache-hit != 'true'
       run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
-
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get install software-properties-common
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+        wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
+        mkdir ${{ github.workspace }}/.chia
+        mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
 
     - name: Run install script
       env:
@@ -93,14 +90,31 @@ jobs:
     - name: Install timelord
       run: |
         . ./activate
-        sh install-timelord.sh
+        sh install-timelord.sh -n
         ./vdf_bench square_asm 400000
 
     - name: Test core-daemon code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/core/daemon/test_*.py -s -v --durations 0
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py --durations=10  -n 0 -m "not benchmark" -p no:monitor
 
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
+
+# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme

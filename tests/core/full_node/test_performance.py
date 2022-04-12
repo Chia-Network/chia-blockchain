@@ -1,5 +1,5 @@
 # flake8: noqa: F811, F401
-import asyncio
+import cProfile
 import dataclasses
 import logging
 import random
@@ -7,23 +7,20 @@ import time
 from typing import Dict
 
 import pytest
-import cProfile
+from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.clvm import int_to_bytes
 from chia.util.ints import uint64
-from tests.wallet_tools import WalletTool
-
-from tests.connection_utils import add_dummy_connection, connect_and_get_peer
-from tests.core.full_node.test_coin_store import get_future_reward_coins
+from tests.connection_utils import add_dummy_connection
+from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import bt, setup_simulators_and_wallets, test_constants
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -38,30 +35,11 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest.fixture(scope="module")
-async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
-    nodes, wallets = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    server_1 = full_node_1.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, server_1, wallet_a, wallet_receiver
-
-    async for _ in async_gen:
-        yield _
-
-
 class TestPerformance:
     @pytest.mark.asyncio
-    async def test_full_block_performance(self, wallet_nodes):
-        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes
+    @pytest.mark.benchmark
+    async def test_full_block_performance(self, bt, wallet_nodes_perf, self_hostname):
+        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 
@@ -81,7 +59,7 @@ class TestPerformance:
             if full_node_1.full_node.blockchain.get_peak() is not None
             else -1
         )
-        incoming_queue, node_id = await add_dummy_connection(server_1, 12312)
+        incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
@@ -151,8 +129,10 @@ class TestPerformance:
 
             if req is None:
                 break
+        end = time.time()
         log.warning(f"Num Tx: {num_tx}")
-        log.warning(f"Time for mempool: {time.time() - start}")
+        log.warning(f"Time for mempool: {end - start:f}")
+        assert end - start < 0.001
         pr.create_stats()
         pr.dump_stats("./mempool-benchmark.pstats")
 
@@ -176,8 +156,12 @@ class TestPerformance:
             guarantee_transaction_block=True,
         )
         block = blocks[-1]
+        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+            sub_slots = block.finished_sub_slots[:-1]
+        else:
+            sub_slots = block.finished_sub_slots
         unfinished = UnfinishedBlock(
-            block.finished_sub_slots,
+            sub_slots,
             block.reward_chain_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
@@ -193,8 +177,10 @@ class TestPerformance:
 
         start = time.time()
         res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
+        end = time.time()
         log.warning(f"Res: {res}")
-        log.warning(f"Time for unfinished: {time.time() - start}")
+        log.warning(f"Time for unfinished: {end - start:f}")
+        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./unfinished-benchmark.pstats")
@@ -206,8 +192,10 @@ class TestPerformance:
         # No transactions generator, the full node already cached it from the unfinished block
         block_small = dataclasses.replace(block, transactions_generator=None)
         res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
+        end = time.time()
         log.warning(f"Res: {res}")
-        log.warning(f"Time for full block: {time.time() - start}")
+        log.warning(f"Time for full block: {end - start:f}")
+        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./full-block-benchmark.pstats")

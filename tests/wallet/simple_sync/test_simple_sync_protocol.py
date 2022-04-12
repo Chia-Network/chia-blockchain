@@ -7,10 +7,10 @@ from clvm.casts import int_to_bytes
 from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from chia.protocols import wallet_protocol, full_node_protocol
+from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates, CoinState
+from chia.protocols.wallet_protocol import RespondToCoinUpdates, CoinStateUpdate, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -23,7 +23,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets, bt
+from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.time_out_assert import time_out_assert
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 from tests.wallet_tools import WalletTool
@@ -39,33 +39,18 @@ def wallet_height_at_least(wallet_node, h):
 log = getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+async def get_all_messages_in_queue(queue):
+    all_messages = []
+    await asyncio.sleep(2)
+    while not queue.empty():
+        message, peer = await queue.get()
+        all_messages.append(message)
+    return all_messages
 
 
 class TestSimpleSyncProtocol:
-    @pytest.fixture(scope="function")
-    async def wallet_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def wallet_two_node_simulator(self):
-        async for _ in setup_simulators_and_wallets(2, 1, {}):
-            yield _
-
-    async def get_all_messages_in_queue(self, queue):
-        all_messages = []
-        await asyncio.sleep(2)
-        while not queue.empty():
-            message, peer = await queue.get()
-            all_messages.append(message)
-        return all_messages
-
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph(self, wallet_node_simulator):
+    async def test_subscribe_for_ph(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -74,7 +59,7 @@ class TestSimpleSyncProtocol:
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         zero_ph = 32 * b"\0"
         junk_ph = 32 * b"\a"
@@ -108,7 +93,7 @@ class TestSimpleSyncProtocol:
             else:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [zero_ph])
         all_zero_coin = set(zero_coin)
@@ -151,7 +136,7 @@ class TestSimpleSyncProtocol:
         all_coins = set(zero_coins)
         all_coins.update(one_coins)
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         notified_all_coins = set()
 
@@ -195,6 +180,7 @@ class TestSimpleSyncProtocol:
         data_response_1: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response_1.data)
         assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
@@ -212,6 +198,7 @@ class TestSimpleSyncProtocol:
         # Let's make sure the wallet can handle a non ephemeral launcher
         from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
 
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
         await wallet.push_transaction(tx_record)
 
@@ -221,6 +208,8 @@ class TestSimpleSyncProtocol:
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(SINGLETON_LAUNCHER_HASH))
+
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
 
         # Send a transaction to make sure the wallet is still running
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
@@ -233,7 +222,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         notified_state = None
 
@@ -249,7 +238,7 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is not None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id(self, wallet_node_simulator):
+    async def test_subscribe_for_coin_id(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -260,7 +249,7 @@ class TestSimpleSyncProtocol:
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
 
@@ -299,7 +288,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         notified_coins = set()
         for message in all_messages:
@@ -312,6 +301,7 @@ class TestSimpleSyncProtocol:
         assert notified_coins == coins
 
         # Test getting notification for coin that is about to be created
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
 
         tx_record.spend_bundle.additions()
@@ -339,7 +329,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         notified_state = None
 
@@ -355,7 +345,7 @@ class TestSimpleSyncProtocol:
         assert notified_state.spent_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_ph_reorg(self, wallet_node_simulator):
+    async def test_subscribe_for_ph_reorg(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         long_blocks = 20
         full_nodes, wallets = wallet_node_simulator
@@ -367,7 +357,7 @@ class TestSimpleSyncProtocol:
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
         zero_ph = 32 * b"\0"
@@ -399,7 +389,7 @@ class TestSimpleSyncProtocol:
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
         assert coin_records == []
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         coin_update_messages = []
         for message in all_messages:
@@ -430,7 +420,7 @@ class TestSimpleSyncProtocol:
         assert second_state_coin_2.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator):
+    async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         long_blocks = 20
         full_nodes, wallets = wallet_node_simulator
@@ -442,7 +432,7 @@ class TestSimpleSyncProtocol:
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
         zero_ph = 32 * b"\0"
@@ -477,7 +467,7 @@ class TestSimpleSyncProtocol:
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
         assert coin_records == []
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         coin_update_messages = []
         for message in all_messages:
@@ -497,7 +487,7 @@ class TestSimpleSyncProtocol:
         assert second_coin.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint(self, wallet_node_simulator):
+    async def test_subscribe_for_hint(self, bt, wallet_node_simulator, self_hostname):
         num_blocks = 4
         full_nodes, wallets = wallet_node_simulator
         full_node_api = full_nodes[0]
@@ -506,7 +496,7 @@ class TestSimpleSyncProtocol:
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         ph = wt.get_new_puzzlehash()
@@ -533,6 +523,7 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -546,7 +537,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
 
         notified_state = None
 
@@ -571,7 +562,7 @@ class TestSimpleSyncProtocol:
         assert data_response.coin_states[0] == coin_records[0].coin_state
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator):
+    async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, bt, self_hostname):
         num_blocks = 4
         full_nodes, wallets = wallet_two_node_simulator
         full_node_api = full_nodes[0]
@@ -584,8 +575,8 @@ class TestSimpleSyncProtocol:
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        incoming_queue, peer_id = await add_dummy_connection(fn_server, 12312, NodeType.WALLET)
-        incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, 12313, NodeType.WALLET)
+        incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
+        incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, self_hostname, 12313, NodeType.WALLET)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         ph = wt.get_new_puzzlehash()
@@ -615,6 +606,7 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -636,8 +628,8 @@ class TestSimpleSyncProtocol:
         node0_height = full_node_api.full_node.blockchain.get_peak_height()
         await time_out_assert(15, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
 
-        all_messages = await self.get_all_messages_in_queue(incoming_queue)
-        all_messages_1 = await self.get_all_messages_in_queue(incoming_queue_1)
+        all_messages = await get_all_messages_in_queue(incoming_queue)
+        all_messages_1 = await get_all_messages_in_queue(incoming_queue_1)
 
         def check_messages_for_hint(messages):
             notified_state = None

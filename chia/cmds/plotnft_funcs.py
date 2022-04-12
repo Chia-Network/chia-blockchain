@@ -104,7 +104,7 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
                     print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
                     return None
         except Exception as e:
-            print(f"Error creating plot NFT: {e}")
+            print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
         return
     print("Aborting.")
 
@@ -279,7 +279,8 @@ async def submit_tx_with_confirmation(
 
     if user_input.lower() == "y" or user_input.lower() == "yes":
         try:
-            tx_record: TransactionRecord = await func()
+            result: Dict = await func()
+            tx_record: TransactionRecord = result["transaction"]
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)

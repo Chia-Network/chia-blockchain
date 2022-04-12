@@ -40,6 +40,7 @@ class WalletPoolStore:
         wallet_id: int,
         spend: CoinSpend,
         height: uint32,
+        in_transaction=False,
     ) -> None:
         """
         Appends (or replaces) entries in the DB. The new list must be at least as long as the existing list, and the
@@ -47,31 +48,38 @@ class WalletPoolStore:
         until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
-        if wallet_id not in self._state_transitions_cache:
-            self._state_transitions_cache[wallet_id] = []
-        all_state_transitions: List[Tuple[uint32, CoinSpend]] = self.get_spends_for_wallet(wallet_id)
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            if wallet_id not in self._state_transitions_cache:
+                self._state_transitions_cache[wallet_id] = []
+            all_state_transitions: List[Tuple[uint32, CoinSpend]] = self.get_spends_for_wallet(wallet_id)
 
-        if (height, spend) in all_state_transitions:
-            return
+            if (height, spend) in all_state_transitions:
+                return
 
-        if len(all_state_transitions) > 0:
-            if height < all_state_transitions[-1][0]:
-                raise ValueError("Height cannot go down")
-            if spend.coin.parent_coin_info != all_state_transitions[-1][1].coin.name():
-                raise ValueError("New spend does not extend")
+            if len(all_state_transitions) > 0:
+                if height < all_state_transitions[-1][0]:
+                    raise ValueError("Height cannot go down")
+                if spend.coin.parent_coin_info != all_state_transitions[-1][1].coin.name():
+                    raise ValueError("New spend does not extend")
 
-        all_state_transitions.append((height, spend))
+            all_state_transitions.append((height, spend))
 
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
-            (
-                len(all_state_transitions) - 1,
-                wallet_id,
-                height,
-                bytes(spend),
-            ),
-        )
-        await cursor.close()
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO pool_state_transitions VALUES (?, ?, ?, ?)",
+                (
+                    len(all_state_transitions) - 1,
+                    wallet_id,
+                    height,
+                    bytes(spend),
+                ),
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()
 
     def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
         """
@@ -95,21 +103,29 @@ class WalletPoolStore:
                 self._state_transitions_cache[wallet_id] = []
             self._state_transitions_cache[wallet_id].append((height, coin_spend))
 
-    async def rollback(self, height: int, wallet_id_arg: int) -> None:
+    async def rollback(self, height: int, wallet_id_arg: int, in_transaction: bool) -> None:
         """
         Rollback removes all entries which have entry_height > height passed in. Note that this is not committed to the
         DB until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
-        for wallet_id, items in self._state_transitions_cache.items():
-            remove_index_start: Optional[int] = None
-            for i, (item_block_height, _) in enumerate(items):
-                if item_block_height > height and wallet_id == wallet_id_arg:
-                    remove_index_start = i
-                    break
-            if remove_index_start is not None:
-                del items[remove_index_start:]
-        cursor = await self.db_connection.execute(
-            "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
-        )
-        await cursor.close()
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            for wallet_id, items in self._state_transitions_cache.items():
+                remove_index_start: Optional[int] = None
+                for i, (item_block_height, _) in enumerate(items):
+                    if item_block_height > height and wallet_id == wallet_id_arg:
+                        remove_index_start = i
+                        break
+                if remove_index_start is not None:
+                    del items[remove_index_start:]
+            cursor = await self.db_connection.execute(
+                "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
+            )
+            await cursor.close()
+        finally:
+            if not in_transaction:
+                await self.db_connection.commit()
+                self.db_wrapper.lock.release()

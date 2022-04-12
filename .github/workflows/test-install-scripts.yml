@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -40,7 +40,6 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: sh install.sh
 
     - name: Run install-gui script
@@ -64,7 +63,13 @@ jobs:
         - name: arch:latest
           type: arch
           url: "docker://archlinux:latest"
-        # TODO: what CentOS version provides Python3.7-3.9?
+        - name: centos:7
+          type: centos
+          url: "docker://centos:7"
+#       commented out until we decide what to do with this, it fails consistently
+#         - name: centos:8
+#           type: centos
+#           url: "docker://centos:8"
         - name: debian:buster
           type: debian
           # https://packages.debian.org/buster/python/python3 (3.7)
@@ -89,6 +94,9 @@ jobs:
 #          type: fedora
 #          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
 #          url: "docker://fedora:35"
+        - name: rockylinux:8
+          type: rocky
+          url: "docker://rockylinux:8"
         - name: ubuntu:bionic (18.04)
           type: ubuntu
           # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
@@ -116,6 +124,29 @@ jobs:
       if: ${{ matrix.distribution.type == 'arch' }}
       run: |
         pacman --noconfirm --refresh base --sync git sudo
+        # The behavior we follow in install.sh is unique with Arch in that
+        # we leave it to the user to install the appropriate version of python,
+        # so we need to install python here in order for the test to succeed.
+        pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
+
+    - name: Prepare CentOS
+      if: ${{ matrix.distribution.type == 'centos' }}
+      # Installing Git from yum brings git@1.x which doesn't work on actions/checkout.
+      # So install git@2.x from source
+      run: |
+        if [ "$(rpm --eval %{centos_ver})" = "8" ]; then
+          sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Linux-*;
+        fi
+        yum update -y
+        yum install -y sudo gcc autoconf make wget curl-devel expat-devel gettext-devel openssl-devel perl-devel zlib-devel
+        wget https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.29.0.tar.gz
+        tar zxf git-2.29.0.tar.gz
+        pushd git-2.29.0
+        make configure
+        ./configure --prefix=/usr/local
+        make all
+        make install
+        popd
 
     - name: Prepare Debian
       if: ${{ matrix.distribution.type == 'debian' }}
@@ -129,6 +160,11 @@ jobs:
       if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
         yum install --assumeyes git
+
+    - name: Prepare Rocky
+      if: ${{ matrix.distribution.type == 'rocky' }}
+      run: |
+        yum install --assumeyes git sudo
 
     - name: Prepare Ubuntu
       if: ${{ matrix.distribution.type == 'ubuntu' }}
@@ -144,14 +180,13 @@ jobs:
 
     # after installing git so we use that copy
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: sh install.sh -a
 
     - name: Run chia --help

@@ -22,7 +22,7 @@ from tests.block_tools import test_constants
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
-from tests.setup_nodes import bt
+
 
 try:
     from reprlib import repr
@@ -40,12 +40,6 @@ from chia.full_node.weight_proof import (
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 def count_sub_epochs(blockchain, last_hash) -> int:
@@ -78,12 +72,12 @@ def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
 async def load_blocks_dont_validate(
     blocks,
 ) -> Tuple[
-    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[bytes32, SubEpochSummary]
+    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[uint32, SubEpochSummary]
 ]:
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, BlockRecord] = {}
-    sub_epoch_summaries: Dict[bytes32, SubEpochSummary] = {}
+    sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
     block: FullBlock
@@ -113,12 +107,9 @@ async def load_blocks_dont_validate(
             cc_sp,
         )
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 2 to "BlockCache" has incompatible type "Dict[uint32, bytes32]"; expected
-        #       "Optional[Dict[bytes32, HeaderBlock]]"  [arg-type]
         sub_block = block_to_block_record(
             test_constants,
-            BlockCache(sub_blocks, height_to_hash),  # type: ignore[arg-type]
+            BlockCache(sub_blocks, height_to_hash=height_to_hash),
             required_iters,
             block,
             None,
@@ -201,7 +192,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_edge_cases(self, default_400_blocks):
+    async def test_weight_proof_edge_cases(self, bt, default_400_blocks):
         blocks: List[FullBlock] = default_400_blocks
 
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -377,7 +368,7 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    async def test_weight_proof1000_partial_blocks_compact(self, default_10000_blocks_compact):
+    async def test_weight_proof1000_partial_blocks_compact(self, bt, default_10000_blocks_compact):
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
             block_list_input=default_10000_blocks_compact,

@@ -1,7 +1,9 @@
 import sys
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import click
+
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -48,6 +50,15 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     show_default=True,
     required=True,
 )
+@click.option(
+    "-l",
+    "--limit",
+    help="Max number of transactions to return",
+    type=int,
+    default=(2 ** 32 - 1),
+    show_default=True,
+    required=False,
+)
 @click.option("--verbose", "-v", count=True, type=int)
 @click.option(
     "--paginate/--no-paginate",
@@ -59,10 +70,11 @@ def get_transactions_cmd(
     fingerprint: int,
     id: int,
     offset: int,
+    limit: int,
     verbose: bool,
     paginate: Optional[bool],
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate}
+    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "limit": limit}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
@@ -128,11 +140,21 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+@click.option(
+    "-w",
+    "--wallet_type",
+    help="Choose a specific wallet type to return",
+    type=click.Choice([x.name.lower() for x in WalletType]),
+    default=None,
+)
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
+    args: Dict[str, Any] = {}
+    if wallet_type is not None:
+        args["type"] = WalletType[wallet_type.upper()]
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
 @wallet_cmd.command("get_address", short_help="Get a wallet receive address")
@@ -145,8 +167,18 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
-    extra_params = {"id": id}
+@click.option(
+    "-n/-l",
+    "--new-address/--latest-address",
+    help=(
+        "Create a new wallet receive address, or show the most recently created wallet receive address"
+        "  [default: show most recent address]"
+    ),
+    is_flag=True,
+    default=False,
+)
+def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_address: bool) -> None:
+    extra_params = {"id": id, "new_address": new_address}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_address
 
@@ -230,7 +262,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     required=True,
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the genrated offer file to", required=True)
+@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option("-m", "--fee", help="A fee to add to the offer when it gets taken", default="0")
 def make_offer_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, offer: Tuple[str], request: Tuple[str], filepath: str, fee: str
