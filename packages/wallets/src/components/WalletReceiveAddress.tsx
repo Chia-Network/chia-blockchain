@@ -38,7 +38,7 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
             <Trans>
               HD or Hierarchical Deterministic keys are a type of public key/private
               key scheme where one private key can have a nearly infinite number of
-              different public keys (and therefor wallet receive addresses) that
+              different public keys (and therefore wallet receive addresses) that
               will all ultimately come back to and be spendable by a single private
               key.
             </Trans>
