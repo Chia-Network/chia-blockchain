@@ -41,7 +41,7 @@ export default function PlotNFTAbsorbRewards(props: Props) {
   const { data, isLoading } = useGetPlotNFTsQuery();
 
   const [working, setWorking] = useState<boolean>(false);
-  const { wallet, loading: loadingWallet } = useStandardWallet();
+  const { loading: loadingWallet } = useStandardWallet();
   const [pwAbsorbRewards] = usePwAbsorbRewardsMutation();
   const { data: address, isLoading: isLoadingAddress } = useGetCurrentAddressQuery({
     walletId: 1,
