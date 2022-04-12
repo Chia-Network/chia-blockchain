@@ -49,11 +49,11 @@ export default function useWalletsList(search?: string): {
     pollingInterval: 10000,
   });
 
-  const { hidden, isHidden, show, hide } = useHiddenWallet();
+  const { hidden, isHidden, show, hide, isLoading: isLoadingHiddenWallet } = useHiddenWallet();
   const [addCATToken] = useAddCATTokenMutation();
   const showError = useShowError();
 
-  const isLoading = isLoadingGetWallets || isLoadingGetStrayCats || isLoadingGetCatList;
+  const isLoading = isLoadingGetWallets || isLoadingGetStrayCats || isLoadingGetCatList || isLoadingHiddenWallet;
 
   const walletAssetIds = useMemo(() => {
     const ids = new Map<string, number>();

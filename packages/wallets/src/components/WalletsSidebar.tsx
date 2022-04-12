@@ -47,14 +47,14 @@ export default function WalletsSidebar() {
   const navigate = useNavigate();
   const { walletId } = useParams();
   const { data: wallets, isLoading } = useGetWalletsQuery();
-  const { isHidden, hidden } = useHiddenWallet();
+  const { isHidden, hidden, isLoading: isLoadingHiddenWallet } = useHiddenWallet();
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
   }
 
   const items = useMemo(() => {
-    if (isLoading) {
+    if (isLoading || isLoadingHiddenWallet) {
       return [];
     }
 
@@ -78,7 +78,7 @@ export default function WalletsSidebar() {
           </CardListItem>
         );
       });
-  }, [wallets, walletId, isLoading, hidden]);
+  }, [wallets, walletId, isLoading, hidden, isLoadingHiddenWallet]);
 
   return (
     <StyledRoot>
