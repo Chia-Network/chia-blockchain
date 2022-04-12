@@ -25,7 +25,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -66,6 +66,31 @@ class WalletRpcTestEnvironment:
     wallet_1: WalletBundle
     wallet_2: WalletBundle
     full_node: FullNodeBundle
+
+
+async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 5):
+    wallet_id = 1
+    initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(str(wallet_id))
+    ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(str(wallet_id), True))
+    generated_funds = 0
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        peak_height = full_node_api.full_node.blockchain.get_peak_height()
+        assert peak_height is not None
+        generated_funds += calculate_pool_reward(peak_height) + calculate_base_farmer_reward(peak_height)
+
+    # Farm a dummy block to confirm the created funds
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
+
+    await time_out_assert(5, wallet_is_synced, True, wallet_bundle.node, full_node_api)
+
+    expected_confirmed = initial_balances["confirmed_wallet_balance"] + generated_funds
+    expected_unconfirmed = initial_balances["unconfirmed_wallet_balance"] + generated_funds
+    await time_out_assert(10, get_confirmed_balance, expected_confirmed, wallet_bundle.rpc_client, wallet_id)
+    await time_out_assert(10, get_unconfirmed_balance, expected_unconfirmed, wallet_bundle.rpc_client, wallet_id)
+    await time_out_assert(10, wallet_bundle.rpc_client.get_synced)
+
+    return generated_funds
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -175,7 +200,6 @@ async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
 @pytest.mark.asyncio
 async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
-    num_blocks = 5
 
     wallet: Wallet = env.wallet_1.wallet
     wallet_2: Wallet = env.wallet_2.wallet
@@ -188,26 +212,9 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     client_2: WalletRpcClient = env.wallet_2.rpc_client
     client_node: FullNodeRpcClient = env.full_node.rpc_client
 
-    ph = await wallet.get_new_puzzlehash()
+    generated_funds = await generate_funds(full_node_api, env.wallet_1)
+
     ph_2 = await wallet_2.get_new_puzzlehash()
-
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
-    initial_funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
-    initial_funds_eventually = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
-    )
-
-    await time_out_assert(5, get_confirmed_balance, initial_funds, client, 1)
-    await time_out_assert(5, get_unconfirmed_balance, initial_funds, client, 1)
-
-    await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1})
-    await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
-
-    await time_out_assert(5, client.get_synced)
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
@@ -221,12 +228,13 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert spend_bundle is not None
 
     await time_out_assert(5, tx_in_mempool, True, client, transaction_id)
-    await time_out_assert(5, get_unconfirmed_balance, initial_funds - tx_amount, client, 1)
+    await time_out_assert(5, get_unconfirmed_balance, generated_funds - tx_amount, client, 1)
 
     for i in range(0, 5):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
     await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+
     # Checks that the memo can be retrieved
     tx_confirmed = await client.get_transaction("1", transaction_id)
     assert tx_confirmed.confirmed
@@ -234,7 +242,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
     assert list(tx_confirmed.get_memos().keys())[0] in [a.name() for a in spend_bundle.additions()]
 
-    await time_out_assert(5, get_confirmed_balance, initial_funds_eventually - tx_amount, client, 1)
+    await time_out_assert(5, get_confirmed_balance, generated_funds - tx_amount, client, 1)
 
     # Tests offline signing
     ph_3 = await wallet_2.get_new_puzzlehash()
@@ -316,13 +324,13 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     push_res = await client.push_tx(tx_res.spend_bundle)
     assert push_res["success"]
-    assert await get_confirmed_balance(client, 1) == initial_funds_eventually - tx_amount
+    assert await get_confirmed_balance(client, 1) == generated_funds - tx_amount
 
     for i in range(0, 5):
         await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
         await asyncio.sleep(0.5)
 
-    await time_out_assert(5, get_confirmed_balance, initial_funds_eventually - tx_amount - signed_tx_amount, client, 1)
+    await time_out_assert(5, get_confirmed_balance, generated_funds - tx_amount - signed_tx_amount, client, 1)
 
     # Test transaction to two outputs, from a specified coin, with a fee
     coin_to_spend = None
@@ -366,7 +374,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
             found = True
     assert found
 
-    new_balance = initial_funds_eventually - tx_amount - signed_tx_amount - 444 - 999 - 100
+    new_balance = generated_funds - tx_amount - signed_tx_amount - 444 - 999 - 100
     await time_out_assert(5, get_confirmed_balance, new_balance, client, 1)
 
     send_tx_res: TransactionRecord = await client.send_transaction_multi(
