@@ -52,7 +52,7 @@ mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" control.j2
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
-dpkg-deb --build --root-owner-group "$CLI_DEB_BASE"
+dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
@@ -106,6 +106,6 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 # Move the cli only deb into final installers as well, so it gets uploaded as an artifact
-mv "$CLI_DEB_BASE.deb" final_installer/
+mv "dist/$CLI_DEB_BASE.deb" final_installer/
 
 ls final_installer/
