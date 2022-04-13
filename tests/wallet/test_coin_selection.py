@@ -116,7 +116,7 @@ class TestCoinSelection:
                     Coin(a_hash, std_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
                 )
             )
-        spendable_amount = uint128(spendable_amount + (2000 * 1500))
+        spendable_amount = uint128(spendable_amount + 2000 * 100)
         for target_amount in [50000, 10000]:  # select the first 100 values
             dusty_result: Set[Coin] = await select_coins(
                 spendable_amount,
