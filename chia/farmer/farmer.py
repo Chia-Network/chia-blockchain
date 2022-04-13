@@ -502,7 +502,7 @@ class Farmer:
                         farmer_info, error_code = await update_pool_farmer_info()
                         if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[G1Element, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -526,7 +526,7 @@ class Farmer:
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         )
                         if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
-                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[G1Element, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
