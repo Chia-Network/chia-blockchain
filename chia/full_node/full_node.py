@@ -49,6 +49,7 @@ from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -69,6 +70,7 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
+from chia.util.generator_tools import tx_removals_and_additions, tx_removals_additions_and_hints
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -1032,42 +1034,63 @@ class FullNode:
         height: uint32,
         fork_height: uint32,
         peak_hash: bytes32,
-        state_update: Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
+        rolled_back_states: List[CoinRecord],
+        new_npc_results: List[NPCResult],
     ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
-        states, hint_state = state_update
+        # removed_rec: List[Optional[CoinRecord]] = [
+        #     await self.coin_store.get_coin_record(name) for name in tx_removals
+        # ]
+        #
+        # # Set additions first, then removals in order to handle ephemeral coin state
+        # # Add in height order is also required
+        # record: Optional[CoinRecord]
+        # for record in added_rec:
+        #     assert record
+        #     latest_coin_state[record.name] = record
+        # for record in removed_rec:
+        #     assert record
+        #     latest_coin_state[record.name] = record
+        #
+        # if npc_res is not None:
+        #     hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
+        #     await self.hint_store.add_hints(hint_list)
+        #     # There can be multiple coins for the same hint
+        #     for coin_id, hint in hint_list:
+        #         key = hint
+        #         if key not in hint_coin_state:
+        #             hint_coin_state[key] = {}
+        #         hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
 
-        for coin_record in states:
-            if coin_record.name in self.coin_subscriptions:
-                subscribed_peers = self.coin_subscriptions[coin_record.name]
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_record.coin_state)
+        # states, hint_st = state_update
 
-            if coin_record.coin.puzzle_hash in self.ph_subscriptions:
-                subscribed_peers = self.ph_subscriptions[coin_record.coin.puzzle_hash]
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_record.coin_state)
+        for coin_record in rolled_back_states:
+            for peer in self.coin_subscriptions.get(coin_record.name, []):
+                if peer not in changes_for_peer:
+                    changes_for_peer[peer] = set()
+                changes_for_peer[peer].add(coin_record.coin_state)
 
-        # This is just a verification that the assumptions justifying the ignore below
-        # are valid.
+            for peer in self.ph_subscriptions.get(coin_record.coin.puzzle_hash, []):
+                if peer not in changes_for_peer:
+                    changes_for_peer[peer] = set()
+                changes_for_peer[peer].add(coin_record.coin_state)
+
+        # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
+        coin_id: bytes32
         hint: bytes
-        for hint, records in hint_state.items():
-            # While `hint` is typed as a `bytes`, and this is locally verified
-            # immediately above, if it has length 32 then it might match an entry in
-            # `self.ph_subscriptions`.  It is unclear if there is a more proper means
-            # of handling this situation.
-            subscribed_peers = self.ph_subscriptions.get(hint)  # type: ignore[call-overload]
-            if subscribed_peers is not None:
-                for peer in subscribed_peers:
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    for record in records.values():
-                        changes_for_peer[peer].add(record.coin_state)
+        lookup_coin_ids: Set[bytes32] = set()
+        for npc_result in new_npc_results:
+            removal_ids, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
+            for coin_id, hint in self.get_hint_list(npc_result):
+                if len(hint) == 32 and bytes32(hint) in self.ph_subscriptions:
+                    lookup_coin_ids.add(coin_id)
+
+            # for peer in self.ph_subscriptions.get(hint, []):  # type: ignore[call-overload]
+            #     if peer not in changes_for_peer:
+            #         changes_for_peer[peer] = set()
+            #     for record in records.values():
+            #         changes_for_peer[peer].add(record.coin_state)
 
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:
