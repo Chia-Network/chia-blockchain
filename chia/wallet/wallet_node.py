@@ -478,7 +478,7 @@ class WalletNode:
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
-                await self.wallet_state_manager.reorg_rollback(fork_height)
+                removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
                 await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
@@ -495,6 +495,9 @@ class WalletNode:
                 raise
             else:
                 await self.wallet_state_manager.blockchain.clean_block_records()
+
+                for wallet_id in removed_wallet_ids:
+                    self.wallet_state_manager.wallets.pop(wallet_id)
 
     async def long_sync(
         self,
