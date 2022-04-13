@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 import logging
 from operator import attrgetter
@@ -68,6 +67,17 @@ class WalletRpcTestEnvironment:
     full_node: FullNodeBundle
 
 
+async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+
+
+async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
+    await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name())
+    await farm_transaction_block(full_node_api, wallet_node)
+    assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
+
+
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 5):
     wallet_id = 1
     initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(str(wallet_id))
@@ -80,9 +90,7 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
         generated_funds += calculate_pool_reward(peak_height) + calculate_base_farmer_reward(peak_height)
 
     # Farm a dummy block to confirm the created funds
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
-
-    await time_out_assert(5, wallet_is_synced, True, wallet_bundle.node, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_bundle.node)
 
     expected_confirmed = initial_balances["confirmed_wallet_balance"] + generated_funds
     expected_unconfirmed = initial_balances["unconfirmed_wallet_balance"] + generated_funds
@@ -230,10 +238,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(5, tx_in_mempool, True, client, transaction_id)
     await time_out_assert(5, get_unconfirmed_balance, generated_funds - tx_amount, client, 1)
 
-    for i in range(0, 5):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
-
-    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Checks that the memo can be retrieved
     tx_confirmed = await client.get_transaction("1", transaction_id)
@@ -322,13 +327,14 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert len(tx_res.additions) == 2  # The output and the change
     assert any([addition.amount == signed_tx_amount for addition in tx_res.additions])
 
-    push_res = await client.push_tx(tx_res.spend_bundle)
+    spend_bundle = tx_res.spend_bundle
+    assert spend_bundle is not None
+
+    push_res = await client.push_tx(spend_bundle)
     assert push_res["success"]
     assert await get_confirmed_balance(client, 1) == generated_funds - tx_amount
 
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     await time_out_assert(5, get_confirmed_balance, generated_funds - tx_amount - signed_tx_amount, client, 1)
 
@@ -356,9 +362,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     push_res = await client_node.push_tx(spend_bundle)
     assert push_res["success"]
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     found: bool = False
     for addition in spend_bundle.additions():
@@ -385,6 +390,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
         ],
         fee=uint64(200),
     )
+    spend_bundle = send_tx_res.spend_bundle
+    assert spend_bundle is not None
     assert send_tx_res is not None
     assert send_tx_res.fee_amount == 200
     assert send_tx_res.amount == 555 + 666
@@ -393,10 +400,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert any([addition.amount == 666 for addition in send_tx_res.additions])
     assert sum([rem.amount for rem in send_tx_res.removals]) - sum([ad.amount for ad in send_tx_res.additions]) == 200
 
-    await asyncio.sleep(3)
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     new_balance = new_balance - 555 - 666 - 200
     await time_out_assert(5, get_confirmed_balance, new_balance, client, 1)
@@ -501,10 +505,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
-    await asyncio.sleep(1)
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    await farm_transaction_block(full_node_api, wallet_node)
 
     await time_out_assert(10, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
@@ -521,10 +522,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
     await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 1})
 
-    await asyncio.sleep(1)
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    await farm_transaction_block(full_node_api, wallet_node)
+
     bal_1 = await client_2.get_wallet_balance(cat_1_id)
     assert bal_1["confirmed_wallet_balance"] == 0
 
@@ -533,12 +532,10 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     assert addr_0 != addr_1
 
-    await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
-
-    await asyncio.sleep(1)
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
+    spend_bundle = tx_res.spend_bundle
+    assert spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT
     assert wallet_node.wallet_state_manager is not None
@@ -596,10 +593,7 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
     all_offers = await client.get_all_offers()
     assert len(all_offers) == 2
 
-    await asyncio.sleep(1)
-    for i in range(0, 5):
-        await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
-        await asyncio.sleep(0.5)
+    await farm_transaction_block(full_node_api, wallet_node)
 
     async def is_trade_confirmed(client, trade) -> bool:
         trade_record = await client.get_offer(trade.name())
