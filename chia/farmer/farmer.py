@@ -19,7 +19,7 @@ from chia.daemon.keychain_proxy import (
 )
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.delta import Delta
-from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, add_auth_key
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     ErrorResponse,
