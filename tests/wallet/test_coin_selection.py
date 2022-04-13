@@ -111,40 +111,6 @@ class TestCoinSelection:
             assert len(result) <= 500
 
     @pytest.mark.asyncio
-    async def test_coin_selection_failure(self, a_hash: bytes32) -> None:
-        spendable_amount = uint128(10000)
-        coin_list: List[WalletCoinRecord] = []
-        for i in range(10000):
-            coin_list.append(
-                WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
-                )
-            )
-        # make sure coins are not identical.
-        # test for failure
-        with pytest.raises(ValueError):
-            for target_amount in [10000, 9999]:
-                result: Set[Coin] = await select_coins(
-                    spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
-                    coin_list,
-                    {},
-                    logging.getLogger("test"),
-                    uint128(target_amount),
-                )
-        # test not enough coin failure.
-        with pytest.raises(ValueError):
-            for target_amount in [10001, 20000]:
-                result: Set[Coin] = await select_coins(
-                    spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
-                    coin_list,
-                    {},
-                    logging.getLogger("test"),
-                    uint128(target_amount),
-                )
-
-    @pytest.mark.asyncio
     async def test_coin_selection(self, a_hash: bytes32) -> None:
         coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
         coin_list: List[WalletCoinRecord] = [
