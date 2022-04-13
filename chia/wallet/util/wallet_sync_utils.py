@@ -1,4 +1,5 @@
 import asyncio
+from chia.protocols.shared_protocol import Capability
 import logging
 import random
 from typing import List, Optional, Tuple, Union, Dict
@@ -7,9 +8,11 @@ from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
+    RequestHeaderBlockBlobs,
     RespondAdditions,
     RejectAdditionsRequest,
     RejectRemovalsRequest,
+    RespondHeaderBlockBlobs,
     RespondRemovals,
     RequestRemovals,
     RespondBlockHeader,
@@ -150,7 +153,7 @@ def validate_removals(
         # Verify removals root
         removals_merkle_set = MerkleSet()
         for name_coin in coins:
-            name, coin = name_coin
+            _, coin = name_coin
             if coin is not None:
                 removals_merkle_set.add_already_hashed(coin.name())
         removals_root = removals_merkle_set.get_root()
@@ -287,17 +290,51 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
+def get_block_header(block):
+    return HeaderBlock(
+        block.finished_sub_slots,
+        block.reward_chain_block,
+        block.challenge_chain_sp_proof,
+        block.challenge_chain_ip_proof,
+        block.reward_chain_sp_proof,
+        block.reward_chain_ip_proof,
+        block.infused_challenge_chain_ip_proof,
+        block.foliage,
+        block.foliage_transaction_block,
+        b"",  # we don't need the filter
+        block.transactions_info,
+    )
+
+
+async def _prepare_response_header_block_from_blob(
+    peer: WSChiaConnection, request
+) -> Optional[wallet_protocol.RespondHeaderBlocks]:
+    blob_response = await peer.request_header_block_blobs(
+        RequestHeaderBlockBlobs(request.start_height, request.end_height)
+    )
+    if not isinstance(blob_response, RespondHeaderBlockBlobs):
+        return None
+    header_blocks: List[HeaderBlock] = []
+    for header_block_blob in blob_response.header_block_blobs:
+        block = FullBlock.from_bytes(header_block_blob)
+        header_block = get_block_header(block)
+        header_blocks.append(header_block)
+    return wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks)
+
+
 async def _fetch_header_blocks_inner(
     all_peers: List[WSChiaConnection],
     request: RequestHeaderBlocks,
 ) -> Optional[RespondHeaderBlocks]:
     # We will modify this list, don't modify passed parameters.
-    remaining_peers = list(all_peers)
-
+    blob_api_peers = [peer for peer in all_peers if Capability.BLOB_API in peer.capabilities]
+    remaining_peers = list(all_peers) + (5 * blob_api_peers)  # prioritize peers with blob_api
     while len(remaining_peers) > 0:
         peer = random.choice(remaining_peers)
-
-        response = await peer.request_header_blocks(request)
+        if Capability.BLOB_API in peer.capabilities:
+            response = await _prepare_response_header_block_from_blob(peer, request)
+        else:
+            response = await peer.request_header_blocks(request)
 
         if isinstance(response, RespondHeaderBlocks):
             return response

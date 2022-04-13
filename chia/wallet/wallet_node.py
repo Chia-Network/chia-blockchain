@@ -1340,9 +1340,8 @@ class WalletNode:
                         return False
 
             all_peers = self.server.get_full_node_connections()
-            blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
-                start, end, peer_request_cache, all_peers
-            )
+            blocks: Optional[List[HeaderBlock]] = []
+            blocks = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
             if blocks is None:
                 self.log.error(f"Error fetching blocks {start} {end}")
                 return False
