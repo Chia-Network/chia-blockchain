@@ -175,6 +175,9 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
+    - name: Add safe git directory
+      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
     # after installing git so we use that copy
     - name: Checkout Code
       uses: actions/checkout@v2
