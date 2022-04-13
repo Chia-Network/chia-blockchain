@@ -88,6 +88,22 @@ class Program(SExp):
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
+    # Replicates the curry function from clvm_tools, taking advantage of *args
+    # being a list.  We iterate through args in reverse building the code to
+    # create a clvm list.
+    #
+    # Given arguments to a function addressable by the '1' reference in clvm
+    #
+    # fixed_args = 1
+    #
+    # Each arg is prepended as fixed_args = (c (q . arg) fixed_args)
+    #
+    # The resulting argument list is interpreted with apply (2)
+    #
+    # (2 (1 . self) rest)
+    #
+    # Resulting in a function which places its own arguments after those
+    # curried in in the form of a proper list.
     def curry(self, *args) -> "Program":
         fixed_args: Any = 1
         for arg in reversed(args):
