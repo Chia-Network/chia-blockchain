@@ -117,7 +117,7 @@ class TestCoinSelection:
                 )
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
-        for target_amount in [50000, 10000]:  # select the first 100 values
+        for target_amount in [50000, 25000, 15000, 10000, 9000, 3000]:  # select the first 100 values
             dusty_result: Set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
@@ -128,7 +128,8 @@ class TestCoinSelection:
             )
             assert dusty_result is not None
             assert sum([coin.amount for coin in dusty_result]) >= target_amount
-            assert target_amount == len(dusty_result) * 2000  # make sure that we do not use any dust coins.
+            for coin in dusty_result:
+                assert coin.amount > 1
             assert len(dusty_result) <= 500
 
     @pytest.mark.asyncio
