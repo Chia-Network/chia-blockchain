@@ -30,6 +30,7 @@ assert len(DEFAULT_SEED) == 32
 class WalletTool:
     next_address = 0
     pubkey_num_lookup: Dict[bytes, uint32] = {}
+    puzzle_pk_cache: Dict[bytes32, PrivateKey] = {}
 
     def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
         self.constants = constants
@@ -48,16 +49,13 @@ class WalletTool:
         return self.next_address
 
     def get_private_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> PrivateKey:
-        if puzzle_hash in self.puzzle_pk_cache:
-            child = self.puzzle_pk_cache[puzzle_hash]
-            private = master_sk_to_wallet_sk(self.private_key, uint32(child))
-            #  pubkey = private.get_g1()
-            return private
-        else:
-            for child in range(self.next_address):
-                pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
-                if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
-                    return master_sk_to_wallet_sk(self.private_key, uint32(child))
+        sk = self.puzzle_pk_cache.get(puzzle_hash)
+        if sk:
+            return sk
+        for child in range(self.next_address):
+            pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
+            if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
+                return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
@@ -65,12 +63,13 @@ class WalletTool:
 
     def get_new_puzzle(self) -> Program:
         next_address_index: uint32 = self.get_next_address_index()
-        pubkey: G1Element = master_sk_to_wallet_sk(self.private_key, next_address_index).get_g1()
+        sk: PrivateKey = master_sk_to_wallet_sk(self.private_key, next_address_index)
+        pubkey: G1Element = sk.get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
 
         puzzle: Program = puzzle_for_pk(pubkey)
 
-        self.puzzle_pk_cache[puzzle.get_tree_hash()] = next_address_index
+        self.puzzle_pk_cache[puzzle.get_tree_hash()] = sk
         return puzzle
 
     def get_new_puzzlehash(self) -> bytes32:
