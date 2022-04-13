@@ -78,7 +78,7 @@ async def select_coins(
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
-        smallest_coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins, amount)
+        smallest_coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins, amount)
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     elif smaller_coin_sum > amount:
@@ -87,23 +87,12 @@ async def select_coins(
         if coin_set is None:
             raise ValueError("Knapsack algorithm failed to find a solution.")
         if len(coin_set) > max_num_coins:
-            coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins, amount)
-            if coin is None or coin.amount < amount:
-                raise ValueError(
-                    "Can't make this transaction because the transaction would use over 500 "
-                    "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
-                )
+            coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins, amount)
             coin_set = {coin}
         return coin_set
     else:
-        # if we == amount and len(smaller_coins) >= max_num_coins.
-        coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins, amount)
+        coin = select_smallest_coin_over_target(smaller_coins, valid_spendable_coins, amount)
         log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
-        if coin is None or coin.amount < amount:
-            raise ValueError(
-                "Can't make this transaction because the transaction would use over 500 "
-                "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
-            )
         return {coin}
 
 
@@ -118,15 +107,19 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
     return None
 
 
-# amount of coins smaller than target, followed by a list of all valid spendable coins sorted in descending order.
 def select_smallest_coin_over_target(
-    smaller_coin_amount: int, valid_spendable_coin_list: List[Coin], target_amount: uint128
+    smaller_coin_list: List[Coin], valid_spendable_coin_list: List[Coin], target_amount: uint128
 ) -> Coin:
-    if smaller_coin_amount > 0:  # in case we only have bigger coins.
-        greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
+    if len(smaller_coin_list) > 0:  # in case we only have bigger coins.
+        greater_coins = valid_spendable_coin_list[: -len(smaller_coin_list)]
     else:
         greater_coins = valid_spendable_coin_list
     coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
+    if coin is None or coin.amount < target_amount:
+        raise ValueError(
+            "Can't make this transaction because the transaction would use over 500 "
+            "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
+        )
     return coin
 
 
