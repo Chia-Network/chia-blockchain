@@ -1311,13 +1311,34 @@ class FullNodeAPI:
         return response_msg
 
     @api_request
+    async def request_header_block_blobs(self, request: wallet_protocol.RequestHeaderBlockBlobs) -> Optional[Message]:
+        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+            return None
+        height_to_hash = self.full_node.blockchain.height_to_hash
+        header_hashes: List[bytes32] = []
+        for i in range(request.start_height, request.end_height + 1):
+            header_hash: Optional[bytes32] = height_to_hash(uint32(i))
+            if header_hash is None:
+                reject = RejectHeaderBlocks(request.start_height, request.end_height)
+                msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
+                return msg
+            header_hashes.append(header_hash)
+
+        blocks: List[bytes] = await self.full_node.block_store.get_block_blobs_by_hash(header_hashes)
+        msg = make_msg(
+            ProtocolMessageTypes.respond_header_block_blobs,
+            wallet_protocol.RespondHeaderBlockBlobs(request.start_height, request.end_height, blocks),
+        )
+        return msg
+
+    @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
-
+        height_to_hash = self.full_node.blockchain.height_to_hash
         header_hashes: List[bytes32] = []
         for i in range(request.start_height, request.end_height + 1):
-            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+            header_hash: Optional[bytes32] = height_to_hash(uint32(i))
             if header_hash is None:
                 reject = RejectHeaderBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
@@ -1327,8 +1348,11 @@ class FullNodeAPI:
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
-            added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
-            removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(block.height)
+            removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records, removed_coins_records = await asyncio.gather(
+                added_coins_records_coroutine, removed_coins_records_coroutine
+            )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)

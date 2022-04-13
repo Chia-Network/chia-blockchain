@@ -65,7 +65,6 @@ class WSChiaConnection:
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None
         self.peer_node_id = peer_id
-
         self.log = log
 
         # connection properties
@@ -104,7 +103,7 @@ class WSChiaConnection:
         # disconnect. Also it allows a little flexibility.
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
-
+        self.capabilities: List[Capability] = []
         # Used by the Chia Seeder.
         self.version = None
         self.protocol_version = ""
@@ -125,7 +124,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOB_API.value), "2")],
                 ),
             )
             assert outbound_handshake is not None
@@ -151,7 +150,7 @@ class WSChiaConnection:
             self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-
+            self.capabilities = [x[0] for x in inbound_handshake.capabilities]
         else:
             try:
                 message = await self._read_one_message()
@@ -181,12 +180,13 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOB_API.value), "2")],
                 ),
             )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
+            self.capabilities = [x[0] for x in inbound_handshake.capabilities]
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -317,7 +317,6 @@ class WSChiaConnection:
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
-
                 req_annotations = ret_attr.__annotations__
                 req = None
                 for key in req_annotations:

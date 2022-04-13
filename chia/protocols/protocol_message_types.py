@@ -105,3 +105,6 @@ class ProtocolMessageTypes(Enum):
     respond_children = 75
     request_ses_hashes = 76
     respond_ses_hashes = 77
+    request_header_block_blobs = 86
+    reject_header_block_blobs = 87
+    respond_header_block_blobs = 88

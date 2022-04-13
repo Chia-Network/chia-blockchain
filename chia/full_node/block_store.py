@@ -129,6 +129,12 @@ class BlockStore:
         else:
             return FullBlock.from_bytes(block_bytes)
 
+    def maybe_decompress_blob(self, block_bytes: bytes) -> bytes:
+        if self.db_wrapper.db_version == 2:
+            return zstd.decompress(block_bytes)
+        else:
+            return block_bytes
+
     async def rollback(self, height: int) -> None:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.write_db() as conn:
@@ -394,6 +400,37 @@ class BlockStore:
                         all_blocks[block_rec.header_hash] = block_rec
 
         ret: List[BlockRecord] = []
+        for hh in header_hashes:
+            if hh not in all_blocks:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+            ret.append(all_blocks[hh])
+        return ret
+
+    async def get_block_blobs_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
+        """
+        Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+
+        if len(header_hashes) == 0:
+            return []
+
+        header_hashes_db: Tuple[Any, ...]
+        if self.db_wrapper.db_version == 2:
+            header_hashes_db = tuple(header_hashes)
+        else:
+            header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        formatted_str = (
+            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        )
+        all_blocks: Dict[bytes32, bytes] = {}
+        async with self.db_wrapper.read_db() as conn:
+            async with conn.execute(formatted_str, header_hashes_db) as cursor:
+                for row in await cursor.fetchall():
+                    header_hash = bytes32(self.maybe_from_hex(row[0]))
+                    all_blocks[header_hash] = self.maybe_decompress_blob(row[1])
+
+        ret: List[bytes] = []
         for hh in header_hashes:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")

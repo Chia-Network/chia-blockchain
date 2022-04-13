@@ -142,6 +142,28 @@ class RequestHeaderBlocks(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RequestHeaderBlockBlobs(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondHeaderBlockBlobs(Streamable):
+    start_height: uint32
+    end_height: uint32
+    header_block_blobs: List[bytes]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectHeaderBlockBlobs(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class RejectHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32
