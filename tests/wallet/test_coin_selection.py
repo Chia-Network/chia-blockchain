@@ -97,7 +97,7 @@ class TestCoinSelection:
                 )
             )
         # make sure coins are not identical.
-        for target_amount in [10000, 9999]:  # select the first 100 values
+        for target_amount in [10000, 9999]:
             result: Set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
@@ -108,7 +108,28 @@ class TestCoinSelection:
             )
             assert result is not None
             assert sum([coin.amount for coin in result]) >= target_amount
-            assert len(result) <= 500
+            assert len(result) == 1  # only one coin should be selected
+
+        for i in range(100):
+            coin_list.append(
+                WalletCoinRecord(
+                    Coin(a_hash, std_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                )
+            )
+        spendable_amount = uint128(spendable_amount + (2000 * 1500))
+        for target_amount in [50000, 10000]:  # select the first 100 values
+            dusty_result: Set[Coin] = await select_coins(
+                spendable_amount,
+                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                coin_list,
+                {},
+                logging.getLogger("test"),
+                uint128(target_amount),
+            )
+            assert dusty_result is not None
+            assert sum([coin.amount for coin in dusty_result]) >= target_amount
+            assert target_amount == len(dusty_result) * 2000  # make sure that we do not use any dust coins.
+            assert len(dusty_result) <= 500
 
     @pytest.mark.asyncio
     async def test_coin_selection_failure(self, a_hash: bytes32) -> None:
