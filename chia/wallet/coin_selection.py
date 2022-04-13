@@ -35,6 +35,7 @@ async def select_coins(
 
     log.debug(f"About to select coins for amount {amount}")
 
+    max_num_coins = 500
     sum_spendable_coins = 0
     valid_spendable_coins: List[Coin] = []
 
@@ -73,23 +74,32 @@ async def select_coins(
         if coin.amount < amount:
             smaller_coin_sum += coin.amount
             smaller_coins.append(coin)
-    if smaller_coin_sum == amount:
+    if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
-        if len(smaller_coins) > 0:  # in case we only have bigger coins.
-            greater_coins = valid_spendable_coins[: -len(smaller_coins)]
-        else:
-            greater_coins = valid_spendable_coins
-        smallest_coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
-        assert smallest_coin is not None
+        smallest_coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
+    elif smaller_coin_sum > amount:
+        coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
+        log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
+        if coin_set is None:
+            raise ValueError("Knapsack algorithm failed to find a solution.")
+        if len(coin_set) > max_num_coins:
+            coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
+            if coin is None or coin.amount < amount:
+                raise ValueError(
+                    "Can't make this transaction because the transaction would use over 500 "
+                    "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
+                )
+            coin_set = {coin}
+        return coin_set
     else:
-        knapsack_coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
-        assert knapsack_coin_set is not None
-        log.debug(f"Selected coins from knapsack algorithm: {knapsack_coin_set}")
-        return knapsack_coin_set
+        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
+        coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
+        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
+        return {coin}
 
 
 # These algorithms were based off of the algorithms in:
@@ -103,8 +113,23 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
     return None
 
 
+# amount of coins smaller than target, followed by a list of all valid spendable coins sorted in descending order.
+def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_coin_list: List[Coin]) -> Coin:
+    if smaller_coin_amount >= len(valid_spendable_coin_list):
+        raise ValueError(
+            "There are no coins greater then the target."
+            " This is caused by having too many dust coins. Try making a smaller transaction to condense the dust."
+        )
+    if smaller_coin_amount > 0:  # in case we only have bigger coins.
+        greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
+    else:
+        greater_coins = valid_spendable_coin_list
+    coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
+    return coin
+
+
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
-# IMPORTANT: The coins have to be sorted in decending order or else this function will not work.
+# IMPORTANT: The coins have to be sorted in descending order or else this function will not work.
 def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin_amount: int) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
