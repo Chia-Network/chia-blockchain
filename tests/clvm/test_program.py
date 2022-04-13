@@ -2,6 +2,9 @@ from unittest import TestCase
 
 from chia.types.blockchain_format.program import Program
 from clvm.EvalError import EvalError
+from clvm_tools.curry import uncurry
+from clvm.operators import KEYWORD_TO_ATOM
+from clvm_tools.binutils import assemble, disassemble
 
 
 class TestProgram(TestCase):
@@ -19,3 +22,28 @@ class TestProgram(TestCase):
 
         self.assertRaises(ValueError, lambda: p.at("q"))
         self.assertRaises(EvalError, lambda: p.at("ff"))
+
+
+def check_idempotency(f, *args):
+    prg = Program.to(f)
+    curried = prg.curry(*args)
+
+    r = disassemble(curried)
+    f_0, args_0 = uncurry(curried)
+
+    assert disassemble(f_0) == disassemble(f)
+    assert disassemble(args_0) == disassemble(Program.to(list(args)))
+    return r
+
+
+def test_curry_uncurry():
+    PLUS = KEYWORD_TO_ATOM["+"][0]
+    f = assemble("(+ 2 5)")
+    actual_disassembly = check_idempotency(f, 200, 30)
+    assert actual_disassembly == f"(a (q {PLUS} 2 5) (c (q . 200) (c (q . 30) 1)))"
+
+    f = assemble("(+ 2 5)")
+    args = assemble("(+ (q . 50) (q . 60))")
+    # passing "args" here wraps the arguments in a list
+    actual_disassembly = check_idempotency(f, args)
+    assert actual_disassembly == f"(a (q {PLUS} 2 5) (c (q {PLUS} (q . 50) (q . 60)) 1))"

@@ -1,12 +1,12 @@
 import io
-from typing import List, Set, Tuple, Optional
+from typing import List, Set, Tuple, Optional, Any
 
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
 from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator
-from clvm_tools.curry import curry, uncurry
+from clvm_tools.curry import uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
@@ -89,8 +89,10 @@ class Program(SExp):
         return r
 
     def curry(self, *args) -> "Program":
-        cost, r = curry(self, list(args))
-        return Program.to(r)
+        fixed_args: Any = 1
+        for arg in reversed(args):
+            fixed_args = [4, (1, arg), fixed_args]
+        return Program.to([2, (1, self), fixed_args])
 
     def uncurry(self) -> Tuple["Program", "Program"]:
         r = uncurry(self)
