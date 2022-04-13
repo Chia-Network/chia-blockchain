@@ -308,10 +308,10 @@ class WalletRpcApi:
         pool_target = config["pool"].get("xch_target_address")
         address_to_check: List[bytes32] = [decode_puzzle_hash(farmer_target), decode_puzzle_hash(pool_target)]
 
-        found_dict: Dict[bytes32, bool] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
 
-        found_farmer = found_dict.get(address_to_check[0], False)
-        found_pool = found_dict.get(address_to_check[1], False)
+        found_farmer = address_to_check[0] in found_addresses
+        found_pool = address_to_check[1] in found_addresses
 
         return found_farmer, found_pool
 

@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Set
 import traceback
 
 import aiohttp
@@ -552,13 +552,13 @@ class Farmer:
             have_farmer_sk, have_pool_sk = False, False
             search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
             for sk, _ in all_sks:
-                found_dict: Dict[bytes32, bool] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
+                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
 
-                if not have_farmer_sk and found_dict.get(self.farmer_target, False):
+                if not have_farmer_sk and self.farmer_target in found_addresses:
                     search_addresses.remove(self.farmer_target)
                     have_farmer_sk = True
 
-                if not have_pool_sk and found_dict.get(self.pool_target, False):
+                if not have_pool_sk and self.pool_target in found_addresses:
                     search_addresses.remove(self.pool_target)
                     have_pool_sk = True
 

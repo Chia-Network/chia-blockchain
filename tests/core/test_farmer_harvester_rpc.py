@@ -214,8 +214,8 @@ async def test_farmer_reward_target_endpoints(bt, harvester_farmer_environment):
 
     root_path = farmer_api.farmer._root_path
     config = load_config(root_path, "config.yaml")
-    assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(new_ph, "xch")
-    assert config["pool"]["xch_target_address"] == encode_puzzle_hash(new_ph_2, "xch")
+    assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(observer_farmer, "xch")
+    assert config["pool"]["xch_target_address"] == encode_puzzle_hash(observer_pool, "xch")
 
     new_ph_2_encoded = encode_puzzle_hash(new_ph_2, "xch")
     added_char = new_ph_2_encoded + "a"

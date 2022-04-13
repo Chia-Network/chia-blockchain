@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Set, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
@@ -116,22 +116,30 @@ def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Op
 
 def match_address_to_sk(
     sk: PrivateKey, addresses_to_search: List[bytes32], max_ph_to_search: int = 500
-) -> Dict[bytes32, bool]:
-    """Checks the list of given address is a derivation of the given sk within the given number of derivations"""
+) -> Set[bytes32]:
+    """
+    Checks the list of given address is a derivation of the given sk within the given number of derivations
+    Returns a Set of the addresses that are derivations of the given sk
+    """
     if sk is None or not addresses_to_search:
-        return {}
+        return set()
 
-    found_dict: Dict[bytes32, bool] = {}
+    found_addresses: Set[bytes32] = set()
+    search_list: Set[bytes32] = set(addresses_to_search)
+
     for i in range(max_ph_to_search):
+
         phs = [
             create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
             create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
         ]
-        for address in addresses_to_search:
+
+        for address in search_list:
             if address in phs:
-                found_dict[address] = True
+                found_addresses.add(address)
 
-        if len(found_dict) == len(addresses_to_search):
-            return found_dict
+        search_list = search_list - found_addresses
+        if not len(search_list):
+            return found_addresses
 
-    return found_dict
+    return found_addresses
