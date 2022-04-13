@@ -115,6 +115,9 @@ jobs:
           url: "docker://ubuntu:impish"
 
     steps:
+    - name: Add safe git directory
+      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
     - name: Prepare Amazon Linux
       if: ${{ matrix.distribution.type == 'amazon' }}
       run: |
