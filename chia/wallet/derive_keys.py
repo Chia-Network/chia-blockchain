@@ -1,7 +1,9 @@
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from blspy import AugSchemeMPL, PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 
 # EIP 2334 bls key derivation
@@ -110,3 +112,26 @@ def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Op
                 # NOTE: ONLY use 0 for authentication key index to ensure compatibility
                 return master_sk_to_pooling_authentication_sk(sk, uint32(pool_wallet_index), uint32(0))
     return None
+
+
+def match_address_to_sk(
+    sk: PrivateKey, addresses_to_search: List[bytes32], max_ph_to_search: int = 500
+) -> Dict[bytes32, bool]:
+    """Checks the list of given address is a derivation of the given sk within the given number of derivations"""
+    if sk is None or not addresses_to_search:
+        return {}
+
+    found_dict: Dict[bytes32, bool] = {}
+    for i in range(max_ph_to_search):
+        phs = [
+            create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
+            create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
+        ]
+        for address in addresses_to_search:
+            if address in phs:
+                found_dict[address] = True
+
+        if len(found_dict) == len(addresses_to_search):
+            return found_dict
+
+    return found_dict
