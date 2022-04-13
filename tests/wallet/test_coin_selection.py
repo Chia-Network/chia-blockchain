@@ -124,7 +124,7 @@ class TestCoinSelection:
         # test for failure
         with pytest.raises(ValueError):
             for target_amount in [10000, 9999]:
-                await select_coins(
+                result: Set[Coin] = await select_coins(
                     spendable_amount,
                     DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
                     coin_list,
@@ -135,7 +135,7 @@ class TestCoinSelection:
         # test not enough coin failure.
         with pytest.raises(ValueError):
             for target_amount in [10001, 20000]:
-                await select_coins(
+                result: Set[Coin] = await select_coins(
                     spendable_amount,
                     DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
                     coin_list,

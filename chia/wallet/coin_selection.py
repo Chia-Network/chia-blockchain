@@ -117,8 +117,7 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_coin_list: List[Coin]) -> Coin:
     if smaller_coin_amount >= len(valid_spendable_coin_list):
         raise ValueError(
-            "There are no coins greater then the target."
-            " This is caused by having too many dust coins. Try making a smaller transaction to condense the dust."
+            "There are no coins greater then the target. This is caused by having too many dust coins. Try making a smaller transaction to condense the dust."
         )
     if smaller_coin_amount > 0:  # in case we only have bigger coins.
         greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
