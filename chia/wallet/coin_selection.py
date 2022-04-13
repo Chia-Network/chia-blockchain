@@ -82,7 +82,7 @@ async def select_coins(
         else:
             target_coins: Set[Coin] = set()
             coin_sum = 0
-            coins_500: List[Coin] = valid_spendable_coins[: -(len(valid_spendable_coins) - 500)]
+            coins_500: List[Coin] = valid_spendable_coins[: -(len(valid_spendable_coins)-500)]
             # remove 500 coins of least value.
             for coin in coins_500:
                 if coin_sum >= amount:
