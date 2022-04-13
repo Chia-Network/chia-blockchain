@@ -88,13 +88,21 @@ export default deepmerge(greyTheme, {
         },
       }],
     },
+    MuiTypography: {
+      variants: [{
+        props: { variant: "h6" },
+        style: {
+          fontWeight: 400,
+        },
+      }],
+    },
     MuiButton: {
       variants: [
         {
           props: { variant: "contained", color: "grey" },
           style: {
-            color: theme.palette.getContrastText(theme.palette.grey[300])
-          }
+            color: theme.palette.getContrastText(theme.palette.grey[300]),
+          },
         },
         {
           props: { variant: "outlined", color: "grey" },
@@ -105,7 +113,7 @@ export default deepmerge(greyTheme, {
                 ? "rgba(0, 0, 0, 0.23)"
                 : "rgba(255, 255, 255, 0.23)",
             "&.Mui-disabled": {
-              border: `1px solid ${theme.palette.action.disabledBackground}`
+              border: `1px solid ${theme.palette.action.disabledBackground}`,
             },
             "&:hover": {
               borderColor:

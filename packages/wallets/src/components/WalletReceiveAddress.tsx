@@ -31,7 +31,7 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
   return (
     <Flex gap={2} flexDirection="column">
       <Flex gap={1} flexGrow={1} justifyContent="space-between">
-        <Typography variant="h5">
+        <Typography variant="h6">
           <Trans>Receive Address</Trans>
           &nbsp;
           <TooltipIcon>

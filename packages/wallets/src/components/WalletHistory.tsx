@@ -241,7 +241,7 @@ export default function WalletHistory(props: Props) {
   }, [wallet?.type]);
 
   return (
-    <Card title={<Trans>Transactions</Trans>} transparent>
+    <Card title={<Trans>Transactions</Trans>} titleVariant="h6" transparent>
       <TableControlled
         cols={cols}
         rows={transactions ?? []}

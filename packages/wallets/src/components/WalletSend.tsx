@@ -132,7 +132,7 @@ export default function WalletSend(props: SendCardProps) {
   return (
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex gap={2} flexDirection="column">
-        <Typography variant="h5">
+        <Typography variant="h6">
           <Trans>Create Transaction</Trans>
           &nbsp;
           <TooltipIcon>

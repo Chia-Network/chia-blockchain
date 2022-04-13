@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { WalletType } from '@chia/api';
+import { WalletType, type Wallet } from '@chia/api';
 import { useShowError} from '@chia/core';
 import { orderBy } from 'lodash';
 import { useGetWalletsQuery, useGetStrayCatsQuery, useGetCatListQuery, useAddCATTokenMutation } from '@chia/api-react';
@@ -67,6 +67,20 @@ export default function useWalletsList(search?: string): {
     return ids;
   }, [wallets]);
 
+  const knownCatAssetIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (catList) {
+      catList.forEach((cat) => ids.add(cat.assetId));
+    }
+
+    return ids;
+  }, [catList]);
+
+
+  function hasCatAssignedWallet(assetId: string) {
+    return walletAssetIds.has(assetId);
+  }
+
   function isHiddenCAT(assetId: string) {
     if (!walletAssetIds.has(assetId)) {
       return true;
@@ -79,7 +93,7 @@ export default function useWalletsList(search?: string): {
   function getCATName(assetId: string) {
     if (walletAssetIds.has(assetId)) {
       const walletId = walletAssetIds.get(assetId);
-      const wallet = wallets?.find((w) => w.id === walletId);
+      const wallet = wallets?.find((wallet: Wallet) => wallet.id === walletId);
 
       return wallet?.name ?? assetId;
     }
@@ -95,10 +109,21 @@ export default function useWalletsList(search?: string): {
       return undefined;
     }
 
-    const baseWallets = wallets.filter((wallet) => ![WalletType.CAT, WalletType.POOLING_WALLET].includes(wallet.type));
+    const baseWallets = wallets.filter((wallet: Wallet) => ![WalletType.CAT, WalletType.POOLING_WALLET].includes(wallet.type));
+    const catBaseWallets = wallets.filter((wallet: Wallet) => wallet.type === WalletType.CAT);
+
+    // hidden by default because they are not known
+    const nonAddedKnownCats = catList?.filter(
+      (cat) => !hasCatAssignedWallet(cat.assetId),
+    );
+
+    // hidden by default
+    const nonAddedStrayCats = strayCats?.filter(
+      (strayCat) => !hasCatAssignedWallet(strayCat.assetId),
+    );
 
     let tokens = [
-      ...baseWallets.map((wallet) => ({
+      ...baseWallets.map((wallet: Wallet) => ({
         id: wallet.id,
         type: 'WALLET',
         walletType: wallet.type,
@@ -107,7 +132,16 @@ export default function useWalletsList(search?: string): {
         assetId: wallet.meta?.assetId,
         name: wallet.type === WalletType.STANDARD_WALLET ? 'Chia' : wallet.name,
       })),
-      ...catList.map((cat) => ({
+      ...catBaseWallets.map((wallet: Wallet) => ({
+        id: wallet.id,
+        type: knownCatAssetIds.has(wallet.meta?.assetId) ? 'CAT_LIST' : 'STRAY_CAT',
+        walletType: wallet.type,
+        hidden: isHidden(wallet.id),
+        walletId: wallet.id,
+        assetId: wallet.meta?.assetId,
+        name: wallet.name,
+      })),
+      ...nonAddedKnownCats.map((cat) => ({
         id: cat.assetId,
         type: 'CAT_LIST',
         walletType: WalletType.CAT,
@@ -116,7 +150,7 @@ export default function useWalletsList(search?: string): {
         assetId: cat.assetId,
         name: getCATName(cat.assetId),
       })),
-      ...strayCats.map((strayCat) => ({
+      ...nonAddedStrayCats.map((strayCat) => ({
         id: strayCat.assetId,
         type: 'STRAY_CAT',
         walletType: WalletType.CAT,
