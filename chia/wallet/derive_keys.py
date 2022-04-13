@@ -93,7 +93,7 @@ def master_sk_to_pooling_authentication_sk(master: PrivateKey, pool_wallet_index
     return _derive_path(master, [12381, 8444, 6, pool_wallet_index * 10000 + index])
 
 
-def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[G1Element, uint32]]:
+def find_owner_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Optional[Tuple[PrivateKey, uint32]]:
     for pool_wallet_index in range(MAX_POOL_WALLETS):
         for sk in all_sks:
             try_owner_sk = master_sk_to_singleton_owner_sk(sk, uint32(pool_wallet_index))
