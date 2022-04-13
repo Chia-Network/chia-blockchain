@@ -122,57 +122,57 @@ progress = {
 
 
 def install_bladebit(root_path):
-    if is_bladebit_supported():
-        print("Installing dependencies.")
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "update",
-                "-y",
-            ],
-            "Could not update get package information from apt",
-        )
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "install",
-                "-y",
-                "build-essential",
-                "cmake",
-                "libnuma-dev",
-                "git",
-                "libgmp-dev",
-            ],
-            "Could not install dependencies",
-        )
-
-        print("Cloning repository and its submodules.")
-        run_command(
-            [
-                "git",
-                "clone",
-                "--recursive",
-                "https://github.com/Chia-Network/bladebit.git",
-            ],
-            "Could not clone bladebit repository",
-            cwd=os.fspath(root_path),
-        )
-
-        bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
-        build_path: str = os.fspath(Path(bladebit_path) / "build")
-
-        print("Build bladebit.")
-        run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
-        run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
-        run_command(
-            ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],
-            "Building bladebit failed",
-            cwd=build_path,
-        )
-    else:
+    if not is_bladebit_supported():
         raise RuntimeError("Platform not supported yet for bladebit plotter.")
+
+    print("Installing dependencies.")
+    run_command(
+        [
+            "sudo",
+            "apt",
+            "update",
+            "-y",
+        ],
+        "Could not update get package information from apt",
+    )
+    run_command(
+        [
+            "sudo",
+            "apt",
+            "install",
+            "-y",
+            "build-essential",
+            "cmake",
+            "libnuma-dev",
+            "git",
+            "libgmp-dev",
+        ],
+        "Could not install dependencies",
+    )
+
+    print("Cloning repository and its submodules.")
+    run_command(
+        [
+            "git",
+            "clone",
+            "--recursive",
+            "https://github.com/Chia-Network/bladebit.git",
+        ],
+        "Could not clone bladebit repository",
+        cwd=os.fspath(root_path),
+    )
+
+    bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
+    build_path: str = os.fspath(Path(bladebit_path) / "build")
+
+    print("Build bladebit.")
+    run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
+    run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
+    run_command(
+        ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],
+        "Building bladebit failed",
+        cwd=build_path,
+    )
 
 
 def plot_bladebit(args, chia_root_path, root_path):
