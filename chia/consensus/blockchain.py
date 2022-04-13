@@ -193,12 +193,7 @@ class Blockchain(BlockchainInterface):
         block: FullBlock,
         pre_validation_result: PreValidationResult,
         fork_point_with_peak: Optional[uint32] = None,
-    ) -> Tuple[
-        ReceiveBlockResult,
-        Optional[Err],
-        Optional[uint32],
-        Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]],
-    ]:
+    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32], List[CoinRecord], List[NPCResult]]:
         """
         This method must be called under the blockchain lock
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -216,23 +211,24 @@ class Blockchain(BlockchainInterface):
                 DISCONNECTED_BLOCK, ALREDY_HAVE_BLOCK)
             An optional error if the result is not NEW_PEAK or ADDED_AS_ORPHAN
             A fork point if the result is NEW_PEAK
-            A list of changes to the coin store, and changes to hints, if the result is NEW_PEAK
+            A list of coin changes as a result of rollback
+            A list of NPCResult for any new transaction block added to the chain
         """
 
         genesis: bool = block.height == 0
         if self.contains_block(block.header_hash):
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None, ([], {})
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None, [], []
 
         if not self.contains_block(block.prev_header_hash) and not genesis:
-            return (ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None, ([], {}))
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None, [], []
 
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
-            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None, ([], {})
+            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None, [], []
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
         if pre_validation_result.error is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None, ([], {})
+            return ReceiveBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None, [], []
         assert required_iters is not None
 
         error_code, _ = await validate_block_body(
@@ -250,7 +246,7 @@ class Blockchain(BlockchainInterface):
             validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code, None, ([], {})
+            return ReceiveBlockResult.INVALID_BLOCK, error_code, None, [], []
 
         block_record = block_to_block_record(
             self.constants,
@@ -265,7 +261,7 @@ class Blockchain(BlockchainInterface):
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
-                fork_height, peak_height, records, (coin_record_change, hint_changes) = await self._reconsider_peak(
+                fork_height, peak_height, records, rollback_changes, npc_results = await self._reconsider_peak(
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
 
@@ -292,10 +288,9 @@ class Blockchain(BlockchainInterface):
 
         if fork_height is not None:
             # new coin records added
-            assert coin_record_change is not None
-            return ReceiveBlockResult.NEW_PEAK, None, fork_height, (coin_record_change, hint_changes)
+            return ReceiveBlockResult.NEW_PEAK, None, fork_height, rollback_changes, npc_results
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, ([], {})
+            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None, [], []
 
     async def _reconsider_peak(
         self,
@@ -333,13 +328,13 @@ class Blockchain(BlockchainInterface):
                     )
                 await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
-                return uint32(0), uint32(0), [block_record], []
-            return None, None, [], []
+                return uint32(0), uint32(0), [block_record], [], []
+            return None, None, [], [], []
 
         assert peak is not None
         if block_record.weight <= peak.weight:
             # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-            return None, None, [], []
+            return None, None, [], [], []
 
         # Find the fork. if the block is just being appended, it will return the peak
         # If no blocks in common, returns -1, and reverts all blocks

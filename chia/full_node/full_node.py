@@ -439,7 +439,7 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self._blockchain_lock_high_priority:
-                    success, advanced_peak, fork_height, coin_changes = await self.receive_block_batch(
+                    success, advanced_peak, fork_height, rollback_changes, npc_results = await self.receive_block_batch(
                         response.blocks, peer, None
                     )
                     if not success:
@@ -1039,33 +1039,30 @@ class FullNode:
     ):
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
-        # removed_rec: List[Optional[CoinRecord]] = [
-        #     await self.coin_store.get_coin_record(name) for name in tx_removals
-        # ]
-        #
-        # # Set additions first, then removals in order to handle ephemeral coin state
-        # # Add in height order is also required
-        # record: Optional[CoinRecord]
-        # for record in added_rec:
-        #     assert record
-        #     latest_coin_state[record.name] = record
-        # for record in removed_rec:
-        #     assert record
-        #     latest_coin_state[record.name] = record
-        #
-        # if npc_res is not None:
-        #     hint_list: List[Tuple[bytes32, bytes]] = self.get_hint_list(npc_res)
-        #     await self.hint_store.add_hints(hint_list)
-        #     # There can be multiple coins for the same hint
-        #     for coin_id, hint in hint_list:
-        #         key = hint
-        #         if key not in hint_coin_state:
-        #             hint_coin_state[key] = {}
-        #         hint_coin_state[key][coin_id] = latest_coin_state[coin_id]
+        # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
+        coin_id: bytes32
+        hint: bytes
+        lookup_coin_ids: Set[bytes32] = set()
+        for npc_result in new_npc_results:
+            removal_ids, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
 
-        # states, hint_st = state_update
+            # Record all coin_ids that we are interested in, that had changes
+            for removal_coin_id in removal_ids:
+                if removal_coin_id in self.coin_subscriptions:
+                    lookup_coin_ids.add(removal_coin_id)
 
-        for coin_record in rolled_back_states:
+            for addition_coin, hint in additions_with_h:
+                addition_coin_name = addition_coin.name()
+                if addition_coin_name in self.coin_subscriptions:
+                    lookup_coin_ids.add(addition_coin_name)
+                if len(hint) == 32 and bytes32(hint) in self.ph_subscriptions:
+                    lookup_coin_ids.add(addition_coin_name)
+
+        new_states: List[Optional[CoinRecord]] = [
+            await self.coin_store.get_coin_record(coin_id) for coin_id in list(lookup_coin_ids)
+        ]
+
+        for coin_record in rolled_back_states + new_states:
             for peer in self.coin_subscriptions.get(coin_record.name, []):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
@@ -1075,22 +1072,6 @@ class FullNode:
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
-
-        # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
-        coin_id: bytes32
-        hint: bytes
-        lookup_coin_ids: Set[bytes32] = set()
-        for npc_result in new_npc_results:
-            removal_ids, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
-            for coin_id, hint in self.get_hint_list(npc_result):
-                if len(hint) == 32 and bytes32(hint) in self.ph_subscriptions:
-                    lookup_coin_ids.add(coin_id)
-
-            # for peer in self.ph_subscriptions.get(hint, []):  # type: ignore[call-overload]
-            #     if peer not in changes_for_peer:
-            #         changes_for_peer[peer] = set()
-            #     for record in records.values():
-            #         changes_for_peer[peer].add(record.coin_state)
 
         for peer, changes in changes_for_peer.items():
             if peer not in self.server.all_connections:
@@ -1106,7 +1087,9 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], Tuple[List[CoinRecord], Dict[bytes, Dict[bytes32, CoinRecord]]]]:
+    ) -> Tuple[bool, bool, Optional[uint32], List[CoinRecord], List[NPCResult]]:
+        # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
+
         advanced_peak = False
         fork_height: Optional[uint32] = uint32(0)
 
@@ -1116,7 +1099,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, False, fork_height, ([], {})
+            return True, False, fork_height, [], []
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
@@ -1137,34 +1120,26 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, advanced_peak, fork_height, ([], {})
+                return False, advanced_peak, fork_height, [], []
 
-        # Dicts because deduping
-        all_coin_changes: Dict[bytes32, CoinRecord] = {}
-        all_hint_changes: Dict[bytes, Dict[bytes32, CoinRecord]] = {}
+        all_rollback_changes: List[CoinRecord] = []
+        all_new_npc_results: List[NPCResult] = []
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
-            result, error, fork_height, coin_changes = await self.blockchain.receive_block(
+            result, error, fork_height, rollback_changes, new_npc_results = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
-            coin_record_list, hint_records = coin_changes
-
-            # Update all changes
-            for record in coin_record_list:
-                all_coin_changes[record.name] = record
-            for hint, list_of_records in hint_records.items():
-                if hint not in all_hint_changes:
-                    all_hint_changes[hint] = {}
-                for record in list_of_records.values():
-                    all_hint_changes[hint][record.name] = record
 
             if result == ReceiveBlockResult.NEW_PEAK:
                 advanced_peak = True
+                # Since all blocks are contiguous, we can simply append the rollback changes and npc results
+                all_rollback_changes += rollback_changes
+                all_new_npc_results += new_npc_results
             elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, advanced_peak, fork_height, ([], {})
+                return False, advanced_peak, fork_height, all_rollback_changes, all_new_npc_results
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
@@ -1175,7 +1150,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: {advanced_peak}"
             )
-        return True, advanced_peak, fork_height, (list(all_coin_changes.values()), all_hint_changes)
+        return True, advanced_peak, fork_height, all_rollback_changes, all_new_npc_results
 
     async def _finish_sync(self):
         """
