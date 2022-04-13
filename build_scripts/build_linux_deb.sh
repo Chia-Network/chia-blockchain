@@ -12,6 +12,7 @@ else
 	PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
 fi
+export PLATFORM
 
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
@@ -21,6 +22,7 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 	CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+export CHIA_INSTALLER_VERSION
 
 echo "Installing npm and electron packagers"
 cd npm_linux_deb || exit
