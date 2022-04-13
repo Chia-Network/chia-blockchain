@@ -96,7 +96,7 @@ async def select_coins(
             coin_set = {coin}
         return coin_set
     else:
-        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
+        # if we == amount and len(smaller_coins) >= max_num_coins.
         coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
         log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
         return {coin}
