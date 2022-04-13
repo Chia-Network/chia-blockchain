@@ -1,6 +1,7 @@
 import argparse
 import binascii
 import os
+from pathlib import Path
 from enum import Enum
 from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit, install_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
@@ -313,7 +314,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
 
 
-def install_plotter(plotter, root_path):
+def install_plotter(plotter: str, root_path: Path):
     if plotter == "chiapos":
         print("Chiapos already installed. No action taken.")
         return
