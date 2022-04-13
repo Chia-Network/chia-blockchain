@@ -74,21 +74,8 @@ async def select_coins(
             smaller_coin_sum += coin.amount
             smaller_coins.append(coin)
     if smaller_coin_sum == amount:
-        if len(smaller_coins) > 500:
-            target_coins: Set[Coin] = set()
-            coin_sum = 0
-            for coin in valid_spendable_coins:
-                if coin_sum >= amount:
-                    break
-                target_coins.add(coin)
-                coin_sum += coin.amount
-            log.debug(f"selected largest coins due to the large amount of dust. {target_coins}")
-            return target_coins
-        else:
-            log.debug(
-                f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}"
-            )
-            return set(smaller_coins)
+        log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
+        return set(smaller_coins)
     elif smaller_coin_sum < amount:
         if len(smaller_coins) > 0:  # in case we only have bigger coins.
             greater_coins = valid_spendable_coins[: -len(smaller_coins)]
