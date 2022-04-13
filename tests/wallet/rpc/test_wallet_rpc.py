@@ -223,11 +223,8 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     await time_out_assert(5, client.get_synced)
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     tx_amount = uint64(15600000)
-    try:
+    with pytest.raises(ValueError):
         await client.send_transaction("1", uint64(100000000000000001), addr)
-        raise Exception("Should not create high value tx")
-    except ValueError:
-        pass
 
     # Tests sending a basic transaction
     tx = await client.send_transaction("1", tx_amount, addr, memos=["this is a basic tx"])
@@ -755,11 +752,9 @@ async def test_wallet_rpc(wallet_rpc_environment: WalletRpcTestEnvironment, trus
     assert len(wallets) == 1
     assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
 
-    try:
+    with pytest.raises(ValueError):
         await client.send_transaction(wallets[0]["id"], uint64(100), addr)
-        raise Exception("Should not create tx if no balance")
-    except ValueError:
-        pass
+
     # Delete all keys
     await client.delete_all_keys()
     assert len(await client.get_public_keys()) == 0
