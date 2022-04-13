@@ -53,8 +53,8 @@ async def select_coins(
     # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
     if sum_spendable_coins < amount:
         raise ValueError(
-            "Can't make this transaction at the moment. "
-            "We are either waiting for the change from a previous transaction, or our dust limit is too high."
+            f"Transaction for {amount} is greater than spendable balance of {sum_spendable_coins}. "
+            "There may be other transactions pending or our minimum coin amount is too high."
         )
 
     # Sort the coins by amount
@@ -90,8 +90,7 @@ async def select_coins(
             coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
             if coin is None or coin.amount < amount:
                 raise ValueError(
-                    "Can't make this transaction because the transaction would use over 500 "
-                    "coins which is unlikely to get confirmed. Try making a smaller transaction to condense the dust."
+                    f"Transaction of {amount} mojo would use more than 500 coins. Try sending a smaller amount"
                 )
             coin_set = {coin}
         return coin_set
@@ -116,10 +115,7 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 # amount of coins smaller than target, followed by a list of all valid spendable coins sorted in descending order.
 def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_coin_list: List[Coin]) -> Coin:
     if smaller_coin_amount >= len(valid_spendable_coin_list):
-        raise ValueError(
-            "There are no coins greater then the target."
-            " This is caused by having too many dust coins. Try making a smaller transaction to condense the dust."
-        )
+        raise ValueError("Unable to select coins for this transaction. Try sending a smaller amount")
     if smaller_coin_amount > 0:  # in case we only have bigger coins.
         greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
     else:
