@@ -83,7 +83,7 @@ def create_full_puzzle_with_curry_params(
     nft_transfer_program_hash,
     metadata: Program,
     transfer_program_curry_params: Program,
-):
+) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     innerpuz = create_nft_layer_puzzle_with_curry_params(
         singleton_id, current_owner_did, nft_transfer_program_hash, metadata, transfer_program_curry_params
