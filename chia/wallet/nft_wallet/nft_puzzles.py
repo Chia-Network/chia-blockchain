@@ -148,7 +148,7 @@ def get_transfer_program_from_inner_solution(solution: Program) -> Optional[Prog
     return None
 
 
-def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Program:
+def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Optional[Program]:
     try:
         curried_args = match_nft_puzzle(puzzle)[1]
         (
