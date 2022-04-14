@@ -316,6 +316,7 @@ class MempoolManager:
         # build removal list
         removal_names: List[bytes32] = [spend.coin_id for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return None, MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
 
         additions = additions_for_npc(npc_result)
