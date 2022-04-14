@@ -655,7 +655,7 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash = curried_args
+        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash, metadata = curried_args
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
@@ -674,7 +674,7 @@ class WalletStateManager:
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash
+                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash, metadata
             )
             full_puzzle = create_fullpuz(did_puzzle, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:

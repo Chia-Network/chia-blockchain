@@ -1,4 +1,7 @@
 import asyncio
+
+from chia.wallet.did_wallet.did_wallet import DIDWallet
+
 import logging
 from operator import attrgetter
 from typing import Dict, Optional
@@ -32,7 +35,9 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
+
 from tests.pools.test_pool_rpc import wallet_is_synced
+
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 
@@ -678,3 +683,52 @@ class TestWalletRpc:
             await rpc_cleanup()
             await rpc_cleanup_2()
             await rpc_cleanup_node()
+
+            ##############
+            # DID       #
+            ##############
+            # Create a DID wallet
+            res = await client.create_new_did_wallet(1)
+            assert res["success"]
+            did_wallet_id_0 = res["wallet_id"]
+            did_id_0 = res["my_did"]
+            # Check DID ID
+            res = await client.get_did_id(did_wallet_id_0)
+            assert res["success"]
+            assert did_id_0 == res["my_did"]
+            # Create backup file
+            res = await client.create_did_backup_file(did_wallet_id_0, "backup.did")
+            assert res["success"]
+
+            # Recover from backup file
+            res = await client.create_new_did_wallet_from_recovery("backup.did")
+            assert res["success"]
+            did_wallet_id_1 = res["wallet_id"]
+            did_id_1 = res["my_did"]
+            assert did_id_0 == did_id_1
+
+            # Update recovery list
+            res = await client.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
+            assert res["success"]
+            res = await client.get_did_recovery_list(did_wallet_id_0)
+            assert res["num_required"] == 1
+            assert res["recovery_list"][0] == did_id_0
+
+            # Update metadata
+            res = await client.update_did_metadata(did_wallet_id_0, {"Twitter":"Https://test"})
+            assert res["success"]
+            res = await client.get_did_metadata(did_wallet_id_0)
+            assert res["metadata"]["Twitter"] == "Https://test"
+
+            # Transfer DID
+            addr = encode_puzzle_hash(wallet_2.get_new_puzzlehash())
+            res = await client.did_transfer_did(did_wallet_id_0, addr, 0)
+            assert res["success"] == True
+            did_wallets = list(
+                filter(
+                    lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+                    await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+                )
+            )
+            did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
+            assert did_wallet_2.get_my_DID() == did_id_0

@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+import json
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
@@ -107,10 +108,12 @@ class WalletRpcApi:
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
+            "/did_update_metadata": self.did_update_metadata,
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
             "/did_get_recovery_list": self.did_get_recovery_list,
+            "/did_get_metadata": self.did_get_metadata,
             "/did_create_attest": self.did_create_attest,
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/did_get_current_coin_info": self.did_get_current_coin_info,
@@ -513,6 +516,10 @@ class WalletRpcApi:
                     backup_dids.append(hexstr_to_bytes(d))
                 if len(backup_dids) > 0:
                     num_needed = uint64(request["num_of_backup_ids_needed"])
+                metadata: Dict[str, str] = {}
+                if request["metadata"] is not None:
+                    if type(request["metadata"]) is dict:
+                        metadata = request["metadata"]
                 async with self.service.wallet_state_manager.lock:
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
@@ -520,6 +527,8 @@ class WalletRpcApi:
                         uint64(request["amount"]),
                         backup_dids,
                         uint64(num_needed),
+                        metadata,
+                        request["wallet_name"],
                     )
                 my_did = did_wallet.get_my_DID()
                 return {
@@ -1090,6 +1099,21 @@ class WalletRpcApi:
         success = spend_bundle is not None and update_success
         return {"success": success}
 
+    async def did_update_metadata(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        metadata: Dict[str, str] = {}
+        if request["metadata"] is not None:
+            if type(request["metadata"]) is dict:
+                metadata = request["metadata"]
+        async with self.service.wallet_state_manager.lock:
+            update_success = await wallet.update_metadata(metadata)
+            # Update coin with new ID info
+            spend_bundle = await wallet.create_update_spend()
+
+        success = spend_bundle is not None and update_success
+        return {"success": success}
+
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -1112,8 +1136,18 @@ class WalletRpcApi:
         return {
             "success": True,
             "wallet_id": wallet_id,
-            "recover_list": recover_hex_list,
+            "recovery_list": recover_hex_list,
             "num_required": wallet.did_info.num_of_backup_ids_needed,
+        }
+
+    async def did_get_metadata(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        metadata = json.loads(wallet.did_info.metadata)
+        return {
+            "success": True,
+            "wallet_id": wallet_id,
+            "metadata": metadata,
         }
 
     async def did_recovery_spend(self, request):
@@ -1226,6 +1260,7 @@ class WalletRpcApi:
             txs: TransactionRecord = await did_wallet.transfer_did(puzzle_hash, fee)
 
         return {
+            "success": True,
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
         }

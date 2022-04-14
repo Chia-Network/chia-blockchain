@@ -247,6 +247,52 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
+    async def get_did_id(self, wallet_id):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_did", request)
+        return response
+
+    async def create_did_backup_file(self, wallet_id, filename):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "filename": filename,
+        }
+        response = await self.fetch("did_create_backup_file", request)
+        return response
+
+    async def update_did_recovery_list(self, wallet_id, recovery_list, num_verification):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "new_list": recovery_list,
+            "num_verifications_required": num_verification,
+        }
+        response = await self.fetch("did_update_recovery_ids", request)
+        return response
+
+    async def get_did_recovery_list(self, wallet_id):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_recovery_list", request)
+        return response
+
+    async def update_did_metadata(self, wallet_id, metadata):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "metdata": metadata,
+        }
+        response = await self.fetch("did_update_metadata", request)
+        return response
+
+    async def get_did_metadata(self, wallet_id):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_metadata", request)
+        return response
+
     async def create_new_did_wallet_from_recovery(self, filename):
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
@@ -273,6 +319,15 @@ class WalletRpcClient(RpcClient):
             "attest_filenames": attest_filenames,
         }
         response = await self.fetch("did_recovery_spend", request)
+        return response
+
+    async def did_transfer_did(self, wallet_id, address, fee):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "inner_address": address,
+            "fee": fee
+        }
+        response = await self.fetch("did_transfer_did", request)
         return response
 
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.

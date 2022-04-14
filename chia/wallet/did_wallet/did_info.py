@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -21,3 +21,4 @@ class DIDInfo(Streamable):
     temp_puzhash: Optional[bytes32]
     temp_pubkey: Optional[bytes]
     sent_recovery_transaction: bool
+    metadata: str  # User defined metadata

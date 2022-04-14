@@ -10,6 +10,7 @@
   NUM_VERIFICATIONS_REQUIRED  ; how many of the above list are required for a recovery
   SINGLETON_STRUCT  ; my singleton_struct, formerly a Truth - ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
   DID_MOD_HASH  ; DID inner puzzle treehash
+  METADATA ; Customized metadata, e.g KYC info
   mode  ; this indicates which spend mode we want. 0. Recovery mode 1. Send message mode 2. Transfer mode
   new_amount  ; DIDs can receive payments so when we recreate ourselves sometimes we want to change our amount
   p2_solution ; Solution of the inner P2 puzzle, only required in the create message mode and transfer mode.
@@ -61,8 +62,9 @@
   )
 
   ;Return the DID puzzle hash
-  (defun-inline calculate_did_puzzle_hash (p2_puzhash RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED SINGLETON_STRUCT DID_MOD_HASH)
+  (defun-inline calculate_did_puzzle_hash (p2_puzhash RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED SINGLETON_STRUCT DID_MOD_HASH METADATA)
      (puzzle-hash-of-curried-function DID_MOD_HASH
+                                      (sha256tree1 METADATA)
                                       (sha256tree1 DID_MOD_HASH)
                                       (sha256tree1 SINGLETON_STRUCT)
                                       (sha256tree1 NUM_VERIFICATIONS_REQUIRED)
@@ -141,7 +143,7 @@
       (c (list CREATE_COIN new_inner_puzhash new_amount (list new_inner_puzhash)) (c (list AGG_SIG_ME (get_pubkey P2_PUZZLE) (sha256tree1 (list new_inner_puzhash new_amount))) (a P2_PUZZLE p2_solution)))
       ; Transfer DID
       (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-         (c (list CREATE_COIN (calculate_did_puzzle_hash new_inner_puzhash RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED SINGLETON_STRUCT DID_MOD_HASH) new_amount (list new_inner_puzhash)) (c (list AGG_SIG_ME (get_pubkey P2_PUZZLE) (sha256tree1 (list new_inner_puzhash new_amount recovery_list_reveal))) (a P2_PUZZLE p2_solution)))
+         (c (list CREATE_COIN (calculate_did_puzzle_hash new_inner_puzhash RECOVERY_DID_LIST_HASH NUM_VERIFICATIONS_REQUIRED SINGLETON_STRUCT DID_MOD_HASH METADATA) new_amount (list new_inner_puzhash)) (c (list AGG_SIG_ME (get_pubkey P2_PUZZLE) (sha256tree1 (list new_inner_puzhash new_amount recovery_list_reveal))) (a P2_PUZZLE p2_solution)))
          (x)
       )
     )
