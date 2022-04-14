@@ -63,9 +63,9 @@ def create_nft_layer_puzzle_with_curry_params(
 
 
 def create_full_puzzle(
-    singleton_id,
-    current_owner_did,
-    nft_transfer_program_hash,
+    singleton_id: bytes32,
+    current_owner_did: bytes32,
+    nft_transfer_program_hash: bytes32,
     metadata: Program,
     backpayment_address: bytes32,
     percentage: uint64,
