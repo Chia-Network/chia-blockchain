@@ -643,7 +643,14 @@ class WalletStateManager:
             matched, curried_args = match_nft_puzzle(Program.from_bytes(bytes(nft_spend.puzzle_reveal)))
 
             if matched:
-                NFT_MOD_HASH, singleton_struct, current_owner_did, nft_transfer_program_hash = curried_args
+                (
+                    NFT_MOD_HASH,
+                    singleton_struct,
+                    current_owner_did,
+                    nft_transfer_program_hash,
+                    transfer_program_curry_params,
+                    metadata,
+                ) = curried_args
                 hint_list = nft_spend.hints()
                 for wallet_info in await self.get_all_wallet_info_entries():
                     if wallet_info.type == WalletType.NFT:

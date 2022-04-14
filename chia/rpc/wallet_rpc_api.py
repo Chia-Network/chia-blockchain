@@ -28,7 +28,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_transfer_program
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -1168,14 +1168,13 @@ class WalletRpcApi:
         address = request["artist_address"]
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
-        metadata = Program.to([
-            ('u', request["uris"]),
-            ('h', request["hash"]),
-        ])
-        if "amount" in request:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
-        else:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
+        metadata = Program.to(
+            [
+                ("u", request["uris"]),
+                ("h", request["hash"]),
+            ]
+        )
+        await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
@@ -1184,7 +1183,7 @@ class WalletRpcApi:
         nfts = nft_wallet.get_current_nfts()
         nft_uri_pairs = []
         for nft in nfts:
-            uri = get_uri_list_from_transfer_program(nft.transfer_program)
+            uri = get_uri_list_from_puzzle(nft.full_puzzle)
             nft_uri_pairs.append((nft, uri))
         return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
 
@@ -1200,9 +1199,7 @@ class WalletRpcApi:
         sb = await nft_wallet.transfer_nft(
             request["nft_coin_info"],
             bytes.fromhex(request["new_did"]),
-            request["new_did_parent"],
             request["new_did_inner_hash"],
-            request["new_did_amount"],
             request["trade_price"],
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}

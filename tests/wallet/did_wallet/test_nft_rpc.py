@@ -142,14 +142,10 @@ class TestNFTRPC:
         did_wallet_id_1 = val["wallet_id"]
         await asyncio.sleep(2)
 
-        val = await api_0.create_new_wallet(
-            {"wallet_type": "nft_wallet", "did_wallet_id": did_wallet_id_0}
-        )
+        val = await api_0.create_new_wallet({"wallet_type": "nft_wallet", "did_wallet_id": did_wallet_id_0})
         assert val["success"]
         nft_wallet_id_0 = val["wallet_id"]
-        val = await api_1.create_new_wallet(
-            {"wallet_type": "nft_wallet", "did_wallet_id": did_wallet_id_1}
-        )
+        val = await api_1.create_new_wallet({"wallet_type": "nft_wallet", "did_wallet_id": did_wallet_id_1})
         assert val["success"]
         nft_wallet_id_1 = val["wallet_id"]
 
@@ -166,9 +162,9 @@ class TestNFTRPC:
             {
                 "wallet_id": nft_wallet_id_0,
                 "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
-                "hash": 0xd4584ad463139fa8c0d9f68f4b59f185,
+                "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
                 "artist_percentage": 20,
-                "artist_address": ph2
+                "artist_address": ph2,
             }
         )
 
@@ -193,23 +189,22 @@ class TestNFTRPC:
 
         trade_price = [[50]]
 
-        val = await api_0.nft_transfer_nft({
-            "wallet_id": nft_wallet_id_0,
-            "nft_coin_info": nft_coin_info,
-            "new_did": did_1,
-            "new_did_parent": val["did_parent"],
-            "new_did_inner_hash": val["did_innerpuz"],
-            "new_did_amount": val["did_amount"],
-            "trade_price": trade_price
-        })
+        val = await api_0.nft_transfer_nft(
+            {
+                "wallet_id": nft_wallet_id_0,
+                "nft_coin_info": nft_coin_info,
+                "new_did": did_1,
+                "new_did_parent": val["did_parent"],
+                "new_did_inner_hash": val["did_innerpuz"],
+                "new_did_amount": val["did_amount"],
+                "trade_price": trade_price,
+            }
+        )
 
         assert val["success"]
         assert val["spend_bundle"] is not None
 
-        val = await api_1.nft_receive_nft({
-            "wallet_id": nft_wallet_id_1,
-            "spend_bundle": val["spend_bundle"]
-        })
+        val = await api_1.nft_receive_nft({"wallet_id": nft_wallet_id_1, "spend_bundle": val["spend_bundle"]})
 
         assert val["success"]
 
