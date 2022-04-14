@@ -12,7 +12,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
 
@@ -51,11 +50,6 @@ async def check_balance(api, wallet_id):
 
 
 class TestNFTRPC:
-    @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True],
@@ -183,7 +177,7 @@ class TestNFTRPC:
         nft_coin_info = val["nfts"][0][0]
         assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo.svg"]
 
-        val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_0})
+        val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_1})
         assert val["success"]
 
         trade_price = [[50]]

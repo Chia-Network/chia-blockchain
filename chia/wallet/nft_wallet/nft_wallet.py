@@ -30,6 +30,7 @@ from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import subscribe_to_phs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
@@ -102,8 +103,8 @@ class NFTWallet:
         ] = self.wallet_state_manager.wallet_node.server.connection_by_type.get(NodeType.FULL_NODE, {})
 
         for node_id, node in full_nodes.copy().items():
-            await self.wallet_state_manager.wallet_node.subscribe_to_phs([my_did], node)
-        await self.wallet_state_manager.add_interested_puzzle_hash(my_did, self.wallet_id)
+            await subscribe_to_phs([my_did], node, uint32(0))
+        await self.wallet_state_manager.add_interested_puzzle_hashes([my_did], [self.wallet_id], in_transaction=False)
         return self
 
     @classmethod
