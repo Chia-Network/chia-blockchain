@@ -181,7 +181,7 @@ def get_royalty_address_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     return None
 
 
-def get_percentage_from_puzzle(puzzle: Program) -> uint64:
+def get_percentage_from_puzzle(puzzle: Program) -> Optional[uint64]:
     try:
         transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
         (
