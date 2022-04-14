@@ -69,7 +69,7 @@ def create_full_puzzle(
     metadata: Program,
     backpayment_address: bytes32,
     percentage: uint64,
-):
+) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     innerpuz = create_nft_layer_puzzle(
         singleton_id, current_owner_did, nft_transfer_program_hash, metadata, backpayment_address, percentage
