@@ -1,4 +1,4 @@
-(mod (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner my_did_inner_hash new_did new_did_inner_hash solution)
+(mod (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner my_did_inner_hash new_did new_did_inner_hash solution is_auth_delayed)
     ; METADATA and CURRY_PARAMS are not actually curried into the mod hash but are curried into the NFT layer and passed in
     ; This effectively achieves the same result - fixing the values - but means that the transfer program mod never changes
     ; CURRY_PARAMS are: (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)

@@ -11,9 +11,11 @@ SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_MOD = load_clvm("nft_innerpuz.clvm")
+DELAYED_PERMISSION_MOD = load_clvm("did_delayed_permission.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
+DELAYED_PERMISSION_MOD_HASH = DELAYED_PERMISSION_MOD.get_tree_hash()
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
@@ -57,6 +59,7 @@ def test_transfer_no_backpayments():
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
+            DELAYED_PERMISSION_MOD_HASH,
             SINGLETON_STRUCT,
             did_one,
             nft_program.get_tree_hash(),
@@ -66,6 +69,7 @@ def test_transfer_no_backpayments():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
+            0,
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
@@ -82,6 +86,80 @@ def test_transfer_no_backpayments():
     assert res.rest().first().rest().first().as_atom() == announcement_one.name()
     # assert res.rest().rest().first().first().as_int() == 63
     # assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
+
+
+def test_transfer_delayed_coin():
+    did_one: bytes32 = Program.to("did_one").get_tree_hash()
+    did_two: bytes32 = Program.to("did_two").get_tree_hash()
+
+    did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
+    did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
+    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
+    did_one_amount = 201
+
+    #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
+    did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
+    # did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    # did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
+    # did_two_amount = 401
+
+    did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
+    # did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
+
+    # NFT_MOD_HASH
+    # SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    # CURRENT_OWNER_DID
+    # NFT_TRANSFER_PROGRAM_HASH
+    # TRANSFER_PROGRAM_CURRY_PARAMS
+    # METADATA
+    # my_amount
+    # my_did_inner_hash
+    # new_did
+    # new_did_inner_hash
+    # transfer_program_reveal
+    # transfer_program_solution
+
+    nft_program = Program.to(0)
+    trade_price = 0
+    solution = Program.to(
+        [
+            NFT_MOD_HASH,  # curried in params
+            DELAYED_PERMISSION_MOD_HASH,
+            SINGLETON_STRUCT,
+            did_one,
+            nft_program.get_tree_hash(),
+            1,
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+            ],
+            # below here is the solution
+            1,
+            did_one_innerpuz.get_tree_hash(),
+            did_two,
+            did_two_innerpuz.get_tree_hash(),
+            nft_program,
+            [trade_price, 0],
+        ]
+    )
+    cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
+    # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
+    ann = Program.to([[trade_price, 0], did_two]).get_tree_hash()
+
+    # Generate our delayed permission coin
+    delayed_puz = DELAYED_PERMISSION_MOD.curry(Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH))), ann, did_one_innerpuz.get_tree_hash())
+    announcement_one = Announcement(delayed_puz.get_tree_hash(), ann)
+    assert res.rest().first().first().as_int() == 63
+    assert res.rest().first().rest().first().as_atom() == announcement_one.name()
+
+    cost, res = delayed_puz.run_with_cost(INFINITE_COST, Program.to([did_one_parent, did_one_amount]))
+    assert res.first().first().as_int() == 71
+    assert res.first().rest().first().as_atom() == did_one_coin.name()
+    assert res.rest().first().first().as_int() == 62
+    assert res.rest().first().rest().first().as_atom() == ann
 
 
 def test_transfer_with_backpayments():
@@ -127,6 +205,7 @@ def test_transfer_with_backpayments():
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
+            DELAYED_PERMISSION_MOD_HASH,
             SINGLETON_STRUCT,
             did_one,
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
@@ -136,6 +215,7 @@ def test_transfer_with_backpayments():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
+            0,
             did_one_innerpuz.get_tree_hash(),
             did_two,
             did_two_innerpuz.get_tree_hash(),
@@ -192,6 +272,7 @@ def test_announce():
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
+            DELAYED_PERMISSION_MOD_HASH,
             SINGLETON_STRUCT,
             did_one,
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
@@ -201,6 +282,7 @@ def test_announce():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
+            0,
             did_one_innerpuz.get_tree_hash(),
             0,
             0,
@@ -262,6 +344,7 @@ def test_update_url_spend():
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
+            DELAYED_PERMISSION_MOD_HASH,
             SINGLETON_STRUCT,
             did_one,
             NFT_TRANSFER_PROGRAM.get_tree_hash(),
@@ -271,6 +354,7 @@ def test_update_url_spend():
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ],
             # below here is the solution
+            0,
             did_one_innerpuz.get_tree_hash(),
             did_one,
             did_one_innerpuz.get_tree_hash(),
@@ -280,6 +364,7 @@ def test_update_url_spend():
     )
     new_inner = NFT_MOD.curry(
         NFT_MOD_HASH,  # curried in params
+        DELAYED_PERMISSION_MOD_HASH,
         SINGLETON_STRUCT,
         did_one,
         NFT_TRANSFER_PROGRAM.get_tree_hash(),
@@ -296,6 +381,6 @@ def test_update_url_spend():
         ],
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
-    # new_full = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_inner)
+
     assert res.rest().rest().first().first().as_int() == 51
     assert res.rest().rest().first().rest().first().as_atom() == new_inner.get_tree_hash()

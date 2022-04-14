@@ -46,6 +46,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
         "chia/wallet/puzzles/nft_innerpuz.clvm",
         "chia/wallet/puzzles/nft_transfer_program.clvm",
+        "chia/wallet/puzzles/did_delayed_permission.clvm"
     ]
 )
 

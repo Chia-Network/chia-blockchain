@@ -1,0 +1,44 @@
+(mod (SINGLETON_STRUCT MESSAGE MY_PARENTS_INNER_PUZHASH my_parents_parent my_parents_amount)
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  ; To revoke permission, set my_parents_amount to 0 - DID's cannot have 0 amount
+  ; In case of revoking permission my_parents_parent is my_coin_id
+
+  ; SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (MY_PARENTS_DID, LAUNCHER_PUZZLE_HASH)))
+
+  ; Plan is to attach an encoded spend_bundle of this permission coin as part of the trade file
+  ; These are never tracked by wallets, but instead by files
+
+  ; NFTs can re-curry the args to verify and assert the puzzle announcement
+  ; Solution is verified through ASSERT_MY_PARENT_ID
+
+  (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 ONE TREE)
+        )
+  )
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree1 SINGLETON_STRUCT)
+     )
+  )
+
+  ; main
+
+  (if my_parents_amount
+    (list
+      (list ASSERT_MY_PARENT_ID (sha256 my_parents_parent (calculate_full_puzzle_hash SINGLETON_STRUCT MY_PARENTS_INNER_PUZHASH) my_parents_amount))
+      (list CREATE_PUZZLE_ANNOUNCEMENT MESSAGE)
+    )
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_STRUCT MY_PARENTS_INNER_PUZHASH) 'd' my_parents_parent))
+      (list ASSERT_MY_COIN_ID my_parents_parent)
+    )
+  )
+
+)
