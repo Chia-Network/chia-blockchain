@@ -88,7 +88,7 @@ class WalletActionStore:
 
     async def get_all_pending_actions(self) -> List[WalletAction]:
         """
-        Returns list of all pending action
+        Returns list of all pending actions
         """
         result: List[WalletAction] = []
         cursor = await self.db_connection.execute("SELECT * from action_queue WHERE done=?", (0,))
