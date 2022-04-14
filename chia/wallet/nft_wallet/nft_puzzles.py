@@ -139,7 +139,7 @@ def update_metadata(metadata, solution):
     return new_metadata
 
 
-def get_transfer_program_from_inner_solution(solution: Program) -> Program:
+def get_transfer_program_from_inner_solution(solution: Program) -> Optional[Program]:
     try:
         prog = solution.rest().rest().rest().first()
         return prog
