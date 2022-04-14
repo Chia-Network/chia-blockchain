@@ -214,7 +214,7 @@ def get_metadata_from_puzzle(puzzle: Program) -> Program:
     return None
 
 
-def get_uri_list_from_puzzle(puzzle: Program) -> List[str]:
+def get_uri_list_from_puzzle(puzzle: Program) -> Optional[List[str]]:
     try:
         uri_list = []
         metadata = get_metadata_from_puzzle(puzzle)
