@@ -78,9 +78,9 @@ def create_full_puzzle(
 
 
 def create_full_puzzle_with_curry_params(
-    singleton_id,
-    current_owner_did,
-    nft_transfer_program_hash,
+    singleton_id: bytes32,
+    current_owner_did: bytes32,
+    nft_transfer_program_hash: bytes32,
     metadata: Program,
     transfer_program_curry_params: Program,
 ) -> Program:
