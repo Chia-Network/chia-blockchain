@@ -91,7 +91,7 @@ def create_full_puzzle_with_curry_params(
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
-def get_transfer_puzzle():
+def get_transfer_puzzle() -> Program:
     return NFT_TRANSFER_PROGRAM
 
 
