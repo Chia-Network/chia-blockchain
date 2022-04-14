@@ -1044,7 +1044,9 @@ class WalletNode:
 
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
-        await self.wallet_state_manager.new_peak(new_peak)
+
+        async with self.wallet_state_manager.lock:
+            await self.wallet_state_manager.new_peak(new_peak)
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int:
         assert self.wallet_state_manager is not None

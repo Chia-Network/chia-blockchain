@@ -1212,6 +1212,10 @@ class WalletStateManager:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == uint8(WalletType.POOLING_WALLET):
                 await wallet.new_peak(peak.height)
+        current_time = int(time.time())
+
+        if self.tx_store.last_global_tx_resend_time < current_time - self.tx_store.global_tx_resend_timeout_secs:
+            self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(
         self, puzzle_hashes: List[bytes32], wallet_ids: List[int], in_transaction: bool = False
