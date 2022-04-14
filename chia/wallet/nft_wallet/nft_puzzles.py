@@ -165,7 +165,7 @@ def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Optional[P
     return None
 
 
-def get_royalty_address_from_puzzle(puzzle: Program) -> bytes32:
+def get_royalty_address_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     try:
         transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
         (
