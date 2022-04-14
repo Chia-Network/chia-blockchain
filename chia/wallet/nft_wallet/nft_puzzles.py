@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.types.blockchain_format.program import Program
@@ -126,7 +126,7 @@ def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     return None
 
 
-def update_metadata(metadata, solution):
+def update_metadata(metadata: Program, solution: Program) -> Any:
     tp_solution: Program = get_transfer_program_solution_from_solution(solution)
     if tp_solution is None or tp_solution.rest().first() == Program.to(0):
         return metadata
