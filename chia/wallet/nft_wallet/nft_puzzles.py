@@ -229,7 +229,7 @@ def get_uri_list_from_puzzle(puzzle: Program) -> Optional[List[str]]:
     return None
 
 
-def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
+def get_trade_prices_list_from_inner_solution(solution: Program) -> Optional[Program]:
     try:
         prog = solution.rest().rest().rest().rest().first().first()
         return prog
