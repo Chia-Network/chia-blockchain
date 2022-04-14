@@ -238,7 +238,7 @@ def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     return None
 
 
-def get_transfer_program_solution_from_solution(solution: Program) -> Program:
+def get_transfer_program_solution_from_solution(solution: Program) -> Optional[Program]:
     try:
         prog_sol = solution.rest().rest().rest().rest().first()
         return prog_sol
