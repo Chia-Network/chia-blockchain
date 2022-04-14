@@ -4,7 +4,8 @@ import logging
 import random
 import signal
 import traceback
-from typing import Any, List
+from pathlib import Path
+from typing import Any, Dict, List
 
 import aiosqlite
 from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
@@ -35,7 +36,7 @@ ns_records: List[Any] = []
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
     def __init__(self, callback):
-        self.data_queue = asyncio.Queue(loop=asyncio.get_event_loop())
+        self.data_queue = asyncio.Queue()
         self.callback = callback
         asyncio.ensure_future(self.respond())
 
@@ -43,7 +44,7 @@ class EchoServerProtocol(asyncio.DatagramProtocol):
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        asyncio.ensure_future(self.handler(data, addr), loop=asyncio.get_event_loop())
+        asyncio.ensure_future(self.handler(data, addr))
 
     async def respond(self):
         while True:
@@ -70,15 +71,15 @@ class DNSServer:
     pointer: int
     crawl_db: aiosqlite.Connection
 
-    def __init__(self):
+    def __init__(self, config: Dict, root_path: Path):
         self.reliable_peers_v4 = []
         self.reliable_peers_v6 = []
         self.lock = asyncio.Lock()
         self.pointer_v4 = 0
         self.pointer_v6 = 0
-        db_path_replaced: str = "crawler.db"
-        root_path = DEFAULT_ROOT_PATH
-        self.db_path = path_from_root(root_path, db_path_replaced)
+
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
         mkdir(self.db_path.parent)
 
     async def start(self):
@@ -227,8 +228,8 @@ class DNSServer:
             log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
 
-async def serve_dns():
-    dns_server = DNSServer()
+async def serve_dns(config: Dict, root_path: Path):
+    dns_server = DNSServer(config, root_path)
     await dns_server.start()
 
     # TODO: Make this cleaner?
@@ -239,6 +240,22 @@ async def serve_dns():
 async def kill_processes():
     # TODO: implement.
     pass
+
+
+def signal_received():
+    asyncio.create_task(kill_processes())
+
+
+async def async_main(config, root_path):
+    loop = asyncio.get_running_loop()
+
+    try:
+        loop.add_signal_handler(signal.SIGINT, signal_received)
+        loop.add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
+
+    await serve_dns(config, root_path)
 
 
 def main():
@@ -266,21 +283,7 @@ def main():
     )
     ns_records = [NS(ns)]
 
-    def signal_received():
-        asyncio.create_task(kill_processes())
-
-    loop = asyncio.get_event_loop()
-
-    try:
-        loop.add_signal_handler(signal.SIGINT, signal_received)
-        loop.add_signal_handler(signal.SIGTERM, signal_received)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    try:
-        loop.run_until_complete(serve_dns())
-    finally:
-        loop.close()
+    asyncio.run(async_main(config=config, root_path=root_path))
 
 
 if __name__ == "__main__":

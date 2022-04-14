@@ -25,7 +25,7 @@ We ask that external contributors create a fork of the `main` branch for any fea
 
 Members of the Chia organization may create feature branches from the `main` branch.
 
-In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `1.0.0`.
+In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `latest`.
 
 ## Branching Strategy
 
@@ -58,6 +58,7 @@ py.test tests -v --durations 0
 The [black library](https://black.readthedocs.io/en/stable/) is used as an automatic style formatter to make things easier.
 The [flake8 library](https://readthedocs.org/projects/flake8/) helps ensure consistent style.
 The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
+The [isort library](https://isort.readthedocs.io) is used to sort, group and validate imports in all python files.
 
 If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 
@@ -92,7 +93,7 @@ workflow.
 3. Install BlackConnect plugin
 4. Set to run python black on save
 5. Set line length to 120
-6. Install these linters https://github.com/Chia-Network/chia-blockchain/tree/main/.github/linters
+6. Install the linters in the root directory
 
 ## Testnets and review environments
 

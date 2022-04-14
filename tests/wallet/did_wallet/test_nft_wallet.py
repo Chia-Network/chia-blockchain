@@ -1,23 +1,26 @@
 import asyncio
-import pytest
 from typing import List
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
-from tests.setup_nodes import setup_simulators_and_wallets
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.full_node.mempool_manager import MempoolManager
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.transaction_record import TransactionRecord
-from chia.types.blockchain_format.program import Program
+
+import pytest
 
 # from blspy import AugSchemeMPL
 # from chia.types.spend_bundle import SpendBundle
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.full_node.mempool_manager import MempoolManager
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.transaction_record import TransactionRecord
+
+# from blspy import AugSchemeMPL
+# from chia.types.spend_bundle import SpendBundle
+from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 
@@ -36,31 +39,6 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
 
 
 class TestNFTWallet:
-    @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.parametrize(
         "trusted",
         [True],

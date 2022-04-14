@@ -4,16 +4,16 @@ from multiprocessing import freeze_support
 from typing import Dict
 
 from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
+from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import mkdir, path_from_root
 from tests.block_tools import BlockTools, create_block_tools, test_constants
 from tests.util.keyring import TempKeyring
 
-from .full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -43,7 +43,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
         service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
-        rpc_info=(FullNodeRpcApi, config["rpc_port"]),
+        rpc_info=(SimulatorFullNodeRpcApi, config["rpc_port"]),
         network_id=network_id,
     )
     return kwargs

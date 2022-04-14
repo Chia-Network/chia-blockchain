@@ -11,8 +11,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class BlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more

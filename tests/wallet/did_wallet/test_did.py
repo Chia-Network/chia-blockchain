@@ -1,57 +1,21 @@
-import asyncio
 import pytest
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
-from tests.setup_nodes import setup_simulators_and_wallets
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.types.blockchain_format.program import Program
 from blspy import AugSchemeMPL
-from chia.types.spend_bundle import SpendBundle
+
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.program import Program
+from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.did_wallet.did_wallet import DIDWallet
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestDIDWallet:
-    @pytest.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 3, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
-    async def test_creation_from_backup_file(self, three_wallet_nodes, trusted):
+    async def test_creation_from_backup_file(self, self_hostname, three_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -67,24 +31,9 @@ class TestDIDWallet:
         ph1 = await wallet_1.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
 
-        if trusted:
-            wallet_node_0.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_1.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node_0.config["trusted_peers"] = {}
-            wallet_node_1.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -215,12 +164,8 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
-    async def test_did_recovery_with_multiple_backup_dids(self, two_wallet_nodes, trusted):
+    async def test_did_recovery_with_multiple_backup_dids(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -232,20 +177,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -370,12 +303,8 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
-    async def test_did_recovery_with_empty_set(self, two_wallet_nodes, trusted):
+    async def test_did_recovery_with_empty_set(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -386,20 +315,8 @@ class TestDIDWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -443,12 +360,8 @@ class TestDIDWallet:
         else:
             assert False
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True],
-    )
     @pytest.mark.asyncio
-    async def test_did_attest_after_recovery(self, two_wallet_nodes, trusted):
+    async def test_did_attest_after_recovery(self, self_hostname, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -459,20 +372,8 @@ class TestDIDWallet:
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        if trusted:
-            wallet_node.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-
-            wallet_node_2.config["trusted_peers"] = {
-                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-            }
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 

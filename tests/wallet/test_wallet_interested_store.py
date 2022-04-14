@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from secrets import token_bytes
 import aiosqlite
@@ -11,16 +10,10 @@ from chia.util.ints import uint64
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestWalletInterestedStore:
     @pytest.mark.asyncio
     async def test_store(self):
-        db_filename = Path("wallet_store_test.db")
+        db_filename = Path("wallet_interested_store_test.db")
 
         if db_filename.exists():
             db_filename.unlink()

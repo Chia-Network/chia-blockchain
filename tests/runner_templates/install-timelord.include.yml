@@ -1,5 +1,5 @@
     - name: Install timelord
       run: |
         . ./activate
-        sh install-timelord.sh
+        sh install-timelord.sh -n
         ./vdf_bench square_asm 400000

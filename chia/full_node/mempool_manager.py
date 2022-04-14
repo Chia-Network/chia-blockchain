@@ -1,9 +1,11 @@
 import asyncio
 import collections
-import dataclasses
 import logging
+from concurrent.futures import Executor
+from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
+from chia.util.inline_executor import InlineExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
 from chiabip158 import PyBIP158
@@ -15,25 +17,23 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import mempool_check_conditions_dict, get_name_puzzle_conditions
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.cached_bls import LOCAL_CACHE
-from chia.util.clvm import int_from_bytes
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from chia.util.streamable import recurse_jsonify
+from chia.util.setproctitle import getproctitle, setproctitle
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 
 log = logging.getLogger(__name__)
 
@@ -57,9 +57,10 @@ def validate_clvm_and_signature(
         if result.error is not None:
             return Err(result.error), b"", {}
 
-        pks: List[bytes48]
-        msgs: List[bytes]
-        pks, msgs = pkm_pairs(result.npc_list, additional_data)
+        pks: List[bytes48] = []
+        msgs: List[bytes] = []
+        assert result.conds is not None
+        pks, msgs = pkm_pairs(result.conds, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache = LRUCache(10000)
@@ -77,9 +78,17 @@ def validate_clvm_and_signature(
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+    pool: Executor
+
+    def __init__(
+        self,
+        coin_store: CoinStore,
+        consensus_constants: ConsensusConstants,
+        multiprocessing_context: Optional[BaseContext] = None,
+        *,
+        single_threaded: bool = False,
+    ):
         self.constants: ConsensusConstants = consensus_constants
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
 
         # Keep track of seen spend_bundles
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
@@ -98,7 +107,15 @@ class MempoolManager:
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
         self.seen_cache_size = 10000
-        self.pool = ProcessPoolExecutor(max_workers=2)
+        if single_threaded:
+            self.pool = InlineExecutor()
+        else:
+            self.pool = ProcessPoolExecutor(
+                max_workers=2,
+                mp_context=multiprocessing_context,
+                initializer=setproctitle,
+                initargs=(f"{getproctitle()}_worker",),
+            )
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecord] = None
@@ -280,8 +297,10 @@ class MempoolManager:
         if self.peak is None:
             return None, MempoolInclusionStatus.FAILED, Err.MEMPOOL_NOT_INITIALIZED
 
-        npc_list = npc_result.npc_list
         assert npc_result.error is None
+        if npc_result.error is not None:
+            return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
+
         if program is None:
             program = simple_solution_generator(new_spend).program
         cost = npc_result.cost
@@ -293,19 +312,20 @@ class MempoolManager:
             # execute the CLVM program.
             return None, MempoolInclusionStatus.FAILED, Err.BLOCK_COST_EXCEEDS_MAX
 
+        assert npc_result.conds is not None
         # build removal list
-        removal_names: List[bytes32] = [npc.coin_name for npc in npc_list]
+        removal_names: List[bytes32] = [spend.coin_id for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return None, MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
 
-        additions = additions_for_npc(npc_list)
+        additions = additions_for_npc(npc_result)
 
         additions_dict: Dict[bytes32, Coin] = {}
         for add in additions:
             additions_dict[add.name()] = add
 
-        addition_amount = uint64(0)
+        addition_amount: int = 0
         # Check additions for max coin amount
         for coin in additions:
             if coin.amount < 0:
@@ -320,7 +340,7 @@ class MempoolManager:
                     MempoolInclusionStatus.FAILED,
                     Err.COIN_AMOUNT_EXCEEDS_MAXIMUM,
                 )
-            addition_amount = uint64(addition_amount + coin.amount)
+            addition_amount = addition_amount + coin.amount
         # Check for duplicate outputs
         addition_counter = collections.Counter(_.name() for _ in additions)
         for k, v in addition_counter.items():
@@ -336,8 +356,7 @@ class MempoolManager:
             return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
         removal_record_dict: Dict[bytes32, CoinRecord] = {}
-        removal_coin_dict: Dict[bytes32, Coin] = {}
-        removal_amount = uint64(0)
+        removal_amount: int = 0
         for name in removal_names:
             removal_record = await self.coin_store.get_coin_record(name)
             if removal_record is None and name not in additions_dict:
@@ -353,33 +372,24 @@ class MempoolManager:
                 assert self.peak.timestamp is not None
                 removal_record = CoinRecord(
                     removal_coin,
-                    uint32(self.peak.height + 1),  # In mempool, so will be included in next height
+                    uint32(self.peak.height + 1),
                     uint32(0),
                     False,
                     self.peak.timestamp,
                 )
 
             assert removal_record is not None
-            removal_amount = uint64(removal_amount + removal_record.coin.amount)
+            removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
-            removal_coin_dict[name] = removal_record.coin
 
-        removals: List[Coin] = [coin for coin in removal_coin_dict.values()]
+        removals: List[Coin] = [record.coin for record in removal_record_dict.values()]
 
         if addition_amount > removal_amount:
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
         fees = uint64(removal_amount - addition_amount)
-        assert_fee_sum: uint64 = uint64(0)
+        assert_fee_sum: uint64 = uint64(npc_result.conds.reserve_fee)
 
-        for npc in npc_list:
-            if ConditionOpcode.RESERVE_FEE in npc.condition_dict:
-                fee_list: List[ConditionWithArgs] = npc.condition_dict[ConditionOpcode.RESERVE_FEE]
-                for cvp in fee_list:
-                    fee = int_from_bytes(cvp.vars[0])
-                    if fee < 0:
-                        return None, MempoolInclusionStatus.FAILED, Err.RESERVE_FEE_CONDITION_FAILED
-                    assert_fee_sum = assert_fee_sum + fee
         if fees < assert_fee_sum:
             return (
                 None,
@@ -401,7 +411,6 @@ class MempoolManager:
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this spendbundle has a higher fee per cost than all others
-        tmp_error: Optional[Err] = None
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
@@ -421,41 +430,36 @@ class MempoolManager:
         elif fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
-        if tmp_error:
-            return None, MempoolInclusionStatus.FAILED, tmp_error
-
         # Verify conditions, create hash_key list for aggsig check
-        error: Optional[Err] = None
-        for npc in npc_list:
-            coin_record: CoinRecord = removal_record_dict[npc.coin_name]
+        for spend in npc_result.conds.spends:
+            coin_record: CoinRecord = removal_record_dict[spend.coin_id]
             # Check that the revealed removal puzzles actually match the puzzle hash
-            if npc.puzzle_hash != coin_record.coin.puzzle_hash:
+            if spend.puzzle_hash != coin_record.coin.puzzle_hash:
                 log.warning("Mempool rejecting transaction because of wrong puzzle_hash")
-                log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
+                log.warning(f"{spend.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            chialisp_height = (
-                self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
-            )
-            assert self.peak.timestamp is not None
-            error = mempool_check_conditions_dict(
-                coin_record,
-                npc.condition_dict,
-                uint32(chialisp_height),
-                self.peak.timestamp,
-            )
+        chialisp_height = (
+            self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
+        )
 
-            if error:
-                if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                    potential = MempoolItem(
-                        new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
-                    )
-                    self.potential_cache.add(potential)
-                    return uint64(cost), MempoolInclusionStatus.PENDING, error
-                break
+        assert self.peak.timestamp is not None
+        error: Optional[Err] = mempool_check_time_locks(
+            removal_record_dict,
+            npc_result.conds,
+            uint32(chialisp_height),
+            self.peak.timestamp,
+        )
 
         if error:
-            return None, MempoolInclusionStatus.FAILED, error
+            if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
+                potential = MempoolItem(
+                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
+                )
+                self.potential_cache.add(potential)
+                return uint64(cost), MempoolInclusionStatus.PENDING, error
+            else:
+                return None, MempoolInclusionStatus.FAILED, error
 
         # Remove all conflicting Coins and SpendBundles
         if fail_reason:
@@ -487,7 +491,7 @@ class MempoolManager:
         for record in removals.values():
             removal = record.coin
             # 1. Checks if it's been spent already
-            if record.spent == 1:
+            if record.spent:
                 return Err.DOUBLE_SPEND, []
             # 2. Checks if there's a mempool conflict
             if removal.name() in self.mempool.removals:

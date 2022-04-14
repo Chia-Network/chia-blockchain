@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32, uint8
+from chia.util.ints import uint64, uint32, uint8, uint128
 from chia.wallet.util.transaction_type import TransactionType
 
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -57,7 +57,7 @@ class DIDWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         if amount & 1 == 0:
@@ -76,7 +76,7 @@ class DIDWallet:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
 
@@ -111,7 +111,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=token_bytes(),
+            name=bytes32(token_bytes()),
             memos=[],
         )
         regular_record = TransactionRecord(
@@ -189,18 +189,18 @@ class DIDWallet:
     def id(self):
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list=None) -> uint64:
+    async def get_confirmed_balance(self, record_list=None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
-        amount: uint64 = uint64(0)
+        amount: uint128 = uint128(0)
         for record in record_list:
             parent = self.get_parent_for_coin(record.coin)
             if parent is not None:
-                amount = uint64(amount + record.coin.amount)
+                amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for did wallet is {amount}")
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
@@ -222,7 +222,7 @@ class DIDWallet:
 
         return uint64(addition_amount)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         confirmed = await self.get_confirmed_balance(record_list)
         return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
 
@@ -345,7 +345,9 @@ class DIDWallet:
             f = open(filename, "r")
             details = f.readline().split(":")
             f.close()
-            origin = Coin(bytes.fromhex(details[0]), bytes.fromhex(details[1]), uint64(int(details[2])))
+            origin = Coin(
+                bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2]))
+            )
             backup_ids = []
             for d in details[3].split(","):
                 backup_ids.append(bytes.fromhex(d))
@@ -438,7 +440,7 @@ class DIDWallet:
             return did_wallet_puzzles.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return did_wallet_puzzles.create_fullpuz(innerpuz, 0x00)
+            return did_wallet_puzzles.create_fullpuz(innerpuz, bytes32([0] * 32))
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -719,15 +721,17 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
 
-    async def get_info_for_recovery(self) -> Tuple[bytes32, bytes32, uint64]:
+    async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
-        coin = coins.pop()
-        parent = coin.parent_coin_info
-        innerpuzhash = self.did_info.current_inner.get_tree_hash()
-        amount = coin.amount
-        return (parent, innerpuzhash, amount)
+        if coins is not None:
+            coin = coins.pop()
+            parent = coin.parent_coin_info
+            innerpuzhash = self.did_info.current_inner.get_tree_hash()
+            amount = coin.amount
+            return (parent, innerpuzhash, amount)
+        return None
 
     async def load_attest_files_for_recovery_spend(self, filenames):
         spend_bundle_list = []
@@ -886,6 +890,7 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
+        assert self.did_info.origin_coin is not None
         innerpuz = did_wallet_puzzles.create_innerpuz(
             pubkey,
             self.did_info.backup_ids,
@@ -898,6 +903,7 @@ class DIDWallet:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             did_hash
         )
+        assert self.did_info.origin_coin is not None
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
             bytes(record.pubkey),
             self.did_info.backup_ids,
@@ -1010,7 +1016,7 @@ class DIDWallet:
     async def get_frozen_amount(self) -> uint64:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )

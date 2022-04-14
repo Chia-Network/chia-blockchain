@@ -46,10 +46,11 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        await self.wallet_node.new_peak_wallet(peak, peer)
+        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request
-    async def reject_block_header(self, response: wallet_protocol.RejectHeaderRequest):
+    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
@@ -135,10 +136,11 @@ class WalletNodeAPI:
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 
+    @execute_task
     @peer_required
     @api_request
     async def coin_state_update(self, request: wallet_protocol.CoinStateUpdate, peer: WSChiaConnection):
-        await self.wallet_node.state_update_received(request, peer)
+        await self.wallet_node.new_peak_queue.full_node_state_updated(request, peer)
 
     @api_request
     async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):

@@ -1,10 +1,10 @@
-from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
-from chia.util.ints import uint64
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
@@ -18,16 +18,16 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 
 
-def test_transfer_no_backpayments():
+def test_transfer_no_backpayments() -> None:
     did_one: bytes32 = Program.to("did_one").get_tree_hash()
     did_two: bytes32 = Program.to("did_two").get_tree_hash()
 
     did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
     did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
-    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    did_one_puzzle: Program = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
-    did_one_amount = 201
+    did_one_amount = uint64(201)
 
     #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
@@ -84,23 +84,23 @@ def test_transfer_no_backpayments():
     # assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()
 
 
-def test_transfer_with_backpayments():
+def test_transfer_with_backpayments() -> None:
     did_one: bytes32 = Program.to("did_one").get_tree_hash()
     did_two: bytes32 = Program.to("did_two").get_tree_hash()
 
     did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
     did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
-    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    did_one_puzzle: Program = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
-    did_one_amount = 201
+    did_one_amount = uint64(201)
 
     #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_two, LAUNCHER_PUZZLE_HASH)))
-    did_two_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
+    did_two_puzzle: Program = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_two_innerpuz)
     did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
-    did_two_amount = 401
+    did_two_amount = uint64(401)
 
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
@@ -157,16 +157,16 @@ def test_transfer_with_backpayments():
     assert res.rest().rest().rest().rest().first().rest().first().as_atom() == nft_creator_address
 
 
-def test_announce():
+def test_announce() -> None:
     did_one: bytes32 = Program.to("did_one").get_tree_hash()
     did_two: bytes32 = Program.to("did_two").get_tree_hash()
 
     did_one_pk: bytes32 = Program.to("did_one_pk").get_tree_hash()
     did_one_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (did_one, LAUNCHER_PUZZLE_HASH)))
-    did_one_puzzle: bytes32 = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
+    did_one_puzzle: Program = SINGLETON_MOD.curry(SINGLETON_STRUCT, did_one_innerpuz)
     did_one_parent: bytes32 = Program.to("did_one_parent").get_tree_hash()
-    did_one_amount = 201
+    did_one_amount = uint64(201)
 
     #  did_two_pk: bytes32 = Program.to("did_two_pk").get_tree_hash()
     #  did_two_innerpuz = DID_MOD.curry(did_one_pk, 0, 0)
@@ -219,7 +219,7 @@ def test_announce():
     assert res.rest().rest().rest().first().rest().first().as_atom() == did_one
 
 
-def test_update_url_spend():
+def test_update_url_spend() -> None:
     did_one: bytes32 = Program.to("did_one").get_tree_hash()
     did_two: bytes32 = Program.to("did_two").get_tree_hash()
 
