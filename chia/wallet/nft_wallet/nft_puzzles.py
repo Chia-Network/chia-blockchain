@@ -10,6 +10,8 @@ SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_MOD = load_clvm("nft_innerpuz.clvm")
+DELAYED_PERMISSION_MOD = load_clvm("did_delayed_permission.clvm")
+DELAYED_PERMISSION_MOD_HASH = DELAYED_PERMISSION_MOD.get_tree_hash()
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
@@ -54,6 +56,7 @@ def create_nft_layer_puzzle_with_curry_params(
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     return NFT_MOD.curry(
         NFT_MOD_HASH,
+        DELAYED_PERMISSION_MOD_HASH,
         singleton_struct,
         current_owner_did,
         nft_transfer_program_mod_hash,
@@ -115,12 +118,21 @@ def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
 
 def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     """
-    Given a puzzle test if it's an NFT and, if it is, return the curried arguments
+    Given a puzzle test if it's an NFT and, if it is, return the singleton ID
     """
     try:
-        mod, curried_args = puzzle.uncurry()
-        if mod == SINGLETON_TOP_LAYER_MOD:
-            return curried_args.first().rest().first().as_atom()
+        found, curried_args = match_nft_puzzle(puzzle)
+        assert found
+        (
+            NFT_MOD_HASH,
+            DELAYED_PERMISSION_MOD_HASH,
+            singleton_struct,
+            current_owner_did,
+            nft_transfer_program_hash,
+            transfer_program_curry_params,
+            metadata,
+        ) = curried_args
+        return singleton_struct.rest().first().as_atom()
     except Exception:
         return None
     return None
@@ -141,7 +153,7 @@ def update_metadata(metadata, solution):
 
 def get_transfer_program_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().first()
+        prog = solution.rest().rest().rest().rest().first()
         return prog
     except Exception:
         return None
@@ -153,6 +165,7 @@ def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Program:
         curried_args = match_nft_puzzle(puzzle)[1]
         (
             NFT_MOD_HASH,
+            DELAYED_PERMISSION_MOD_HASH,
             singleton_struct,
             current_owner_did,
             nft_transfer_program_hash,
@@ -202,6 +215,7 @@ def get_metadata_from_puzzle(puzzle: Program) -> Program:
         curried_args = match_nft_puzzle(puzzle)[1]
         (
             NFT_MOD_HASH,
+            DELAYED_PERMISSION_MOD_HASH,
             singleton_struct,
             current_owner_did,
             nft_transfer_program_hash,
@@ -231,7 +245,7 @@ def get_uri_list_from_puzzle(puzzle: Program) -> List[str]:
 
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
     try:
-        prog = solution.rest().rest().rest().rest().first().first()
+        prog = solution.rest().rest().rest().rest().rest().first().first()
         return prog
     except Exception:
         return None
@@ -240,7 +254,7 @@ def get_trade_prices_list_from_inner_solution(solution: Program) -> Program:
 
 def get_transfer_program_solution_from_solution(solution: Program) -> Program:
     try:
-        prog_sol = solution.rest().rest().rest().rest().first()
+        prog_sol = solution.rest().rest().rest().rest().rest().first()
         return prog_sol
     except Exception:
         return None

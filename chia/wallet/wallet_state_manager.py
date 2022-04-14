@@ -645,6 +645,7 @@ class WalletStateManager:
             if matched:
                 (
                     NFT_MOD_HASH,
+                    DELAYED_PERMISSION_MOD,
                     singleton_struct,
                     current_owner_did,
                     nft_transfer_program_hash,

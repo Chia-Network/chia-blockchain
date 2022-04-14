@@ -161,6 +161,7 @@ class NFTWallet:
         if matched:
             (
                 NFT_MOD_HASH,
+                DELAYED_PERMISSION_MOD_HASH,
                 singleton_struct,
                 current_owner,
                 nft_transfer_program_hash,
@@ -331,7 +332,7 @@ class NFTWallet:
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
 
-        innersol = Program.to([did_wallet.did_info.current_inner.get_tree_hash(), 0])
+        innersol = Program.to([0, did_wallet.did_info.current_inner.get_tree_hash(), 0])
         fullsol = Program.to(
             [
                 [launcher_coin.parent_coin_info, launcher_coin.amount],
@@ -374,6 +375,7 @@ class NFTWallet:
 
         innersol = Program.to(
             [
+                0,
                 did_wallet.did_info.current_inner.get_tree_hash(),
                 0,
             ]
@@ -433,6 +435,7 @@ class NFTWallet:
 
         innersol = Program.to(
             [
+                0,
                 did_wallet.did_info.current_inner.get_tree_hash(),
                 new_did,
                 new_did_inner_hash,
@@ -447,10 +450,11 @@ class NFTWallet:
                 innersol,
             ]
         )
-        # breakpoint()
+
         list_of_coinspends = [CoinSpend(nft_coin_info.coin, nft_coin_info.full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         full_spend = SpendBundle.aggregate([spend_bundle, message_sb])
+        # breakpoint()
         # this full spend should be aggregated with the DID announcement spend of the recipient DID
         if Program.to(trade_prices_list) == Program.to(0):
             nft_record = TransactionRecord(
@@ -479,8 +483,8 @@ class NFTWallet:
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
             if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
-                inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
+                nft_solution = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
+                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(nft_solution)
                 nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
                 royalty_address = nft_puzzles.get_royalty_address_from_puzzle(
                     Program.from_bytes(bytes(coin_spend.puzzle_reveal))
