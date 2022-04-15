@@ -49,12 +49,11 @@ fi
 pip install j2cli
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
+mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
-cp assets/deb/postinst "dist/$CLI_DEB_BASE/DEBIAN/postinst"
-cp assets/deb/prerm "dist/$CLI_DEB_BASE/DEBIAN/prerm"
-chmod 0755 "dist/$CLI_DEB_BASE/DEBIAN/postinst" "dist/$CLI_DEB_BASE/DEBIAN/prerm"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
+ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
 dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
