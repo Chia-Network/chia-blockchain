@@ -15,16 +15,15 @@ from chia.wallet.util.puzzle_compression import (
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
-    SpendableCAT,
-    construct_cat_puzzle,
-    match_cat_puzzle,
-    unsigned_spend_bundle_for_spendable_cats,
-)
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.payment import Payment
+from chia.wallet.trading.outer_puzzles import (
+    AssetType,
+    type_of_puzzle,
+    asset_id_of_puzzle,
+    construct_puzzle,
+    solve_puzzle,
+)
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
@@ -48,6 +47,7 @@ class Offer:
         Optional[bytes32], List[NotarizedPayment]
     ]  # The key is the asset id of the asset being requested
     bundle: SpendBundle
+    type_dict: Dict[bytes32, AssetType]  # asset_id -> asset type
 
     @staticmethod
     def ph():
@@ -64,23 +64,23 @@ class Offer:
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
-        for tail_hash, payments in requested_payments.items():
-            notarized_payments[tail_hash] = []
+        for asset_id, payments in requested_payments.items():
+            notarized_payments[asset_id] = []
             for p in payments:
                 puzzle_hash, amount, memos = tuple(p.as_condition_args())
-                notarized_payments[tail_hash].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
+                notarized_payments[asset_id].append(NotarizedPayment(puzzle_hash, amount, memos, nonce))
 
         return notarized_payments
 
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
+        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]], type_dict: Dict[bytes32, AssetType]
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
-        for tail, payments in notarized_payments.items():
-            if tail is not None:
-                settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail, OFFER_MOD).get_tree_hash()
+        for asset_id, payments in notarized_payments.items():
+            if asset_id is not None:
+                settlement_ph: bytes32 = construct_puzzle(type_dict[asset_id], asset_id, OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
@@ -114,22 +114,18 @@ class Offer:
             )[0].puzzle_reveal.to_program()
 
             # Determine it's TAIL (or lack of)
-            matched, curried_args = match_cat_puzzle(parent_puzzle)
-            tail_hash: Optional[bytes32] = None
-            if matched:
-                _, tail_hash_program, _ = curried_args
-                tail_hash = bytes32(tail_hash_program.as_python())
-                offer_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD).get_tree_hash()
+            asset_id = asset_id_of_puzzle(parent_puzzle)
+            if asset_id is not None:
+                offer_ph: bytes32 = construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD).get_tree_hash()
             else:
-                tail_hash = None
                 offer_ph = OFFER_MOD.get_tree_hash()
 
             # Check if the puzzle_hash matches the hypothetical `settlement_payments` puzzle hash
             if addition.puzzle_hash == offer_ph:
-                if tail_hash in offered_coins:
-                    offered_coins[tail_hash].append(addition)
+                if asset_id in offered_coins:
+                    offered_coins[asset_id].append(addition)
                 else:
-                    offered_coins[tail_hash] = [addition]
+                    offered_coins[asset_id] = [addition]
 
         return offered_coins
 
@@ -234,6 +230,7 @@ class Offer:
     def aggregate(cls, offers: List["Offer"]) -> "Offer":
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
+        total_type_dict: Dict[bytes32, AssetType] = {}
         for offer in offers:
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
@@ -242,15 +239,20 @@ class Offer:
                 raise ValueError("The aggregated offers overlap inputs")
 
             # Next, do the aggregation
-            for tail, payments in offer.requested_payments.items():
-                if tail in total_requested_payments:
-                    total_requested_payments[tail].extend(payments)
+            for asset_id, payments in offer.requested_payments.items():
+                if asset_id in total_requested_payments:
+                    total_requested_payments[asset_id].extend(payments)
                 else:
-                    total_requested_payments[tail] = payments
+                    total_requested_payments[asset_id] = payments
+
+            for key, value in offer.type_dict.items():
+                if key in total_type_dict and total_type_dict[key] != value:
+                    raise ValueError(f"The offers to aggregate disagree on the type of {key.hex()}")
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
+            total_type_dict = {**total_type_dict, **offer.type_dict}
 
-        return cls(total_requested_payments, total_bundle)
+        return cls(total_requested_payments, total_bundle, total_type_dict)
 
     # Validity is defined by having enough funds within the offer to satisfy both sides
     def is_valid(self) -> bool:
@@ -263,11 +265,11 @@ class Offer:
             raise ValueError("Offer is currently incomplete")
 
         completion_spends: List[CoinSpend] = []
-        for tail_hash, payments in self.requested_payments.items():
-            offered_coins: List[Coin] = self.get_offered_coins()[tail_hash]
+        for asset_id, payments in self.requested_payments.items():
+            offered_coins: List[Coin] = self.get_offered_coins()[asset_id]
 
             # Because of CAT supply laws, we must specify a place for the leftovers to go
-            arbitrage_amount: int = self.arbitrage()[tail_hash]
+            arbitrage_amount: int = self.arbitrage()[asset_id]
             all_payments: List[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
@@ -282,28 +284,17 @@ class Offer:
                         nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
                         inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
 
-                if tail_hash:
+                if asset_id:
                     # CATs have a special way to be solved so we have to do some calculation before getting the solution
                     parent_spend: CoinSpend = list(
                         filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
                     )[0]
-                    parent_coin: Coin = parent_spend.coin
-                    matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
-                    assert matched
-                    _, _, inner_puzzle = curried_args
-                    spendable_cat = SpendableCAT(
+                    solution: Program = solve_puzzle(
+                        self.type_dict[asset_id],
                         coin,
-                        tail_hash,
                         OFFER_MOD,
                         Program.to(inner_solutions),
-                        lineage_proof=LineageProof(
-                            parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
-                        ),
-                    )
-                    solution: Program = (
-                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
-                        .coin_spends[0]
-                        .solution.to_program()
+                        parent_spend,
                     )
                 else:
                     solution = Program.to(inner_solutions)
@@ -311,7 +302,7 @@ class Offer:
                 completion_spends.append(
                     CoinSpend(
                         coin,
-                        construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD,
+                        construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD) if asset_id else OFFER_MOD,
                         solution,
                     )
                 )
@@ -321,8 +312,10 @@ class Offer:
     def to_spend_bundle(self) -> SpendBundle:
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
-        for tail_hash, payments in self.requested_payments.items():
-            puzzle_reveal: Program = construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD
+        for asset_id, payments in self.requested_payments.items():
+            puzzle_reveal: Program = (
+                construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD) if asset_id else OFFER_MOD
+            )
             inner_solutions = []
             nonces: List[bytes32] = [p.nonce for p in payments]
             for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
@@ -352,16 +345,15 @@ class Offer:
     def from_spend_bundle(cls, bundle: SpendBundle) -> "Offer":
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
         requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
+        type_dict: Dict[bytes32, AssetType] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
+            asset_id = asset_id_of_puzzle(coin_spend.puzzle_reveal.to_program())
+            if asset_id is not None:
+                typ = type_of_puzzle(coin_spend.puzzle_reveal.to_program())
+                assert typ is not None
+                type_dict[asset_id] = typ
             if coin_spend.coin.parent_coin_info == ZERO_32:
-                matched, curried_args = match_cat_puzzle(coin_spend.puzzle_reveal.to_program())
-                if matched:
-                    _, tail_hash_program, _ = curried_args
-                    tail_hash: Optional[bytes32] = bytes32(tail_hash_program.as_python())
-                else:
-                    tail_hash = None
-
                 notarized_payments: List[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
                     nonce = bytes32(payment_group.first().as_python())
@@ -369,12 +361,12 @@ class Offer:
                     notarized_payments.extend(
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )
-                requested_payments[tail_hash] = notarized_payments
 
+                requested_payments[asset_id] = notarized_payments
             else:
                 leftover_coin_spends.append(coin_spend)
 
-        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature))
+        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), type_dict)
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()

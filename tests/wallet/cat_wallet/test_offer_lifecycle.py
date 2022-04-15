@@ -19,6 +19,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
+from chia.wallet.trading.outer_puzzles import AssetType
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
@@ -178,6 +179,11 @@ class TestOfferLifecycle:
             red_coins: List[Coin] = all_coins["red"]
             blue_coins: List[Coin] = all_coins["blue"]
 
+            type_dict: Dict[bytes32, AssetType] = {
+                str_to_tail_hash("red"): AssetType.CAT,
+                str_to_tail_hash("blue"): AssetType.CAT,
+            }
+
             # Create an XCH Offer for RED
             chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 str_to_tail_hash("red"): [
@@ -189,9 +195,9 @@ class TestOfferLifecycle:
             chia_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 chia_requested_payments, chia_coins
             )
-            chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments)
+            chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments, type_dict)
             chia_secured_bundle: SpendBundle = generate_secure_bundle(chia_coins, chia_announcements, 1000)
-            chia_offer = Offer(chia_requested_payments, chia_secured_bundle)
+            chia_offer = Offer(chia_requested_payments, chia_secured_bundle, type_dict)
             assert not chia_offer.is_valid()
 
             # Create a RED Offer for XCH
@@ -205,9 +211,9 @@ class TestOfferLifecycle:
             red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 red_requested_payments, red_coins
             )
-            red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments)
+            red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments, type_dict)
             red_secured_bundle: SpendBundle = generate_secure_bundle(red_coins, red_announcements, 350, tail_str="red")
-            red_offer = Offer(red_requested_payments, red_secured_bundle)
+            red_offer = Offer(red_requested_payments, red_secured_bundle, type_dict)
             assert not red_offer.is_valid()
 
             # Test aggregation of offers
@@ -229,11 +235,11 @@ class TestOfferLifecycle:
             blue_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 blue_requested_payments, blue_coins
             )
-            blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments)
+            blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments, type_dict)
             blue_secured_bundle: SpendBundle = generate_secure_bundle(
                 blue_coins, blue_announcements, 2000, tail_str="blue"
             )
-            blue_offer = Offer(blue_requested_payments, blue_secured_bundle)
+            blue_offer = Offer(blue_requested_payments, blue_secured_bundle, type_dict)
             assert not blue_offer.is_valid()
 
             # Test a re-aggregation
