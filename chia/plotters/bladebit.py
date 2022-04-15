@@ -218,7 +218,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         "-n",
         str(args.count),
         "-f",
-        bytes(plot_keys.farmer_public_key).hex()
+        bytes(plot_keys.farmer_public_key).hex(),
     ]
     if plot_keys.pool_public_key is not None:
         call_args.append("-p")
