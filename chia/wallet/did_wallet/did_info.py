@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64

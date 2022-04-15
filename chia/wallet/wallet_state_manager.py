@@ -34,7 +34,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
 from chia.wallet.nft_wallet.nft_puzzles import match_nft_puzzle
 from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, create_fullpuz, DID_INNERPUZ_MOD
-from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWalletInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -573,7 +572,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         nft_matched, nft_curried_args = match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
         if nft_matched:
-            return await self.handle_nft(coin_spend)
+            return await self.handle_nft(coin_spend, nft_curried_args)
 
         # Check if the coin is a DID
         did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
@@ -619,7 +618,7 @@ class WalletStateManager:
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 return None, None
             if bytes(tail_hash).hex()[2:] in self.default_cats or self.config.get(
-                    "automatically_add_unknown_cats", False
+                "automatically_add_unknown_cats", False
             ):
                 cat_wallet = await CATWallet.create_wallet_for_cat(
                     self, self.main_wallet, bytes(tail_hash).hex()[2:], in_transaction=True
@@ -714,13 +713,14 @@ class WalletStateManager:
             transfer_program_curry_params,
             metadata,
         ) = curried_args
-        hint_list = cast(List[bytes32], coin_spend.hints())
+        hint_list = cast(List[bytes32], compute_coin_hints(coin_spend))
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.NFT:
                 nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
                 for hint in hint_list:
                     if nft_wallet_info.my_did == hint:
-                        return wallet_info.id, WalletType.NFT
+                        wallet_id = wallet_info.id
+                        wallet_type = WalletType.NFT
         return wallet_id, wallet_type
 
     async def new_coin_state(

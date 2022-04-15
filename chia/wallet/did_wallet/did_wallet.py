@@ -52,7 +52,7 @@ class DIDWallet:
         backups_ids: List = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
-        name: str = None,
+        name: str = "DID Wallet",
     ):
         """
         This must be called under the wallet state manager lock
@@ -78,7 +78,7 @@ class DIDWallet:
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
+            name, WalletType.DISTRIBUTED_ID.value, info_as_string, in_transaction=True
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -149,21 +149,21 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         filename: str,
-        name: str = None,
+        name: str = "DID Wallet",
     ):
         self = DIDWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
+        self.log.info("Creating DID wallet from recovery file ...")
         self.wallet_state_manager = wallet_state_manager
         self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None, False, "")
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
+            name, WalletType.DISTRIBUTED_ID.value, info_as_string, in_transaction=True
         )
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-        print("Added new DID wallet")
         # load backup will also set our DIDInfo
         await self.load_backup(filename)
 
@@ -179,7 +179,7 @@ class DIDWallet:
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        name: str = None,
+        name: str = "DID Wallet",
     ):
         """
         Create a DID wallet from a transfer
@@ -191,12 +191,14 @@ class DIDWallet:
         :param name: Wallet name
         :return:
         """
+
         self = DIDWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
+        self.log.info(f"Creating DID wallet from a coin spend {launch_coin}  ...")
         # Create did info from the coin spend
         args = did_wallet_puzzles.uncurry_innerpuz(inner_puzzle)
         if args is None:
@@ -220,13 +222,15 @@ class DIDWallet:
             json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
+
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
+            name, WalletType.DISTRIBUTED_ID.value, info_as_string, in_transaction=True
         )
+
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         await self.load_parent(self.did_info)
-
+        self.log.info(f"New DID wallet created {info_as_string}.")
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
@@ -292,8 +296,7 @@ class DIDWallet:
         return uint64(addition_amount)
 
     async def get_unconfirmed_balance(self, record_list=None) -> uint128:
-        confirmed = await self.get_confirmed_balance(record_list)
-        return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
         """Returns a set of coins that can be used for generating a new transaction."""
@@ -398,9 +401,10 @@ class DIDWallet:
             output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
             output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
             output_str += f"{self.did_info.origin_coin.amount}:"
-            for did in self.did_info.backup_ids:
-                output_str = output_str + did.hex() + ","
-            output_str = output_str[:-1]
+            if len(self.did_info.backup_ids) > 0:
+                for did in self.did_info.backup_ids:
+                    output_str = output_str + did.hex() + ","
+                output_str = output_str[:-1]
             output_str += f":{bytes(self.did_info.current_inner).hex()}:{self.did_info.num_of_backup_ids_needed}"
 
             output_str += f":{self.did_info.metadata}"
@@ -419,8 +423,9 @@ class DIDWallet:
                 bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2]))
             )
             backup_ids = []
-            for d in details[3].split(","):
-                backup_ids.append(bytes.fromhex(d))
+            if len(details[3]) > 0:
+                for d in details[3].split(","):
+                    backup_ids.append(bytes.fromhex(d))
             num_of_backup_ids_needed = uint64(int(details[5]))
             if num_of_backup_ids_needed > len(backup_ids):
                 raise Exception
@@ -474,6 +479,7 @@ class DIDWallet:
                     did_info.current_inner.get_tree_hash(),
                     coin.amount,
                 )
+
                 await self.add_parent(coin.name(), future_parent, False)
                 if children_state.spent_height != children_state.created_height:
                     did_info = DIDInfo(

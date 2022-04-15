@@ -496,6 +496,76 @@ class TestWalletRpc:
             selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
             assert len(selected_coins) > 0
 
+            ##############
+            # DID       #
+            ##############
+            # Create a DID wallet
+            res = await client.create_new_did_wallet(1)
+            assert res["success"]
+            did_wallet_id_0 = res["wallet_id"]
+            did_id_0 = res["my_did"]
+            # Check DID ID
+            res = await client.get_did_id(did_wallet_id_0)
+            assert res["success"]
+            assert did_id_0 == res["my_did"]
+            # Create backup file
+            res = await client.create_did_backup_file(did_wallet_id_0, "backup.did")
+            assert res["success"]
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
+                await asyncio.sleep(0.5)
+
+            # Recover from backup file
+            res = await client_2.create_new_did_wallet_from_recovery("backup.did")
+            assert res["success"]
+            did_wallet_id_1 = res["wallet_id"]
+            did_id_1 = res["my_did"]
+            assert did_id_0 == did_id_1
+
+            # Update recovery list
+            res = await client.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
+            assert res["success"]
+            res = await client.get_did_recovery_list(did_wallet_id_0)
+            assert res["num_required"] == 1
+            assert res["recovery_list"][0] == did_id_0
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(await wallet.get_new_puzzlehash(), "txch"))
+                await asyncio.sleep(0.5)
+
+            # Update metadata
+            res = await client.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
+            assert res["success"]
+            res = await client.get_did_metadata(did_wallet_id_0)
+            assert res["metadata"]["Twitter"] == "Https://test"
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
+                await asyncio.sleep(0.5)
+
+            # Transfer DID
+            addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+            res = await client.did_transfer_did(did_wallet_id_0, addr, 0)
+            assert res["success"]
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph_2, "txch"))
+                await asyncio.sleep(0.5)
+
+            did_wallets = list(
+                filter(
+                    lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+                    await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+                )
+            )
+            did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
+            assert did_wallet_2.get_my_DID() == did_id_0
+
             ##########
             # Offers #
             ##########
@@ -672,6 +742,7 @@ class TestWalletRpc:
             # Delete all keys
             await client.delete_all_keys()
             assert len(await client.get_public_keys()) == 0
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
@@ -683,52 +754,3 @@ class TestWalletRpc:
             await rpc_cleanup()
             await rpc_cleanup_2()
             await rpc_cleanup_node()
-
-            ##############
-            # DID       #
-            ##############
-            # Create a DID wallet
-            res = await client.create_new_did_wallet(1)
-            assert res["success"]
-            did_wallet_id_0 = res["wallet_id"]
-            did_id_0 = res["my_did"]
-            # Check DID ID
-            res = await client.get_did_id(did_wallet_id_0)
-            assert res["success"]
-            assert did_id_0 == res["my_did"]
-            # Create backup file
-            res = await client.create_did_backup_file(did_wallet_id_0, "backup.did")
-            assert res["success"]
-
-            # Recover from backup file
-            res = await client.create_new_did_wallet_from_recovery("backup.did")
-            assert res["success"]
-            did_wallet_id_1 = res["wallet_id"]
-            did_id_1 = res["my_did"]
-            assert did_id_0 == did_id_1
-
-            # Update recovery list
-            res = await client.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
-            assert res["success"]
-            res = await client.get_did_recovery_list(did_wallet_id_0)
-            assert res["num_required"] == 1
-            assert res["recovery_list"][0] == did_id_0
-
-            # Update metadata
-            res = await client.update_did_metadata(did_wallet_id_0, {"Twitter":"Https://test"})
-            assert res["success"]
-            res = await client.get_did_metadata(did_wallet_id_0)
-            assert res["metadata"]["Twitter"] == "Https://test"
-
-            # Transfer DID
-            addr = encode_puzzle_hash(wallet_2.get_new_puzzlehash())
-            res = await client.did_transfer_did(did_wallet_id_0, addr, 0)
-            assert res["success"] == True
-            did_wallets = list(
-                filter(
-                    lambda w: (w.type == WalletType.DISTRIBUTED_ID),
-                    await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
-                )
-            )
-            did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
-            assert did_wallet_2.get_my_DID() == did_id_0

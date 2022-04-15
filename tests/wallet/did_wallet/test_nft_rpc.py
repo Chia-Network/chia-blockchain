@@ -198,6 +198,11 @@ class TestNFTRPC:
             }
         )
 
+        await asyncio.sleep(5)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await asyncio.sleep(5)
+
         assert val["success"]
         assert val["spend_bundle"] is not None
 
@@ -206,10 +211,8 @@ class TestNFTRPC:
         assert val["success"]
 
         await asyncio.sleep(5)
-
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
         await asyncio.sleep(5)
 
         val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})

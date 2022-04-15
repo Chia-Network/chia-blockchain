@@ -517,9 +517,10 @@ class WalletRpcApi:
                 if len(backup_dids) > 0:
                     num_needed = uint64(request["num_of_backup_ids_needed"])
                 metadata: Dict[str, str] = {}
-                if request["metadata"] is not None:
+                if "metadata" in request:
                     if type(request["metadata"]) is dict:
                         metadata = request["metadata"]
+
                 async with self.service.wallet_state_manager.lock:
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
@@ -528,8 +529,9 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request["wallet_name"],
+                        request["wallet_name"] if "wallet_name" in request else "DID Wallet",
                     )
+
                 my_did = did_wallet.get_my_DID()
                 return {
                     "success": True,
@@ -1103,7 +1105,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         metadata: Dict[str, str] = {}
-        if request["metadata"] is not None:
+        if "metadata" in request:
             if type(request["metadata"]) is dict:
                 metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
