@@ -542,3 +542,6 @@ wallet:
   # if an unknown CAT belonging to us is seen, a wallet will be automatically created
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
+
+  # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
+  tx_resend_timeout_secs: 1800

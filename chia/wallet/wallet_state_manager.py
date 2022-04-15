@@ -1214,7 +1214,7 @@ class WalletStateManager:
                 await wallet.new_peak(peak.height)
         current_time = int(time.time())
 
-        if self.tx_store.last_global_tx_resend_time < current_time - self.tx_store.global_tx_resend_timeout_secs:
+        if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
             self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(

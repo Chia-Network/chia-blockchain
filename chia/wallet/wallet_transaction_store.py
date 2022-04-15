@@ -33,8 +33,8 @@ class WalletTransactionStore:
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
-    last_global_tx_resend_time: int  # Epoch time in seconds
-    global_tx_resend_timeout_secs: int  # Duration in seconds
+    last_wallet_tx_resend_time: int  # Epoch time in seconds
+    wallet_tx_resend_timeout_secs: int  # Duration in seconds
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper):
@@ -91,8 +91,8 @@ class WalletTransactionStore:
         self.tx_record_cache = {}
         self.tx_submitted = {}
         self.unconfirmed_for_wallet = {}
-        self.last_global_tx_resend_time = int(time.time())
-        self.global_tx_resend_timeout_secs = 60 * 60
+        self.last_wallet_tx_resend_time = int(time.time())
+        self.wallet_tx_resend_timeout_secs = 60 * 60
         await self.rebuild_tx_cache()
         return self
 
@@ -291,7 +291,7 @@ class WalletTransactionStore:
             return record
         return None
 
-    async def get_not_sent(self) -> List[TransactionRecord]:
+    async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
         """
@@ -303,14 +303,10 @@ class WalletTransactionStore:
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
-        retry_accepted = False
-        if self.last_global_tx_resend_time < current_time - self.global_tx_resend_timeout_secs:
-            retry_accepted = True
-            self.last_global_tx_resend_time = current_time
 
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
-            if retry_accepted:
+            if include_accepted_txs:
                 # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
                 record = dataclasses.replace(record, sent=1, sent_to=filter_ok_mempool_status(record.sent_to))
                 await self.add_transaction_record(record, False)

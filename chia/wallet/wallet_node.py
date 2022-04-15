@@ -141,6 +141,8 @@ class WalletNode:
         self.validation_semaphore = None
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
+        self.last_wallet_tx_resend_time: int = 0
+        self.wallet_tx_resend_timeout_secs: int = 60
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -230,6 +232,9 @@ class WalletNode:
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
+        self.last_wallet_tx_resend_time = int(time.time())
+        if "tx_resend_timeout_secs" in self.config:
+            self.wallet_tx_resend_timeout_secs = self.config["tx_resend_timeout_secs"]
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
@@ -332,7 +337,14 @@ class WalletNode:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
-        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
+        current_time = int(time.time())
+        retry_accepted_txs = False
+        if self.last_wallet_tx_resend_time < current_time - self.wallet_tx_resend_timeout_secs:
+            self.last_wallet_tx_resend_time = current_time
+            retry_accepted_txs = True
+        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent(
+            include_accepted_txs=retry_accepted_txs
+        )
 
         for record in records:
             if record.spend_bundle is None:
