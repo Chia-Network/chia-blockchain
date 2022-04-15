@@ -121,7 +121,12 @@ progress = {
 }
 
 
-def install_bladebit(root_path):
+def install_bladebit(root_path: Path):
+    if os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
+        print("Bladebit plotter already installed.")
+        return
+
+    print("Installing bladebit plotter.")
     if not is_bladebit_supported():
         raise RuntimeError("Platform not supported yet for bladebit plotter.")
 
