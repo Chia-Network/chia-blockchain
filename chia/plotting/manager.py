@@ -140,16 +140,25 @@ class PlotManager:
                 if not self._refreshing_enabled:
                     return
 
+                start = time.time()
+
+                def bench_log(message: str) -> None:
+                    log.debug(f"bench_log: {message} {time.time() - start:.2f}")
+
                 plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
                 plot_directories: Set[Path] = set(plot_filenames.keys())
                 plot_paths: List[Path] = []
                 for paths in plot_filenames.values():
                     plot_paths += paths
 
+                bench_log("fetch paths")
+
                 total_result: PlotRefreshResult = PlotRefreshResult()
                 total_size = len(plot_paths)
 
+                bench_log("callback start pre")
                 self._refresh_callback(PlotRefreshEvents.started, PlotRefreshResult(remaining=total_size))
+                bench_log("callback start post")
 
                 # First drop all plots we have in plot_filename_paths but not longer in the filesystem or set in config
                 for path in list(self.failed_to_open_filenames.keys()):
@@ -159,6 +168,8 @@ class PlotManager:
                 for path in self.no_key_filenames.copy():
                     if path not in plot_paths:
                         self.no_key_filenames.remove(path)
+
+                bench_log("checked invalid")
 
                 filenames_to_remove: List[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
@@ -184,8 +195,12 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
+                bench_log("checked removals")
+
                 for remaining, batch in list_to_batches(plot_paths, self.refresh_parameter.batch_size):
+                    bench_log("batch start")
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
+                    bench_log("batch done")
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
                         break
@@ -195,15 +210,19 @@ class PlotManager:
                     total_result.processed += batch_result.processed
                     total_result.duration += batch_result.duration
 
+                    bench_log("callback batch pre")
                     self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
+                    bench_log("callback batch post")
                     if remaining == 0:
                         break
                     batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                     self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
                     time.sleep(float(batch_sleep) / 1000.0)
 
+                bench_log("callback done pre")
                 if self._refreshing_enabled:
                     self._refresh_callback(PlotRefreshEvents.done, total_result)
+                bench_log("callback done post")
 
                 # Reset the initial refresh indication
                 self._initial = False
@@ -219,8 +238,12 @@ class PlotManager:
                 self.cache.remove(remove_paths)
                 self.log.debug(f"_refresh_task: cached entries removed: {len(remove_paths)}")
 
+                bench_log("cache cleanup")
+
                 if self.cache.changed():
                     self.cache.save()
+
+                bench_log("cache save")
 
                 self.last_refresh_time = time.time()
 
@@ -242,6 +265,9 @@ class PlotManager:
 
         if self.match_str is not None:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
+
+        def bench_log(message: str) -> None:
+            log.debug(f"bench_log: {message} {time.time() - start_time:.2f}")
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
             if not self._refreshing_enabled:
@@ -351,10 +377,13 @@ class PlotManager:
 
         with self, ThreadPoolExecutor() as executor:
             plots_refreshed: Dict[Path, PlotInfo] = {}
+            bench_log("executor pre")
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
                     plots_refreshed[Path(new_plot.prover.get_filename())] = new_plot
+            bench_log("executor post")
             self.plots.update(plots_refreshed)
+            bench_log("plots updates")
 
         result.duration = time.time() - start_time
 
