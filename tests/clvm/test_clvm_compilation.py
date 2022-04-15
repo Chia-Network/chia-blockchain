@@ -172,3 +172,4 @@ class TestClvmCompilation(TestCase):
         with open(hexname) as f:
             self.assertEqual(f.read().strip(), '8400989680')
         remove(tf.name)
+        remove(hexname)
