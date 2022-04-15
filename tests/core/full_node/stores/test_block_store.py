@@ -302,4 +302,7 @@ class TestBlockStoreAPI:
 
             assert not await store.get_block_bytes_by_hash([])
             with pytest.raises(ValueError):
-                await store.get_block_bytes_by_hash([bytes32(b"yolo")])
+                await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)])
+
+            with pytest.raises(AssertionError):
+                await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * 1000)
