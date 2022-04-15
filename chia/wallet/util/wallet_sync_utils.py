@@ -308,6 +308,16 @@ def get_block_header(block):
     )
 
 
+async def request_header_blocks(peer, start_height, end_height) -> Optional[List[HeaderBlock]]:
+    if Capability.BLOCK_HEADERS in peer.capabilities:
+        response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
+    else:
+        response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
+    if response is None:
+        return None
+    return response.header_blocks
+
+
 async def _fetch_header_blocks_inner(
     all_peers: List[WSChiaConnection],
     request_start: uint32,

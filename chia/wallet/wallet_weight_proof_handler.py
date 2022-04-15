@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import math
 import pathlib
 import random
 import tempfile
@@ -46,7 +48,8 @@ class WalletWeightProofHandler:
         multiprocessing_context: BaseContext,
     ):
         self._constants = constants
-        self._num_processes = 4
+        cpu_count = os.cpu_count() or 1
+        self._num_processes = min([math.ceil(cpu_count / 2), 4])
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
             self._num_processes,
