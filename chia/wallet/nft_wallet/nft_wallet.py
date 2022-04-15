@@ -134,11 +134,11 @@ class NFTWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def add_nft_coin(self, coin: Coin, spent_height: uint32) -> None:
-        await self.coin_added(coin, spent_height)
+    async def add_nft_coin(self, coin: Coin, spent_height: uint32, in_transaction: bool) -> None:
+        await self.coin_added(coin, spent_height, in_transaction=in_transaction)
         return
 
-    async def coin_added(self, coin: Coin, height: uint32) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, in_transaction: bool) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f" NFT wallet has been notified that {coin} was added")
         for coin_info in self.nft_wallet_info.my_nft_coins:
@@ -159,9 +159,9 @@ class NFTWallet:
             if cs is not None:
                 break
         assert cs is not None
-        await self.puzzle_solution_received(cs)
+        await self.puzzle_solution_received(cs, in_transaction=in_transaction)
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend) -> None:
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, in_transaction: bool) -> None:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
@@ -184,7 +184,7 @@ class NFTWallet:
                 attempt = nft_puzzles.get_transfer_program_from_inner_solution(solution)
                 if attempt is not None:
                     nft_transfer_program = attempt
-                    await self.add_transfer_program(nft_transfer_program)
+                    await self.add_transfer_program(nft_transfer_program, in_transaction=in_transaction)
 
             assert nft_transfer_program is not None
             self.log.info(f"found the info for coin {coin_name}")
@@ -230,6 +230,7 @@ class NFTWallet:
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
                 nft_transfer_program,
                 child_puzzle,
+                in_transaction=in_transaction,
             )
         else:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
@@ -243,7 +244,7 @@ class NFTWallet:
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def add_coin(
-        self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program
+        self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program, in_transaction: bool
     ) -> None:
         my_nft_coins = self.nft_wallet_info.my_nft_coins
         for coin_info in my_nft_coins:
@@ -257,11 +258,11 @@ class NFTWallet:
             my_nft_coins,
             self.nft_wallet_info.known_transfer_programs,
         )
-        await self.save_info(new_nft_wallet_info, False)
-        await self.wallet_state_manager.add_interested_coin_id(coin.name())
+        await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
+        await self.wallet_state_manager.add_interested_coin_ids([coin.name()], in_transaction=in_transaction)
         return
 
-    async def remove_coin(self, coin: Coin) -> None:
+    async def remove_coin(self, coin: Coin, in_transaction: bool) -> None:
         my_nft_coins = self.nft_wallet_info.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
@@ -272,10 +273,10 @@ class NFTWallet:
             my_nft_coins,
             self.nft_wallet_info.known_transfer_programs,
         )
-        await self.save_info(new_nft_wallet_info, False)
+        await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
         return
 
-    async def add_transfer_program(self, transfer_program: Program) -> None:
+    async def add_transfer_program(self, transfer_program: Program, in_transaction: bool) -> None:
         my_transfer_programs = self.nft_wallet_info.known_transfer_programs
         my_transfer_programs.append((transfer_program.get_tree_hash(), transfer_program))
         new_nft_wallet_info = NFTWalletInfo(
@@ -284,7 +285,7 @@ class NFTWallet:
             self.nft_wallet_info.my_nft_coins,
             my_transfer_programs,
         )
-        await self.save_info(new_nft_wallet_info, False)
+        await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
         return
 
     def puzzle_for_pk(self, pk: G1Element) -> Program:
@@ -380,7 +381,7 @@ class NFTWallet:
             memos=[],
         )
         await self.standard_wallet.push_transaction(nft_record)
-        await self.add_transfer_program(nft_transfer_program)
+        await self.add_transfer_program(nft_transfer_program, in_transaction=False)
         return nft_record
 
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo) -> SpendBundle:

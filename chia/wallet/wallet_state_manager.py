@@ -956,7 +956,7 @@ class WalletStateManager:
                 elif record.wallet_type == WalletType.NFT:
                     if coin_state.spent_height is not None:
                         nft_wallet = self.wallets[uint32(record.wallet_id)]
-                        await nft_wallet.remove_coin(coin_state.coin)
+                        await nft_wallet.remove_coin(coin_state.coin, in_transaction=True)
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -1156,7 +1156,7 @@ class WalletStateManager:
             await wallet.coin_added(coin, height)
 
         if wallet_type == WalletType.NFT:
-            await self.wallets[wallet_id].add_nft_coin(coin, height)
+            await self.wallets[wallet_id].add_nft_coin(coin, height, in_transaction=True)
 
         await self.create_more_puzzle_hashes(in_transaction=True)
         return coin_record_1
