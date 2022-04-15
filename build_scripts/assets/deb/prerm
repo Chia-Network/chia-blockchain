@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+
+unlink /usr/local/bin/chia

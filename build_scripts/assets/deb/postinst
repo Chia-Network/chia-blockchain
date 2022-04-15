@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+
+ln -s /opt/chia/chia /usr/local/bin/chia
