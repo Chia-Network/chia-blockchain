@@ -415,6 +415,8 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
+        # sqlite on python3.7 on windows has issues with large variable substitutions
+        assert len(header_hashes) < 901
         header_hashes_db: Tuple[Any, ...]
         if self.db_wrapper.db_version == 2:
             header_hashes_db = tuple(header_hashes)
