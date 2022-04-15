@@ -36,7 +36,9 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             100,
             30,
         )
-        await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
+        await wsc.perform_handshake(
+            server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE, server._local_capabilities
+        )
 
 
 @pytest_asyncio.fixture(scope="function")
