@@ -303,15 +303,19 @@ class WalletTransactionStore:
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
+        retry_accepted = False
+        if self.last_global_tx_resend_time < current_time - self.global_tx_resend_timeout_secs:
+            retry_accepted = True
+            self.last_global_tx_resend_time = current_time
+
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
-            if self.last_global_tx_resend_time < current_time - self.global_tx_resend_timeout_secs:
+            if retry_accepted:
                 # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
                 record = dataclasses.replace(record, sent=1, sent_to=filter_ok_mempool_status(record.sent_to))
                 await self.add_transaction_record(record, False)
                 self.tx_submitted[record.name] = current_time, 1
                 records.append(record)
-                self.last_global_tx_resend_time = current_time
             elif record.name in self.tx_submitted:
                 time_submitted, count = self.tx_submitted[record.name]
                 if time_submitted < current_time - (60 * 10):
