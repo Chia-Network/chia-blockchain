@@ -72,79 +72,85 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
 
 
 def install_madmax(plotters_root_path: Path):
-    if is_madmax_supported():
-        print("Installing dependencies.")
-        if sys.platform.startswith("linux"):
-            run_command(
-                [
-                    "sudo",
-                    "apt",
-                    "update",
-                    "-y",
-                ],
-                "Could not update get package information from apt",
-            )
-            run_command(
-                [
-                    "sudo",
-                    "apt",
-                    "install",
-                    "-y",
-                    "libsodium-dev",
-                    "cmake",
-                    "g++",
-                    "git",
-                    "build-essential",
-                ],
-                "Could not install dependencies",
-            )
-        if sys.platform.startswith("darwin"):
-            run_command(
-                [
-                    "brew",
-                    "install",
-                    "libsodium",
-                    "cmake",
-                    "git",
-                    "autoconf",
-                    "automake",
-                    "libtool",
-                    "wget",
-                ],
-                "Could not install dependencies",
-            )
-        run_command(["git", "--version"], "Error checking Git version.")
+    if os.path.exists(plotters_root_path / "madmax-plotter/build/chia_plot"):
+        print("Madmax plotter already installed.")
+        return
 
-        print("Cloning git repository.")
-        run_command(
-            [
-                "git",
-                "clone",
-                "https://github.com/Chia-Network/chia-plotter-madmax.git",
-                MADMAX_PLOTTER_DIR,
-            ],
-            "Could not clone madmax git repository",
-            cwd=os.fspath(plotters_root_path),
-        )
+    print("Installing madmax plotter.")
 
-        print("Installing git submodules.")
-        madmax_path: str = os.fspath(get_madmax_install_path(plotters_root_path))
-        run_command(
-            [
-                "git",
-                "submodule",
-                "update",
-                "--init",
-                "--recursive",
-            ],
-            "Could not initialize git submodules",
-            cwd=madmax_path,
-        )
-
-        print("Running install script.")
-        run_command(["./make_devel.sh"], "Error while running install script", cwd=madmax_path)
-    else:
+    if not is_madmax_supported():
         raise RuntimeError("Platform not supported yet for madmax plotter.")
+
+    print("Installing dependencies.")
+    if sys.platform.startswith("linux"):
+        run_command(
+            [
+                "sudo",
+                "apt",
+                "update",
+                "-y",
+            ],
+            "Could not update get package information from apt",
+        )
+        run_command(
+            [
+                "sudo",
+                "apt",
+                "install",
+                "-y",
+                "libsodium-dev",
+                "cmake",
+                "g++",
+                "git",
+                "build-essential",
+            ],
+            "Could not install dependencies",
+        )
+    if sys.platform.startswith("darwin"):
+        run_command(
+            [
+                "brew",
+                "install",
+                "libsodium",
+                "cmake",
+                "git",
+                "autoconf",
+                "automake",
+                "libtool",
+                "wget",
+            ],
+            "Could not install dependencies",
+        )
+    run_command(["git", "--version"], "Error checking Git version.")
+
+    print("Cloning git repository.")
+    run_command(
+        [
+            "git",
+            "clone",
+            "https://github.com/Chia-Network/chia-plotter-madmax.git",
+            MADMAX_PLOTTER_DIR,
+        ],
+        "Could not clone madmax git repository",
+        cwd=os.fspath(plotters_root_path),
+    )
+
+    print("Installing git submodules.")
+    madmax_path: str = os.fspath(get_madmax_install_path(plotters_root_path))
+    run_command(
+        [
+            "git",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        ],
+        "Could not initialize git submodules",
+        cwd=madmax_path,
+    )
+
+    print("Running install script.")
+    run_command(["./make_devel.sh"], "Error while running install script", cwd=madmax_path)
 
 
 progress = {
