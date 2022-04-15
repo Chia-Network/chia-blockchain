@@ -1,4 +1,5 @@
 import asyncio
+from chia.util.full_block_utils import header_block_from_block
 import dataclasses
 import time
 import traceback
@@ -21,6 +22,7 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     PuzzleSolutionResponse,
+    RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
     CoinState,
@@ -1311,7 +1313,7 @@ class FullNodeAPI:
         return response_msg
 
     @api_request
-    async def request_header_block_blobs(self, request: wallet_protocol.RequestHeaderBlockBlobs) -> Optional[Message]:
+    async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
@@ -1319,17 +1321,23 @@ class FullNodeAPI:
         for i in range(request.start_height, request.end_height + 1):
             header_hash: Optional[bytes32] = height_to_hash(uint32(i))
             if header_hash is None:
-                reject = RejectHeaderBlocks(request.start_height, request.end_height)
+                reject = RejectBlockHeaders(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
                 return msg
             header_hashes.append(header_hash)
 
-        blocks: List[bytes] = await self.full_node.block_store.get_block_blobs_by_hash(header_hashes)
-        msg = make_msg(
-            ProtocolMessageTypes.respond_header_block_blobs,
-            wallet_protocol.RespondHeaderBlockBlobs(request.start_height, request.end_height, blocks),
+        blocks_bytes: List[bytes] = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
+        header_blocks_bytes: List[bytes] = [
+            header_block_from_block(memoryview(b), request.return_filter) for b in blocks_bytes
+        ]
+
+        respond_header_blocks_manually_streamed: bytes = (
+            bytes(uint32(request.start_height))
+            + bytes(uint32(request.end_height))
+            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
         )
-        return msg
+        respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
+        return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
     @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:

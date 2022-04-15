@@ -58,6 +58,7 @@ async def setup_full_node(
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
     db_version=1,
+    disable_capabilities=None,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -72,7 +73,6 @@ async def setup_full_node(
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
     config = local_bt.config["full_node"]
-
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
@@ -86,6 +86,8 @@ async def setup_full_node(
     config["dns_servers"] = []
     config["port"] = 0
     config["rpc_port"] = 0
+    if disable_capabilities:
+        config["disable_capabilities"] = disable_capabilities
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:

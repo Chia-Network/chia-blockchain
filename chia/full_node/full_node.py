@@ -1,4 +1,5 @@
 import asyncio
+from chia.protocols.shared_protocol import Capability, capabilities
 import contextlib
 import dataclasses
 import logging
@@ -138,7 +139,17 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
-
+        self.capabilities = capabilities
+        if config.get("disable_capabilities"):
+            try:
+                disable_capabilities_values = config["disable_capabilities"]
+                if Capability.BASE.value in disable_capabilities_values:
+                    disable_capabilities_values.remove(Capability.BASE.value)
+                self.capabilities = [
+                    x for x in self.capabilities if not Capability(int(x[0])).name in disable_capabilities_values
+                ]
+            except Exception:
+                self.log.exception("Error disabling capabilities, defaulting to all capabilities")
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
         self.multiprocessing_context = None

@@ -9,11 +9,11 @@ from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
-    RequestHeaderBlockBlobs,
+    RequestBlockHeaders,
     RespondAdditions,
     RejectAdditionsRequest,
     RejectRemovalsRequest,
-    RespondHeaderBlockBlobs,
+    RespondBlockHeaders,
     RespondRemovals,
     RequestRemovals,
     RespondBlockHeader,
@@ -308,37 +308,23 @@ def get_block_header(block):
     )
 
 
-async def _prepare_response_header_block_from_blob(
-    peer: WSChiaConnection, request
-) -> Optional[wallet_protocol.RespondHeaderBlocks]:
-    blob_response = await peer.request_header_block_blobs(
-        RequestHeaderBlockBlobs(request.start_height, request.end_height)
-    )
-    if not isinstance(blob_response, RespondHeaderBlockBlobs):
-        return None
-    header_blocks: List[HeaderBlock] = []
-    for header_block_blob in blob_response.header_block_blobs:
-        block = FullBlock.from_bytes(header_block_blob)
-        header_block = get_block_header(block)
-        header_blocks.append(header_block)
-    return wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks)
-
-
 async def _fetch_header_blocks_inner(
     all_peers: List[WSChiaConnection],
-    request: RequestHeaderBlocks,
-) -> Optional[RespondHeaderBlocks]:
+    request_start: uint32,
+    request_end: uint32,
+) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
-    blob_api_peers = [peer for peer in all_peers if Capability.BLOB_API in peer.capabilities]
-    remaining_peers = list(all_peers) + (5 * blob_api_peers)  # prioritize peers with blob_api
+    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer.capabilities]
+    remaining_peers = list(all_peers) + (5 * bytes_api_peers)  # prioritize peers with blob_api
     while len(remaining_peers) > 0:
         peer = random.choice(remaining_peers)
-        if Capability.BLOB_API in peer.capabilities:
-            response = await _prepare_response_header_block_from_blob(peer, request)
+        log.debug("Peer capabilities: %s", peer.capabilities)
+        if Capability.BLOCK_HEADERS in peer.capabilities:
+            response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
         else:
-            response = await peer.request_header_blocks(request)
+            response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
 
-        if isinstance(response, RespondHeaderBlocks):
+        if isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders)):
             return response
 
         # Request to peer failed in some way, close the connection and remove the peer
@@ -364,13 +350,12 @@ async def fetch_header_blocks_in_range(
         if res_h_blocks_task is not None:
             log.debug(f"Using cache for: {start}-{end}")
             if res_h_blocks_task.done():
-                res_h_blocks: Optional[RespondHeaderBlocks] = res_h_blocks_task.result()
+                res_h_blocks: Optional[Union[RespondBlockHeaders, RespondHeaderBlocks]] = res_h_blocks_task.result()
             else:
                 res_h_blocks = await res_h_blocks_task
         else:
             log.debug(f"Fetching: {start}-{end}")
-            request_header_blocks = RequestHeaderBlocks(request_start, request_end)
-            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_header_blocks))
+            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_start, request_end))
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:

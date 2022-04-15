@@ -2,7 +2,11 @@ import pytest
 from colorlog import getLogger
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.protocols import full_node_protocol
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols import full_node_protocol, wallet_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.wallet_protocol import RespondBlockHeaders
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
@@ -20,6 +24,44 @@ def wallet_height_at_least(wallet_node, h):
 
 
 log = getLogger(__name__)
+
+
+class TestWalletProtocol:
+    @pytest.mark.asyncio
+    async def test_request_block_headers(self, bt, wallet_node, default_1000_blocks):
+        # Tests the edge case of receiving funds right before the recent blocks  in weight proof
+        full_node_api: FullNodeAPI
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        for block in default_1000_blocks[:100]:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 15, False))
+        assert msg.type == ProtocolMessageTypes.respond_block_headers.value
+        res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
+        bh = res_block_headers.header_blocks
+        assert len(bh) == 6
+        assert [x.reward_chain_block.height for x in default_1000_blocks[10:16]] == [
+            x.reward_chain_block.height for x in bh
+        ]
+
+        assert [x.foliage for x in default_1000_blocks[10:16]] == [x.foliage for x in bh]
+
+        assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
+
+        num_blocks = 20
+        new_blocks = bt.get_consecutive_blocks(
+            num_blocks, block_list_input=default_1000_blocks, pool_reward_puzzle_hash=ph
+        )
+        for i in range(0, len(new_blocks)):
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(110, 115, True))
+        res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
+        bh = res_block_headers.header_blocks
+        assert len(bh) == 6
 
 
 class TestWalletSync:
@@ -58,6 +100,20 @@ class TestWalletSync:
                 100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
             )
 
+    @pytest.mark.parametrize(
+        "wallet_node",
+        [
+            dict(
+                disable_capabilities=[Capability.BLOCK_HEADERS.name],
+            ),
+            dict(
+                disable_capabilities=
+                # this one should be ignored
+                [Capability.BASE.name],
+            ),
+        ],
+        indirect=True,
+    )
     @pytest.mark.asyncio
     async def test_almost_recent(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof

@@ -60,7 +60,9 @@ async def add_dummy_connection(
         100,
         30,
     )
-    await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
+    await wsc.perform_handshake(
+        server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE, server._local_capabilities
+    )
     return incoming_queue, peer_id
 
 

@@ -110,7 +110,12 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 
 
 async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants, self_hostname: str, starting_height=None, key_seed=None, db_version=1
+    consensus_constants: ConsensusConstants,
+    self_hostname: str,
+    starting_height=None,
+    key_seed=None,
+    db_version=1,
+    disable_capabilities=None,
 ):
     with TempKeyring(populate=True) as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
@@ -122,6 +127,7 @@ async def setup_node_and_wallet(
                 btools,
                 simulator=False,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             ),
             setup_wallet_node(
                 btools.config["self_hostname"],

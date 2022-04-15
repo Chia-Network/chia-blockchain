@@ -3,7 +3,7 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -114,6 +114,7 @@ class WSChiaConnection:
         protocol_version: str,
         server_port: int,
         local_type: NodeType,
+        capabilities: List[Tuple[uint16, str]],
     ) -> None:
         if self.is_outbound:
             outbound_handshake = make_msg(
@@ -124,7 +125,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOB_API.value), "2")],
+                    capabilities,
                 ),
             )
             assert outbound_handshake is not None
@@ -180,7 +181,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOB_API.value), "2")],
+                    capabilities,
                 ),
             )
             await self._send_message(outbound_handshake)
