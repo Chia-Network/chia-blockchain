@@ -36,7 +36,7 @@ def cleanup_keyring(keyring: TempKeyring):
 temp_keyring = TempKeyring()
 keychain = temp_keyring.get_keychain()
 atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
-test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})
+test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
 bt = create_block_tools(constants=test_constants, keychain=keychain)
 
 

@@ -11,17 +11,10 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64
 
 from chia.wallet.util.wallet_types import WalletType
-from tests.setup_nodes import setup_simulators_and_wallets
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 async def get_wallet_num(wallet_manager):
@@ -620,7 +613,6 @@ class TestDIDWallet:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         wallet_node.config["trusted_peers"] = {

@@ -463,7 +463,8 @@ class DIDWallet:
                 (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
             )
             parent_info = None
-
+            assert did_info.origin_coin is not None
+            assert did_info.current_inner is not None
             node = self.wallet_state_manager.wallet_node.get_full_node_peer()
             children = await self.wallet_state_manager.wallet_node.fetch_children(node, did_info.origin_coin.name())
             while True:
@@ -1016,6 +1017,7 @@ class DIDWallet:
         """
         # Note: the recovery list will be kept.
         # In a selling case, the seller should clean the recovery list then transfer to the new owner.
+        assert self.did_info.origin_coin is not None
         return did_wallet_puzzles.create_innerpuz(
             puzzle_for_pk(pubkey),
             self.did_info.backup_ids,

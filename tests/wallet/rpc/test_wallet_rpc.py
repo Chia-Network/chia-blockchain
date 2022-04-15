@@ -520,7 +520,6 @@ class TestWalletRpc:
             # Recover from backup file
             res = await client_2.create_new_did_wallet_from_recovery("backup.did")
             assert res["success"]
-            did_wallet_id_1 = res["wallet_id"]
             did_id_1 = res["my_did"]
             assert did_id_0 == did_id_1
 

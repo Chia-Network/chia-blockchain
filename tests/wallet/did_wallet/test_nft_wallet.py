@@ -3,8 +3,6 @@ from typing import List
 
 import pytest
 
-# from blspy import AugSchemeMPL
-# from chia.types.spend_bundle import SpendBundle
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -18,18 +16,9 @@ from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 
-
-# from blspy import AugSchemeMPL
-# from chia.types.spend_bundle import SpendBundle
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
