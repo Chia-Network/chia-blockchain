@@ -15,7 +15,6 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
-
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
