@@ -166,10 +166,10 @@ class TestClvmCompilation(TestCase):
 
     def test_017_encoding_bug_fixed(self):
         with NamedTemporaryFile(delete=False) as tf:
-            tf.write(b'10000000')
-        hexname = tf.name + '.hex'
+            tf.write(b"10000000")
+        hexname = tf.name + ".hex"
         compile_clvm(tf.name, hexname, [])
         with open(hexname) as f:
-            self.assertEqual(f.read().strip(), '8400989680')
+            self.assertEqual(f.read().strip(), "8400989680")
         remove(tf.name)
         remove(hexname)
