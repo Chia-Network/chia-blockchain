@@ -217,8 +217,11 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+async def wallet_node(self_hostname, request):
+    params = {}
+    if request and request.param_index > 0:
+        params = request.param
+    async for _ in setup_node_and_wallet(test_constants, self_hostname, **params):
         yield _
 
 

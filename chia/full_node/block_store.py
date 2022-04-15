@@ -406,7 +406,7 @@ class BlockStore:
             ret.append(all_blocks[hh])
         return ret
 
-    async def get_block_blobs_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
+    async def get_block_bytes_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
         """
         Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present

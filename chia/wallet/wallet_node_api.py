@@ -133,7 +133,7 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def respond_header_block_blobs(self, request: wallet_protocol.RespondHeaderBlockBlobs):
+    async def respond_block_headers(self, request: wallet_protocol.RespondBlockHeaders):
         pass
 
     @api_request

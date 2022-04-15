@@ -16,7 +16,9 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.util.full_block_utils import generator_from_block
+from chia.types.header_block import HeaderBlock
+from chia.util.full_block_utils import generator_from_block, header_block_from_block
+from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 test_g2s = [rand_g2() for _ in range(10)]
@@ -129,20 +131,21 @@ def get_foliage_transaction_block():
     )
 
 
-def get_transactions_info(height):
-    yield None
+def get_transactions_info(height, foliage_transaction_block):
     farmer_coin, pool_coin = rewards(uint32(height))
     reward_claims_incorporated = [farmer_coin, pool_coin]
     fees = uint64(random.randint(0, 150000))
-
-    yield TransactionsInfo(
-        hsh(),  # generator_root
-        hsh(),  # generator_refs_root
-        g2(),  # aggregated_signature
-        fees,
-        uint64(random.randint(0, 12000000000)),  # cost
-        reward_claims_incorporated,
-    )
+    if foliage_transaction_block:
+        yield TransactionsInfo(
+            hsh(),  # generator_root
+            hsh(),  # generator_refs_root
+            g2(),  # aggregated_signature
+            fees,
+            uint64(random.randint(0, 12000000000)),  # cost
+            reward_claims_incorporated,
+        )
+    else:
+        yield None
 
 
 def get_challenge_chain_sub_slot():
@@ -204,9 +207,9 @@ def get_full_blocks():
 
     for foliage in get_foliage():
         for foliage_transaction_block in get_foliage_transaction_block():
-            height = random.randint(0, 1000000)
+            height = random.randint(0, 100000)
             for reward_chain_block in get_reward_chain_block(height):
-                for transactions_info in get_transactions_info(height):
+                for transactions_info in get_transactions_info(height, foliage_transaction_block):
                     for challenge_chain_sp_proof in [vdf_proof(), None]:
                         for reward_chain_sp_proof in [vdf_proof(), None]:
                             for infused_challenge_chain_ip_proof in [vdf_proof(), None]:
@@ -239,7 +242,14 @@ class TestFullBlockParser:
         for block in get_full_blocks():
 
             block_bytes = bytes(block)
-            gen = generator_from_block(block_bytes)
+            gen = generator_from_block(memoryview(block_bytes))
             assert gen == block.transactions_generator
             # this doubles the run-time of this test, with questionable utility
             # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
+
+    @pytest.mark.asyncio
+    async def test_header_block(self):
+        for block in get_full_blocks():
+            hb: HeaderBlock = get_block_header(block, [], [])
+            hb_bytes = header_block_from_block(memoryview(bytes(block)))
+            assert HeaderBlock.from_bytes(hb_bytes) == hb

@@ -17,7 +17,7 @@ Note: When changing this file, also change protocol_message_types.py
 # These are passed in as uint16 into the Handshake
 class Capability(IntEnum):
     BASE = 1  # Base capability just means it supports the chia protocol at mainnet
-    BLOB_API = 2
+    BLOCK_HEADERS = 2
 
 
 @streamable
@@ -29,3 +29,6 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: List[Tuple[uint16, str]]
+
+
+capabilities = [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOCK_HEADERS.value), "2")]

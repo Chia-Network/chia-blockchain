@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import capabilities, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -133,7 +133,9 @@ class ChiaServer:
 
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
-
+        self._local_capabilities = capabilities
+        if local_type == NodeType.FULL_NODE.value:
+            self._local_capabilities = node.capabilities
         self._ping_interval = ping_interval
         self._network_id = network_id
         self._inbound_rate_limit_percent = inbound_rate_limit_percent
@@ -305,10 +307,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self._local_capabilities
             )
 
             assert handshake is True
@@ -459,10 +458,7 @@ class ChiaServer:
                 session=session,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self._port, self._local_type, self._local_capabilities
             )
             assert handshake is True
             await self.connection_added(connection, on_connect)
