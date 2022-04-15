@@ -17,7 +17,7 @@ BLADEBIT_PLOTTER_DIR = "bladebit"
 
 
 def is_bladebit_supported() -> bool:
-    # bladebit >= 2.0.0 now supports MacOS
+    # bladebit >= 2.0.0 now supports macOS
     return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin", "darwin"]
 
 
@@ -133,48 +133,57 @@ progress = {
 }
 
 
-def install_bladebit(root_path: Path):
-    if os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
+def install_bladebit(root_path: Path, override: bool = False, git_ref: Optional[str] = None):
+    if not override and os.path.exists(get_bladebit_executable_path(root_path)):
         print("Bladebit plotter already installed.")
         return
 
-    print("Installing bladebit plotter.")
     if not is_bladebit_supported():
         raise RuntimeError("Platform not supported yet for bladebit plotter.")
 
-    print("Installing dependencies.")
-    run_command(
-        [
-            "sudo",
-            "apt",
-            "update",
-            "-y",
-        ],
-        "Could not update get package information from apt",
-    )
-    run_command(
-        [
-            "sudo",
-            "apt",
-            "install",
-            "-y",
-            "build-essential",
-            "cmake",
-            "libnuma-dev",
-            "git",
-            "libgmp-dev",
-        ],
-        "Could not install dependencies",
-    )
+    print("Installing bladebit plotter.")
 
+    if sys.platform in ["win32", "cygwin"]:
+        print("Windows user must build bladebit manually on <chia_root>\\plotters\\bladebit")
+        print("Please run `git clone` on the folder then build it as instructed in README")
+        raise RuntimeError("Automatic install not supported on Windows")
+
+    if sys.platform.startswith("linux"):
+        run_command(
+            [
+                "sudo",
+                "apt",
+                "install",
+                "-y",
+                "build-essential",
+                "cmake",
+                "libnuma-dev",
+                "git",
+                "libgmp-dev",
+            ],
+            "Could not install dependencies",
+        )
+    elif sys.platform in ["darwin"]:
+        # @TODO Do something required to be done before build
+        pass
+
+    # If git repository of bladebit already exists and `git_ref` is specified
+    # then checkout the specified commit reference
+    # If git repository of bladebit already exists but `git_ref` is not specified
+    # then checkout the main branch
+    # If git repository of bladebit does not exist and `git_ref` is specified
+    # then git clone with the specified ref
+    # If git repository of bladebit does not exist and `git_ref` is not specified
+    # then git clone without branch/commit/tag option
     print("Cloning repository and its submodules.")
+    git_clone_command = [
+        "git",
+        "clone",
+        "--recursive",
+        "https://github.com/Chia-Network/bladebit.git",
+    ]
     run_command(
-        [
-            "git",
-            "clone",
-            "--recursive",
-            "https://github.com/Chia-Network/bladebit.git",
-        ],
+        git_clone_command,
         "Could not clone bladebit repository",
         cwd=os.fspath(root_path),
     )
@@ -193,6 +202,8 @@ def install_bladebit(root_path: Path):
 
 
 def plot_bladebit(args, chia_root_path, root_path):
+    # When neither bladebit installed from git nor bladebit bundled with installer is available,
+    # install bladebit from git repos.
     if not os.path.exists(get_bladebit_executable_path(root_path)):
         print("Installing bladebit plotter.")
         try:
@@ -200,6 +211,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
             return
+
     plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
