@@ -220,7 +220,7 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug("Received message: %s", msg)
+            self.log.debug(f"Received message: {msg}")
             if msg.type == WSMsgType.TEXT:
                 try:
                     decoded = json.loads(msg.data)
