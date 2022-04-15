@@ -11,17 +11,14 @@ export default class DIDWallet extends Wallet {
     walletId: number,
     nftCoinInfo: any,
     newDid: string,
-    newDidParent: string,
     newDidInnerHash: string,
-    newDidAmount: number,
-    tradePrice: number) {
+    tradePrice: number
+  ) {
     return this.command('nft_transfer_nft', {
       walletId,
       nftCoinInfo,
       newDid,
-      newDidParent,
       newDidInnerHash,
-      newDidAmount,
       tradePrice,
     });
   }
