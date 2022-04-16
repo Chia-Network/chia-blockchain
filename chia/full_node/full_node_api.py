@@ -1322,7 +1322,7 @@ class FullNodeAPI:
             header_hash: Optional[bytes32] = height_to_hash(uint32(i))
             if header_hash is None:
                 reject = RejectBlockHeaders(request.start_height, request.end_height)
-                msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
+                msg = make_msg(ProtocolMessageTypes.reject_block_headers, reject)
                 return msg
             header_hashes.append(header_hash)
 

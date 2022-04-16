@@ -6,7 +6,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, capabilities
-from chia.protocols.wallet_protocol import RespondBlockHeaders
+from chia.protocols.wallet_protocol import RejectBlockHeaders, RespondBlockHeaders
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
@@ -26,7 +26,7 @@ def wallet_height_at_least(wallet_node, h):
 log = getLogger(__name__)
 
 
-class TestWalletProtocol:
+class TestWalletSync:
     @pytest.mark.asyncio
     async def test_request_block_headers(self, bt, wallet_node, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
@@ -62,6 +62,31 @@ class TestWalletProtocol:
         res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
         bh = res_block_headers.header_blocks
         assert len(bh) == 6
+
+    @pytest.mark.asyncio
+    async def test_request_block_headers_rejected(self, bt, wallet_node, default_1000_blocks):
+        # Tests the edge case of receiving funds right before the recent blocks  in weight proof
+        full_node_api: FullNodeAPI
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(1000000, 1000010, False))
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
+
+        for block in default_1000_blocks[:100]:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(80, 99, False))
+        assert msg.type == ProtocolMessageTypes.respond_block_headers.value
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 8, False))
+        assert msg is None
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 8, True))
+        assert msg is None
+
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(90, 110, False))
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
+        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(90, 110, True))
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
 
 class TestWalletSync:
