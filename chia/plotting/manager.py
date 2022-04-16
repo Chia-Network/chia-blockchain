@@ -140,10 +140,12 @@ class PlotManager:
                 if not self._refreshing_enabled:
                     return
 
-                start = time.time()
+                start_time = time.time()
 
                 def bench_log(message: str) -> None:
-                    log.debug(f"bench_log: {message} {time.time() - start:.2f}")
+                    nonlocal start_time
+                    log.debug(f"bench_log: {message} {time.time() - start_time:.2f}")
+                    start_time = time.time()
 
                 plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
                 plot_directories: Set[Path] = set(plot_filenames.keys())
@@ -267,7 +269,9 @@ class PlotManager:
             log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
         def bench_log(message: str) -> None:
+            nonlocal start_time
             log.debug(f"bench_log: {message} {time.time() - start_time:.2f}")
+            start_time = time.time()
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
             if not self._refreshing_enabled:
