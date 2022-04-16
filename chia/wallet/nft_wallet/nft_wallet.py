@@ -346,8 +346,8 @@ class NFTWallet:
         # EVE SPEND BELOW
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # Create a puzzle announcement
-        message_puz = Program.to([[62, "a"]])
-        message_sb = await did_wallet.create_message_spend(message_puz)
+        puzzle_announcements = ["a"]
+        message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
 
@@ -387,8 +387,8 @@ class NFTWallet:
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo) -> SpendBundle:
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # Create a puzzle announcement
-        message_puz = Program.to([[62, "a"]])
-        message_sb = await did_wallet.create_message_spend(message_puz)
+        puzzle_announcements = ["a"]
+        message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
 
@@ -440,9 +440,9 @@ class NFTWallet:
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         transfer_prog = nft_coin_info.transfer_program
         # 2 is a puzzle announcement
-        # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
-        messages = Program.to([[62, Program.to([[trade_prices_list, new_url], bytes(new_did)]).get_tree_hash()]])
-        message_sb = await did_wallet.create_message_spend(messages)
+        # (sha256tree1 (list transfer_program_solution new_did))
+        puzzle_announcements = [Program.to([[trade_prices_list, new_url], bytes(new_did)]).get_tree_hash()]
+        message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         # my_did_inner_hash
@@ -578,9 +578,8 @@ class NFTWallet:
                 # spend_list.append(CoinSpend(coin, construct_cat_puzzle(CAT_MOD, asset_id, OFFER_MOD), ))
         # offers_sb = SpendBundle(spend_list, AugSchemeMPL.aggregate([]))
         # sb_list.append(offers_sb)
-        # breakpoint()
-        message_puz = Program.to([[62, trade_price_list_discovered.get_tree_hash() + bytes(nft_id)]])
-        message_sb = await did_wallet.create_message_spend(message_puz)
+        puzzle_announcements = [Program.to(trade_price_list_discovered.get_tree_hash() + bytes(nft_id))]
+        message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
         sb_list.append(message_sb)

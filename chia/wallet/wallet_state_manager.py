@@ -654,7 +654,7 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash, metadata = curried_args
+        p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
