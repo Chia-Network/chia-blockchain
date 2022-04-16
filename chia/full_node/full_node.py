@@ -140,9 +140,9 @@ class FullNode:
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
         self.capabilities = capabilities
-        if config.get("disable_capabilities"):
+        disable_capabilities_values = config.get("disable_capabilities")
+        if disable_capabilities_values and isinstance(disable_capabilities_values, list):
             try:
-                disable_capabilities_values = config["disable_capabilities"]
                 if Capability.BASE.value in disable_capabilities_values:
                     disable_capabilities_values.remove(Capability.BASE.value)
                 self.capabilities = [
