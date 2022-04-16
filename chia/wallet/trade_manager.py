@@ -295,12 +295,17 @@ class TradeManager:
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
+                        # ATTENTION: new wallets
                         if wallet.type() == WalletType.STANDARD_WALLET:
                             key: Optional[bytes32] = None
                             memos: List[bytes] = []
                         elif wallet.type() == WalletType.CAT:
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
+                            if key in type_dict and type_dict[key] != AssetType.CAT:
+                                raise ValueError(f"type_dict specified {type_dict[key]}, was expecting {AssetType.CAT}")
+                            else:
+                                type_dict[key] = AssetType.CAT
                         else:
                             raise ValueError(f"Offers are not implemented for {wallet.type()}")
                     else:
@@ -316,6 +321,15 @@ class TradeManager:
                     if balance < abs(amount):
                         raise Exception(f"insufficient funds in wallet {wallet_id}")
                     coins_to_offer[wallet_id] = await wallet.select_coins(uint64(abs(amount)))
+                    # ATTENTION: new wallets
+                    if wallet.type() == WalletType.CAT:
+                        asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                        if asset_id in type_dict and type_dict[asset_id] != AssetType.CAT:
+                            raise ValueError(
+                                f"type_dict specified {type_dict[asset_id]}, was expecting {AssetType.CAT}"
+                            )
+                        else:
+                            type_dict[asset_id] = AssetType.CAT
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -371,7 +385,6 @@ class TradeManager:
             exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())  # ATTENTION: new_wallets
             if exists is None:
                 await wsm.create_wallet_for_asset_id(key, offer.type_dict[key])  # ATTENTION: new_wallets
-
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
