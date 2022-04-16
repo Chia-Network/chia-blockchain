@@ -92,10 +92,11 @@ export type CardProps = {
   fullHeight?: boolean;
   highlight?: ReactNode | false;
   transparent?: boolean;
+  titleVariant?: string;
 };
 
 export default function Card(props: CardProps) {
-  const { children, highlight, title, tooltip, actions, gap = 2, interactive = false, action, onSelect, disabled, fullHeight, transparent = false } = props;
+  const { children, highlight, title, tooltip, actions, gap = 2, interactive = false, titleVariant = 'h5', action, onSelect, disabled, fullHeight, transparent = false } = props;
 
   const headerTitle = tooltip ? (
     <Flex alignItems="center" gap={1}>
@@ -125,7 +126,7 @@ export default function Card(props: CardProps) {
           <StyledCardTitle transparent={transparent}>
             <Flex gap={2} alignItems="center" flexWrap="wrap">
               <Box flexGrow={1}>
-                <Typography variant="h5">{headerTitle}</Typography>
+                <Typography variant={titleVariant}>{headerTitle}</Typography>
               </Box>
               {action && <Box>{action}</Box>}
             </Flex>

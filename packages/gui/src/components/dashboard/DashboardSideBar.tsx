@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { List, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import {
   Farming as FarmingIcon,
   FullNode as FullNodeIcon,
@@ -14,14 +14,16 @@ import {
 } from '@chia/icons';
 import { Flex, SideBarItem } from '@chia/core';
 
-const StyledRoot = styled(Flex)`
-  height: 100%;
-  overflow-y: auto;
+const StyledItemsContainer = styled(Flex)`
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: auto;
   padding-top: ${({ theme }) => `${theme.spacing(5)}`};
 `;
 
-const StyledList = styled(List)`
-  width: 100%;
+const StyledRoot = styled(Flex)`
+  height: 100%;
+  flex-direction: column;
 `;
 
 const StyledSideBarDivider = styled(Box)`
@@ -31,19 +33,10 @@ const StyledSideBarDivider = styled(Box)`
     rgba(0, 0, 0, 0.18) 99.54%,
     rgba(255, 255, 255, 0) 100%
   );
-  margin: ${({ theme }) => `${theme.spacing(2)} 0 ${theme.spacing(2)} 0`};
 `;
 
 const StyledSettingsContainer = styled(Box)`
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
   background-color: ${({ theme }) => theme.palette.background.paper};
-`;
-
-const StyledInvisible = styled(Box)`
-  visibility: hidden;
 `;
 
 export type DashboardSideBarProps = {
@@ -55,7 +48,7 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
 
   return (
     <StyledRoot>
-      <StyledList disablePadding>
+      <StyledItemsContainer>
         <SideBarItem
           to="/dashboard/wallets"
           icon={TokensIcon}
@@ -74,7 +67,9 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
 
         {!simple && (
           <>
-            <StyledSideBarDivider />
+            <Box my={1}>
+              <StyledSideBarDivider />
+            </Box>
 
             <SideBarItem
               to="/dashboard"
@@ -107,15 +102,7 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
             />
           </>
         )}
-
-        <StyledInvisible>
-          <SideBarItem
-            to="/dashboard/settings"
-            icon={SettingsIcon}
-            title={<Trans>Settings</Trans>}
-          />
-        </StyledInvisible>
-      </StyledList>
+      </StyledItemsContainer>
       <StyledSettingsContainer>
         <SideBarItem
           to="/dashboard/settings"

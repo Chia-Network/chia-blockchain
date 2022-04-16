@@ -5,11 +5,11 @@ import useDarkMode from '../../hooks/useDarkMode';
 import Button from '../Button';
 import Link from '../Link';
 import { ButtonGroup } from '@mui/material';
-import { 
-  WbSunny as WbSunnyIcon, 
+import { Farming } from '@chia/icons';
+import {
+  WbSunny as WbSunnyIcon,
   NightsStay as NightsStayIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
-  EnergySavingsLeaf as EcoIcon,
 } from '@mui/icons-material';
 import useMode from '../../hooks/useMode';
 import SettingsLabel from './SettingsLabel';
@@ -45,7 +45,7 @@ export default function SettingsApp(props: SettingsAppProps) {
       showError(error);
     }
   }
-  
+
   async function handleOpenSendFeedbackURL(): Promise<void> {
     try {
       const shell: Shell = (window as any).shell;
@@ -62,7 +62,7 @@ export default function SettingsApp(props: SettingsAppProps) {
           <Trans>Mode</Trans>
         </SettingsLabel>
         <ButtonGroup fullWidth>
-          <Button startIcon={<EcoIcon />} selected={mode === Mode.FARMING} onClick={handleSetFarmingMode}>
+          <Button startIcon={<Farming />} selected={mode === Mode.FARMING} onClick={handleSetFarmingMode}>
             <Trans>Farming</Trans>
           </Button>
           <Button startIcon={<AccountBalanceWalletIcon />} selected={mode === Mode.WALLET} onClick={handleSetWalletMode}>
@@ -89,7 +89,7 @@ export default function SettingsApp(props: SettingsAppProps) {
         <SettingsLabel>
           <Trans>Language</Trans>
         </SettingsLabel>
-        <LocaleToggle 
+        <LocaleToggle
           variant="outlined"
         />
       </Flex>

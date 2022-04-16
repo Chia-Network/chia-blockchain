@@ -83,7 +83,7 @@ msgstr "Akce"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:68
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:67
-#: src/components/fullNode/FullNodeConnections.tsx:82
+#: src/components/fullNode/FullNodeConnections.tsx:81
 #: src/components/pool/PoolOverview.tsx:65
 msgid "Actions"
 msgstr "Akce"
@@ -109,7 +109,7 @@ msgstr "Přidat pole do fronty"
 #~ msgid "Add Wallet"
 #~ msgstr "Add Wallet"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:42
+#: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/PlotHeader.tsx:60
 #: src/components/plot/add/PlotAddForm.tsx:176
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
@@ -311,7 +311,7 @@ msgstr "V současné době farmaříte <0/>"
 #: src/components/backup/BackupCreate.tsx:51
 #: src/components/block/FarmManageFarmingRewards.tsx:175
 #: src/components/block/FullNodeAddConnection.tsx:85
-#: src/components/farm/FarmManageFarmingRewards.tsx:187
+#: src/components/farm/FarmManageFarmingRewards.tsx:186
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
@@ -484,7 +484,7 @@ msgstr "Připojit"
 
 #: src/components/block/FullNodeAddConnection.tsx:64
 #: src/components/fullNode/FullNodeAddConnection.tsx:63
-#: src/components/fullNode/FullNodeConnections.tsx:110
+#: src/components/fullNode/FullNodeConnections.tsx:109
 msgid "Connect to other peers"
 msgstr "Připojit k dalším peerům"
 
@@ -514,11 +514,11 @@ msgstr "Stav připojení"
 msgid "Connection Status:"
 msgstr "Stav připojení:"
 
-#: src/components/fullNode/FullNodeConnections.tsx:75
+#: src/components/fullNode/FullNodeConnections.tsx:74
 msgid "Connection type"
 msgstr "Typ připojení"
 
-#: src/components/fullNode/FullNodeConnections.tsx:107
+#: src/components/fullNode/FullNodeConnections.tsx:106
 msgid "Connections"
 msgstr "Připojení"
 
@@ -795,7 +795,7 @@ msgstr "Odpojit"
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:48
+#: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/overview/PlotOverviewHero.tsx:67
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "Máte již na tomto počítači existující pole? <0>Přidejte složku s poli</0>"
@@ -931,12 +931,12 @@ msgid "Farmer Puzzle Hash"
 msgstr "Hash hádanek pro farmáře"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:142
-#: src/components/farm/FarmManageFarmingRewards.tsx:154
+#: src/components/farm/FarmManageFarmingRewards.tsx:153
 msgid "Farmer Reward Address"
 msgstr "Adresa pro odměny farmáře"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:116
-#: src/components/farm/FarmManageFarmingRewards.tsx:128
+#: src/components/farm/FarmManageFarmingRewards.tsx:127
 msgid "Farmer Reward Address is not properly formatted."
 msgstr "Farmářova adresa odměny není správně formátována."
 
@@ -945,7 +945,7 @@ msgstr "Farmářova adresa odměny není správně formátována."
 #~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/block/FarmManageFarmingRewards.tsx:110
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:121
 msgid "Farmer Reward Address must not be empty."
 msgstr "Farmářova adresa pro odměnu nesmí být prázdná."
 
@@ -963,11 +963,11 @@ msgstr "Farmář není spuštěn"
 #~ msgid "Farmer public key:"
 #~ msgstr "Farmářuv veřejný klíč:"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:29
+#: src/components/farm/overview/FarmOverviewHero.tsx:28
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Farmáři získávají odměny za bloky a transakční poplatky tím, že vloží svůj volný prostor do sítě a zabezpečí tím tak transakce. Farmu, kterou uvidíte zde, vytvoříte přidáním nějakých polí. <0>Více informací</0>"
 
-#: src/components/dashboard/DashboardSideBar.tsx:100
+#: src/components/dashboard/DashboardSideBar.tsx:99
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
@@ -1044,7 +1044,7 @@ msgstr "Sledovat na Twitteru"
 msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky"
 
-#: src/components/dashboard/DashboardSideBar.tsx:81
+#: src/components/dashboard/DashboardSideBar.tsx:80
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Uzel"
@@ -1061,7 +1061,7 @@ msgstr "Uzel"
 msgid "Full Screen"
 msgstr "Celá obrazovka"
 
-#: src/components/settings/Settings.tsx:256
+#: src/components/settings/Settings.tsx:257
 msgid "General"
 msgstr ""
 
@@ -1099,7 +1099,7 @@ msgstr "Hash hlavičky"
 
 #: src/components/block/Block.jsx:179
 #: src/components/fullNode/FullNode.jsx:76
-#: src/components/fullNode/FullNodeConnections.tsx:79
+#: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Výška"
 
@@ -1129,7 +1129,7 @@ msgstr ""
 msgid "Host Name"
 msgstr "Název hostitele"
 
-#: src/components/fullNode/FullNodeConnections.tsx:40
+#: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "IP address"
 msgstr "IP adresa"
 
@@ -1138,7 +1138,7 @@ msgstr "IP adresa"
 msgid "IP address / host"
 msgstr "IP adresa / host"
 
-#: src/components/settings/Settings.tsx:257
+#: src/components/settings/Settings.tsx:258
 msgid "Identities"
 msgstr ""
 
@@ -1210,7 +1210,7 @@ msgstr "Připojit se k Poolu"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/pool/PoolHero.tsx:27
+#: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Připojit se k Poolu"
 
@@ -1366,11 +1366,11 @@ msgstr "Spravovat odměny z farmaření"
 #~ msgstr "Správa DID obnovení"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:98
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Cílové adresy odměn z farmaření"
 
-#: src/components/fullNode/FullNodeConnections.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:67
 msgid "MiB Up/Down"
 msgstr "MiB odesláno/přijato"
 
@@ -1470,13 +1470,13 @@ msgstr "Zatím nic nevyfarmařeno"
 #~ msgstr "Žádné předchozí transakce"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:135
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:146
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Žádné soukromé klíče pro jednu nebo obě adresy. Bezpečné pouze v případě, že posíláte odměny do jiné peněženky."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:33
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
-#: src/components/fullNode/FullNodeConnections.tsx:36
+#: src/components/fullNode/FullNodeConnections.tsx:35
 msgid "Node ID"
 msgstr "ID uzlu"
 
@@ -1522,7 +1522,7 @@ msgid "Not found Plots"
 msgstr "Pole nenalezena"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:163
-#: src/components/farm/FarmManageFarmingRewards.tsx:175
+#: src/components/farm/FarmManageFarmingRewards.tsx:174
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Všimněte si, že toto nezmění vaše Pool adresy. To se týká pouze starého formátu polí a odměny 0,25XCH pool polí."
 
@@ -1551,7 +1551,7 @@ msgstr "OK"
 #~ msgid "Offer"
 #~ msgstr "Nabídka"
 
-#: src/components/dashboard/DashboardSideBar.tsx:71
+#: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Offers"
 msgstr ""
 
@@ -1849,7 +1849,7 @@ msgstr "Pole je duplikát {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "NFT pole se mění na (cílový stav). Může to chvíli trvat. Prosím nezavírejte aplikaci, dokud nebude tato akce dokončena."
 
-#: src/components/dashboard/DashboardSideBar.tsx:87
+#: src/components/dashboard/DashboardSideBar.tsx:86
 msgid "Plots"
 msgstr "Pole"
 
@@ -1927,12 +1927,12 @@ msgid "Pool Puzzle Hash"
 msgstr "Hádankový klíč"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:152
-#: src/components/farm/FarmManageFarmingRewards.tsx:164
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
 msgid "Pool Reward Address"
 msgstr "Adresa pro odměny poolu"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:128
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:139
 msgid "Pool Reward Address is not properly formatted."
 msgstr "Adresa odměny pole není správně formátována."
 
@@ -1941,7 +1941,7 @@ msgstr "Adresa odměny pole není správně formátována."
 #~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/block/FarmManageFarmingRewards.tsx:123
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:134
 msgid "Pool Reward Address must not be empty."
 msgstr "Adresa odměny pole nesmí být prázdná."
 
@@ -1975,7 +1975,7 @@ msgstr ""
 msgid "Pool:"
 msgstr "Pool:"
 
-#: src/components/dashboard/DashboardSideBar.tsx:105
+#: src/components/dashboard/DashboardSideBar.tsx:104
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
@@ -1985,7 +1985,7 @@ msgstr "Poolování"
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
 #: src/components/fullNode/FullNodeAddConnection.tsx:75
-#: src/components/fullNode/FullNodeConnections.tsx:46
+#: src/components/fullNode/FullNodeConnections.tsx:45
 msgid "Port"
 msgstr "Port"
 
@@ -2185,7 +2185,7 @@ msgid "Safe To Skip"
 msgstr "Přeskočit"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:178
-#: src/components/farm/FarmManageFarmingRewards.tsx:190
+#: src/components/farm/FarmManageFarmingRewards.tsx:189
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:130
 msgid "Save"
 msgstr "Uložit"
@@ -2319,9 +2319,9 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:114
-#: src/components/dashboard/DashboardSideBar.tsx:122
-#: src/components/settings/Settings.tsx:247
+#: src/components/dashboard/DashboardSideBar.tsx:113
+#: src/components/dashboard/DashboardSideBar.tsx:121
+#: src/components/settings/Settings.tsx:248
 msgid "Settings"
 msgstr ""
 
@@ -2367,7 +2367,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Přeskočí využití cílové složky pro farmaření"
 
-#: src/components/pool/PoolHero.tsx:22
+#: src/components/pool/PoolHero.tsx:21
 msgid "Smooth out your XCH farming rewards by joining a pool."
 msgstr "Stabilizujte odměny za vaše farmení XCH přidáním do poolu."
 
@@ -2708,7 +2708,7 @@ msgstr "Časová značka"
 #~ msgid "To"
 #~ msgstr "Komu"
 
-#: src/components/dashboard/DashboardSideBar.tsx:59
+#: src/components/dashboard/DashboardSideBar.tsx:58
 msgid "Tokens"
 msgstr ""
 

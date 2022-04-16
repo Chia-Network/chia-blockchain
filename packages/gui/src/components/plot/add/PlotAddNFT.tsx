@@ -142,7 +142,7 @@ const PlotAddNFT = forwardRef((props: Props, ref) => {
           </Typography>
 
           <Box>
-            <Button onClick={handleJoinPool} variant="contained">
+            <Button onClick={handleJoinPool} variant="outlined" >
               <Trans>Join a Pool</Trans>
             </Button>
           </Box>

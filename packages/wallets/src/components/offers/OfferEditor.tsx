@@ -7,6 +7,7 @@ import { Trans, t } from '@lingui/macro';
 import {
   Back,
   Button,
+  Card,
   ButtonLoading,
   Flex,
   Form,
@@ -15,7 +16,6 @@ import {
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
 import {
-  Divider,
   Grid,
 } from '@mui/material';
 import type OfferEditorRowData from './OfferEditorRowData';
@@ -24,13 +24,9 @@ import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
 import OfferEditorConditionsPanel from './OfferEditorConditionsPanel';
 import OfferLocalStorageKeys from './OfferLocalStorage';
-import styled from 'styled-components';
 import { chiaToMojo, catToMojo } from '@chia/core';
 import fs from 'fs';
 
-const StyledEditorBox = styled.div`
-  padding: ${({ theme }) => `${theme.spacing(4)}`};
-`;
 
 type FormData = {
   selectedTab: number;
@@ -184,31 +180,29 @@ function OfferEditor(props: OfferEditorProps) {
 
   return (
     <Form methods={methods} onSubmit={onSubmit}>
-      <Divider />
-      <StyledEditorBox>
-        <Flex flexDirection="column" rowGap={3} flexGrow={1}>
+      <Flex flexDirection="column" rowGap={3} flexGrow={1}>
+        <Card>
           <OfferEditorConditionsPanel makerSide="sell" disabled={processing} />
-          <Divider />
-          <Flex gap={3}>
-            <Button
-              variant="outlined"
-              type="reset"
-              onClick={handleReset}
-              disabled={processing}
-            >
-              <Trans>Reset</Trans>
-            </Button>
-            <ButtonLoading
-              variant="contained"
-              color="primary"
-              type="submit"
-              loading={processing}
-            >
-              <Trans>Save Offer</Trans>
-            </ButtonLoading>
-          </Flex>
+        </Card>
+        <Flex justifyContent="flex-end" gap={2}>
+          <Button
+            variant="outlined"
+            type="reset"
+            onClick={handleReset}
+            disabled={processing}
+          >
+            <Trans>Reset</Trans>
+          </Button>
+          <ButtonLoading
+            variant="contained"
+            color="primary"
+            type="submit"
+            loading={processing}
+          >
+            <Trans>Save Offer</Trans>
+          </ButtonLoading>
         </Flex>
-      </StyledEditorBox>
+      </Flex>
     </Form>
   );
 }

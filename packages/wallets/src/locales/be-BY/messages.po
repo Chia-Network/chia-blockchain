@@ -99,7 +99,7 @@ msgstr ""
 #~ msgid "Action"
 #~ msgstr "Дзеянне"
 
-#: src/components/WalletHeader.tsx:101
+#: src/components/WalletHeader.tsx:74
 msgid "Actions"
 msgstr "Дзеянні"
 
@@ -217,7 +217,7 @@ msgstr ""
 msgid "Amount must be an even amount."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:111
+#: src/components/offers/OfferManager.tsx:100
 msgid "Are you sure you want to cancel your offer?"
 msgstr ""
 
@@ -226,7 +226,7 @@ msgstr ""
 #~ msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 #~ msgstr "Сапраўды выдаліць дзялянку? Пасля выдалення дзялянку будзе немагчыма аднавіць."
 
-#: src/components/WalletHeader.tsx:51
+#: src/components/WalletHeader.tsx:42
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr ""
 
@@ -247,8 +247,8 @@ msgstr ""
 #~ msgstr "Сапраўды хочаце выкарыстоўваць k={plotSize}?"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:80
-#: src/components/cat/WalletCATTAILDialog.tsx:44
-#: src/components/cat/WalletCATTAILDialog.tsx:56
+#: src/components/cat/WalletCATTAILDialog.tsx:43
+#: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
 msgstr ""
 
@@ -393,9 +393,9 @@ msgstr ""
 msgid "Cancel"
 msgstr "Скасаваць"
 
-#: src/components/offers/OfferManager.tsx:105
-#: src/components/offers/OfferManager.tsx:177
-#: src/components/offers/OfferManager.tsx:434
+#: src/components/offers/OfferManager.tsx:94
+#: src/components/offers/OfferManager.tsx:166
+#: src/components/offers/OfferManager.tsx:423
 msgid "Cancel Offer"
 msgstr ""
 
@@ -403,7 +403,7 @@ msgstr ""
 #~ msgid "Cancel and Spend"
 #~ msgstr "Скасаваць і патраціць"
 
-#: src/components/offers/OfferManager.tsx:132
+#: src/components/offers/OfferManager.tsx:121
 msgid "Cancel on blockchain"
 msgstr ""
 
@@ -478,7 +478,7 @@ msgstr ""
 #~ msgid "Claim Rewards"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:170
+#: src/components/offers/OfferManager.tsx:159
 #: src/components/offers/OfferShareDialog.tsx:379
 #: src/components/offers/OfferShareDialog.tsx:520
 #: src/components/offers/OfferShareDialog.tsx:722
@@ -549,7 +549,7 @@ msgstr ""
 #~ msgid "Confirm Passphrase"
 #~ msgstr ""
 
-#: src/components/WalletHeader.tsx:46
+#: src/components/WalletHeader.tsx:37
 msgid "Confirmation"
 msgstr ""
 
@@ -711,11 +711,11 @@ msgstr "Стварыць трансакцыю"
 #~ msgstr "Стварыць кашалёк адміністратара"
 
 #: src/components/offers/OfferEditor.tsx:232
-#: src/components/offers/OfferManager.tsx:528
+#: src/components/offers/OfferManager.tsx:517
 msgid "Create an Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:523
+#: src/components/offers/OfferManager.tsx:512
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
 msgstr ""
 
@@ -751,7 +751,7 @@ msgstr ""
 #~ msgid "Created by us:"
 #~ msgstr "Створана намі:"
 
-#: src/components/offers/OfferManager.tsx:134
+#: src/components/offers/OfferManager.tsx:123
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
 msgstr ""
 
@@ -763,7 +763,7 @@ msgstr ""
 #~ msgid "Creating Plot NFT for Self Pooling"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:350
+#: src/components/offers/OfferManager.tsx:339
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
 msgstr ""
@@ -818,7 +818,7 @@ msgstr "Дата"
 #~ msgid "Delay"
 #~ msgstr "Затрымка"
 
-#: src/components/WalletHeader.tsx:47
+#: src/components/WalletHeader.tsx:38
 #: src/components/cat/WalletDID.tsx:448
 #: src/components/cat/WalletDID.tsx:862
 #: src/components/did/WalletDID.tsx:448
@@ -837,7 +837,7 @@ msgstr "Выдаліць"
 #~ msgid "Delete Plot"
 #~ msgstr "Выдаліць дзялянку"
 
-#: src/components/WalletHeader.tsx:114
+#: src/components/WalletHeader.tsx:87
 msgid "Delete Unconfirmed Transactions"
 msgstr ""
 
@@ -915,7 +915,7 @@ msgstr ""
 #~ msgid "Disconnect"
 #~ msgstr "Адлучыць"
 
-#: src/components/offers/OfferManager.tsx:404
+#: src/components/offers/OfferManager.tsx:393
 msgid "Display Offer Data"
 msgstr ""
 
@@ -1133,7 +1133,7 @@ msgstr "Ферма"
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/offers/OfferEditorConditionsPanel.tsx:333
-#: src/components/offers/OfferManager.tsx:149
+#: src/components/offers/OfferManager.tsx:138
 #: src/components/offers/OfferViewer.tsx:470
 #: src/components/rateLimited/WalletRateLimited.jsx:732
 msgid "Fee"
@@ -1304,7 +1304,7 @@ msgstr "IP-адрас"
 msgid "If selected, your offer will be not be shared publicly."
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:118
+#: src/components/offers/OfferManager.tsx:107
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
 msgstr ""
 
@@ -1566,7 +1566,7 @@ msgstr ""
 #~ msgid "Manage Farming Rewards"
 #~ msgstr "Кіраванне ўзнагародай за фермерства"
 
-#: src/components/offers/OfferManager.tsx:516
+#: src/components/offers/OfferManager.tsx:505
 msgid "Manage Offers"
 msgstr ""
 
@@ -1700,7 +1700,7 @@ msgstr "Псеўданім"
 #~ msgid "No blocks farmed yet"
 #~ msgstr "Ураджайных блокаў яшчэ няма"
 
-#: src/components/offers/OfferManager.tsx:469
+#: src/components/offers/OfferManager.tsx:458
 msgid "No current offers"
 msgstr ""
 
@@ -1786,7 +1786,7 @@ msgstr ""
 #~ msgid "Number of threads"
 #~ msgstr "Колькасць патокаў"
 
-#: src/components/cat/WalletCATTAILDialog.tsx:83
+#: src/components/cat/WalletCATTAILDialog.tsx:82
 #: src/components/offers/OfferDataDialog.tsx:75
 msgid "OK"
 msgstr "ОК"
@@ -1823,7 +1823,7 @@ msgstr ""
 msgid "OfferBin URL"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:311
+#: src/components/offers/OfferManager.tsx:300
 msgid "Offered"
 msgstr ""
 
@@ -1831,11 +1831,11 @@ msgstr ""
 #~ msgid "Offers Created"
 #~ msgstr "Аферта створана"
 
-#: src/components/offers/OfferManager.tsx:543
+#: src/components/offers/OfferManager.tsx:532
 msgid "Offers you accepted"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:538
+#: src/components/offers/OfferManager.tsx:527
 msgid "Offers you created"
 msgstr ""
 
@@ -2073,8 +2073,8 @@ msgid "Please finish syncing before making a transaction"
 msgstr "Завяршыце сінхранізацыю перад выкананнем трансакцыі"
 
 #: src/components/WalletHeader.tsx:64
-msgid "Please finish syncing before managing offers"
-msgstr ""
+#~ msgid "Please finish syncing before managing offers"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:66
 #~ msgid "Please select amount"
@@ -2428,7 +2428,7 @@ msgstr "Інфармацыя аб абмежаваннях вываду"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Наладжванне кашалька карыстальніка з абмежаваннямі вываду"
 
-#: src/components/WalletHeader.tsx:87
+#: src/components/WalletHeader.tsx:60
 msgid "Receive"
 msgstr ""
 
@@ -2514,7 +2514,7 @@ msgstr ""
 #~ msgid "Report an Issue..."
 #~ msgstr "Паведаміць аб праблеме..."
 
-#: src/components/offers/OfferManager.tsx:334
+#: src/components/offers/OfferManager.tsx:323
 msgid "Requested"
 msgstr ""
 
@@ -2551,7 +2551,7 @@ msgstr "Захаваць"
 msgid "Save Offer"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:419
+#: src/components/offers/OfferManager.tsx:408
 msgid "Save Offer File"
 msgstr ""
 
@@ -2570,7 +2570,7 @@ msgstr ""
 #~ msgstr "Пошук блока па хэше загалоўка"
 
 #: src/components/WalletTokenCard.tsx:76
-#: src/components/cat/WalletCATTAILDialog.tsx:72
+#: src/components/cat/WalletCATTAILDialog.tsx:71
 #: src/components/offers/OfferSummaryRow.tsx:94
 msgid "Search on Tail Database"
 msgstr ""
@@ -2669,7 +2669,7 @@ msgstr ""
 #~ msgid "Sell"
 #~ msgstr "Прадаць"
 
-#: src/components/WalletHeader.tsx:86
+#: src/components/WalletHeader.tsx:59
 #: src/components/WalletSend.tsx:188
 #: src/components/cat/WalletCATSend.tsx:247
 #: src/components/rateLimited/WalletRateLimited.jsx:747
@@ -2699,7 +2699,7 @@ msgstr "Адпраўце гэты адкрыты ключ адміністрат
 #~ msgid "Settings"
 #~ msgstr ""
 
-#: src/components/offers/OfferManager.tsx:365
+#: src/components/offers/OfferManager.tsx:354
 #: src/components/offers/OfferShareDialog.tsx:435
 #: src/components/offers/OfferShareDialog.tsx:562
 #: src/components/offers/OfferShareDialog.tsx:798
@@ -2739,7 +2739,7 @@ msgstr ""
 msgid "Show Asset Id"
 msgstr ""
 
-#: src/components/offers/OfferManager.tsx:390
+#: src/components/offers/OfferManager.tsx:379
 msgid "Show Details"
 msgstr ""
 
@@ -2833,7 +2833,7 @@ msgstr ""
 #~ msgstr "Стан"
 
 #: src/components/WalletStatusCard.tsx:22
-#: src/components/offers/OfferManager.tsx:288
+#: src/components/offers/OfferManager.tsx:277
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
 msgstr "Стан"
@@ -2885,7 +2885,7 @@ msgstr "Адправіць"
 msgid "Success"
 msgstr ""
 
-#: src/components/WalletHeader.tsx:85
+#: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:450
 msgid "Summary"
 msgstr ""
@@ -3166,7 +3166,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:106
+#: src/components/WalletsSidebar.tsx:86
 msgid "Tokens"
 msgstr ""
 
@@ -3280,8 +3280,8 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr "Невядомы"
 
-#: src/components/offers/OfferManager.tsx:295
-#: src/components/offers/OfferManager.tsx:318
+#: src/components/offers/OfferManager.tsx:284
+#: src/components/offers/OfferManager.tsx:307
 #: src/components/offers/OfferSummaryRow.tsx:67
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
@@ -3347,7 +3347,7 @@ msgstr "Адкрыты ключ карыстальніка"
 #~ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:153
-#: src/components/offers/OfferManager.tsx:531
+#: src/components/offers/OfferManager.tsx:520
 msgid "View an Offer"
 msgstr ""
 

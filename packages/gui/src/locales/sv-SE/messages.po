@@ -83,7 +83,7 @@ msgstr "Åtgärd"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:68
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:67
-#: src/components/fullNode/FullNodeConnections.tsx:82
+#: src/components/fullNode/FullNodeConnections.tsx:81
 #: src/components/pool/PoolOverview.tsx:65
 msgid "Actions"
 msgstr "Åtgärder"
@@ -109,7 +109,7 @@ msgstr "Lägg till plott i kön"
 #~ msgid "Add Wallet"
 #~ msgstr "Add Wallet"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:42
+#: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/PlotHeader.tsx:60
 #: src/components/plot/add/PlotAddForm.tsx:176
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
@@ -311,7 +311,7 @@ msgstr "Men för tillfället odlar du <0/>"
 #: src/components/backup/BackupCreate.tsx:51
 #: src/components/block/FarmManageFarmingRewards.tsx:175
 #: src/components/block/FullNodeAddConnection.tsx:85
-#: src/components/farm/FarmManageFarmingRewards.tsx:187
+#: src/components/farm/FarmManageFarmingRewards.tsx:186
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
@@ -484,7 +484,7 @@ msgstr "Anslut"
 
 #: src/components/block/FullNodeAddConnection.tsx:64
 #: src/components/fullNode/FullNodeAddConnection.tsx:63
-#: src/components/fullNode/FullNodeConnections.tsx:110
+#: src/components/fullNode/FullNodeConnections.tsx:109
 msgid "Connect to other peers"
 msgstr "Anslut till andra peer-datorer"
 
@@ -514,11 +514,11 @@ msgstr "Anslutningsstatus"
 msgid "Connection Status:"
 msgstr "Anslutningsstatus:"
 
-#: src/components/fullNode/FullNodeConnections.tsx:75
+#: src/components/fullNode/FullNodeConnections.tsx:74
 msgid "Connection type"
 msgstr "Anslutningstyp"
 
-#: src/components/fullNode/FullNodeConnections.tsx:107
+#: src/components/fullNode/FullNodeConnections.tsx:106
 msgid "Connections"
 msgstr "Anslutningar"
 
@@ -795,7 +795,7 @@ msgstr "Koppla ifrån"
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:48
+#: src/components/farm/overview/FarmOverviewHero.tsx:47
 #: src/components/plot/overview/PlotOverviewHero.tsx:67
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "Har du redan några plottar på denna maskin? <0>Lägg till plottmapp</0>"
@@ -931,12 +931,12 @@ msgid "Farmer Puzzle Hash"
 msgstr "Odlare-pusselhash"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:142
-#: src/components/farm/FarmManageFarmingRewards.tsx:154
+#: src/components/farm/FarmManageFarmingRewards.tsx:153
 msgid "Farmer Reward Address"
 msgstr "Adress för odlarbelöning"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:116
-#: src/components/farm/FarmManageFarmingRewards.tsx:128
+#: src/components/farm/FarmManageFarmingRewards.tsx:127
 msgid "Farmer Reward Address is not properly formatted."
 msgstr "Den här dressen är inte korrekt formaterad."
 
@@ -945,7 +945,7 @@ msgstr "Den här dressen är inte korrekt formaterad."
 #~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/block/FarmManageFarmingRewards.tsx:110
-#: src/components/farm/FarmManageFarmingRewards.tsx:122
+#: src/components/farm/FarmManageFarmingRewards.tsx:121
 msgid "Farmer Reward Address must not be empty."
 msgstr "Adress får inte vara tom."
 
@@ -963,11 +963,11 @@ msgstr "Odlaren körs inte"
 #~ msgid "Farmer public key:"
 #~ msgstr "Publik nyckel för odlare:"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:29
+#: src/components/farm/overview/FarmOverviewHero.tsx:28
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Odlare tjänar blockbelöningar och transaktionsavgifter genom att dedikera ledigt utrymme till nätverket för att hjälpa till att säkra transaktioner. Detta är vad din odling gör när du väl har lagt till en plott. <0>Läs mer</0>"
 
-#: src/components/dashboard/DashboardSideBar.tsx:100
+#: src/components/dashboard/DashboardSideBar.tsx:99
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
@@ -1044,7 +1044,7 @@ msgstr "Följ på Twitter"
 msgid "Frequently Asked Questions"
 msgstr "Vanliga frågor"
 
-#: src/components/dashboard/DashboardSideBar.tsx:81
+#: src/components/dashboard/DashboardSideBar.tsx:80
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
 msgstr "Fullständig nod"
@@ -1061,7 +1061,7 @@ msgstr "Fullständig nod"
 msgid "Full Screen"
 msgstr "Helskärm"
 
-#: src/components/settings/Settings.tsx:256
+#: src/components/settings/Settings.tsx:257
 msgid "General"
 msgstr ""
 
@@ -1099,7 +1099,7 @@ msgstr "Huvudhash"
 
 #: src/components/block/Block.jsx:179
 #: src/components/fullNode/FullNode.jsx:76
-#: src/components/fullNode/FullNodeConnections.tsx:79
+#: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Höjd"
 
@@ -1129,7 +1129,7 @@ msgstr ""
 msgid "Host Name"
 msgstr "Värdnamn"
 
-#: src/components/fullNode/FullNodeConnections.tsx:40
+#: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "IP address"
 msgstr "IP-adress"
 
@@ -1138,7 +1138,7 @@ msgstr "IP-adress"
 msgid "IP address / host"
 msgstr "IP-adress/värd"
 
-#: src/components/settings/Settings.tsx:257
+#: src/components/settings/Settings.tsx:258
 msgid "Identities"
 msgstr ""
 
@@ -1210,7 +1210,7 @@ msgstr "Gå med i en pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/pool/PoolHero.tsx:27
+#: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Gå med i en pool"
 
@@ -1366,11 +1366,11 @@ msgstr "Hantera odlingsbelöningar"
 #~ msgstr "Hantera återställnings-DID"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:98
-#: src/components/farm/FarmManageFarmingRewards.tsx:110
+#: src/components/farm/FarmManageFarmingRewards.tsx:109
 msgid "Manage Your Farming Rewards Target Addresses"
 msgstr "Hantera dina måladresser för odlarbelöningar"
 
-#: src/components/fullNode/FullNodeConnections.tsx:68
+#: src/components/fullNode/FullNodeConnections.tsx:67
 msgid "MiB Up/Down"
 msgstr "MiB upp/ner"
 
@@ -1470,13 +1470,13 @@ msgstr "Inga block har odlats ännu"
 #~ msgstr "Inga tidigare transaktioner"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:135
-#: src/components/farm/FarmManageFarmingRewards.tsx:147
+#: src/components/farm/FarmManageFarmingRewards.tsx:146
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Inga privata nycklar för en eller båda adresser. Endast säkert om du skicka belöningar till en annan plånbok."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:33
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
-#: src/components/fullNode/FullNodeConnections.tsx:36
+#: src/components/fullNode/FullNodeConnections.tsx:35
 msgid "Node ID"
 msgstr "Node-ID"
 
@@ -1522,7 +1522,7 @@ msgid "Not found Plots"
 msgstr "Ej hittade plottar"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:163
-#: src/components/farm/FarmManageFarmingRewards.tsx:175
+#: src/components/farm/FarmManageFarmingRewards.tsx:174
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Observera att detta inte ändrar dina poolutbetalningsadresser. Detta påverkar endast plottar med det gamla formatet och belöningen 0,25XCH för poolplotter."
 
@@ -1551,7 +1551,7 @@ msgstr "OK"
 #~ msgid "Offer"
 #~ msgstr "Erbjudande"
 
-#: src/components/dashboard/DashboardSideBar.tsx:71
+#: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Offers"
 msgstr ""
 
@@ -1849,7 +1849,7 @@ msgstr "Plotten är en dubblett av {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "PlotNFT håller på att byta status till (target state). Detta kan ta ett tag. Stäng inte programmet förrän detta är slutfört."
 
-#: src/components/dashboard/DashboardSideBar.tsx:87
+#: src/components/dashboard/DashboardSideBar.tsx:86
 msgid "Plots"
 msgstr "Plottar"
 
@@ -1927,12 +1927,12 @@ msgid "Pool Puzzle Hash"
 msgstr "Pool-pusselhash"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:152
-#: src/components/farm/FarmManageFarmingRewards.tsx:164
+#: src/components/farm/FarmManageFarmingRewards.tsx:163
 msgid "Pool Reward Address"
 msgstr "Adress för pool-belöning"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:128
-#: src/components/farm/FarmManageFarmingRewards.tsx:140
+#: src/components/farm/FarmManageFarmingRewards.tsx:139
 msgid "Pool Reward Address is not properly formatted."
 msgstr "Den här dressen är inte korrekt formaterad."
 
@@ -1941,7 +1941,7 @@ msgstr "Den här dressen är inte korrekt formaterad."
 #~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
 
 #: src/components/block/FarmManageFarmingRewards.tsx:123
-#: src/components/farm/FarmManageFarmingRewards.tsx:135
+#: src/components/farm/FarmManageFarmingRewards.tsx:134
 msgid "Pool Reward Address must not be empty."
 msgstr "Adress får inte vara tom."
 
@@ -1975,7 +1975,7 @@ msgstr ""
 msgid "Pool:"
 msgstr "Pool:"
 
-#: src/components/dashboard/DashboardSideBar.tsx:105
+#: src/components/dashboard/DashboardSideBar.tsx:104
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
@@ -1985,7 +1985,7 @@ msgstr "Poolning"
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:42
 #: src/components/fullNode/FullNodeAddConnection.tsx:75
-#: src/components/fullNode/FullNodeConnections.tsx:46
+#: src/components/fullNode/FullNodeConnections.tsx:45
 msgid "Port"
 msgstr "Port"
 
@@ -2185,7 +2185,7 @@ msgid "Safe To Skip"
 msgstr "Kan hoppas över"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:178
-#: src/components/farm/FarmManageFarmingRewards.tsx:190
+#: src/components/farm/FarmManageFarmingRewards.tsx:189
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:130
 msgid "Save"
 msgstr "Spara"
@@ -2319,9 +2319,9 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:114
-#: src/components/dashboard/DashboardSideBar.tsx:122
-#: src/components/settings/Settings.tsx:247
+#: src/components/dashboard/DashboardSideBar.tsx:113
+#: src/components/dashboard/DashboardSideBar.tsx:121
+#: src/components/settings/Settings.tsx:248
 msgid "Settings"
 msgstr ""
 
@@ -2367,7 +2367,7 @@ msgstr ""
 msgid "Skips adding a final directory to harvester for farming"
 msgstr "Hoppar över steget att lägga till en slutlig mapp till skördaren för odling"
 
-#: src/components/pool/PoolHero.tsx:22
+#: src/components/pool/PoolHero.tsx:21
 msgid "Smooth out your XCH farming rewards by joining a pool."
 msgstr "Jämna ut dina XCH-odlarbelöningar genom att gå med i en pool."
 
@@ -2708,7 +2708,7 @@ msgstr "Tidsstämpel"
 #~ msgid "To"
 #~ msgstr "Till"
 
-#: src/components/dashboard/DashboardSideBar.tsx:59
+#: src/components/dashboard/DashboardSideBar.tsx:58
 msgid "Tokens"
 msgstr ""
 

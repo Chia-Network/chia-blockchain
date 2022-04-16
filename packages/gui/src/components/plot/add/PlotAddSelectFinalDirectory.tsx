@@ -66,6 +66,7 @@ export default function PlotAddSelectFinalDirectory(props: Props) {
           onClick={handleSelect}
           size="large"
           variant="outlined"
+          color="secondary"
           selected={hasFinalLocation}
           nowrap
         >

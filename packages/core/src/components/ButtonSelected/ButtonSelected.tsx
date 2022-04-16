@@ -9,7 +9,7 @@ type Props = ButtonProps & {
 
 export default function ButtonSelected(props: Props) {
   const { selected, children, ...rest } = props;
-  const color = selected ? 'primary' : 'default';
+  const color = selected ? 'primary' : 'secondary';
 
   return (
     <Button color={color} {...rest}>

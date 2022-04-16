@@ -16,7 +16,7 @@ const StyledHeader = styled(Box)`
 const StyledBody = styled(Box)`
   padding: 1rem 1rem;
   flex-grow: 1;
-  overflow: auto;
+  overflow-y: overlay;
 `;
 
 export type SettingsProps = {
@@ -39,7 +39,7 @@ export default function Settings(props: SettingsProps) {
     if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
       return;
     }
-    
+
     setOpen(false);
   }
 

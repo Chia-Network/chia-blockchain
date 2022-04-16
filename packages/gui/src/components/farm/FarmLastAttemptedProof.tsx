@@ -1,8 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Link, Loading, Table, Card, FormatBytes } from '@chia/core';
+import { Link, Table, Card, FormatBytes } from '@chia/core';
 import { useGetFarmingInfoQuery } from '@chia/api-react';
-import { Typography } from '@mui/material';
 import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
 import usePlots from '../../hooks/usePlots';
@@ -56,32 +55,30 @@ export default function FarmLastAttemptedProof() {
         </Trans>
       }
       interactive
+      transparent
     >
-      {isLoading ? (
-        <Loading center />
-      ) : (
-        <Table
-          cols={cols}
-          rows={reducedLastAttemptedProof}
-          caption={
-            isEmpty && (
-              <Typography>
-                <Trans>None of your plots have passed the plot filter yet.</Trans>
+      <Table
+        cols={cols}
+        rows={reducedLastAttemptedProof}
+        isLoading={isLoading}
+        caption={
+          isEmpty && (
+            <>
+              <Trans>None of your plots have passed the plot filter yet.</Trans>
 
-                {!!size && (
-                  <>
-                    {' '}
-                    <Trans>
-                      But you are currently farming{' '}
-                      <FormatBytes value={size} precision={3} />
-                    </Trans>
-                  </>
-                )}
-              </Typography>
-            )
-          }
-        />
-      )}
+              {!!size && (
+                <>
+                  {' '}
+                  <Trans>
+                    But you are currently farming{' '}
+                    <FormatBytes value={size} precision={3} />
+                  </Trans>
+                </>
+              )}
+            </>
+          )
+        }
+      />
     </Card>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans, t } from '@lingui/macro';
 import { Back, ButtonLoading, Card, Flex, Form, TextField } from '@chia/core';
-import { Box, Grid } from '@mui/material';
+import { Grid } from '@mui/material';
 import { useAddCATTokenMutation } from '@chia/api-react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
@@ -86,7 +86,7 @@ export default function WalletCATCreateExisting() {
             </Grid>
           </Grid>
         </Card>
-        <Box>
+        <Flex justifyContent="flex-end">
           <ButtonLoading
             type="submit"
             variant="contained"
@@ -95,7 +95,7 @@ export default function WalletCATCreateExisting() {
           >
             <Trans>Add</Trans>
           </ButtonLoading>
-        </Box>
+        </Flex>
       </Flex>
     </Form>
   );

@@ -58,7 +58,7 @@ export { SettingsApp, SettingsLabel } from './Settings';
 export { default as SideBarItem } from './SideBarItem';
 export { default as Spacer } from './Spacer';
 export { default as Spinner } from './Spinner';
-export { default as StateIndicator } from './StateIndicator';
+export { default as StateIndicator, StateIndicatorDot } from './StateIndicator';
 export { default as StateTypography } from './StateTypography';
 export { default as Suspender } from './Suspender';
 export { default as Table, TableControlled } from './Table';

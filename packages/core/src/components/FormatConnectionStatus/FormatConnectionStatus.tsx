@@ -38,7 +38,7 @@ export default function FormatConnectionStatus(props: Props) {
   const color = connected ? 'primary' : 'secondary';
 
   return (
-    <Flex alignItems="center" gap={1}>
+    <Flex alignItems="center" gap={1} inline>
       <Typography variant={variant} color={color}>
         {connected ? connectedTitle : notConnectedTitle}
       </Typography>

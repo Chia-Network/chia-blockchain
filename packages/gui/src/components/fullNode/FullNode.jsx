@@ -6,7 +6,6 @@ import {
   FormatLargeNumber,
   Flex,
   Card,
-  Loading,
   StateColor,
   Table,
   LayoutDashboardSub,
@@ -120,11 +119,7 @@ const BlocksCard = () => {
 
   return (
     <Card title={<Trans>Blocks</Trans>} action={<FullNodeBlockSearch />} transparent>
-      {!isLoading ? (
-        <Table cols={cols} rows={rows} onRowClick={handleRowClick} />
-      ) : (
-        <Loading center />
-      )}
+      <Table cols={cols} rows={rows} onRowClick={handleRowClick} isLoading={isLoading}/>
     </Card>
   );
 };

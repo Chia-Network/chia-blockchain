@@ -20,9 +20,11 @@ const StyledRoot = styled(Box)`
 `;
 
 const StyledContent = styled(Box)`
-  padding-left: ${({ theme }) => theme.spacing(4)};
-  padding-right: ${({ theme }) => theme.spacing(4)};
+  padding-left: ${({ theme }) => theme.spacing(3)};
+  padding-right: ${({ theme }) => theme.spacing(3)};
+  margin-right: ${({ theme }) => theme.spacing(2)};
   min-height: ${({ theme }) => theme.spacing(5)};
+  overflow-y: overlay;
 `;
 
 const StyledBody = styled(Box)`
@@ -30,29 +32,29 @@ const StyledBody = styled(Box)`
   position: relative;
 `;
 
-const StyledItemsContainer = styled(Box)`
-  overflow: auto;
+const StyledItemsContainer = styled(Flex)`
+  flex-direction: column;
   height: 100%;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding-bottom: ${({ theme }) => theme.spacing(11)};
+  padding-bottom: ${({ theme }) => theme.spacing(6)};
 `;
 
 export default function WalletsSidebar() {
   const navigate = useNavigate();
   const { walletId } = useParams();
   const { data: wallets, isLoading } = useGetWalletsQuery();
-  const { isHidden, hidden } = useHiddenWallet();
+  const { isHidden, hidden, isLoading: isLoadingHiddenWallet } = useHiddenWallet();
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
   }
 
   const items = useMemo(() => {
-    if (isLoading) {
+    if (isLoading || isLoadingHiddenWallet) {
       return [];
     }
 
@@ -76,7 +78,7 @@ export default function WalletsSidebar() {
           </CardListItem>
         );
       });
-  }, [wallets, walletId, isLoading, hidden]);
+  }, [wallets, walletId, isLoading, hidden, isLoadingHiddenWallet]);
 
   return (
     <StyledRoot>

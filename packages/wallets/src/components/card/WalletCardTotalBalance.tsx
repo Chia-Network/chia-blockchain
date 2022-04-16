@@ -22,8 +22,8 @@ type Props = {
 export default function WalletCardTotalBalance(props: Props) {
   const { walletId, tooltip } = props;
 
-  const { 
-    data: walletBalance, 
+  const {
+    data: walletBalance,
     isLoading: isLoadingWalletBalance,
     error,
   } = useGetWalletBalanceQuery({
@@ -48,7 +48,7 @@ export default function WalletCardTotalBalance(props: Props) {
       error={error}
       description={
         <StyledGraphContainer>
-          <WalletGraph walletId={walletId} height={114} />
+          <WalletGraph walletId={walletId} height={106} />
         </StyledGraphContainer>
       }
     />

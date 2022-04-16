@@ -116,7 +116,7 @@ const cols = [
 ];
 
 export default function PlotOverviewPlots() {
-  const { plots, size, queue } = usePlots();
+  const { plots, size, queue, loading } = usePlots();
   if (!plots) {
     return null;
   }
@@ -132,7 +132,7 @@ export default function PlotOverviewPlots() {
           <Trans>Harvester Plots</Trans>
         </Typography>
       </PlotHeader>
-      <Card>
+      <Card gap={1} transparent>
         <Flex gap={1}>
           <Flex flexGrow={1}>
             <Typography variant="body2">
@@ -150,9 +150,10 @@ export default function PlotOverviewPlots() {
           </Typography>
         </Flex>
 
-        <Table 
-          cols={cols} 
-          rows={plots} 
+        <Table
+          cols={cols}
+          rows={plots}
+          isLoading={loading}
           pages
         >
           {queuePlots
