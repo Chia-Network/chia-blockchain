@@ -234,17 +234,19 @@ def header_block_from_block(
     buf2 = skip_optional(buf2, skip_foliage_transaction_block)  # foliage_transaction_block
 
     transactions_info: Optional[TransactionsInfo] = None
-    transactions_info_optional: bytes = b""
-    # this is the transactions_info optional
-    if buf2[0] == 0:
-        transactions_info_optional = bytes([0])
-    else:
-        buf3 = buf2[1:]
-        transactions_info_optional = bytes([1])
-        transactions_info = TransactionsInfo.parse(io.BytesIO(buf3))
+    # we make it optional even if it's not by default
+    # if request_filter is True it will read extra bytes and populate it properly
+    transactions_info_optional: bytes = bytes([0])
     encoded_filter = b"\x00"
 
     if request_filter:
+        # this is the transactions_info optional
+        if buf2[0] == 0:
+            transactions_info_optional = bytes([0])
+        else:
+            transactions_info_optional = bytes([1])
+            buf3 = buf2[1:]
+            transactions_info = TransactionsInfo.parse(io.BytesIO(buf3))
         byte_array_tx: List[bytearray] = []
         if is_transaction_block and transactions_info:
             addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)
