@@ -268,41 +268,40 @@ class TestBlockStore:
             assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
 
 
-class TestBlockStoreAPI:
-    @pytest.mark.asyncio
-    async def test_get_blocks_by_hash(self, tmp_dir, bt, db_version):
-        assert sqlite3.threadsafety == 1
-        blocks = bt.get_consecutive_blocks(10)
+@pytest.mark.asyncio
+async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
+    assert sqlite3.threadsafety == 1
+    blocks = bt.get_consecutive_blocks(10)
 
-        async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
+    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
 
-            # Use a different file for the blockchain
-            coin_store_2 = await CoinStore.create(db_wrapper_2)
-            store_2 = await BlockStore.create(db_wrapper_2)
-            hint_store = await HintStore.create(db_wrapper_2)
-            bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
+        # Use a different file for the blockchain
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
 
-            store = await BlockStore.create(db_wrapper)
-            await BlockStore.create(db_wrapper_2)
+        store = await BlockStore.create(db_wrapper)
+        await BlockStore.create(db_wrapper_2)
 
-            hashes = []
-            # Save/get block
-            for block in blocks:
-                await _validate_and_add_block(bc, block)
-                block_record = bc.block_record(block.header_hash)
-                await store.add_full_block(block.header_hash, block, block_record)
-                hashes.append(block.header_hash)
+        hashes = []
+        # Save/get block
+        for block in blocks:
+            await _validate_and_add_block(bc, block)
+            block_record = bc.block_record(block.header_hash)
+            await store.add_full_block(block.header_hash, block, block_record)
+            hashes.append(block.header_hash)
 
-            full_blocks_by_hash = await store.get_blocks_by_hash(hashes)
-            assert full_blocks_by_hash == blocks
+        full_blocks_by_hash = await store.get_blocks_by_hash(hashes)
+        assert full_blocks_by_hash == blocks
 
-            full_block_bytes_by_hash = await store.get_block_bytes_by_hash(hashes)
+        full_block_bytes_by_hash = await store.get_block_bytes_by_hash(hashes)
 
-            assert [FullBlock.from_bytes(x) for x in full_block_bytes_by_hash] == blocks
+        assert [FullBlock.from_bytes(x) for x in full_block_bytes_by_hash] == blocks
 
-            assert not await store.get_block_bytes_by_hash([])
-            with pytest.raises(ValueError):
-                await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)])
+        assert not await store.get_block_bytes_by_hash([])
+        with pytest.raises(ValueError):
+            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)])
 
-            with pytest.raises(AssertionError):
-                await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * 1000)
+        with pytest.raises(AssertionError):
+            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * 1000)
