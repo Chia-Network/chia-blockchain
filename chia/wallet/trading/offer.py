@@ -80,6 +80,8 @@ class Offer:
         announcements: List[Announcement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
+                if asset_id not in type_dict:
+                    raise ValueError("Cannot calculate announcements without type of requested item")
                 settlement_ph: bytes32 = construct_puzzle(type_dict[asset_id], asset_id, OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
@@ -102,6 +104,11 @@ class Offer:
             payment_programs: List[bytes32] = [p.name() for p in payments]
             if len(set(payment_programs)) != len(payment_programs):
                 raise ValueError("Bundle has duplicate requested payments")
+
+        # Verify we have a type for every kind of asset
+        for asset_id in self.requested_payments:
+            if asset_id is not None and asset_id not in self.type_dict:
+                raise ValueError("Offer does not have enough type information about the requested payments")
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
