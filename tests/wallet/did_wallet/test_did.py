@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from blspy import AugSchemeMPL
 
@@ -565,7 +567,12 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), [bytes(ph)]
+                wallet_node.wallet_state_manager,
+                wallet,
+                uint64(101),
+                [bytes(ph)],
+                uint64(1),
+                {"Twitter": "Test", "GitHub": "测试"},
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -601,6 +608,9 @@ class TestDIDWallet:
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
         assert did_wallet_1.did_info.num_of_backup_ids_needed == did_wallet_2.did_info.num_of_backup_ids_needed
+        metadata = json.loads(did_wallet_1.did_info.metadata)
+        assert metadata["Twitter"] == "Test"
+        assert metadata["GitHub"] == "测试"
 
     @pytest.mark.asyncio
     async def test_update_recovery_list(self, two_wallet_nodes):

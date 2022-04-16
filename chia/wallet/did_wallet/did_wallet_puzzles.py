@@ -136,6 +136,7 @@ def program_to_metadata(program: Program) -> Dict:
     :return: Metadata dict
     """
     metadata = {}
-    for key, val in program.as_iter():
-        metadata[str(key.as_python(), "ascii")] = str(val.as_python(), "ascii")
+    print(f"Metadata {program.as_python()}")
+    for key, val in program.as_python():
+        metadata[str(key, "utf-8")] = str(val, "utf-8")
     return metadata

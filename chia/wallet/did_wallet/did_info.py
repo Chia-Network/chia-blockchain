@@ -21,4 +21,4 @@ class DIDInfo(Streamable):
     temp_puzhash: Optional[bytes32]
     temp_pubkey: Optional[bytes]
     sent_recovery_transaction: bool
-    metadata: str  # User defined metadata
+    metadata: str  # JSON of the user defined metadata

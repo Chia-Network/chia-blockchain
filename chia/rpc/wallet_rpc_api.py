@@ -529,7 +529,7 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request["wallet_name"] if "wallet_name" in request else "DID Wallet",
+                        request.get("wallet_name", "DID Wallet"),
                     )
 
                 my_did = did_wallet.get_my_DID()
@@ -1087,6 +1087,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = []
+        success: bool = False
         for _ in request["new_list"]:
             recovery_list.append(hexstr_to_bytes(_))
         if "num_verifications_required" in request:
@@ -1096,24 +1097,27 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
-            spend_bundle = await wallet.create_update_spend()
-
-        success = spend_bundle is not None and update_success
+            if update_success:
+                spend_bundle = await wallet.create_update_spend()
+                if spend_bundle is not None:
+                    success = True
         return {"success": success}
 
     async def did_update_metadata(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         metadata: Dict[str, str] = {}
+        success: bool = False
         if "metadata" in request:
             if type(request["metadata"]) is dict:
                 metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
-            spend_bundle = await wallet.create_update_spend()
-
-        success = spend_bundle is not None and update_success
+            if update_success:
+                spend_bundle = await wallet.create_update_spend()
+                if spend_bundle is not None:
+                    success = True
         return {"success": success}
 
     async def did_get_did(self, request):
@@ -1287,10 +1291,8 @@ class WalletRpcApi:
                 ("h", request["hash"]),
             ]
         )
-        if "amount" in request:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address, request["amount"])
-        else:
-            await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
+
+        await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
     async def nft_get_current_nfts(self, request):
