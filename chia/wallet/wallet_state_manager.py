@@ -41,6 +41,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.outer_puzzles import AssetType
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
@@ -1133,6 +1134,13 @@ class WalletStateManager:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
         return None
+
+    async def create_wallet_for_asset_id(self, asset_id: bytes32, typ: AssetType):
+        self.log.info(f"Creating wallet for asset ID: {asset_id}")
+        if typ == AssetType.CAT:
+            await CATWallet.create_wallet_for_cat(self, self.main_wallet, asset_id.hex())
+        else:
+            raise ValueError(f"Cannot create wallet for type {typ.value}")
 
     async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet

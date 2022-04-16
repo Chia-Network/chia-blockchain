@@ -12,10 +12,10 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, NotarizedPayment
+from chia.wallet.trading.outer_puzzles import AssetType
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -188,6 +188,7 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a CAT but it has to for now
+            # ATTENTION: new_wallets
             if wallet.type() == WalletType.CAT:
                 txs = await wallet.generate_signed_transaction(
                     [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
@@ -246,9 +247,13 @@ class TradeManager:
         self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
-        self, offer: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0), validate_only: bool = False
+        self,
+        offer: Dict[Union[int, bytes32], int],
+        type_dict: Dict[bytes32, AssetType] = {},
+        fee: uint64 = uint64(0),
+        validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer, fee=fee)
+        success, created_offer, error = await self._create_offer_for_ids(offer, type_dict, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
 
@@ -273,7 +278,10 @@ class TradeManager:
         return success, trade_offer, error
 
     async def _create_offer_for_ids(
-        self, offer_dict: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0)
+        self,
+        offer_dict: Dict[Union[int, bytes32], int],
+        type_dict: Dict[bytes32, AssetType] = {},
+        fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -315,14 +323,14 @@ class TradeManager:
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
-            announcements_to_assert = Offer.calculate_announcements(notarized_payments)
+            announcements_to_assert = Offer.calculate_announcements(notarized_payments, type_dict)
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
-
+                # ATTENTION: new_wallets
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[int(wallet_id)])],
@@ -346,7 +354,7 @@ class TradeManager:
 
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
-            offer = Offer(notarized_payments, total_spend_bundle)
+            offer = Offer(notarized_payments, total_spend_bundle, type_dict)
             return True, offer, None
 
         except Exception as e:
@@ -358,13 +366,12 @@ class TradeManager:
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
-            wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
+            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())  # ATTENTION: new_wallets
             if exists is None:
-                self.log.info(f"Creating wallet for asset ID: {key}")
-                await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
+                await wsm.create_wallet_for_asset_id(key, offer.type_dict[key])  # ATTENTION: new_wallets
+
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
@@ -398,7 +405,7 @@ class TradeManager:
                 wallet_id, _ = wallet_info
                 if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_id]
-                    to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)
+                    to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
                             confirmed_at_height=uint32(0),
@@ -472,9 +479,10 @@ class TradeManager:
                 wallet = self.wallet_state_manager.main_wallet
                 key: Union[bytes32, int] = int(wallet.id())
             else:
+                # ATTENTION: new wallets
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
-                    return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
+                    return False, None, f"Do not have a wallet of asset ID: {asset_id} to fulfill offer"
                 elif wallet is None:
                     key = asset_id
                 else:
@@ -486,7 +494,7 @@ class TradeManager:
         if not valid:
             return False, None, "This offer is no longer valid"
 
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, fee=fee)
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.type_dict, fee=fee)
         if not success or take_offer is None:
             return False, None, error
 
