@@ -384,6 +384,7 @@ def call_plotters(root_path: Path, args):
     build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
     install_parser = subparsers.add_parser("install", description="Install custom plotters.")
     build_install_parser(install_parser)
+    subparsers.add_parser("version", description="Show plotter versions")
 
     args = plotters.parse_args(args)
 
@@ -395,6 +396,8 @@ def call_plotters(root_path: Path, args):
         plot_bladebit(args, chia_root_path, root_path)
     if args.plotter == "install":
         install_plotter(args, root_path)
+    if args.plotter == "version":
+        show_plotters_version(chia_root_path)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:
@@ -412,3 +415,13 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
         plotters["madmax"] = madmax
 
     return plotters
+
+
+def show_plotters_version(root_path: Path):
+    info = get_available_plotters(root_path)
+    if "chiapos" in info and "version" in info["chiapos"]:
+        print(f"chiapos: {info['chiapos']['version']}")
+    if "bladebit" in info and "version" in info["bladebit"]:
+        print(f"bladebit: {info['bladebit']['version']}")
+    if "madmax" in info and "version" in info["madmax"]:
+        print(f"madmax: {info['madmax']['version']}")
