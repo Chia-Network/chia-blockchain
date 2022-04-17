@@ -87,10 +87,12 @@ def check_git_ref(git_ref: str):
     if len(git_ref) > 50:
         return False
 
-    test = re.match(r"[^\w.@/-]", git_ref) \
-        or re.match(r"\.\.", git_ref) \
-        or re.match(r"\.$", git_ref) \
-        or re.match(r"@\{", git_ref) \
+    test = (
+        re.match(r"[^\w.@/-]", git_ref)
+        or re.match(r"\.\.", git_ref)
+        or re.match(r"\.$", git_ref)
+        or re.match(r"@\{", git_ref)
         or re.match(r"^@$", git_ref)
+    )
 
     return False if test else True
