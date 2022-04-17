@@ -39,10 +39,9 @@ class Options(Enum):
     CONNECT_TO_DAEMON = 26
 
 
-chia_plotter = [
+chia_plotter_options = [
     Options.TMP_DIR,
     Options.TMP_DIR2,
-    Options.FINAL_DIR,
     Options.K,
     Options.MEMO,
     Options.ID,
@@ -59,9 +58,10 @@ chia_plotter = [
     Options.PLOT_COUNT,
     Options.EXCLUDE_FINAL_DIR,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
 ]
 
-madmax_plotter = [
+madmax_plotter_options = [
     Options.K,
     Options.PLOT_COUNT,
     Options.NUM_THREADS,
@@ -69,7 +69,6 @@ madmax_plotter = [
     Options.MADMAX_NUM_BUCKETS_PHRASE3,
     Options.TMP_DIR,
     Options.TMP_DIR2,
-    Options.FINAL_DIR,
     Options.MADMAX_WAITFORCOPY,
     Options.POOLKEY,
     Options.FARMERKEY,
@@ -77,9 +76,10 @@ madmax_plotter = [
     Options.MADMAX_TMPTOGGLE,
     Options.MADMAX_RMULTI2,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
 ]
 
-bladebit_plotter = [
+bladebit_plotter_options = [
     Options.NUM_THREADS,
     Options.PLOT_COUNT,
     Options.FARMERKEY,
@@ -88,9 +88,9 @@ bladebit_plotter = [
     Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,
-    Options.FINAL_DIR,
     Options.VERBOSE,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
 ]
 
 
@@ -377,11 +377,11 @@ def call_plotters(root_path: Path, args):
         except Exception as e:
             print(f"Cannot create plotters root path {root_path} {type(e)} {e}.")
 
-    plotters = argparse.ArgumentParser(description="Available options.")
+    plotters = argparse.ArgumentParser("chia plotters", description="Available options.")
     subparsers = plotters.add_subparsers(help="Available options", dest="plotter")
-    build_parser(subparsers, root_path, chia_plotter, "chiapos", "Chiapos Plotter")
-    build_parser(subparsers, root_path, madmax_plotter, "madmax", "Madmax Plotter")
-    build_parser(subparsers, root_path, bladebit_plotter, "bladebit", "Bladebit Plotter")
+    build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Chiapos Plotter")
+    build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Madmax Plotter")
+    build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
     install_parser = subparsers.add_parser("install", description="Install custom plotters.")
     build_install_parser(install_parser)
 
