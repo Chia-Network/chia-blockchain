@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import run_plotter, run_command
+from chia.plotters.plotters_util import run_plotter, run_command, check_git_repository, check_git_ref
 
 log = logging.getLogger(__name__)
 
@@ -133,13 +133,16 @@ progress = {
 }
 
 
-def install_bladebit(root_path: Path, override: bool = False, git_ref: Optional[str] = None):
+def install_bladebit(root_path: Path, override: bool = False, commit: Optional[str] = None):
     if not override and os.path.exists(get_bladebit_executable_path(root_path)):
         print("Bladebit plotter already installed.")
         return
 
     if not is_bladebit_supported():
         raise RuntimeError("Platform not supported yet for bladebit plotter.")
+
+    if commit and not check_git_ref(commit):
+        raise RuntimeError("commit contains unusual string. Aborted.")
 
     print("Installing bladebit plotter.")
 
@@ -151,10 +154,7 @@ def install_bladebit(root_path: Path, override: bool = False, git_ref: Optional[
     if sys.platform.startswith("linux"):
         run_command(
             [
-                "sudo",
-                "apt",
-                "install",
-                "-y",
+                "sudo", "apt", "install", "-y",
                 "build-essential",
                 "cmake",
                 "libnuma-dev",
@@ -164,35 +164,40 @@ def install_bladebit(root_path: Path, override: bool = False, git_ref: Optional[
             "Could not install dependencies",
         )
     elif sys.platform in ["darwin"]:
-        # @TODO Do something required to be done before build
-        pass
-
-    # If git repository of bladebit already exists and `git_ref` is specified
-    # then checkout the specified commit reference
-    # If git repository of bladebit already exists but `git_ref` is not specified
-    # then checkout the main branch
-    # If git repository of bladebit does not exist and `git_ref` is specified
-    # then git clone with the specified ref
-    # If git repository of bladebit does not exist and `git_ref` is not specified
-    # then git clone without branch/commit/tag option
-    print("Cloning repository and its submodules.")
-    git_clone_command = [
-        "git",
-        "clone",
-        "--recursive",
-        "https://github.com/Chia-Network/bladebit.git",
-    ]
-    run_command(
-        git_clone_command,
-        "Could not clone bladebit repository",
-        cwd=os.fspath(root_path),
-    )
+        # 'brew' is a requirement for chia on macOS, so it should be available.
+        run_command(["brew", "install", "cmake"], "Could not install dependencies")
 
     bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
+    bladebit_git_origin_url = "https://github.com/Chia-Network/bladebit.git"
+    bladebit_git_repos_exist = check_git_repository(bladebit_path, bladebit_git_origin_url)
+
+    if bladebit_git_repos_exist:
+        if commit:
+            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
+            run_command(["git", "checkout", "-f", commit], f"Failed to reset to {commit}", cwd=bladebit_path)
+        elif override:
+            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
+            run_command(["git", "reset", "--hard", "origin/master"]
+                        , "Failed to reset to origin/master", cwd=bladebit_path)
+        else:
+            # Rebuild with existing files
+            pass
+    else:
+        if commit:
+            run_command([
+                "git", "clone", "--recursive", "--branch", commit, bladebit_git_origin_url
+            ], "Could not clone bladebit repository", cwd=os.fspath(root_path))
+        else:
+            print("Cloning repository and its submodules.")
+            run_command([
+                "git", "clone", "--recursive", bladebit_git_origin_url
+            ], "Could not clone bladebit repository", cwd=os.fspath(root_path))
+
     build_path: str = os.fspath(Path(bladebit_path) / "build")
 
     print("Build bladebit.")
-    run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
+    if not os.path.exists(bladebit_path):
+        run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
     run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
     run_command(
         ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],

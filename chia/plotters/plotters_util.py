@@ -4,6 +4,7 @@ import json
 import signal
 import subprocess
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, TextIO
@@ -105,3 +106,30 @@ def run_command(args, exc_description, *, check=True, **kwargs) -> subprocess.Co
     except Exception as e:
         raise RuntimeError(f"{exc_description} {e}")
     return proc
+
+
+def check_git_repository(git_dir: str, expected_origin_url: str):
+    command = ["git", "remote", "get-url", "origin"]
+    try:
+        proc = subprocess.run(command, capture_output=True, check=True, text=True, cwd=git_dir)
+        return proc.stdout.strip() == expected_origin_url
+    except Exception as e:
+        print(f"Error while executing \"{' '.join(command)}\"")
+        print(e)
+        return False
+
+
+# If raw value of `git_ref` is passed to command string `git reset --hard {git_ref}` without any check,
+# it would be a security risk. This check will eliminate unusual ref string before it is used.
+# See https://git-scm.com/docs/git-check-ref-format (This check is stricter than the specification)
+def check_git_ref(git_ref: str):
+    if len(git_ref) > 50:
+        return False
+
+    test = re.match(r"[^\w.@/-]", git_ref) \
+        or re.match(r"\.\.", git_ref) \
+        or re.match(r"\.$", git_ref) \
+        or re.match(r"@\{", git_ref) \
+        or re.match(r"^@$", git_ref)
+
+    return False if test else True
