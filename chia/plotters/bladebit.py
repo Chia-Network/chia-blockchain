@@ -191,14 +191,14 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
             run_command(
                 ["git", "clone", "--recursive", "--branch", commit, bladebit_git_origin_url],
                 "Could not clone bladebit repository",
-                cwd=os.fspath(root_path)
+                cwd=os.fspath(root_path),
             )
         else:
             print("Cloning repository and its submodules.")
             run_command(
                 ["git", "clone", "--recursive", bladebit_git_origin_url],
                 "Could not clone bladebit repository",
-                cwd=os.fspath(root_path)
+                cwd=os.fspath(root_path),
             )
 
     build_path: str = os.fspath(Path(bladebit_path) / "build")
