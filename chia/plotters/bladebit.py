@@ -154,7 +154,10 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
     if sys.platform.startswith("linux"):
         run_command(
             [
-                "sudo", "apt", "install", "-y",
+                "sudo",
+                "apt",
+                "install",
+                "-y",
                 "build-essential",
                 "cmake",
                 "libnuma-dev",
@@ -177,21 +180,26 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
             run_command(["git", "checkout", "-f", commit], f"Failed to reset to {commit}", cwd=bladebit_path)
         elif override:
             run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
-            run_command(["git", "reset", "--hard", "origin/master"]
-                        , "Failed to reset to origin/master", cwd=bladebit_path)
+            run_command(
+                ["git", "reset", "--hard", "origin/master"], "Failed to reset to origin/master", cwd=bladebit_path
+            )
         else:
             # Rebuild with existing files
             pass
     else:
         if commit:
-            run_command([
-                "git", "clone", "--recursive", "--branch", commit, bladebit_git_origin_url
-            ], "Could not clone bladebit repository", cwd=os.fspath(root_path))
+            run_command(
+                ["git", "clone", "--recursive", "--branch", commit, bladebit_git_origin_url],
+                "Could not clone bladebit repository",
+                cwd=os.fspath(root_path)
+            )
         else:
             print("Cloning repository and its submodules.")
-            run_command([
-                "git", "clone", "--recursive", bladebit_git_origin_url
-            ], "Could not clone bladebit repository", cwd=os.fspath(root_path))
+            run_command(
+                ["git", "clone", "--recursive", bladebit_git_origin_url],
+                "Could not clone bladebit repository",
+                cwd=os.fspath(root_path)
+            )
 
     build_path: str = os.fspath(Path(bladebit_path) / "build")
 
