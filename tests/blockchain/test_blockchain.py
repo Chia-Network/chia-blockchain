@@ -187,6 +187,7 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
+                log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
                 )
@@ -741,11 +742,12 @@ class TestBlockHeaderValidation:
         await _validate_and_add_block(blockchain, block_bad, expected_result=ReceiveBlockResult.INVALID_BLOCK)
 
     @pytest.mark.asyncio
-    async def test_empty_sub_slots_epoch(self, empty_blockchain, bt):
+    async def test_empty_sub_slots_epoch(self, empty_blockchain, default_400_blocks, bt):
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
         # Also tests overflow block in epoch
-        blocks_base = bt.get_consecutive_blocks(test_constants.EPOCH_BLOCKS)
+        blocks_base = default_400_blocks[: test_constants.EPOCH_BLOCKS]
+        assert len(blocks_base) == test_constants.EPOCH_BLOCKS
         blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
         blocks_2 = bt.get_consecutive_blocks(1, skip_slots=3, block_list_input=blocks_base, force_overflow=True)
         for block in blocks_base:
@@ -779,10 +781,19 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2q
-        blocks = bt.get_consecutive_blocks(10)
+        blocks: List[FullBlock] = []
+        found_overflow_slot: bool = False
 
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        while not found_overflow_slot:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+                and block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_overflow_slot = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -798,9 +809,11 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss.challenge_chain.get_hash(),
                 )
+                log.warning(f"Num slots: {len(block.finished_sub_slots)}")
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
+                log.warning(f"Signage point index: {block_bad.reward_chain_block.signage_point_index}")
                 await _validate_and_add_block(empty_blockchain, block_bad, expected_error=Err.INVALID_CC_EOS_VDF)
 
                 # Bad output
@@ -845,7 +858,9 @@ class TestBlockHeaderValidation:
                 )
 
                 await _validate_and_add_block_multi_error(
-                    empty_blockchain, block_bad_3, [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH]
+                    empty_blockchain,
+                    block_bad_3,
+                    [Err.INVALID_CC_EOS_VDF, Err.INVALID_PREV_CHALLENGE_SLOT_HASH, Err.INVALID_POSPACE],
                 )
 
                 # Bad proof
@@ -864,9 +879,18 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain, bt):
         # 2p
-        blocks = bt.get_consecutive_blocks(10)
-        for block in blocks:
-            if len(block.finished_sub_slots):
+        blocks: List[FullBlock] = []
+        found_block: bool = False
+
+        while not found_block:
+            blocks = bt.get_consecutive_blocks(1, blocks)
+            block = blocks[-1]
+            if (
+                len(block.finished_sub_slots)
+                and block.finished_sub_slots[-1].reward_chain.end_of_slot_vdf.output
+                != ClassgroupElement.get_default_element()
+            ):
+                found_block = True
                 # Bad iters
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -1011,7 +1035,9 @@ class TestBlockHeaderValidation:
 
         while True:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
-            if len(blocks[-1].finished_sub_slots) > 0:
+            if len(blocks[-1].finished_sub_slots) > 0 and is_overflow_block(
+                test_constants, blocks[-1].reward_chain_block.signage_point_index
+            ):
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
                     "challenge_chain",
@@ -1711,6 +1737,86 @@ class TestPreValidation:
 
 
 class TestBodyValidation:
+
+    # TODO: add test for
+    # ASSERT_COIN_ANNOUNCEMENT,
+    # CREATE_COIN_ANNOUNCEMENT,
+    # CREATE_PUZZLE_ANNOUNCEMENT,
+    # ASSERT_PUZZLE_ANNOUNCEMENT,
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.ASSERT_MY_AMOUNT,
+            ConditionOpcode.ASSERT_MY_PUZZLEHASH,
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            ConditionOpcode.ASSERT_MY_PARENT_ID,
+        ],
+    )
+    @pytest.mark.parametrize("with_garbage", [True, False])
+    async def test_conditions(self, empty_blockchain, opcode, with_garbage, bt):
+        b = empty_blockchain
+        blocks = bt.get_consecutive_blocks(
+            3,
+            guarantee_transaction_block=True,
+            farmer_reward_puzzle_hash=bt.pool_ph,
+            pool_reward_puzzle_hash=bt.pool_ph,
+            genesis_timestamp=10000,
+            time_per_block=10,
+        )
+        await _validate_and_add_block(empty_blockchain, blocks[0])
+        await _validate_and_add_block(empty_blockchain, blocks[1])
+        await _validate_and_add_block(empty_blockchain, blocks[2])
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+
+        tx1: SpendBundle = wt.generate_signed_transaction(
+            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        )
+        coin1: Coin = tx1.additions()[0]
+        secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
+        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        public_key = synthetic_secret_key.get_g1()
+
+        if opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
+            args = [int_to_bytes(coin1.amount)]
+        elif opcode == ConditionOpcode.ASSERT_MY_PUZZLEHASH:
+            args = [coin1.puzzle_hash]
+        elif opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
+            args = [coin1.name()]
+        elif opcode == ConditionOpcode.ASSERT_MY_PARENT_ID:
+            args = [coin1.parent_coin_info]
+        # elif opcode == ConditionOpcode.RESERVE_FEE:
+        # args = [int_to_bytes(5)]
+        # TODO: since we use the production wallet code, we can't (easily)
+        # create a transaction with fee without also including a valid
+        # RESERVE_FEE condition
+        else:
+            assert False
+
+        conditions = {opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]}
+
+        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
+        assert coin1 in tx2.removals()
+        coin2: Coin = tx2.additions()[0]
+
+        bundles = SpendBundle.aggregate([tx1, tx2])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            guarantee_transaction_block=True,
+            transaction_data=bundles,
+            time_per_block=10,
+        )
+
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            [blocks[-1]], {}, validate_signatures=False
+        )
+        # Ignore errors from pre-validation, we are testing block_body_validation
+        repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == (ReceiveBlockResult.NEW_PEAK, None, 2)
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
     @pytest.mark.parametrize(
@@ -1744,9 +1850,7 @@ class TestBodyValidation:
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         public_key = synthetic_secret_key.get_g1()
 
-        args = [public_key, b"msg"]
-        if with_garbage:
-            args.append(b"garbage")
+        args = [public_key, b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
         tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
@@ -1771,27 +1875,32 @@ class TestBodyValidation:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "opcode,lock_value,expected",
+        "opcode,lock_value,expected,with_garbage",
         [
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 0, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, 1, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 3, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 4, ReceiveBlockResult.INVALID_BLOCK, False),
             # genesis timestamp is 10000 and each block is 10 seconds
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK),
-            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10030, ReceiveBlockResult.NEW_PEAK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10031, ReceiveBlockResult.INVALID_BLOCK, False),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10032, ReceiveBlockResult.INVALID_BLOCK, False),
+            # additional garbage at the end of parameters
+            (ConditionOpcode.ASSERT_SECONDS_RELATIVE, 0, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_RELATIVE, -1, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, 2, ReceiveBlockResult.NEW_PEAK, True),
+            (ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, 10029, ReceiveBlockResult.NEW_PEAK, True),
         ],
     )
-    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, bt):
+    async def test_ephemeral_timelock(self, empty_blockchain, opcode, lock_value, expected, with_garbage, bt):
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -1807,7 +1916,9 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
+        conditions = {
+            opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else []))]
+        }
 
         tx1: SpendBundle = wt.generate_signed_transaction(
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
@@ -2775,7 +2886,7 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, bt):
+    async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
@@ -2784,7 +2895,7 @@ class TestReorgs:
         num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
         assert num_blocks_chain_1 < 10000
-        blocks = default_10000_blocks[:num_blocks_chain_1]
+        blocks = default_1500_blocks[:num_blocks_chain_1]
 
         for block in blocks:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
@@ -2792,15 +2903,15 @@ class TestReorgs:
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
-        # These blocks will have less time between them (timestamp) and therefore will make difficulty go up
+        # The reorg blocks will have less time between them (timestamp) and therefore will make difficulty go up
         # This means that the weight will grow faster, and we can get a heavier chain with lower height
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            num_blocks_chain_2 - num_blocks_chain_2_start,
-            blocks[:num_blocks_chain_2_start],
-            seed=b"2",
-            time_per_block=8,
-        )
-        for reorg_block in blocks_reorg_chain:
+
+        # If these assert fail, you probably need to change the fixture in test_long_reorg_blocks to create the
+        # right amount of blocks at the right time
+        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_1500_blocks[num_blocks_chain_2_start - 1]
+        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_1500_blocks[num_blocks_chain_2_start]
+
+        for reorg_block in test_long_reorg_blocks:
             if reorg_block.height < num_blocks_chain_2_start:
                 await _validate_and_add_block(
                     b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
@@ -2820,11 +2931,11 @@ class TestReorgs:
         assert b.get_peak().height < chain_1_height
 
     @pytest.mark.asyncio
-    async def test_long_compact_blockchain(self, empty_blockchain, default_10000_blocks_compact):
+    async def test_long_compact_blockchain(self, empty_blockchain, default_2000_blocks_compact):
         b = empty_blockchain
-        for block in default_10000_blocks_compact:
+        for block in default_2000_blocks_compact:
             await _validate_and_add_block(b, block, skip_prevalidation=True)
-        assert b.get_peak().height == len(default_10000_blocks_compact) - 1
+        assert b.get_peak().height == len(default_2000_blocks_compact) - 1
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain, bt):
@@ -3169,7 +3280,13 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
     )
 
     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
-    chain_a = bt.get_consecutive_blocks(5, chain_a, previous_generator=[uint32(10)], transaction_data=spend_bundle)
+    chain_a = bt.get_consecutive_blocks(
+        5,
+        chain_a,
+        previous_generator=[uint32(10)],
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
 
     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
     chain_a = bt.get_consecutive_blocks(

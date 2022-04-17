@@ -65,13 +65,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v3
-      with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
+# Omitted checking out blocks and plots repo Chia-Network/test-cache
 
     - name: Run install script
       env:

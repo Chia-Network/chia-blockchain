@@ -14,11 +14,8 @@ else
 	DIR_NAME="chia-blockchain-linux-arm64"
 fi
 
-pip install setuptools_scm
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
-CHIA_INSTALLER_VERSION=$(python installer-version.py)
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."

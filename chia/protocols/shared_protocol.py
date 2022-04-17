@@ -5,7 +5,7 @@ from typing import List, Tuple
 from chia.util.ints import uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.33"
+protocol_version = "0.0.34"
 
 """
 Handshake when establishing a connection between two servers.
@@ -20,8 +20,8 @@ class Capability(IntEnum):
     WP = 2  # Supports new version of weight proofs
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Handshake(Streamable):
     network_id: str
     protocol_version: str

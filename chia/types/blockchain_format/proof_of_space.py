@@ -15,8 +15,8 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ProofOfSpace(Streamable):
     challenge: bytes32
     pool_public_key: Optional[G1Element]  # Only one of these two should be present
