@@ -149,9 +149,9 @@ class PlotManager:
 
                 plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
                 plot_directories: Set[Path] = set(plot_filenames.keys())
-                plot_paths: List[Path] = []
+                plot_paths: Set[Path] = set()
                 for paths in plot_filenames.values():
-                    plot_paths += paths
+                    plot_paths.update(paths)
 
                 bench_log("fetch paths")
 
@@ -199,7 +199,7 @@ class PlotManager:
 
                 bench_log("checked removals")
 
-                for remaining, batch in list_to_batches(plot_paths, self.refresh_parameter.batch_size):
+                for remaining, batch in list_to_batches(list(plot_paths), self.refresh_parameter.batch_size):
                     bench_log("batch start")
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                     bench_log("batch done")
