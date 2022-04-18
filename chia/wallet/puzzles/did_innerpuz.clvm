@@ -11,7 +11,7 @@
   SINGLETON_STRUCT  ; my singleton_struct, formerly a Truth - ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
   METADATA ; Customized metadata, e.g KYC info
   mode  ; this indicates which spend mode we want. 0. Recovery mode 1. Run P2_PUZZLE with p2_solution
-  new_amount_or_p2_solution  ; In mode 0, maybe we want to change our amount
+  my_amount_or_p2_solution  ; In mode 0, we use this to recover our coin and assert it is our actual amount
                              ; In mode 1 this is the solution of the inner P2 puzzle, only required in the create message mode and transfer mode.
   new_inner_puzhash  ; In recovery mode, this will be the new wallet DID puzzle hash
   parent_innerpuzhash_amounts_for_recovery_ids  ; during a recovery we need extra information about our recovery list coins
@@ -118,11 +118,11 @@
   ;MAIN
   (if mode
     ; mode 1 - run P2_PUZZLE
-    (a P2_PUZZLE new_amount_or_p2_solution)
+    (a P2_PUZZLE my_amount_or_p2_solution)
 
     ; mode 0 - recovery
     (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-      (c (list ASSERT_MY_AMOUNT new_amount_or_p2_solution) (c (list CREATE_COIN new_inner_puzhash new_amount_or_p2_solution (list new_inner_puzhash)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0))))
+      (c (list ASSERT_MY_AMOUNT my_amount_or_p2_solution) (c (list CREATE_COIN new_inner_puzhash my_amount_or_p2_solution (list new_inner_puzhash)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0))))
       (x)
     )
   )
