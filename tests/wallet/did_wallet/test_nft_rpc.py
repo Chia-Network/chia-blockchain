@@ -152,7 +152,7 @@ class TestNFTRPC:
                 "wallet_id": nft_wallet_id_0,
                 "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
                 "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
-                "artist_percentage": 20,
+                "artist_percentage": 2000,
                 "artist_address": ph2,
             }
         )

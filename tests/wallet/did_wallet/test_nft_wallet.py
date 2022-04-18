@@ -112,7 +112,7 @@ class TestNFTWallet:
                 ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
             ]
         )
-        tr = await nft_wallet_0.generate_new_nft(metadata, 20, ph)
+        tr = await nft_wallet_0.generate_new_nft(metadata, 2000, ph)
 
         await time_out_assert_not_none(
             5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name()
@@ -318,7 +318,7 @@ class TestNFTWallet:
         nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
             wallet_node_0.wallet_state_manager, wallet_0, did_wallet_0.id()
         )
-        tr = await nft_wallet_0.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 20, ph)
+        tr = await nft_wallet_0.generate_new_nft("https://www.chia.net/img/branding/chia-logo.svg", 2000, ph)
 
         await time_out_assert_not_none(
             5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name()

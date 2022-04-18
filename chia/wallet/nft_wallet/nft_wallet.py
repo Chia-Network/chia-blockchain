@@ -543,7 +543,7 @@ class NFTWallet:
                 backpayment_amount += pair.first().as_int()
             elif len(pair.as_python()) >= 2:
                 asset_id = pair.rest().first().as_atom()
-                amount = (pair.first().as_int() * royalty_percentage) // 100
+                amount = (pair.first().as_int() * royalty_percentage) // 10000
                 cat_wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 assert cat_wallet is not None  # TODO: catch this neater, maybe
                 settlement_ph: bytes32 = construct_cat_puzzle(CAT_MOD, asset_id, OFFER_MOD).get_tree_hash()
