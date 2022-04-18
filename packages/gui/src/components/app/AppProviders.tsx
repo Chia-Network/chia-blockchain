@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useState, Suspense } from 'react';
 import { Provider } from 'react-redux';
 import { Outlet } from 'react-router-dom';
-import { useDarkMode, sleep, ThemeProvider, ModalDialogsProvider, ModalDialogs, LocaleProvider, LayoutLoading, dark, light } from '@chia/core';
+import { useDarkMode, sleep, ThemeProvider, ModalDialogsProvider, ModalDialogs, LocaleProvider, LayoutLoading, dark, light, ErrorBoundary } from '@chia/core';
 import { store, api } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { i18n, defaultLocale, locales } from '../../config/locales';
@@ -44,31 +44,34 @@ export default function App(props: AppProps) {
 
     setIsReady(true);
   }
-  
+
   useEffect(() => {
     init();
   }, []);
 
   return (
-    <ModalDialogsProvider>
-      <Provider store={store}>
-        <LocaleProvider i18n={i18n} defaultLocale={defaultLocale} locales={locales}>
-          <ThemeProvider theme={theme} fonts global>
-            {isReady ? (
-              <Suspense fallback={<LayoutLoading />}>
-                <AppState>
-                  {outlet ? <Outlet /> : children}
-                </AppState>
-              </Suspense>
-            ) : (
-              <LayoutLoading>
-                <Trans>Loading configuration</Trans>
-              </LayoutLoading>
-            )}
-            <ModalDialogs />
-          </ThemeProvider>
-        </LocaleProvider>
-      </Provider>
-    </ModalDialogsProvider>
+    <Provider store={store}>
+      <LocaleProvider i18n={i18n} defaultLocale={defaultLocale} locales={locales}>
+        <ThemeProvider theme={theme} fonts global>
+          <ErrorBoundary>
+            <ModalDialogsProvider>
+              {isReady ? (
+                <Suspense fallback={<LayoutLoading />}>
+                  <AppState>
+                    {outlet ? <Outlet /> : children}
+                  </AppState>
+                </Suspense>
+              ) : (
+                <LayoutLoading>
+                  <Trans>Loading configuration</Trans>
+                </LayoutLoading>
+              )}
+              <ModalDialogs />
+            </ModalDialogsProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
+      </LocaleProvider>
+    </Provider>
+
   );
 }
