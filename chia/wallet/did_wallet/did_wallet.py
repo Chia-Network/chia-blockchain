@@ -710,7 +710,6 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        # breakpoint()
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 
@@ -1177,7 +1176,6 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        # breakpoint()
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         return await self.sign(unsigned_spend_bundle)
 
