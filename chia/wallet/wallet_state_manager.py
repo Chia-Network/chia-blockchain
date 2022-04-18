@@ -673,7 +673,7 @@ class WalletStateManager:
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, did_puzzle_mod_hash, metadata
+                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
             full_puzzle = create_fullpuz(did_puzzle, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:

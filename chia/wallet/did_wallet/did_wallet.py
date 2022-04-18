@@ -786,7 +786,6 @@ class DIDWallet:
             primaries=[
                 {"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": []},
                 {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
-
             ],
         )
         innersol = Program.to([1, p2_solution])
@@ -1164,7 +1163,13 @@ class DIDWallet:
         assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": [innerpuz.get_tree_hash()]}]
+            primaries=[
+                {
+                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [innerpuz.get_tree_hash()],
+                }
+            ]
         )
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
