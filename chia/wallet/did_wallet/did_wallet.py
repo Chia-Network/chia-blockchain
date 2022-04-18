@@ -615,7 +615,7 @@ class DIDWallet:
             self.did_info.origin_coin.name(),
             self.did_info.metadata,
         )
-        p2_solution = p2_solution = self.standard_wallet.make_solution(
+        p2_solution = self.standard_wallet.make_solution(
             primaries=[{"puzzlehash": new_did_puz, "amount": uint64(coin.amount), "memos": [new_puzhash]}]
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -1163,7 +1163,7 @@ class DIDWallet:
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
         assert self.did_info.origin_coin is not None
         # innerpuz solution is (mode p2_solution)
-        p2_solution = p2_solution = self.standard_wallet.make_solution(
+        p2_solution = self.standard_wallet.make_solution(
             primaries=[{"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": [innerpuz.get_tree_hash()]}]
         )
         innersol = Program.to([1, p2_solution])
