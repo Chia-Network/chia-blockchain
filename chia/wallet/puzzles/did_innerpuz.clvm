@@ -122,7 +122,7 @@
 
     ; mode 0 - recovery
     (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-      (c (list CREATE_COIN new_inner_puzhash new_amount_or_p2_solution (list new_inner_puzhash)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
+      (c (list ASSERT_MY_AMOUNT new_amount_or_p2_solution) (c (list CREATE_COIN new_inner_puzhash new_amount_or_p2_solution (list new_inner_puzhash)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0))))
       (x)
     )
   )
