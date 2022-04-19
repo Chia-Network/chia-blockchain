@@ -1134,7 +1134,7 @@ class WebSocketServer:
         log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        self.log.info(f"Register service {request}")
+        self.log.info(f"Register service {request}, {self.connections}")
         service = request["service"]
         if service not in self.connections:
             self.connections[service] = []
@@ -1150,7 +1150,7 @@ class WebSocketServer:
         else:
             self.remote_address_map[websocket] = service
         self.log.info(f"registered for service {service}")
-        log.info(f"{response}")
+        log.info(f"{response}, {self.connections}")
         return response
 
 
