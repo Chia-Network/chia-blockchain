@@ -123,7 +123,7 @@ def test_transfer_with_backpayments() -> None:
     # transfer_program_solution
 
     # (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
-    transfer_program_curry_params = [nft_creator_address, 10, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
+    transfer_program_curry_params = [nft_creator_address, 1000, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
@@ -188,7 +188,7 @@ def test_announce() -> None:
     # transfer_program_reveal
     # transfer_program_solution
     nft_creator_address = Program.to("nft_creator_address").get_tree_hash()
-    transfer_program_curry_params = [nft_creator_address, 10, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
+    transfer_program_curry_params = [nft_creator_address, 1000, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params
@@ -258,7 +258,7 @@ def test_update_url_spend() -> None:
     # transfer_program_solution
 
     # (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH)
-    transfer_program_curry_params = [nft_creator_address, 10, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
+    transfer_program_curry_params = [nft_creator_address, 1000, OFFER_MOD.get_tree_hash(), CAT_MOD.get_tree_hash()]
     solution = Program.to(
         [
             NFT_MOD_HASH,  # curried in params

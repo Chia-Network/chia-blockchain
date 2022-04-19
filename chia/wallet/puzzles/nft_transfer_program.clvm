@@ -9,7 +9,7 @@
 
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
-    (defconstant HUNDRED 100)
+    (defconstant TEN_THOUSAND 10000)
 
     ; trade_prices_list is a list of (amount type) pairs
     ; type 0 is standard chia
@@ -37,7 +37,7 @@
     )
 
     (defun-inline calculate_percentage (amount percentage)
-      (f (divmod (* amount percentage) HUNDRED))
+      (f (divmod (* amount percentage) TEN_THOUSAND))
     )
 
     (defun sha256tree1 (TREE)

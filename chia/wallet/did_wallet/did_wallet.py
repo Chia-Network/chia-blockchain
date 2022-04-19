@@ -545,8 +545,11 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
         new_puzhash = await self.get_new_did_inner_hash()
-        # innerpuz solution is (mode amount, p2_solution, new_puz)
-        innersol: Program = Program.to([1, coin.amount, [[], [], []], new_puzhash])
+        # innerpuz solution is (mode, p2_solution)
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(coin.amount), "memos": [new_puzhash]}]
+        )
+        innersol: Program = Program.to([1, p2_solution])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -592,10 +595,10 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    async def transfer_did(self, puzzle_hash: bytes32, fee: uint64) -> TransactionRecord:
+    async def transfer_did(self, new_puzhash: bytes32, fee: uint64) -> TransactionRecord:
         """
         Transfer the current DID to another owner
-        :param new_pubkey: New owner's public key
+        :param new_puzhash: New owner's p2_puzzle
         :param fee: Transaction fee
         :return: Spend bundle
         """
@@ -605,10 +608,20 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
 
+        new_did_puz = did_wallet_puzzles.create_innerpuz(
+            new_puzhash,
+            0,
+            0,
+            self.did_info.origin_coin.name(),
+            self.did_info.metadata,
+        )
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=[{"puzzlehash": new_did_puz, "amount": uint64(coin.amount), "memos": [new_puzhash]}]
+        )
         # Need to include backup list reveal here, even we are don't recover
         # innerpuz solution is
-        # (mode amount p2_solution, new_puz, parent_innerpuzhash_amounts_for_recovery_ids, pubkey, recovery_list_reveal)
-        innersol: Program = Program.to([2, coin.amount, [[], [], []], puzzle_hash, [], [], self.did_info.backup_ids])
+        # (mode, p2_solution)
+        innersol: Program = Program.to([1, p2_solution])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -635,7 +648,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hash,
+            to_puzzle_hash=new_puzhash,
             amount=uint64(coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -655,7 +668,10 @@ class DIDWallet:
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
     async def create_message_spend(
-        self, message_puz: Program, message_sol: Program = Program.to([]), new_innerpuzhash: Optional[bytes32] = None
+        self,
+        coin_announcements: Optional[Set[bytes]] = None,
+        puzzle_announcements: Optional[Set[bytes32]] = None,
+        new_innerpuzhash: Optional[bytes32] = None,
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -664,12 +680,16 @@ class DIDWallet:
         coin = coins.pop()
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
-        message_puz = Program.to((1, message_puz))
-        message_sol = Program.to((1, message_sol))
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
-        # innerpuz solution is (mode amount p2_solution, new_puz)
-        innersol: Program = Program.to([1, coin.amount, [[], message_puz, message_sol], new_innerpuzhash])
+
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": []}],
+            puzzle_announcements=puzzle_announcements,
+            coin_announcements=coin_announcements,
+        )
+        # innerpuz solution is (mode p2_solution)
+        innersol: Program = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -700,10 +720,9 @@ class DIDWallet:
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
-        amount = coin.amount - 1
         message_puz = Program.to((1, [[51, 0x00, -113]]))
-        # innerpuz solution is (mode amount p2_solution new_puz)
-        innersol: Program = Program.to([1, amount, [[], message_puz, []], puzhash])
+        # innerpuz solution is (mode p2_solution)
+        innersol: Program = Program.to([1, [[], message_puz, []]])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
@@ -762,10 +781,14 @@ class DIDWallet:
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
-        # Create new coin
-        message_puz = Program.to((1, [[51, innermessage, 0]]))
-        # innerpuz solution is (mode, amount, p2_solution new_inner_puzhash)
-        innersol = Program.to([1, coin.amount, [[], message_puz, []], innerpuz.get_tree_hash()])
+        # innerpuz solution is (mode, p2_solution)
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=[
+                {"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": []},
+                {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
+            ],
+        )
+        innersol = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -887,12 +910,11 @@ class DIDWallet:
     ) -> SpendBundle:
         assert self.did_info.origin_coin is not None
 
-        # innersol is mode new_amount p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
+        # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
         innersol: Program = Program.to(
             [
                 0,
                 coin.amount,
-                [[], [], []],
                 puzhash,
                 parent_innerpuzhash_amounts_for_recovery_ids,
                 bytes(pubkey),
@@ -1048,7 +1070,7 @@ class DIDWallet:
         for spend in spend_bundle.coin_spends:
             matched, puzzle_args = did_wallet_puzzles.match_did_puzzle(spend.puzzle_reveal.to_program())
             if matched:
-                p2_puzzle, _, _, _, _, _ = puzzle_args
+                p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
                 pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
@@ -1139,8 +1161,17 @@ class DIDWallet:
 
     async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program):
         assert self.did_info.origin_coin is not None
-        # innerpuz solution is (mode amount  p2_solution new_puzhash)
-        innersol = Program.to([1, coin.amount, [[], [], []], innerpuz.get_tree_hash()])
+        # innerpuz solution is (mode p2_solution)
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=[
+                {
+                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [innerpuz.get_tree_hash()],
+                }
+            ]
+        )
+        innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
         fullsol = Program.to(
             [

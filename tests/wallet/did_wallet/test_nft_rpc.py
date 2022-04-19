@@ -152,7 +152,7 @@ class TestNFTRPC:
                 "wallet_id": nft_wallet_id_0,
                 "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
                 "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
-                "artist_percentage": 20,
+                "artist_percentage": 2000,
                 "artist_address": ph2,
             }
         )
@@ -183,9 +183,7 @@ class TestNFTRPC:
                 "wallet_id": nft_wallet_id_0,
                 "nft_coin_info": nft_coin_info,
                 "new_did": did_1,
-                "new_did_parent": val["did_parent"],
                 "new_did_inner_hash": val["did_innerpuz"],
-                "new_did_amount": val["did_amount"],
                 "trade_price": trade_price,
             }
         )
@@ -212,3 +210,26 @@ class TestNFTRPC:
         assert val["success"]
         assert len(val["nfts"]) == 1
         assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo.svg"]
+
+        # Test adding a url
+        # TODO: un comment out this code when DID isn't broken
+        
+        # nft_coin_info = val["nfts"][0][0]
+        # val = await api_0.nft_add_url(
+        #     {
+        #         "wallet_id": nft_wallet_id_1,
+        #         "nft_coin_info": nft_coin_info,
+        #         "new_url": "https://www.chia.net/img/branding/chia-logo-2.svg",
+        #     }
+        # )
+        # assert val["success"]
+        # await asyncio.sleep(5)
+        # for i in range(1, num_blocks):
+        #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        # await asyncio.sleep(5)
+        #
+        # val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})
+        #
+        # assert val["success"]
+        # assert len(val["nfts"]) == 1
+        # assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo-2.svg", b"https://www.chia.net/img/branding/chia-logo.svg"]

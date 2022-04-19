@@ -1310,15 +1310,27 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         # nft_coin_info: NFTCoinInfo,
         # new_did,
-        # new_did_parent,
         # new_did_inner_hash,
-        # new_did_amount,
-        # trade_price,
+        # trade_prices_list,
+        # new_url=0,
+        new_url = 0
+        if "new_url" in request:
+            new_url = request["new_url"]
+        new_did_inner_hash = 0
+        if "new_did_inner_hash" in request:
+            new_did_inner_hash = request["new_did_inner_hash"]
+        else:
+            assert request["trade_price"] == 0
+        if isinstance(request["new_did"], str):
+            new_did = bytes.fromhex(request["new_did"])
+        else:
+            new_did = request["new_did"]
         sb = await nft_wallet.transfer_nft(
             request["nft_coin_info"],
-            bytes.fromhex(request["new_did"]),
-            request["new_did_inner_hash"],
+            new_did,
+            new_did_inner_hash,
             request["trade_price"],
+            new_url,
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
 
@@ -1335,6 +1347,27 @@ class WalletRpcApi:
         else:
             fee = 0
         sb = await nft_wallet.receive_nft(sending_sb, fee)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+
+    async def nft_add_url(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        my_did = nft_wallet.nft_wallet_info.my_did
+        did_wallet = self.service.wallet_state_manager.wallets[nft_wallet.nft_wallet_info.did_wallet_id]
+        new_did_inner_hash = did_wallet.did_info.current_inner.get_tree_hash()
+        new_url = request["new_url"]
+        # nft_coin_info: NFTCoinInfo,
+        # new_did,
+        # new_did_inner_hash,
+        # trade_prices_list,
+        # new_url=0,
+        sb = await nft_wallet.transfer_nft(
+            request["nft_coin_info"],
+            my_did,
+            new_did_inner_hash,
+            0,
+            new_url,
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
 
     ##########################################################################################

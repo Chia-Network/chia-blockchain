@@ -28,9 +28,7 @@ def create_innerpuz(
 ) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
-    return DID_INNERPUZ_MOD.curry(
-        p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, DID_INNERPUZ_MOD_HASH, metadata
-    )
+    return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
 
 
 def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
