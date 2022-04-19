@@ -17,7 +17,7 @@ from blspy import AugSchemeMPL
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import Blockchain, ReceiveBlockResult, StateChangeSummary
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -280,7 +280,7 @@ class FullNode:
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
             mempool_new_peak_result, fns_peak_result, wallet_sub_changes = await self.peak_post_processing(
-                full_peak, peak, max(peak.height - 1, 0), None, []
+                full_peak, peak, StateChangeSummary(max(peak.height - 1, 0), [], [], []), None
             )
             await self.peak_post_processing_2(
                 full_peak,
@@ -444,23 +444,25 @@ class FullNode:
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self._blockchain_lock_high_priority:
-                    success, advanced_peak, fork_height, rollback_changes, npc_results = await self.receive_block_batch(
-                        response.blocks, peer, None
-                    )
+                    state_change_summary: Optional[StateChangeSummary]
+                    success, state_change_summary = await self.receive_block_batch(response.blocks, peer, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
-                    if advanced_peak:
+                    if state_change_summary is not None:
                         peak = self.blockchain.get_peak()
                         try:
                             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                            assert peak is not None and peak_fb is not None and fork_height is not None
+                            assert peak is not None and peak_fb is not None
                             mempool_new_peak_result, fns_peak_result, wallet_changes = await self.peak_post_processing(
-                                peak_fb, peak, fork_height, peer, rollback_changes, npc_results
+                                peak_fb,
+                                peak,
+                                state_change_summary,
+                                peer,
                             )
                             await self.peak_post_processing_2(
                                 peak_fb,
                                 peak,
-                                fork_height,
+                                state_change_summary.fork_height,
                                 peer,
                                 mempool_new_peak_result,
                                 fns_peak_result,
@@ -469,10 +471,8 @@ class FullNode:
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
                             peak_fb = await self.blockchain.get_full_peak()
-                            assert peak is not None and peak_fb is not None and fork_height is not None
-                            await self.peak_post_processing(
-                                peak_fb, peak, fork_height, peer, rollback_changes, npc_results
-                            )
+                            assert peak is not None and peak_fb is not None and state_change_summary
+                            await self.peak_post_processing(peak_fb, peak, state_change_summary, peer)
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
@@ -998,7 +998,7 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                success, advanced_peak, fork_height, rollback_records, new_npcs = await self.receive_block_batch(
+                success, state_change_summary = await self.receive_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
@@ -1008,13 +1008,16 @@ class FullNode:
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
-                if len(rollback_records) > 0 or len(new_npcs) > 0:
+                if state_change_summary is not None:
+                    advanced_peak = True
                     assert peak is not None
-                    assert fork_height is not None
+                    # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(
-                        rollback_records, new_npcs
+                        state_change_summary.rolled_back_records, state_change_summary.new_npc_results
                     )
-                    await self.update_wallets(peak.height, fork_height, peak.header_hash, wallet_subscription_changes)
+                    await self.update_wallets(
+                        peak.height, state_change_summary.fork_height, peak.header_hash, wallet_subscription_changes
+                    )
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -1059,6 +1062,7 @@ class FullNode:
         hint: bytes
         lookup_coin_ids: Set[bytes32] = set()
         hints_to_add: List[Tuple[bytes32, bytes]] = []
+        self.log.warning(f"Adding hints: rollback {len(rolled_back_states)} new: {len(new_npc_results)}")
         for npc_result in new_npc_results:
             removal_ids, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
 
@@ -1100,7 +1104,9 @@ class FullNode:
         peak_hash: bytes32,
         changes_for_peer: Dict[bytes32, Set[CoinState]],
     ) -> None:
+        self.log.warning(f"Updating wallets... {len(changes_for_peer)}")
         for peer, changes in changes_for_peer.items():
+            self.log.warning(f"Updating with {len(changes)}")
             if peer not in self.server.all_connections:
                 continue
             ws_peer: ws.WSChiaConnection = self.server.all_connections[peer]
@@ -1114,11 +1120,9 @@ class FullNode:
         peer: ws.WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, bool, Optional[uint32], List[CoinRecord], List[NPCResult]]:
+    ) -> Tuple[bool, Optional[StateChangeSummary]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
-
-        advanced_peak = False
-        fork_height: Optional[uint32] = uint32(0)
+        # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
@@ -1126,7 +1130,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, False, fork_height, [], []
+            return True, None
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
@@ -1147,37 +1151,47 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, advanced_peak, fork_height, [], []
+                return False, None
 
-        all_rollback_changes: List[CoinRecord] = []
-        all_new_npc_results: List[NPCResult] = []
+        agg_state_change_summary: Optional[StateChangeSummary] = None
 
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
-            result, error, fork_height, rollback_changes, new_npc_results = await self.blockchain.receive_block(
+            state_change_summary: Optional[StateChangeSummary]
+            advanced_peak = agg_state_change_summary is not None
+            result, error, state_change_summary = await self.blockchain.receive_block(
                 block, pre_validation_results[i], None if advanced_peak else fork_point
             )
 
             if result == ReceiveBlockResult.NEW_PEAK:
-                advanced_peak = True
+                assert state_change_summary is not None
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
-                all_rollback_changes += rollback_changes
-                all_new_npc_results += new_npc_results
+                if agg_state_change_summary is None:
+                    agg_state_change_summary = state_change_summary
+                else:
+                    # Keeps the old, original fork_height, since the next blocks will have fork height h-1
+                    # Groups up all state changes into one
+                    agg_state_change_summary = StateChangeSummary(
+                        agg_state_change_summary.fork_height,
+                        agg_state_change_summary.rolled_back_records + state_change_summary.rolled_back_records,
+                        agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
+                        agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
+                    )
             elif result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, advanced_peak, fork_height, all_rollback_changes, all_new_npc_results
+                return False, agg_state_change_summary
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
-        if advanced_peak:
+        if agg_state_change_summary is not None:
             self._state_changed("new_peak")
             self.log.debug(
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
-                f"advanced: {advanced_peak}"
+                f"advanced: True"
             )
-        return True, advanced_peak, fork_height, all_rollback_changes, all_new_npc_results
+        return True, agg_state_change_summary
 
     async def _finish_sync(self):
         """
@@ -1287,10 +1301,8 @@ class FullNode:
         self,
         block: FullBlock,
         record: BlockRecord,
-        fork_height: uint32,
+        state_change_summary: StateChangeSummary,
         peer: Optional[ws.WSChiaConnection],
-        rolled_back_states: List[CoinRecord],
-        new_npc_results: List[NPCResult],
     ):
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
@@ -1302,7 +1314,7 @@ class FullNode:
         self.log.info(
             f"🌱 Updated peak to height {record.height}, weight {record.weight}, "
             f"hh {record.header_hash}, "
-            f"forked at {fork_height}, rh: {record.reward_infusion_new_challenge}, "
+            f"forked at {state_change_summary.fork_height}, rh: {record.reward_infusion_new_challenge}, "
             f"total iters: {record.total_iters}, "
             f"overflow: {record.overflow}, "
             f"deficit: {record.deficit}, "
@@ -1314,6 +1326,12 @@ class FullNode:
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
+        if (
+            self.full_node_store.previous_generator is not None
+            and state_change_summary.fork_height < self.full_node_store.previous_generator.block_height
+        ):
+            self.full_node_store.previous_generator = None
+
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
 
@@ -1321,9 +1339,9 @@ class FullNode:
             self.blockchain.clean_block_records()
 
         fork_block: Optional[BlockRecord] = None
-        if fork_height != block.height - 1 and block.height != 0:
+        if state_change_summary.fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(fork_height)
+            fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(state_change_summary.fork_height)
             assert fork_hash is not None
             fork_block = self.blockchain.block_record(fork_hash)
 
@@ -1366,8 +1384,9 @@ class FullNode:
         )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
+        new_npc_results: List[NPCResult] = state_change_summary.new_npc_results
         mempool_new_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]] = await self.mempool_manager.new_peak(
-            self.blockchain.get_peak(), new_npc_results[-1]
+            self.blockchain.get_peak(), new_npc_results[-1] if len(new_npc_results) > 0 else None
         )
 
         # Check if we detected a spent transaction, to load up our generator cache
@@ -1378,7 +1397,7 @@ class FullNode:
                 self.full_node_store.previous_generator = generator_arg
 
         wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(
-            rolled_back_states, new_npc_results
+            state_change_summary.rolled_back_records, state_change_summary.new_npc_results
         )
         return mempool_new_peak_result, fns_peak_result, wallet_subscription_changes
 
@@ -1531,7 +1550,7 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-        mempool_new_peak_result, fns_peak_result, wallet_sub_changes = None, None, {}
+        mempool_new_peak_result, fns_peak_result, state_change_summary, wallet_sub_changes = None, None, None, {}
         async with self._blockchain_lock_high_priority:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
@@ -1556,7 +1575,6 @@ class FullNode:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                         added = ReceiveBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
-                        fork_height: Optional[uint32] = None
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -1567,28 +1585,15 @@ class FullNode:
                         pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
-                    (
-                        added,
-                        error_code,
-                        fork_height,
-                        rolled_back_states,
-                        new_npc_results,
-                    ) = await self.blockchain.receive_block(block, result_to_validate, None)
-
-                    if (
-                        self.full_node_store.previous_generator is not None
-                        and fork_height is not None
-                        and fork_height < self.full_node_store.previous_generator.block_height
-                    ):
-                        self.full_node_store.previous_generator = None
-
+                    (added, error_code, state_change_summary) = await self.blockchain.receive_block(
+                        block, result_to_validate, None
+                    )
                 if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
                     return None
                 elif added == ReceiveBlockResult.INVALID_BLOCK:
                     assert error_code is not None
                     self.log.error(f"Block {header_hash} at height {block.height} is invalid with code {error_code}.")
                     raise ConsensusError(error_code, [header_hash])
-
                 elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     self.log.info(f"Disconnected block {header_hash} at height {block.height}")
                     if raise_on_disconnected:
@@ -1597,9 +1602,9 @@ class FullNode:
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
                     new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
-                    assert new_peak is not None and fork_height is not None
+                    assert new_peak is not None and state_change_summary is not None
                     mempool_new_peak_result, fns_peak_result, wallet_sub_changes = await self.peak_post_processing(
-                        block, new_peak, fork_height, peer, rolled_back_states, new_npc_results
+                        block, new_peak, state_change_summary, peer
                     )
 
                 elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
@@ -1615,22 +1620,20 @@ class FullNode:
                 new_peak = self.blockchain.get_peak()
                 if added == ReceiveBlockResult.NEW_PEAK:
                     assert new_peak is not None
-                    assert fork_height is not None
-                    await self.peak_post_processing(
-                        block, new_peak, fork_height, peer, rolled_back_states, new_npc_results
-                    )
+                    assert state_change_summary is not None
+                    await self.peak_post_processing(block, new_peak, state_change_summary, peer)
                 raise
 
             validation_time = time.time() - validation_start
 
         if mempool_new_peak_result is not None:
             assert new_peak is not None
-            assert fork_height is not None
             assert fns_peak_result is not None
+            assert state_change_summary is not None
             await self.peak_post_processing_2(
                 block,
                 new_peak,
-                fork_height,
+                state_change_summary.fork_height,
                 peer,
                 mempool_new_peak_result,
                 fns_peak_result,
