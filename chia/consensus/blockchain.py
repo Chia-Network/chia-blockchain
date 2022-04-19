@@ -69,6 +69,7 @@ class ReceiveBlockResult(Enum):
 
 @dataclasses.dataclass
 class StateChangeSummary:
+    peak: BlockRecord
     fork_height: uint32
     rolled_back_records: List[CoinRecord]
     new_npc_results: List[NPCResult]
@@ -341,7 +342,9 @@ class Blockchain(BlockchainInterface):
                     )
                 await self.block_store.set_in_chain([(block_record.header_hash,)])
                 await self.block_store.set_peak(block_record.header_hash)
-                return [block_record], StateChangeSummary(uint32(0), [], [], list(block.get_included_reward_coins()))
+                return [block_record], StateChangeSummary(
+                    block_record, uint32(0), [], [], list(block.get_included_reward_coins())
+                )
             return [], None
 
         assert peak is not None
@@ -420,7 +423,7 @@ class Blockchain(BlockchainInterface):
         await self.block_store.set_peak(block_record.header_hash)
 
         return records_to_add, StateChangeSummary(
-            uint32(max(fork_height, 0)), list(rolled_back_state.values()), npc_results, reward_coins
+            block_record, uint32(max(fork_height, 0)), list(rolled_back_state.values()), npc_results, reward_coins
         )
 
     async def get_tx_removals_and_additions(

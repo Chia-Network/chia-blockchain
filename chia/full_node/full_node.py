@@ -26,6 +26,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
@@ -77,6 +78,14 @@ from chia.util.profiler import profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
+
+
+# This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
+@dataclasses.dataclass
+class PeakPostProcessingResult:
+    mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
+    fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
+    lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
 class FullNode:
@@ -279,18 +288,11 @@ class FullNode:
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            mempool_new_peak_result, fns_peak_result, wallet_sub_changes = await self.peak_post_processing(
-                full_peak, peak, StateChangeSummary(max(peak.height - 1, 0), [], [], []), None
+            state_change_summary = StateChangeSummary(max(peak.height - 1, 0), [], [], [])
+            ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                full_peak, state_change_summary, None
             )
-            await self.peak_post_processing_2(
-                full_peak,
-                peak,
-                max(peak.height - 1, 0),
-                None,
-                mempool_new_peak_result,
-                fns_peak_result,
-                wallet_sub_changes,
-            )
+            await self.peak_post_processing_2(full_peak, None, state_change_summary, ppp_result)
         if self.config["send_uncompact_interval"] != 0:
             sanitize_weight_proof_only = False
             if "sanitize_weight_proof_only" in self.config:
@@ -329,7 +331,7 @@ class FullNode:
         try:
             while not self._shut_down:
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
-                # However doing them one at a time would be slow, because they get sent to other processes.
+                # However, doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
                 item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
                 asyncio.create_task(self._handle_one_transaction(item))
@@ -449,30 +451,20 @@ class FullNode:
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
-                        peak = self.blockchain.get_peak()
                         try:
                             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
-                            assert peak is not None and peak_fb is not None
-                            mempool_new_peak_result, fns_peak_result, wallet_changes = await self.peak_post_processing(
+                            assert peak_fb is not None
+                            ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                                 peak_fb,
-                                peak,
                                 state_change_summary,
                                 peer,
                             )
-                            await self.peak_post_processing_2(
-                                peak_fb,
-                                peak,
-                                state_change_summary.fork_height,
-                                peer,
-                                mempool_new_peak_result,
-                                fns_peak_result,
-                                wallet_changes,
-                            )
+                            await self.peak_post_processing_2(peak_fb, peer, state_change_summary, ppp_result)
                         except asyncio.CancelledError:
                             # Still do post processing after cancel
                             peak_fb = await self.blockchain.get_full_peak()
-                            assert peak is not None and peak_fb is not None and state_change_summary
-                            await self.peak_post_processing(peak_fb, peak, state_change_summary, peer)
+                            assert peak_fb is not None
+                            await self.peak_post_processing(peak_fb, state_change_summary, peer)
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
@@ -1012,12 +1004,11 @@ class FullNode:
                     advanced_peak = True
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                    wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(
-                        state_change_summary
+                    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
+                        state_change_summary, self.coin_subscriptions, self.ph_subscriptions
                     )
-                    await self.update_wallets(
-                        peak.height, state_change_summary.fork_height, peak.header_hash, wallet_subscription_changes
-                    )
+                    await self.hint_store.add_hints(hints_to_add)
+                    await self.update_wallets(state_change_summary, lookup_coin_ids)
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -1050,60 +1041,13 @@ class FullNode:
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
         return peers_with_peak
 
-    async def add_hints(self, state_change_summary: StateChangeSummary) -> Dict[bytes32, Set[CoinState]]:
-        # Adds hints to the database based on recent changes, and compiles a list of changes to send to wallets
-
-        changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
-
-        # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
-        hint: bytes
-        hints_to_add: List[Tuple[bytes32, bytes]] = []
-        self.log.warning(
-            f"Adding hints: rollback {len(state_change_summary.rolled_back_records)} new: {len(state_change_summary.new_npc_results)}"
-        )
-
-        # Goes through additions and removals for each block and flattens to a map and a set
-        potential_ph_to_coin_id: Dict[bytes32, bytes32] = {}
-        potential_coin_ids: Set[bytes32] = set()
-        for npc_result in state_change_summary.new_npc_results:
-            removals, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
-
-            # Record all coin_ids that we are interested in, that had changes
-            for removal_coin_id, removal_ph in removals:
-                potential_coin_ids.add(removal_coin_id)
-                potential_ph_to_coin_id[removal_ph] = removal_coin_id
-
-            for addition_coin, hint in additions_with_h:
-                addition_coin_name = addition_coin.name()
-                potential_coin_ids.add(addition_coin_name)
-                potential_ph_to_coin_id[addition_coin.puzzle_hash] = addition_coin_name
-                if len(hint) == 32:
-                    potential_ph_to_coin_id[bytes32(hint)] = addition_coin_name
-
-                if len(hint) > 0:
-                    hints_to_add.append((addition_coin_name, hint))
-
-        # Goes through all new reward coins
-        for reward_coin in state_change_summary.new_rewards:
-            potential_coin_ids.add(reward_coin.name())
-            potential_ph_to_coin_id[reward_coin.puzzle_hash] = reward_coin.name()
-
-        # Filters out any coin ID that connected wallets are not interested in
-        lookup_coin_ids: Set[bytes32] = {
-            coin_id for coin_id in potential_coin_ids if coin_id in self.coin_subscriptions
-        }
-        lookup_coin_ids.update(
-            {coin_id for ph, coin_id in potential_ph_to_coin_id.items() if ph in self.ph_subscriptions}
-        )
-
-        # Adds hints to the database
-        await self.hint_store.add_hints(coin_hint_list=hints_to_add)
-
+    async def update_wallets(self, state_change_summary: StateChangeSummary, lookup_coin_ids: List[bytes32]) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
         new_states: List[Optional[CoinRecord]] = [
             await self.coin_store.get_coin_record(coin_id) for coin_id in list(lookup_coin_ids)
         ]
 
+        changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
             for peer in self.coin_subscriptions.get(coin_record.name, []):
                 if peer not in changes_for_peer:
@@ -1114,22 +1058,18 @@ class FullNode:
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
-        return changes_for_peer
-
-    async def update_wallets(
-        self,
-        peak_height: uint32,
-        fork_height: uint32,
-        peak_hash: bytes32,
-        changes_for_peer: Dict[bytes32, Set[CoinState]],
-    ) -> None:
         self.log.warning(f"Updating wallets... {len(changes_for_peer)}")
         for peer, changes in changes_for_peer.items():
             self.log.warning(f"Updating with {len(changes)}")
             if peer not in self.server.all_connections:
                 continue
             ws_peer: ws.WSChiaConnection = self.server.all_connections[peer]
-            state = CoinStateUpdate(peak_height, fork_height, peak_hash, list(changes))
+            state = CoinStateUpdate(
+                state_change_summary.peak.height,
+                state_change_summary.fork_height,
+                state_change_summary.peak.header_hash,
+                list(changes),
+            )
             msg = make_msg(ProtocolMessageTypes.coin_state_update, state)
             await ws_peer.send_message(msg)
 
@@ -1191,6 +1131,7 @@ class FullNode:
                     # Keeps the old, original fork_height, since the next blocks will have fork height h-1
                     # Groups up all state changes into one
                     agg_state_change_summary = StateChangeSummary(
+                        state_change_summary.peak,
                         agg_state_change_summary.fork_height,
                         agg_state_change_summary.rolled_back_records + state_change_summary.rolled_back_records,
                         agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
@@ -1230,13 +1171,11 @@ class FullNode:
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
             if peak is not None:
-                mempool_new_peak_result, fns_peak_result = await self.peak_post_processing(
-                    peak_fb, peak, max(peak.height - 1, 0), None, []
+                state_change_summary = StateChangeSummary(peak, max(peak.height - 1, 0), [], [], [])
+                ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                    peak_fb, state_change_summary, None
                 )
-
-                await self.peak_post_processing_2(
-                    peak_fb, peak, max(peak.height - 1, 0), None, ([], {}), mempool_new_peak_result, fns_peak_result
-                )
+                await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
 
         if peak is not None and self.weight_proof_handler is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
@@ -1319,14 +1258,15 @@ class FullNode:
     async def peak_post_processing(
         self,
         block: FullBlock,
-        record: BlockRecord,
         state_change_summary: StateChangeSummary,
         peer: Optional[ws.WSChiaConnection],
-    ):
+    ) -> PeakPostProcessingResult:
         """
         Must be called under self.blockchain.lock. This updates the internal state of the full node with the
         latest peak information. It also notifies peers about the new peak.
         """
+
+        record = state_change_summary.peak
         difficulty = self.blockchain.get_next_difficulty(record.header_hash, False)
         sub_slot_iters = self.blockchain.get_next_slot_iters(record.header_hash, False)
 
@@ -1350,6 +1290,11 @@ class FullNode:
             and state_change_summary.fork_height < self.full_node_store.previous_generator.block_height
         ):
             self.full_node_store.previous_generator = None
+
+        hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
+            state_change_summary, self.coin_subscriptions, self.ph_subscriptions
+        )
+        await self.hint_store.add_hints(hints_to_add)
 
         sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(record.header_hash)
         assert sub_slots is not None
@@ -1415,24 +1360,21 @@ class FullNode:
                 self.log.info(f"Saving previous generator for height {block.height}")
                 self.full_node_store.previous_generator = generator_arg
 
-        wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(state_change_summary)
-        return mempool_new_peak_result, fns_peak_result, wallet_subscription_changes
+        return PeakPostProcessingResult(mempool_new_peak_result, fns_peak_result, lookup_coin_ids)
 
     async def peak_post_processing_2(
         self,
         block: FullBlock,
-        record: BlockRecord,
-        fork_height: uint32,
         peer: Optional[ws.WSChiaConnection],
-        mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]],
-        fns_peak_result: FullNodeStorePeakResult,
-        wallet_sub_changes: Dict[bytes32, Set[CoinState]],
+        state_change_summary: StateChangeSummary,
+        ppp_result: PeakPostProcessingResult,
     ):
         """
         Does NOT need to be called under the blockchain lock. Handle other parts of post processing like communicating
         with peers
         """
-        for bundle, result, spend_name in mempool_peak_result:
+        record = state_change_summary.peak
+        for bundle, result, spend_name in ppp_result.mempool_peak_result:
             self.log.debug(f"Added transaction to mempool: {spend_name}")
             mempool_item = self.mempool_manager.get_mempool_item(spend_name)
             assert mempool_item is not None
@@ -1448,12 +1390,12 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         # If there were pending end of slots that happen after this peak, broadcast them if they are added
-        if fns_peak_result.added_eos is not None:
+        if ppp_result.fns_peak_result.added_eos is not None:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                fns_peak_result.added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                fns_peak_result.added_eos.challenge_chain.get_hash(),
+                ppp_result.fns_peak_result.added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                ppp_result.fns_peak_result.added_eos.challenge_chain.get_hash(),
                 uint8(0),
-                fns_peak_result.added_eos.reward_chain.end_of_slot_vdf.challenge,
+                ppp_result.fns_peak_result.added_eos.reward_chain.end_of_slot_vdf.challenge,
             )
             msg = make_msg(ProtocolMessageTypes.new_signage_point_or_end_of_sub_slot, broadcast)
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -1475,7 +1417,7 @@ class FullNode:
                     record.header_hash,
                     record.height,
                     record.weight,
-                    fork_height,
+                    state_change_summary.fork_height,
                     block.reward_chain_block.get_unfinished().get_hash(),
                 ),
             )
@@ -1491,10 +1433,10 @@ class FullNode:
                 record.header_hash,
                 record.height,
                 record.weight,
-                fork_height,
+                state_change_summary.fork_height,
             ),
         )
-        await self.update_wallets(record.height, fork_height, record.header_hash, wallet_sub_changes)
+        await self.update_wallets(state_change_summary, ppp_result.lookup_coin_ids)
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
 
@@ -1567,7 +1509,8 @@ class FullNode:
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
                 return await self.respond_block(block_response, peer)
-        mempool_new_peak_result, fns_peak_result, state_change_summary, wallet_sub_changes = None, None, None, {}
+        state_change_summary: Optional[StateChangeSummary] = None
+        ppp_result: Optional[PeakPostProcessingResult] = None
         async with self._blockchain_lock_high_priority:
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
@@ -1618,10 +1561,9 @@ class FullNode:
                     return None
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
-                    new_peak: Optional[BlockRecord] = self.blockchain.get_peak()
-                    assert new_peak is not None and state_change_summary is not None
-                    mempool_new_peak_result, fns_peak_result, wallet_sub_changes = await self.peak_post_processing(
-                        block, new_peak, state_change_summary, peer
+                    assert state_change_summary is not None
+                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
+                        block, state_change_summary, peer
                     )
 
                 elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
@@ -1634,28 +1576,16 @@ class FullNode:
             except asyncio.CancelledError:
                 # We need to make sure to always call this method even when we get a cancel exception, to make sure
                 # the node stays in sync
-                new_peak = self.blockchain.get_peak()
                 if added == ReceiveBlockResult.NEW_PEAK:
-                    assert new_peak is not None
                     assert state_change_summary is not None
-                    await self.peak_post_processing(block, new_peak, state_change_summary, peer)
+                    await self.peak_post_processing(block, state_change_summary, peer)
                 raise
 
             validation_time = time.time() - validation_start
 
-        if mempool_new_peak_result is not None:
-            assert new_peak is not None
-            assert fns_peak_result is not None
+        if ppp_result is not None:
             assert state_change_summary is not None
-            await self.peak_post_processing_2(
-                block,
-                new_peak,
-                state_change_summary.fork_height,
-                peer,
-                mempool_new_peak_result,
-                fns_peak_result,
-                wallet_sub_changes,
-            )
+            await self.peak_post_processing_2(block, peer, state_change_summary, ppp_result)
 
         percent_full_str = (
             (
@@ -2439,6 +2369,7 @@ class FullNode:
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
+                        record: Optional[BlockRecord] = None
                         if sanitize_weight_proof_only:
                             assert header.header_hash in records
                             record = records[header.header_hash]
@@ -2471,6 +2402,7 @@ class FullNode:
                         # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
+                            assert record is not None
                             if not record.is_challenge_block(self.constants):
                                 continue
                         if header.challenge_chain_sp_proof is not None and (
