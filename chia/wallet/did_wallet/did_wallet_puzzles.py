@@ -31,6 +31,20 @@ def create_innerpuz(
     return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
 
 
+def get_inner_puzhash_by_p2(
+    p2_puzhash: bytes32,
+    identities: List[bytes],
+    num_of_backup_ids_needed: uint64,
+    singleton_id: bytes32,
+    metadata: Program = Program.to([]),
+) -> bytes32:
+    backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    return DID_INNERPUZ_MOD.curry(
+        p2_puzhash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
+    ).get_tree_hash(p2_puzhash)
+
+
 def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
@@ -57,7 +71,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Progra
     if not is_did_innerpuz(inner_f):
         return None
 
-    p2_puzzle, id_list, num_of_backup_ids_needed, singleton_struct, _, metadata = list(args.as_iter())
+    p2_puzzle, id_list, num_of_backup_ids_needed, singleton_struct, metadata = list(args.as_iter())
     return p2_puzzle, id_list, num_of_backup_ids_needed, singleton_struct, metadata
 
 

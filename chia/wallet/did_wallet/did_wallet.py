@@ -205,10 +205,10 @@ class DIDWallet:
             raise ValueError("Cannot uncurry the DID puzzle.")
         _, _, num_verification, _, metadata = args
         full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
-        inner_solution: Program = full_solution.rest().rest().first()
+        # inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes] = []
-        for did in list(inner_solution.rest().rest().rest().rest().rest().rest().as_iter()):
-            recovery_list.append(did.as_python()[0])
+        # for did in list(inner_solution.rest().rest().rest().rest().rest().rest().as_iter()):
+        #     recovery_list.append(did.as_python()[0])
         self.did_info = DIDInfo(
             launch_coin,
             recovery_list,
@@ -608,15 +608,21 @@ class DIDWallet:
         assert coins is not None
         coin = coins.pop()
 
-        new_did_puz = did_wallet_puzzles.create_innerpuz(
+        new_did_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             new_puzhash,
-            0,
-            0,
+            [],
+            uint64(0),
             self.did_info.origin_coin.name(),
-            self.did_info.metadata,
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_did_puz, "amount": uint64(coin.amount), "memos": [new_puzhash]}]
+            primaries=[
+                {
+                    "puzzlehash": new_did_puzhash,
+                    "amount": uint64(coin.amount),
+                    "memos": [new_puzhash],
+                }
+            ]
         )
         # Need to include backup list reveal here, even we are don't recover
         # innerpuz solution is
@@ -670,7 +676,7 @@ class DIDWallet:
     async def create_message_spend(
         self,
         coin_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements: Optional[Set[bytes32]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
         new_innerpuzhash: Optional[bytes32] = None,
     ):
         assert self.did_info.current_inner is not None
@@ -684,7 +690,7 @@ class DIDWallet:
             new_innerpuzhash = innerpuz.get_tree_hash()
 
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": []}],
+            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
         )
@@ -720,7 +726,8 @@ class DIDWallet:
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
-        message_puz = Program.to((1, [[51, 0x00, -113]]))
+        message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
+
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, [[], message_puz, []]])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)

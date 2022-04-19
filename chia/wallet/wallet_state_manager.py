@@ -673,10 +673,11 @@ class WalletStateManager:
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
             full_puzzle = create_fullpuz(did_puzzle, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
+                self.log.error("DID puzzle hash doesn't match, please check curried parameters.")
                 return None, None
             # Create DID wallet
             response: List[CoinState] = await self.wallet_node.get_coin_state([launch_id])

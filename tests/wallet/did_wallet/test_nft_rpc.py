@@ -213,7 +213,7 @@ class TestNFTRPC:
 
         # Test adding a url
         # TODO: un comment out this code when DID isn't broken
-        
+
         # nft_coin_info = val["nfts"][0][0]
         # val = await api_0.nft_add_url(
         #     {
@@ -232,4 +232,5 @@ class TestNFTRPC:
         #
         # assert val["success"]
         # assert len(val["nfts"]) == 1
-        # assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo-2.svg", b"https://www.chia.net/img/branding/chia-logo.svg"]
+        # assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo-2.svg",
+        # b"https://www.chia.net/img/branding/chia-logo.svg"]
