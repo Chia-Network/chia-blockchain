@@ -1093,7 +1093,7 @@ class FullNode:
             coin_id for coin_id in potential_coin_ids if coin_id in self.coin_subscriptions
         }
         lookup_coin_ids.update(
-            {coin_id for puzzle_hash, coin_id in potential_ph_to_coin_id if puzzle_hash in self.ph_subscriptions}
+            {coin_id for ph, coin_id in potential_ph_to_coin_id.items() if ph in self.ph_subscriptions}
         )
 
         # Adds hints to the database
