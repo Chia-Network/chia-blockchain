@@ -4,6 +4,7 @@ import { AlertDialog, Flex, Form, TextField, useOpenDialog } from '@chia/core';
 import { Button } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
+import NFT from '../../types/NFT';
 
 type NFTTransferDemoFormData = {
   walletId: number;
@@ -11,13 +12,18 @@ type NFTTransferDemoFormData = {
   destinationDID?: string;
 };
 
-export default function NFTTransferDemo() {
+type NFTTransferDemoProps = {
+  nft?: NFT;
+};
+
+export default function NFTTransferDemo(props: NFTTransferDemoProps) {
+  const { nft } = props;
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferDemoFormData>({
     shouldUnregister: false,
     defaultValues: {
-      walletId: 0,
-      nftAssetId: '',
+      walletId: nft?.walletId ?? 0,
+      nftAssetId: nft?.id ?? '',
       destinationDID: '',
     },
   });
@@ -46,11 +52,15 @@ export default function NFTTransferDemo() {
 
   async function handleInitiateTransfer(formData: NFTTransferDemoFormData) {
     const { walletId, nftAssetId, destinationDID } = formData;
+    const nftToTransfer = {
+      ...(nft ?? { walletId: 0, id: '', name: '', description: '' }),
+      walletId,
+      id: nftAssetId,
+    };
 
     await openDialog(
       <NFTTransferDialog
-        walletId={walletId}
-        nftAssetId={nftAssetId}
+        nft={nftToTransfer}
         destinationDID={destinationDID}
         onComplete={handleComplete}
       />,

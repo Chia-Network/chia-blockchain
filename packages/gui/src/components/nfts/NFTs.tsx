@@ -1,77 +1,194 @@
-import React from 'react';
-import { Trans } from '@lingui/macro';
-import { Flex, DropdownActions, useOpenDialog } from '@chia/core';
+import React, { useMemo } from 'react';
+import { randomBytes } from 'crypto';
+import { Flex } from '@chia/core';
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  ListItemIcon,
-  MenuItem,
+  Box,
+  Checkbox,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
 } from '@mui/material';
-import { ArrowForward as TransferIcon } from '@mui/icons-material';
-import NFTTransferDemo from './NFTTransferDemo';
+import NFT from '../../types/NFT';
+import NFTSelection from '../../types/NFTSelection';
+import NFTContextualActions from './NFTContextualActions';
 
-export default function NFTs() {
-  const openDialog = useOpenDialog();
+/* ========================================================================== */
 
-  function handleTransferNFT() {
-    const open = true;
+// Temporary: Used by getFakeNFTName
+import seedrandom from 'seedrandom';
+import {
+  uniqueNamesGenerator,
+  adjectives,
+  colors,
+  animals,
+} from 'unique-names-generator';
 
-    openDialog(
-      <Dialog
-        open={open}
-        aria-labelledby="nft-transfer-dialog-title"
-        aria-describedby="nft-transfer-dialog-description"
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle id="nft-transfer-dialog-title">
-          <Typography variant="h6">
-            <Trans>NFT Transfer Demo</Trans>
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Flex justifyContent="center">
-            <NFTTransferDemo />
-          </Flex>
-        </DialogContent>
-      </Dialog>,
-    );
+/* ========================================================================== */
+
+function NFTMockGalleryTableHeader() {
+  const headers = [
+    { id: 'id', label: 'ID' },
+    { id: 'name', label: 'Name' },
+    { id: 'description', label: 'Description' },
+  ];
+
+  return (
+    <TableHead>
+      <TableRow>
+        <TableCell padding="checkbox">
+          <Checkbox color="primary" disabled={true} />
+        </TableCell>
+        {headers.map((header) => (
+          <TableCell key={header.id}>{header.label}</TableCell>
+        ))}
+      </TableRow>
+    </TableHead>
+  );
+}
+
+/* ========================================================================== */
+
+function NFTMockGalleryView() {
+  const [selected, setSelected] = React.useState<readonly string[]>([]);
+
+  const rows: NFT[] = useMemo(() => {
+    return [...Array(5)].map((_, i) => {
+      const walletId = 5;
+      const id = randomBytes(32).toString('hex');
+      const name = getFakeNFTName(id);
+      const description = `NFT ${i} description`;
+
+      return { walletId, id, name, description };
+    });
+  }, []);
+
+  const selection: NFTSelection = useMemo(() => {
+    const idSet = new Set(selected);
+    return {
+      items: rows.filter((row) => idSet.has(row.id)),
+    };
+  }, [selected]);
+
+  function isSelected(id: string) {
+    return selected.indexOf(id) !== -1;
+  }
+
+  function handleClick(event: React.MouseEvent<unknown>, id: string) {
+    const selectedIndex = selected.indexOf(id);
+    let newSelected: readonly string[] = [];
+
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selected, id);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selected.slice(1));
+    } else if (selectedIndex === selected.length - 1) {
+      newSelected = newSelected.concat(selected.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1),
+      );
+    }
+
+    setSelected(newSelected);
   }
 
   return (
-    <div>
-      NFTs
-      <Flex
-        flexDirection="row"
-        flexGrow={1}
-        justifyContent="flex-end"
-        gap={3}
-        style={{ padding: '1rem' }}
-      >
+    <Flex flexDirection="column" flexGrow={1} gap={1}>
+      <Flex flexDirection="row" flexGrow={1} justifyContent="flex-end">
         <Flex gap={1} alignItems="center">
-          <DropdownActions label={<Trans>Actions</Trans>}>
-            {({ onClose }) => (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    onClose();
-                    handleTransferNFT();
-                  }}
-                >
-                  <ListItemIcon>
-                    <TransferIcon />
-                  </ListItemIcon>
-                  <Typography variant="inherit" noWrap>
-                    <Trans>Transfer NFT</Trans>
-                  </Typography>
-                </MenuItem>
-              </>
-            )}
-          </DropdownActions>
+          <NFTContextualActions selection={selection} />
         </Flex>
       </Flex>
-    </div>
+
+      <Box sx={{ width: '100%' }}>
+        <Paper sx={{ width: '100%', mb: 2 }}>
+          <TableContainer>
+            <Table sx={{ minWidth: 750 }} size={'medium'}>
+              <NFTMockGalleryTableHeader />
+              <TableBody>
+                {rows.map((row, index) => {
+                  const isItemSelected = isSelected(row.id);
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      onClick={(event) => handleClick(event, row.id)}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox color="primary" checked={isItemSelected} />
+                      </TableCell>
+                      <TableCell>{row.id}</TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.description}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Box>
+    </Flex>
   );
+}
+
+/* ========================================================================== */
+
+export default function NFTs() {
+  return (
+    <Box sx={{ width: '100%', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+      <Flex
+        flexDirection="column"
+        flexGrow={1}
+        gap={3}
+        style={{ paddingTop: '1.5rem' }}
+      >
+        <Typography variant="h5">NFTs</Typography>
+        <Flex>
+          <NFTMockGalleryView />
+        </Flex>
+      </Flex>
+    </Box>
+  );
+}
+
+/* ========================================================================== */
+/*                              Utility Functions                             */
+/* ========================================================================== */
+
+const uniqueNames: {
+  [key: string]: string;
+} = {};
+
+function getFakeNFTName(seed: string, iteration = 0): string {
+  const computedName = Object.keys(uniqueNames).find(
+    (key) => uniqueNames[key] === seed,
+  );
+  if (computedName) {
+    return computedName;
+  }
+
+  const generator = seedrandom(iteration ? `${seed}-${iteration}` : seed);
+
+  const uniqueName = uniqueNamesGenerator({
+    dictionaries: [colors, animals, adjectives],
+    length: 2,
+    seed: generator.int32(),
+    separator: ' ',
+    style: 'capital',
+  });
+
+  if (uniqueNames[uniqueName] && uniqueNames[uniqueName] !== seed) {
+    return getFakeNFTName(seed, iteration + 1);
+  }
+
+  uniqueNames[uniqueName] = seed;
+
+  return uniqueName;
 }

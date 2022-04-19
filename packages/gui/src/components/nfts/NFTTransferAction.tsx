@@ -27,15 +27,7 @@ import {
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useTransferNFTMutation } from '@chia/api-react';
-
-// Temporary: Used by getFakeNFTName
-import seedrandom from 'seedrandom';
-import {
-  uniqueNamesGenerator,
-  adjectives,
-  colors,
-  animals,
-} from 'unique-names-generator';
+import NFT from '../../types/NFT';
 
 /* ========================================================================== */
 /*                                   Styles                                   */
@@ -163,15 +155,13 @@ type NFTTransferFormData = {
 };
 
 type NFTTransferActionProps = {
-  walletId: number;
-  nftAssetId: string;
-  nftName: string;
+  nft: NFT;
   destinationDID?: string;
   onComplete?: (result?: NFTTransferResult) => void;
 };
 
 export default function NFTTransferAction(props: NFTTransferActionProps) {
-  const { walletId, nftAssetId, nftName, destinationDID, onComplete } = props;
+  const { nft, destinationDID, onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
   const openDialog = useOpenDialog();
@@ -207,8 +197,8 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
       setIsLoading(true);
 
       const { error, data: response } = await transferNFT({
-        walletId,
-        nftCoinInfo: nftAssetId,
+        walletId: nft.walletId,
+        nftCoinInfo: nft.id,
         newDid: destinationDID,
         newDidInnerHash: '',
         tradePrice: 0,
@@ -222,7 +212,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
         onComplete({
           success,
           transferInfo: {
-            nftAssetId,
+            nftAssetId: nft.id,
             destinationDID,
             fee,
           },
@@ -249,7 +239,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {nftName}
+                {nft.name}
               </Typography>
               <TooltipIcon interactive>
                 <Flex flexDirection="column" gap={1}>
@@ -257,7 +247,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
                     <Trans>NFT Name</Trans>
                   </StyledTitle>
                   <StyledValue>
-                    <Typography variant="caption">{nftName}</Typography>
+                    <Typography variant="caption">{nft.name}</Typography>
                   </StyledValue>
                 </Flex>
               </TooltipIcon>
@@ -276,7 +266,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {nftAssetId}
+                {nft.id}
               </Typography>
               <TooltipIcon interactive>
                 <Flex flexDirection="column" gap={1}>
@@ -284,7 +274,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
                     <Trans>NFT Asset ID</Trans>
                   </StyledTitle>
                   <StyledValue>
-                    <Typography variant="caption">{nftAssetId}</Typography>
+                    <Typography variant="caption">{nft.id}</Typography>
                   </StyledValue>
                 </Flex>
               </TooltipIcon>
@@ -342,25 +332,12 @@ type NFTTransferDialogProps = {
   open: boolean;
   onClose: (value: any) => void;
   onComplete?: (result?: NFTTransferResult) => void;
-  walletId: number;
-  nftAssetId: string;
+  nft: NFT;
   destinationDID?: string;
 };
 
 export function NFTTransferDialog(props: NFTTransferDialogProps) {
-  const {
-    open,
-    onClose,
-    onComplete,
-    walletId,
-    nftAssetId,
-    destinationDID,
-    ...rest
-  } = props;
-
-  const nftFakeName = useMemo(() => {
-    return getFakeNFTName(nftAssetId);
-  }, [nftAssetId]);
+  const { open, onClose, onComplete, nft, destinationDID, ...rest } = props;
 
   function handleClose() {
     onClose(false);
@@ -400,9 +377,7 @@ export function NFTTransferDialog(props: NFTTransferDialogProps) {
             </Trans>
           </DialogContentText>
           <NFTTransferAction
-            walletId={walletId}
-            nftAssetId={nftAssetId}
-            nftName={nftFakeName}
+            nft={nft}
             destinationDID={destinationDID}
             onComplete={handleCompletion}
           />
@@ -416,38 +391,3 @@ NFTTransferDialog.defaultProps = {
   open: false,
   onClose: () => {},
 };
-
-/* ========================================================================== */
-/*                              Utility Functions                             */
-/* ========================================================================== */
-
-const uniqueNames: {
-  [key: string]: string;
-} = {};
-
-function getFakeNFTName(seed: string, iteration = 0): string {
-  const computedName = Object.keys(uniqueNames).find(
-    (key) => uniqueNames[key] === seed,
-  );
-  if (computedName) {
-    return computedName;
-  }
-
-  const generator = seedrandom(iteration ? `${seed}-${iteration}` : seed);
-
-  const uniqueName = uniqueNamesGenerator({
-    dictionaries: [colors, animals, adjectives],
-    length: 2,
-    seed: generator.int32(),
-    separator: ' ',
-    style: 'capital',
-  });
-
-  if (uniqueNames[uniqueName] && uniqueNames[uniqueName] !== seed) {
-    return getFakeNFTName(seed, iteration + 1);
-  }
-
-  uniqueNames[uniqueName] = seed;
-
-  return uniqueName;
-}
