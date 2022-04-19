@@ -204,7 +204,7 @@ class DIDWallet:
         if args is None:
             raise ValueError("Cannot uncurry the DID puzzle.")
         _, _, num_verification, _, metadata = args
-        full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+        # full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
         # inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes] = []
         # for did in list(inner_solution.rest().rest().rest().rest().rest().rest().as_iter()):
