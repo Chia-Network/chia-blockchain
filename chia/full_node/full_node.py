@@ -70,7 +70,6 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
-from chia.util.generator_tools import tx_removals_additions_and_hints
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -1562,9 +1561,7 @@ class FullNode:
                 elif added == ReceiveBlockResult.NEW_PEAK:
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
                     assert state_change_summary is not None
-                    ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
-                        block, state_change_summary, peer
-                    )
+                    ppp_result = await self.peak_post_processing(block, state_change_summary, peer)
 
                 elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
                     self.log.info(

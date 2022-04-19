@@ -9,7 +9,7 @@ def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
     coin_subscriptions: Dict[bytes32, Set[bytes32]],
     ph_subscriptions: Dict[bytes32, Set[bytes32]],
-) -> Tuple[List[Tuple[bytes32, bytes]], Set[bytes32]]:
+) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
     # Adds hints to the database based on recent changes, and compiles a list of changes to send to wallets
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
@@ -43,7 +43,7 @@ def get_hints_and_subscription_coin_ids(
         potential_ph_to_coin_id[reward_coin.puzzle_hash] = reward_coin.name()
 
     # Filters out any coin ID that connected wallets are not interested in
-    lookup_coin_ids: Set[bytes32] = {coin_id for coin_id in potential_coin_ids if coin_id in coin_subscriptions}
-    lookup_coin_ids.update({coin_id for ph, coin_id in potential_ph_to_coin_id.items() if ph in ph_subscriptions})
+    lookup_coin_ids: List[bytes32] = [coin_id for coin_id in potential_coin_ids if coin_id in coin_subscriptions]
+    lookup_coin_ids.extend([coin_id for ph, coin_id in potential_ph_to_coin_id.items() if ph in ph_subscriptions])
 
     return hints_to_add, lookup_coin_ids
