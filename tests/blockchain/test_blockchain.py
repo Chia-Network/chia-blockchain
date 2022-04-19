@@ -1815,7 +1815,10 @@ class TestBodyValidation:
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == (ReceiveBlockResult.NEW_PEAK, None, 2)
+        code, err, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert code == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+        assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
@@ -1871,7 +1874,8 @@ class TestBodyValidation:
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == expected
+        res, error, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

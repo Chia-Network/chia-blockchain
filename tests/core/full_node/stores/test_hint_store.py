@@ -4,10 +4,13 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.blockchain import Blockchain
 from chia.full_node.hint_store import HintStore
+from chia.protocols.full_node_protocol import RespondBlock
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
+from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.util.db_connection import DBConnection
 from tests.wallet_tools import WalletTool
@@ -104,8 +107,8 @@ class TestHintStore:
                 assert rows[0][0] == 4
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, empty_blockchain, bt):  # noqa: F811
-        blockchain: Blockchain = empty_blockchain
+    async def test_hints_in_blockchain(self, bt, wallet_nodes):  # noqa: F811
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver = wallet_nodes
 
         blocks = bt.get_consecutive_blocks(
             5,
@@ -115,12 +118,12 @@ class TestHintStore:
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         for block in blocks:
-            await _validate_and_add_block(blockchain, block)
+            await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
-        puzzle_hash = 32 * b"\0"
+        puzzle_hash = bytes32(32 * b"\0")
         amount = int_to_bytes(1)
-        hint = 32 * b"\5"
+        hint = bytes32(32 * b"\5")
         coin_spent = list(blocks[-1].get_included_reward_coins())[0]
         condition_dict = {
             ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
@@ -136,12 +139,12 @@ class TestHintStore:
             10, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
         )
 
-        for block in blocks:
-            await _validate_and_add_block_no_error(blockchain, block)
+        for block in blocks[-10:]:
+            await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
-        get_hint = await blockchain.hint_store.get_coin_ids(hint)
+        get_hint = await full_node_1.full_node.blockchain.hint_store.get_coin_ids(hint)
 
-        assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, 1).name()
+        assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 
     @pytest.mark.asyncio
     async def test_counts(self, db_version):

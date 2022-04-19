@@ -55,21 +55,23 @@ def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple
     """
     Doesn't return farmer and pool reward.
     """
-    removals: List[bytes32]
+    removals: List[Tuple[bytes32, bytes32]]
     removals, additions_with_h = tx_removals_additions_and_hints(results)
     additions: List[Coin] = [c for c, hint in additions_with_h]
-    return removals, additions
+    return [r[0] for r in removals], additions
 
 
 def tx_removals_additions_and_hints(
     results: Optional[SpendBundleConditions],
-) -> Tuple[List[bytes32], List[Tuple[Coin, bytes]]]:
+) -> Tuple[List[Tuple[bytes32, bytes32]], List[Tuple[Coin, bytes]]]:
+    # Returns (coin_id, puzzle_hash) for each removal, and (Coin, hint) for each addition
+
     if results is None:
         return [], []
-    ret_removals: List[bytes32] = []
+    ret_removals: List[Tuple[bytes32, bytes32]] = []
     ret_additions: List[Tuple[Coin, bytes]] = []
     for spend in results.spends:
-        ret_removals.append(spend.coin_id)
+        ret_removals.append((spend.coin_id, spend.puzzle_hash))
         for puzzle_hash, amount, hint in spend.create_coin:
             coin = Coin(spend.coin_id, puzzle_hash, amount)
             ret_additions.append((coin, hint))

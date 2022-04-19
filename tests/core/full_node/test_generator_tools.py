@@ -53,12 +53,11 @@ class TestGeneratorTools:
 
     def test_tx_removals_additions_and_hints(self) -> None:
         conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), [], uint64(0))
-        expected_rems = [coin_ids[0], coin_ids[1]]
+        expected_rems = [(coin_ids[0], phs[0]), (coin_ids[1], phs[0])]
         expected_additions = []
         for spend in spends:
             for puzzle_hash, am, hint in spend.create_coin:
                 expected_additions.append((Coin(spend.coin_id, puzzle_hash, am), hint))
-        print(expected_additions)
         assert tx_removals_additions_and_hints(conditions) == (expected_rems, expected_additions)
 
     def test_empty_tx_removals_additions_and_hints(self) -> None:

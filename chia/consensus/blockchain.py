@@ -274,7 +274,8 @@ class Blockchain(BlockchainInterface):
                     block_record, genesis, fork_point_with_peak, npc_result
                 )
 
-                # Then update the memory cache. It is important that this task is not cancelled and does not throw
+                # Then update the memory cache. It is important that this is not cancelled and does not throw
+                # This is done after all async/DB operations, so there is a decreased chance of failure.
                 self.add_block_record(block_record)
                 if state_change_summary is not None:
                     self.__height_map.rollback(state_change_summary.fork_height)
@@ -286,7 +287,6 @@ class Blockchain(BlockchainInterface):
                     )
                 if state_change_summary is not None:
                     self._peak_height = block_record.height
-                    await self.__height_map.maybe_flush()
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 log.error(
@@ -294,6 +294,9 @@ class Blockchain(BlockchainInterface):
                     f" rolling back: {traceback.format_exc()} {e}"
                 )
                 raise
+
+            # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
+            await self.__height_map.maybe_flush()
 
         if state_change_summary is not None:
             # new coin records added
@@ -346,7 +349,7 @@ class Blockchain(BlockchainInterface):
             # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
             return [], None
 
-        # Find the fork. if the block is just being appended, it will return the peak
+        # Finds the fork. if the block is just being appended, it will return the peak
         # If no blocks in common, returns -1, and reverts all blocks
         if block_record.prev_hash == peak.header_hash:
             fork_height: int = peak.height
@@ -359,10 +362,11 @@ class Blockchain(BlockchainInterface):
             for coin_record in await self.coin_store.rollback_to_block(fork_height):
                 rolled_back_state[coin_record.name] = coin_record
 
-        # Collect all blocks from fork point to new peak
+        # Collects all blocks from fork point to new peak
         blocks_to_add: List[Tuple[FullBlock, BlockRecord]] = []
         curr = block_record.header_hash
 
+        # Backtracks up to the fork point, pulling all the required blocks from DB (that will soon be in the chain)
         while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
             fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
             fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
@@ -374,14 +378,16 @@ class Blockchain(BlockchainInterface):
                 break
             curr = fetched_block_record.prev_hash
 
-        records_to_add = []
+        records_to_add: List[BlockRecord] = []
         npc_results: List[NPCResult] = []
         reward_coins: List[Coin] = []
         for fetched_full_block, fetched_block_record in reversed(blocks_to_add):
             records_to_add.append(fetched_block_record)
             if not fetched_full_block.is_transaction_block():
+                # Coins are only created in TX blocks so there are no state updates for this block
                 continue
 
+            # We need to recompute the additions and removals, since they are not stored on DB (only generator is).
             if fetched_block_record.header_hash == block_record.header_hash:
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(
                     fetched_full_block, npc_result
@@ -389,9 +395,11 @@ class Blockchain(BlockchainInterface):
             else:
                 tx_removals, tx_additions, npc_res = await self.get_tx_removals_and_additions(fetched_full_block, None)
 
+            # Collect the NPC results for later post-processing
             if npc_res is not None:
                 npc_results.append(npc_res)
 
+            # Apply the coin store changes for each block that is now in the blockchain
             assert fetched_full_block.foliage_transaction_block is not None
             await self.coin_store.new_block(
                 fetched_full_block.height,
@@ -400,6 +408,7 @@ class Blockchain(BlockchainInterface):
                 tx_additions,
                 tx_removals,
             )
+            # Collect the new reward coins for later post-processing
             reward_coins.extend(fetched_full_block.get_included_reward_coins())
 
         # we made it to the end successfully
@@ -409,10 +418,10 @@ class Blockchain(BlockchainInterface):
 
         # Changes the peak to be the new peak
         await self.block_store.set_peak(block_record.header_hash)
-        state_change: StateChangeSummary = StateChangeSummary(
+
+        return records_to_add, StateChangeSummary(
             uint32(max(fork_height, 0)), list(rolled_back_state.values()), npc_results, reward_coins
         )
-        return records_to_add, state_change
 
     async def get_tx_removals_and_additions(
         self, block: FullBlock, npc_result: Optional[NPCResult] = None

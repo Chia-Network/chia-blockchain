@@ -1013,7 +1013,7 @@ class FullNode:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
                     wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(
-                        state_change_summary.rolled_back_records, state_change_summary.new_npc_results
+                        state_change_summary
                     )
                     await self.update_wallets(
                         peak.height, state_change_summary.fork_height, peak.header_hash, wallet_subscription_changes
@@ -1050,42 +1050,61 @@ class FullNode:
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
         return peers_with_peak
 
-    async def add_hints(
-        self, rolled_back_states: List[CoinRecord], new_npc_results: List[NPCResult]
-    ) -> Dict[bytes32, Set[CoinState]]:
+    async def add_hints(self, state_change_summary: StateChangeSummary) -> Dict[bytes32, Set[CoinState]]:
         # Adds hints to the database based on recent changes, and compiles a list of changes to send to wallets
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
 
         # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
-        coin_id: bytes32
         hint: bytes
-        lookup_coin_ids: Set[bytes32] = set()
         hints_to_add: List[Tuple[bytes32, bytes]] = []
-        self.log.warning(f"Adding hints: rollback {len(rolled_back_states)} new: {len(new_npc_results)}")
-        for npc_result in new_npc_results:
-            removal_ids, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
+        self.log.warning(
+            f"Adding hints: rollback {len(state_change_summary.rolled_back_records)} new: {len(state_change_summary.new_npc_results)}"
+        )
+
+        # Goes through additions and removals for each block and flattens to a map and a set
+        potential_ph_to_coin_id: Dict[bytes32, bytes32] = {}
+        potential_coin_ids: Set[bytes32] = set()
+        for npc_result in state_change_summary.new_npc_results:
+            removals, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
 
             # Record all coin_ids that we are interested in, that had changes
-            for removal_coin_id in removal_ids:
-                if removal_coin_id in self.coin_subscriptions:
-                    lookup_coin_ids.add(removal_coin_id)
+            for removal_coin_id, removal_ph in removals:
+                potential_coin_ids.add(removal_coin_id)
+                potential_ph_to_coin_id[removal_ph] = removal_coin_id
 
             for addition_coin, hint in additions_with_h:
                 addition_coin_name = addition_coin.name()
-                if addition_coin_name in self.coin_subscriptions:
-                    lookup_coin_ids.add(addition_coin_name)
-                if len(hint) == 32 and bytes32(hint) in self.ph_subscriptions:
-                    lookup_coin_ids.add(addition_coin_name)
+                potential_coin_ids.add(addition_coin_name)
+                potential_ph_to_coin_id[addition_coin.puzzle_hash] = addition_coin_name
+                if len(hint) == 32:
+                    potential_ph_to_coin_id[bytes32(hint)] = addition_coin_name
+
                 if len(hint) > 0:
                     hints_to_add.append((addition_coin_name, hint))
+
+        # Goes through all new reward coins
+        for reward_coin in state_change_summary.new_rewards:
+            potential_coin_ids.add(reward_coin.name())
+            potential_ph_to_coin_id[reward_coin.puzzle_hash] = reward_coin.name()
+
+        # Filters out any coin ID that connected wallets are not interested in
+        lookup_coin_ids: Set[bytes32] = {
+            coin_id for coin_id in potential_coin_ids if coin_id in self.coin_subscriptions
+        }
+        lookup_coin_ids.update(
+            {coin_id for puzzle_hash, coin_id in potential_ph_to_coin_id if puzzle_hash in self.ph_subscriptions}
+        )
+
+        # Adds hints to the database
         await self.hint_store.add_hints(coin_hint_list=hints_to_add)
 
+        # Looks up coin records in DB for the coins that wallets are interested in
         new_states: List[Optional[CoinRecord]] = [
             await self.coin_store.get_coin_record(coin_id) for coin_id in list(lookup_coin_ids)
         ]
 
-        for coin_record in rolled_back_states + [s for s in new_states if s is not None]:
+        for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
             for peer in self.coin_subscriptions.get(coin_record.name, []):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
@@ -1396,9 +1415,7 @@ class FullNode:
                 self.log.info(f"Saving previous generator for height {block.height}")
                 self.full_node_store.previous_generator = generator_arg
 
-        wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(
-            state_change_summary.rolled_back_records, state_change_summary.new_npc_results
-        )
+        wallet_subscription_changes: Dict[bytes32, Set[CoinState]] = await self.add_hints(state_change_summary)
         return mempool_new_peak_result, fns_peak_result, wallet_subscription_changes
 
     async def peak_post_processing_2(
