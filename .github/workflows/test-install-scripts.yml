@@ -156,6 +156,16 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
+    # @TODO this step can be removed once Python 3.10 is supported
+    # Python 3.10 is now the default in bookworm, so install 3.9 specifically so install does not fail
+    - name: Prepare debian:bookworm
+      if: ${{ matrix.distribution.name == 'debian:bookworm' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update -y
+        apt-get install -y python3.9-venv
+
     - name: Prepare Fedora
       if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
