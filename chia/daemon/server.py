@@ -233,6 +233,7 @@ class WebSocketServer:
                     error = {"success": False, "error": f"{e}"}
                     response = format_response(decoded, error)
                     sockets_to_use = []
+                self.log.debug(f"incoming_connection sockets_to_use {sockets_to_use}")
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
                         try:
@@ -257,6 +258,7 @@ class WebSocketServer:
                 break
 
     def remove_connection(self, websocket: WebSocketResponse):
+        self.log.debug(f"remove_connection {self.remote_address_map}, {self.connections}")
         service_name = None
         if websocket in self.remote_address_map:
             service_name = self.remote_address_map[websocket]
