@@ -58,7 +58,7 @@ class NFTCoinInfo(Streamable):
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     my_did: bytes32
-    did_wallet_id: uint64
+    did_wallet_id: uint32
     my_nft_coins: List[NFTCoinInfo]
     known_transfer_programs: List[Tuple[bytes32, Program]]
 
@@ -79,7 +79,7 @@ class NFTWallet:
         cls: Type[_T_NFTWallet],
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        did_wallet_id: int,
+        did_wallet_id: uint32,
         name: str = "",
     ) -> _T_NFTWallet:
         """
@@ -88,7 +88,7 @@ class NFTWallet:
         did_wallet = wallet_state_manager.wallets[did_wallet_id]
         my_did = did_wallet.did_info.origin_coin.name()
 
-        nft_wallet_info = NFTWalletInfo(my_did, uint64(did_wallet_id), [], [])
+        nft_wallet_info = NFTWalletInfo(my_did, did_wallet_id, [], [])
 
         info_as_string = json.dumps(nft_wallet_info.to_json_dict())
         wallet_info = await wallet_state_manager.user_store.create_wallet(
