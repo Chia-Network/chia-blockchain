@@ -42,7 +42,7 @@ export default class ErrorBoundary extends Component {
     };
   }
 
-  async componentDidUpdate(prevProps, prevState) {
+  async componentDidUpdate(_prevProps, prevState) {
     if (this.state.error && prevState.error !== this.state.error) {
       this.setState({
         stacktrace: formatStackTrace(await StackTrace.fromError(this.state.error)),
