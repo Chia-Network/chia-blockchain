@@ -5,9 +5,8 @@ import sys
 import tempfile
 
 excepted_packages = {
-    # "chia_blockchain",
-    "keyrings.cryptfile",
-    "dnslib",
+    "keyrings.cryptfile",  # pure python
+    "dnslib",  # pure python
 }
 
 
