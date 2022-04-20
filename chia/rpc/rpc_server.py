@@ -54,7 +54,7 @@ class RpcServer:
             await self.client_session.close()
 
     async def _state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
@@ -73,7 +73,7 @@ class RpcServer:
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
-            if self.websocket is None:
+            if self.websocket is None or self.websocket.closed:
                 return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
@@ -82,7 +82,7 @@ class RpcServer:
                 self.log.warning(f"Sending data failed. Exception {tb}.")
 
     def state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(*args))
 

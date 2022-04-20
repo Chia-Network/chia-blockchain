@@ -92,7 +92,7 @@ jobs:
     - name: Test core-full_node-full_sync code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/full_node/full_sync/test_*.py --durations=10  -n 4 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/core/full_node/full_sync/test_*.py --durations=10  -n 4 -m "not benchmark" -p no:monitor
 
     - name: Process coverage data
       run: |
@@ -104,7 +104,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*

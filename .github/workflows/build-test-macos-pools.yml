@@ -93,7 +93,7 @@ jobs:
     - name: Test pools code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/pools/test_*.py --durations=10  -n 2 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/pools/test_*.py --durations=10  -n 2 -m "not benchmark"
 
     - name: Process coverage data
       run: |
@@ -105,7 +105,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*

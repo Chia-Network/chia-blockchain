@@ -78,7 +78,7 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test TEST_DIR --durations=10 PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest TEST_DIR --durations=10 PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR
 
     - name: Process coverage data
       run: |
@@ -90,7 +90,7 @@ INSTALL_TIMELORD
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*
