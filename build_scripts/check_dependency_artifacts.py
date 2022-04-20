@@ -24,12 +24,12 @@ def main() -> int:
         directory_path = pathlib.Path(directory_string)
 
         extras = ["upnp"]
-        package = "."
+        package_path = pathlib.Path(__file__).parent.parent
 
         if len(extras) > 0:
-            package_and_extras = f"{package}[{','.join(extras)}]"
+            package_and_extras = f"{package_path}[{','.join(extras)}]"
         else:
-            package_and_extras = package
+            package_and_extras = package_path
 
         subprocess.run(
             [
