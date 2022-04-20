@@ -60,6 +60,7 @@ singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
+UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL: int = 120
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 """
@@ -468,6 +469,8 @@ class Farmer:
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+                    else:
+                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
