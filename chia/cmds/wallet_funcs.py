@@ -22,9 +22,24 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
+
+
+transaction_type_descriptions = {
+    TransactionType.INCOMING_TX: "received",
+    TransactionType.OUTGOING_TX: "sent",
+    TransactionType.COINBASE_REWARD: "rewarded",
+    TransactionType.FEE_REWARD: "rewarded",
+    TransactionType.INCOMING_TRADE: "received in trade",
+    TransactionType.OUTGOING_TRADE: "sent in trade",
+}
+
+
+def transaction_description_from_type(tx: TransactionRecord) -> str:
+    return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -35,7 +50,8 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        description = transaction_description_from_type(tx)
+        print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
