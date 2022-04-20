@@ -14,6 +14,7 @@ from blspy import G1Element, PrivateKey
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol

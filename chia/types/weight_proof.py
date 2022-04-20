@@ -105,8 +105,8 @@ class WeightProof(Streamable):
     recent_chain_data: List[HeaderBlock]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubSlotDataV2(Streamable):
     proof_of_space: Optional[ProofOfSpace]  # if challenge block
     # VDF to signage point
@@ -138,8 +138,8 @@ class SubSlotDataV2(Streamable):
         return False
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubEpochChallengeSegmentV2(Streamable):
     sub_epoch_n: uint32
     sub_slot_data: List[SubSlotDataV2]
@@ -150,15 +150,15 @@ class SubEpochChallengeSegmentV2(Streamable):
     prev_icc_ip_iters: Optional[uint64]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 # this is used only for serialization to database
 class SubEpochSegmentsV2(Streamable):
     challenge_segments: List[SubEpochChallengeSegmentV2]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class WeightProofV2(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegmentV2]  # sampled sub epoch

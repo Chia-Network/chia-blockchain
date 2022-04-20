@@ -890,7 +890,7 @@ class FullNode:
             self.log.debug(f"capabilities {capabilities} ")
             weight_proof_v2 = False
             ses_response = None
-            seed = None
+            salt = None
             if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
                 weight_proof_v2 = True
                 self.log.info("using new weight proof format")
@@ -927,13 +927,9 @@ class FullNode:
 
             try:
                 if weight_proof_v2:
-                    validated, fork_point, summaries = await self.weight_proof_handler_v2.validate_weight_proof(
-                        response.wp, seed
+                    validated, fork_point, summaries, _ = await self.weight_proof_handler_v2.validate_weight_proof(
+                        response.wp, salt
                     )
-
-                    # todo move into handler
-                    if summaries[-2].get_hash() != ses_response.sub_epoch_summary.get_hash():
-                        raise RuntimeError(f"Weight proof sub epoch summary did not match")
                 else:
                     validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(
                         response.wp

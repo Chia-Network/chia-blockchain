@@ -1,12 +1,13 @@
 import asyncio
 import json
 import logging
+import os
 import random
 import time
 import traceback
 from asyncio import CancelledError
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, PrivateKey
 from packaging.version import Version
@@ -21,8 +22,17 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
+from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
+
+from chia.protocols.shared_protocol import Capability
 from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chia.protocols.full_node_protocol import (
+    RequestProofOfWeight,
+    RespondProofOfWeight,
+    RequestSubEpochSummary,
+    RequestProofOfWeightV2,
+    RespondSubEpochSummary,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
@@ -45,12 +55,13 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import SubEpochData, WeightProof
+from chia.types.weight_proof import SubEpochData, WeightProof, WeightProofV2
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
-from chia.util.ints import uint32, uint64
+from chia.util.hash import std_hash
+from chia.util.ints import uint32, uint64, uint16
 from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
 from chia.util.profiler import profile_task
@@ -97,6 +108,7 @@ class WalletNode:
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
+    salt: bytes32
 
     def __init__(
         self,
@@ -141,6 +153,7 @@ class WalletNode:
         self.validation_semaphore = None
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
+        self.salt = bytes32.from_bytes(os.urandom(32))
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -954,7 +967,7 @@ class WalletNode:
                         )
                         fork_point = min(fork_point, wp_fork_point)
 
-                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, self.salt, block_records)
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
@@ -975,7 +988,9 @@ class WalletNode:
                         or weight_proof.recent_chain_data[-1].weight
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
-                        await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        await self.wallet_state_manager.blockchain.new_weight_proof(
+                            weight_proof, self.salt, block_records
+                        )
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
@@ -1086,13 +1101,33 @@ class WalletNode:
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
         assert self.wallet_state_manager is not None
         assert self.wallet_state_manager.weight_proof_handler is not None
+        capabilities = peer.capabilities
+        self.log.debug(f"capabilities {capabilities} ")
+        weight_proof_v2 = False
+        ses_response: Optional[RespondSubEpochSummary] = None
+        seed = None
+        if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
+            weight_proof_v2 = True
+            self.log.info("using new weight proof format")
 
-        weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-            weight_request, timeout=wp_timeout
-        )
+        if weight_proof_v2:
+            request = RequestSubEpochSummary(peak.weight)
+            ses_response = await peer.request_sub_epoch_summary(request, timeout=10)
+            if ses_response is None:
+                self.log.error(f"did not receive ses response")
+                return False, None, [], []
+            self.log.debug(f"salt for wp is {self.salt}")
+            ses_hash = ses_response.sub_epoch_summary.get_hash()
+            seed = std_hash(self.salt + bytes(ses_hash))
+            self.log.info(f"wp salt is {self.salt}, ses hash is {ses_hash}, salted seed is {seed}")
+            wp_request = RequestProofOfWeightV2(peak.weight, peak.header_hash, seed)
+            weight_proof_response = await peer.request_proof_of_weight_v2(wp_request, timeout=wp_timeout)
+        else:
+            weight_proof_response = await peer.request_proof_of_weight(
+                RequestProofOfWeight(peak.height, peak.header_hash), timeout=wp_timeout
+            )
 
         if weight_proof_response is None:
             return False, None, [], []
@@ -1100,23 +1135,28 @@ class WalletNode:
 
         weight_proof = weight_proof_response.wp
 
-        if weight_proof.recent_chain_data[-1].reward_chain_block.height != peak.height:
-            return False, None, [], []
         if weight_proof.recent_chain_data[-1].reward_chain_block.weight != peak.weight:
             return False, None, [], []
 
         if weight_proof.get_hash() in self.valid_wp_cache:
-            valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
+            valid, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
-            (
-                valid,
-                fork_point,
-                summaries,
-                block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if weight_proof_v2:
+                assert ses_response
+                (
+                    valid,
+                    summaries,
+                    block_records,
+                ) = await validate_weight_proof_no_fork_point(self.constants, weight_proof, self.salt)
+            else:
+                (
+                    valid,
+                    summaries,
+                    block_records,
+                ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
             if valid:
-                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
+                self.valid_wp_cache[weight_proof.get_hash()] = valid, summaries, block_records
 
         end_validation = time.time()
         self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
@@ -1291,7 +1331,9 @@ class WalletNode:
                 if stored_record.header_hash == block.header_hash:
                     return True
 
-        weight_proof: Optional[WeightProof] = self.wallet_state_manager.blockchain.synced_weight_proof
+        weight_proof: Optional[
+            Union[WeightProof, WeightProofV2]
+        ] = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
             return False
 

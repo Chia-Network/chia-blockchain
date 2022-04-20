@@ -63,28 +63,28 @@ class RespondProofOfWeight(Streamable):
     tip: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestSubEpochSummary(Streamable):
     tip: uint32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondSubEpochSummary(Streamable):
     sub_epoch_summary: SubEpochSummary
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestProofOfWeightV2(Streamable):
     total_number_of_blocks: uint32
     tip: bytes32
     seed: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondProofOfWeightV2(Streamable):
     wp: WeightProofV2
 

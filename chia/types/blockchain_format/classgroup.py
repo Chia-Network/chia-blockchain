@@ -38,8 +38,8 @@ class ClassgroupElement(Streamable):
         return 100
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class CompressedClassgroupElement(Streamable):
     """
     Represents a classgroup element (a,b,c) where a, b, and c are 512 bit signed integers. However this is using
