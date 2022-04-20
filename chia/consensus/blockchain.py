@@ -752,9 +752,8 @@ class Blockchain(BlockchainInterface):
     ) -> Dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
-            if self.contains_height(uint32(height)):
-                header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
-                assert header_hash is not None
+            header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
+            if header_hash is not None:
                 hashes.append(header_hash)
 
         blocks: List[FullBlock] = []

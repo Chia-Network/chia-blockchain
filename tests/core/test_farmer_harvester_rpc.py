@@ -112,7 +112,6 @@ async def test_farmer_get_harvesters(harvester_farmer_environment):
         harvester_rpc_api,
         harvester_rpc_client,
     ) = harvester_farmer_environment
-    farmer_api = farmer_service._api
     harvester = harvester_service._node
 
     num_plots = 0
@@ -124,11 +123,6 @@ async def test_farmer_get_harvesters(harvester_farmer_environment):
         return num_plots > 0
 
     await time_out_assert(10, non_zero_plots)
-
-    # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
-    update_interval_before = farmer_api.farmer.update_harvester_cache_interval
-    farmer_api.farmer.update_harvester_cache_interval = 1
-    farmer_api.farmer.harvester_cache = {}
 
     async def test_get_harvesters():
         harvester.plot_manager.trigger_refresh()
@@ -143,10 +137,6 @@ async def test_farmer_get_harvesters(harvester_farmer_environment):
         return True
 
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
-
-    # Reset cache and reset update interval to avoid hitting the rate limit
-    farmer_api.farmer.update_harvester_cache_interval = update_interval_before
-    farmer_api.farmer.harvester_cache = {}
 
 
 @pytest.mark.asyncio

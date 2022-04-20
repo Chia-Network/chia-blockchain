@@ -10,7 +10,7 @@ oses = ["ubuntu", "macos"]
 
 # Defaults are conservative.
 parallel: Union[bool, int, Literal["auto"]] = False
-checkout_blocks_and_plots = True
+checkout_blocks_and_plots = False
 install_timelord = False
 check_resource_usage = False
 job_timeout = 30

@@ -327,8 +327,12 @@ class WalletRpcClient(RpcClient):
         reply = parse_result_transactions(reply)
         return reply
 
-    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> Dict:
-        reply = await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee})
+    async def pw_absorb_rewards(
+        self, wallet_id: str, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
+    ) -> Dict:
+        reply = await self.fetch(
+            "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
+        )
         reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
         reply = parse_result_transactions(reply)
         return reply
@@ -362,6 +366,10 @@ class WalletRpcClient(RpcClient):
             "wallet_id": wallet_id,
         }
         return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
+
+    async def get_stray_cats(self) -> Dict:
+        response = await self.fetch("get_stray_cats", {})
+        return response["stray_cats"]
 
     async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
         request: Dict[str, Any] = {
