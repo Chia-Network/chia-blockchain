@@ -202,8 +202,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        ips = request["ips"]
-        ports = request["ports"]
+        ips = request["ip"]
+        ports = request["port"]
         await self.service.subscribe(store_id=store_id_bytes, ip=ips, port=ports)
         return {}
 
