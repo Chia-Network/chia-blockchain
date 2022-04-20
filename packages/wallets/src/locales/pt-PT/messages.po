@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:14\n"
+"PO-Revision-Date: 2022-04-20 22:12\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -83,7 +83,7 @@ msgstr ""
 #: src/components/offers/OfferViewer.tsx:289
 #: src/components/offers/OfferViewer.tsx:290
 msgid "Accept Offer"
-msgstr ""
+msgstr "Aceitar Oferta"
 
 #: src/components/trading/TradingOverview.jsx:227
 #~ msgid "Accepted at time:"
@@ -91,7 +91,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:194
 msgid "Accepted on Date"
-msgstr ""
+msgstr "Aceite na Data"
 
 #: src/components/plot/PlotsFailed.tsx:18
 #: src/components/plot/PlotsNotFound.tsx:18
@@ -135,7 +135,7 @@ msgstr ""
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr ""
+msgstr "Adicionar Token"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
@@ -250,11 +250,11 @@ msgstr "Tem certeza que deseja excluir as transações não confirmadas?"
 #: src/components/cat/WalletCATTAILDialog.tsx:43
 #: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
-msgstr ""
+msgstr "ID do Activo"
 
 #: src/components/offers/OfferAssetSelector.tsx:117
 msgid "Asset Type"
-msgstr ""
+msgstr "Tipo do Ativo"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
@@ -397,7 +397,7 @@ msgstr "Cancelar"
 #: src/components/offers/OfferManager.tsx:166
 #: src/components/offers/OfferManager.tsx:423
 msgid "Cancel Offer"
-msgstr ""
+msgstr "Cancelar a oferta"
 
 #: src/components/trading/TradingOverview.jsx:388
 #~ msgid "Cancel and Spend"
@@ -498,7 +498,7 @@ msgstr "Nome da moeda"
 
 #: src/components/offers/OfferViewer.tsx:522
 msgid "Coins"
-msgstr ""
+msgstr "Moedas"
 
 #: src/components/trading/TradingOverview.jsx:365
 #~ msgid "Coins:"
@@ -555,12 +555,12 @@ msgstr "Confirmação"
 
 #: src/components/WalletHistory.tsx:111
 msgid "Confirmed"
-msgstr ""
+msgstr "Confirmado"
 
 #: src/components/WalletHistory.tsx:290
 #: src/components/offers/OfferViewer.tsx:188
 msgid "Confirmed at Height"
-msgstr ""
+msgstr "Confirmado na Altura"
 
 #: src/components/trading/TradingOverview.jsx:200
 #~ msgid "Confirmed at block:"
@@ -713,7 +713,7 @@ msgstr "Criar transação"
 #: src/components/offers/OfferEditor.tsx:232
 #: src/components/offers/OfferManager.tsx:517
 msgid "Create an Offer"
-msgstr ""
+msgstr "Criar uma oferta"
 
 #: src/components/offers/OfferManager.tsx:512
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
@@ -1646,7 +1646,7 @@ msgstr "A minha chave pública"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
-msgstr ""
+msgstr "Nome"
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 #~ msgid "Network Name"
@@ -1787,7 +1787,7 @@ msgstr ""
 #: src/components/cat/WalletCATTAILDialog.tsx:82
 #: src/components/offers/OfferDataDialog.tsx:75
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -2703,7 +2703,7 @@ msgstr "Envie sua pubkey para o administrador da Carteira de Taxa Limitada:"
 #: src/components/offers/OfferShareDialog.tsx:798
 #: src/components/offers/OfferShareDialog.tsx:911
 msgid "Share"
-msgstr ""
+msgstr "Partilhar"
 
 #: src/components/offers/OfferShareDialog.tsx:973
 msgid "Share Offer"
@@ -2820,7 +2820,7 @@ msgstr "Limite de gastos (chia por intervalo): {0}"
 
 #: src/constants/WalletName.ts:5
 msgid "Standard Wallet"
-msgstr ""
+msgstr "Carteira Padrão"
 
 #: src/components/app/AppState.tsx:161
 #~ msgid "Starting services"
@@ -2881,12 +2881,12 @@ msgstr "Enviar"
 #: src/components/WalletSendTransactionResultDialog.tsx:15
 #: src/components/offers/OfferViewer.tsx:343
 msgid "Success"
-msgstr ""
+msgstr "Sucesso"
 
 #: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:450
 msgid "Summary"
-msgstr ""
+msgstr "Resumo"
 
 #: src/components/WalletStatus.tsx:39
 msgid "Synced"
@@ -3473,7 +3473,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:298
 msgid "Warning"
-msgstr ""
+msgstr "Aviso"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3698,7 +3698,7 @@ msgstr "altura:"
 
 #: src/components/WalletStatusCard.tsx:27
 msgid "status:"
-msgstr ""
+msgstr "estado:"
 
 #: src/components/WalletStatusCard.tsx:29
 msgid "synced"
@@ -3718,7 +3718,7 @@ msgstr "sincronizando"
 
 #: src/components/offers/OfferShareDialog.tsx:853
 msgid "{0}"
-msgstr ""
+msgstr "{0}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
