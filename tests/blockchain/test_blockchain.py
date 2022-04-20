@@ -3280,7 +3280,13 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
     )
 
     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
-    chain_a = bt.get_consecutive_blocks(5, chain_a, previous_generator=[uint32(10)], transaction_data=spend_bundle)
+    chain_a = bt.get_consecutive_blocks(
+        5,
+        chain_a,
+        previous_generator=[uint32(10)],
+        transaction_data=spend_bundle,
+        guarantee_transaction_block=True,
+    )
 
     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
     chain_a = bt.get_consecutive_blocks(
