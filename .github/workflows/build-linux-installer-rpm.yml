@@ -109,7 +109,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Build .rpm package
       env:

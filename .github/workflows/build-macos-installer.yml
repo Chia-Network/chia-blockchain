@@ -128,7 +128,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
