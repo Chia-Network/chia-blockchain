@@ -31,7 +31,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         submodules: recursive
@@ -65,17 +65,17 @@ jobs:
         SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
 
       # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest madmax plotter
       run: |
@@ -86,17 +86,17 @@ jobs:
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
       # Get the most recent release from bladebit
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'bladebit',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest bladebit plotter
       run: |
@@ -108,23 +108,23 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         sh install.sh
 
     - name: Build .rpm package
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        . ./activate
         ldd --version
-        cd ./chia-blockchain-gui
-        git status
-        cd ../build_scripts
+        git -C ./chia-blockchain-gui status
+        . ./activate
+        cd ./build_scripts
         sh build_linux_rpm.sh amd64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Linux-Installers
+        name: chia-installers-linux-rpm-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Configure AWS Credentials

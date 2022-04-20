@@ -33,6 +33,8 @@ from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
+max_message_size = 50 * 1024 * 1024  # 50MB
+
 
 def ssl_context_for_server(
     ca_cert: Path,
@@ -42,7 +44,7 @@ def ssl_context_for_server(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
@@ -70,7 +72,7 @@ def ssl_context_for_server(
 
 def ssl_context_for_root(
     ca_cert_file: str, *, check_permissions: bool = True, log: Optional[logging.Logger] = None
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([Path(ca_cert_file)], [], log)
 
@@ -86,7 +88,7 @@ def ssl_context_for_client(
     *,
     check_permissions: bool = True,
     log: Optional[logging.Logger] = None,
-) -> Optional[ssl.SSLContext]:
+) -> ssl.SSLContext:
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
@@ -278,7 +280,7 @@ class ChiaServer:
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             self.log.warning(f"Peer {request.remote} is banned, refusing connection")
             return None
-        ws = web.WebSocketResponse(max_msg_size=50 * 1024 * 1024)
+        ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
         close_event = asyncio.Event()
         cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
@@ -423,7 +425,7 @@ class ChiaServer:
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=max_message_size
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
@@ -633,16 +635,12 @@ class ChiaServer:
                     if task_id in self.execute_tasks:
                         self.execute_tasks.remove(task_id)
 
-            task_id = token_bytes()
+            task_id: bytes32 = bytes32(token_bytes(32))
             api_task = asyncio.create_task(api_call(payload_inc, connection_inc, task_id))
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
-            self.api_tasks[task_id] = api_task  # type: ignore[index]
+            self.api_tasks[task_id] = api_task
             if connection_inc.peer_node_id not in self.tasks_from_peer:
                 self.tasks_from_peer[connection_inc.peer_node_id] = set()
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "add" of "set" has incompatible type "bytes"; expected "bytes32"  [arg-type]
-            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)  # type: ignore[arg-type]
+            self.tasks_from_peer[connection_inc.peer_node_id].add(task_id)
 
     async def send_to_others(
         self,

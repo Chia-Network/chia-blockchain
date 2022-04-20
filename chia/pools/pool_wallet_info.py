@@ -38,8 +38,8 @@ LEAVING_POOL = PoolSingletonState.LEAVING_POOL
 FARMING_TO_POOL = PoolSingletonState.FARMING_TO_POOL
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolState(Streamable):
     """
     `PoolState` is a type that is serialized to the blockchain to track the state of the user's pool singleton
@@ -97,8 +97,8 @@ def create_pool_state(
     return ps
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolWalletInfo(Streamable):
     """
     Internal Pool Wallet state, not destined for the blockchain. This can be completely derived with
