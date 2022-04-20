@@ -14,8 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
-from websockets import ConnectionClosedOK, WebSocketException, WebSocketServerProtocol, serve
-
+from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
@@ -39,12 +38,12 @@ from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
-from chia import __version__
 
 io_pool_exc = ThreadPoolExecutor()
 
 try:
-    from aiohttp import ClientSession, web
+    from aiohttp import ClientSession, WSMsgType, web
+    from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
@@ -100,9 +99,8 @@ if getattr(sys, "frozen", False):
         "chia_timelord": "start_timelord",
         "chia_timelord_launcher": "timelord_launcher",
         "chia_full_node_simulator": "start_simulator",
-        "chia_seeder": "chia_seeder",
-        "chia_seeder_crawler": "chia_seeder_crawler",
-        "chia_seeder_dns": "chia_seeder_dns",
+        "chia_seeder": "start_seeder",
+        "chia_crawler": "start_crawler",
     }
 
     def executable_for_service(service_name: str) -> str:
@@ -135,40 +133,46 @@ class WebSocketServer:
         ca_key_path: Path,
         crt_path: Path,
         key_path: Path,
+        shutdown_event: asyncio.Event,
         run_check_keys_on_unlock: bool = False,
     ):
         self.root_path = root_path
         self.log = log
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, List[WebSocketServerProtocol]] = dict()  # service_name : [WebSocket]
-        self.remote_address_map: Dict[WebSocketServerProtocol, str] = dict()  # socket: service_name
-        self.ping_job: Optional[asyncio.Task] = None
+        self.connections: Dict[str, List[WebSocketResponse]] = dict()  # service_name : [WebSocket]
+        self.remote_address_map: Dict[WebSocketResponse, str] = dict()  # socket: service_name
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_server = None
+        self.websocket_runner: Optional[web.AppRunner] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
-        self.shut_down = False
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
+        self.shutdown_event = shutdown_event
 
     async def start(self):
         self.log.info("Starting Daemon Server")
 
-        if ssl.OPENSSL_VERSION_NUMBER < 0x10101000:
+        # Note: the minimum_version has been already set to TLSv1_2
+        # in ssl_context_for_server()
+        # Daemon is internal connections, so override to TLSv1_3 only
+        if ssl.HAS_TLSv1_3:
+            try:
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+            except ValueError:
+                # in case the attempt above confused the config, set it again (likely not needed but doesn't hurt)
+                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+
+        if self.ssl_context.minimum_version is not ssl.TLSVersion.TLSv1_3:
             self.log.warning(
                 (
-                    "Deprecation Warning: Your version of openssl (%s) does not support TLS1.3. "
+                    "Deprecation Warning: Your version of SSL (%s) does not support TLS1.3. "
                     "A future version of Chia will require TLS1.3."
                 ),
                 ssl.OPENSSL_VERSION,
             )
-        else:
-            if self.ssl_context is not None:
-                # Daemon is internal connections, so override to TLS1.3 only
-                self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
 
         def master_close_cb():
             asyncio.create_task(self.stop())
@@ -179,16 +183,19 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        self.websocket_server = await serve(
-            self.safe_handle,
-            self.self_hostname,
-            self.daemon_port,
-            max_size=self.daemon_max_message_size,
-            ping_interval=500,
-            ping_timeout=300,
-            ssl=self.ssl_context,
+        app = web.Application(client_max_size=self.daemon_max_message_size)
+        app.add_routes([web.get("/", self.incoming_connection)])
+        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
+        await self.websocket_runner.setup()
+
+        site = web.TCPSite(
+            self.websocket_runner,
+            host=self.self_hostname,
+            port=self.daemon_port,
+            shutdown_timeout=3,
+            ssl_context=self.ssl_context,
         )
-        self.log.info("Waiting Daemon WebSocketServer closure")
+        await site.start()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -198,22 +205,28 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
-        self.shut_down = True
-        self.cancel_task_safe(self.ping_job)
-        await self.exit()
-        if self.websocket_server is not None:
-            self.websocket_server.close()
+        jobs = []
+        for service_name in self.services.keys():
+            jobs.append(kill_service(self.root_path, self.services, service_name))
+        if jobs:
+            await asyncio.wait(jobs)
+        self.services.clear()
+        asyncio.create_task(self.exit())
         return {"success": True}
 
-    async def safe_handle(self, websocket: WebSocketServerProtocol, path: str):
-        service_name = ""
-        try:
-            async for message in websocket:
+    async def incoming_connection(self, request):
+        ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
+        await ws.prepare(request)
+
+        while True:
+            msg = await ws.receive()
+            self.log.debug(f"Received message: {msg}")
+            if msg.type == WSMsgType.TEXT:
                 try:
-                    decoded = json.loads(message)
+                    decoded = json.loads(msg.data)
                     if "data" not in decoded:
                         decoded["data"] = {}
-                    response, sockets_to_use = await self.handle_message(websocket, decoded)
+                    response, sockets_to_use = await self.handle_message(ws, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
@@ -223,28 +236,27 @@ class WebSocketServer:
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
                         try:
-                            await socket.send(response)
+                            await socket.send_str(response)
                         except Exception as e:
                             tb = traceback.format_exc()
                             self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
-        except Exception as e:
-            tb = traceback.format_exc()
-            service_name = "Unknown"
-            if websocket in self.remote_address_map:
-                service_name = self.remote_address_map[websocket]
-            if isinstance(e, ConnectionClosedOK):
-                self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
-            elif isinstance(e, WebSocketException):
-                self.log.info(f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
+                            break
             else:
-                self.log.error(f"Unexpected exception in websocket: {e} {tb}")
-        finally:
-            self.remove_connection(websocket)
-            await websocket.close()
+                service_name = "Unknown"
+                if ws in self.remote_address_map:
+                    service_name = self.remote_address_map[ws]
+                if msg.type == WSMsgType.CLOSE:
+                    self.log.info(f"ConnectionClosed. Closing websocket with {service_name}")
+                elif msg.type == WSMsgType.ERROR:
+                    self.log.info(f"Websocket exception. Closing websocket with {service_name}. {ws.exception()}")
 
-    def remove_connection(self, websocket: WebSocketServerProtocol):
+                self.remove_connection(ws)
+                await ws.close()
+                break
+
+    def remove_connection(self, websocket: WebSocketResponse):
         service_name = None
         if websocket in self.remote_address_map:
             service_name = self.remote_address_map[websocket]
@@ -258,31 +270,8 @@ class WebSocketServer:
                     after_removal.append(connection)
             self.connections[service_name] = after_removal
 
-    async def ping_task(self) -> None:
-        restart = True
-        await asyncio.sleep(30)
-        for remote_address, service_name in self.remote_address_map.items():
-            if service_name in self.connections:
-                sockets = self.connections[service_name]
-                for socket in sockets:
-                    if socket.remote_address[1] == remote_address:
-                        try:
-                            self.log.info(f"About to ping: {service_name}")
-                            await socket.ping()
-                        except asyncio.CancelledError:
-                            self.log.info("Ping task received Cancel")
-                            restart = False
-                            break
-                        except Exception as e:
-                            self.log.info(f"Ping error: {e}")
-                            self.log.warning("Ping failed, connection closed.")
-                            self.remove_connection(socket)
-                            await socket.close()
-        if restart is True:
-            self.ping_job = asyncio.create_task(self.ping_task())
-
     async def handle_message(
-        self, websocket: WebSocketServerProtocol, message: WsRpcMessage
+        self, websocket: WebSocketResponse, message: WsRpcMessage
     ) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
@@ -291,7 +280,6 @@ class WebSocketServer:
         command = message["command"]
         destination = message["destination"]
         if destination != "daemon":
-            destination = message["destination"]
             if destination in self.connections:
                 sockets = self.connections[destination]
                 return dict_to_json_str(message), sockets
@@ -384,6 +372,8 @@ class WebSocketServer:
             "passphrase_hint": passphrase_hint,
             "passphrase_requirements": requirements,
         }
+        # Help diagnose GUI launch issues
+        self.log.debug(f"Keyring status: {response}")
         return response
 
     async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -397,6 +387,18 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
+
+                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
+                try:
+                    if not Keychain.migration_checked_for_current_version():
+                        self.log.info("Will attempt to migrate legacy keys...")
+                        Keychain.migrate_legacy_keys_silently()
+                        self.log.info("Migration of legacy keys complete.")
+                    else:
+                        self.log.debug("Skipping legacy key migration (previously attempted).")
+                except Exception:
+                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
+
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
@@ -613,7 +615,7 @@ class WebSocketServer:
 
         for websocket in websockets:
             try:
-                await websocket.send(response)
+                await websocket.send_str(response)
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
@@ -672,7 +674,7 @@ class WebSocketServer:
 
         for websocket in websockets:
             try:
-                await websocket.send(response)
+                await websocket.send_str(response)
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
@@ -862,20 +864,11 @@ class WebSocketServer:
 
     def _post_process_plotting_job(self, job: Dict[str, Any]):
         id: str = job["id"]
-        final_dir: str = job.get("final_dir", "")
-        exclude_final_dir: bool = job.get("exclude_final_dir", False)
-
+        final_dir: str = job["final_dir"]
+        exclude_final_dir: bool = job["exclude_final_dir"]
         log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
-
-        if exclude_final_dir is False and len(final_dir) > 0:
-            resolved_final_dir: str = str(Path(final_dir).resolve())
-            config = load_config(self.root_path, "config.yaml")
-            plot_directories_list: str = config["harvester"]["plot_directories"]
-
-            if resolved_final_dir not in plot_directories_list:
-                # Adds the directory to the plot directories if it is not present
-                log.info(f"Adding directory {resolved_final_dir} to harvester for farming")
-                add_plot_directory(self.root_path, resolved_final_dir)
+        if not exclude_final_dir:
+            add_plot_directory(self.root_path, final_dir)
 
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
@@ -997,7 +990,8 @@ class WebSocketServer:
 
             if parallel is True or can_start_serial_plotting:
                 log.info(f"Plotting will start in {config['delay']} seconds")
-                loop = asyncio.get_event_loop()
+                # TODO: loop gets passed down a lot, review for potential removal
+                loop = asyncio.get_running_loop()
                 loop.create_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
@@ -1040,7 +1034,8 @@ class WebSocketServer:
             self.plots_queue.remove(config)
 
             if run_next:
-                loop = asyncio.get_event_loop()
+                # TODO: review to see if we can remove this
+                loop = asyncio.get_running_loop()
                 self._run_next_serial_plotting(loop, queue)
 
             return {"success": True}
@@ -1057,6 +1052,7 @@ class WebSocketServer:
         error = None
         success = False
         testing = False
+        already_running = False
         if "testing" in request:
             testing = request["testing"]
 
@@ -1070,9 +1066,17 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = f"Service {service_command} already running"
+                self.log.info(f"Service {service_command} already running")
+                already_running = True
+        elif len(self.connections.get(service_command, [])) > 0:
+            # If the service was started manually (not launched by the daemon), we should
+            # have a connection to it.
+            self.log.info(f"Service {service_command} already registered")
+            already_running = True
 
-        if error is None:
+        if already_running:
+            success = True
+        elif error is None:
             try:
                 exe_command = service_command
                 if testing is True:
@@ -1107,6 +1111,12 @@ class WebSocketServer:
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
+            if not is_running:
+                # Check if we have a connection to the requested service. This might be the
+                # case if the service was started manually (i.e. not started by the daemon).
+                service_connections = self.connections.get(service_name)
+                if service_connections is not None:
+                    is_running = len(service_connections) > 0
             response = {
                 "success": True,
                 "service_name": service_name,
@@ -1115,22 +1125,13 @@ class WebSocketServer:
 
         return response
 
-    async def exit(self) -> Dict[str, Any]:
-        jobs = []
-        for k in self.services.keys():
-            jobs.append(kill_service(self.root_path, self.services, k))
-        if jobs:
-            await asyncio.wait(jobs)
-        self.services.clear()
+    async def exit(self) -> None:
+        if self.websocket_runner is not None:
+            await self.websocket_runner.cleanup()
+        self.shutdown_event.set()
+        log.info("chia daemon exiting")
 
-        # TODO: fix this hack
-        asyncio.get_event_loop().call_later(5, lambda *args: sys.exit(0))
-        log.info("chia daemon exiting in 5 seconds")
-
-        response = {"success": True}
-        return response
-
-    async def register_service(self, websocket: WebSocketServerProtocol, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
         service = request["service"]
         if service not in self.connections:
@@ -1146,8 +1147,6 @@ class WebSocketServer:
             }
         else:
             self.remote_address_map[websocket] = service
-            if self.ping_job is None:
-                self.ping_job = asyncio.create_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response
@@ -1318,7 +1317,6 @@ async def kill_service(
     if process is None:
         return False
     del services[service_name]
-
     result = await kill_process(process, root_path, service_name, "", delay_before_kill)
     return result
 
@@ -1326,68 +1324,6 @@ async def kill_service(
 def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
-
-
-def create_server_for_daemon(root_path: Path):
-    routes = web.RouteTableDef()
-
-    services: Dict = dict()
-
-    @routes.get("/daemon/ping/")
-    async def ping(request: web.Request) -> web.Response:
-        return web.Response(text="pong")
-
-    @routes.get("/daemon/service/start/")
-    async def start_service(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None or not validate_service(service_name):
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-
-        if is_running(services, service_name):
-            r = f"{service_name} already running"
-            return web.Response(text=str(r))
-
-        try:
-            process, pid_path = launch_service(root_path, service_name)
-            services[service_name] = process
-            r = f"{service_name} started"
-        except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")
-            r = f"{service_name} start failed"
-
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/service/stop/")
-    async def stop_service(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None:
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-        r = str(await kill_service(root_path, services, service_name))
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/service/is_running/")
-    async def is_running_handler(request: web.Request) -> web.Response:
-        service_name = request.query.get("service")
-        if service_name is None:
-            r = f"{service_name} unknown service"
-            return web.Response(text=str(r))
-
-        r = str(is_running(services, service_name))
-        return web.Response(text=str(r))
-
-    @routes.get("/daemon/exit/")
-    async def exit(request: web.Request):
-        jobs = []
-        for k in services.keys():
-            jobs.append(kill_service(root_path, services, k))
-        if jobs:
-            await asyncio.wait(jobs)
-        services.clear()
-
-        # we can't await `site.stop()` here because that will cause a deadlock, waiting for this
-        # request to exit
 
 
 def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
@@ -1441,21 +1377,27 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
         print("daemon: already launching")
         return 2
 
+    shutdown_event = asyncio.Event()
+
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
-    create_server_for_daemon(root_path)
     ws_server = WebSocketServer(
-        root_path, ca_crt_path, ca_key_path, crt_path, key_path, run_check_keys_on_unlock=wait_for_unlock
+        root_path,
+        ca_crt_path,
+        ca_key_path,
+        crt_path,
+        key_path,
+        shutdown_event,
+        run_check_keys_on_unlock=wait_for_unlock,
     )
     await ws_server.start()
-    assert ws_server.websocket_server is not None
-    await ws_server.websocket_server.wait_closed()
+    await shutdown_event.wait()
     log.info("Daemon WebSocketServer closed")
     # sys.stdout.close()
     return 0
 
 
 def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
-    result = asyncio.get_event_loop().run_until_complete(async_run_daemon(root_path, wait_for_unlock))
+    result = asyncio.run(async_run_daemon(root_path, wait_for_unlock))
     return result
 
 

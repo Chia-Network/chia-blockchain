@@ -1,10 +1,10 @@
 from pathlib import Path
+
 import aiosqlite
 import pytest
 
 from chia.util.db_wrapper import DBWrapper
 from chia.wallet.util.wallet_types import WalletType
-
 from chia.wallet.wallet_user_store import WalletUserStore
 
 

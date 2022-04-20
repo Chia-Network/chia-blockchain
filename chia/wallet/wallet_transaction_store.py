@@ -71,7 +71,9 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
+        )
 
         await self.db_connection.commit()
         self.tx_record_cache = {}
@@ -235,7 +237,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord):
+    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -257,7 +259,7 @@ class WalletTransactionStore:
             name=record.name,
             memos=record.memos,
         )
-        await self.add_transaction_record(tx, False)
+        await self.add_transaction_record(tx, in_transaction=in_transaction)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -349,12 +351,17 @@ class WalletTransactionStore:
             return []
 
     async def get_transactions_between(
-        self, wallet_id: int, start, end, sort_key=None, reverse=False
+        self, wallet_id: int, start, end, sort_key=None, reverse=False, to_puzzle_hash: Optional[bytes32] = None
     ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
+
+        if to_puzzle_hash is None:
+            puzz_hash_where = ""
+        else:
+            puzz_hash_where = f' and to_puzzle_hash="{to_puzzle_hash.hex()}"'
 
         if sort_key is None:
             sort_key = "CONFIRMED_AT_HEIGHT"
@@ -367,7 +374,9 @@ class WalletTransactionStore:
             query_str = SortKey[sort_key].ascending()
 
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?" f" {query_str}, rowid" f" LIMIT {start}, {limit}",
+            f"SELECT * from transaction_record where wallet_id=?{puzz_hash_where}"
+            f" {query_str}, rowid"
+            f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()

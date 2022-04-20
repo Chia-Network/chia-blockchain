@@ -1,34 +1,20 @@
 from typing import List
 
-from blspy import G2Element
-
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.coin_spend import CoinSpend
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.spend_bundle import SpendBundle
-from chia.full_node.bundle_tools import simple_solution_generator
 
 
-def compute_coin_hints(cs: CoinSpend) -> List[bytes]:
+def compute_coin_hints(cs: CoinSpend) -> List[bytes32]:
+    _, result_program = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
 
-    bundle = SpendBundle([cs], G2Element())
-    generator = simple_solution_generator(bundle)
-
-    npc_result = get_name_puzzle_conditions(
-        generator,
-        INFINITE_COST,
-        cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE,
-        mempool_mode=False,
-        height=DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT,
-    )
-    h_list = []
-    for npc in npc_result.npc_list:
-        for opcode, conditions in npc.conditions:
-            if opcode == ConditionOpcode.CREATE_COIN:
-                for condition in conditions:
-                    if len(condition.vars) > 2 and condition.vars[2] != b"":
-                        h_list.append(condition.vars[2])
-
+    h_list: List[bytes32] = []
+    for condition_data in result_program.as_python():
+        condition = condition_data[0]
+        args = condition_data[1:]
+        if condition == ConditionOpcode.CREATE_COIN and len(args) > 2:
+            if isinstance(args[2], list):
+                if isinstance(args[2][0], bytes):
+                    h_list.append(bytes32(args[2][0]))
     return h_list

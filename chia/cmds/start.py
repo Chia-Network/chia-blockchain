@@ -11,4 +11,4 @@ def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     import asyncio
     from .start_funcs import async_start
 
-    asyncio.get_event_loop().run_until_complete(async_start(ctx.obj["root_path"], group, restart))
+    asyncio.run(async_start(ctx.obj["root_path"], group, restart))

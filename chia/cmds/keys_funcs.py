@@ -67,7 +67,7 @@ def add_private_key_seed(mnemonic: str):
 
 
 @unlocks_keyring(use_passphrase_cache=True)
-def show_all_keys(show_mnemonic: bool):
+def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
     """
     Prints all keys and mnemonics (if available).
     """
@@ -92,10 +92,13 @@ def show_all_keys(show_mnemonic: bool):
             master_sk_to_farmer_sk(sk).get_g1(),
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
-        print(
-            "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
+        first_wallet_sk: PrivateKey = (
+            master_sk_to_wallet_sk(sk, uint32(0))
+            if non_observer_derivation
+            else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
+        wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
+        print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
         assert seed is not None
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())
@@ -178,6 +181,50 @@ def verify(message: str, public_key: str, signature: str):
     public_key = G1Element.from_bytes(bytes.fromhex(public_key))
     signature = G2Element.from_bytes(bytes.fromhex(signature))
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
+
+
+def migrate_keys():
+    from chia.util.keyring_wrapper import KeyringWrapper
+    from chia.util.misc import prompt_yes_no
+
+    # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
+    if Keychain.needs_migration():
+        KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
+    else:
+        keys_to_migrate, legacy_keyring = Keychain.get_keys_needing_migration()
+        if len(keys_to_migrate) > 0 and legacy_keyring is not None:
+            print(f"Found {len(keys_to_migrate)} key(s) that need migration:")
+            for key, _ in keys_to_migrate:
+                print(f"Fingerprint: {key.get_g1().get_fingerprint()}")
+
+            print()
+            response = prompt_yes_no("Migrate these keys? (y/n) ")
+            if response:
+                keychain = Keychain()
+                for sk, seed_bytes in keys_to_migrate:
+                    mnemonic = bytes_to_mnemonic(seed_bytes)
+                    keychain.add_private_key(mnemonic, "")
+                    fingerprint = sk.get_g1().get_fingerprint()
+                    print(f"Added private key with public key fingerprint {fingerprint}")
+
+                print(f"Migrated {len(keys_to_migrate)} key(s)")
+
+                print("Verifying migration results...", end="")
+                if Keychain.verify_keys_present(keys_to_migrate):
+                    print(" Verified")
+                    print()
+                    response = prompt_yes_no("Remove key(s) from old keyring? (y/n) ")
+                    if response:
+                        legacy_keyring.delete_keys(keys_to_migrate)
+                        print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
+                    print("Migration complete")
+                else:
+                    print(" Failed")
+                    sys.exit(1)
+        else:
+            print("No keys need migration")
+
+        Keychain.mark_migration_checked_for_current_version()
 
 
 def _clear_line_part(n: int):

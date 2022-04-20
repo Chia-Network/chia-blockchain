@@ -54,7 +54,9 @@ class WalletCoinStore:
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on coin_record(wallet_type)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS coin_record_wallet_type on coin_record(wallet_type)"
+        )
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
 

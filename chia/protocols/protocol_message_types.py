@@ -86,6 +86,14 @@ class ProtocolMessageTypes(Enum):
     new_signage_point_harvester = 66
     request_plots = 67
     respond_plots = 68
+    plot_sync_start = 78
+    plot_sync_loaded = 79
+    plot_sync_removed = 80
+    plot_sync_invalid = 81
+    plot_sync_keys_missing = 82
+    plot_sync_duplicates = 83
+    plot_sync_done = 84
+    plot_sync_response = 85
 
     # More wallet protocol
     coin_state_update = 69

@@ -9,8 +9,8 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class DIDInfo(Streamable):
     origin_coin: Optional[Coin]  # Coin ID of this coin is our DID
     backup_ids: List[bytes]
@@ -21,3 +21,4 @@ class DIDInfo(Streamable):
     temp_puzhash: Optional[bytes32]
     temp_pubkey: Optional[bytes]
     sent_recovery_transaction: bool
+    metadata: str  # JSON of the user defined metadata

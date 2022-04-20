@@ -21,11 +21,11 @@ class CompressorArg:
     end: int
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
     generator_refs: List[SerializedProgram]
 
-    # the heights are only used when creating blocks, never when validating
+    # the heights are only used when creating new blocks, never when validating
     block_height_list: List[uint32]

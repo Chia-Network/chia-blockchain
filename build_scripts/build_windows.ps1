@@ -10,7 +10,8 @@ git status
 Write-Output "   ---"
 Write-Output "curl miniupnpc"
 Write-Output "   ---"
-Invoke-WebRequest -Uri "https://pypi.chia.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
+# download.chia.net is the CDN url behind all the files that are actually on pypi.chia.net/simple now
+Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
 Write-Output "Using win_amd64 python 3.9 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
 Write-Output "Actual build from https://github.com/miniupnp/miniupnp/commit/7783ac1545f70e3341da5866069bde88244dd848"
 If ($LastExitCode -gt 0){
@@ -30,13 +31,10 @@ python -m venv venv
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32
-pip install pyinstaller==4.5
-pip install setuptools_scm
+pip install pyinstaller==4.9
 
 Write-Output "   ---"
-Write-Output "Get CHIA_INSTALLER_VERSION"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
-$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
