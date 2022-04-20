@@ -97,8 +97,6 @@ class CATWallet:
 
         self.wallet_info = new_wallet_info
 
-        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-
         try:
             chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[
                 cat_tail_info["identifier"]
