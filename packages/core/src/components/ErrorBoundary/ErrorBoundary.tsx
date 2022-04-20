@@ -59,11 +59,11 @@ export default class ErrorBoundary extends Component {
     if (this.state.hasError) {
       const { stacktrace, error } = this.state;
       const issueLink = `https://github.com/Chia-Network/chia-blockchain/issues/new?${qs.stringify({
-        labels: 'bug,GUI',
+        labels: 'bug',
         template: 'bug_report.yaml',
         title: `[BUG] ${error.message}`,
         ui: 'GUI',
-        logs: `${error.message}\n\n${stacktrace}`,
+        logs: `${error.message}\n\nURL\n${window.location.hash}\n\nStacktrace\n${stacktrace}`,
       })}`
       // You can render any custom fallback UI
       return (
