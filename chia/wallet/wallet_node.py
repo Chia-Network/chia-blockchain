@@ -358,7 +358,7 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug(f"Pulled from queue: {item}")
+                self.log.debug("Pulled from queue: %s", item)
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
