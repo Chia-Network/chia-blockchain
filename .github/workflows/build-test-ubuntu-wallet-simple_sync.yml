@@ -104,7 +104,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*
