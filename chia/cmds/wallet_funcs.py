@@ -131,9 +131,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     offset = args["offset"]
     limit = args["limit"]
+    sort_key = args["sort_key"]
+    reverse = args["reverse"]
+
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, start=offset, end=(offset + limit), reverse=True
+        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse
     )
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
