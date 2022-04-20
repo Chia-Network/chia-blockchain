@@ -385,10 +385,9 @@ class FullNodeRpcApi:
             if peak_height < uint32(a):
                 self.service.log.warning("requested block is higher than known peak ")
                 break
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has type
-            #       "bytes32")  [assignment]
-            header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))  # type: ignore[assignment]
+            header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(uint32(a))
+            if header_hash is None:
+                raise ValueError(f"Height not in blockchain: {a}")
             record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB

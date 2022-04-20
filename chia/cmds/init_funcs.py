@@ -502,6 +502,7 @@ def chia_init(
             db_path_replaced = new_db_path.replace("CHALLENGE", config["selected_network"])
             db_path = path_from_root(root_path, db_path_replaced)
 
+            mkdir(db_path.parent)
             with sqlite3.connect(db_path) as connection:
                 set_db_version(connection, 1)
 

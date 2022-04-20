@@ -733,17 +733,17 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[114]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, 2 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 2 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[50]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
-        await time_out_assert(15, wallet.get_confirmed_balance, 8 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 8 * 10 ** 12)
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[113]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hashes[209]))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        await time_out_assert(15, wallet.get_confirmed_balance, 12 * 10 ** 12)
+        await time_out_assert(60, wallet.get_confirmed_balance, 12 * 10 ** 12)
 
     @pytest.mark.parametrize(
         "trusted",

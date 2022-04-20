@@ -12,9 +12,7 @@ from chia.util.files import write_file_async
 
 
 def gen_block_hash(height: int) -> bytes32:
-    # TODO: address hint errors and remove ignores
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return struct.pack(">I", height + 1) * (32 // 4)  # type: ignore[return-value]
+    return bytes32(struct.pack(">I", height + 1) * (32 // 4))
 
 
 def gen_ses(height: int) -> SubEpochSummary:
@@ -371,7 +369,15 @@ class TestBlockHeightMap:
             assert height_map.get_hash(5) == gen_block_hash(5)
 
             height_map.rollback(5)
-
+            assert height_map.contains_height(0)
+            assert height_map.contains_height(1)
+            assert height_map.contains_height(2)
+            assert height_map.contains_height(3)
+            assert height_map.contains_height(4)
+            assert height_map.contains_height(5)
+            assert not height_map.contains_height(6)
+            assert not height_map.contains_height(7)
+            assert not height_map.contains_height(8)
             assert height_map.get_hash(5) == gen_block_hash(5)
 
             assert height_map.get_ses(0) == gen_ses(0)
@@ -401,8 +407,12 @@ class TestBlockHeightMap:
             assert height_map.get_hash(6) == gen_block_hash(6)
 
             height_map.rollback(6)
+            assert height_map.contains_height(6)
+            assert not height_map.contains_height(7)
 
             assert height_map.get_hash(6) == gen_block_hash(6)
+            with pytest.raises(AssertionError) as _:
+                height_map.get_hash(7)
 
             assert height_map.get_ses(0) == gen_ses(0)
             assert height_map.get_ses(2) == gen_ses(2)
