@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_PT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 21:03\n"
+"PO-Revision-Date: 2022-04-20 22:12\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -701,7 +701,7 @@ msgstr "Eliminar"
 
 #: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
-msgstr ""
+msgstr "Apagar chave"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
@@ -731,7 +731,7 @@ msgstr "Excluir transações não confirmadas"
 
 #: src/components/app/AppPassPrompt.tsx:88
 msgid "Deleting key"
-msgstr ""
+msgstr "Excluindo a chave"
 
 #: src/components/selectKey/SelectKey.tsx:101
 #~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -760,7 +760,7 @@ msgstr "Dificuldade"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
-msgstr ""
+msgstr "Desativar NUMA"
 
 #: src/components/app/AppPassPrompt.tsx:77
 #~ msgid "Disable Passphrase Protection"
@@ -832,7 +832,7 @@ msgstr "Editar Instruções de pagamento"
 
 #: src/electron/main.tsx:402
 msgid "Enable Simulator"
-msgstr ""
+msgstr "Ativar simulador"
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:111
 #~ msgid "Enter Passphrase"
@@ -1118,7 +1118,7 @@ msgstr "Ajuda"
 #: src/components/app/AppPassPrompt.tsx:127
 #: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
-msgstr ""
+msgstr "Sugestão"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
@@ -1140,7 +1140,7 @@ msgstr "Endereço IP / host"
 
 #: src/components/settings/Settings.tsx:258
 msgid "Identities"
-msgstr ""
+msgstr "Identidades"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
 msgid "If none selected, then it will default to the temporary directory."
@@ -1385,16 +1385,16 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
-msgstr ""
+msgstr "Migrar Chaves"
 
 #: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
-msgstr ""
+msgstr "Migração necessária"
 
 #: src/components/settings/Settings.tsx:127
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
-msgstr ""
+msgstr "Migração necessária para suportar a proteção de senha"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
@@ -1435,7 +1435,7 @@ msgstr "Nome da rede"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:170
 msgid "New Passphrase"
-msgstr ""
+msgstr "Nova Palavra Passe"
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
 #~ msgid "New Wallet"
@@ -1545,7 +1545,7 @@ msgstr "Número de processos"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:87
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1553,7 +1553,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Offers"
-msgstr ""
+msgstr "Ofertas"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -2323,7 +2323,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:121
 #: src/components/settings/Settings.tsx:248
 msgid "Settings"
-msgstr ""
+msgstr "Configurações"
 
 #: src/components/app/AppSelectMode.tsx:171
 #~ msgid "Settings are located at the upper right corner"
@@ -2349,7 +2349,7 @@ msgstr ""
 #: src/components/app/AppKeyringMigrator.tsx:57
 #: src/components/app/AppKeyringMigrator.tsx:218
 msgid "Skip"
-msgstr ""
+msgstr "Ignorar"
 
 #: src/components/app/AppKeyringMigrator.tsx:56
 msgid "Skip Keyring Migration"
@@ -2702,7 +2702,7 @@ msgstr "Hora de Criação"
 
 #: src/components/block/Block.jsx:167
 msgid "Timestamp"
-msgstr ""
+msgstr "Timestamp"
 
 #: src/components/_wallet_old/WalletHistory.tsx:42
 #~ msgid "To"
@@ -2900,7 +2900,7 @@ msgstr "Aguardando a confirmação da transação"
 #: src/components/app/AppSelectMode.tsx:81
 #: src/components/app/AppSelectMode.tsx:133
 msgid "Wallet Mode"
-msgstr ""
+msgstr "Modo de carteira"
 
 #: src/components/pool/PoolOverview.tsx:181
 msgid "Wallet Status:"
@@ -2912,7 +2912,7 @@ msgstr "Estado da carteira:"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
 msgid "Wallet is not defined"
-msgstr ""
+msgstr "Carteira não está definida"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
