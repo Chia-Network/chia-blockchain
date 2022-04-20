@@ -2,7 +2,6 @@ import asyncio
 
 import pytest
 
-# from tests.wallet.sync.test_wallet_sync import wallet_height_at_least
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -13,12 +12,6 @@ from chia.util.ints import uint16, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 async def is_transaction_in_mempool(user_wallet_id, api, tx_id: bytes32) -> bool:
@@ -119,6 +112,9 @@ class TestNFTRPC:
         assert val["my_did"]
         assert val["type"] == WalletType.DISTRIBUTED_ID.value
         # did_0 = val["my_did"]
+
+        # did_0 = val["my_did"]
+
         did_wallet_id_0 = val["wallet_id"]
 
         api_1 = WalletRpcApi(wallet_node_1)
@@ -156,7 +152,7 @@ class TestNFTRPC:
                 "wallet_id": nft_wallet_id_0,
                 "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
                 "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
-                "artist_percentage": 20,
+                "artist_percentage": 2000,
                 "artist_address": ph2,
             }
         )
@@ -187,12 +183,15 @@ class TestNFTRPC:
                 "wallet_id": nft_wallet_id_0,
                 "nft_coin_info": nft_coin_info,
                 "new_did": did_1,
-                "new_did_parent": val["did_parent"],
                 "new_did_inner_hash": val["did_innerpuz"],
-                "new_did_amount": val["did_amount"],
                 "trade_price": trade_price,
             }
         )
+
+        await asyncio.sleep(5)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await asyncio.sleep(5)
 
         assert val["success"]
         assert val["spend_bundle"] is not None
@@ -202,10 +201,8 @@ class TestNFTRPC:
         assert val["success"]
 
         await asyncio.sleep(5)
-
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
         await asyncio.sleep(5)
 
         val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})
@@ -213,3 +210,27 @@ class TestNFTRPC:
         assert val["success"]
         assert len(val["nfts"]) == 1
         assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo.svg"]
+
+        # Test adding a url
+        # TODO: un comment out this code when DID isn't broken
+
+        # nft_coin_info = val["nfts"][0][0]
+        # val = await api_0.nft_add_url(
+        #     {
+        #         "wallet_id": nft_wallet_id_1,
+        #         "nft_coin_info": nft_coin_info,
+        #         "new_url": "https://www.chia.net/img/branding/chia-logo-2.svg",
+        #     }
+        # )
+        # assert val["success"]
+        # await asyncio.sleep(5)
+        # for i in range(1, num_blocks):
+        #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        # await asyncio.sleep(5)
+        #
+        # val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})
+        #
+        # assert val["success"]
+        # assert len(val["nfts"]) == 1
+        # assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo-2.svg",
+        # b"https://www.chia.net/img/branding/chia-logo.svg"]

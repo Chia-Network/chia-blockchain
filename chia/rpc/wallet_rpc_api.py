@@ -1,5 +1,6 @@
 import asyncio
 import dataclasses
+import json
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Set, Any
@@ -107,14 +108,17 @@ class WalletRpcApi:
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_update_recovery_ids": self.did_update_recovery_ids,
+            "/did_update_metadata": self.did_update_metadata,
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
             "/did_get_recovery_list": self.did_get_recovery_list,
+            "/did_get_metadata": self.did_get_metadata,
             "/did_create_attest": self.did_create_attest,
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
+            "/did_transfer_did": self.did_transfer_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
@@ -512,6 +516,11 @@ class WalletRpcApi:
                     backup_dids.append(hexstr_to_bytes(d))
                 if len(backup_dids) > 0:
                     num_needed = uint64(request["num_of_backup_ids_needed"])
+                metadata: Dict[str, str] = {}
+                if "metadata" in request:
+                    if type(request["metadata"]) is dict:
+                        metadata = request["metadata"]
+
                 async with self.service.wallet_state_manager.lock:
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
@@ -519,7 +528,10 @@ class WalletRpcApi:
                         uint64(request["amount"]),
                         backup_dids,
                         uint64(num_needed),
+                        metadata,
+                        request.get("wallet_name", "DID Wallet"),
                     )
+
                 my_did = did_wallet.get_my_DID()
                 return {
                     "success": True,
@@ -1075,6 +1087,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = []
+        success: bool = False
         for _ in request["new_list"]:
             recovery_list.append(hexstr_to_bytes(_))
         if "num_verifications_required" in request:
@@ -1084,9 +1097,27 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
-            spend_bundle = await wallet.create_update_spend()
+            if update_success:
+                spend_bundle = await wallet.create_update_spend()
+                if spend_bundle is not None:
+                    success = True
+        return {"success": success}
 
-        success = spend_bundle is not None and update_success
+    async def did_update_metadata(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        metadata: Dict[str, str] = {}
+        success: bool = False
+        if "metadata" in request:
+            if type(request["metadata"]) is dict:
+                metadata = request["metadata"]
+        async with self.service.wallet_state_manager.lock:
+            update_success = await wallet.update_metadata(metadata)
+            # Update coin with new ID info
+            if update_success:
+                spend_bundle = await wallet.create_update_spend()
+                if spend_bundle is not None:
+                    success = True
         return {"success": success}
 
     async def did_get_did(self, request):
@@ -1111,8 +1142,18 @@ class WalletRpcApi:
         return {
             "success": True,
             "wallet_id": wallet_id,
-            "recover_list": recover_hex_list,
+            "recovery_list": recover_hex_list,
             "num_required": wallet.did_info.num_of_backup_ids_needed,
+        }
+
+    async def did_get_metadata(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        metadata = json.loads(wallet.did_info.metadata)
+        return {
+            "success": True,
+            "wallet_id": wallet_id,
+            "metadata": metadata,
         }
 
     async def did_recovery_spend(self, request):
@@ -1210,6 +1251,26 @@ class WalletRpcApi:
         did_wallet.create_backup(request["filename"])
         return {"wallet_id": wallet_id, "success": True}
 
+    async def did_transfer_did(self, request):
+        assert self.service.wallet_state_manager is not None
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+        wallet_id = int(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
+        if "fee" in request:
+            fee = uint64(request["fee"])
+        else:
+            fee = uint64(0)
+        async with self.service.wallet_state_manager.lock:
+            txs: TransactionRecord = await did_wallet.transfer_did(puzzle_hash, fee)
+
+        return {
+            "success": True,
+            "transaction": txs.to_json_dict_convenience(self.service.config),
+            "transaction_id": txs.name,
+        }
+
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
@@ -1230,6 +1291,7 @@ class WalletRpcApi:
                 ("h", request["hash"]),
             ]
         )
+
         await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
         return {"wallet_id": wallet_id, "success": True}
 
@@ -1248,15 +1310,27 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         # nft_coin_info: NFTCoinInfo,
         # new_did,
-        # new_did_parent,
         # new_did_inner_hash,
-        # new_did_amount,
-        # trade_price,
+        # trade_prices_list,
+        # new_url=0,
+        new_url = 0
+        if "new_url" in request:
+            new_url = request["new_url"]
+        new_did_inner_hash = 0
+        if "new_did_inner_hash" in request:
+            new_did_inner_hash = request["new_did_inner_hash"]
+        else:
+            assert request["trade_price"] == 0
+        if isinstance(request["new_did"], str):
+            new_did = bytes.fromhex(request["new_did"])
+        else:
+            new_did = request["new_did"]
         sb = await nft_wallet.transfer_nft(
             request["nft_coin_info"],
-            bytes.fromhex(request["new_did"]),
-            request["new_did_inner_hash"],
+            new_did,
+            new_did_inner_hash,
             request["trade_price"],
+            new_url,
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
 
@@ -1273,6 +1347,27 @@ class WalletRpcApi:
         else:
             fee = 0
         sb = await nft_wallet.receive_nft(sending_sb, fee)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+
+    async def nft_add_url(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        my_did = nft_wallet.nft_wallet_info.my_did
+        did_wallet = self.service.wallet_state_manager.wallets[nft_wallet.nft_wallet_info.did_wallet_id]
+        new_did_inner_hash = did_wallet.did_info.current_inner.get_tree_hash()
+        new_url = request["new_url"]
+        # nft_coin_info: NFTCoinInfo,
+        # new_did,
+        # new_did_inner_hash,
+        # trade_prices_list,
+        # new_url=0,
+        sb = await nft_wallet.transfer_nft(
+            request["nft_coin_info"],
+            my_did,
+            new_did_inner_hash,
+            0,
+            new_url,
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
 
     ##########################################################################################

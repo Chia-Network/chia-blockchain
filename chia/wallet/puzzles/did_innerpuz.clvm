@@ -5,18 +5,19 @@
 
 (mod
   (
-  MY_PUBKEY  ; the public key of the owner used for signing transactions
+  INNER_PUZZLE  ; Standard P2 inner puzzle, used to record the ownership of the DID.
   RECOVERY_DID_LIST_HASH  ; the list of DIDs that can send messages to you for recovery we store only the hash so that we don't have to reveal every time we make a message spend
   NUM_VERIFICATIONS_REQUIRED  ; how many of the above list are required for a recovery
   SINGLETON_STRUCT  ; my singleton_struct, formerly a Truth - ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
-  my_id  ; my coin ID, formerly a Truth
-  mode  ; this indicates which spend mode we want. Create message, recover, or self-destruct
-  new_amount  ; DIDs can receive payments so when we recreate ourselves sometimes we want to change our amount
-  message  ; this is a list of messages when creating a message spend, or a new puzhash when recovering or self destructing
-  new_inner_puzhash  ; this is used during the message creation spend to optionally give ourselves a new inner puzzle - this is useful for updating our recovery list
+  METADATA ; Customized metadata, e.g KYC info
+  mode  ; this indicates which spend mode we want. 0. Recovery mode 1. Run INNER_PUZZLE with p2_solution
+  my_amount_or_inner_solution  ; In mode 0, we use this to recover our coin and assert it is our actual amount
+                             ; In mode 1 this is the solution of the inner P2 puzzle, only required in the create message mode and transfer mode.
+  new_inner_puzhash  ; In recovery mode, this will be the new wallet DID puzzle hash
   parent_innerpuzhash_amounts_for_recovery_ids  ; during a recovery we need extra information about our recovery list coins
   pubkey  ; this is the new pubkey used for a recovery
   recovery_list_reveal  ; this is the reveal of the stored list of DIDs approved for recovery
+  my_id  ; my coin ID
   )
   ;message is the new puzzle in the recovery and standard spend cases
 
@@ -50,7 +51,7 @@
   )
 
 
-  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
@@ -110,46 +111,19 @@
     )
   )
 
-  ; for a list of messages in the format (type . message) create a message
-  ; type 0 is 0 value coin
-  ; type 1 is coin announcement
-  ; type 2 is puzzle announcement
-  (defun create_messages (messages)
-    (if messages
-      (c
-        (if (f (f messages))
-           (list (if (= (f (f messages)) 1) CREATE_COIN_ANNOUNCEMENT CREATE_PUZZLE_ANNOUNCEMENT) (r (f messages)))
-           (list CREATE_COIN (r (f messages)) 0)
-        )
-        (create_messages (r messages))
-      )
-      ()
-    )
-  )
-
   ;Spend modes:
-  ;0 = exit spend
-  ;1 = create messages and recreate singleton
-  ;2 = recovery
+  ;0 = recovery
+  ;1 = run the INNER_PUZZLE
 
   ;MAIN
-
   (if mode
-    (if (= mode 1)
-      ; mode one - create messages and recreate singleton
-      (c (list CREATE_COIN new_inner_puzhash new_amount) (c (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_inner_puzhash new_amount message))) (create_messages message)))
-    ; mode two - recovery
-    ; check that recovery list is not empty
-      (if recovery_list_reveal
-        (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
-          (c (list CREATE_COIN message new_amount) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id message parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)))
-          (x)
-        )
-        (x)
-      )
-    )
-    ; mode zero - exit spend
-    (list (list CREATE_COIN 0x00 -113) (list CREATE_COIN message new_amount) (list AGG_SIG_ME MY_PUBKEY (sha256tree1 (list new_amount message))))
-  )
+    ; mode 1 - run INNER_PUZZLE
+    (a INNER_PUZZLE my_amount_or_inner_solution)
 
+    ; mode 0 - recovery
+    (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
+      (c (list ASSERT_MY_AMOUNT my_amount_or_inner_solution) (c (list CREATE_COIN new_inner_puzhash my_amount_or_inner_solution (list new_inner_puzhash)) (c (list ASSERT_MY_COIN_ID my_id) (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0))))
+      (x)
+    )
+  )
 )
