@@ -44,6 +44,23 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
+# Builds CLI only rpm
+CLI_RPM_BASE="chia-blockchain-cli-$CHIA_INSTALLER_VERSION-1.$REDHAT_PLATFORM"
+mkdir -p "dist/$CLI_RPM_BASE/opt/chia"
+mkdir -p "dist/$CLI_RPM_BASE/usr/bin"
+cp -r dist/daemon/* "dist/$CLI_RPM_BASE/opt/chia/"
+ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
+fpm -s dir -t rpm \
+  -C "dist/$CLI_RPM_BASE" \
+  -p "dist/$CLI_RPM_BASE.rpm" \
+  --name chia-blockchain-cli \
+  --license Apache-2.0 \
+  --version "$CHIA_INSTALLER_VERSION" \
+  --architecture "$REDHAT_PLATFORM" \
+  --description "Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure." \
+  .
+# CLI only rpm done
+
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
 cd chia-blockchain-gui || exit
@@ -109,5 +126,8 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	  exit $LAST_EXIT_CODE
   fi
 fi
+
+# Move the cli only rpm into final installers as well, so it gets uploaded as an artifact
+mv "dist/$CLI_RPM_BASE.rpm" final_installer/
 
 ls final_installer/
