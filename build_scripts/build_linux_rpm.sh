@@ -50,8 +50,7 @@ mkdir -p "dist/$CLI_RPM_BASE/opt/chia"
 mkdir -p "dist/$CLI_RPM_BASE/usr/bin"
 cp -r dist/daemon/* "dist/$CLI_RPM_BASE/opt/chia/"
 ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
-. /etc/profile.d/rvm.sh
-fpm -s dir -t rpm \
+/usr/local/rvm/gems/ruby-3.0.0/bin/fpm -s dir -t rpm \
   -C "dist/$CLI_RPM_BASE" \
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
