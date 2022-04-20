@@ -44,7 +44,16 @@ from chia.wallet.derive_keys import (
 )
 from chia.cmds.configure import configure
 
-private_node_names: List[str] = ["full_node", "wallet", "farmer", "harvester", "timelord", "crawler", "data_layer", "daemon"]
+private_node_names: List[str] = [
+    "full_node",
+    "wallet",
+    "farmer",
+    "harvester",
+    "timelord",
+    "crawler",
+    "data_layer",
+    "daemon",
+]
 public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
 

@@ -320,8 +320,7 @@ async def start_rpc_server(
         app = web.Application()
         rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        app.add_routes(
-            [web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
+        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
 
         if connect_to_daemon:
             daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
