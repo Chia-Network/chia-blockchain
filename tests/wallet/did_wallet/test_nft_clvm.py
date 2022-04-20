@@ -75,7 +75,7 @@ def test_transfer_no_backpayments() -> None:
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
     # (sha256tree1 (list transfer_program_solution new_did trade_prices_list))
-    ann = Program.to([[trade_price, 0], did_two]).get_tree_hash()
+    ann = Program.to([did_two, [trade_price, 0], did_two]).get_tree_hash()
     announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
     # announcement_two = Announcement(did_two_coin.name(), ann)
     assert res.rest().first().first().as_int() == 63
@@ -145,7 +145,7 @@ def test_transfer_with_backpayments() -> None:
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
 
-    msg = Program.to([[trade_price, 0], did_two]).get_tree_hash()
+    msg = Program.to([did_two, [trade_price, 0], did_two]).get_tree_hash()
     announcement_one = Announcement(did_one_coin.puzzle_hash, msg)
     ann = bytes(bytes(Program.to(trade_price).get_tree_hash()) + did_two)
     announcement_two = Announcement(did_two_coin.puzzle_hash, ann)
@@ -211,7 +211,7 @@ def test_announce() -> None:
         ]
     )
     cost, res = NFT_MOD.run_with_cost(INFINITE_COST, solution)
-    ann = bytes("a", "utf-8")
+    ann = did_two
     announcement_one = Announcement(did_one_coin.puzzle_hash, ann)
     assert res.rest().rest().first().first().as_int() == 63
     assert res.rest().rest().first().rest().first().as_atom() == announcement_one.name()

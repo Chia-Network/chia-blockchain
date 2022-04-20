@@ -346,7 +346,7 @@ class NFTWallet:
         # EVE SPEND BELOW
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # Create a puzzle announcement
-        puzzle_announcements = ["a"]
+        puzzle_announcements = [launcher_coin.name()]
         message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -387,7 +387,8 @@ class NFTWallet:
     async def make_announce_spend(self, nft_coin_info: NFTCoinInfo) -> SpendBundle:
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         # Create a puzzle announcement
-        puzzle_announcements = ["a"]
+        nft_id: bytes32 = nft_puzzles.get_nft_id_from_puzzle(nft_coin_info.full_puzzle)
+        puzzle_announcements = [Program.to(bytes(nft_id))]
         message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
@@ -432,16 +433,17 @@ class NFTWallet:
     async def transfer_nft(
         self,
         nft_coin_info: NFTCoinInfo,
-        new_did,
-        new_did_inner_hash,
-        trade_prices_list,
+        new_did: bytes32,
+        new_did_inner_hash: bytes32,
+        trade_prices_list: Program,
         new_url=0,
     ):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
         transfer_prog = nft_coin_info.transfer_program
         # (sha256tree1 (list transfer_program_solution new_did))
         transfer_program_solution = [trade_prices_list, new_url]  # TODO: Make this flexible for other transfer_programs
-        puzzle_announcements = [Program.to([transfer_program_solution, bytes(new_did)]).get_tree_hash()]
+        nft_id: bytes32 = nft_puzzles.get_nft_id_from_puzzle(nft_coin_info.full_puzzle)
+        puzzle_announcements = [Program.to([nft_id, transfer_program_solution, bytes(new_did)]).get_tree_hash()]
         message_sb = await did_wallet.create_message_spend(puzzle_announcements=puzzle_announcements)
         if message_sb is None:
             raise ValueError("Unable to created DID message spend.")
