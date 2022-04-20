@@ -17,7 +17,6 @@ def excepted(path: pathlib.Path) -> bool:
 
     name, dash, rest = path.name.partition("-")
     return name in excepted_packages
-    # return any(path.name.startswith(f"{package_name}-") for package_name in excepted_packages)
 
 
 def main() -> int:
