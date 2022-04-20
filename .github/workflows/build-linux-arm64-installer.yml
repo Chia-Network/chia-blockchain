@@ -107,7 +107,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Build arm64 .deb package
       env:
@@ -120,7 +120,7 @@ jobs:
         sh build_linux_deb.sh arm64
 
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: chia-installers-linux-deb-arm64
         path: ${{ github.workspace }}/build_scripts/final_installer/

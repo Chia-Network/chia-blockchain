@@ -3,15 +3,15 @@ from setuptools import setup
 dependencies = [
     "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.9",  # Signature library
-    "chiavdf==1.0.5",  # timelord and vdf verification
+    "blspy==1.0.10",  # Signature library
+    "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
-    "chiapos==1.0.9",  # proof of space
+    "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.1",
     "clvm-tools-rs==0.1.7",  # Rust implementation of clvm_tools
-    "aiohttp==3.7.4",  # HTTP server for full node rpc
+    "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.4",  # Colorizes terminal output
@@ -57,6 +57,7 @@ dev_dependencies = [
     "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
+    "pyinstaller==4.9",
     "types-aiofiles",
     "types-click",
     "types-cryptography",
