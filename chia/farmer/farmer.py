@@ -2,9 +2,9 @@ import asyncio
 import json
 import logging
 import time
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
-import traceback
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -18,20 +18,20 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
-from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.delta import Delta
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, add_auth_key
+from chia.plot_sync.receiver import Receiver
+from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
+    AuthenticationPayload,
     ErrorResponse,
-    get_current_authentication_token,
     GetFarmerResponse,
     PoolErrorCode,
     PostFarmerPayload,
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
-    AuthenticationPayload,
+    get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -42,16 +42,16 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, lock_and_load_config, save_config, config_path_for_filename
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
+    find_authentication_sk,
+    find_owner_sk,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
-    find_authentication_sk,
-    find_owner_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
