@@ -1,25 +1,26 @@
 import logging
 import time
+from dataclasses import dataclass
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
 from typing import Callable, Iterator, List, Optional
+
 import pytest
 from blspy import G1Element
 
-from dataclasses import dataclass
+from chia.plotting.manager import Cache, PlotManager
 from chia.plotting.util import (
     PlotInfo,
-    PlotRefreshResult,
     PlotRefreshEvents,
-    remove_plot,
-    get_plot_directories,
+    PlotRefreshResult,
     add_plot_directory,
+    get_plot_directories,
+    remove_plot,
     remove_plot_directory,
 )
 from chia.util.config import create_default_chia_config
 from chia.util.path import mkdir
-from chia.plotting.manager import Cache, PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
 from tests.time_out_assert import time_out_assert
