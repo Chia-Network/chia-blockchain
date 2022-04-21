@@ -12,7 +12,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, NotarizedPayment
@@ -302,13 +303,13 @@ class TradeManager:
                         elif wallet.type() == WalletType.CAT:
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
-                            if key in driver_dict and driver_dict[key].info["type"] != AssetType.CAT:
+                            if key in driver_dict and AssetType(driver_dict[key].type()) != AssetType.CAT:
                                 raise ValueError(
-                                    f"driver_dict specified {driver_dict[key].info['type']},"
+                                    f"driver_dict specified {AssetType(driver_dict[key].type())},"
                                     f"was expecting {AssetType.CAT}"
                                 )
                             else:
-                                driver_dict[key] = PuzzleInfo({"type": AssetType.CAT, "tail": key})
+                                driver_dict[key] = PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + key.hex()})
                         else:
                             raise ValueError(f"Offers are not implemented for {wallet.type()}")
                     else:
@@ -327,13 +328,15 @@ class TradeManager:
                     # ATTENTION: new wallets
                     if wallet.type() == WalletType.CAT:
                         asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                        if asset_id in driver_dict and driver_dict[asset_id].info["type"] != AssetType.CAT:
+                        if asset_id in driver_dict and AssetType(driver_dict[asset_id].type()) != AssetType.CAT:
                             raise ValueError(
-                                f"driver_dict specified {driver_dict[asset_id].info['type']},"
+                                f"driver_dict specified {AssetType(driver_dict[asset_id].type())},"
                                 f"was expecting {AssetType.CAT}"
                             )
                         else:
-                            driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
+                            driver_dict[asset_id] = PuzzleInfo(
+                                {"type": AssetType.CAT.value, "tail": "0x" + asset_id.hex()}
+                            )
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 

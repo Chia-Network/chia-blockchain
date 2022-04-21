@@ -37,7 +37,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -1149,9 +1150,9 @@ class WalletStateManager:
         return None
 
     async def create_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo, name=None, in_transaction=False):
-        if puzzle_driver.info["type"] in self.asset_to_wallet_map:
+        if AssetType(puzzle_driver.type()) in self.asset_to_wallet_map:
             async with self.lock:
-                await self.asset_to_wallet_map[puzzle_driver.info["type"]].create_from_puzzle_info(
+                await self.asset_to_wallet_map[AssetType(puzzle_driver.type())].create_from_puzzle_info(
                     self,
                     self.main_wallet,
                     puzzle_driver,

@@ -32,7 +32,8 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -925,7 +926,7 @@ class WalletRpcApi:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key in offer:
-                if len(key) == 32:
+                if len(key) == 64:
                     asset_id = bytes32.from_hexstr(key)
                     driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
         else:

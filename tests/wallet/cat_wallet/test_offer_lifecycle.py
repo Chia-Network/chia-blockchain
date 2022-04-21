@@ -17,7 +17,8 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
@@ -180,8 +181,12 @@ class TestOfferLifecycle:
             blue_coins: List[Coin] = all_coins["blue"]
 
             driver_dict: Dict[bytes32, PuzzleInfo] = {
-                str_to_tail_hash("red"): PuzzleInfo({"type": AssetType.CAT, "tail": str_to_tail_hash("red")}),
-                str_to_tail_hash("blue"): PuzzleInfo({"type": AssetType.CAT, "tail": str_to_tail_hash("blue")}),
+                str_to_tail_hash("red"): PuzzleInfo(
+                    {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("red").hex()}
+                ),
+                str_to_tail_hash("blue"): PuzzleInfo(
+                    {"type": AssetType.CAT.value, "tail": "0x" + str_to_tail_hash("blue").hex()}
+                ),
             }
 
             # Create an XCH Offer for RED
