@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 07:34\n"
+"PO-Revision-Date: 2022-04-21 08:32\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -119,7 +119,7 @@ msgstr "Přidat CAT peněženky pro více možností"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
-msgstr ""
+msgstr "Přidat vlastní Token"
 
 #: src/components/plot/PlotHeader.tsx:89
 #~ msgid "Add Plot Directory"
@@ -250,11 +250,11 @@ msgstr "Opravdu chcete odstranit nepotvrzenou transakci?"
 #: src/components/cat/WalletCATTAILDialog.tsx:43
 #: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
-msgstr ""
+msgstr "ID aktiva"
 
 #: src/components/offers/OfferAssetSelector.tsx:117
 msgid "Asset Type"
-msgstr ""
+msgstr "Typ aktiva"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
@@ -292,7 +292,7 @@ msgstr "Zůstatek"
 
 #: src/components/offers/OfferShareDialog.tsx:759
 msgid "Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must first join the {KeybaseTeamName} team. Please note that it might take a few moments to join the channel."
-msgstr ""
+msgstr "Před odesláním nabídky v Keybase na kanál #{KeybaseChannelName} se musíte nejprve připojit k týmu {KeybaseTeamName}. Vezměte prosím na vědomí, že připojení k kanálu může chvíli trvat."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:33
 #: src/components/farm/FarmLatestBlockChallenges.tsx:43
@@ -397,7 +397,7 @@ msgstr "Zrušit"
 #: src/components/offers/OfferManager.tsx:166
 #: src/components/offers/OfferManager.tsx:423
 msgid "Cancel Offer"
-msgstr ""
+msgstr "Zrušit nabídku"
 
 #: src/components/trading/TradingOverview.jsx:388
 #~ msgid "Cancel and Spend"
@@ -405,12 +405,12 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:121
 msgid "Cancel on blockchain"
-msgstr ""
+msgstr "Zrušit na blockchainu"
 
 #: src/components/WalletSend.tsx:99
 #: src/components/cat/WalletCATSend.tsx:119
 msgid "Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "Chia nelze odeslat na barevnou adresu. Zadejte prosím běžnou Chia adresu."
 
 #: src/components/plot/PlotsNotFound.tsx:36
 #~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
@@ -451,7 +451,7 @@ msgstr ""
 #: src/components/create/WalletCreateList.tsx:32
 #: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
-msgstr ""
+msgstr "Chia Asset Token"
 
 #: src/electron/main.tsx:369
 #~ msgid "Chia Blockchain Wiki"
@@ -498,7 +498,7 @@ msgstr "Název mince"
 
 #: src/components/offers/OfferViewer.tsx:522
 msgid "Coins"
-msgstr ""
+msgstr "Mince"
 
 #: src/components/trading/TradingOverview.jsx:365
 #~ msgid "Coins:"
@@ -555,12 +555,12 @@ msgstr "Potvrzení"
 
 #: src/components/WalletHistory.tsx:111
 msgid "Confirmed"
-msgstr ""
+msgstr "Potvrzeno"
 
 #: src/components/WalletHistory.tsx:290
 #: src/components/offers/OfferViewer.tsx:188
 msgid "Confirmed at Height"
-msgstr ""
+msgstr "Potvrzeno ve výšce"
 
 #: src/components/trading/TradingOverview.jsx:200
 #~ msgid "Confirmed at block:"
@@ -645,7 +645,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateExisting.tsx:76
 msgid "Create Chia Asset Token Wallet from Existing TAIL"
-msgstr ""
+msgstr "Vytvořit Chia Asset Token Peněženku z existující TAIL"
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
@@ -657,7 +657,7 @@ msgstr "Vytvořit peněženku distribuované identity"
 
 #: src/components/cat/WalletCATCreateNew.tsx:75
 msgid "Create New Chia Asset Token Wallet"
-msgstr ""
+msgstr "Vytvořit novou Chia Asset Token peněženku"
 
 #: src/components/cat/WalletCATSelect.tsx:32
 #: src/components/did/WalletDIDSelect.tsx:32
@@ -713,15 +713,15 @@ msgstr "Vytvořit transakci"
 #: src/components/offers/OfferEditor.tsx:232
 #: src/components/offers/OfferManager.tsx:517
 msgid "Create an Offer"
-msgstr ""
+msgstr "Vytvořit nabídku"
 
 #: src/components/offers/OfferManager.tsx:512
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
-msgstr ""
+msgstr "Vytvořte nabídku na výměnu XCH nebo jiných tokenů. Zobrazit nabídku pro kontrolu a přijetí nabídky vytvořené jinou stranou."
 
 #: src/components/cat/WalletCATCreateExisting.tsx:75
 msgid "Create custom CAT Wallet"
-msgstr ""
+msgstr "Vytvořit vlastní CAT peněženku"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:132
 #~ msgid "Create new coloured coin"
@@ -753,7 +753,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:123
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
-msgstr ""
+msgstr "Vytvoří a odešle transakci do blockchainu, která zruší nabídku"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:61
 #~ msgid "Creating Plot NFT and Joining the Pool"
@@ -766,7 +766,7 @@ msgstr ""
 #: src/components/offers/OfferManager.tsx:339
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
-msgstr ""
+msgstr "Datum vytvoření"
 
 #: src/components/plot/add/PlotAddForm.tsx:109
 #~ msgid "Currency code is not defined"
@@ -792,11 +792,11 @@ msgstr ""
 
 #: src/constants/WalletName.ts:20
 msgid "Custody Wallet"
-msgstr ""
+msgstr "Správcovská (custody) peněženka"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:102
 msgid "Custom"
-msgstr ""
+msgstr "Vlastní"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
@@ -804,7 +804,7 @@ msgstr ""
 
 #: src/constants/WalletName.ts:29
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID Peněženka"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -872,7 +872,7 @@ msgstr "Odstranit nepotvrzené transakce"
 
 #: src/components/offers/OfferViewer.tsx:499
 msgid "Details"
-msgstr ""
+msgstr "Podrobnosti"
 
 #: src/electron/main.tsx:315
 #~ msgid "Developer"
@@ -917,7 +917,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:393
 msgid "Display Offer Data"
-msgstr ""
+msgstr "Zobrazit data nabídky"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -1848,7 +1848,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:300
 msgid "One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive."
-msgstr ""
+msgstr "Nabízí se jeden nebo více neznámých tokenů. Ověřte, zda ID aktiva níže uvedených tokenů odpovídá ID aktiva tokenů, které očekáváte, že obdržíte."
 
 #: src/components/did/WalletDIDRecovery.tsx:33
 msgid "Only one backup file is allowed."
@@ -1997,7 +1997,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
-msgstr ""
+msgstr "Zadejte prosím platné ID aktiva"
 
 #: src/components/create/createRLAdmin.jsx:139
 msgid "Please enter a valid initial coin amount"
@@ -2080,7 +2080,7 @@ msgstr "Prosím dokončete synchronizaci před provedením transakce"
 
 #: src/components/offers/OfferEditor.tsx:112
 msgid "Please select an asset for each row"
-msgstr ""
+msgstr "Prosím vyberte aktivum pro každý řádek"
 
 #: src/components/did/WalletDIDRecovery.tsx:54
 msgid "Please select backup file first"
@@ -2735,7 +2735,7 @@ msgstr ""
 
 #: src/components/cat/WalletCAT.tsx:105
 msgid "Show Asset Id"
-msgstr ""
+msgstr "Ukázat ID aktiva"
 
 #: src/components/offers/OfferManager.tsx:379
 msgid "Show Details"
@@ -3154,11 +3154,11 @@ msgstr "Komu"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:85
 msgid "Token and Asset Issuance Limitations"
-msgstr ""
+msgstr "Omezení vydávání tokenu a aktiv"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:45
 msgid "Token has empty asset id"
-msgstr ""
+msgstr "Token má prázdné ID aktiva"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:41
 msgid "Token has empty name"
@@ -3347,7 +3347,7 @@ msgstr "Uživatelský veřejný klíč"
 #: src/components/offers/OfferImport.tsx:153
 #: src/components/offers/OfferManager.tsx:520
 msgid "View an Offer"
-msgstr ""
+msgstr "Zobrazit nabídku"
 
 #: src/components/offers/OfferShareDialog.tsx:509
 msgid "View on Hashgreen DEX"
@@ -3490,7 +3490,7 @@ msgstr ""
 
 #: src/components/offers/OfferSummary.tsx:97
 msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
-msgstr ""
+msgstr "Varování: Ověřte, že nabízená ID CAT aktiva odpovídají ID aktiva tokenů, které očekáváte, že obdržíte."
 
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
