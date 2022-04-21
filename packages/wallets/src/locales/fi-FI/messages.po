@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 18:28\n"
+"PO-Revision-Date: 2022-04-21 19:24\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -3160,15 +3160,15 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:45
 msgid "Token has empty asset id"
-msgstr ""
+msgstr "Tokenilla on tyhjä assettitunnus"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:41
 msgid "Token has empty name"
-msgstr ""
+msgstr "Tokenilla on tyhjä nimi"
 
 #: src/components/WalletsSidebar.tsx:86
 msgid "Tokens"
-msgstr ""
+msgstr "Tokenit"
 
 #: src/components/card/WalletCardTotalBalance.tsx:45
 #: src/components/rateLimited/WalletRateLimited.jsx:542
@@ -3241,7 +3241,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:244
 msgid "Transactions"
-msgstr ""
+msgstr "Transaktiot"
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -3285,7 +3285,7 @@ msgstr ""
 #: src/components/offers/OfferSummaryRow.tsx:67
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
-msgstr ""
+msgstr "Tuntematon CAT"
 
 #: src/components/app/AppPassPrompt.tsx:83
 #~ msgid "Unlock Keyring"
@@ -3349,11 +3349,11 @@ msgstr "Käyttäjän julkinen avain"
 #: src/components/offers/OfferImport.tsx:153
 #: src/components/offers/OfferManager.tsx:520
 msgid "View an Offer"
-msgstr ""
+msgstr "Näytä Tarjous"
 
 #: src/components/offers/OfferShareDialog.tsx:509
 msgid "View on Hashgreen DEX"
-msgstr ""
+msgstr "Näytä Hashgreen DEX:ssä"
 
 #: src/components/offers/OfferShareDialog.tsx:368
 msgid "View on OfferBin"
@@ -3369,11 +3369,11 @@ msgstr "Näytä avoimet saldot"
 
 #: src/components/offers/OfferViewer.tsx:552
 msgid "Viewing offer"
-msgstr ""
+msgstr "Näytetään tarjous"
 
 #: src/components/offers/OfferViewer.tsx:550
 msgid "Viewing offer created at {0}"
-msgstr ""
+msgstr "Näytetään tarjous joka on luotu {0}"
 
 #: src/components/offers/OfferViewer.tsx:548
 msgid "Viewing offer: {offerFilePath}"
@@ -3654,7 +3654,7 @@ msgstr ""
 #: src/components/offers/OfferShareDialog.tsx:543
 #: src/components/offers/OfferShareDialog.tsx:891
 msgid "Your offer:"
-msgstr ""
+msgstr "Tarjouksesi :"
 
 #: src/components/app/AppKeyringMigrator.tsx:181
 #: src/components/settings/ChangePassphrasePrompt.tsx:211
