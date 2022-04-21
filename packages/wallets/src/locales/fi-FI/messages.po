@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 17:13\n"
+"PO-Revision-Date: 2022-04-21 18:28\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1850,7 +1850,7 @@ msgstr "Kun hyväksyt tämän tarjouksen, et voi peruuttaa transaktiota. Oletko 
 
 #: src/components/offers/OfferViewer.tsx:300
 msgid "One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive."
-msgstr ""
+msgstr "Yhtä tai useampaa tuntematonta tokenia tarjotaan. Varmista, että alla lueteltujen tokeneiden Asset ID:t täsmäävät tokeneihin, joita odotat vastaanottavasi."
 
 #: src/components/did/WalletDIDRecovery.tsx:33
 msgid "Only one backup file is allowed."
@@ -1866,7 +1866,7 @@ msgstr "Lähtevä"
 
 #: src/components/offers/OfferViewer.tsx:249
 msgid "Parent Coin"
-msgstr ""
+msgstr "Edeltävä kolikko"
 
 #: src/components/app/AppKeyringMigrator.tsx:139
 #: src/components/app/AppKeyringMigrator.tsx:140
@@ -1916,7 +1916,7 @@ msgstr ""
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
 msgid "Paste Offer Data"
-msgstr ""
+msgstr "Liitä Tarjoustiedot"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:358
 #~ msgid "Payout Address"
@@ -1995,11 +1995,11 @@ msgstr "Syötä puzzlehash osoitetiiviste"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:40
 msgid "Please enter a valid CAT name"
-msgstr ""
+msgstr "Anna kelvollinen CAT-nimi"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
-msgstr ""
+msgstr "Anna kelvollinen asset ID"
 
 #: src/components/create/createRLAdmin.jsx:139
 msgid "Please enter a valid initial coin amount"
@@ -2042,15 +2042,15 @@ msgstr "Anna käypä julkinen avain"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:45
 msgid "Please enter a valid token name"
-msgstr ""
+msgstr "Anna kelvollinen tokenin nimi"
 
 #: src/components/offers/OfferEditor.tsx:115
 msgid "Please enter an amount for each row"
-msgstr ""
+msgstr "Ole hyvä ja syötä summa jokaiselle riville"
 
 #: src/components/WalletRenameDialog.tsx:49
 msgid "Please enter valid wallet name"
-msgstr ""
+msgstr "Anna kelvollinen lompakon nimi"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:75
 #~ msgid "Please enter your current passphrase, and a new passphrase"
@@ -2082,7 +2082,7 @@ msgstr "Synkronoi loppuun ennen transaktion tekemistä"
 
 #: src/components/offers/OfferEditor.tsx:112
 msgid "Please select an asset for each row"
-msgstr ""
+msgstr "Ole hyvä ja valitse assetti jokaiselle riville"
 
 #: src/components/did/WalletDIDRecovery.tsx:54
 msgid "Please select backup file first"
@@ -2309,7 +2309,7 @@ msgstr "Ole hyvä ja odota lompakon synkronointia"
 
 #: src/constants/WalletName.ts:32
 msgid "Pooling Wallet"
-msgstr ""
+msgstr "Poolauslompakko"
 
 #: src/components/WalletConnections.tsx:33
 msgid "Port"
@@ -2376,7 +2376,7 @@ msgstr "Julkinen avain"
 
 #: src/components/offers/OfferViewer.tsx:272
 msgid "Puzzle Hash"
-msgstr ""
+msgstr "Haasteen tiiviste"
 
 #: src/components/cat/WalletDID.tsx:1002
 #: src/components/did/WalletDID.tsx:1002
@@ -2405,7 +2405,7 @@ msgstr "Puzzlehash-osoitetiiviste"
 
 #: src/constants/WalletName.ts:8
 msgid "RL Wallet"
-msgstr ""
+msgstr "Rajoitettu Lompakko"
 
 #: src/components/wallet/create/WalletCreate.jsx:246
 #~ msgid "RLListItems.title"
@@ -2430,7 +2430,7 @@ msgstr "Siirtorajoitetun Lompakon Asennus"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
-msgstr ""
+msgstr "Vastaanota"
 
 #: src/components/WalletReceiveAddress.tsx:32
 msgid "Receive Address"
@@ -2438,7 +2438,7 @@ msgstr "Vastaanottajan Osoite"
 
 #: src/components/cat/WalletCATSend.tsx:123
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
-msgstr ""
+msgstr "Vastaanottajan osoite ei ole CAT-osoite. Syötä CAT-osoite"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:104
 #: src/components/cat/WalletDID.tsx:463
@@ -2468,11 +2468,11 @@ msgstr "Palauta Lompakko"
 
 #: src/constants/WalletName.ts:26
 msgid "Recoverable Wallet"
-msgstr ""
+msgstr "Palautettavissa Oleva Lompakko"
 
 #: src/components/cat/WalletCATSelect.tsx:39
 msgid "Recovery Wallet"
-msgstr ""
+msgstr "Recovery-lompakko"
 
 #: src/components/plot/PlotHeader.tsx:76
 #: src/components/plot/overview/PlotOverviewHero.tsx:60
@@ -2508,7 +2508,7 @@ msgstr ""
 #: src/components/WalletRenameDialog.tsx:69
 #: src/components/cat/WalletCAT.tsx:91
 msgid "Rename Wallet"
-msgstr ""
+msgstr "Uudelleennimeä Lompakko"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2516,11 +2516,11 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:323
 msgid "Requested"
-msgstr ""
+msgstr "Pyydetty"
 
 #: src/components/offers/OfferEditor.tsx:199
 msgid "Reset"
-msgstr ""
+msgstr "Palauta"
 
 #: src/components/backup/BackupRestore.tsx:160
 #~ msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -2532,7 +2532,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:119
 msgid "Retire"
-msgstr ""
+msgstr "Poista vanhentunut"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2549,11 +2549,11 @@ msgstr "Tallenna"
 
 #: src/components/offers/OfferEditor.tsx:207
 msgid "Save Offer"
-msgstr ""
+msgstr "Tallenna Tarjous"
 
 #: src/components/offers/OfferManager.tsx:408
 msgid "Save Offer File"
-msgstr ""
+msgstr "Tallenna Tarjoustiedosto"
 
 #: src/components/app/AppKeyringMigrator.tsx:178
 #: src/components/settings/ChangePassphrasePrompt.tsx:208
@@ -2573,7 +2573,7 @@ msgstr ""
 #: src/components/cat/WalletCATTAILDialog.tsx:71
 #: src/components/offers/OfferSummaryRow.tsx:94
 msgid "Search on Tail Database"
-msgstr ""
+msgstr "Etsi Tail-tietokannasta"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
 #~ msgid "Second temporary folder location"
@@ -2609,7 +2609,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:136
 msgid "Select Offer File"
-msgstr ""
+msgstr "Valitse Tarjoustiedosto"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 #~ msgid "Select Temporary Directory"
@@ -2618,7 +2618,7 @@ msgstr ""
 #: src/components/WalletsList.tsx:32
 #: src/components/hero/WalletHeroWallets.tsx:47
 msgid "Select Wallet"
-msgstr ""
+msgstr "Valitse Lompakko"
 
 #: src/components/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
@@ -2705,31 +2705,31 @@ msgstr "Lähetä julkinen avaimesi Siirtorajoitetun Lompakon pääkäyttäjälle
 #: src/components/offers/OfferShareDialog.tsx:798
 #: src/components/offers/OfferShareDialog.tsx:911
 msgid "Share"
-msgstr ""
+msgstr "Jaa"
 
 #: src/components/offers/OfferShareDialog.tsx:973
 msgid "Share Offer"
-msgstr ""
+msgstr "Jaa Tarjous"
 
 #: src/components/offers/OfferShareDialog.tsx:412
 msgid "Share Privately"
-msgstr ""
+msgstr "Jaa Yksityisesti"
 
 #: src/components/offers/OfferShareDialog.tsx:537
 msgid "Share on Hashgreen DEX"
-msgstr ""
+msgstr "Jaa Hashgreen DEX:ssä"
 
 #: src/components/offers/OfferShareDialog.tsx:739
 msgid "Share on Keybase"
-msgstr ""
+msgstr "Jaa KeyBasessa"
 
 #: src/components/offers/OfferShareDialog.tsx:396
 msgid "Share on OfferBin"
-msgstr ""
+msgstr "Jaa OfferBinissä"
 
 #: src/components/offers/OfferShareDialog.tsx:885
 msgid "Share on offerpool"
-msgstr ""
+msgstr "Jaa Offerpoolissa"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
@@ -2737,11 +2737,11 @@ msgstr ""
 
 #: src/components/cat/WalletCAT.tsx:105
 msgid "Show Asset Id"
-msgstr ""
+msgstr "Näytä Assetin tunniste"
 
 #: src/components/offers/OfferManager.tsx:379
 msgid "Show Details"
-msgstr ""
+msgstr "Näytä Tiedot"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -2822,7 +2822,7 @@ msgstr "Käyttöraja (Chiaa/ajanjakso):{0}"
 
 #: src/constants/WalletName.ts:5
 msgid "Standard Wallet"
-msgstr ""
+msgstr "Vakiolompakko"
 
 #: src/components/app/AppState.tsx:161
 #~ msgid "Starting services"
@@ -2883,12 +2883,12 @@ msgstr "Lähetä"
 #: src/components/WalletSendTransactionResultDialog.tsx:15
 #: src/components/offers/OfferViewer.tsx:343
 msgid "Success"
-msgstr ""
+msgstr "Onnistui"
 
 #: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:450
 msgid "Summary"
-msgstr ""
+msgstr "Yhteenveto"
 
 #: src/components/WalletStatus.tsx:39
 msgid "Synced"
