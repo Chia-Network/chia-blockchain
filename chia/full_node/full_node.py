@@ -9,6 +9,7 @@ import random
 import time
 import traceback
 from pathlib import Path
+from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
@@ -897,7 +898,7 @@ class FullNode:
             if weight_proof_v2:
                 request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_height)
                 ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=10)
-                salt = bytes32.from_bytes(os.urandom(32))
+                salt = bytes32.from_bytes(token_bytes(32))
                 ses_hash = ses_response.sub_epoch_summary.get_hash()
                 seed = std_hash(salt + bytes(ses_hash))
                 self.log.info(f"wp salt is {salt}, ses hash is {ses_hash}, salted seed is {seed}")

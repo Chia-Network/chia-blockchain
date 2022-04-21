@@ -7,6 +7,7 @@ import time
 import traceback
 from asyncio import CancelledError
 from pathlib import Path
+from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, PrivateKey
@@ -153,7 +154,7 @@ class WalletNode:
         self.validation_semaphore = None
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
-        self.salt = bytes32.from_bytes(os.urandom(32))
+        self.salt = bytes32.from_bytes(token_bytes(32))
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
