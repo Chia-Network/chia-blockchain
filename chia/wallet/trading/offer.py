@@ -18,10 +18,11 @@ from chia.wallet.util.puzzle_compression import (
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.payment import Payment
 from chia.wallet.trading.outer_puzzles import (
-    AssetType,
-    type_of_puzzle,
-    asset_id_of_puzzle,
+    PuzzleInfo,
+    Solver,
+    create_asset_id,
     construct_puzzle,
+    match_puzzle,
     solve_puzzle,
 )
 
@@ -47,7 +48,7 @@ class Offer:
         Optional[bytes32], List[NotarizedPayment]
     ]  # The key is the asset id of the asset being requested
     bundle: SpendBundle
-    type_dict: Dict[bytes32, AssetType]  # asset_id -> asset type
+    driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
 
     @staticmethod
     def ph():
@@ -75,14 +76,14 @@ class Offer:
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]], type_dict: Dict[bytes32, AssetType]
+        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]], driver_dict: Dict[bytes32, PuzzleInfo]
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
-                if asset_id not in type_dict:
-                    raise ValueError("Cannot calculate announcements without type of requested item")
-                settlement_ph: bytes32 = construct_puzzle(type_dict[asset_id], asset_id, OFFER_MOD).get_tree_hash()
+                if asset_id not in driver_dict:
+                    raise ValueError("Cannot calculate announcements without driver of requested item")
+                settlement_ph: bytes32 = construct_puzzle(driver_dict[asset_id], OFFER_MOD).get_tree_hash()
             else:
                 settlement_ph = OFFER_MOD.get_tree_hash()
 
@@ -107,8 +108,8 @@ class Offer:
 
         # Verify we have a type for every kind of asset
         for asset_id in self.requested_payments:
-            if asset_id is not None and asset_id not in self.type_dict:
-                raise ValueError("Offer does not have enough type information about the requested payments")
+            if asset_id is not None and asset_id not in self.driver_dict:
+                raise ValueError("Offer does not have enough driver information about the requested payments")
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
@@ -121,10 +122,12 @@ class Offer:
             )[0].puzzle_reveal.to_program()
 
             # Determine it's TAIL (or lack of)
-            asset_id = asset_id_of_puzzle(parent_puzzle)
-            if asset_id is not None:
-                offer_ph: bytes32 = construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD).get_tree_hash()
+            puzzle_driver = match_puzzle(parent_puzzle)
+            if puzzle_driver is not None:
+                asset_id = create_asset_id(puzzle_driver)
+                offer_ph: bytes32 = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD).get_tree_hash()
             else:
+                asset_id = None
                 offer_ph = OFFER_MOD.get_tree_hash()
 
             # Check if the puzzle_hash matches the hypothetical `settlement_payments` puzzle hash
@@ -237,7 +240,7 @@ class Offer:
     def aggregate(cls, offers: List["Offer"]) -> "Offer":
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
-        total_type_dict: Dict[bytes32, AssetType] = {}
+        total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
         for offer in offers:
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
@@ -252,14 +255,14 @@ class Offer:
                 else:
                     total_requested_payments[asset_id] = payments
 
-            for key, value in offer.type_dict.items():
-                if key in total_type_dict and total_type_dict[key] != value:
-                    raise ValueError(f"The offers to aggregate disagree on the type of {key.hex()}")
+            for key, value in offer.driver_dict.items():
+                if key in total_driver_dict and total_driver_dict[key] != value:
+                    raise ValueError(f"The offers to aggregate disagree on the drivers for {key.hex()}")
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
-            total_type_dict = {**total_type_dict, **offer.type_dict}
+            total_driver_dict = {**total_driver_dict, **offer.driver_dict}
 
-        return cls(total_requested_payments, total_bundle, total_type_dict)
+        return cls(total_requested_payments, total_bundle, total_driver_dict)
 
     # Validity is defined by having enough funds within the offer to satisfy both sides
     def is_valid(self) -> bool:
@@ -297,11 +300,15 @@ class Offer:
                         filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
                     )[0]
                     solution: Program = solve_puzzle(
-                        self.type_dict[asset_id],
-                        coin,
+                        self.driver_dict[asset_id],
+                        Solver(
+                            {
+                                "coin": coin,
+                                "parent_spend": parent_spend,
+                            }
+                        ),
                         OFFER_MOD,
                         Program.to(inner_solutions),
-                        parent_spend,
                     )
                 else:
                     solution = Program.to(inner_solutions)
@@ -309,7 +316,7 @@ class Offer:
                 completion_spends.append(
                     CoinSpend(
                         coin,
-                        construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD) if asset_id else OFFER_MOD,
+                        construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD,
                         solution,
                     )
                 )
@@ -320,9 +327,7 @@ class Offer:
         # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
-            puzzle_reveal: Program = (
-                construct_puzzle(self.type_dict[asset_id], asset_id, OFFER_MOD) if asset_id else OFFER_MOD
-            )
+            puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
             inner_solutions = []
             nonces: List[bytes32] = [p.nonce for p in payments]
             for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
@@ -352,14 +357,16 @@ class Offer:
     def from_spend_bundle(cls, bundle: SpendBundle) -> "Offer":
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
         requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
-        type_dict: Dict[bytes32, AssetType] = {}
+        driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            asset_id = asset_id_of_puzzle(coin_spend.puzzle_reveal.to_program())
-            if asset_id is not None:
-                typ = type_of_puzzle(coin_spend.puzzle_reveal.to_program())
-                assert typ is not None
-                type_dict[asset_id] = typ
+            driver = match_puzzle(coin_spend.puzzle_reveal.to_program())
+            if driver is not None:
+                asset_id = create_asset_id(driver)
+                assert asset_id is not None
+                driver_dict[asset_id] = driver
+            else:
+                asset_id = None
             if coin_spend.coin.parent_coin_info == ZERO_32:
                 notarized_payments: List[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
@@ -373,7 +380,7 @@ class Offer:
             else:
                 leftover_coin_spends.append(coin_spend)
 
-        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), type_dict)
+        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict)
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
