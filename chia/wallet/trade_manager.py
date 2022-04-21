@@ -15,7 +15,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, NotarizedPayment
-from chia.wallet.trading.outer_puzzles import AssetType
+from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -249,11 +249,11 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
-        type_dict: Dict[bytes32, AssetType] = {},
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer, type_dict, fee=fee)
+        success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
 
@@ -280,7 +280,7 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
-        type_dict: Dict[bytes32, AssetType] = {},
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
@@ -302,10 +302,13 @@ class TradeManager:
                         elif wallet.type() == WalletType.CAT:
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
-                            if key in type_dict and type_dict[key] != AssetType.CAT:
-                                raise ValueError(f"type_dict specified {type_dict[key]}, was expecting {AssetType.CAT}")
+                            if key in driver_dict and driver_dict[key].info["type"] != AssetType.CAT:
+                                raise ValueError(
+                                    f"driver_dict specified {driver_dict[key].info['type']},"
+                                    f"was expecting {AssetType.CAT}"
+                                )
                             else:
-                                type_dict[key] = AssetType.CAT
+                                driver_dict[key] = PuzzleInfo({"type": AssetType.CAT, "tail": key})
                         else:
                             raise ValueError(f"Offers are not implemented for {wallet.type()}")
                     else:
@@ -324,12 +327,13 @@ class TradeManager:
                     # ATTENTION: new wallets
                     if wallet.type() == WalletType.CAT:
                         asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                        if asset_id in type_dict and type_dict[asset_id] != AssetType.CAT:
+                        if asset_id in driver_dict and driver_dict[asset_id].info["type"] != AssetType.CAT:
                             raise ValueError(
-                                f"type_dict specified {type_dict[asset_id]}, was expecting {AssetType.CAT}"
+                                f"driver_dict specified {driver_dict[asset_id].info['type']},"
+                                f"was expecting {AssetType.CAT}"
                             )
                         else:
-                            type_dict[asset_id] = AssetType.CAT
+                            driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -337,7 +341,7 @@ class TradeManager:
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
-            announcements_to_assert = Offer.calculate_announcements(notarized_payments, type_dict)
+            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
@@ -368,7 +372,7 @@ class TradeManager:
 
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
-            offer = Offer(notarized_payments, total_spend_bundle, type_dict)
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 
         except Exception as e:
@@ -382,9 +386,10 @@ class TradeManager:
             wsm = self.wallet_state_manager
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())  # ATTENTION: new_wallets
+            # ATTENTION: new_wallets
+            exists: Optional[Wallet] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
-                await wsm.create_wallet_for_asset_id(key, offer.type_dict[key])  # ATTENTION: new_wallets
+                await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])  # ATTENTION: new_wallets
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
@@ -507,7 +512,7 @@ class TradeManager:
         if not valid:
             return False, None, "This offer is no longer valid"
 
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.type_dict, fee=fee)
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
         if not success or take_offer is None:
             return False, None, error
 

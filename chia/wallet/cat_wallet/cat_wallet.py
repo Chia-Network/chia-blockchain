@@ -41,6 +41,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
@@ -206,6 +207,23 @@ class CATWallet:
         )
         await self.wallet_state_manager.add_new_wallet(self, self.id(), in_transaction=in_transaction)
         return self
+
+    @classmethod
+    async def create_from_puzzle_info(
+        cls,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        puzzle_driver: PuzzleInfo,
+        name=None,
+        in_transaction=False,
+    ) -> CATWallet:
+        return await cls.create_wallet_for_cat(
+            wallet_state_manager,
+            wallet,
+            puzzle_driver.info["tail"].hex(),
+            name,
+            in_transaction,
+        )
 
     @staticmethod
     async def create(
@@ -806,3 +824,13 @@ class CATWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+
+    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+        if (
+            puzzle_driver.info["type"] == AssetType.CAT
+            and puzzle_driver.info["tail"] == bytes.fromhex(self.get_asset_id())
+            and "and" not in puzzle_driver.info
+        ):
+            return True
+        else:
+            return False
