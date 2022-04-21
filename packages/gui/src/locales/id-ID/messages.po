@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 08:32\n"
+"PO-Revision-Date: 2022-04-21 12:59\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1006,7 +1006,7 @@ msgstr "Biaya"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
-msgstr ""
+msgstr "Biaya akan di gunakan dua kali: satu kali untuk meninggalkan pool, satu kali untuk bergbung."
 
 #: src/components/block/Block.jsx:299
 msgid "Fees Amount"
@@ -1019,7 +1019,7 @@ msgstr "Jumlah Biaya"
 #: src/electron/main.tsx:340
 #: src/electron/main.tsx:547
 msgid "File"
-msgstr ""
+msgstr "File"
 
 #: src/components/plot/PlotsFailed.tsx:13
 #: src/components/plot/PlotsNotFound.tsx:13
@@ -1042,12 +1042,12 @@ msgstr "Follow di Twitter"
 
 #: src/electron/main.tsx:457
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Pertanyaan Umum"
 
 #: src/components/dashboard/DashboardSideBar.tsx:80
 #: src/components/fullNode/FullNode.jsx:137
 msgid "Full Node"
-msgstr ""
+msgstr "Full Node"
 
 #: src/components/fullNode/FullNode.jsx:138
 #~ msgid "Full Node Overview"
@@ -1063,7 +1063,7 @@ msgstr "Layar Penuh"
 
 #: src/components/settings/Settings.tsx:257
 msgid "General"
-msgstr ""
+msgstr "Umum"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
@@ -1118,7 +1118,7 @@ msgstr "Bantuan"
 #: src/components/app/AppPassPrompt.tsx:127
 #: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
-msgstr ""
+msgstr "Petunjuk"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
@@ -1140,7 +1140,7 @@ msgstr "Alamat IP / host"
 
 #: src/components/settings/Settings.tsx:258
 msgid "Identities"
-msgstr ""
+msgstr "Identitas"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
 msgid "If none selected, then it will default to the temporary directory."
@@ -1168,7 +1168,7 @@ msgstr "Sedang Berlangsung"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:17
 msgid "Index"
-msgstr ""
+msgstr "Index"
 
 #: src/components/trading/TradingOverview.jsx:213
 #~ msgid "Indicated if this offer was created by us"
@@ -1201,7 +1201,7 @@ msgstr "Keadaan Salah"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:66
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Adalah sebuah alamat web untuk masuk satu kali ke halaman web milik pool. Mengandung tanda tangan dari kuci plot NFT milik farmer. Tidak semua pool mendukung fitur ini."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:403
 #: src/components/pool/PoolOverview.tsx:109
@@ -1216,19 +1216,19 @@ msgstr "Gabung ke Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:49
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr ""
+msgstr "Gabung ke pool untuk mendapatkan hasil XCH parming yang konsisten. Rata rata penghasilan menyerupai, tapi lebih terduga."
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:63
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr ""
+msgstr "Gabung ke pool untuk mendapatkan hasil XCH parming yang konsisten. Rata rata penghasilan menyerupai, tapi lebih terduga. Tunjuk plot ke plot NFT. Anda dapat dengan mudah berpindah pool tanpa harus membuat ulang plot."
 
 #: src/components/plot/add/PlotAddNFT.tsx:138
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr ""
+msgstr "Gabung ke pool untuk mendapatkan hasil XCH parming yang konsisten. Buat sebuah plot NFT dan tempatkan plot anda ke sebuah group."
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
-msgstr ""
+msgstr "Gabung ke farming pool"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 msgid "K-Size"
@@ -1236,7 +1236,7 @@ msgstr "Ukuran-K"
 
 #: src/components/app/AppKeyringMigrator.tsx:93
 msgid "Keyring migration failed: {0}"
-msgstr ""
+msgstr "Migrasi penyimpan kunci gagal: {0}"
 
 #: src/components/app/AppKeyringMigrator.tsx:86
 #~ msgid "Keyring migration failed: {error}"
@@ -1261,7 +1261,7 @@ msgstr "Puncak Tertuai Terakhir"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "Last Transaction Block Time"
-msgstr ""
+msgstr "Waktu Terakhir Blok Transaksi"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:30
 msgid "Latest Block Challenges"
@@ -1270,7 +1270,7 @@ msgstr "Blok Challenge Terbaru"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:294
 #: src/components/plotNFT/PlotNFTCard.tsx:347
 msgid "Launcher Id"
-msgstr ""
+msgstr "Id Peluncur"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:76
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:118
@@ -1291,11 +1291,11 @@ msgstr "Tampilan daftar"
 
 #: src/components/app/AppProviders.tsx:65
 msgid "Loading configuration"
-msgstr ""
+msgstr "Memuat konfigurasi"
 
 #: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
-msgstr ""
+msgstr "Memuat status penyimpan kunci"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -1355,7 +1355,7 @@ msgstr "Memuat..."
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "Kelola CAT token"
 
 #: src/components/farm/overview/FarmOverview.tsx:49
 msgid "Manage Farming Rewards"
@@ -1381,20 +1381,20 @@ msgstr "MiB Naik/Turun"
 #: src/components/settings/Settings.tsx:186
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
-msgstr ""
+msgstr "Migrasi Penyimpan kunci"
 
 #: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
-msgstr ""
+msgstr "Migrasi Penyimpan kunci"
 
 #: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
-msgstr ""
+msgstr "Migrasi di wajibkan"
 
 #: src/components/settings/Settings.tsx:127
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
-msgstr ""
+msgstr "Migrasi di wajibkan untuk mendukung perlindungan kata kunci"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
@@ -1435,7 +1435,7 @@ msgstr "Nama jaringan"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:170
 msgid "New Passphrase"
-msgstr ""
+msgstr "Kata kunci Baru"
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
 #~ msgid "New Wallet"
@@ -1482,7 +1482,7 @@ msgstr "Nod ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 msgid "Node Id"
-msgstr ""
+msgstr "Id Node"
 
 #: src/components/plot/add/PlotAddNFT.tsx:91
 msgid "None"
@@ -1524,7 +1524,7 @@ msgstr "Tidak dijumpai plot-plot"
 #: src/components/block/FarmManageFarmingRewards.tsx:163
 #: src/components/farm/FarmManageFarmingRewards.tsx:174
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Mohon di ingat ini tidak akan merubah alamat pembayaran pool. Ini hanya mempengaruhi plot format lama, dan 0.25XCH penghasilan dari memasukan plot ke pool."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:157
@@ -1537,7 +1537,7 @@ msgstr "Bilangan bucket"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
 msgid "Number of buckets for phase 3 & 4"
-msgstr ""
+msgstr "Jumblah buckets untuk kata 3 & 4"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
 msgid "Number of threads"
@@ -1545,7 +1545,7 @@ msgstr "Bilangan thread"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:87
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1553,7 +1553,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:70
 msgid "Offers"
-msgstr ""
+msgstr "Penawaran"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1582,23 +1582,23 @@ msgstr ""
 #: src/components/settings/SetPassphrasePrompt.tsx:149
 #: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
-msgstr ""
+msgstr "Kata kunci"
 
 #: src/components/app/AppKeyringMigrator.tsx:162
 #: src/components/settings/ChangePassphrasePrompt.tsx:191
 #: src/components/settings/SetPassphrasePrompt.tsx:173
 msgid "Passphrase Hint"
-msgstr ""
+msgstr "Pengingat kata kunci"
 
 #: src/components/app/AppKeyringMigrator.tsx:161
 #: src/components/settings/ChangePassphrasePrompt.tsx:190
 #: src/components/settings/SetPassphrasePrompt.tsx:172
 msgid "Passphrase Hint (Optional)"
-msgstr ""
+msgstr "Petunjuk Kata Kunci (Opsional)"
 
 #: src/components/settings/Settings.tsx:217
 msgid "Passphrase Settings"
-msgstr ""
+msgstr "Setting Kata kunci"
 
 #: src/components/app/AppPassPrompt.tsx:152
 #: src/components/settings/RemovePassphrasePrompt.tsx:67
@@ -1608,12 +1608,12 @@ msgstr ""
 #: src/components/settings/Settings.tsx:100
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
-msgstr ""
+msgstr "Perlindungan kata kunci sudah di matikan"
 
 #: src/components/settings/Settings.tsx:137
 #: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
-msgstr ""
+msgstr "Perlindungan kata kunci sudah di matikan"
 
 #: src/components/settings/Settings.tsx:134
 #: src/components/settings/SettingsPanel.tsx:138
@@ -2513,7 +2513,7 @@ msgstr "Sinkronisasi <0/>/<1/>"
 
 #: src/components/pool/PoolInfo.tsx:37
 msgid "Target Puzzle Hash"
-msgstr ""
+msgstr "Teka-teki Hash Target"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:18
 #~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -2552,15 +2552,15 @@ msgstr "Node sedang melakukan sinkronisasi, yang berarti node sedang meng unduh 
 
 #: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
-msgstr ""
+msgstr "URL pool \"{normalizedUrl}\" tidak bekerja. Apakah ini pool? Error: {0}"
 
 #: src/hooks/usePoolInfo.ts:44
 msgid "The pool URL is not valid. {normalizedUrl}"
-msgstr ""
+msgstr "Pool URL tidak valid. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:40
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
-msgstr ""
+msgstr "Pool URL membutuhkan protocol https. {normalizedUrl}"
 
 #: src/hooks/usePoolInfo.ts:44
 #~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
@@ -2572,7 +2572,7 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
-msgstr ""
+msgstr "Oprasi perpindahan pool dibatalkan, coba lagi dengan berpindah pool, atau bekerja sendiri"
 
 #: src/components/app/AppPassPrompt.tsx:37
 #~ msgid "The provided passphrase and confirmation do not match"
@@ -2596,7 +2596,7 @@ msgstr "Total dari biaya transaksi pada block ini. Diberikan kepada farmer."
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:106
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
-msgstr ""
+msgstr "Ini adalah instruksi bagaimana farmer ingin di bayar. Secara bawaan ini akan dibayarkan ke alamat XCH, tetapi bisa di set ke string dengan ukuran kurang dari 1024 karakter, bisa me representasi kan blockchain lain atau indentifiksi sistem pembayaran."
 
 #: src/components/plot/PlotsFailed.tsx:36
 msgid "These plots are invalid, you might want to delete them."
@@ -2609,7 +2609,7 @@ msgstr "Anda dapat menambah direktori yang berisikan plot. Apa bila belum membua
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:129
 #: src/components/plotNFT/PlotNFTCard.tsx:169
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
-msgstr ""
+msgstr "Kesulitan ini lebih rendah dari kesulitan sebenar nya di jaringan sebenarnya, dan digunakan dikala farming, untuk menemukan proof dan mengirimkan nya ke pool. Lebih banyak plot yang anda miliki, lebih tinggi tingkat kesulitan yang akan anda dapatkan. Tetapi, kesulitan tidak mempengaruhi hadiah."
 
 #: src/hooks/useSelectDirectory.tsx:32
 msgid "This feature is available only from the GUI."
@@ -2637,7 +2637,7 @@ msgstr "Ini adalah waktu dimana blok di hasilkan oleh farmer, sebelum di finalis
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the timestamp of the most recent transaction block."
-msgstr ""
+msgstr "Ini adalah cap waktu dari blok transaksi terakhir."
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -2650,12 +2650,12 @@ msgstr ""
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:148
 #: src/components/plotNFT/PlotNFTCard.tsx:188
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
-msgstr ""
+msgstr "Ini adalah jumlah total points plotNFT yang di miliki di pool ini, dari sesudah pembayaran terakhir. Pool akan me nihil kan points sesudah melakukan pembayaran."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:165
 #: src/components/plotNFT/PlotNFTCard.tsx:205
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
-msgstr ""
+msgstr "Ini adalah total points yang farmer anda temukan untuk plotNFT ini. Setiap k32 plot akan mendapatkan sekitar 10 point per hari, jadi apabila anda memiliki 10TiB, anda bisa mendapatkan kurang lebih 1000 points per hari, atau 41 points per jam."
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:52
 msgid "This node is fully caught up and validating the network"
