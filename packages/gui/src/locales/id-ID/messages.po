@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 12:59\n"
+"PO-Revision-Date: 2022-04-21 14:24\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2663,7 +2663,7 @@ msgstr "Node ini sudah mempunyai data terbaru dan sudah ikut men validasi dalam 
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:307
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
-msgstr ""
+msgstr "PlotNFT ini telah di alokasi kan ke kunci yang berbeda. Anda masi bisa membuat plots untuk plotNFT ini, tapi anda tidak bisa membuat perubahan."
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 #~ msgid "This plot NFT is not connected to pool"
@@ -2691,7 +2691,7 @@ msgstr "Tabel berikut menunjukan waktu terakhir farm anda mencoba untuk memenang
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
 msgid "Thread Multiplier for Phase 2"
-msgstr ""
+msgstr "Perkalian Thread untuk fase 2"
 
 #: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
@@ -2703,7 +2703,7 @@ msgstr "Waktu Dibuat"
 
 #: src/components/block/Block.jsx:167
 msgid "Timestamp"
-msgstr ""
+msgstr "Stempel waktu"
 
 #: src/components/_wallet_old/WalletHistory.tsx:42
 #~ msgid "To"
@@ -2711,7 +2711,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:58
 msgid "Tokens"
-msgstr ""
+msgstr "Token"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
@@ -2721,7 +2721,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Total Chia yang sudah di farm"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -2769,7 +2769,7 @@ msgstr "Jumlah bilangan sejak mula blockchain"
 
 #: src/components/app/AppSelectMode.tsx:101
 msgid "Trade tokens"
-msgstr ""
+msgstr "Tukarkan token"
 
 #: src/components/trading/TradingOverview.jsx:152
 #~ msgid "Trades will show up here"
@@ -2798,7 +2798,7 @@ msgstr "Seleksi Hash Transaksi"
 #: src/components/plotNFT/PlotNFTCard.tsx:147
 #: src/components/pool/PoolOverview.tsx:62
 msgid "Unclaimed Rewards"
-msgstr ""
+msgstr "Hadiah yang belum di klaim"
 
 #: src/components/fullNode/FullNode.jsx:94
 msgid "Unfinished"
@@ -2814,7 +2814,7 @@ msgstr "Belum Selesai"
 
 #: src/components/app/AppPassPrompt.tsx:82
 msgid "Unlock Keyring"
-msgstr ""
+msgstr "Buka Penyimpan kunci"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"
@@ -2827,7 +2827,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
-msgstr ""
+msgstr "Biaya Transaksi Pengguna"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
@@ -2901,7 +2901,7 @@ msgstr "Menunggu transaksi untuk di konfirmasi"
 #: src/components/app/AppSelectMode.tsx:81
 #: src/components/app/AppSelectMode.tsx:133
 msgid "Wallet Mode"
-msgstr ""
+msgstr "Mode Dompet"
 
 #: src/components/pool/PoolOverview.tsx:181
 msgid "Wallet Status:"
@@ -2913,7 +2913,7 @@ msgstr "Status Dompet:"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
 msgid "Wallet is not defined"
-msgstr ""
+msgstr "Dompet tidak ditemukan"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2965,7 +2965,7 @@ msgstr "Anda hendak lebih masa sebelum plot seterusnya mula?"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 msgid "Warm start"
-msgstr ""
+msgstr "Mulai yang sudah berjalan"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3024,7 +3024,7 @@ msgstr "Kamu tidak sedan membuat pool sendiri"
 
 #: src/components/app/AppSelectMode.tsx:167
 msgid "You can always change your mode later in the settings"
-msgstr ""
+msgstr "Anda bisa mengubah mode nanti di setting"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:421
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
@@ -3032,7 +3032,7 @@ msgstr "Kamu masi bisa membuat plot untuk plot NFT ini, tetapi tidak bisa membua
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Anda tidak terlu tersinkronisasi atau terhubung ke plot. File sementara akan dibuat ketika membuat plot yang melebihi ukuran ahir plot. Pastikan anda mempunyai sisa penyimpanan yang cukup. <0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3104,11 +3104,11 @@ msgstr "Gambaran Pool Anda"
 
 #: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "Penyimpan kunci anda terkunci"
 
 #: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "Kunci anda belum migrasi ke penyimpanan kunci baru. Anda tidak akan bisa membuat kunci baru atau menghapus kunci yang ada sampai dengan migrasi selesai. Apa anda mau menunda migrasi kunci anda sekarang?"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
@@ -3116,27 +3116,27 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:105
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
-msgstr ""
+msgstr "Kunci anda perlu di migrasi ke penyimpan kunci yang baru yang memberikan opsi untuk mengamankan dengan kata kunci."
 
 #: src/components/app/AppKeyringMigrator.tsx:111
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
-msgstr ""
+msgstr "Kunci anda perlu di migrasi ke penyimpan kunci baru yang di amankan oleh kata kunci master."
 
 #: src/components/app/AppKeyringMigrator.tsx:180
 #: src/components/settings/ChangePassphrasePrompt.tsx:209
 #: src/components/settings/SetPassphrasePrompt.tsx:191
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
-msgstr ""
+msgstr "Kata kunci anda disimpan di penyimpanan kredensial system anda yang aman. Chia akan bisa meng akses kunci anda tanpa meminta anda untuk memasukan kata kunci."
 
 #: src/components/settings/Settings.tsx:89
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
-msgstr ""
+msgstr "Kata kunci anda telah ditetapkan"
 
 #: src/components/settings/Settings.tsx:78
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
-msgstr ""
+msgstr "Kata kunci anda telah diperbaharui"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3162,7 +3162,7 @@ msgstr "[Error 22] File tidak di temukan. Kemungkinan besar salah satu folder pl
 
 #: src/components/plot/add/PlotAddForm.tsx:125
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2_singleton_puzzle_hash belum ter definisi"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
@@ -3202,7 +3202,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
-msgstr ""
+msgstr "{0} buckets sebagai rekomendasi"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
@@ -3226,5 +3226,5 @@ msgstr "{0} poin {1} - {2} jam yang lalu"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
-msgstr ""
+msgstr "{warning}"
 
