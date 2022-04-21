@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 07:34\n"
+"PO-Revision-Date: 2022-04-21 08:32\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2280,7 +2280,7 @@ msgstr "Kirim Masukan"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:48
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-msgstr "Mengaktifkan opsi kalimat kunci sangat di ajurkan untuk melindungi kunci dompet anda. Apa anda yakin mau melewati pengaktifan kalimat kunci?"
+msgstr "Mengaktifkan opsi kata kunci sangat di ajurkan untuk melindungi kunci dompet anda. Apa anda yakin mau melewati pengaktifan kata kunci?"
 
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
@@ -2314,7 +2314,7 @@ msgstr "Lewati"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:46
 msgid "Skip Passphrase Protection"
-msgstr "Lewati perlindungan kalimat kunci"
+msgstr "Lewati perlindungan kata kunci"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2948,7 +2948,7 @@ msgstr "Perhatian: Kunci ini digunakan sebagai alamat dari penghasilan farming. 
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:108
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Perhatian: Kunci ini di gunakan untuk pengasilan pool. Dengan menghapus kunci ini anda akan kehilangan akses ke pengasilan pool di masa depan"
 
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
@@ -3079,7 +3079,7 @@ msgstr "Ada perubahan yang belum disimpan. Apakah kamu ingin membuangnya?"
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:20
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-msgstr ""
+msgstr "Kunci anda belum migrasi ke penyimpanan kunci baru. Anda tidak akan bisa membuat kunci baru atau menghapus kunci yang ada sampai dengan migrasi selesai. Apa anda mau migrasi kunci anda sekarang?"
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 #~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
@@ -3158,7 +3158,7 @@ msgstr ""
 
 #: src/components/Amount/Amount.tsx:96
 msgid "{0, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{0, plural,one {mojo} other {mojos}}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -3191,7 +3191,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:33
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-msgstr ""
+msgstr "{minPassphraseLength, plural, one {Kata kunci harus paling sedikit # karakter panjang nya} other {Kata kunci harus paling sedikit # karakter panjang nya}}"
 
 #: src/components/Amount/Amount.tsx:95
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
