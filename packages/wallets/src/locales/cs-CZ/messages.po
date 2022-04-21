@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:15\n"
+"PO-Revision-Date: 2022-04-21 07:34\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -83,7 +83,7 @@ msgstr ""
 #: src/components/offers/OfferViewer.tsx:289
 #: src/components/offers/OfferViewer.tsx:290
 msgid "Accept Offer"
-msgstr ""
+msgstr "Přijmout Nabídku"
 
 #: src/components/trading/TradingOverview.jsx:227
 #~ msgid "Accepted at time:"
@@ -91,7 +91,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:194
 msgid "Accepted on Date"
-msgstr ""
+msgstr "Přijato dne"
 
 #: src/components/plot/PlotsFailed.tsx:18
 #: src/components/plot/PlotsNotFound.tsx:18
@@ -115,7 +115,7 @@ msgstr "Přidat ID zálohy"
 
 #: src/components/offers/OfferAssetSelector.tsx:127
 msgid "Add CAT wallets to have more options"
-msgstr ""
+msgstr "Přidat CAT peněženky pro více možností"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
@@ -135,7 +135,7 @@ msgstr ""
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr ""
+msgstr "Přidat token"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
@@ -168,7 +168,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:94
 msgid "Adding {0} token"
-msgstr ""
+msgstr "Přidávání {0} tokenů"
 
 #: src/components/WalletReceiveAddress.tsx:55
 msgid "Address"
@@ -211,7 +211,7 @@ msgstr "Částka pro počáteční minci"
 
 #: src/components/offers/OfferEditor.tsx:118
 msgid "Amount exceeds spendable balance"
-msgstr ""
+msgstr "Částka přesahuje zůstatek k útratě"
 
 #: src/components/did/WalletDIDCreate.tsx:61
 msgid "Amount must be an even amount."
@@ -219,7 +219,7 @@ msgstr "Částka musí být sudá částka."
 
 #: src/components/offers/OfferManager.tsx:100
 msgid "Are you sure you want to cancel your offer?"
-msgstr ""
+msgstr "Jste si jisti, že chcete zrušit vaši nabídku?"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
