@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 12:00\n"
+"PO-Revision-Date: 2022-04-21 14:24\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2103,7 +2103,7 @@ msgstr "RAM enimmäismäärä"
 
 #: src/components/app/AppSelectMode.tsx:116
 msgid "Recommended"
-msgstr ""
+msgstr "Suositus"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
@@ -2145,11 +2145,11 @@ msgstr "Version Muutokset"
 #: src/components/settings/Settings.tsx:198
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
-msgstr ""
+msgstr "Poista Salasana"
 
 #: src/components/app/AppKeyringMigrator.tsx:195
 msgid "Remove keys from old keyring upon successful migration"
-msgstr ""
+msgstr "Poista avaimet vanhasta avainrenkaasta onnistuneen siiron jälkeen"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:36
 msgid "Removing"
@@ -2173,7 +2173,7 @@ msgstr "Palauta väritettyjen kolikkojen metatiedot ja muut älylompakot varmuus
 
 #: src/components/app/AppSelectMode.tsx:152
 msgid "Runs the full node"
-msgstr ""
+msgstr "Ajaa koko noodia"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2194,7 +2194,7 @@ msgstr "Tallenna"
 #: src/components/settings/ChangePassphrasePrompt.tsx:206
 #: src/components/settings/SetPassphrasePrompt.tsx:188
 msgid "Save passphrase"
-msgstr ""
+msgstr "Tallenna salasana"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -2211,7 +2211,7 @@ msgstr "Toinen väliaikaishakemistosijainti"
 #: src/components/settings/Settings.tsx:130
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
-msgstr ""
+msgstr "Suojaa avainrengas vahvalla salasanalla"
 
 #: src/components/_selectKey_old/SelectKey.tsx:216
 #~ msgid "See private key"
@@ -2247,7 +2247,7 @@ msgstr "Valitse Väliaikaistyöhakemisto"
 
 #: src/components/app/AppSelectMode.tsx:65
 msgid "Select Your Client Mode"
-msgstr ""
+msgstr "Valitse Sovelluksen Tila"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -2313,7 +2313,7 @@ msgstr "Itsepoolaus. Kun voitat lohkon, ansaitset XCH-kolikoita."
 #: src/components/settings/Settings.tsx:209
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
-msgstr ""
+msgstr "Aseta Salasana"
 
 #: src/components/app/AppPassPrompt.tsx:75
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
