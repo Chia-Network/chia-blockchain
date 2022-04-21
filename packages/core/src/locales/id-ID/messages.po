@@ -8,7 +8,7 @@ msgstr ""
 "Language: id_ID\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:12\n"
+"PO-Revision-Date: 2022-04-21 07:34\n"
 "Last-Translator: \n"
 "Language-Team: Indonesian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -167,7 +167,7 @@ msgstr "Jumlah"
 
 #: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
-msgstr ""
+msgstr "Tampilan"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -659,7 +659,7 @@ msgstr "BAHAYA: menghapus permanen private key"
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
-msgstr ""
+msgstr "Gelap"
 
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
@@ -701,7 +701,7 @@ msgstr "Hapus semua key"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:91
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Hapus Kunci {fingerprint}"
 
 #: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -734,7 +734,7 @@ msgstr "Menghapus semua kunci akan menghilangkan kunci-kunci tersebut dari kompu
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:51
 msgid "Disable"
-msgstr ""
+msgstr "Nonaktifkan"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 #~ msgid "Disable NUMA"
@@ -742,7 +742,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:50
 msgid "Disable Passphrase Protection"
-msgstr ""
+msgstr "Nonaktifkan proteksi sandi"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -827,7 +827,7 @@ msgstr "Buang"
 #: src/components/CardSimple/CardSimple.tsx:58
 #: src/hooks/useShowError.tsx:11
 msgid "Error"
-msgstr ""
+msgstr "Error"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -861,7 +861,7 @@ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
 msgid "FAQ"
-msgstr ""
+msgstr "Pertanyaan Umum"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -938,7 +938,7 @@ msgstr "Kunci Publik Farmer:"
 
 #: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
-msgstr ""
+msgstr "Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:15
 #: src/components/farm/card/FarmCardStatus.tsx:26
@@ -1003,7 +1003,7 @@ msgstr "Biaya"
 
 #: src/components/Settings/SettingsApp.tsx:105
 msgid "Frequently Asked Questions"
-msgstr ""
+msgstr "Pertanyaan Umum"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/fullNode/FullNode.jsx:137
@@ -1201,7 +1201,7 @@ msgstr "Nilai Salah"
 
 #: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
-msgstr ""
+msgstr "Bahasa"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
@@ -1231,7 +1231,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
-msgstr ""
+msgstr "Terang"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1251,7 +1251,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:116
 msgid "Loading list of the keys"
-msgstr ""
+msgstr "Memuat Daftar dompet"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -1268,7 +1268,7 @@ msgstr ""
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:116
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:135
 msgid "Log Out"
-msgstr ""
+msgstr "Keluar"
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
@@ -1277,7 +1277,7 @@ msgstr ""
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:115
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:134
 msgid "Logout"
-msgstr ""
+msgstr "Keluar"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1337,7 +1337,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:16
 msgid "Migrate"
-msgstr ""
+msgstr "Migrasi"
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1349,7 +1349,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:15
 msgid "Migration required"
-msgstr ""
+msgstr "Migrasi di wajibkan"
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1365,7 +1365,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
-msgstr ""
+msgstr "Modus"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -1406,7 +1406,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:38
 msgid "New passphrase is the same as your current passphrase"
-msgstr ""
+msgstr "Kalimat sandi baru sama dengan kalimat sandi yang sekarang"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
@@ -1514,7 +1514,7 @@ msgstr "Tidak terhubung"
 
 #: src/components/ConfirmDialog/ConfirmDialog.tsx:106
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1928,7 +1928,7 @@ msgstr ""
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:75
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:75
 msgid "Pool public key:"
-msgstr ""
+msgstr "Kunci Publik Pool:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -1986,7 +1986,7 @@ msgstr "Kunci privat dengan sidik jari publik {fingerprint}"
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:28
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:40
 msgid "Private key {fingerprint}"
-msgstr ""
+msgstr "Kunci privat {fingerprint}"
 
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
@@ -2226,7 +2226,7 @@ msgstr "Pilih kunci"
 
 #: src/components/Dropdown/Dropdown.tsx:85
 msgid "Select..."
-msgstr ""
+msgstr "Pilih..."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
@@ -2262,7 +2262,7 @@ msgstr ""
 #: src/components/LayoutMain/LayoutFooter.tsx:53
 #: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
-msgstr ""
+msgstr "Kirim Masukan"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -2280,12 +2280,12 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:48
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-msgstr ""
+msgstr "Mengaktifkan opsi kalimat kunci sangat di ajurkan untuk melindungi kunci dompet anda. Apa anda yakin mau melewati pengaktifan kalimat kunci?"
 
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
 msgid "Settings"
-msgstr ""
+msgstr "Pengaturan"
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2306,7 +2306,7 @@ msgstr "Log Masuk"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:47
 msgid "Skip"
-msgstr ""
+msgstr "Lewati"
 
 #: src/components/app/AppKeyringMigrator.tsx:57
 #~ msgid "Skip Keyring Migration"
@@ -2314,7 +2314,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:46
 msgid "Skip Passphrase Protection"
-msgstr ""
+msgstr "Lewati perlindungan kalimat kunci"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2535,7 +2535,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:30
 msgid "The provided passphrase and confirmation do not match"
-msgstr ""
+msgstr "Kata sandi yang dimasukan tidak sama dengan konfirmasi"
 
 #: src/components/block/Block.jsx:291
 #~ msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2734,15 +2734,15 @@ msgstr ""
 
 #: src/utils/getTransactionResult.ts:15
 msgid "Transaction has not been sent to node yet"
-msgstr ""
+msgstr "Tansaksi belum dinkirim ke node"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
-msgstr ""
+msgstr "Transaksi sudah di kirim ke full node dan sedang menunggu di tambahkan ke mempool. {0}"
 
 #: src/utils/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
-msgstr ""
+msgstr "Transaksi sudah sukses di kirimkan ke node utama dan sudah tercatat di mempool."
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -2750,7 +2750,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:123
 msgid "Try Again"
-msgstr ""
+msgstr "Coba Lagi"
 
 #: src/components/_wallet_old/WalletHistory.tsx:25
 #~ msgid "Type"
@@ -2762,7 +2762,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:127
 msgid "Unable to load the list of the keys"
-msgstr ""
+msgstr "Tisak bisa menampilkan daftar kunci dompet"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
 #: src/components/pool/PoolOverview.tsx:63
@@ -2787,7 +2787,7 @@ msgstr "Diketahui"
 
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
-msgstr ""
+msgstr "Perubahan yang belum disimpan"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:281
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:293
@@ -2800,7 +2800,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:52
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-msgstr ""
+msgstr "Mengaktifkan opsi kalimat kunci sangat di ajurkan untuk melindungi kunci dompet anda. Apa anda yakin mau melewati pengaktifan kalimat kunci?"
 
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
 #~ msgid "VDF Sub Slot Iterations"
@@ -2870,7 +2870,7 @@ msgstr "Nilai Kelihatan terlalu tinggi"
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:91
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
-msgstr ""
+msgstr "Dompet"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
@@ -2940,11 +2940,11 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:117
 msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr ""
+msgstr "Perhatian: Kunci ini di gunakan oleh dompet yang mungkin tidak kosong. Dengan menghapus kunci ini anda akan kehilangan akses ke dompet"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:99
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Perhatian: Kunci ini digunakan sebagai alamat dari penghasilan farming. Dengan menghapus kunci ini anda akan kehilangan penhasilan farming di masa depan"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:108
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
