@@ -118,7 +118,15 @@
   ;MAIN
   (if mode
     ; mode 1 - run INNER_PUZZLE
-    (a INNER_PUZZLE my_amount_or_inner_solution)
+    (if (= mode 2)
+       ; If mode is 2, it means this is a transfer spend.
+       (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)
+          (a INNER_PUZZLE my_amount_or_inner_solution)
+          (x)
+       )
+       (a INNER_PUZZLE my_amount_or_inner_solution)
+    )
+
 
     ; mode 0 - recovery
     (if (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH)

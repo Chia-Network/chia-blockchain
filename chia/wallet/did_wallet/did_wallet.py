@@ -204,11 +204,11 @@ class DIDWallet:
         if args is None:
             raise ValueError("Cannot uncurry the DID puzzle.")
         _, _, num_verification, _, metadata = args
-        # full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
-        # inner_solution: Program = full_solution.rest().rest().first()
+        full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
+        inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes] = []
-        # for did in list(inner_solution.rest().rest().rest().rest().rest().rest().as_iter()):
-        #     recovery_list.append(did.as_python()[0])
+        for did in list(inner_solution.rest().rest().rest().rest().rest().as_iter()):
+            recovery_list.append(did.as_python()[0])
         self.did_info = DIDInfo(
             launch_coin,
             recovery_list,
@@ -610,8 +610,8 @@ class DIDWallet:
 
         new_did_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             new_puzhash,
-            [],
-            uint64(0),
+            self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
@@ -627,7 +627,7 @@ class DIDWallet:
         # Need to include backup list reveal here, even we are don't recover
         # innerpuz solution is
         # (mode, p2_solution)
-        innersol: Program = Program.to([1, p2_solution])
+        innersol: Program = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
