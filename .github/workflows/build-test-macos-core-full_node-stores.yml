@@ -93,7 +93,7 @@ jobs:
     - name: Test core-full_node-stores code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/core/full_node/stores/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/core/full_node/stores/test_block_store.py tests/core/full_node/stores/test_coin_store.py tests/core/full_node/stores/test_full_node_store.py tests/core/full_node/stores/test_hint_store.py tests/core/full_node/stores/test_sync_store.py
 
     - name: Process coverage data
       run: |

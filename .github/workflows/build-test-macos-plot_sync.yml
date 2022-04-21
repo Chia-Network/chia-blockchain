@@ -93,7 +93,7 @@ jobs:
     - name: Test plot_sync code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/plot_sync/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/plot_sync/test_delta.py tests/plot_sync/test_plot_sync.py tests/plot_sync/test_receiver.py tests/plot_sync/test_sender.py tests/plot_sync/test_sync_simulated.py
 
     - name: Process coverage data
       run: |
