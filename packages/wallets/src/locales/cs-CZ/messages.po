@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 08:32\n"
+"PO-Revision-Date: 2022-04-21 09:43\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -943,7 +943,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:122
 msgid "Drag & drop an offer file below to view its details"
-msgstr ""
+msgstr "Přetažením souboru nabídky níže zobrazíte její detaily"
 
 #: src/components/cat/WalletDID.tsx:426
 #: src/components/did/WalletDID.tsx:426
@@ -1165,7 +1165,7 @@ msgstr "Poplatek"
 
 #: src/components/offers/OfferSummary.tsx:122
 msgid "Fees included in offer:"
-msgstr ""
+msgstr "Poplatky zahrnuté v nabídce:"
 
 #: src/electron/main.tsx:266
 #: src/electron/main.tsx:467
@@ -1302,11 +1302,11 @@ msgstr "IP adresa"
 
 #: src/components/offers/OfferShareDialog.tsx:414
 msgid "If selected, your offer will be not be shared publicly."
-msgstr ""
+msgstr "Pokud je vybráno, vaše nabídka nebude sdílena veřejně."
 
 #: src/components/offers/OfferManager.tsx:107
 msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
-msgstr ""
+msgstr "Pokud jste již sdíleli soubor své nabídky, možná budete muset odeslat transakci pro zrušení čekající nabídky. Klikněte na \"Zrušit na blockchainu\" pro odeslání storno transakce."
 
 #: src/components/WalletSendTransactionResultDialog.tsx:41
 msgid "If you would like to speed up the transaction, please delete unconfirmed transactions and retry with a higher fee."
@@ -1341,7 +1341,7 @@ msgstr ""
 
 #: src/components/offers/OfferEditorConditionsPanel.tsx:339
 msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
-msgstr ""
+msgstr "Zahrnutí poplatku do nabídky může pomoci urychlit transakci při přijetí nabídky."
 
 #: src/components/WalletHistory.tsx:60
 msgid "Incoming"
@@ -1383,12 +1383,14 @@ msgstr ""
 #: src/components/offers/OfferViewer.tsx:358
 msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
+msgstr "Nedostatek dostupných finančních prostředků k přijetí nabídky. Ujistěte se, že Váš\n"
+"disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/offers/OfferEditor.tsx:169
 msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
+msgstr "Nedostatek dostupných finančních prostředků k vytvoření nabídky. Ujistěte se, že Váš\n"
+"disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/create/createRLAdmin.jsx:217
 msgid "Interval"
@@ -1439,7 +1441,7 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:744
 msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {KeybaseTeamName} team, you must first have Keybase installed."
-msgstr ""
+msgstr "Keybase je bezpečná aplikace pro sdílení zpráv a souborů. Chcete-li sdílet nabídku v týmu Keybase {KeybaseTeamName}, musíte nejprve Keybase nainstalovat."
 
 #: src/components/app/AppKeyringMigrator.tsx:94
 #~ msgid "Keyring migration failed: {0}"
@@ -1566,7 +1568,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:505
 msgid "Manage Offers"
-msgstr ""
+msgstr "Správa Nabídek"
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -1700,7 +1702,7 @@ msgstr "Uživatelské jméno"
 
 #: src/components/offers/OfferManager.tsx:458
 msgid "No current offers"
-msgstr ""
+msgstr "Žádné aktuální nabídky"
 
 #: src/components/WalletHistory.tsx:323
 msgid "No previous transactions"
@@ -1800,22 +1802,22 @@ msgstr ""
 #: src/components/offers/OfferDataDialog.tsx:42
 #: src/components/offers/OfferDataDialog.tsx:50
 msgid "Offer Data"
-msgstr ""
+msgstr "Data nabídky"
 
 #: src/components/offers/OfferViewer.tsx:183
 msgid "Offer Identifier"
-msgstr ""
+msgstr "Identifikátor nabídky"
 
 #: src/components/offers/OfferShareDialog.tsx:345
 #: src/components/offers/OfferShareDialog.tsx:486
 #: src/components/offers/OfferShareDialog.tsx:703
 #: src/components/offers/OfferShareDialog.tsx:849
 msgid "Offer Shared"
-msgstr ""
+msgstr "Sdílená nabídka"
 
 #: src/components/offers/OfferViewer.tsx:344
 msgid "Offer has been accepted and is awaiting confirmation."
-msgstr ""
+msgstr "Nabídka byla přijata a čeká na potvrzení."
 
 #: src/components/offers/OfferShareDialog.tsx:350
 msgid "OfferBin URL"
@@ -1823,7 +1825,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:300
 msgid "Offered"
-msgstr ""
+msgstr "Nabídnuto"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1831,7 +1833,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:532
 msgid "Offers you accepted"
-msgstr ""
+msgstr "Nabídky, které jste přijali"
 
 #: src/components/offers/OfferManager.tsx:527
 msgid "Offers you created"
