@@ -35,7 +35,8 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -220,7 +221,7 @@ class CATWallet:
         return await cls.create_wallet_for_cat(
             wallet_state_manager,
             wallet,
-            puzzle_driver.info["tail"].hex(),
+            puzzle_driver["tail"].hex(),
             name,
             in_transaction,
         )
@@ -827,8 +828,8 @@ class CATWallet:
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         if (
-            puzzle_driver.info["type"] == AssetType.CAT
-            and puzzle_driver.info["tail"] == bytes.fromhex(self.get_asset_id())
+            AssetType(puzzle_driver.type()) == AssetType.CAT
+            and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())
             and "and" not in puzzle_driver.info
         ):
             return True

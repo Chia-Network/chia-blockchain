@@ -27,7 +27,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened, MAX_POOL_WALLETS
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -964,7 +965,7 @@ class WalletRpcApi:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key in offer:
-                if len(key) == 32:
+                if len(key) == 64:
                     asset_id = bytes32.from_hexstr(key)
                     driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
         else:

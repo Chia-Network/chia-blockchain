@@ -16,13 +16,12 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 from chia.wallet.outer_puzzles import (
-    PuzzleInfo,
-    Solver,
     create_asset_id,
     construct_puzzle,
     match_puzzle,
     solve_puzzle,
 )
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.payment import Payment
 
@@ -303,8 +302,11 @@ class Offer:
                         self.driver_dict[asset_id],
                         Solver(
                             {
-                                "coin": coin,
-                                "parent_spend": parent_spend,
+                                "coin": "0x"
+                                + coin.parent_coin_info.hex()
+                                + coin.puzzle_hash.hex()
+                                + bytes(coin.amount).hex(),
+                                "parent_spend": "0x" + bytes(parent_spend).hex(),
                             }
                         ),
                         OFFER_MOD,
