@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -19,26 +20,55 @@ class AssetType(Enum):
     CAT = "CAT"
 
 
+@dataclass(frozen=True)
+class PuzzleInfo:
+    info: Dict[str, Any]
+
+
+@dataclass(frozen=True)
+class Solver:
+    info: Dict[str, Any]
+
+
 class CATOuterPuzzle:
-    @staticmethod
-    def asset_id(puzzle: Program) -> Optional[bytes32]:
+    @classmethod
+    def match(cls, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_cat_puzzle(puzzle)
         if matched:
-            _, tail_hash, _ = curried_args
-            return bytes32(tail_hash.as_python())
+            _, tail_hash, inner_puzzle = curried_args
+            constructor_dict = {
+                "type": AssetType.CAT,
+                "tail": bytes32(tail_hash.as_python()),
+            }
+            next_constructor = match_puzzle(inner_puzzle)
+            if next_constructor is not None:
+                constructor_dict["and"] = next_constructor.info
+            return PuzzleInfo(constructor_dict)
         else:
             return None
 
-    @staticmethod
-    def construct(asset_id: bytes32, inner_puzzle: Program) -> Program:
-        return construct_cat_puzzle(CAT_MOD, asset_id, inner_puzzle)
+    @classmethod
+    def asset_id(cls, constructor: PuzzleInfo) -> Optional[bytes32]:
+        return bytes32(constructor.info["tail"])
 
-    @staticmethod
-    def solve(coin: Coin, inner_puzzle: Program, inner_solution: Program, parent_spend: CoinSpend) -> Program:
+    @classmethod
+    def construct(cls, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
+        if "and" in constructor.info:
+            inner_puzzle = construct_puzzle(constructor.info["and"], inner_puzzle)
+        return construct_cat_puzzle(CAT_MOD, constructor.info["tail"], inner_puzzle)
+
+    @classmethod
+    def solve(cls, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
+        tail_hash: bytes32 = constructor.info["tail"]
+        coin: Coin = solver.info["coin"]
+        parent_spend: CoinSpend = solver.info["parent_spend"]
         parent_coin: Coin = parent_spend.coin
+        if "and" in constructor.info:
+            inner_puzzle = construct_puzzle(PuzzleInfo(constructor.info["and"]), inner_puzzle)
+            inner_solution = solve_puzzle(PuzzleInfo(constructor.info["and"]), solver, inner_puzzle, inner_solution)
         matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
         assert matched
-        _, tail_hash, parent_inner_puzzle = curried_args
+        _, _, parent_inner_puzzle = curried_args
         spendable_cat = SpendableCAT(
             coin,
             tail_hash,
@@ -51,32 +81,28 @@ class CATOuterPuzzle:
         return unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat]).coin_spends[0].solution.to_program()
 
 
-OUTER_PUZZLES = {
+driver_lookup: Dict[AssetType, Any] = {
     AssetType.CAT: CATOuterPuzzle,
 }
 
 
-def type_of_puzzle(puzzle: Program) -> Optional[AssetType]:
-    for typ, outer in OUTER_PUZZLES.items():
-        asset_id = outer.asset_id(puzzle)
-        if asset_id is not None:
-            return typ
+def match_puzzle(puzzle: Program) -> Optional[PuzzleInfo]:
+    for driver in driver_lookup.values():
+        potential_info: Optional[PuzzleInfo] = driver.match(puzzle)
+        if potential_info is not None:
+            return potential_info
     return None
 
 
-def asset_id_of_puzzle(puzzle: Program) -> Optional[bytes32]:
-    for type, outer in OUTER_PUZZLES.items():
-        asset_id = outer.asset_id(puzzle)
-        if asset_id is not None:
-            return asset_id
-    return None
+def construct_puzzle(constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
+    return driver_lookup[constructor.info["type"]].construct(constructor, inner_puzzle)  # type: ignore
 
 
-def construct_puzzle(typ: AssetType, asset_id: bytes32, inner_puzzle: Program) -> Program:
-    return OUTER_PUZZLES[typ].construct(asset_id, inner_puzzle)
+def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
+    return driver_lookup[constructor.info["type"]].solve(  # type: ignore
+        constructor, solver, inner_puzzle, inner_solution
+    )
 
 
-def solve_puzzle(
-    typ: AssetType, coin: Coin, inner_puzzle: Program, inner_solution: Program, parent_spend: CoinSpend
-) -> Program:
-    return OUTER_PUZZLES[typ].solve(coin, inner_puzzle, inner_solution, parent_spend)
+def create_asset_id(constructor: PuzzleInfo) -> bytes32:
+    return driver_lookup[constructor.info["type"]].asset_id(constructor)  # type: ignore
