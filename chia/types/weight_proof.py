@@ -115,14 +115,14 @@ class SubSlotDataV2(Streamable):
     cc_infusion_point: Optional[VDFProof]  # if block
     signage_point_index: Optional[uint8]  # if block
     cc_slot_end: Optional[VDFProof]  # if is end of slot
-    cc_sp_vdf_output: Optional[CompressedClassgroupElement]  # if is end of slot
-    cc_ip_vdf_output: Optional[CompressedClassgroupElement]  # if is end of slot
+    cc_sp_vdf_output: Optional[CompressedClassgroupElement]
+    cc_ip_vdf_output: Optional[CompressedClassgroupElement]
     cc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
     icc_infusion_point: Optional[VDFProof]
     icc_ip_vdf_output: Optional[CompressedClassgroupElement]
 
-    icc_slot_end: Optional[VDFProof]
-    icc_slot_end_output: Optional[ClassgroupElement]
+    icc_slot_end: Optional[VDFProof]  # if is end of slot
+    icc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
     cc_sp_signature: Optional[G2Element]  # if challenge block (needed for ChallengeBlockInfo)
     ip_iters: Optional[uint64]  # if block
     total_iters: Optional[uint128]  # if block
