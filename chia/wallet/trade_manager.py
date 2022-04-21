@@ -12,10 +12,10 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, NotarizedPayment
-from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord

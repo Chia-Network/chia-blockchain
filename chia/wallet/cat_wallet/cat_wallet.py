@@ -35,13 +35,13 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash

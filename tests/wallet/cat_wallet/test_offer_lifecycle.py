@@ -17,9 +17,9 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trading.offer import Offer, NotarizedPayment
-from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 
 acs = Program.to(1)
