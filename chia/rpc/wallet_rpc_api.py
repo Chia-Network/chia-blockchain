@@ -35,7 +35,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
-from chia.wallet.trading.outer_puzzles import AssetType
+from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
@@ -919,17 +919,20 @@ class WalletRpcApi:
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
-        type_dict_str: Optional[Dict[str, str]] = request.get("type_dict", None)
+        driver_dict_str: Optional[Dict[str, str]] = request.get("driver_dict", None)
 
-        # This type_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
-        type_dict: Dict[str, str] = {}
-        if type_dict_str is None:
+        # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
+        driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        if driver_dict_str is None:
             for key in offer:
-                if len(key) >= 32:
-                    type_dict[bytes32.from_hexstr(key)] = AssetType.CAT
+                if len(key) == 32:
+                    asset_id = bytes32.from_hexstr(key)
+                    driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
         else:
-            for key, value in type_dict_str:
-                type_dict[bytes32.from_hexstr(key)] = AssetType(value)
+            for key, value in driver_dict_str:
+                cast_type_driver_dict = driver_dict_str[key]
+                cast_type_driver_dict["type"] = AssetType(cast_type_driver_dict["type"])
+                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(cast_type_driver_dict)
 
         modified_offer = {}
         for key in offer:
@@ -941,7 +944,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, type_dict, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only
             )
         if success:
             return {
