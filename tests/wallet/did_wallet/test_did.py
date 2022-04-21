@@ -340,7 +340,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), num_of_backup_ids_needed=uint64(1)
+                wallet_node.wallet_state_manager, wallet, uint64(101)
             )
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
