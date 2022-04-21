@@ -80,7 +80,7 @@ class NFTWallet:
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         did_wallet_id: uint32,
-        name: str = "",
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
         """
         This must be called under the wallet state manager lock
@@ -100,7 +100,7 @@ class NFTWallet:
 
         self = cls(
             standard_wallet=wallet,
-            log=logging.getLogger(name if name else __name__),
+            log=logging.getLogger(name if name is not None else __name__),
             wallet_state_manager=wallet_state_manager,
             nft_wallet_info=nft_wallet_info,
             wallet_info=wallet_info,
