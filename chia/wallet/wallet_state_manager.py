@@ -37,11 +37,11 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
+from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
-from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType

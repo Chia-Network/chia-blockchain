@@ -32,10 +32,10 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
-from chia.wallet.trading.outer_puzzles import AssetType, PuzzleInfo
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
