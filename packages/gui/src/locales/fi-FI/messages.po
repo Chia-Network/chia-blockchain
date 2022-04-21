@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 14:24\n"
+"PO-Revision-Date: 2022-04-21 17:13\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2323,7 +2323,7 @@ msgstr "Aseta Salasana"
 #: src/components/dashboard/DashboardSideBar.tsx:121
 #: src/components/settings/Settings.tsx:248
 msgid "Settings"
-msgstr ""
+msgstr "Asetukset"
 
 #: src/components/app/AppSelectMode.tsx:171
 #~ msgid "Settings are located at the upper right corner"
@@ -2349,11 +2349,11 @@ msgstr ""
 #: src/components/app/AppKeyringMigrator.tsx:57
 #: src/components/app/AppKeyringMigrator.tsx:218
 msgid "Skip"
-msgstr ""
+msgstr "Ohita"
 
 #: src/components/app/AppKeyringMigrator.tsx:56
 msgid "Skip Keyring Migration"
-msgstr ""
+msgstr "Ohita Aivainrenkaan Siirto"
 
 #: src/components/app/AppPassPrompt.tsx:73
 #~ msgid "Skip Passphrase Protection"
@@ -2377,7 +2377,7 @@ msgstr "Tasaa XCH-farmauspalkkioita liittymällä pooliin."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 msgid "Specify a value of 0 to use all available threads"
-msgstr ""
+msgstr "Määritä arvo 0 käyttääksesi kaikkia käytettävissä olevia säikeitä"
 
 #: src/electron/main.tsx:561
 msgid "Speech"
@@ -2413,7 +2413,7 @@ msgstr "Puhe"
 
 #: src/components/app/AppState.tsx:172
 msgid "Starting services"
-msgstr ""
+msgstr "Käynnistetään palveluja"
 
 #: src/components/fullNode/FullNode.jsx:96
 msgid "State"
@@ -2450,7 +2450,7 @@ msgstr "Tila"
 
 #: src/components/app/AppSelectMode.tsx:89
 msgid "Store and Send XCH"
-msgstr ""
+msgstr "Säilytä ja lähetä XCH:itä"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 #~ msgid "Stripe Size"
@@ -2636,7 +2636,7 @@ msgstr "Ajankohta jolloin farmari on luonut lohkon. Aikatodiste viimeistelee loh
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the timestamp of the most recent transaction block."
-msgstr ""
+msgstr "Tämä on uusimman transaktiolohkon aikaleima."
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -2690,7 +2690,7 @@ msgstr "Taulukko näyttää farmisi viimeksi yrittämän lohkohaasteen ajankohda
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
 msgid "Thread Multiplier for Phase 2"
-msgstr ""
+msgstr "Säikeiden kerroin vaiheeseen 2"
 
 #: src/components/fullNode/FullNode.jsx:88
 msgid "Time Created"
@@ -2710,7 +2710,7 @@ msgstr "Aikaleima"
 
 #: src/components/dashboard/DashboardSideBar.tsx:58
 msgid "Tokens"
-msgstr ""
+msgstr "Tokenit"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
@@ -2720,7 +2720,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Farmatut Chiat Yhteensä"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -2768,7 +2768,7 @@ msgstr "Iteraatioiden määrä lohkoketjun alusta asti"
 
 #: src/components/app/AppSelectMode.tsx:101
 msgid "Trade tokens"
-msgstr ""
+msgstr "Treidaa tokeneita"
 
 #: src/components/trading/TradingOverview.jsx:152
 #~ msgid "Trades will show up here"
@@ -2813,7 +2813,7 @@ msgstr "Kesken"
 
 #: src/components/app/AppPassPrompt.tsx:82
 msgid "Unlock Keyring"
-msgstr ""
+msgstr "Avaa Avainrengas"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"
@@ -2826,7 +2826,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
-msgstr ""
+msgstr "Transaktiomaksut"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
@@ -2900,7 +2900,7 @@ msgstr "Odotetaan, että tapahtuma on vahvistettu"
 #: src/components/app/AppSelectMode.tsx:81
 #: src/components/app/AppSelectMode.tsx:133
 msgid "Wallet Mode"
-msgstr ""
+msgstr "Lompakkotila"
 
 #: src/components/pool/PoolOverview.tsx:181
 msgid "Wallet Status:"
@@ -2912,7 +2912,7 @@ msgstr "Lompakon Tila:"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
 msgid "Wallet is not defined"
-msgstr ""
+msgstr "Lompakkoa ei ole määritetty"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -2964,7 +2964,7 @@ msgstr "Haluatko asettaa tauon ennen seuraavaa plottausta?"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 msgid "Warm start"
-msgstr ""
+msgstr "Lämmin käynnistys"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3023,7 +3023,7 @@ msgstr "Et ole itsepoolaamassa"
 
 #: src/components/app/AppSelectMode.tsx:167
 msgid "You can always change your mode later in the settings"
-msgstr ""
+msgstr "Voit aina vaihtaa tilaa asetuksissa"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:421
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
@@ -3031,7 +3031,7 @@ msgstr "Voit silti luoda plotteja tälle Plot-NFT:lle, mutta et voi tehdä muuto
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Noodin ei tarvitse olla synkronissa tai yhteydessä plotataksesi. Plottausprosessin aikana luodaan väliaikaistiedostoja, joiden yhteiskoko ylittää lopullisen plottitiedoston koon. Varmista että levyllä on tarpeeksi tilaa. <0>Katso lisää</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3103,11 +3103,11 @@ msgstr "Poolin Yleiskatsaus"
 
 #: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "Avainrenkaasi on lukittu"
 
 #: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "Avaimia ei ole siirretty uuteen avainrenkaaseen. Et voi luoda uusia avaimia tai poistaa olemassa olevia avaimia ennen kuin siirto on tehty. Oletko varma, että haluat ohittaa avaimiesi siirron?"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
@@ -3115,27 +3115,27 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:105
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
-msgstr ""
+msgstr "Avaimesi täytyy siirtää uuteen avainrenkaaseen, joka voidaan suojata pääsalasanalla."
 
 #: src/components/app/AppKeyringMigrator.tsx:111
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
-msgstr ""
+msgstr "Avaimesi täytyy siirtää uuteen avainrenkaaseen, joka on suojattu pääsalasanalla."
 
 #: src/components/app/AppKeyringMigrator.tsx:180
 #: src/components/settings/ChangePassphrasePrompt.tsx:209
 #: src/components/settings/SetPassphrasePrompt.tsx:191
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
-msgstr ""
+msgstr "Salasana voidaan tallentaa järjestelmäsi turvalliseen käyttöoikeussäilöön. Sovellus voi käyttää avaimia ilman että pyytää salasanaasi."
 
 #: src/components/settings/Settings.tsx:89
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
-msgstr ""
+msgstr "Salasanasi on asetettu"
 
 #: src/components/settings/Settings.tsx:78
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
-msgstr ""
+msgstr "Salasanasi on päivitetty"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3161,7 +3161,7 @@ msgstr "[Virhe 22] Tiedostoa ei löydy. Todennäköisesti yhdessä config.yaml-t
 
 #: src/components/plot/add/PlotAddForm.tsx:125
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2SingletonPuzzleHash ei ole määritetty"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
@@ -3201,7 +3201,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
-msgstr ""
+msgstr "{0} muistilohkoa on suositusmäärä"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
@@ -3225,5 +3225,5 @@ msgstr "{0} pistettä {1} - {2} tuntia sitten"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
-msgstr ""
+msgstr "{warning}"
 
