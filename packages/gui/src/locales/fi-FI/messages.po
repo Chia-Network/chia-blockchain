@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 09:43\n"
+"PO-Revision-Date: 2022-04-21 12:00\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1742,11 +1742,11 @@ msgstr "Ole hyvä ja syötä nykyinen salasana ja uusi salasana"
 #: src/components/app/AppPassPrompt.tsx:95
 #: src/components/settings/RemovePassphrasePrompt.tsx:50
 msgid "Please enter your passphrase"
-msgstr ""
+msgstr "Ole hyvä ja syötä salasana"
 
 #: src/components/app/AppPassPrompt.tsx:89
 msgid "Please enter your passphrase to proceed"
-msgstr ""
+msgstr "Ole hyvä ja syötä salasanasi jatkaaksesi"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:623
 #: src/components/_wallet_old/standard/WalletStandard.tsx:420
@@ -1863,7 +1863,7 @@ msgstr "Plotit ovat levyn tilavarauksia, joilla tuotetaan ja ansaitaan Chioja. <
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:103
 msgid "Plotter"
-msgstr ""
+msgstr "Plotteri"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
 msgid "Plotting"
@@ -1951,7 +1951,7 @@ msgstr "Poolin Palkkiosumma"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
 msgid "Pool does not provide relativeLockHeight."
-msgstr ""
+msgstr "Pooli ei tarjoa relativeLockHeightia."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 #~ msgid "Pool does not provide relative_lock_height."
@@ -1959,7 +1959,7 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
 msgid "Pool does not provide targetPuzzleHash."
-msgstr ""
+msgstr "Allas ei tarjoa targetPuzzleHashia."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 #~ msgid "Pool does not provide target_puzzle_hash."
