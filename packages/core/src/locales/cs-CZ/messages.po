@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:12\n"
+"PO-Revision-Date: 2022-04-21 06:35\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -167,7 +167,7 @@ msgstr "Částka"
 
 #: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
-msgstr ""
+msgstr "Vzhled"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -659,7 +659,7 @@ msgstr "POZOR: trvale odstraní privátní klíč"
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
-msgstr ""
+msgstr "Tmavý"
 
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
@@ -734,7 +734,7 @@ msgstr "Smazáním klíče tento klíč nevratně odeberete z počítače. Ujist
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:51
 msgid "Disable"
-msgstr ""
+msgstr "Zakázat"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 #~ msgid "Disable NUMA"
@@ -742,7 +742,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:50
 msgid "Disable Passphrase Protection"
-msgstr ""
+msgstr "Vypnutí ochrany heslem"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -1201,7 +1201,7 @@ msgstr "Nesprávná hodnota"
 
 #: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
-msgstr ""
+msgstr "Jazyk"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
@@ -1231,7 +1231,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
-msgstr ""
+msgstr "Světlý"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1337,7 +1337,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:16
 msgid "Migrate"
-msgstr ""
+msgstr "Migrovat"
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1349,7 +1349,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:15
 msgid "Migration required"
-msgstr ""
+msgstr "Vyžadována migrace"
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1365,7 +1365,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
-msgstr ""
+msgstr "Režim"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -1406,7 +1406,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:38
 msgid "New passphrase is the same as your current passphrase"
-msgstr ""
+msgstr "Nové heslo je stejné jako vaše aktuální heslo"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
@@ -2280,12 +2280,12 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:48
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-msgstr ""
+msgstr "Nastavení hesla je výrazně doporučeno pro ochranu vašich klíčů. Jste si jisti, že chcete přeskočit nastavení hesla?"
 
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
 msgid "Settings"
-msgstr ""
+msgstr "Nastavení"
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2306,7 +2306,7 @@ msgstr "Přihlásit se"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:47
 msgid "Skip"
-msgstr ""
+msgstr "Přeskočit"
 
 #: src/components/app/AppKeyringMigrator.tsx:57
 #~ msgid "Skip Keyring Migration"
@@ -2314,7 +2314,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:46
 msgid "Skip Passphrase Protection"
-msgstr ""
+msgstr "Přeskočit ochranu heslem"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2535,7 +2535,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:30
 msgid "The provided passphrase and confirmation do not match"
-msgstr ""
+msgstr "Zadané heslo a potvrzení hesla se neshodují"
 
 #: src/components/block/Block.jsx:291
 #~ msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2800,7 +2800,7 @@ msgstr "Neuložené změny"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:52
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-msgstr ""
+msgstr "Nastavení hesla je výrazně doporučeno pro ochranu vašich klíčů. Jste si jisti, že chcete vypnout ochranu heslem?"
 
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
 #~ msgid "VDF Sub Slot Iterations"
@@ -3079,7 +3079,7 @@ msgstr "Provedli jste změny. Chcete je zahodit?"
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:20
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-msgstr ""
+msgstr "Vaše klíče nebyly migrovány do nové klíčenky. Nebudete schopni vytvářet nové klíče nebo odstraňovat staré, dokud nedokončíte migraci. Přejete si migrovat klíče nyní?"
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 #~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
@@ -3191,7 +3191,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:33
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-msgstr ""
+msgstr "{minPassphraseLength, plural, one {Heslo musí mít minimálně # znak} other {Heslo musí být minimálně # znaků dlouhé}}"
 
 #: src/components/Amount/Amount.tsx:95
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
