@@ -16,7 +16,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -133,6 +133,25 @@ class NFTWallet:
 
     def id(self) -> uint32:
         return self.wallet_info.id
+
+    async def get_confirmed_balance(self, record_list=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
+
+    async def get_max_send_amount(self, records=None):
+        """This is the confirmed balance, which we set to 0 as the NFT wallet doesn't have one."""
+        return uint128(0)
 
     async def add_nft_coin(self, coin: Coin, spent_height: uint32, in_transaction: bool) -> None:
         await self.coin_added(coin, spent_height, in_transaction=in_transaction)
