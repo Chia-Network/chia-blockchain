@@ -119,7 +119,7 @@ jobs:
         git -C ./chia-blockchain-gui status
         . ./activate
         cd ./build_scripts
-        sh build_linux_rpm.sh amd64
+        bash build_linux_rpm.sh amd64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
