@@ -896,7 +896,7 @@ class FullNode:
                 weight_proof_v2 = True
                 self.log.info("using new weight proof format")
             if weight_proof_v2:
-                request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_height)
+                request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_hash)
                 ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=10)
                 salt = bytes32.from_bytes(token_bytes(32))
                 ses_hash = ses_response.sub_epoch_summary.get_hash()

@@ -339,8 +339,9 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         summary_heights = self.full_node.blockchain.get_ses_heights()
         count = 0
+        block = self.full_node.blockchain.block_record(request.tip)
         for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
-            if ses_height <= request.tip:
+            if ses_height <= block.height:
                 count += 1
             if count == 2:
                 ses = self.full_node.blockchain.get_ses(ses_height)
