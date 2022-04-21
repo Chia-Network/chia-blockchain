@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 09:43\n"
+"PO-Revision-Date: 2022-04-21 10:41\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -930,7 +930,7 @@ msgstr "Distribuovaná identita"
 
 #: src/components/offers/OfferShareDialog.tsx:1014
 msgid "Do not show this dialog again"
-msgstr ""
+msgstr "Tento dialog příště nezobrazovat"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:51
 #: src/components/plot/overview/PlotOverviewHero.tsx:67
@@ -1039,7 +1039,7 @@ msgstr ""
 #: src/components/offers/OfferShareDialog.tsx:232
 #: src/components/offers/OfferShareDialog.tsx:232
 msgid "Failed to execute Keybase command: {stderr}"
-msgstr ""
+msgstr "Provedení příkazu Keybase selhalo: {stderr}"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -1222,11 +1222,11 @@ msgstr "Název souboru"
 #: src/components/offers/OfferShareDialog.tsx:715
 #: src/components/offers/OfferShareDialog.tsx:782
 msgid "Go to #{KeybaseChannelName}"
-msgstr ""
+msgstr "Přejít na #{KeybaseChannelName}"
 
 #: src/components/offers/OfferShareDialog.tsx:865
 msgid "Go to Offerpool"
-msgstr ""
+msgstr "Přejít na Offerpool"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "Grid view"
@@ -1310,11 +1310,11 @@ msgstr "Pokud jste již sdíleli soubor své nabídky, možná budete muset odes
 
 #: src/components/WalletSendTransactionResultDialog.tsx:41
 msgid "If you would like to speed up the transaction, please delete unconfirmed transactions and retry with a higher fee."
-msgstr ""
+msgstr "Pokud chcete urychlit transakci, odstraňte prosím nepotvrzené transakce a zkuste to znovu s vyšším poplatkem."
 
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
-msgstr ""
+msgstr "Import"
 
 #: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
@@ -1331,13 +1331,13 @@ msgstr "Importovat peněženku"
 #: src/components/offers/OfferEditorConditionsPanel.tsx:249
 #: src/components/offers/OfferViewer.tsx:455
 msgid "In exchange for"
-msgstr ""
+msgstr "Výměnou za"
 
 #: src/components/offers/OfferShareDialog.tsx:403
 #: src/components/offers/OfferShareDialog.tsx:544
 #: src/components/offers/OfferShareDialog.tsx:892
 msgid "In exchange for:"
-msgstr ""
+msgstr "Výměnou za:"
 
 #: src/components/offers/OfferEditorConditionsPanel.tsx:339
 msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
@@ -1378,7 +1378,7 @@ msgstr "Inicializovat uživatelskou peněženku s omezenou sazbou:"
 
 #: src/components/offers/OfferShareDialog.tsx:754
 msgid "Install Keybase"
-msgstr ""
+msgstr "Nainstalovat Keybase"
 
 #: src/components/offers/OfferViewer.tsx:358
 msgid "Insufficient funds available to accept offer. Ensure that your\n"
@@ -1394,7 +1394,7 @@ msgstr "Nedostatek dostupných finančních prostředků k vytvoření nabídky.
 
 #: src/components/create/createRLAdmin.jsx:217
 msgid "Interval"
-msgstr ""
+msgstr "Interval"
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 #~ msgid "Invalid state"
@@ -1429,7 +1429,7 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:771
 msgid "Join {KeybaseTeamName}"
-msgstr ""
+msgstr "Připojit se k {KeybaseTeamName}"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:63
 #~ msgid "K-Size"
@@ -1437,7 +1437,7 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:656
 msgid "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
-msgstr ""
+msgstr "Příkaz Keybase selhal {e}. Pokud nemáte nainstalovaný Keybase, můžete jej stáhnout z https://keybase.io"
 
 #: src/components/offers/OfferShareDialog.tsx:744
 msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {KeybaseTeamName} team, you must first have Keybase installed."
@@ -1488,7 +1488,7 @@ msgstr "Keybase je bezpečná aplikace pro sdílení zpráv a souborů. Chcete-l
 
 #: src/components/WalletConnections.tsx:83
 msgid "List of connections is empty"
-msgstr ""
+msgstr "Seznam připojení je prázdný"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1581,7 +1581,7 @@ msgstr "Správa DID obnovení"
 
 #: src/components/WalletsManageTokens.tsx:81
 msgid "Manage token list"
-msgstr ""
+msgstr "Spravovat seznam tokenů"
 
 #: src/components/WalletHistory.tsx:116
 #: src/components/cat/WalletCATSend.tsx:229
@@ -1594,7 +1594,7 @@ msgstr ""
 
 #: src/components/WalletSendTransactionResultDialog.tsx:19
 msgid "Mempool Full"
-msgstr ""
+msgstr "Mempool plný"
 
 #: src/components/WalletConnections.tsx:55
 msgid "MiB Up/Down"
@@ -1648,7 +1648,7 @@ msgstr "Můj Pubkey"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
-msgstr ""
+msgstr "Název"
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 #~ msgid "Network Name"
@@ -1714,7 +1714,7 @@ msgstr "Žádné předchozí transakce"
 
 #: src/components/offers/OfferViewer.tsx:209
 msgid "Node Count"
-msgstr ""
+msgstr "Počet uzlů"
 
 #: src/components/WalletConnections.tsx:23
 msgid "Node ID"
@@ -1743,7 +1743,7 @@ msgstr " Není synchronizováno"
 
 #: src/components/offers/OfferViewer.tsx:198
 msgid "Not accepted"
-msgstr ""
+msgstr "Nepřijato"
 
 #: src/components/trading/TradingOverview.jsx:221
 #~ msgid "Not accepted yet"
@@ -1751,7 +1751,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:189
 msgid "Not confirmed"
-msgstr ""
+msgstr "Nepotvrzeno"
 
 #: src/components/trading/TradingOverview.jsx:194
 #~ msgid "Not confirmed yet"
@@ -1789,7 +1789,7 @@ msgstr ""
 #: src/components/cat/WalletCATTAILDialog.tsx:82
 #: src/components/offers/OfferDataDialog.tsx:75
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1797,7 +1797,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:122
 msgid "Offer Accepted"
-msgstr ""
+msgstr "Nabídka přijata"
 
 #: src/components/offers/OfferDataDialog.tsx:42
 #: src/components/offers/OfferDataDialog.tsx:50
@@ -1821,7 +1821,7 @@ msgstr "Nabídka byla přijata a čeká na potvrzení."
 
 #: src/components/offers/OfferShareDialog.tsx:350
 msgid "OfferBin URL"
-msgstr ""
+msgstr "OfferBin URL"
 
 #: src/components/offers/OfferManager.tsx:300
 msgid "Offered"
@@ -1837,7 +1837,7 @@ msgstr "Nabídky, které jste přijali"
 
 #: src/components/offers/OfferManager.tsx:527
 msgid "Offers you created"
-msgstr ""
+msgstr "Nabídky, které jste vytvořili"
 
 #: src/components/WalletSend.tsx:134
 #: src/components/cat/WalletCATSend.tsx:177
@@ -1846,7 +1846,7 @@ msgstr "Mezi každým transakčním blokem je v průměru jedna minuta. Pokud ne
 
 #: src/components/offers/OfferViewer.tsx:323
 msgid "Once you accept this offer, you will not be able to cancel the transaction. Are you sure you want to accept this offer?"
-msgstr ""
+msgstr "Jakmile přijmete tuto nabídku, nebude možné transakci zrušit. Opravdu chcete tuto nabídku přijmout?"
 
 #: src/components/offers/OfferViewer.tsx:300
 msgid "One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive."
@@ -1866,7 +1866,7 @@ msgstr "Odchozí"
 
 #: src/components/offers/OfferViewer.tsx:249
 msgid "Parent Coin"
-msgstr ""
+msgstr "Rodičovská mince"
 
 #: src/components/app/AppKeyringMigrator.tsx:139
 #: src/components/app/AppKeyringMigrator.tsx:140
@@ -1916,7 +1916,7 @@ msgstr ""
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
 msgid "Paste Offer Data"
-msgstr ""
+msgstr "Vložit data nabídky"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:358
 #~ msgid "Payout Address"
@@ -1995,7 +1995,7 @@ msgstr "Prosím zadejte puzzlehash"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:40
 msgid "Please enter a valid CAT name"
-msgstr ""
+msgstr "Zadejte prosím platný CAT název"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
@@ -2042,15 +2042,15 @@ msgstr "Zadejte prosím platný pubkey"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:45
 msgid "Please enter a valid token name"
-msgstr ""
+msgstr "Zadejte prosím platný název tokenu"
 
 #: src/components/offers/OfferEditor.tsx:115
 msgid "Please enter an amount for each row"
-msgstr ""
+msgstr "Prosím zadejte částku pro každý řádek"
 
 #: src/components/WalletRenameDialog.tsx:49
 msgid "Please enter valid wallet name"
-msgstr ""
+msgstr "Zadejte prosím platný název peněženky"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:75
 #~ msgid "Please enter your current passphrase, and a new passphrase"
@@ -2313,7 +2313,7 @@ msgstr ""
 
 #: src/components/WalletConnections.tsx:33
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:94
 #: src/components/plotNFT/PlotNFTChangePool.tsx:85
@@ -2430,7 +2430,7 @@ msgstr "Nastavení uživatelské peněženky s omezenou rychlostí"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
-msgstr ""
+msgstr "Přijmout"
 
 #: src/components/WalletReceiveAddress.tsx:32
 msgid "Receive Address"
@@ -2438,7 +2438,7 @@ msgstr "Adresa příjemce"
 
 #: src/components/cat/WalletCATSend.tsx:123
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
-msgstr ""
+msgstr "Adresa příjemce není barevná adresa peněženky. Zadejte prosím adresu barevné peněženky"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:104
 #: src/components/cat/WalletDID.tsx:463
@@ -2468,11 +2468,11 @@ msgstr "Obnovit peněženku"
 
 #: src/constants/WalletName.ts:26
 msgid "Recoverable Wallet"
-msgstr ""
+msgstr "Obnovitelná peněženka"
 
 #: src/components/cat/WalletCATSelect.tsx:39
 msgid "Recovery Wallet"
-msgstr ""
+msgstr "Obnovit peněženku"
 
 #: src/components/plot/PlotHeader.tsx:76
 #: src/components/plot/overview/PlotOverviewHero.tsx:60
@@ -2508,7 +2508,7 @@ msgstr ""
 #: src/components/WalletRenameDialog.tsx:69
 #: src/components/cat/WalletCAT.tsx:91
 msgid "Rename Wallet"
-msgstr ""
+msgstr "Přejmenovat peněženku"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2516,11 +2516,11 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:323
 msgid "Requested"
-msgstr ""
+msgstr "Požadováno"
 
 #: src/components/offers/OfferEditor.tsx:199
 msgid "Reset"
-msgstr ""
+msgstr "Resetovat"
 
 #: src/components/backup/BackupRestore.tsx:160
 #~ msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -2549,11 +2549,11 @@ msgstr "Uložit"
 
 #: src/components/offers/OfferEditor.tsx:207
 msgid "Save Offer"
-msgstr ""
+msgstr "Uložit nabídku"
 
 #: src/components/offers/OfferManager.tsx:408
 msgid "Save Offer File"
-msgstr ""
+msgstr "Uložit soubor nabídky"
 
 #: src/components/app/AppKeyringMigrator.tsx:178
 #: src/components/settings/ChangePassphrasePrompt.tsx:208
@@ -2573,7 +2573,7 @@ msgstr ""
 #: src/components/cat/WalletCATTAILDialog.tsx:71
 #: src/components/offers/OfferSummaryRow.tsx:94
 msgid "Search on Tail Database"
-msgstr ""
+msgstr "Hledat v Tail databázi"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
 #~ msgid "Second temporary folder location"
@@ -2609,7 +2609,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:136
 msgid "Select Offer File"
-msgstr ""
+msgstr "Vybrat soubor nabídky"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 #~ msgid "Select Temporary Directory"
@@ -2618,7 +2618,7 @@ msgstr ""
 #: src/components/WalletsList.tsx:32
 #: src/components/hero/WalletHeroWallets.tsx:47
 msgid "Select Wallet"
-msgstr ""
+msgstr "Vybrat peněženku"
 
 #: src/components/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
@@ -2705,31 +2705,31 @@ msgstr "Pošlete svůj veřejný klíč vašemu správci Rate Limited peněženk
 #: src/components/offers/OfferShareDialog.tsx:798
 #: src/components/offers/OfferShareDialog.tsx:911
 msgid "Share"
-msgstr ""
+msgstr "Sdílet"
 
 #: src/components/offers/OfferShareDialog.tsx:973
 msgid "Share Offer"
-msgstr ""
+msgstr "Sdílet nabídku"
 
 #: src/components/offers/OfferShareDialog.tsx:412
 msgid "Share Privately"
-msgstr ""
+msgstr "Sdílet soukromě"
 
 #: src/components/offers/OfferShareDialog.tsx:537
 msgid "Share on Hashgreen DEX"
-msgstr ""
+msgstr "Sdílet na Hashgreen DEX"
 
 #: src/components/offers/OfferShareDialog.tsx:739
 msgid "Share on Keybase"
-msgstr ""
+msgstr "Sdílet na Keybase"
 
 #: src/components/offers/OfferShareDialog.tsx:396
 msgid "Share on OfferBin"
-msgstr ""
+msgstr "Sdílet na OfferBin"
 
 #: src/components/offers/OfferShareDialog.tsx:885
 msgid "Share on offerpool"
-msgstr ""
+msgstr "Sdílet na offerpool"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
@@ -2741,7 +2741,7 @@ msgstr "Ukázat ID aktiva"
 
 #: src/components/offers/OfferManager.tsx:379
 msgid "Show Details"
-msgstr ""
+msgstr "Zobrazit podrobnosti"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -2822,7 +2822,7 @@ msgstr "Limit výdajů (chia na interval): {0}"
 
 #: src/constants/WalletName.ts:5
 msgid "Standard Wallet"
-msgstr ""
+msgstr "Standardní peněženka"
 
 #: src/components/app/AppState.tsx:161
 #~ msgid "Starting services"
@@ -2883,12 +2883,12 @@ msgstr "Odeslat"
 #: src/components/WalletSendTransactionResultDialog.tsx:15
 #: src/components/offers/OfferViewer.tsx:343
 msgid "Success"
-msgstr ""
+msgstr "Úspěch"
 
 #: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:450
 msgid "Summary"
-msgstr ""
+msgstr "Shrnutí"
 
 #: src/components/WalletStatus.tsx:39
 msgid "Synced"
@@ -3011,7 +3011,7 @@ msgstr "Počet záložních ID potřebných pro obnovení nesmí překročit po�
 
 #: src/components/WalletSendTransactionResultDialog.tsx:34
 msgid "The transaction could not be immediately included in the mempool because the specified fee is too low. The transaction will be retried periodically, and may be included in the mempool once fees are lower, or if space becomes available."
-msgstr ""
+msgstr "Transakci nelze okamžitě zahrnout do mempoolu, protože zadaný poplatek je příliš nízký. Transakce bude pravidelně opakována a může být zahrnuta do mempoolu, jakmile budou poplatky nižší nebo bude k dispozici prostor."
 
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:107
 #~ msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
@@ -3023,7 +3023,7 @@ msgstr ""
 
 #: src/components/WalletBadge.tsx:26
 msgid "This access token is verified"
-msgstr ""
+msgstr "Tento přístupový token je ověřen"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:89
 #~ msgid "This allows you to add a directory that has plots in it. If you have not created any plots, go to the plotting screen."
@@ -3042,7 +3042,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:90
 msgid "This is not a valid address for sending funds to"
-msgstr ""
+msgstr "Toto není platná adresa pro odesílání prostředků"
 
 #: src/components/standard/WalletStandardCards.tsx:23
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
@@ -3088,23 +3088,23 @@ msgstr "Celkový zůstatek plus čekající transakce. Jinými slovy: celkový z
 
 #: src/components/offers/OfferViewer.tsx:210
 msgid "This number reflects the number of nodes that the accepted SpendBundle has been sent to"
-msgstr ""
+msgstr "Toto číslo odpovídá počtu uzlů, na které byl přijatý SpendBundle odeslán"
 
 #: src/components/offers/OfferSummary.tsx:132
 msgid "This offer has a fee included to help expedite the transaction when the offer is accepted."
-msgstr ""
+msgstr "Tato nabídka obsahuje poplatek, který pomůže urychlit transakci při přijetí nabídky."
 
 #: src/components/offers/OfferSummary.tsx:128
 msgid "This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small."
-msgstr ""
+msgstr "Tato nabídka obsahuje poplatek, který pomůže urychlit transakci při přijetí nabídky. Můžete zadat dodatečný poplatek, pokud máte pocit, že je zahrnutý poplatek příliš malý."
 
 #: src/components/offers/OfferViewer.tsx:389
 msgid "This offer has completed successfully"
-msgstr ""
+msgstr "Tato nabídka byla úspěšně dokončena"
 
 #: src/components/offers/OfferViewer.tsx:385
 msgid "This offer is no longer valid"
-msgstr ""
+msgstr "Tato nabídka již není platná"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:307
 #~ msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
@@ -3164,11 +3164,11 @@ msgstr "Token má prázdné ID aktiva"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:41
 msgid "Token has empty name"
-msgstr ""
+msgstr "Token má prázdný název"
 
 #: src/components/WalletsSidebar.tsx:86
 msgid "Tokens"
-msgstr ""
+msgstr "Tokeny"
 
 #: src/components/card/WalletCardTotalBalance.tsx:45
 #: src/components/rateLimited/WalletRateLimited.jsx:542
@@ -3237,11 +3237,11 @@ msgstr "Celkový zůstatek"
 
 #: src/components/WalletSendTransactionResultDialog.tsx:27
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
-msgstr ""
+msgstr "Transakce byla úspěšně odeslána do plného uzlu a zahrnuta do mempoolu."
 
 #: src/components/WalletHistory.tsx:244
 msgid "Transactions"
-msgstr ""
+msgstr "Transakce"
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -3257,11 +3257,11 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:669
 msgid "Unable to open Keybase. Install Keybase from https://keybase.io"
-msgstr ""
+msgstr "Nelze otevřít Keybase. Nainstalujte Keybase z https://keybase.io"
 
 #: src/components/offers/OfferShareDialog.tsx:592
 msgid "Unable to open browser. Install Keybase from https://keybase.io"
-msgstr ""
+msgstr "Nelze otevřít prohlížeč. Nainstalujte Keybase z https://keybase.io"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
 #: src/components/pool/PoolOverview.tsx:63
@@ -3285,7 +3285,7 @@ msgstr ""
 #: src/components/offers/OfferSummaryRow.tsx:67
 #: src/components/offers/OfferViewer.tsx:412
 msgid "Unknown CAT"
-msgstr ""
+msgstr "Neznámý CAT"
 
 #: src/components/app/AppPassPrompt.tsx:83
 #~ msgid "Unlock Keyring"
@@ -3353,11 +3353,11 @@ msgstr "Zobrazit nabídku"
 
 #: src/components/offers/OfferShareDialog.tsx:509
 msgid "View on Hashgreen DEX"
-msgstr ""
+msgstr "Zobrazit na Hashgreen DEX"
 
 #: src/components/offers/OfferShareDialog.tsx:368
 msgid "View on OfferBin"
-msgstr ""
+msgstr "Zobrazit na OfferBin"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:561
 msgid "View pending balances"
@@ -3369,15 +3369,15 @@ msgstr "Zobrazit nevyřízené zůstatky"
 
 #: src/components/offers/OfferViewer.tsx:552
 msgid "Viewing offer"
-msgstr ""
+msgstr "Zobrazení nabídky"
 
 #: src/components/offers/OfferViewer.tsx:550
 msgid "Viewing offer created at {0}"
-msgstr ""
+msgstr "Zobrazení nabídky vytvořené v {0}"
 
 #: src/components/offers/OfferViewer.tsx:548
 msgid "Viewing offer: {offerFilePath}"
-msgstr ""
+msgstr "Zobrazení nabídky: {offerFilePath}"
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:26
 #: src/components/plot/PlotStatus.tsx:26
@@ -3415,11 +3415,11 @@ msgstr "Peněženka neexistuje"
 
 #: src/components/Wallet.tsx:50
 msgid "Wallet with type {0} not supported"
-msgstr ""
+msgstr "Peněženka s typem {0} není podporována"
 
 #: src/components/Wallet.tsx:23
 msgid "Wallet {walletId} not found"
-msgstr ""
+msgstr "Peněženka {walletId} nenalezena"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -3475,7 +3475,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:298
 msgid "Warning"
-msgstr ""
+msgstr "Upozornění"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3543,7 +3543,7 @@ msgstr "Pro dokončení registrace Rate Limited peněženky potřebujete instala
 
 #: src/components/offers/OfferViewer.tsx:381
 msgid "You created this offer"
-msgstr ""
+msgstr "Tuto nabídku jste vytvořili"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 #~ msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3591,11 +3591,11 @@ msgstr ""
 
 #: src/components/offers/OfferEditorConditionsPanel.tsx:248
 msgid "You will offer"
-msgstr ""
+msgstr "Nabízíte"
 
 #: src/components/offers/OfferViewer.tsx:456
 msgid "You will receive"
-msgstr ""
+msgstr "Obdržíte"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:143
 #~ msgid "You will recieve <0/> to {0}"
@@ -3608,7 +3608,7 @@ msgstr ""
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
 msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-msgstr ""
+msgstr "Váš DID vyžaduje alespoň {dids_num_req} soubor atestace{0} k obnově. Nahrajte prosím další soubory."
 
 #: src/components/farm/overview/FarmOverview.tsx:33
 #~ msgid "Your Farm Overview"
@@ -3648,13 +3648,13 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:707
 msgid "Your offer has been successfully posted to Keybase."
-msgstr ""
+msgstr "Vaše nabídka byla úspěšně odeslána na Keybase."
 
 #: src/components/offers/OfferShareDialog.tsx:402
 #: src/components/offers/OfferShareDialog.tsx:543
 #: src/components/offers/OfferShareDialog.tsx:891
 msgid "Your offer:"
-msgstr ""
+msgstr "Vaše nabídka:"
 
 #: src/components/app/AppKeyringMigrator.tsx:181
 #: src/components/settings/ChangePassphrasePrompt.tsx:211
