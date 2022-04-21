@@ -1,7 +1,14 @@
 name: Trigger Dev Docker Build
 
 on:
+  push:
+    branches:
+      - 'long_lived/**'
   pull_request:
+    branches:
+      - '**'
+    branches-ignore:
+      - 'long_lived/**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run

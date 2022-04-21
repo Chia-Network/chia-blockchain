@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - main
+      - 'long_lived/**'
     tags:
       - '**'
   pull_request:
     branches:
       - '**'
+    branches-ignore:
+      - 'long_lived/**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
