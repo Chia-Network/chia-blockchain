@@ -36,7 +36,6 @@ def test_transfer_no_backpayments() -> None:
     # did_two_parent: bytes32 = Program.to("did_two_parent").get_tree_hash()
     # did_two_amount = 401
 
-
     did_one_coin = Coin(did_one_parent, did_one_puzzle.get_tree_hash(), did_one_amount)
     # did_two_coin = Coin(did_two_parent, did_two_puzzle.get_tree_hash(), did_two_amount)
 
