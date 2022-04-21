@@ -54,6 +54,9 @@ ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
 # shellcheck disable=SC1091
 . /etc/profile.d/rvm.sh
 rvm use ruby-3
+# /usr/lib64/libcrypt.so.1 is marked as a dependency specifically because newer versions of fedora bundle
+# libcrypt.so.2 by default, and the libxcrypt-compat package needs to be installed for the other version
+# Marking as a dependency allows yum/dnf to automatically install the libxcrypt-compat package as well
 fpm -s dir -t rpm \
   -C "dist/$CLI_RPM_BASE" \
   -p "dist/$CLI_RPM_BASE.rpm" \
@@ -62,6 +65,7 @@ fpm -s dir -t rpm \
   --version "$CHIA_INSTALLER_VERSION" \
   --architecture "$REDHAT_PLATFORM" \
   --description "Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure." \
+  --depends /usr/lib64/libcrypt.so.1 \
   .
 # CLI only rpm done
 
