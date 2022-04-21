@@ -21,6 +21,7 @@ from chia.protocols.harvester_protocol import (
 from chia.server.ws_connection import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.misc import get_list_or_len
 from chia.util.streamable import _T_Streamable
 from tests.plot_sync.util import get_dummy_connection
 
@@ -217,13 +218,15 @@ async def test_reset() -> None:
     assert receiver.connection() == connection_before
 
 
+@pytest.mark.parametrize("counts_only", [True, False])
 @pytest.mark.asyncio
-async def test_to_dict() -> None:
+async def test_to_dict(counts_only: bool) -> None:
     receiver, sync_steps = plot_sync_setup()
-    plot_sync_dict_1 = receiver.to_dict()
-    assert "plots" in plot_sync_dict_1 and len(plot_sync_dict_1["plots"]) == 10
-    assert "failed_to_open_filenames" in plot_sync_dict_1 and len(plot_sync_dict_1["failed_to_open_filenames"]) == 0
-    assert "no_key_filenames" in plot_sync_dict_1 and len(plot_sync_dict_1["no_key_filenames"]) == 0
+    plot_sync_dict_1 = receiver.to_dict(counts_only)
+
+    assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
+    assert get_list_or_len(plot_sync_dict_1["failed_to_open_filenames"], not counts_only) == 0
+    assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
     assert "last_sync_time" not in plot_sync_dict_1
     assert plot_sync_dict_1["connection"] == {
         "node_id": receiver.connection().peer_node_id,
@@ -232,33 +235,21 @@ async def test_to_dict() -> None:
     }
 
     # We should get equal dicts
-    plot_sync_dict_2 = receiver.to_dict()
-    assert plot_sync_dict_1 == plot_sync_dict_2
-
-    dict_2_paths = [x.filename for x in plot_sync_dict_2["plots"]]
-    for plot_info in sync_steps[State.loaded].args[0]:
-        assert plot_info.filename not in dict_2_paths
+    assert plot_sync_dict_1 == receiver.to_dict(counts_only)
+    # But unequal dicts wit the opposite counts_only value
+    assert plot_sync_dict_1 != receiver.to_dict(not counts_only)
 
     # Walk through all states from idle to done and run them with the test data
     for state in State:
         await run_sync_step(receiver, sync_steps[state], state)
 
-    plot_sync_dict_3 = receiver.to_dict()
-    dict_3_paths = [x.filename for x in plot_sync_dict_3["plots"]]
-    for plot_info in sync_steps[State.loaded].args[0]:
-        assert plot_info.filename in dict_3_paths
-
-    for path in sync_steps[State.removed].args[0]:
-        assert path not in plot_sync_dict_3["plots"]
-
-    for path in sync_steps[State.invalid].args[0]:
-        assert path in plot_sync_dict_3["failed_to_open_filenames"]
-
-    for path in sync_steps[State.keys_missing].args[0]:
-        assert path in plot_sync_dict_3["no_key_filenames"]
-
-    for path in sync_steps[State.duplicates].args[0]:
-        assert path in plot_sync_dict_3["duplicates"]
+    plot_sync_dict_3 = receiver.to_dict(counts_only)
+    assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
+    assert (
+        get_list_or_len(sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]
+    )
+    assert get_list_or_len(sync_steps[State.keys_missing].args[0], counts_only) == plot_sync_dict_3["no_key_filenames"]
+    assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["last_sync_time"] > 0
 

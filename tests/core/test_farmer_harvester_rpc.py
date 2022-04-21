@@ -17,6 +17,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
@@ -102,8 +103,9 @@ async def test_get_routes(harvester_farmer_environment):
     await validate_get_routes(harvester_rpc_client, harvester_rpc_api)
 
 
+@pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
 @pytest.mark.asyncio
-async def test_farmer_get_harvesters(harvester_farmer_environment):
+async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, endpoint: str):
     (
         farmer_service,
         farmer_rpc_api,
@@ -114,26 +116,38 @@ async def test_farmer_get_harvesters(harvester_farmer_environment):
     ) = harvester_farmer_environment
     harvester = harvester_service._node
 
-    num_plots = 0
+    harvester_plots = []
 
     async def non_zero_plots() -> bool:
         res = await harvester_rpc_client.get_plots()
-        nonlocal num_plots
-        num_plots = len(res["plots"])
-        return num_plots > 0
+        nonlocal harvester_plots
+        harvester_plots = res["plots"]
+        return len(harvester_plots) > 0
 
     await time_out_assert(10, non_zero_plots)
 
     async def test_get_harvesters():
+        nonlocal harvester_plots
         harvester.plot_manager.trigger_refresh()
         await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
-        farmer_res = await farmer_rpc_client.get_harvesters()
+        farmer_res = await getattr(farmer_rpc_client, endpoint)()
+
         if len(list(farmer_res["harvesters"])) != 1:
             log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
             return False
-        if len(list(farmer_res["harvesters"][0]["plots"])) != num_plots:
-            log.error(f"test_get_harvesters: invalid plots {list(farmer_res['harvesters'])}")
-            return False
+
+        harvester_dict = farmer_res["harvesters"][0]
+        counts_only: bool = endpoint == "get_harvesters_summary"
+
+        if not counts_only:
+            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])
+            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
+
+        assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
+        assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)
+        assert harvester_dict["no_key_filenames"] == get_list_or_len([], counts_only)
+        assert harvester_dict["duplicates"] == get_list_or_len([], counts_only)
+
         return True
 
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)

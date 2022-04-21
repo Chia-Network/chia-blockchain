@@ -636,13 +636,13 @@ class Farmer:
 
         return None
 
-    async def get_harvesters(self) -> Dict:
+    async def get_harvesters(self, counts_only: bool = False) -> Dict:
         harvesters: List = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
             receiver = self.plot_sync_receivers.get(connection.peer_node_id)
             if receiver is not None:
-                harvesters.append(receiver.to_dict())
+                harvesters.append(receiver.to_dict(counts_only))
             else:
                 self.log.debug(
                     f"get_harvesters invalid peer: {connection.peer_host}, node_id: {connection.peer_node_id}"
