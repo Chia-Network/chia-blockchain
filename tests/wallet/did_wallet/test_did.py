@@ -340,7 +340,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101)
+                wallet_node.wallet_state_manager, wallet, uint64(101), num_of_backup_ids_needed=uint64(1)
             )
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
@@ -355,15 +355,15 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
+        print(f"Old coin id {coin.name()}")
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         try:
             spend_bundle = await did_wallet.recovery_spend(
                 coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
             )
-            additions = spend_bundle.additions()
-            assert additions == []
         except Exception:
+            # We expect a CLVM 80 error for this test
             pass
         else:
             assert False
