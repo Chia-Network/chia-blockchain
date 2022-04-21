@@ -152,34 +152,3 @@ def get_signage_point_vdf_info(
         sp_vdf_iters,
         sp_vdf_iters,
     )
-
-
-async def get_sp_input(
-    block: BlockRecord,
-    blocks: BlockchainInterface,
-    sp_total_iters: uint128,
-    sp_iters: uint64,
-):
-    curr: BlockRecord = block
-    slots_n = 1
-    if block.overflow:
-        slots_n = 2
-    while slots_n > 0:
-        if curr.first_in_sub_slot:
-            assert curr.finished_challenge_slot_hashes
-            slots_n -= len(curr.finished_challenge_slot_hashes)
-            if slots_n <= 0:
-                input = ClassgroupElement.get_default_element()
-                break
-        else:
-            assert curr.total_iters
-            if not (curr.total_iters > sp_total_iters):
-                if curr.total_iters < sp_total_iters:
-                    header_block = await blocks.get_header_block_by_height(curr.height, curr.header_hash)
-                    assert header_block
-                    assert header_block.reward_chain_block.reward_chain_sp_vdf
-                    input = header_block.reward_chain_block.reward_chain_sp_vdf.output
-                    sp_iters = uint64(sp_total_iters - curr.total_iters)
-                    break
-        curr = blocks.block_record(curr.prev_hash)
-    return input, sp_iters
