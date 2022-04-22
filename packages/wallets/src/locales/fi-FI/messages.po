@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 19:24\n"
+"PO-Revision-Date: 2022-04-22 09:54\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -3357,7 +3357,7 @@ msgstr "Näytä Hashgreen DEX:ssä"
 
 #: src/components/offers/OfferShareDialog.tsx:368
 msgid "View on OfferBin"
-msgstr ""
+msgstr "Näytä OfferBinissä"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:561
 msgid "View pending balances"
@@ -3377,7 +3377,7 @@ msgstr "Näytetään tarjous joka on luotu {0}"
 
 #: src/components/offers/OfferViewer.tsx:548
 msgid "Viewing offer: {offerFilePath}"
-msgstr ""
+msgstr "Näytetään tarjous: {offerFilePath}"
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:26
 #: src/components/plot/PlotStatus.tsx:26
@@ -3415,11 +3415,11 @@ msgstr "Lompakkoa ei löydy"
 
 #: src/components/Wallet.tsx:50
 msgid "Wallet with type {0} not supported"
-msgstr ""
+msgstr "Lompakkotyyppiä {0} ei tueta"
 
 #: src/components/Wallet.tsx:23
 msgid "Wallet {walletId} not found"
-msgstr ""
+msgstr "Lompakkoa {walletId} ei löydy"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -3475,7 +3475,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:298
 msgid "Warning"
-msgstr ""
+msgstr "Varoitus"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3492,7 +3492,7 @@ msgstr ""
 
 #: src/components/offers/OfferSummary.tsx:97
 msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
-msgstr ""
+msgstr "Varoitus: Varmista, että tarjotut CAT asset ID:t vastaavat tokeneita, joita haluat vastaanottaa."
 
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
@@ -3543,7 +3543,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/components/offers/OfferViewer.tsx:381
 msgid "You created this offer"
-msgstr ""
+msgstr "Loit tämän tarjouksen"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 #~ msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3591,11 +3591,11 @@ msgstr ""
 
 #: src/components/offers/OfferEditorConditionsPanel.tsx:248
 msgid "You will offer"
-msgstr ""
+msgstr "Sinä tarjoat"
 
 #: src/components/offers/OfferViewer.tsx:456
 msgid "You will receive"
-msgstr ""
+msgstr "Vastaanotat"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:143
 #~ msgid "You will recieve <0/> to {0}"
@@ -3648,7 +3648,7 @@ msgstr "DID vaatii vähintään {dids_num_req} todistustiedosto{0} palautusta va
 
 #: src/components/offers/OfferShareDialog.tsx:707
 msgid "Your offer has been successfully posted to Keybase."
-msgstr ""
+msgstr "Tarjous on onnistuneesti lähetetty Keybaseen."
 
 #: src/components/offers/OfferShareDialog.tsx:402
 #: src/components/offers/OfferShareDialog.tsx:543
@@ -3720,7 +3720,7 @@ msgstr "synkronoi"
 
 #: src/components/offers/OfferShareDialog.tsx:853
 msgid "{0}"
-msgstr ""
+msgstr "{0}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -3753,7 +3753,7 @@ msgstr ""
 
 #: src/components/offers/OfferSummary.tsx:125
 msgid "{makerFee, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{makerFee, plural, one {mojo} other {mojoa}}"
 
 #: src/components/core/components/Amount/Amount.tsx:82
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
@@ -3762,7 +3762,7 @@ msgstr ""
 #: src/components/offers/OfferSummaryRow.tsx:41
 #: src/components/offers/OfferViewer.tsx:95
 msgid "{mojos, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{mojos, plural, one {mojo} other {mojoa}}"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
