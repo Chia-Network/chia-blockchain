@@ -145,6 +145,7 @@ class BlockTools:
 
         self.root_path = root_path
         self.local_keychain = keychain
+        self._block_time_residual = 0.0
 
         create_default_chia_config(root_path)
         create_all_ssl(
@@ -602,7 +603,7 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
-                        full_block, block_record = get_full_block_and_block_record(
+                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -631,6 +632,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_time_residual=self._block_time_residual,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -869,7 +871,7 @@ class BlockTools:
                         else:
                             block_generator = None
                             aggregate_signature = G2Element()
-                        full_block, block_record = get_full_block_and_block_record(
+                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -900,6 +902,7 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_time_residual=self._block_time_residual,
                         )
 
                         if block_record.is_transaction_block:
@@ -1471,12 +1474,9 @@ def get_icc(
     )
 
 
-def round_timestamp(timestamp: float) -> int:
-    a = math.modf(timestamp)[0]
-    b = random.random()
-    if b < a:
-        timestamp += 1
-    return int(timestamp)
+def round_timestamp(timestamp: float, residual: float) -> Tuple[int, float]:
+    mod = math.modf(timestamp + residual)
+    return (int(mod[1]), mod[0])
 
 
 def get_full_block_and_block_record(
@@ -1511,14 +1511,17 @@ def get_full_block_and_block_record(
     overflow_rc_challenge: bytes32 = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
-) -> Tuple[FullBlock, BlockRecord]:
+    block_time_residual: float = 0.0
+) -> Tuple[FullBlock, BlockRecord, float]:
     if current_time is True:
         if prev_block.timestamp is not None:
-            timestamp = uint64(max(int(time.time()), prev_block.timestamp + round_timestamp(time_per_block)))
+            time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + time_delta))
         else:
             timestamp = uint64(int(time.time()))
     else:
-        timestamp = uint64(start_timestamp + round_timestamp((prev_block.height + 1 - start_height) * time_per_block))
+        time_delta, block_time_residual = round_timestamp((prev_block.height + 1 - start_height) * time_per_block, block_time_residual)
+        timestamp = uint64(start_timestamp + time_delta)
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
@@ -1569,7 +1572,7 @@ def get_full_block_and_block_record(
         normalized_to_identity_cc_ip,
     )
 
-    return full_block, block_record
+    return full_block, block_record, block_time_residual
 
 
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
