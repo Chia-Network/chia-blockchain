@@ -97,7 +97,8 @@ class FarmerRpcApi:
 
     async def get_reward_targets(self, request: Dict) -> Dict:
         search_for_private_key = request["search_for_private_key"]
-        return await self.service.get_reward_targets(search_for_private_key)
+        max_ph_to_search = request.get("max_ph_to_search", 500)
+        return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
     async def set_reward_targets(self, request: Dict) -> Dict:
         farmer_target, pool_target = None, None

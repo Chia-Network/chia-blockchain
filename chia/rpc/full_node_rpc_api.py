@@ -470,10 +470,10 @@ class FullNodeRpcApi:
 
         newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
         if newer_block is None:
-            raise ValueError("Newer block not found")
+            raise ValueError(f"Newer block {newer_block_hex} not found")
         older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
-            raise ValueError("Newer block not found")
+            raise ValueError(f"Older block {older_block_hex} not found")
         delta_weight = newer_block.weight - older_block.weight
 
         delta_iters = newer_block.total_iters - older_block.total_iters
