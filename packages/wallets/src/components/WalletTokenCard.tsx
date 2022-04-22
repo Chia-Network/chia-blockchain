@@ -103,7 +103,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
   return (
     <CardListItem>
       <Flex gap={1} alignItems="center" width="100%">
-        <Flex flexDirection="column" flexGrow={1} flexBasis={0} minWidth={0}>
+        <Flex flexDirection="column" gap={0.5} flexGrow={1} flexBasis={0} minWidth={0}>
           {walletType === WalletType.STANDARD_WALLET ? (
             <Typography noWrap>{name}</Typography>
           ) : (
@@ -116,17 +116,21 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
               hiddenLabel
             />
           )}
-          {!!subTitle && (
-            <Tooltip title={subTitle} copyToClipboard>
-              <Typography color="textSecondary" variant="caption" noWrap>
-                {subTitle}
-              </Typography>
-            </Tooltip>
-          )}
-          {assetId && (
-            <Link href={`https://www.taildatabase.com/tail/${assetId}`} target="_blank" variant="caption">
-              <Trans>Search on Tail Database</Trans>
-            </Link>
+          {(!!subTitle || assetId) && (
+            <Flex flexDirection="column" flexGrow={1} flexBasis={0} minWidth={0}>
+              {!!subTitle && (
+                <Tooltip title={subTitle} copyToClipboard>
+                  <Typography color="textSecondary" variant="caption" noWrap>
+                    {subTitle}
+                  </Typography>
+                </Tooltip>
+              )}
+              {assetId && (
+                <Link href={`https://www.taildatabase.com/tail/${assetId}`} target="_blank" variant="caption">
+                  <Trans>Search on Tail Database</Trans>
+                </Link>
+              )}
+            </Flex>
           )}
         </Flex>
         <Box width="60px" textAlign="center">
