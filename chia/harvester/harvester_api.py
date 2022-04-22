@@ -1,7 +1,7 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -220,6 +220,12 @@ class HarvesterAPI:
             f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
+        self.harvester.state_changed("farming_info", {
+            "challenge_hash": new_challenge.challenge_hash.hex(),
+            "total_plots": self.harvester.plot_manager.plot_count(),
+            "found_proofs": total_proofs_found,
+            "eligible_plots": len(awaitables),
+        })
 
     @api_request
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
