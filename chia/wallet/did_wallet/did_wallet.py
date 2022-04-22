@@ -53,6 +53,7 @@ class DIDWallet:
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
         name: str = "DID Wallet",
+        fee: uint64 = uint64(0)
     ):
         """
         This must be called under the wallet state manager lock
@@ -109,7 +110,7 @@ class DIDWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=did_puzzle_hash,
             amount=uint64(amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,

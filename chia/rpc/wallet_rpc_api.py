@@ -530,6 +530,7 @@ class WalletRpcApi:
                         uint64(num_needed),
                         metadata,
                         request.get("wallet_name", "DID Wallet"),
+                        uint64(request.get("fee", 0)),
                     )
 
                 my_did = did_wallet.get_my_DID()
