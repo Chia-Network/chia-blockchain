@@ -9,7 +9,7 @@ from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
-from chia.server.server import ssl_context_for_server
+from chia.server.server import ssl_context_for_client, ssl_context_for_server
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
@@ -42,6 +42,9 @@ class RpcServer:
         self.ssl_context = ssl_context_for_server(
             self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
         )
+        self.ssl_client_context = ssl_context_for_client(
+            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
+        )
 
     async def stop(self):
         self.shut_down = True
@@ -51,7 +54,7 @@ class RpcServer:
             await self.client_session.close()
 
     async def _state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
@@ -70,7 +73,7 @@ class RpcServer:
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
-            if self.websocket is None:
+            if self.websocket is None or self.websocket.closed:
                 return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
@@ -79,7 +82,7 @@ class RpcServer:
                 self.log.warning(f"Sending data failed. Exception {tb}.")
 
     def state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(*args))
 
@@ -278,7 +281,7 @@ class RpcServer:
                     autoclose=True,
                     autoping=True,
                     heartbeat=60,
-                    ssl_context=self.ssl_context,
+                    ssl_context=self.ssl_client_context,
                     max_msg_size=max_message_size,
                 )
                 await self.connection(self.websocket)

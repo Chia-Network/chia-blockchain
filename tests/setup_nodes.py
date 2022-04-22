@@ -240,6 +240,7 @@ async def setup_simulators_and_wallets(
     key_seed=None,
     initial_num_public_keys=5,
     db_version=1,
+    disable_capabilities=None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -263,6 +264,7 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 simulator=True,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)

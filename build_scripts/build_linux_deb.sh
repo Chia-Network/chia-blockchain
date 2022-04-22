@@ -35,7 +35,6 @@ rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-pip install pyinstaller==4.9
 SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
@@ -49,12 +48,11 @@ fi
 pip install j2cli
 CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
+mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
-cp assets/deb/postinst "dist/$CLI_DEB_BASE/DEBIAN/postinst"
-cp assets/deb/prerm "dist/$CLI_DEB_BASE/DEBIAN/prerm"
-chmod 0755 "dist/$CLI_DEB_BASE/DEBIAN/postinst" "dist/$CLI_DEB_BASE/DEBIAN/prerm"
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
+ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
 dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
@@ -100,8 +98,10 @@ cd ../../../build_scripts || exit
 echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
 rm -rf final_installer
 mkdir final_installer
-electron-installer-debian --src dist/$DIR_NAME/ --dest final_installer/ \
---arch "$PLATFORM" --options.version $CHIA_INSTALLER_VERSION --options.bin chia-blockchain --options.name chia-blockchain
+electron-installer-debian --src "dist/$DIR_NAME/" \
+  --arch "$PLATFORM" \
+  --options.version "$CHIA_INSTALLER_VERSION" \
+  --config deb-options.json
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
