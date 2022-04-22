@@ -196,11 +196,6 @@ class Farmer:
             await self.cache_clear_task
         if self.update_pool_state_task is not None:
             await self.update_pool_state_task
-        if shutting_down and self.keychain_proxy is not None:
-            proxy = self.keychain_proxy
-            self.keychain_proxy = None
-            await proxy.close()
-            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.started = False
 
     def _set_state_changed_callback(self, callback: Callable):
