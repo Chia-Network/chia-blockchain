@@ -1,6 +1,6 @@
 import json
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -49,9 +49,6 @@ class FarmerAPI:
 
     def __init__(self, farmer) -> None:
         self.farmer = farmer
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.farmer.state_changed_callback = callback
 
     @api_request
     @peer_required
@@ -271,6 +268,17 @@ class FarmerAPI:
                 except Exception as e:
                     self.farmer.log.error(f"Error connecting to pool: {e}")
                     return
+
+                self.farmer.state_changed(
+                    "submitted_partial",
+                    {
+                        "launcher_id": post_partial_request.payload.launcher_id.hex(),
+                        "pool_url": pool_url,
+                        "current_difficulty": pool_state_dict["current_difficulty"],
+                        "points_acknowledged_since_start": pool_state_dict["points_acknowledged_since_start"],
+                        "points_acknowledged_24h": pool_state_dict["points_acknowledged_24h"],
+                    },
+                )
 
                 return
 
