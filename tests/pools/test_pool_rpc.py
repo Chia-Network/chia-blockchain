@@ -69,7 +69,9 @@ class TemporaryPoolPlot:
     async def __aenter__(self):
         self._tmpdir = tempfile.TemporaryDirectory()
         dirname = self._tmpdir.__enter__()
-        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, Path(dirname), tmp_dir=Path(dirname))
+        tmp_path: Path = Path(dirname)
+        self.bt.add_plot_directory(tmp_path)
+        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, Path(dirname), tmp_dir=tmp_path)
         assert plot_id is not None
         await self.bt.refresh_plots()
         self.plot_id = plot_id
