@@ -27,9 +27,6 @@ class HarvesterAPI:
     def __init__(self, harvester: Harvester):
         self.harvester = harvester
 
-    def _set_state_changed_callback(self, callback: Callable):
-        self.harvester.state_changed_callback = callback
-
     @peer_required
     @api_request
     async def harvester_handshake(
