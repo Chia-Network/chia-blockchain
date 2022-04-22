@@ -50,7 +50,7 @@ const cols = [
         <Flex alignItems="center" gap={1}>
           <Box>
             {`K-${size}, `}
-            <FormatBytes value={fileSize} />
+            <FormatBytes value={fileSize} precision={3} />
           </Box>
           {hasDuplicates && (
             <Tooltip title={<Box>{duplicateTitle}</Box>} interactive arrow>
