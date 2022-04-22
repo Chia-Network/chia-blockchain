@@ -78,7 +78,7 @@ jobs:
     - name: Test tools code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/tools/test_*.py --durations=10  -n 4 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/tools/test_full_sync.py tests/tools/test_run_block.py
 
     - name: Process coverage data
       run: |

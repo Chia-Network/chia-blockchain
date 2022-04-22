@@ -2,22 +2,16 @@ import logging
 import threading
 import time
 import traceback
+from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element
 from chiapos import DiskProver
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import (
-    PlotInfo,
-    PlotRefreshResult,
-    PlotsRefreshParameter,
-    PlotRefreshEvents,
-    get_plot_filenames,
-)
+from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
 from chia.util.generator_tools import list_to_batches
 
 log = logging.getLogger(__name__)

@@ -93,7 +93,7 @@ jobs:
     - name: Test wallet-rpc code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/wallet/rpc/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/rpc/test_wallet_rpc.py
 
     - name: Process coverage data
       run: |

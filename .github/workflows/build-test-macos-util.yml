@@ -79,7 +79,7 @@ jobs:
     - name: Test util code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/util/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/util/test_chunks.py tests/util/test_full_block_utils.py tests/util/test_lock_queue.py tests/util/test_network_protocol_files.py tests/util/test_struct_stream.py
 
     - name: Process coverage data
       run: |

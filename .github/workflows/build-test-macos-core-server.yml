@@ -93,7 +93,7 @@ jobs:
     - name: Test core-server code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/core/server/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/core/server/test_dos.py tests/core/server/test_rate_limits.py
 
     - name: Process coverage data
       run: |

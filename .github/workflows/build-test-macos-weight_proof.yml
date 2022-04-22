@@ -93,7 +93,7 @@ jobs:
     - name: Test weight_proof code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/weight_proof/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/weight_proof/test_weight_proof.py
 
     - name: Process coverage data
       run: |

@@ -92,7 +92,7 @@ jobs:
     - name: Test wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/wallet/test_*.py --durations=10  -n 4 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/wallet/test_bech32m.py tests/wallet/test_chialisp.py tests/wallet/test_puzzle_store.py tests/wallet/test_singleton.py tests/wallet/test_singleton_lifecycle.py tests/wallet/test_singleton_lifecycle_fast.py tests/wallet/test_taproot.py tests/wallet/test_wallet.py tests/wallet/test_wallet_blockchain.py tests/wallet/test_wallet_interested_store.py tests/wallet/test_wallet_key_val_store.py tests/wallet/test_wallet_store.py tests/wallet/test_wallet_user_store.py
 
     - name: Process coverage data
       run: |

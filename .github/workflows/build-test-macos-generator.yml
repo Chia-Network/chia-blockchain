@@ -79,7 +79,7 @@ jobs:
     - name: Test generator code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/generator/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/generator/test_compression.py tests/generator/test_generator_types.py tests/generator/test_list_to_batches.py tests/generator/test_rom.py tests/generator/test_scan.py
 
     - name: Process coverage data
       run: |
