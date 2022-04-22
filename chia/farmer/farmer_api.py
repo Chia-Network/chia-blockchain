@@ -50,9 +50,6 @@ class FarmerAPI:
     def __init__(self, farmer) -> None:
         self.farmer = farmer
 
-    def _set_state_changed_callback(self, callback: Callable):
-        self.farmer.state_changed_callback = callback
-
     @api_request
     @peer_required
     async def new_proof_of_space(
