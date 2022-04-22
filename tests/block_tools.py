@@ -439,12 +439,14 @@ class BlockTools:
         previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
+        use_timestamp_residual: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
         else:
             block_list = []
+
         constants = self.constants
         transaction_data_included = False
         if time_per_block is None:
@@ -602,6 +604,9 @@ class BlockTools:
                         else:
                             block_generator = None
                             aggregate_signature = G2Element()
+
+                        if not use_timestamp_residual:
+                            self._block_time_residual = 0.0
 
                         full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
@@ -871,6 +876,10 @@ class BlockTools:
                         else:
                             block_generator = None
                             aggregate_signature = G2Element()
+
+                        if not use_timestamp_residual:
+                            self._block_time_residual = 0.0
+
                         full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
                             blocks,
@@ -1511,7 +1520,7 @@ def get_full_block_and_block_record(
     overflow_rc_challenge: bytes32 = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
-    block_time_residual: float = 0.0
+    block_time_residual: float = 0.0,
 ) -> Tuple[FullBlock, BlockRecord, float]:
     if current_time is True:
         if prev_block.timestamp is not None:
@@ -1520,7 +1529,9 @@ def get_full_block_and_block_record(
         else:
             timestamp = uint64(int(time.time()))
     else:
-        time_delta, block_time_residual = round_timestamp((prev_block.height + 1 - start_height) * time_per_block, block_time_residual)
+        time_delta, block_time_residual = round_timestamp(
+            (prev_block.height + 1 - start_height) * time_per_block, block_time_residual
+        )
         timestamp = uint64(start_timestamp + time_delta)
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
