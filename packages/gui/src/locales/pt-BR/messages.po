@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-22 00:06\n"
+"PO-Revision-Date: 2022-04-22 01:19\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2103,7 +2103,7 @@ msgstr "Uso máximo de RAM"
 
 #: src/components/app/AppSelectMode.tsx:116
 msgid "Recommended"
-msgstr ""
+msgstr "Recomendado"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
@@ -2323,7 +2323,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:121
 #: src/components/settings/Settings.tsx:248
 msgid "Settings"
-msgstr ""
+msgstr "Configurações"
 
 #: src/components/app/AppSelectMode.tsx:171
 #~ msgid "Settings are located at the upper right corner"
@@ -2349,11 +2349,11 @@ msgstr ""
 #: src/components/app/AppKeyringMigrator.tsx:57
 #: src/components/app/AppKeyringMigrator.tsx:218
 msgid "Skip"
-msgstr ""
+msgstr "Ignorar"
 
 #: src/components/app/AppKeyringMigrator.tsx:56
 msgid "Skip Keyring Migration"
-msgstr ""
+msgstr "Ignorar Migração de Chaves"
 
 #: src/components/app/AppPassPrompt.tsx:73
 #~ msgid "Skip Passphrase Protection"
@@ -2710,7 +2710,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:58
 msgid "Tokens"
-msgstr ""
+msgstr "Tokens"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
@@ -2720,7 +2720,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Total de Chia cultivada"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -3103,11 +3103,11 @@ msgstr "Visão geral do seu bolão"
 
 #: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "Seu chaveiro está bloqueado"
 
 #: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "Suas chaves não foram migradas para uma nova keyring. Você não será capaz de criar novas chaves ou excluir chaves existentes até que a migração seja concluída. Tem certeza de que deseja ignorar a migração das chaves?"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
