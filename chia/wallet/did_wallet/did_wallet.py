@@ -53,7 +53,7 @@ class DIDWallet:
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
         name: str = "DID Wallet",
-        fee: uint64 = uint64(0)
+        fee: uint64 = uint64(0),
     ):
         """
         This must be called under the wallet state manager lock
