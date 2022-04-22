@@ -30,7 +30,6 @@ const StyledListItemIcon = styled(ListItemIcon)`
 const StyledListItem = styled(ListItem)`
   display: flex;
   flex-direction: column;
-  white-space: nowrap;
   align-items: center;
   padding-left: 0;
   padding-right: 0;
