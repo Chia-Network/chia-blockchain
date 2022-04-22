@@ -4,13 +4,12 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
@@ -51,7 +50,7 @@ from chia.wallet.derive_keys import (
     find_owner_sk,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
+    match_address_to_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
@@ -503,7 +502,7 @@ class Farmer:
                         farmer_info, error_code = await update_pool_farmer_info()
                         if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -527,7 +526,7 @@ class Farmer:
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         )
                         if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -550,25 +549,30 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
-    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict:
         if search_for_private_key:
             all_sks = await self.get_all_private_keys()
-            stop_searching_for_farmer, stop_searching_for_pool = False, False
-            for i in range(500):
-                if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
-                    break
-                for sk, _ in all_sks:
-                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
+            have_farmer_sk, have_pool_sk = False, False
+            search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
+            for sk, _ in all_sks:
+                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
 
-                    if ph == self.farmer_target:
-                        stop_searching_for_farmer = True
-                    if ph == self.pool_target:
-                        stop_searching_for_pool = True
+                if not have_farmer_sk and self.farmer_target in found_addresses:
+                    search_addresses.remove(self.farmer_target)
+                    have_farmer_sk = True
+
+                if not have_pool_sk and self.pool_target in found_addresses:
+                    search_addresses.remove(self.pool_target)
+                    have_pool_sk = True
+
+                if have_farmer_sk and have_pool_sk:
+                    break
+
             return {
                 "farmer_target": self.farmer_target_encoded,
                 "pool_target": self.pool_target_encoded,
-                "have_farmer_sk": stop_searching_for_farmer,
-                "have_pool_sk": stop_searching_for_pool,
+                "have_farmer_sk": have_farmer_sk,
+                "have_pool_sk": have_pool_sk,
             }
         return {
             "farmer_target": self.farmer_target_encoded,
