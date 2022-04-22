@@ -107,6 +107,8 @@ class WalletRpcApi:
             "/cancel_offer": self.cancel_offer,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
+            "/did_set_wallet_name": self.did_set_wallet_name,
+            "/did_get_wallet_name": self.did_get_wallet_name,
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_update_metadata": self.did_update_metadata,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -1082,6 +1084,20 @@ class WalletRpcApi:
     ##########################################################################################
     # Distributed Identities
     ##########################################################################################
+
+    async def did_set_wallet_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        await wallet.set_name(str(request["name"]))
+        return {"success": True, "wallet_id": wallet_id}
+
+    async def did_get_wallet_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        name: str = await wallet.get_name()
+        return {"success": True, "wallet_id": wallet_id, "name": name}
 
     async def did_update_recovery_ids(self, request):
         wallet_id = int(request["wallet_id"])
