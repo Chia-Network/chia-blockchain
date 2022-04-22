@@ -1,4 +1,5 @@
 import asyncio
+import math
 import copy
 import logging
 import os
@@ -1132,7 +1133,8 @@ class BlockTools:
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-        random.seed(seed)
+        rng = random.Random()
+        rng.seed(seed)
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1180,9 +1182,9 @@ class BlockTools:
                         found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
         if len(found_proofs) >= 1:
-            if random.random() < 0.1:
+            if rng.random() < 0.1:
                 # Removes some proofs of space to create "random" chains, based on the seed
-                random_sample = random.sample(found_proofs, len(found_proofs) - 1)
+                random_sample = rng.sample(found_proofs, len(found_proofs) - 1)
         return random_sample
 
 
@@ -1469,6 +1471,14 @@ def get_icc(
     )
 
 
+def round_timestamp(timestamp: float) -> int:
+    a = math.modf(timestamp)[0]
+    b = random.random()
+    if b < a:
+        timestamp += 1
+    return int(timestamp)
+
+
 def get_full_block_and_block_record(
     constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
@@ -1504,11 +1514,11 @@ def get_full_block_and_block_record(
 ) -> Tuple[FullBlock, BlockRecord]:
     if current_time is True:
         if prev_block.timestamp is not None:
-            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + round_timestamp(time_per_block)))
         else:
             timestamp = uint64(int(time.time()))
     else:
-        timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
+        timestamp = uint64(start_timestamp + round_timestamp((prev_block.height + 1 - start_height) * time_per_block))
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
@@ -1632,9 +1642,10 @@ def create_test_foliage(
         prev_transaction_block = None
         is_transaction_block = True
 
-    random.seed(seed)
+    rng = random.Random()
+    rng.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
+    extension_data: bytes32 = bytes32(rng.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
