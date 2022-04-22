@@ -12,7 +12,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
@@ -296,47 +295,58 @@ class TradeManager:
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
-                        # ATTENTION: new wallets
                         if wallet.type() == WalletType.STANDARD_WALLET:
                             key: Optional[bytes32] = None
                             memos: List[bytes] = []
-                        elif wallet.type() == WalletType.CAT:
+                        elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
+                            getattr(wallet, "get_puzzle_info", None)
+                        ):  # ATTENTION: new wallets
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                            puzzle_driver: PuzzleInfo = wallet.get_puzzle_info()
                             memos = [p2_ph]
-                            if key in driver_dict and AssetType(driver_dict[key].type()) != AssetType.CAT:
+                            if key in driver_dict and driver_dict[key] != puzzle_driver:
                                 raise ValueError(
-                                    f"driver_dict specified {AssetType(driver_dict[key].type())},"
-                                    f"was expecting {AssetType.CAT}"
+                                    f"driver_dict specified {driver_dict[key]}," f" was expecting {puzzle_driver}"
                                 )
                             else:
-                                driver_dict[key] = PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + key.hex()})
+                                driver_dict[key] = puzzle_driver
                         else:
-                            raise ValueError(f"Offers are not implemented for {wallet.type()}")
+                            raise ValueError(
+                                f"Cannot request assets from wallet id {wallet.id()} without more information"
+                            )
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
                         key = id
                         memos = [p2_ph]
                     requested_payments[key] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
-                    assert isinstance(id, int)
-                    wallet_id = uint32(id)
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
-                    balance = await wallet.get_confirmed_balance()
-                    if balance < abs(amount):
-                        raise Exception(f"insufficient funds in wallet {wallet_id}")
-                    coins_to_offer[wallet_id] = await wallet.select_coins(uint64(abs(amount)))
-                    # ATTENTION: new wallets
-                    if wallet.type() == WalletType.CAT:
-                        asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                        if asset_id in driver_dict and AssetType(driver_dict[asset_id].type()) != AssetType.CAT:
-                            raise ValueError(
-                                f"driver_dict specified {AssetType(driver_dict[asset_id].type())},"
-                                f"was expecting {AssetType.CAT}"
-                            )
+                    if isinstance(id, int):
+                        wallet_id = uint32(id)
+                        wallet = self.wallet_state_manager.wallets[wallet_id]
+                        if wallet.type() == WalletType.STANDARD_WALLET:
+                            asset_id = None
+                        elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
+                            getattr(wallet, "get_puzzle_info", None)
+                        ):  # ATTENTION: new wallets
+                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                            puzzle_driver = wallet.get_puzzle_info()
+                            if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                                raise ValueError(
+                                    f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
+                                )
+                            else:
+                                driver_dict[asset_id] = puzzle_driver
                         else:
-                            driver_dict[asset_id] = PuzzleInfo(
-                                {"type": AssetType.CAT.value, "tail": "0x" + asset_id.hex()}
+                            raise ValueError(
+                                f"Cannot offer assets from wallet id {wallet.id()} without more information"
                             )
+                    else:
+                        asset_id = id
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                        wallet_id = wallet.id()
+                    if not callable(getattr(wallet, "get_coins_to_offer", None)):
+                        raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+                    coins_to_offer[wallet_id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -503,7 +513,7 @@ class TradeManager:
                 # ATTENTION: new wallets
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
-                    return False, None, f"Do not have a wallet of asset ID: {asset_id} to fulfill offer"
+                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
                 elif wallet is None:
                     key = asset_id
                 else:
