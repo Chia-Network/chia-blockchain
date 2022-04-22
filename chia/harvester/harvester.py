@@ -58,7 +58,6 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager)
         self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
-        self.state_changed_callback = None
         self.server = None
         self.constants = constants
         self.cached_challenges = []
