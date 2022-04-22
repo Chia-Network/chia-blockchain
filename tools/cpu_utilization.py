@@ -21,7 +21,13 @@ class Counters:
     default="cpu-usage.log",
     help="the file to print CPU usage stats to",
 )
-def main(pid: int, output: str) -> None:
+@click.option(
+    "--threads",
+    is_flag=True,
+    default=False,
+    help="Also capture threads counters",
+)
+def main(pid: int, output: str, threads: bool) -> None:
     process = psutil.Process(pid)
 
     stats: Dict[int, Dict[int, Counters]] = {pid: {}}
@@ -43,17 +49,18 @@ def main(pid: int, output: str) -> None:
                     stats[p.pid][step] = Counters(ps.user, ps.system)
                 except Exception:
                     pass
-            for t in process.threads():
-                try:
-                    if t.id not in stats:
-                        stats[t.id] = {}
-                    stats[t.id][step] = Counters(t.user_time, t.system_time)
-                except Exception:
-                    pass
+            if threads:
+                for t in process.threads():
+                    try:
+                        if t.id not in stats:
+                            stats[t.id] = {}
+                        stats[t.id][step] = Counters(t.user_time, t.system_time)
+                    except Exception:
+                        pass
 
             time.sleep(0.05)
             step += 1
-    except Exception:
+    except KeyboardInterrupt:
         pass
 
     cols = sorted(stats.items())
