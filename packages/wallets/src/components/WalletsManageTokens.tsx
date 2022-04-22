@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import { Box, IconButton, InputBase } from '@mui/material';
 import { Button, useColorModeValue, Spinner, Flex, Tooltip, useTrans } from '@chia/core';
 import styled from 'styled-components';
-import { Add } from '@mui/icons-material';
+import { Add, KeyboardArrowDown, KeyboardArrowUp  } from '@mui/icons-material';
 import { useToggle } from 'react-use';
 import useWalletsList from '../hooks/useWalletsList';
 import WalletTokenCard from './WalletTokenCard';
@@ -67,7 +67,7 @@ const StyledMainButton = styled(Button)`
   pointer-events: auto;
 
   &:hover {
-    background-color: ${({ theme }) => theme.palette.action.hover};
+    background-color: ${({ theme }) => theme.palette.action.selected};
     border-color: ${({ theme }) => theme.palette.highlight.main};
   }
 `;
@@ -94,9 +94,19 @@ const StyledListBody = styled(Flex)`
   overflow-y: overlay;
   flex-direction: column;
   flex-grow: 1;
-  margin-top: ${({ theme }) => theme.spacing(1)};
+  margin-top: ${({ theme }) => theme.spacing(2)};
   padding-left: ${({ theme }) => theme.spacing(2)};
   padding-right: ${({ theme }) => theme.spacing(2)};
+`;
+
+const StyledButtonText = styled(Box)`
+  position: relative;
+`;
+
+const StyledExpandButtonContainer = styled(Box)`
+  position: absolute;
+  right: ${({ theme }) => theme.spacing(-4)};
+  top: ${({ theme }) => theme.spacing(0)};
 `;
 
 export type WalletsManageTokensProps = {
@@ -121,7 +131,12 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
     <StyledRoot>
       <StyledButtonContainer>
         <StyledMainButton onClick={toggle} fullWidth>
-          <Trans>Manage token list</Trans>
+          <StyledButtonText>
+            <Trans>Manage token list</Trans>
+            <StyledExpandButtonContainer>
+              {expanded ? <KeyboardArrowDown /> : <KeyboardArrowUp />}
+            </StyledExpandButtonContainer>
+          </StyledButtonText>
         </StyledMainButton>
       </StyledButtonContainer>
       <StyledBody expanded={expanded}>
