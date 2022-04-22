@@ -677,12 +677,16 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Create an offer of 5 chia for one CAT
-    offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, validate_only=True)
+    offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, col.hex(): 1}, validate_only=True)
     all_offers = await client.get_all_offers()
     assert len(all_offers) == 0
     assert offer is None
 
-    offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+    offer, trade_record = await client.create_offer_for_ids(
+        {uint32(1): -5, col.hex(): 1},
+        driver_dict={col.hex(): {"type": "CAT", "tail": "0x" + col.hex()}},
+        fee=uint64(1),
+    )
     assert offer is not None
 
     col = await client.get_cat_asset_id(cat_0_id)

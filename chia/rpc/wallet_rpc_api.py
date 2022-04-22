@@ -920,24 +920,26 @@ class WalletRpcApi:
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
-        driver_dict_str: Optional[Dict[str, str]] = request.get("driver_dict", None)
+        driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key in offer:
                 if len(key) == 64:
-                    asset_id = bytes32.from_hexstr(key)
-                    driver_dict[asset_id] = PuzzleInfo({"type": AssetType.CAT, "tail": asset_id})
+                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                        {"type": AssetType.CAT.value, "tail": "0x" + key}
+                    )
         else:
-            for key, value in driver_dict_str:
-                cast_type_driver_dict = driver_dict_str[key]
-                cast_type_driver_dict["type"] = AssetType(cast_type_driver_dict["type"])
-                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(cast_type_driver_dict)
+            for key, value in driver_dict_str.items():
+                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            modified_offer[int(key)] = offer[key]
+            if len(key) == 64:
+                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+            else:
+                modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
             (
