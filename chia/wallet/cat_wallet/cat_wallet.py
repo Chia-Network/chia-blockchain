@@ -827,11 +827,17 @@ class CATWallet:
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
-        if (
+        return (
             AssetType(puzzle_driver.type()) == AssetType.CAT
             and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())
-            and "and" not in puzzle_driver.info
-        ):
-            return True
-        else:
-            return False
+            and puzzle_driver.also() is None
+        )
+
+    def get_puzzle_info(self) -> PuzzleInfo:
+        return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
+
+    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+        balance = await self.get_confirmed_balance()
+        if balance < amount:
+            raise Exception(f"insufficient funds in wallet {self.id()}")
+        return await self.select_coins(amount)
