@@ -15,6 +15,7 @@ SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_MOD_HASH = NFT_MOD.get_tree_hash()
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 OFFER_MOD = load_clvm("settlement_payments.clvm")
+DELAYED_PERMISSION_MOD_HASH = load_clvm("delayed_permission.clvm")
 
 
 def create_nft_layer_puzzle(

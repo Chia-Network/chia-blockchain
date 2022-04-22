@@ -1,0 +1,27 @@
+(mod (SINGLETON_STRUCT MESSAGE my_parents_parent my_parents_innerpuz my_parents_amount)
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  ; SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (MY_PARENTS_DID, LAUNCHER_PUZZLE_HASH)))
+
+  ; Plan is to attach an encoded spend_bundle of this permission coin as part of the trade file
+  ; These are never tracked by wallets, but instead by files
+
+  ; NFTs can re-curry the args to verify and assert the puzzle announcement
+  ; Solution is verified through ASSERT_MY_PARENT_ID
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree1 SINGLETON_STRUCT)
+     )
+  )
+
+  ; main
+
+  (list
+    (list ASSERT_MY_PARENT_ID (sha256 my_parents_parent (calculate_full_puzzle_hash SINGLETON_STRUCT my_parents_innerpuz)) my_parents_amount)
+    (list CREATE_PUZZLE_ANNOUNCEMENT MESSAGE)
+  )
+)

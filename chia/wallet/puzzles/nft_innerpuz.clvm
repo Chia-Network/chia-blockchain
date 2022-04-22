@@ -1,5 +1,6 @@
 (mod (
   NFT_MOD_HASH
+  DELAYED_PERMISSION_MOD_HASH
   SINGLETON_STRUCT ; ((SINGLETON_MOD_HASH, (SINGLETON_LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
   CURRENT_OWNER_DID
   TRANSFER_PROGRAM_MOD_HASH
@@ -10,6 +11,7 @@
   new_did_inner_hash
   transfer_program_reveal
   transfer_program_solution
+  is_delayed
 )
 
   (include condition_codes.clvm)
@@ -44,6 +46,13 @@
      )
   )
 
+  (defun-inline get_singleton_or_delayed_pemission_puzhash (SINGLETON_STRUCT singleton_id DELAYED_PERMISSION_MOD_HASH innerpuzhash is_delayed)
+    (if is_delayed
+      (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c singleton_id (r (r SINGLETON_STRUCT)))) innerpuzhash)
+      (puzzle-hash-of-curried-function DELAYED_PERMISSION_MOD_HASH (c (f SINGLETON_STRUCT) (c singleton_id (r (r SINGLETON_STRUCT)))) innerpuzhash)
+    )
+  )
+
   ; if we find an update, recreate ourselves with the update
   ; otherwise recreate ourselves as we are
   (defun parse_transfer_prog_output (NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did output found_update)
@@ -68,7 +77,7 @@
     (if new_did
       (if (= (sha256tree1 transfer_program_reveal) TRANSFER_PROGRAM_MOD_HASH)
         (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) (sha256tree1 (list (f (r SINGLETON_STRUCT)) transfer_program_solution new_did))))
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (get_singleton_or_delayed_pemission_puzhash SINGLETON_STRUCT CURRENT_OWNER_DID DELAYED_PERMISSION_MOD_HASH my_did_inner_hash is_delayed) (sha256tree1 (list (f (r SINGLETON_STRUCT)) transfer_program_solution new_did))))
                                                                                                                 ; (METADATA CURRY_PARAMS SINGLETON_STRUCT current_owner trade_price_list my_did_inner_hash new_did new_did_inner_hash my_nft_id solution)
           (parse_transfer_prog_output NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH TRANSFER_PROGRAM_CURRY_PARAMS METADATA new_did (a transfer_program_reveal (list METADATA TRANSFER_PROGRAM_CURRY_PARAMS SINGLETON_STRUCT CURRENT_OWNER_DID my_did_inner_hash new_did new_did_inner_hash transfer_program_solution)) 0)
         )
@@ -76,7 +85,7 @@
       )
       (list
         (list CREATE_COIN (nft_puzzle_hash NFT_MOD_HASH SINGLETON_STRUCT TRANSFER_PROGRAM_MOD_HASH CURRENT_OWNER_DID TRANSFER_PROGRAM_CURRY_PARAMS METADATA) ONE (list CURRENT_OWNER_DID))
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c CURRENT_OWNER_DID (r (r SINGLETON_STRUCT)))) my_did_inner_hash) (f (r SINGLETON_STRUCT))))
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (get_singleton_or_delayed_pemission_puzhash SINGLETON_STRUCT CURRENT_OWNER_DID DELAYED_PERMISSION_MOD_HASH my_did_inner_hash is_delayed) (f (r SINGLETON_STRUCT))))
         (list CREATE_PUZZLE_ANNOUNCEMENT CURRENT_OWNER_DID)
       )
     )
