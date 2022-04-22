@@ -242,7 +242,7 @@ class TestFullBlockParser:
         for block in get_full_blocks():
 
             block_bytes = bytes(block)
-            gen = generator_from_block(memoryview(block_bytes))
+            gen = generator_from_block(block_bytes)
             assert gen == block.transactions_generator
             # this doubles the run-time of this test, with questionable utility
             # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
