@@ -8,7 +8,7 @@ msgstr ""
 "Language: pt_BR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:15\n"
+"PO-Revision-Date: 2022-04-22 01:19\n"
 "Last-Translator: \n"
 "Language-Team: Portuguese, Brazilian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -83,7 +83,7 @@ msgstr ""
 #: src/components/offers/OfferViewer.tsx:289
 #: src/components/offers/OfferViewer.tsx:290
 msgid "Accept Offer"
-msgstr ""
+msgstr "Aceitar oferta"
 
 #: src/components/trading/TradingOverview.jsx:227
 #~ msgid "Accepted at time:"
@@ -119,7 +119,7 @@ msgstr ""
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
-msgstr ""
+msgstr "Adicionar um token personalizado"
 
 #: src/components/plot/PlotHeader.tsx:89
 #~ msgid "Add Plot Directory"
@@ -135,7 +135,7 @@ msgstr ""
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr ""
+msgstr "Adicionar token"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
@@ -498,7 +498,7 @@ msgstr "Nome da Moeda"
 
 #: src/components/offers/OfferViewer.tsx:522
 msgid "Coins"
-msgstr ""
+msgstr "Moedas"
 
 #: src/components/trading/TradingOverview.jsx:365
 #~ msgid "Coins:"
@@ -555,7 +555,7 @@ msgstr "Confirmação"
 
 #: src/components/WalletHistory.tsx:111
 msgid "Confirmed"
-msgstr ""
+msgstr "Confirmado"
 
 #: src/components/WalletHistory.tsx:290
 #: src/components/offers/OfferViewer.tsx:188
@@ -713,7 +713,7 @@ msgstr "Criar transação"
 #: src/components/offers/OfferEditor.tsx:232
 #: src/components/offers/OfferManager.tsx:517
 msgid "Create an Offer"
-msgstr ""
+msgstr "Criar Oferta"
 
 #: src/components/offers/OfferManager.tsx:512
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
@@ -796,7 +796,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:102
 msgid "Custom"
-msgstr ""
+msgstr "Personalizar"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
@@ -872,7 +872,7 @@ msgstr "Apagar transações não confirmadas"
 
 #: src/components/offers/OfferViewer.tsx:499
 msgid "Details"
-msgstr ""
+msgstr "Detalhes"
 
 #: src/electron/main.tsx:315
 #~ msgid "Developer"
@@ -917,7 +917,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:393
 msgid "Display Offer Data"
-msgstr ""
+msgstr "Exibir dados da oferta"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -1314,7 +1314,7 @@ msgstr ""
 
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
-msgstr ""
+msgstr "Importar"
 
 #: src/components/WalletImport.tsx:81
 msgid "Import Wallet from Mnemonics"
