@@ -221,13 +221,16 @@ class HarvesterAPI:
             f" Found {total_proofs_found} proofs. Time: {found_time:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
-        self.harvester.state_changed("farming_info", {
-            "challenge_hash": new_challenge.challenge_hash.hex(),
-            "total_plots": self.harvester.plot_manager.plot_count(),
-            "found_proofs": total_proofs_found,
-            "eligible_plots": len(awaitables),
-            "time": found_time,
-        })
+        self.harvester.state_changed(
+            "farming_info",
+            {
+                "challenge_hash": new_challenge.challenge_hash.hex(),
+                "total_plots": self.harvester.plot_manager.plot_count(),
+                "found_proofs": total_proofs_found,
+                "eligible_plots": len(awaitables),
+                "time": found_time,
+            },
+        )
 
     @api_request
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):

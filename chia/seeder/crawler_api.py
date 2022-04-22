@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Optional
 
 import chia.server.ws_connection as ws
 from chia.full_node.full_node import full_node_protocol, wallet_protocol
