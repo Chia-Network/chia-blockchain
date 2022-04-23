@@ -67,11 +67,11 @@ if $UBUNTU; then
     sudo apt install bc -y
   fi
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
-  if [ $(echo "$LSB_RELEASE<20" | bc) = "1" ]; then
+  if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
     UBUNTU_PRE_2004=1
-  elif [ $(echo "$LSB_RELEASE<21" | bc) = "1" ]; then
+  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
     UBUNTU_2000=1
-  elif [ $(echo "$LSB_RELEASE<22" | bc) = "1" ]; then
+  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
     UBUNTU_2100=1
   fi
 fi
