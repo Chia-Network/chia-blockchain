@@ -113,7 +113,7 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
-        - name: ubuntu:impish (22.04)
+        - name: ubuntu:jammy (22.04)
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
           url: "docker://ubuntu:jammy"
