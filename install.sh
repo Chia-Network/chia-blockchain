@@ -56,6 +56,16 @@ fi
 # Get submodules
 git submodule update --init mozilla-ca
 
+if $UBUNTU; then
+  LSB_RELEASE=$(lsb_release -rs)
+  # In case Ubuntu minimal does not come with bc
+  if ! command -v bc > /dev/null 2>&1; then
+    sudo apt install bc -y
+  fi
+  # Mint 20.04 responds with 20 here so 20 instead of 20.04
+  UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
+fi
+
 install_python3_and_sqlite3_from_source_with_yum() {
   CURRENT_WD=$(pwd)
   TMP_PATH=/tmp
@@ -102,9 +112,14 @@ install_python3_and_sqlite3_from_source_with_yum() {
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if [ "$UBUNTU" = "true" ]; then
-    # Ubuntu
-    echo "Installing on Ubuntu."
+  if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
+    # Ubuntu 20.04 is the first version that defaults to Python 3.7 or later.  On
+    # earlier versions we need to request at least our minimum support version 3.7.
+    echo "Installing on Ubuntu pre 20.04 LTS."
+    sudo apt-get update
+    sudo apt-get install -y python3.7-venv python3.7-distutils openssl
+  elif [ "$UBUNTU" = "true" ]; then
+    echo "Installing on Ubuntu 20.04 LTS or later."
     sudo apt-get update
     sudo apt-get install -y python3-venv python3-distutils openssl
   elif [ "$DEBIAN" = "true" ]; then
