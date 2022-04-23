@@ -419,6 +419,7 @@ class BlockTools:
         self,
         num_blocks: int,
         block_list_input: List[FullBlock] = None,
+        *,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
@@ -427,6 +428,7 @@ class BlockTools:
         force_overflow: bool = False,
         skip_slots: int = 0,  # Force at least this number of empty slots before the first SB
         guarantee_transaction_block: bool = False,  # Force that this block must be a tx block
+        keep_going_until_tx_block: bool = False,  # keep making new blocks until we find a tx block
         normalized_to_identity_cc_eos: bool = False,
         normalized_to_identity_icc_eos: bool = False,
         normalized_to_identity_cc_sp: bool = False,
@@ -566,7 +568,8 @@ class BlockTools:
                         removals = None
                         if transaction_data_included:
                             transaction_data = None
-                        if transaction_data is not None and not transaction_data_included:
+                            previous_generator = None
+                        if transaction_data is not None:
                             additions = transaction_data.additions()
                             removals = transaction_data.removals()
                         assert start_timestamp is not None
@@ -582,9 +585,10 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
 
+                        block_generator: Optional[BlockGenerator]
                         if transaction_data is not None:
                             if type(previous_generator) is CompressorArg:
-                                block_generator: Optional[BlockGenerator] = best_solution_generator_from_template(
+                                block_generator = best_solution_generator_from_template(
                                     previous_generator, transaction_data
                                 )
                             else:
@@ -629,6 +633,8 @@ class BlockTools:
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
+                            previous_generator = None
+                            keep_going_until_tx_block = False
                         else:
                             if guarantee_transaction_block:
                                 continue
@@ -650,7 +656,7 @@ class BlockTools:
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
-                        if num_blocks == 0:
+                        if num_blocks <= 0 and not keep_going_until_tx_block:
                             return block_list
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -789,7 +795,7 @@ class BlockTools:
             removals = None
             if transaction_data_included:
                 transaction_data = None
-            if transaction_data is not None and not transaction_data_included:
+            if transaction_data is not None:
                 additions = transaction_data.additions()
                 removals = transaction_data.removals()
             sub_slots_finished += 1
@@ -856,6 +862,8 @@ class BlockTools:
                                 )
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
+                                if type(previous_generator) is list:
+                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -895,6 +903,8 @@ class BlockTools:
 
                         if block_record.is_transaction_block:
                             transaction_data_included = True
+                            previous_generator = None
+                            keep_going_until_tx_block = False
                         elif guarantee_transaction_block:
                             continue
                         if pending_ses:
@@ -911,7 +921,7 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
-                        if num_blocks == 0:
+                        if num_blocks <= 0 and not keep_going_until_tx_block:
                             return block_list
 
                         blocks[full_block.header_hash] = block_record
