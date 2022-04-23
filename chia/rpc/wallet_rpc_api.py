@@ -1259,12 +1259,10 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
-        if "fee" in request:
-            fee = uint64(request["fee"])
-        else:
-            fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            txs: TransactionRecord = await did_wallet.transfer_did(puzzle_hash, fee)
+            txs: TransactionRecord = await did_wallet.transfer_did(
+                puzzle_hash, uint64(request.get("fee", 0)), request.get("with_recovery_info", True)
+            )
 
         return {
             "success": True,

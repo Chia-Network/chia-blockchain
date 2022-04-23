@@ -204,16 +204,18 @@ class DIDWallet:
         args = did_wallet_puzzles.uncurry_innerpuz(inner_puzzle)
         if args is None:
             raise ValueError("Cannot uncurry the DID puzzle.")
-        _, _, num_verification, _, metadata = args
+        _, recovery_list_hash, num_verification, _, metadata = args
         full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
         inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes] = []
-        for did in list(inner_solution.rest().rest().rest().rest().rest().as_iter()):
-            recovery_list.append(did.as_python()[0])
+        backup_required: int = num_verification.as_int()
+        if recovery_list_hash != Program.to([]).get_tree_hash():
+            for did in list(inner_solution.rest().rest().rest().rest().rest().as_iter()):
+                recovery_list.append(did.as_python()[0])
         self.did_info = DIDInfo(
             launch_coin,
             recovery_list,
-            uint64(num_verification.as_int()),
+            uint64(backup_required),
             [],
             inner_puzzle,
             None,
@@ -596,11 +598,12 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    async def transfer_did(self, new_puzhash: bytes32, fee: uint64) -> TransactionRecord:
+    async def transfer_did(self, new_puzhash: bytes32, fee: uint64, with_recovery: bool) -> TransactionRecord:
         """
         Transfer the current DID to another owner
         :param new_puzhash: New owner's p2_puzzle
         :param fee: Transaction fee
+        :param with_recovery: A boolean indicates if the recovery info will be sent through the blockchain
         :return: Spend bundle
         """
         assert self.did_info.current_inner is not None
@@ -608,11 +611,15 @@ class DIDWallet:
         coins = await self.select_coins(1)
         assert coins is not None
         coin = coins.pop()
-
+        backup_ids = []
+        backup_required = uint64(0)
+        if with_recovery:
+            backup_ids = self.did_info.backup_ids
+            backup_required = self.did_info.num_of_backup_ids_needed
         new_did_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             new_puzhash,
-            self.did_info.backup_ids,
-            self.did_info.num_of_backup_ids_needed,
+            backup_ids,
+            backup_required,
             self.did_info.origin_coin.name(),
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
@@ -628,7 +635,9 @@ class DIDWallet:
         # Need to include backup list reveal here, even we are don't recover
         # innerpuz solution is
         # (mode, p2_solution)
-        innersol: Program = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
+        innersol: Program = Program.to([2, p2_solution])
+        if with_recovery:
+            innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
