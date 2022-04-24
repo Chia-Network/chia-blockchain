@@ -137,10 +137,12 @@ jobs:
           type: linuxmint
           # 3.8
           url: "docker://linuxmintd/mint20.3-amd64"
-        - name: linuxmintd/mint21-amd64
-          type: linuxmint
-          # 3.10 default with an option for 3.9
-          url: "docker://linuxmintd/mint21-amd64"
+#        The Linux Mint 21 docker image reports as 20.3 but has different Python.
+#        Uncomment after adapting to handle this or upstream fixing it.
+#        - name: linuxmintd/mint21-amd64
+#          type: linuxmint
+#          # 3.10 default with an option for 3.9
+#          url: "docker://linuxmintd/mint21-amd64"
 
     steps:
     - name: Prepare Amazon Linux
