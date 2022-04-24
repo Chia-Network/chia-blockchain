@@ -114,31 +114,31 @@ jobs:
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
         - name: linuxmintd/mint19.1-amd64 (Tessa)
-          type: linuxmint
+          type: mint
           # 3.6 default with an option for 3.7
           url: "docker://linuxmintd/mint19.1-amd64"
         - name: linuxmintd/mint19.2-amd64 (Tina)
-          type: linuxmint
+          type: mint
           # 3.6 default with an option for 3.7
           url: "docker://linuxmintd/mint19.2-amd64"
         - name: linuxmintd/mint19.3-amd64 (Tricia)
-          type: linuxmint
+          type: mint
           # 3.6 default with an option for 3.7
           url: "docker://linuxmintd/mint19.3-amd64"
         - name: linuxmintd/mint20-amd64 (Ulyana)
-          type: linuxmint
+          type: mint
           # 3.8
           url: "docker://linuxmintd/mint20-amd64"
         - name: linuxmintd/mint20.1-amd64 (Ulyssa)
-          type: linuxmint
+          type: mint
           # 3.8
           url: "docker://linuxmintd/mint20.1-amd64"
         - name: linuxmintd/mint20.2-amd64 (Uma)
-          type: linuxmint
+          type: mint
           # 3.8
           url: "docker://linuxmintd/mint20.2-amd64"
         - name: linuxmintd/mint20.3-amd64 (Una)
-          type: linuxmint
+          type: mint
           # 3.8
           url: "docker://linuxmintd/mint20.3-amd64"
 #        The Linux Mint 21 docker image reports as 20.3 but has different Python.
@@ -224,7 +224,7 @@ jobs:
         apt-get install --yes git lsb-release sudo
 
     - name: Prepare Linux Mint
-      if: ${{ matrix.distribution.type == 'ubuntu' }}
+      if: ${{ matrix.distribution.type == 'mint' }}
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
