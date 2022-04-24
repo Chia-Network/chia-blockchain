@@ -113,32 +113,37 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
-        - name: linuxmintd/mint19.1-amd64
+        - name: linuxmintd/mint19.1-amd64 (Tessa)
           type: linuxmint
           # 3.6 default with an option for 3.7
           url: "docker://linuxmintd/mint19.1-amd64"
-        - name: linuxmintd/mint19.3-amd64
+        - name: linuxmintd/mint19.2-amd64 (Tina)
+          type: linuxmint
+          # 3.6 default with an option for 3.7
+          url: "docker://linuxmintd/mint19.2-amd64"
+        - name: linuxmintd/mint19.3-amd64 (Tricia)
           type: linuxmint
           # 3.6 default with an option for 3.7
           url: "docker://linuxmintd/mint19.3-amd64"
-        - name: linuxmintd/mint20-amd64
+        - name: linuxmintd/mint20-amd64 (Ulyana)
           type: linuxmint
           # 3.8
           url: "docker://linuxmintd/mint20-amd64"
-        - name: linuxmintd/mint20.1-amd64
+        - name: linuxmintd/mint20.1-amd64 (Ulyssa)
           type: linuxmint
           # 3.8
           url: "docker://linuxmintd/mint20.1-amd64"
-        - name: linuxmintd/mint20.2-amd64
+        - name: linuxmintd/mint20.2-amd64 (Uma)
           type: linuxmint
           # 3.8
           url: "docker://linuxmintd/mint20.2-amd64"
-        - name: linuxmintd/mint20.3-amd64
+        - name: linuxmintd/mint20.3-amd64 (Una)
           type: linuxmint
           # 3.8
           url: "docker://linuxmintd/mint20.3-amd64"
 #        The Linux Mint 21 docker image reports as 20.3 but has different Python.
 #        Uncomment after adapting to handle this or upstream fixing it.
+#        Also, Linux Mint 21 is not released as of this change.
 #        - name: linuxmintd/mint21-amd64
 #          type: linuxmint
 #          # 3.10 default with an option for 3.9
