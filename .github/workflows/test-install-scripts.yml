@@ -113,34 +113,34 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
-        - name: linuxmintd:mint19.1-amd64
+        - name: linuxmintd/mint19.1-amd64
           type: linuxmint
           # 3.6 default with an option for 3.7
-          url: "docker://linuxmintd:mint19.1-amd64"
-        - name: linuxmintd:mint19.3-amd64
+          url: "docker://linuxmintd/mint19.1-amd64"
+        - name: linuxmintd/mint19.3-amd64
           type: linuxmint
           # 3.6 default with an option for 3.7
-          url: "docker://linuxmintd:mint19.3-amd64"
-        - name: linuxmintd:mint20-amd64
+          url: "docker://linuxmintd/mint19.3-amd64"
+        - name: linuxmintd/mint20-amd64
           type: linuxmint
           # 3.8
-          url: "docker://linuxmintd:mint20-amd64"
-        - name: linuxmintd:mint20.1-amd64
+          url: "docker://linuxmintd/mint20-amd64"
+        - name: linuxmintd/mint20.1-amd64
           type: linuxmint
           # 3.8
-          url: "docker://linuxmintd:mint20.1-amd64"
-        - name: linuxmintd:mint20.2-amd64
+          url: "docker://linuxmintd/mint20.1-amd64"
+        - name: linuxmintd/mint20.2-amd64
           type: linuxmint
           # 3.8
-          url: "docker://linuxmintd:mint20.2-amd64"
-        - name: linuxmintd:mint20.3-amd64
+          url: "docker://linuxmintd/mint20.2-amd64"
+        - name: linuxmintd/mint20.3-amd64
           type: linuxmint
           # 3.8
-          url: "docker://linuxmintd:mint20.3-amd64"
-        - name: linuxmintd:mint21-amd64
+          url: "docker://linuxmintd/mint20.3-amd64"
+        - name: linuxmintd/mint21-amd64
           type: linuxmint
           # 3.10 default with an option for 3.9
-          url: "docker://linuxmintd:mint21-amd64"
+          url: "docker://linuxmintd/mint21-amd64"
 
     steps:
     - name: Prepare Amazon Linux
