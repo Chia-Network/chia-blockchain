@@ -93,7 +93,7 @@ jobs:
     - name: Test core code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest tests/core/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/core/test_cost_calculation.py tests/core/test_crawler_rpc.py tests/core/test_daemon_rpc.py tests/core/test_db_conversion.py tests/core/test_db_validation.py tests/core/test_farmer_harvester_rpc.py tests/core/test_filter.py tests/core/test_full_node_rpc.py tests/core/test_merkle_set.py tests/core/test_setproctitle.py
 
     - name: Process coverage data
       run: |
