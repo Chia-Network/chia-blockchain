@@ -71,7 +71,7 @@ if $UBUNTU; then
     UBUNTU_PRE_2004=1
   elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
     UBUNTU_2000=1
-  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
+  else
     UBUNTU_2100=1
   fi
 fi
@@ -132,7 +132,7 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils openssl
   elif [ "$UBUNTU_2100" = "1" ]; then
-    echo "Installing on Ubuntu 21.04."
+    echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
     sudo apt-get install -y python3.9-venv python3-distutils openssl
   elif [ "$DEBIAN" = "true" ]; then
