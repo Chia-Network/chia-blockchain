@@ -230,6 +230,13 @@ jobs:
       run: |
         # for 19.*
         apt-get --yes update
+        # for 19.3 to avoid 
+        # Setting up software-properties-common (2.0.0.2) ...
+        # Traceback (most recent call last):
+        #   File "/usr/lib/linuxmint/mintSources/mintSources.py", line 11, in <module>
+        #     import requests
+        # ModuleNotFoundError: No module named 'requests'
+        apt-get install --yes python3-requests
         apt-get install --yes software-properties-common
         add-apt-repository --yes ppa:git-core/ppa
         apt-get --yes update
