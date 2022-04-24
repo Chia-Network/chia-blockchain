@@ -1,7 +1,7 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -26,9 +26,6 @@ class HarvesterAPI:
 
     def __init__(self, harvester: Harvester):
         self.harvester = harvester
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.harvester.state_changed_callback = callback
 
     @peer_required
     @api_request
@@ -218,10 +215,21 @@ class HarvesterAPI:
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
+        found_time = time.time() - start
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
-            f" Found {total_proofs_found} proofs. Time: {time.time() - start:.5f} s. "
+            f" Found {total_proofs_found} proofs. Time: {found_time:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
+        )
+        self.harvester.state_changed(
+            "farming_info",
+            {
+                "challenge_hash": new_challenge.challenge_hash.hex(),
+                "total_plots": self.harvester.plot_manager.plot_count(),
+                "found_proofs": total_proofs_found,
+                "eligible_plots": len(awaitables),
+                "time": found_time,
+            },
         )
 
     @api_request

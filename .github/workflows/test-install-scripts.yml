@@ -80,7 +80,7 @@ jobs:
           url: "docker://debian:bullseye"
         - name: debian:bookworm
           type: debian
-          # https://packages.debian.org/bookworm/python/python3 (3.9)
+          # https://packages.debian.org/bookworm/python/python3 (3.10)
           url: "docker://debian:bookworm"
         - name: fedora:33
           type: fedora
