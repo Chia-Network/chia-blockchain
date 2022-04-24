@@ -230,7 +230,7 @@ jobs:
       run: |
         # for 19.*
         apt-get --yes update
-        # for 19.3 to avoid 
+        # for 19.3 to avoid
         # Setting up software-properties-common (2.0.0.2) ...
         # Traceback (most recent call last):
         #   File "/usr/lib/linuxmint/mintSources/mintSources.py", line 11, in <module>
