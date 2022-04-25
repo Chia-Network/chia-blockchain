@@ -126,15 +126,18 @@ if [ "$(uname)" = "Linux" ]; then
     # Ubuntu
     echo "Installing on Ubuntu pre 20.04 LTS."
     sudo apt-get update
+    # distutils must be installed as well to avoid a complaint about ensurepip while
+    # creating the venv.  This may be related to a mis-check while using or
+    # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_2000" = "1" ]; then
     echo "Installing on Ubuntu 20.04 LTS."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils openssl
+    sudo apt-get install -y python3.8-venv openssl
   elif [ "$UBUNTU_2100" = "1" ]; then
     echo "Installing on Ubuntu 21.04 or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.9-venv python3-distutils openssl
+    sudo apt-get install -y python3.9-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
