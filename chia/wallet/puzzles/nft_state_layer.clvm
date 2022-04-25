@@ -1,0 +1,49 @@
+(mod (
+    NFT_STATE_LAYER_MOD_HASH
+    METADATA
+    METADATA_UPDATER_PUZZLE_HASH
+    INNER_PUZZLE
+    solution  ; either to inner puzzle or metadata updater
+    my_amount
+    metadata_updater_reveal
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline nft_state_layer_puzzle_hash (NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH inner_puzzle_hash)
+    (puzzle-hash-of-curried-function NFT_STATE_LAYER_MOD_HASH
+                                     (sha256 ONE inner_puzzle_hash)
+                                     (sha256 ONE METADATA_UPDATER_PUZZLE_HASHs)
+                                     (sha256tree1 METADATA)
+                                     (sha256 ONE NFT_STATE_LAYER_MOD_HASH)
+    )
+  )
+
+  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (METADATA conditions) my_amount)
+    (if conditions
+      (if (= (f (f conditions)) CREATE_COIN)
+        (if (logand (f (r (r (f conditions)))) ONE)
+          (c (list CREATE_COIN (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH  (f (r (f conditions)))) my_amount) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
+        )
+        (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
+      )
+      ()
+    )
+  )
+
+  ; main
+  (c
+    (list ASSERT_MY_AMOUNT my_amount)
+    (wrap_odd_create_coins
+      NFT_STATE_LAYER_MOD_HASH
+      METADATA_UPDATER_PUZZLE_HASH
+      (if metadata_updater_reveal
+       (list (a metadata_updater_reveal solution) (list (list CREATE_COIN (sha256tree INNER_PUZZLE) my_amount)))
+       (list METADATA METADATA_UPDATER_PUZZLE_HASH (a INNER_PUZZLE solution))
+      )
+      my_amount
+    )
+  )
+)

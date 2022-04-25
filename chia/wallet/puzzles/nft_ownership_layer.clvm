@@ -1,0 +1,19 @@
+(mod (
+    CURRENT_OWNER
+    TRANSFER_PROGRAM_HASH
+    INNER_PUZZLE
+    inner_solution
+   )
+
+  ; main
+  (defun wrap_all_create_coins_in_this (new_owner . conditions)
+     ...
+   )
+
+
+   (wrap_all_create_coins_in_this
+     (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions
+       (a INNER_PUZZLE inner_solution)
+     )
+   )
+)
