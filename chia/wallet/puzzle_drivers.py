@@ -4,9 +4,21 @@ from dataclasses import dataclass
 from ir.Type import Type
 from typing import Any, Dict, Optional
 
+"""
+The following two classes act as wrapper classes around dictionaries of strings.
+Values in the dictionary are assumed to be strings in CLVM format (0x for bytes, etc.)
+When you access a value in the dictionary, it will be deserialized to a str, int, bytes, or Program appropriately.
+"""
+
 
 @dataclass(frozen=True)
 class PuzzleInfo:
+    """
+    There are two 'magic' keys in a PuzzleInfo object:
+      - 'type' must be an included key (for easy lookup of drivers)
+      - 'also' gets its own method as it's the supported way to do recursion of PuzzleInfos
+    """
+
     info: Dict[str, Any]
 
     def __post_init__(self) -> None:
