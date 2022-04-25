@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Any, Dict, Optional, List
 
 import pytest
 from blspy import G2Element
@@ -189,6 +189,10 @@ class TestOfferLifecycle:
                 ),
             }
 
+            driver_dict_as_infos: Dict[bytes32, Any] = {}
+            for key, value in driver_dict.items():
+                driver_dict_as_infos[key.hex()] = value.info
+
             # Create an XCH Offer for RED
             chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 str_to_tail_hash("red"): [
@@ -262,6 +266,7 @@ class TestOfferLifecycle:
                     str_to_tail_hash("blue").hex(): 2000,
                 },
                 {"xch": 900, str_to_tail_hash("red").hex(): 350},
+                driver_dict_as_infos,
             )
             assert new_offer.get_pending_amounts() == {
                 "xch": 1200,
