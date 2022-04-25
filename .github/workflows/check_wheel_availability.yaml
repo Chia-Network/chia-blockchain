@@ -19,6 +19,7 @@ jobs:
   check_dependency_artifacts:
     name: Check Dependency Artifacts
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.os == 'arm64' && format('docker://python:{0}', matrix.python-version) || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +30,8 @@ jobs:
             python-version: 3.7
           - os: m1
             python-version: 3.7
+    env:
+      M1_ARCH_COMMAND: ${{ matrix.os == 'm1' && 'arch -arm64' || '' }}
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
@@ -44,4 +47,4 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Check Wheel Availability
-      run: python3 build_scripts/check_dependency_artifacts.py
+      run: ${{ env.M1_ARCH_COMMAND }} python3 build_scripts/check_dependency_artifacts.py
