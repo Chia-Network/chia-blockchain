@@ -33,7 +33,7 @@ def main() -> int:
         print("Downloading packages for Python version:")
         for line in sys.version.splitlines():
             print(f"    {line}")
-        print()
+        print(flush=True)
 
         subprocess.run(
             [
