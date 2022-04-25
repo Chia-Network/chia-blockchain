@@ -19,17 +19,29 @@ jobs:
   check_dependency_artifacts:
     name: Check Dependency Artifacts
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.os == 'arm64' && format('docker://python:{0}', matrix.python-version) || '' }}
+    container: ${{ format(matrix.os.container_format, matrix.python-version) }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.7', '3.8', '3.9']
-        os: [macos-latest, m1, ubuntu-latest, arm64]
+        os:
+          - name: macOS Intel
+            runs-on: macos-latest
+            platform: macos
+          - name: macOS M1
+            runs-on: m1
+            platform: macos
+          - name: Linux Intel
+            runs-on: ubuntu-latest
+            platform: linux
+          - name: Linux ARM64
+            runs-on: [linux, arm64]
+            platform: linux
+            container_format: 'docker://python:{0}'
         exclude:
-          - os: macos-latest
-            python-version: 3.7
-          - os: m1
-            python-version: 3.7
+          - os:
+              platform: macos
+            python-version: '3.7'
     env:
       M1_ARCH_COMMAND: ${{ matrix.os == 'm1' && 'arch -arm64' || '' }}
 
