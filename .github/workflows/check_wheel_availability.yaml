@@ -17,31 +17,40 @@ concurrency:
 
 jobs:
   check_dependency_artifacts:
-    name: Check Dependency Artifacts - ${{ matrix.os.name }} ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os.runs-on }}
-    container: ${{ format(matrix.os.container_format, matrix.python-version) }}
+    name: Check Dependency Artifacts - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    container: ${{ format(matrix.os.container-format[matrix.arch.matrix], matrix.python-version) }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.7', '3.8', '3.9']
         os:
-          - name: macOS Intel
-            runs-on: macos-latest
-            platform: macos
-          - name: macOS M1
-            runs-on: [macos, arm64]
-            platform: macos
-          - name: Linux Intel
-            runs-on: ubuntu-latest
-            platform: linux
-          - name: Linux ARM64
-            runs-on: [linux, arm64]
-            platform: linux
-            container_format: 'docker://python:{0}'
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-latest
+              arm: [macos, arm64]
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+            container-format:
+              arm: 'docker://python:{0}'
+        arch:
+          - name: Intel
+            matrix: intel
+          - name: ARM64
+            matrix: arm
         exclude:
           - os:
-              platform: macos
+              matrix: macos
             python-version: '3.7'
+          - os:
+              matrix: macos
+            arch:
+              matrix: arm
+            python-version: '3.8'
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
