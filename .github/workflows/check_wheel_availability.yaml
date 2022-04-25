@@ -39,7 +39,7 @@ jobs:
 
     - name: Setup Python environment
       uses: actions/setup-python@v2
-      if: matrix.os != 'm1' || matrix.os != 'arm64'
+      if: matrix.os != 'm1' && matrix.os != 'arm64'
       with:
         python-version: ${{ matrix.python-version }}
 
