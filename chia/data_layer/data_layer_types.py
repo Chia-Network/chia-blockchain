@@ -8,6 +8,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
+from chia.util.streamable import Streamable, streamable
 
 
 class Status(IntEnum):
@@ -183,3 +184,11 @@ class DiffData:
     type: OperationType
     key: bytes
     value: bytes
+
+
+@dataclass(frozen=True)
+@streamable
+class SerializedNode(Streamable):
+    is_terminal: bool
+    value1: bytes
+    value2: bytes

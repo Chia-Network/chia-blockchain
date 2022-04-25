@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_types import NodeType, Status
+from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode
 from chia.util.ints import uint16
 
 
@@ -47,15 +47,21 @@ async def insert_from_delta_file(
     root_hash: bytes32,
     filename: str,
 ) -> None:
-    with open(filename, "r") as tree_reader:
-        tree = tree_reader.readlines()
-        for tree_entry in tree:
-            tree_data = tree_entry.split()
-            if tree_data[0] == "1":
-                await data_store.insert_node(NodeType.INTERNAL, tree_data[1], tree_data[2])
+    with open(filename, "rb") as reader:
+        while True:
+            chunk = reader.read(4)
+            if chunk is None or chunk == b"":
+                break
+
+            size = int.from_bytes(chunk, byteorder="big")
+            serialize_nodes_bytes = reader.read(size)
+            serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+
+            if serialized_node.is_terminal:
+                await data_store.insert_node(NodeType.TERMINAL, serialized_node.value1, serialized_node.value2)
             else:
-                assert tree_data[0] == "2"
-                await data_store.insert_node(NodeType.TERMINAL, tree_data[1], tree_data[2])
+                await data_store.insert_node(NodeType.INTERNAL, serialized_node.value1, serialized_node.value2)
+
     await data_store.insert_batch_root(tree_id, root_hash, Status.COMMITTED)
 
 

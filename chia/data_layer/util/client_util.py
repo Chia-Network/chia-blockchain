@@ -8,6 +8,7 @@ from pathlib import Path
 import aiosqlite
 
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.download_data import insert_from_delta_file
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 
@@ -34,9 +35,10 @@ async def download_client_data(delta: bool, foldername: str) -> None:
                     filename = foldername + f"/{generation}-delta.dat"
                 print(f"Parsing file {filename}.")
                 t1 = time.time()
-                generation += 1
+                await insert_from_delta_file(data_store, tree_id, bytes32.from_hexstr(root_entry), filename)
                 t2 = time.time()
                 print(f"Inserted root {root_entry.rstrip()}. Total time: {t2 - t1}")
+                generation += 1
                 tot += t2 - t1
         print(f"Total time: {tot}")
         await connection.close()

@@ -25,6 +25,7 @@ from chia.data_layer.data_layer_types import (
     Subscription,
     DiffData,
     OperationType,
+    SerializedNode,
 )
 from chia.data_layer.data_layer_util import row_to_node
 from chia.types.blockchain_format.program import Program
@@ -194,18 +195,16 @@ class DataStore:
             if result_dict != values:
                 raise Exception(f"Requested insertion of node with matching hash but other values differ: {node_hash}")
 
-    async def insert_node(self, node_type: NodeType, value1: str, value2: str) -> None:
+    async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
         async with self.db_wrapper.locked_transaction(lock=True):
             if node_type == NodeType.INTERNAL:
-                left_hash = bytes32.from_hexstr(value1)
-                right_hash = bytes32.from_hexstr(value2)
+                left_hash = bytes32(value1)
+                right_hash = bytes32(value2)
                 node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
-                await self._insert_node(node_hash.hex(), node_type, value1, value2, None, None)
+                await self._insert_node(node_hash.hex(), node_type, value1.hex(), value2.hex(), None, None)
             else:
-                key = bytes.fromhex(value1)
-                value = bytes.fromhex(value2)
-                node_hash = Program.to((key, value)).get_tree_hash()
-                await self._insert_node(node_hash.hex(), node_type, None, None, value1, value2)
+                node_hash = Program.to((value1, value2)).get_tree_hash()
+                await self._insert_node(node_hash.hex(), node_type, None, None, value1.hex(), value2.hex())
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
@@ -1024,7 +1023,7 @@ class DataStore:
         lock: bool = True,
     ) -> None:
         if node_hash == bytes32([0] * 32):
-            open(filename, "a").close()
+            open(filename, "ab").close()
             return
 
         if deltas_only:
@@ -1033,15 +1032,18 @@ class DataStore:
             if root.generation != generation:
                 return
         node = await self.get_node(node_hash, lock=lock)
+        to_write = b""
         if isinstance(node, InternalNode):
             await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, filename, lock=lock)
             await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, filename, lock=lock)
-            with open(filename, "a") as writer:
-                writer.write(f"1 {node.left_hash.hex()} {node.right_hash.hex()}\n")
+            to_write = bytes(SerializedNode(False, bytes(node.left_hash), bytes(node.right_hash)))
         else:
             assert isinstance(node, TerminalNode)
-            with open(filename, "a") as writer:
-                writer.write(f"2 {node.key.hex()} {node.value.hex()}\n")
+            to_write = bytes(SerializedNode(True, node.key, node.value))
+
+        with open(filename, "ab") as writer:
+            writer.write(len(to_write).to_bytes(4, byteorder="big"))
+            writer.write(to_write)
 
     async def get_left_to_right_ordering(
         self,
