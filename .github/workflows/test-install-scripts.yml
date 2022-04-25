@@ -80,7 +80,7 @@ jobs:
           url: "docker://debian:bullseye"
         - name: debian:bookworm
           type: debian
-          # https://packages.debian.org/bookworm/python/python3 (3.9)
+          # https://packages.debian.org/bookworm/python/python3 (3.10)
           url: "docker://debian:bookworm"
         - name: fedora:33
           type: fedora
@@ -113,6 +113,41 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
+        - name: linuxmintd/mint19.1-amd64 (Tessa)
+          type: mint
+          # 3.6 default with an option for 3.7
+          url: "docker://linuxmintd/mint19.1-amd64"
+        - name: linuxmintd/mint19.2-amd64 (Tina)
+          type: mint
+          # 3.6 default with an option for 3.7
+          url: "docker://linuxmintd/mint19.2-amd64"
+        - name: linuxmintd/mint19.3-amd64 (Tricia)
+          type: mint
+          # 3.6 default with an option for 3.7
+          url: "docker://linuxmintd/mint19.3-amd64"
+        - name: linuxmintd/mint20-amd64 (Ulyana)
+          type: mint
+          # 3.8
+          url: "docker://linuxmintd/mint20-amd64"
+        - name: linuxmintd/mint20.1-amd64 (Ulyssa)
+          type: mint
+          # 3.8
+          url: "docker://linuxmintd/mint20.1-amd64"
+        - name: linuxmintd/mint20.2-amd64 (Uma)
+          type: mint
+          # 3.8
+          url: "docker://linuxmintd/mint20.2-amd64"
+        - name: linuxmintd/mint20.3-amd64 (Una)
+          type: mint
+          # 3.8
+          url: "docker://linuxmintd/mint20.3-amd64"
+#        The Linux Mint 21 docker image reports as 20.3 but has different Python.
+#        Uncomment after adapting to handle this or upstream fixing it.
+#        Also, Linux Mint 21 is not released as of this change.
+#        - name: linuxmintd/mint21-amd64
+#          type: linuxmint
+#          # 3.10 default with an option for 3.9
+#          url: "docker://linuxmintd/mint21-amd64"
 
     steps:
     - name: Prepare Amazon Linux
@@ -183,6 +218,25 @@ jobs:
       run: |
         # for bionic
         apt-get --yes update
+        apt-get install --yes software-properties-common
+        add-apt-repository --yes ppa:git-core/ppa
+        apt-get --yes update
+        apt-get install --yes git lsb-release sudo
+
+    - name: Prepare Linux Mint
+      if: ${{ matrix.distribution.type == 'mint' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        # for 19.*
+        apt-get --yes update
+        # for 19.3 to avoid
+        # Setting up software-properties-common (2.0.0.2) ...
+        # Traceback (most recent call last):
+        #   File "/usr/lib/linuxmint/mintSources/mintSources.py", line 11, in <module>
+        #     import requests
+        # ModuleNotFoundError: No module named 'requests'
+        apt-get install --yes python3-requests
         apt-get install --yes software-properties-common
         add-apt-repository --yes ppa:git-core/ppa
         apt-get --yes update
