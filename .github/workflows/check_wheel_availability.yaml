@@ -44,4 +44,4 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Check Wheel Availability
-      run: python build_scripts/check_dependency_artifacts.py
+      run: python3 build_scripts/check_dependency_artifacts.py
