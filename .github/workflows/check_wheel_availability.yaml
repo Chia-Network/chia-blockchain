@@ -23,13 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9']
         os:
-          - name: macOS
-            matrix: macos
-            runs-on:
-              intel: macos-latest
-              arm: [macos, arm64]
           - name: Linux
             matrix: linux
             runs-on:
@@ -37,11 +31,17 @@ jobs:
               arm: [linux, arm64]
             container-format:
               arm: 'docker://python:{0}'
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-latest
+              arm: [macos, arm64]
         arch:
-          - name: Intel
-            matrix: intel
           - name: ARM64
             matrix: arm
+          - name: Intel
+            matrix: intel
+        python-version: ['3.7', '3.8', '3.9']
         exclude:
           - os:
               matrix: macos
