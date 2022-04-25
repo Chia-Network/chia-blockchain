@@ -131,6 +131,11 @@ class BlockTools:
     Tools to generate blocks for testing.
     """
 
+    _block_cache_header: bytes32
+    _block_cache_height_to_hash: Dict[uint32, bytes32]
+    _block_cache_difficulty: uint64
+    _block_cache: Dict[bytes32, BlockRecord]
+
     def __init__(
         self,
         constants: ConsensusConstants = test_constants,
@@ -138,6 +143,9 @@ class BlockTools:
         const_dict=None,
         keychain: Optional[Keychain] = None,
     ):
+
+        self._block_cache_header = bytes32([0] * 32)
+
         self._tempdir = None
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
@@ -478,7 +486,12 @@ class BlockTools:
             return block_list
 
         blocks: Dict[bytes32, BlockRecord]
-        height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+        if block_list[-1].header_hash == self._block_cache_header:
+            height_to_hash = self._block_cache_height_to_hash
+            difficulty = self._block_cache_difficulty
+            blocks = self._block_cache
+        else:
+            height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -665,6 +678,10 @@ class BlockTools:
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
                         if num_blocks <= 0 and not keep_going_until_tx_block:
+                            self._block_cache_header = block_list[-1].header_hash
+                            self._block_cache_height_to_hash = height_to_hash
+                            self._block_cache_difficulty = difficulty
+                            self._block_cache = blocks
                             return block_list
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -934,13 +951,18 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
-                        if num_blocks <= 0 and not keep_going_until_tx_block:
-                            return block_list
 
                         blocks[full_block.header_hash] = block_record
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+
+                        if num_blocks <= 0 and not keep_going_until_tx_block:
+                            self._block_cache_header = block_list[-1].header_hash
+                            self._block_cache_height_to_hash = height_to_hash
+                            self._block_cache_difficulty = difficulty
+                            self._block_cache = blocks
+                            return block_list
 
             finished_sub_slots_at_sp = finished_sub_slots_eos.copy()
             same_slot_as_last = False
