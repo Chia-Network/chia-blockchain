@@ -1,5 +1,4 @@
 name: Check Dependency Artifacts
-name: Check Dep Wheels
 
 on:
   push:
