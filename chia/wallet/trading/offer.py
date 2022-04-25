@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Set, Tuple
+from typing import Any, List, Optional, Dict, Set, Tuple
 from blspy import G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -165,12 +165,12 @@ class Offer:
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> Tuple[Dict[str, int], Dict[str, int]]:
+    def summary(self) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
-            new_dic: Dict[str, int] = {}
+        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
+            new_dic: Dict[str, Any] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]
@@ -178,7 +178,11 @@ class Offer:
                     new_dic[key.hex()] = dic[key]
             return new_dic
 
-        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts)
+        driver_dict: Dict[Optional[bytes32], Any] = {}
+        for key, value in self.driver_dict.items():
+            driver_dict[key] = value.info
+
+        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), keys_to_strings(driver_dict)
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends

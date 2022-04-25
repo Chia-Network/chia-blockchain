@@ -354,7 +354,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested = offer.summary()
+        offered, requested, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.bundle.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -431,7 +431,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
-    offered, requested = offer.summary()
+    offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")

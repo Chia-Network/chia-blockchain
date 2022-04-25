@@ -998,9 +998,9 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        offered, requested = offer.summary()
+        offered, requested, infos = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees()}}
+        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
