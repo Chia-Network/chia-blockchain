@@ -6,7 +6,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
-
 """
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
 
