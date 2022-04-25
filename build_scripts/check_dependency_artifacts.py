@@ -1,5 +1,6 @@
 import os
 import pathlib
+import platform
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,8 @@ def excepted(path: pathlib.Path) -> bool:
 
 def main() -> int:
     with tempfile.TemporaryDirectory() as directory_string:
+        print(f"Working in: {directory_string}")
+        print()
         directory_path = pathlib.Path(directory_string)
 
         extras = ["upnp"]
@@ -31,7 +34,13 @@ def main() -> int:
             package_and_extras = package_path_string
 
         print("Downloading packages for Python version:")
-        for line in sys.version.splitlines():
+        lines = [
+            *sys.version.splitlines(),
+            "",
+            f"machine: {platform.machine()}",
+            f"platform: {platform.platform()}",
+        ]
+        for line in lines:
             print(f"    {line}")
         print(flush=True)
 
