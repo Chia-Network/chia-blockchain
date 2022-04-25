@@ -1,4 +1,6 @@
+from chia.types.blockchain_format.program import Program
 from clvm.casts import int_from_bytes
+from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, type_for_atom
 from dataclasses import dataclass
 from ir.Type import Type
@@ -26,7 +28,7 @@ class PuzzleInfo:
             raise ValueError("A type is required to initialize a puzzle driver")
 
     def __getitem__(self, item: str) -> Any:
-        value = self.info[decode_info_value(PuzzleInfo, item)]
+        value = self.info[item]
         return decode_info_value(PuzzleInfo, value)
 
     def type(self) -> str:
@@ -44,7 +46,7 @@ class Solver:
     info: Dict[str, Any]
 
     def __getitem__(self, item: str) -> Any:
-        value = self.info[decode_info_value(Solver, item)]
+        value = self.info[item]
         return decode_info_value(Solver, value)
 
 
@@ -54,11 +56,15 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]
     else:
-        atom: bytes = assemble(value).as_atom()  # type: ignore
-        typ = type_for_atom(atom)
-        if typ == Type.QUOTES:
-            return bytes(atom).decode("utf8")
-        elif typ == Type.INT:
-            return int_from_bytes(atom)
+        expression: Sexp = assemble(value)
+        if expression.atom is None:
+            return Program(expression)
         else:
-            return atom
+            atom: bytes = expression.atom
+            typ = type_for_atom(atom)
+            if typ == Type.QUOTES:
+                return bytes(atom).decode("utf8")
+            elif typ == Type.INT:
+                return int_from_bytes(atom)
+            else:
+                return atom

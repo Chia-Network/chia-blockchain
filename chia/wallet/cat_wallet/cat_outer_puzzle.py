@@ -34,7 +34,7 @@ class CATOuterPuzzle:
             }
             next_constructor = self._match(inner_puzzle)
             if next_constructor is not None:
-                constructor_dict["and"] = next_constructor.info
+                constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
         else:
             return None
