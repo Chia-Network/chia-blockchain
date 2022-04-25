@@ -2,7 +2,7 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.9",  # Signature library
+    "blspy==1.0.11",  # Signature library
     "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
@@ -56,7 +56,7 @@ dev_dependencies = [
     "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==4.9",
+    "pyinstaller==5.0",
     "types-aiofiles",
     "types-click",
     "types-cryptography",
