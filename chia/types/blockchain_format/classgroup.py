@@ -40,7 +40,7 @@ class ClassgroupElement(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class CompressedClassgroupElement(Streamable):
+class B(Streamable):
     """
     Represents a classgroup element (a,b,c) where a, b, and c are 512 bit signed integers. However this is using
     a compressed representation. VDF outputs are a single classgroup element. VDF proofs can also be one classgroup
@@ -50,14 +50,14 @@ class CompressedClassgroupElement(Streamable):
     data: bytes33
 
     @staticmethod
-    def from_bytes(data) -> "CompressedClassgroupElement":
+    def from_bytes(data) -> "B":
         if len(data) < 33:
             data += b"\x00" * (33 - len(data))
-        return CompressedClassgroupElement(bytes33(data))
+        return B(bytes33(data))
 
     @staticmethod
-    def from_hex(data) -> "CompressedClassgroupElement":
-        return CompressedClassgroupElement.from_bytes(hexstr_to_bytes(data))
+    def from_hex(data) -> "B":
+        return B.from_bytes(hexstr_to_bytes(data))
 
     @staticmethod
     def get_size(constants: ConsensusConstants):

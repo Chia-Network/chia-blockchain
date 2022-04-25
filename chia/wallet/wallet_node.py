@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 import random
 import time
 import traceback
@@ -24,12 +23,9 @@ from chia.daemon.keychain_proxy import (
     wrap_local_keychain,
 )
 from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
-
-from chia.protocols.shared_protocol import Capability
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import (
     RequestProofOfWeight,
-    RespondProofOfWeight,
     RequestSubEpochSummary,
     RequestProofOfWeightV2,
     RespondSubEpochSummary,
@@ -62,7 +58,7 @@ from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint16
+from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
 from chia.util.profiler import profile_task
@@ -1102,18 +1098,11 @@ class WalletNode:
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
         assert self.wallet_state_manager is not None
         assert self.wallet_state_manager.weight_proof_handler is not None
-        capabilities = peer.capabilities
-        self.log.debug(f"capabilities {capabilities} ")
-        weight_proof_v2 = False
-        ses_response: Optional[RespondSubEpochSummary] = None
-        seed = None
-        if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
-            weight_proof_v2 = True
-            self.log.info("using new weight proof format")
 
+        ses_response: Optional[RespondSubEpochSummary] = None
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        if weight_proof_v2:
+        if peer.has_wp_capability():
             request = RequestSubEpochSummary(peak.weight)
             ses_response = await peer.request_sub_epoch_summary(request, timeout=10)
             if ses_response is None:
@@ -1143,7 +1132,7 @@ class WalletNode:
             valid, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
-            if weight_proof_v2:
+            if peer.has_wp_capability():
                 assert ses_response
                 (
                     valid,

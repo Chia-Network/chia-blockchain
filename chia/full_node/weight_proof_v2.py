@@ -16,7 +16,7 @@ from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_iters, is_overflow_block
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
-from chia.types.blockchain_format.classgroup import ClassgroupElement, CompressedClassgroupElement
+from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -550,13 +550,11 @@ def handle_block_vdfs(
         header_block.challenge_chain_ip_proof,
         header_block.reward_chain_block.signage_point_index,
         None,
-        None if compressed_sp_output is None else CompressedClassgroupElement.from_hex(compressed_sp_output.result()),
-        CompressedClassgroupElement.from_hex(compressed_cc_ip_output.result()),
+        None if compressed_sp_output is None else B.from_hex(compressed_sp_output.result()),
+        B.from_hex(compressed_cc_ip_output.result()),
         None,
         header_block.infused_challenge_chain_ip_proof,
-        None
-        if compressed_icc_ip_output is None
-        else CompressedClassgroupElement.from_hex(compressed_icc_ip_output.result()),
+        None if compressed_icc_ip_output is None else B.from_hex(compressed_icc_ip_output.result()),
         None,
         None,
         header_block.reward_chain_block.challenge_chain_sp_signature
@@ -818,7 +816,7 @@ def _validate_segment(
     start_from: int = 0,
 ) -> Tuple[uint64, uint64, int, bytes32, bytes32, bool]:
     slot_iters, slots = uint64(0), 0
-    output_cache: Dict[CompressedClassgroupElement, ClassgroupElement] = {}
+    output_cache: Dict[B, ClassgroupElement] = {}
     sub_slot_data = segment.sub_slot_data[start_from:]
     first_block = True
     prev_cc_challenge = None
@@ -943,7 +941,7 @@ def validate_overflow(
     constants: ConsensusConstants,
     first_block: bool,
     idx: int,
-    long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
+    long_outputs: Dict[B, ClassgroupElement],
     sub_slots_data: List[SubSlotDataV2],
 ) -> None:
     ssd = sub_slots_data[idx]
@@ -1003,10 +1001,10 @@ def validate_eos(
     sub_slots_data: List[SubSlotDataV2],
     idx: int,
     ssi: uint64,
-    long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
+    long_outputs: Dict[B, ClassgroupElement],
 ) -> None:
     cc_eos_iters = ssi
-    cc_ip_input = ClassgroupElement.get_default_element()
+    cc_input = ClassgroupElement.get_default_element()
     ssd = sub_slots_data[idx]
     prev_ssd = sub_slots_data[idx - 1]
     if not prev_ssd.is_end_of_slot():
@@ -1014,13 +1012,13 @@ def validate_eos(
         if not ssd.cc_slot_end.normalized_to_identity:
             assert prev_ssd.cc_ip_vdf_output
             assert prev_ssd.ip_iters
-            cc_ip_input = long_outputs[prev_ssd.cc_ip_vdf_output]
+            cc_input = long_outputs[prev_ssd.cc_ip_vdf_output]
             cc_eos_iters = uint64(ssi - prev_ssd.ip_iters)
     assert ssd.cc_slot_end_output
     cc_slot_end_info = VDFInfo(cc_sub_slot_hash, cc_eos_iters, ssd.cc_slot_end_output)
     assert ssd.cc_slot_end
-    if not ssd.cc_slot_end.is_valid(constants, cc_ip_input, cc_slot_end_info):
-        raise Exception(f"failed cc slot end validation  {cc_slot_end_info} \n input {cc_ip_input}")
+    if not ssd.cc_slot_end.is_valid(constants, cc_input, cc_slot_end_info):
+        raise Exception(f"failed cc slot end validation  {cc_slot_end_info} \n input {cc_input}")
     icc_ip_input = ClassgroupElement.get_default_element()
     icc_eos_iters: uint64 = ssi
     if not prev_ssd.is_end_of_slot():
@@ -1042,7 +1040,7 @@ def validate_eos(
     icc_slot_end_info = VDFInfo(icc_challenge, icc_eos_iters, ssd.icc_slot_end_output)
     assert ssd.icc_slot_end
     if not ssd.icc_slot_end.is_valid(constants, icc_ip_input, icc_slot_end_info):
-        raise Exception(f"failed icc slot end validation  {icc_slot_end_info} \n input {cc_ip_input}")
+        raise Exception(f"failed icc slot end validation  {icc_slot_end_info} \n input {cc_input}")
     return
 
 
@@ -1054,7 +1052,7 @@ def _validate_challenge_sub_slot_data(
     ssi: uint64,
     challenge: bytes32,
     prev_challenge: Optional[bytes32],
-    long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
+    long_outputs: Dict[B, ClassgroupElement],
     sampled: bool,
 ) -> bytes32:
     sub_slot_data = sub_slots[ssd_idx]
@@ -1077,7 +1075,7 @@ def _validate_challenge_sub_slot_data(
         if ssd_idx > 0 and not sub_slot_data.cc_signage_point.normalized_to_identity:
             sp_total_iters = get_sp_total_iters(sp_iters, is_overflow, ssi, sub_slot_data)
             tmp_input, sp_iters = sub_slot_data_vdf_info(ssd_idx, sub_slots, is_overflow, sp_total_iters, sp_iters)
-            if isinstance(tmp_input, CompressedClassgroupElement):
+            if isinstance(tmp_input, B):
                 cc_sp_input = long_outputs[tmp_input]
             elif isinstance(tmp_input, ClassgroupElement):
                 cc_sp_input = tmp_input
@@ -1149,7 +1147,7 @@ def _validate_sub_slot_data(
     cc_challenge: bytes32,
     prev_cc_sub_slot_hash: Optional[bytes32],
     icc_challenge: bytes32,
-    long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
+    long_outputs: Dict[B, ClassgroupElement],
 ) -> None:
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = sub_slots[sub_slot_idx - 1]
@@ -1170,7 +1168,7 @@ def _validate_sub_slot_data(
             tmp_input, iterations = sub_slot_data_vdf_info(
                 sub_slot_idx, sub_slots, is_overflow, sp_total_iters, sp_iters
             )
-            if isinstance(tmp_input, CompressedClassgroupElement):
+            if isinstance(tmp_input, B):
                 cc_sp_input = long_outputs[tmp_input]
             elif isinstance(tmp_input, ClassgroupElement):
                 cc_sp_input = tmp_input
@@ -1242,7 +1240,7 @@ def sub_slot_data_vdf_info(
     is_overflow: bool,
     sp_total_iters: uint128,
     sp_iters: uint64,
-) -> Tuple[Union[CompressedClassgroupElement, ClassgroupElement], uint64]:
+) -> Tuple[Union[B, ClassgroupElement], uint64]:
     ssd: Optional[SubSlotDataV2] = None
     slots_n = 1
     if is_overflow:
@@ -1277,7 +1275,7 @@ def __validate_pospace(
     curr_diff: uint64,
     cc_sub_slot_hash: bytes32,
     ssi: uint64,
-    long_outputs: Dict[CompressedClassgroupElement, ClassgroupElement],
+    long_outputs: Dict[B, ClassgroupElement],
 ) -> Optional[uint64]:
     assert ssd.signage_point_index is not None
     sp_iters = calculate_sp_iters(constants, ssi, ssd.signage_point_index)

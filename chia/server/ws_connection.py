@@ -11,7 +11,7 @@ from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
-from chia.protocols.shared_protocol import Handshake
+from chia.protocols.shared_protocol import Handshake, Capability
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
@@ -116,7 +116,7 @@ class WSChiaConnection:
         protocol_version: str,
         server_port: int,
         local_type: NodeType,
-        capabilities: List[Tuple[uint16, str]],
+        capabilities: List[Tuple[Capability, str]],
     ):
         if self.is_outbound:
             outbound_handshake = make_msg(
@@ -517,3 +517,13 @@ class WSChiaConnection:
             return PeerInfo(self.peer_host, port)
         else:
             return info
+
+    def has_capability(self, c: Capability, value: int) -> bool:
+        capabilities = self.capabilities
+        if capabilities is not None and (c, value) in capabilities:
+            self.log.debug("has new weight proof format capability")
+            return True
+        return False
+
+    def has_wp_capability(self) -> bool:
+        return self.has_capability(Capability.WP, 1)

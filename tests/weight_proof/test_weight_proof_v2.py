@@ -626,6 +626,7 @@ class TestWeightProof:
     #
     #
 
+
 def get_size(obj, seen=None) -> int:  # type: ignore
     """Recursively finds size of objects"""
     size = sys.getsizeof(obj)

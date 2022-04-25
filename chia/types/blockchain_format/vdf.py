@@ -1,9 +1,9 @@
 import logging
 import traceback
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional
+from typing import Optional, Tuple
 from functools import lru_cache
 
 from chiavdf import (
@@ -14,7 +14,7 @@ from chiavdf import (
 )
 
 from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.classgroup import ClassgroupElement, CompressedClassgroupElement
+from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
@@ -109,7 +109,7 @@ def compress_future(
     proof: bytes,
     number_of_iterations: uint64,
     proof_type: int,
-):
+) -> B:
     return get_b_from_n_wesolowski(
         disc,
         input,
@@ -127,7 +127,7 @@ def compress_output(
     proof: VDFProof,
     number_of_iterations: uint64,
     executor: ProcessPoolExecutor,
-):
+) -> Future[B]:
 
     future = executor.submit(
         compress_future,
@@ -146,10 +146,10 @@ def verify_compressed_vdf(
     constants: ConsensusConstants,
     challenge: bytes32,
     vdf_input: ClassgroupElement,
-    vdf_output: CompressedClassgroupElement,
+    vdf_output: B,
     proof: VDFProof,
     number_of_iterations: uint64,
-):
+) -> Tuple[bool, ClassgroupElement]:
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
         raise Exception(f"invalid witness type")
     x, y = verify_n_wesolowski_with_b(

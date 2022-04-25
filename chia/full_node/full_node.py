@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import multiprocessing
 from multiprocessing.context import BaseContext
-import os
 import random
 import time
 import traceback
@@ -46,7 +45,6 @@ from chia.protocols.full_node_protocol import (
     RespondSignagePoint,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -74,7 +72,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_m
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128, uint16
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -889,13 +887,9 @@ class FullNode:
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
             capabilities = weight_proof_peer.capabilities
             self.log.debug(f"capabilities {capabilities} ")
-            weight_proof_v2 = False
-            ses_response = None
+
             salt = None
-            if capabilities is not None and (uint16(Capability.WP.value), "1") in capabilities:
-                weight_proof_v2 = True
-                self.log.info("using new weight proof format")
-            if weight_proof_v2:
+            if weight_proof_peer.has_wp_capability():
                 request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_hash)
                 ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=10)
                 salt = bytes32.from_bytes(token_bytes(32))
@@ -927,7 +921,7 @@ class FullNode:
                     raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
 
             try:
-                if weight_proof_v2:
+                if weight_proof_peer.has_wp_capability():
                     validated, fork_point, summaries, _ = await self.weight_proof_handler_v2.validate_weight_proof(
                         response.wp, salt
                     )

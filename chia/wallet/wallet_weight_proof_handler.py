@@ -18,7 +18,6 @@ from chia.full_node.weight_proof import (
     chunks,
     _validate_vdf_batch,
 )
-from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 
 from chia.types.weight_proof import (

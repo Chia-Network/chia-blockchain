@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from blspy import G2Element
 
-from chia.types.blockchain_format.classgroup import ClassgroupElement, CompressedClassgroupElement
+from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -115,11 +115,11 @@ class SubSlotDataV2(Streamable):
     cc_infusion_point: Optional[VDFProof]  # if block
     signage_point_index: Optional[uint8]  # if block
     cc_slot_end: Optional[VDFProof]  # if is end of slot
-    cc_sp_vdf_output: Optional[CompressedClassgroupElement]
-    cc_ip_vdf_output: Optional[CompressedClassgroupElement]
+    cc_sp_vdf_output: Optional[B]
+    cc_ip_vdf_output: Optional[B]
     cc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
     icc_infusion_point: Optional[VDFProof]
-    icc_ip_vdf_output: Optional[CompressedClassgroupElement]
+    icc_ip_vdf_output: Optional[B]
 
     icc_slot_end: Optional[VDFProof]  # if is end of slot
     icc_slot_end_output: Optional[ClassgroupElement]  # if is end of slot
