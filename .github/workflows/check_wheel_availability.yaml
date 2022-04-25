@@ -29,7 +29,7 @@ jobs:
             runs-on: macos-latest
             platform: macos
           - name: macOS M1
-            runs-on: m1
+            runs-on: [macos, arm64]
             platform: macos
           - name: Linux Intel
             runs-on: ubuntu-latest
@@ -42,21 +42,16 @@ jobs:
           - os:
               platform: macos
             python-version: '3.7'
-    env:
-      M1_ARCH_COMMAND: ${{ matrix.os == 'm1' && 'arch -arm64' || '' }}
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
-      if: matrix.os == 'm1' || matrix.os == 'arm64'
 
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
-      if: matrix.os != 'm1' && matrix.os != 'arm64'
+    - uses: Chia-Network/actions/setup-python@main
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Check Wheel Availability
-      run: ${{ env.M1_ARCH_COMMAND }} python3 build_scripts/check_dependency_artifacts.py
+      run: python build_scripts/check_dependency_artifacts.py
