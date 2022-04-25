@@ -30,6 +30,11 @@ def main() -> int:
         else:
             package_and_extras = package_path_string
 
+        print("Downloading packages for Python version:")
+        for line in sys.version.splitlines():
+            print(f"    {line}")
+        print()
+
         subprocess.run(
             [
                 sys.executable,
