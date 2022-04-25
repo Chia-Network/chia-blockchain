@@ -1,19 +1,70 @@
 (mod (
+    NFT_OWNERSHIP_LAYER_MOD_HASH
     CURRENT_OWNER
     TRANSFER_PROGRAM_HASH
     INNER_PUZZLE
     inner_solution
    )
 
-  ; main
-  (defun wrap_all_create_coins_in_this (new_owner . conditions)
-     ...
+   (include condition_codes.clvm)
+   (include curry-and-treehash.clinc)
+
+   (defconstant MAGIC_NUMBER -10)
+
+  (defun-ineline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM_HASH inner_puzzle_hash)
+      (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
+                                       (sha256 ONE inner_puzzle_hash)
+                                       (sha256 ONE TRANSFER_PROGRAM_HASH)
+                                       (sha256 ONE new_owner)
+                                       (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
+      )
    )
 
-
-   (wrap_all_create_coins_in_this
-     (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions
-       (a INNER_PUZZLE inner_solution)
+   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH (new_owner . conditions) TRANSFER_PROGRAM_HASH inner_puzzle_hash)
+     (if conditions
+       (if (= (f (f conditions)) CREATE_COIN)
+         (if (logand (f (r (r (f conditions)))) ONE)
+           (c (list CREATE_COIN (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM_HASH) (f (r (r (f conditions))))) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM_HASH inner_puzzle_hash)))
+           (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM_HASH inner_puzzle_hash))
+         )
+         (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM_HASH inner_puzzle_hash))
+       )
+       ()
      )
+   )
+
+   (defun merge_list (list_a list_b)
+     (if list_a
+       (c (f list_a) (merge_list (r list_a) list_b))
+       list_b
+     )
+   )
+
+   (defun process_trans_program (list_a list_b)
+    (c (f list_a) (merge_list (r list_a) list_b))
+   )
+
+   (defun loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions (TRANSFER_PROGRAM_HASH conditions)
+      (if conditions
+        (if (= (f (f conditions)) MAGIC_NUMBER)
+          (if (= (sha256tree1 (f (r (f conditions)))) TRANSFER_PROGRAM_HASH)
+            (process_trans_program (a (f (r (f conditions))) (f (r (r (f conditions))))) conditions)
+            (x)
+          )
+          (c (f conditions) (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions TRANSFER_PROGRAM_HASH (r conditions)))
+        )
+        (x)
+      )
+   )
+
+   ; main
+   (wrap_odd_create_coins
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions
+        TRANSFER_PROGRAM_HASH
+        (a INNER_PUZZLE inner_solution)
+      )
+      TRANSFER_PROGRAM_HASH
+      (sha256tree1 INNER_PUZZLE)
    )
 )
