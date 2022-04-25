@@ -48,10 +48,10 @@ class TradeManager:
       - To be able to be traded, a wallet must implement these methods on itself:
         - generate_signed_transaction(...) -> List[TransactionRecord]  (See cat_wallet.py for full API)
         - convert_puzzle_hash(puzzle_hash: bytes32) -> bytes32  # Converts a puzzlehash from outer to inner puzzle
+        - get_puzzle_info(asset_id: bytes32) -> PuzzleInfo
         - get_coins_to_offer(asset_id: bytes32, amount: uint64) -> Set[Coin]
       - If you would like assets from your wallet to be referenced with just a wallet ID, you must also implement:
         - get_asset_id() -> bytes32
-        - get_puzzle_info() -> PuzzleInfo
       - Finally, you must make sure that your wallet will respond appropriately when these WSM methods are called:
         - get_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
         - create_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
@@ -328,46 +328,29 @@ class TradeManager:
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                         if wallet.type() == WalletType.STANDARD_WALLET:
-                            key: Optional[bytes32] = None
+                            asset_id: Optional[bytes32] = None
                             memos: List[bytes] = []
-                        elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
-                            getattr(wallet, "get_puzzle_info", None)
-                        ):
-                            key = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                            puzzle_driver: PuzzleInfo = wallet.get_puzzle_info()
+                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
-                            if key in driver_dict and driver_dict[key] != puzzle_driver:
-                                raise ValueError(
-                                    f"driver_dict specified {driver_dict[key]}," f" was expecting {puzzle_driver}"
-                                )
-                            else:
-                                driver_dict[key] = puzzle_driver
                         else:
                             raise ValueError(
                                 f"Cannot request assets from wallet id {wallet.id()} without more information"
                             )
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
-                        key = id
+                        asset_id = id
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                         memos = [p2_ph]
-                    requested_payments[key] = [Payment(p2_ph, uint64(amount), memos)]
+                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         if wallet.type() == WalletType.STANDARD_WALLET:
                             asset_id = None
-                        elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
-                            getattr(wallet, "get_puzzle_info", None)
-                        ):
+                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                             asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                            puzzle_driver = wallet.get_puzzle_info()
-                            if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                                raise ValueError(
-                                    f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
-                                )
-                            else:
-                                driver_dict[asset_id] = puzzle_driver
                         else:
                             raise ValueError(
                                 f"Cannot offer assets from wallet id {wallet.id()} without more information"
@@ -381,6 +364,18 @@ class TradeManager:
                     coins_to_offer[wallet_id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
+
+            if asset_id is not None and wallet is not None:
+                if callable(getattr(wallet, "get_puzzle_info", None)):
+                    puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
+                    if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                        raise ValueError(
+                            f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
+                        )
+                    else:
+                        driver_dict[asset_id] = puzzle_driver
+                else:
+                    raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(

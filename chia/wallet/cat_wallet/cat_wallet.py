@@ -817,7 +817,7 @@ class CATWallet:
             and puzzle_driver.also() is None
         )
 
-    def get_puzzle_info(self) -> PuzzleInfo:
+    def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
         return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
 
     async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
