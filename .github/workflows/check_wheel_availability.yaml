@@ -17,8 +17,8 @@ concurrency:
 
 jobs:
   check_dependency_artifacts:
-    name: Check Dependency Artifacts
-    runs-on: ${{ matrix.os }}
+    name: Check Dependency Artifacts - ${{ matrix.os.name }}
+    runs-on: ${{ matrix.os.runs-on }}
     container: ${{ format(matrix.os.container_format, matrix.python-version) }}
     strategy:
       fail-fast: false
