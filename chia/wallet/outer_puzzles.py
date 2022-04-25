@@ -7,6 +7,24 @@ from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 
+"""
+This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
+
+A driver for a puzzle must include the following functions:
+  - match(self, puzzle: Program) -> Optional[PuzzleInfo]
+    - Given a puzzle reveal, return a PuzzleInfo object that can be used to reconstruct it later
+  - asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]
+    - Given a PuzzleInfo object, generate a 32 byte ID for use in dictionaries, etc.
+  - construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program
+    - Given a PuzzleInfo object and an innermost puzzle, construct a puzzle reveal for a coin spend
+  - solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program
+    - Given a PuzzleInfo object, a Solver object, and an innermost puzzle and its solution return a solution for a spend
+    - The "Solver" object can contain any dictionary, it's up to the driver to enforce the needed elements of the API
+    - Some classes that wish to integrate with a driver may not have access to all of the info it needs so the driver
+      needs to raise errors appropriately
+"""
+
+
 class AssetType(Enum):
     CAT = "CAT"
 

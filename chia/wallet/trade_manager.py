@@ -26,6 +26,38 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 class TradeManager:
+    """
+    This class is a driver for creating and accepting settlement_payments.clvm style offers.
+
+    By default, standard XCH is supported but to support other types of assets you must implement certain functions on
+    the asset's wallet as well as create a driver for its puzzle(s).  Here is a guide to integrating a new types of
+    assets with this trade manager:
+
+    Puzzle Drivers:
+      - See chia/wallet/outer_puzzles.py for a full description of how to build these
+      - The `solve` method must be able to be solved by a Solver that looks like this:
+            Solver(
+                {
+                    "coin": bytes
+                    "parent_spend": bytes
+                }
+            )
+
+    Wallet:
+      - Segments in this code that call general wallet methods are highlighted by comments: # ATTENTION: new wallets
+      - To be able to be traded, a wallet must implement these methods on itself:
+        - generate_signed_transaction(...) -> List[TransactionRecord]  (See cat_wallet.py for full API)
+        - convert_puzzle_hash(puzzle_hash: bytes32) -> bytes32  # Converts a puzzlehash from outer to inner puzzle
+        - get_coins_to_offer(asset_id: bytes32, amount: uint64) -> Set[Coin]
+      - If you would like assets from your wallet to be referenced with just a wallet ID, you must also implement:
+        - get_asset_id() -> bytes32
+        - get_puzzle_info() -> PuzzleInfo
+      - Finally, you must make sure that your wallet will respond appropriately when these WSM methods are called:
+        - get_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
+        - create_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
+        - get_wallet_for_asset_id(asset_id: bytes32) -> <Your wallet>
+    """
+
     wallet_state_manager: Any
     log: logging.Logger
     trade_store: TradeStore
@@ -300,7 +332,7 @@ class TradeManager:
                             memos: List[bytes] = []
                         elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
                             getattr(wallet, "get_puzzle_info", None)
-                        ):  # ATTENTION: new wallets
+                        ):
                             key = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             puzzle_driver: PuzzleInfo = wallet.get_puzzle_info()
                             memos = [p2_ph]
@@ -327,7 +359,7 @@ class TradeManager:
                             asset_id = None
                         elif callable(getattr(wallet, "get_asset_id", None)) and callable(  # ATTENTION: new wallets
                             getattr(wallet, "get_puzzle_info", None)
-                        ):  # ATTENTION: new wallets
+                        ):
                             asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             puzzle_driver = wallet.get_puzzle_info()
                             if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
@@ -344,7 +376,7 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                         wallet_id = wallet.id()
-                    if not callable(getattr(wallet, "get_coins_to_offer", None)):
+                    if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
                     coins_to_offer[wallet_id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
                 elif amount == 0:
@@ -402,7 +434,7 @@ class TradeManager:
             # ATTENTION: new_wallets
             exists: Optional[Wallet] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
-                await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])  # ATTENTION: new_wallets
+                await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
