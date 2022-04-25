@@ -1,10 +1,12 @@
-from chia.types.blockchain_format.program import Program
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
 from clvm_tools.binutils import assemble, type_for_atom
-from dataclasses import dataclass
 from ir.Type import Type
-from typing import Any, Dict, Optional
+
+from chia.types.blockchain_format.program import Program
 
 """
 The following two classes act as wrapper classes around dictionaries of strings.
@@ -56,7 +58,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]
     else:
-        expression: Sexp = assemble(value)
+        expression: SExp = assemble(value)
         if expression.atom is None:
             return Program(expression)
         else:
