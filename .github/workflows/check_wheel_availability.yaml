@@ -1,4 +1,5 @@
 name: Check Dependency Artifacts
+name: Check Dep Wheels
 
 on:
   push:
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   check_dependency_artifacts:
-    name: Check Dependency Artifacts - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ format(matrix.os.container-format[matrix.arch.matrix], matrix.python-version) }}
     strategy:
