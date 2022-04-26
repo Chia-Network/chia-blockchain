@@ -1,5 +1,5 @@
 import functools
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Dict
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
@@ -23,12 +23,19 @@ def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], for
             if missing_count > len(pks) // 2:
                 return []
         pairings.append(pairing)
-
+    pk_bytes_to_g1: Dict[bytes48, G1Element] = {}
     for i, pairing in enumerate(pairings):
         if pairing is None:
             aug_msg = pks[i] + msgs[i]
             aug_hash: G2Element = AugSchemeMPL.g2_from_message(aug_msg)
-            pairing = G1Element.from_bytes(pks[i]).pair(aug_hash)
+
+            if pks[i] in pk_bytes_to_g1:
+                pk_parsed: G1Element = pk_bytes_to_g1[pks[i]]
+            else:
+                pk_pblack chia tests && mypy chia tests && flake8 chia tests
+arsed = G1Element.from_bytes(pks[i])
+                pk_bytes_to_g1[pks[i]] = pk_parsed
+            pairing = pk_parsed.pair(aug_hash)
 
             h = bytes(std_hash(aug_msg))
             cache.put(h, pairing)
