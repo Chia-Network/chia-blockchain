@@ -11,6 +11,14 @@
 
    (defconstant MAGIC_NUMBER -10)
 
+   (defun sha256tree1
+          (TREE)
+          (if (l TREE)
+              (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+              (sha256 1 TREE)
+          )
+   )
+
   (defun-ineline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM_HASH inner_puzzle_hash)
       (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
                                        (sha256 ONE inner_puzzle_hash)
