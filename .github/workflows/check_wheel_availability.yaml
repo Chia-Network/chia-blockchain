@@ -19,7 +19,6 @@ jobs:
   check_dependency_artifacts:
     name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    container: ${{ format(matrix.os.container-format[matrix.arch.matrix], matrix.python-version) }}
     strategy:
       fail-fast: false
       matrix:
@@ -29,8 +28,6 @@ jobs:
             runs-on:
               intel: ubuntu-latest
               arm: [linux, arm64]
-            container-format:
-              arm: 'docker://python:{0}'
           - name: macOS
             matrix: macos
             runs-on:
@@ -59,7 +56,6 @@ jobs:
       uses: actions/checkout@v3
 
     - uses: Chia-Network/actions/setup-python@main
-      if: matrix.os.container-format[matrix.arch.matrix] == ''
       with:
         python-version: ${{ matrix.python-version }}
 
