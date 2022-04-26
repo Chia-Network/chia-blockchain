@@ -78,6 +78,7 @@ export default function NFTGallerySidebar() {
                       value={price}
                       onChange={handleSliderChange}
                       valueLabelDisplay="auto"
+                      color="secondary"
                     />
                   </MenuItem>
                 </Select>
