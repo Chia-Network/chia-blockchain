@@ -27,7 +27,10 @@ export default function CopyToClipboard(props: CopyToClipboardProps) {
     setCopied(false);
   }, clearCopiedDelay);
 
-  function handleCopy() {
+  function handleCopy(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
     copyToClipboard(value);
     setCopied(true);
     timeout.start();

@@ -7,6 +7,7 @@ export { default as useGetCombinedPlotsQuery } from './useGetCombinedPlotsQuery'
 export { default as useGetFarmerFullNodeConnectionsQuery } from './useGetFarmerFullNodeConnectionsQuery';
 export { default as useGetHarvesterConnectionsQuery} from './useGetHarvesterConnectionsQuery';
 export { default as useLogout } from './useLogout';
+export { default as useNFTMetadata } from './useNFTMetadata';
 export { default as useService } from './useService';
 export { default as useServices } from './useServices';
 export { default as useThrottleQuery } from './useThrottleQuery';

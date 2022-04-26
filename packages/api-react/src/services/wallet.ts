@@ -15,6 +15,7 @@ import type {
   WalletBalance,
   WalletConnections,
 } from '@chia/api';
+import { randomBytes } from 'crypto';
 import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
@@ -1761,19 +1762,24 @@ export const walletApi = apiWithTag.injectEndpoints({
     // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
 
     // NFTs
-    getCurrentNFTs: build.query<any, { walletId: number }>({
-      query: ({ walletId }) => ({
+    getCurrentNFTs: build.query<any, { walletId?: number }>({
+      query: ({ walletId } = {}) => ({
         command: 'getCurrentNfts',
         service: NFT,
         args: [walletId],
+        mockResponse: {
+          nfts: [...Array(11)].map(() => ({
+            walletId: walletId ?? Math.floor(Math.random() * 100), // TODO remove when mock is fixed
+            id: randomBytes(32).toString('hex'),
+          })),
+        }
       }),
-      providesTags: (result, _error, { walletId }) =>
-        result
-          ? [
-              { type: 'NFT', id: walletId },
-              { type: 'NFT', id: 'LIST' },
-            ]
-          : [],
+      transformResponse: (response: any) => response.nfts,
+      providesTags: (nfts, _error) =>
+        nfts ? [
+          ...nfts.map(({ id }) => ({ type: 'NFT', id: id } as const)),
+          { type: 'NFT', id: 'LIST' },
+        ] : [{ type: 'NFT', id: 'LIST' }],
     }),
 
     transferNFT: build.mutation<

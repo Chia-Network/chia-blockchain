@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { randomBytes } from 'crypto';
 import { Flex } from '@chia/core';
+import { Routes, Route } from 'react-router-dom';
 import {
   Box,
   Checkbox,
@@ -16,7 +17,8 @@ import {
 import NFT from '../../types/NFT';
 import NFTSelection from '../../types/NFTSelection';
 import NFTContextualActions from './NFTContextualActions';
-
+import NFTGallery from './gallery/NFTGallery';
+import NFTDetail from './detail/NFTDetail';
 /* ========================================================================== */
 
 // Temporary: Used by getFakeNFTName
@@ -141,6 +143,13 @@ function NFTMockGalleryView() {
 /* ========================================================================== */
 
 export default function NFTs() {
+  return (
+    <Routes>
+      <Route index element={<NFTGallery />} />
+      <Route path=":nftId" element={<NFTDetail />} />
+    </Routes>
+  );
+
   return (
     <Box sx={{ width: '100%', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
       <Flex

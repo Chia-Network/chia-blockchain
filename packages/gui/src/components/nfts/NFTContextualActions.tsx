@@ -167,7 +167,7 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
     .map((key) => actionComponents[key]);
 
   return (
-    <DropdownActions label={<Trans>Actions</Trans>}>
+    <DropdownActions label={<Trans>Actions</Trans>} variant="outlined">
       {({ onClose }) => (
         <>
           {actions.map((Action) => (
