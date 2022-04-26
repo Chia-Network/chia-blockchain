@@ -23,17 +23,19 @@ def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], for
             if missing_count > len(pks) // 2:
                 return []
         pairings.append(pairing)
+
+    # G1Element.from_bytes can be expensive due to subgroup check, so we avoid recomputing it with this cache
     pk_bytes_to_g1: Dict[bytes48, G1Element] = {}
     for i, pairing in enumerate(pairings):
         if pairing is None:
             aug_msg = pks[i] + msgs[i]
             aug_hash: G2Element = AugSchemeMPL.g2_from_message(aug_msg)
 
-            if pks[i] in pk_bytes_to_g1:
-                pk_parsed: G1Element = pk_bytes_to_g1[pks[i]]
-            else:
+            pk_parsed: Optional[G1Element] = pk_bytes_to_g1.get(pks[i])
+            if pk_parsed is None:
                 pk_parsed = G1Element.from_bytes(pks[i])
                 pk_bytes_to_g1[pks[i]] = pk_parsed
+
             pairing = pk_parsed.pair(aug_hash)
 
             h = bytes(std_hash(aug_msg))
