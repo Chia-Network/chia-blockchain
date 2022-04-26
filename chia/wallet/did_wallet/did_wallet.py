@@ -132,7 +132,7 @@ class DIDWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=did_puzzle_hash,
             amount=uint64(amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
