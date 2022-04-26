@@ -351,7 +351,6 @@ class DataLayer:
     async def periodically_fetch_data(self) -> None:
         success = False
         while not self._shut_down and not success:
-            success = False
             async with self.subscription_lock:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
