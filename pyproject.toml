@@ -57,8 +57,7 @@ keyring = "23.0.1"  # Store keys in MacOS Keychain, Windows Credential Locker
 # See https://github.com/frispete/keyrings.cryptfile/issues/15
 packaging = "21.0"
 PyYAML = "6.0"  # Used for config file format
-# TODO: poetry looks on pypi.chia.net, finds setproctitle, fails because it only has macos for 1.2.2 (i think...)
-# setproctitle = "1.2.3"  # Gives the chia processes readable names
+setproctitle = "1.2.3"  # Gives the chia processes readable names
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
 typing-extensions = "4.0.1"  # typing backports like Protocol and TypedDict
 watchdog = "2.1.6"  # Filesystem event watching - watches keyring.yaml
