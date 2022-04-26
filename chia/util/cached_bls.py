@@ -1,5 +1,5 @@
 import functools
-from typing import List, Optional, Sequence, Dict
+from typing import Dict, List, Optional, Sequence
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
