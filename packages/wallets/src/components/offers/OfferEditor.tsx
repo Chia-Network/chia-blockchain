@@ -32,7 +32,7 @@ type FormData = {
   selectedTab: number;
   makerRows: OfferEditorRowData[];
   takerRows: OfferEditorRowData[];
-  fee: number;
+  fee: string;
 };
 
 type OfferEditorProps = {
@@ -47,6 +47,7 @@ function OfferEditor(props: OfferEditorProps) {
     selectedTab: 0,
     makerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: new BigNumber(0) }],
     takerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: new BigNumber(0) }],
+    fee: '',
   };
   const methods = useForm<FormData>({
     defaultValues,
