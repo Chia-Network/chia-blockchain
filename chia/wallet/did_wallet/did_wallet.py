@@ -57,8 +57,19 @@ class DIDWallet:
         fee: uint64 = uint64(0),
     ):
         """
+        Create a brand new DID wallet
         This must be called under the wallet state manager lock
+        :param wallet_state_manager: Wallet state manager
+        :param wallet: Standard wallet
+        :param amount: Amount of the DID coin
+        :param backups_ids: A list of DIDs used for recovery this DID
+        :param num_of_backup_ids_needed: Needs how many recovery DIDs at least
+        :param metadata: Metadata saved in the DID
+        :param name: Wallet name
+        :param fee: transaction fee
+        :return: DID wallet
         """
+
         self = DIDWallet()
         self.wallet_state_manager = wallet_state_manager
         if name is None:
@@ -153,9 +164,17 @@ class DIDWallet:
     async def create_new_did_wallet_from_recovery(
         wallet_state_manager: Any,
         wallet: Wallet,
-        filename: str,
+        backup_data: str,
         name: Optional[str] = None,
     ):
+        """
+        Create a DID wallet from a backup file
+        :param wallet_state_manager: Wallet state manager
+        :param wallet: Standard wallet
+        :param backup_data: A serialized backup data
+        :param name: Wallet name
+        :return: DID wallet
+        """
         self = DIDWallet()
         self.wallet_state_manager = wallet_state_manager
         if name is None:
@@ -166,7 +185,7 @@ class DIDWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DID wallet from recovery file ...")
         # load backup will also set our DIDInfo
-        self.did_info = DIDWallet.get_did_from_file(filename)
+        self.did_info = DIDWallet.deserialize_backup_data(backup_data)
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -198,7 +217,7 @@ class DIDWallet:
         :param inner_puzzle: DID inner puzzle
         :param coin_spend: DID transfer spend
         :param name: Wallet name
-        :return:
+        :return: DID wallet
         """
 
         self = DIDWallet()
@@ -258,6 +277,14 @@ class DIDWallet:
         wallet_info: WalletInfo,
         name: str = None,
     ):
+        """
+        Create a DID wallet based on the local database
+        :param wallet_state_manager: Wallet state manager
+        :param wallet: Standard wallet
+        :param wallet_info: Serialized WalletInfo
+        :param name: Wallet name
+        :return:
+        """
         self = DIDWallet()
         self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
@@ -408,10 +435,13 @@ class DIDWallet:
             )
             await self.add_parent(coin.parent_coin_info, parent_info, False)
 
-    def create_backup(self, filename: str):
+    def create_backup(self) -> str:
+        """
+        Create a serialized backup data for DIDInfo
+        :return: Serialized backup data
+        """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        f = open(filename, "w")
         output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
         output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
         output_str += f"{self.did_info.origin_coin.amount}:"
@@ -421,9 +451,7 @@ class DIDWallet:
             output_str = output_str[:-1]
         output_str += f":{bytes(self.did_info.current_inner).hex()}:{self.did_info.num_of_backup_ids_needed}"
         output_str += f":{self.did_info.metadata}"
-        f.write(output_str)
-        f.close()
-        return None
+        return output_str
 
     async def load_parent(self, did_info: DIDInfo):
         """
@@ -761,8 +789,15 @@ class DIDWallet:
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
     async def create_attestment(
-        self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element, filename=None
-    ) -> SpendBundle:
+        self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element
+    ) -> Tuple[SpendBundle, str]:
+        """
+        Create an attestment
+        :param recovering_coin_name: Coin ID of the DID
+        :param newpuz: New puzzle hash
+        :param pubkey: New wallet pubkey
+        :return: (SpendBundle, attest string)
+        """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(1)
@@ -822,24 +857,10 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-
-        if filename is not None:
-            f = open(filename, "w")
-            f.write(self.get_my_DID())
-            f.write(":")
-            f.write(bytes(message_spend_bundle).hex())
-            f.write(":")
-            parent = coin.parent_coin_info.hex()
-            innerpuzhash = self.did_info.current_inner.get_tree_hash().hex()
-            amount = coin.amount
-            f.write(parent)
-            f.write(":")
-            f.write(innerpuzhash)
-            f.write(":")
-            f.write(str(amount))
-            f.close()
+        attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
+        attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
         await self.standard_wallet.push_transaction(did_record)
-        return message_spend_bundle
+        return message_spend_bundle, attest_str
 
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
@@ -853,22 +874,19 @@ class DIDWallet:
             return (parent, innerpuzhash, amount)
         return None
 
-    async def load_attest_files_for_recovery_spend(self, filenames):
+    async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
         spend_bundle_list = []
         info_dict = {}
         try:
-            for i in filenames:
-                f = open(i)
-                info = f.read().split(":")
+            for attest in attest_data:
+                info = attest.split(":")
                 info_dict[info[0]] = [
                     bytes.fromhex(info[2]),
                     bytes.fromhex(info[3]),
                     uint64(info[4]),
                 ]
-
                 new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
                 spend_bundle_list.append(new_sb)
-                f.close()
             # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
             my_recovery_list: List[bytes] = self.did_info.backup_ids
 
@@ -1277,15 +1295,13 @@ class DIDWallet:
                 raise ValueError("Wallet already exists")
 
     @staticmethod
-    def get_did_from_file(filename: str) -> DIDInfo:
+    def deserialize_backup_data(backup_data: str) -> DIDInfo:
         """
-        Get a DIDInfo from a backup file
-        :param filename: Path of the backup file
+        Get a DIDInfo from a serialized string
+        :param backup_data: serialized
         :return: DIDInfo
         """
-        f = open(filename, "r")
-        details = f.readline().split(":")
-        f.close()
+        details = backup_data.split(":")
         origin = Coin(bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2])))
         backup_ids = []
         if len(details[3]) > 0:

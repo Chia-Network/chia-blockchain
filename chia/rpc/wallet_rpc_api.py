@@ -544,7 +544,7 @@ class WalletRpcApi:
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
-                        wallet_state_manager, main_wallet, request["filename"]
+                        wallet_state_manager, main_wallet, request["backup_data"]
                     )
                 assert did_wallet.did_info.temp_coin is not None
                 assert did_wallet.did_info.temp_puzhash is not None
@@ -1160,14 +1160,14 @@ class WalletRpcApi:
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if len(request["attest_filenames"]) < wallet.did_info.num_of_backup_ids_needed:
+        if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
 
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
                 message_spend_bundle,
-            ) = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
+            ) = await wallet.load_attest_files_for_recovery_spend(request["attest_data"])
 
             if "pubkey" in request:
                 pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
@@ -1203,14 +1203,17 @@ class WalletRpcApi:
             info = await wallet.get_info_for_recovery()
             coin = hexstr_to_bytes(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            spend_bundle = await wallet.create_attestment(
-                coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
+            spend_bundle, attest_data = await wallet.create_attestment(
+                coin,
+                hexstr_to_bytes(request["puzhash"]),
+                pubkey,
             )
         if info is not None and spend_bundle is not None:
             return {
                 "success": True,
                 "message_spend_bundle": bytes(spend_bundle).hex(),
                 "info": [info[0].hex(), info[1].hex(), info[2]],
+                "attest_data": attest_data,
             }
         else:
             return {"success": False}
@@ -1249,8 +1252,7 @@ class WalletRpcApi:
     async def did_create_backup_file(self, request):
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        did_wallet.create_backup(request["filename"])
-        return {"wallet_id": wallet_id, "success": True}
+        return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
 
     async def did_transfer_did(self, request):
         assert self.service.wallet_state_manager is not None
