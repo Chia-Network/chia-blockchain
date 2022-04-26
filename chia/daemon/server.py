@@ -613,7 +613,7 @@ class WebSocketServer:
 
         response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -672,7 +672,7 @@ class WebSocketServer:
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:

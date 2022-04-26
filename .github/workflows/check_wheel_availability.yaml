@@ -17,20 +17,45 @@ concurrency:
 
 jobs:
   check_dependency_artifacts:
-    name: Check Dependency Artifacts
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9']
-        os: [macOS-latest, ubuntu-latest]
+        os:
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-latest
+              arm: [macos, arm64]
+        arch:
+          - name: ARM64
+            matrix: arm
+          - name: Intel
+            matrix: intel
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        exclude:
+          - os:
+              matrix: macos
+            python-version: '3.7'
+          - os:
+              matrix: macos
+            arch:
+              matrix: arm
+            python-version: '3.8'
 
     steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Setup Python environment
-      uses: actions/setup-python@v2
+    - uses: Chia-Network/actions/setup-python@main
       with:
         python-version: ${{ matrix.python-version }}
 
