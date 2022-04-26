@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS farmer_harvester Tests
+name: MacOS farmer_harvester Test
 
 on:
   push:

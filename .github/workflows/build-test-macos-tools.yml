@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS tools Tests
+name: MacOS tools Test
 
 on:
   push:

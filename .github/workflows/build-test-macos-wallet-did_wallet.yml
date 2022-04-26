@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-did_wallet Tests
+name: MacOS wallet-did_wallet Test
 
 on:
   push:

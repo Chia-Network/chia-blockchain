@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-custom_types Tests
+name: MacOS core-custom_types Test
 
 on:
   push:
