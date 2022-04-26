@@ -90,10 +90,10 @@ jobs:
           type: fedora
           # (34, 3.9) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+34&start=0
           url: "docker://fedora:34"
-#        - name: fedora:35
-#          type: fedora
-#          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
-#          url: "docker://fedora:35"
+        - name: fedora:35
+          type: fedora
+          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
+          url: "docker://fedora:35"
         - name: rockylinux:8
           type: rocky
           url: "docker://rockylinux:8"
@@ -113,6 +113,10 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
           url: "docker://ubuntu:impish"
+        - name: ubuntu:jammy (22.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+          url: "docker://ubuntu:jammy"
         - name: linuxmintd/mint19.1-amd64 (Tessa)
           type: mint
           # 3.6 default with an option for 3.7
@@ -190,16 +194,6 @@ jobs:
       run: |
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
-
-    # @TODO this step can be removed once Python 3.10 is supported
-    # Python 3.10 is now the default in bookworm, so install 3.9 specifically so install does not fail
-    - name: Prepare debian:bookworm
-      if: ${{ matrix.distribution.name == 'debian:bookworm' }}
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        apt-get update -y
-        apt-get install -y python3.9-venv
 
     - name: Prepare Fedora
       if: ${{ matrix.distribution.type == 'fedora' }}

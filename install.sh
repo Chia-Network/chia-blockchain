@@ -59,6 +59,7 @@ git submodule update --init mozilla-ca
 UBUNTU_PRE_2004=0
 UBUNTU_2000=0
 UBUNTU_2100=0
+UBUNTU_2200=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -71,8 +72,10 @@ if $UBUNTU; then
     UBUNTU_PRE_2004=1
   elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
     UBUNTU_2000=1
-  else
+  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
     UBUNTU_2100=1
+  else
+    UBUNTU_2200=1
   fi
 fi
 
@@ -132,9 +135,13 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils openssl
   elif [ "$UBUNTU_2100" = "1" ]; then
-    echo "Installing on Ubuntu 21.04 or newer."
+    echo "Installing on Ubuntu 21.04."
     sudo apt-get update
     sudo apt-get install -y python3.9-venv python3-distutils openssl
+  elif [ "$UBUNTU_2200" = "1" ]; then
+    echo "Installing on Ubuntu 22.04 LTS or newer."
+    sudo apt-get update
+    sudo apt-get install -y python3.10-venv python3-distutils openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
@@ -194,14 +201,14 @@ fi
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 39 3.9 38 3.8 37 3.7 3; do
+  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.10"
+          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
+            echo "Chia requires Python version < 3.11.0"
             echo "Current Python version = $PY3_VERSION"
             # If Arch, direct to Arch Wiki
             if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
