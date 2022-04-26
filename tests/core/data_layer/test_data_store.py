@@ -1,6 +1,12 @@
 import itertools
 import logging
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set
+import tempfile
+import aiosqlite
+
+from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
+from chia.data_layer.download_data import insert_from_delta_file
+from pathlib import Path
+
 from random import Random
 import pytest
 
@@ -21,6 +27,7 @@ from chia.data_layer.data_layer_types import (
     TerminalNode,
     OperationType,
     DiffData,
+    Root,
 )
 from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
@@ -1077,3 +1084,66 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
     assert await data_store.get_subscriptions() == [
         Subscription(tree_id, ["0.0.0.0", "127.0.0.1"], [uint16(8003), uint16(8004)]),
     ]
+
+
+@pytest.mark.parametrize(
+    "test_delta",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_delta: bool) -> None:
+    roots: List[Root] = []
+    num_batches = 10
+    num_ops_per_batch = 100
+
+    with tempfile.TemporaryDirectory() as foldername:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            temp_directory_path = Path(temp_directory)
+            db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+
+            connection = await aiosqlite.connect(db_path)
+            db_wrapper = DBWrapper(connection)
+            data_store_server = await DataStore.create(db_wrapper=db_wrapper)
+            tree_id = bytes32(b"0" * 32)
+            await data_store_server.create_tree(tree_id)
+            random = Random()
+            random.seed(100, version=2)
+
+            keys: List[bytes] = []
+            counter = 0
+
+            for batch in range(num_batches):
+                changelist: List[Dict[str, Any]] = []
+                for operation in range(num_ops_per_batch):
+                    if random.randint(0, 4) > 0 or len(keys) == 0:
+                        key = counter.to_bytes(4, byteorder="big")
+                        value = (2 * counter).to_bytes(4, byteorder="big")
+                        keys.append(key)
+                        changelist.append({"action": "insert", "key": key, "value": value})
+                    else:
+                        key = random.choice(keys)
+                        keys.remove(key)
+                        changelist.append({"action": "delete", "key": key})
+                    counter += 1
+                await data_store_server.insert_batch(tree_id, changelist)
+                filename_full_tree = foldername + f"/{batch}.dat"
+                filename_diff_tree = foldername + f"/{batch}-delta.dat"
+                root = await data_store_server.get_tree_root(tree_id)
+                if root.node_hash is not None:
+                    await data_store_server.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
+                    await data_store_server.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
+                roots.append(root)
+            await connection.close()
+
+        generation = 0
+        assert len(roots) == num_batches
+        for root in roots:
+            if not test_delta:
+                filename = foldername + f"/{generation}.dat"
+            else:
+                filename = foldername + f"/{generation}-delta.dat"
+            assert root.node_hash is not None
+            await insert_from_delta_file(data_store, tree_id, root.node_hash, filename)
+            current_root = await data_store.get_tree_root(tree_id=tree_id)
+            assert current_root.node_hash == root.node_hash
+            generation += 1
