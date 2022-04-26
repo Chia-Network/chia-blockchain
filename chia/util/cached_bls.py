@@ -32,8 +32,7 @@ def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], for
             if pks[i] in pk_bytes_to_g1:
                 pk_parsed: G1Element = pk_bytes_to_g1[pks[i]]
             else:
-                pk_pblack chia tests && mypy chia tests && flake8 chia tests
-arsed = G1Element.from_bytes(pks[i])
+                pk_parsed = G1Element.from_bytes(pks[i])
                 pk_bytes_to_g1[pks[i]] = pk_parsed
             pairing = pk_parsed.pair(aug_hash)
 
