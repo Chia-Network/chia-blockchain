@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 import testconfig
 
 root_path = Path(__file__).parent.resolve()
+project_root_path = root_path.parent
 
 
 def skip(path: Path) -> bool:
@@ -83,17 +84,12 @@ test_paths = subdirs(per=args.per)
 configuration = []
 
 for path in test_paths:
-    relative_path = path.relative_to(root_path)
-
-    dir: Path
     if path.is_dir():
-        dir = path
         test_files = sorted(dir.glob("test_*.py"))
-        test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
-        paths_for_cli = " ".join(test_file_paths)
+        test_file_paths = [file.relative_to(project_root_path) for file in test_files]
+        paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
     else:
-        dir = path.parent
-        paths_for_cli = f"{os.fspath(relative_path)}"
+        paths_for_cli = path.relative_to(project_root_path).as_posix()
 
     conf = update_config(module_dict(testconfig), dir_config(dir))
 
@@ -108,7 +104,7 @@ for path in test_paths:
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
-        "name": ".".join(relative_path.with_suffix("").parts),
+        "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
