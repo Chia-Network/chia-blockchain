@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { DropdownActions, Flex, Form, Select } from '@chia/core';
-import { Box, MenuItem, Typography, FormControl, InputLabel } from '@mui/material';
+import { Box, MenuItem, Typography, FormControl, InputLabel, Slider } from '@mui/material';
 import { useForm } from 'react-hook-form';
 
 function useProfiles() {
@@ -19,6 +19,7 @@ function useProfiles() {
 
 export default function NFTGallerySidebar() {
   const { isLoading, data } = useProfiles();
+  const [price, setPrice] = useState([10, 50]);
   const methods = useForm({
     defaultValues: {
       status: '',
@@ -27,6 +28,12 @@ export default function NFTGallerySidebar() {
       collections: '',
     },
   });
+
+  function handleSliderChange(event: Event, newValue: number | number[]) {
+    setPrice(newValue as number[]);
+  }
+
+  function handleSubmit() {}
 
   return (
     <Box width="320px">
@@ -46,7 +53,7 @@ export default function NFTGallerySidebar() {
           </Box>
 
 
-          <Form methods={methods}>
+          <Form methods={methods} onSubmit={handleSubmit}>
             <Flex flexDirection="column" gap={2}>
               <FormControl color="secondary" fullWidth>
                 <InputLabel>
@@ -67,9 +74,11 @@ export default function NFTGallerySidebar() {
                 </InputLabel>
                 <Select name="price">
                   <MenuItem value="">
-                    <em>
-                      <Trans>All</Trans>
-                    </em>
+                    <Slider
+                      value={price}
+                      onChange={handleSliderChange}
+                      valueLabelDisplay="auto"
+                    />
                   </MenuItem>
                 </Select>
               </FormControl>
