@@ -11,7 +11,7 @@ def find_available_listen_port(name: str = "free") -> uint16:
     global recent_ports
 
     while True:
-        port = uint16(secrets.randbits(15) + 2000)
+        port = uint16(secrets.randbelow(0xFFFF - 1024) + 1024)
         if port in recent_ports:
             continue
 

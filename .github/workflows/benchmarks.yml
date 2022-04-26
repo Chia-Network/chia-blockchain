@@ -60,7 +60,7 @@ jobs:
         with:
           repository: 'Chia-Network/test-cache'
           path: '.chia'
-          ref: '0.28.0'
+          ref: '0.29.0'
           fetch-depth: 1
 
       - name: Run install script

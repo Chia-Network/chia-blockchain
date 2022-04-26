@@ -1629,6 +1629,8 @@ class FullNode:
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
             "height": block.height,
+            "validation_time": validation_time,
+            "pre_validation_time": pre_validation_time,
         }
 
         if block.transactions_info is not None:

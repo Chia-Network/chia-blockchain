@@ -65,10 +65,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Daily (POC) cache key invalidation for test blocks and plots
-      id: today-date
-      run: date +%F > today.txt
-
     - name: Cache test blocks and plots
       uses: actions/cache@v2
       id: test-blocks-plots
@@ -76,14 +72,14 @@ jobs:
         path: |
           ${{ github.workspace }}/.chia/blocks
           ${{ github.workspace }}/.chia/test-plots
-        key: ${{ hashFiles('today.txt') }}
+        key: 0.29.0
 
     - name: Checkout test blocks and plots
       if: steps.test-blocks-plots.outputs.cache-hit != 'true'
       run: |
-        wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.28.0.tar.gz | tar xzf -
+        wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
         mkdir ${{ github.workspace }}/.chia
-        mv ${{ github.workspace }}/test-cache-0.28.0/* ${{ github.workspace }}/.chia
+        mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
 
     - name: Run install script
       env:
@@ -97,7 +93,7 @@ jobs:
     - name: Test wallet-simple_sync code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/simple_sync/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/simple_sync/test_simple_sync_protocol.py
 
     - name: Process coverage data
       run: |
@@ -109,7 +105,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*

@@ -10,6 +10,7 @@ import pytest
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
@@ -155,8 +156,12 @@ class TestPerformance:
             guarantee_transaction_block=True,
         )
         block = blocks[-1]
+        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
+            sub_slots = block.finished_sub_slots[:-1]
+        else:
+            sub_slots = block.finished_sub_slots
         unfinished = UnfinishedBlock(
-            block.finished_sub_slots,
+            sub_slots,
             block.reward_chain_block.get_unfinished(),
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,

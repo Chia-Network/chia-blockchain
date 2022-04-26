@@ -1,7 +1,7 @@
 import os
 import pickle
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import aiosqlite
 import tempfile
@@ -45,9 +45,13 @@ def persistent_blocks(
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
+    block_list_input: List[FullBlock] = None,
+    time_per_block: Optional[float] = None,
 ):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
+    if block_list_input is None:
+        block_list_input = []
     block_path_dir = DEFAULT_ROOT_PATH.parent.joinpath("blocks")
     file_path = block_path_dir.joinpath(db_name)
 
@@ -65,7 +69,7 @@ def persistent_blocks(
             blocks: List[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes(block_bytes))
-            if len(blocks) == num_of_blocks:
+            if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
                 return blocks
         except EOFError:
@@ -80,6 +84,8 @@ def persistent_blocks(
         seed,
         empty_sub_slots,
         bt,
+        block_list_input,
+        time_per_block,
         normalized_to_identity_cc_eos,
         normalized_to_identity_icc_eos,
         normalized_to_identity_cc_sp,
@@ -93,6 +99,8 @@ def new_test_db(
     seed: bytes,
     empty_sub_slots: int,
     bt: BlockTools,
+    block_list_input: List[FullBlock],
+    time_per_block: Optional[float],
     normalized_to_identity_cc_eos: bool = False,  # CC_EOS,
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,
@@ -101,6 +109,8 @@ def new_test_db(
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,
+        block_list_input=block_list_input,
+        time_per_block=time_per_block,
         seed=seed,
         skip_slots=empty_sub_slots,
         normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,

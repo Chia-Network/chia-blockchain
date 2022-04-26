@@ -18,13 +18,29 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
+
+
+transaction_type_descriptions = {
+    TransactionType.INCOMING_TX: "received",
+    TransactionType.OUTGOING_TX: "sent",
+    TransactionType.COINBASE_REWARD: "rewarded",
+    TransactionType.FEE_REWARD: "rewarded",
+    TransactionType.INCOMING_TRADE: "received in trade",
+    TransactionType.OUTGOING_TRADE: "sent in trade",
+}
+
+
+def transaction_description_from_type(tx: TransactionRecord) -> str:
+    return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -35,7 +51,8 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        description = transaction_description_from_type(tx)
+        print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -115,9 +132,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     offset = args["offset"]
     limit = args["limit"]
+    sort_key = args["sort_key"]
+    reverse = args["reverse"]
+
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, start=offset, end=(offset + limit), reverse=True
+        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse
     )
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
@@ -208,8 +229,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await asyncio.sleep(0.1)
         tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
-            print(f"Transaction submitted to nodes: {tx.sent_to}")
-            print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+            print(transaction_submitted_msg(tx))
+            print(transaction_status_msg(fingerprint, tx_id))
             return None
 
     print("Transaction not yet submitted to nodes")

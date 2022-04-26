@@ -428,6 +428,7 @@ class CoinStore:
             self.coin_record_cache.remove(coin_name)
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
+        # Add coins that are confirmed in the reverted blocks to the list of updated coins.
         async with self.db_wrapper.write_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -439,12 +440,13 @@ class CoinStore:
                     record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
                     coin_changes[record.name] = record
 
-            # Delete from storage
+            # Delete reverted blocks from storage
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
+            # Add coins that are confirmed in the reverted blocks to the list of changed coins.
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index>?",
+                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index>?",
                 (block_index,),
             ) as cursor:
                 for row in await cursor.fetchall():
