@@ -71,9 +71,6 @@ class DataLayer:
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
             await self.data_layer_server.start()
-        subscriptions = await self.get_subscriptions()
-        for subscription in subscriptions:
-            await self.wallet_rpc.dl_track_new(subscription.tree_id)
         self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         return True
 
@@ -352,6 +349,20 @@ class DataLayer:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def periodically_fetch_data(self) -> None:
+        success = False
+        while not self._shut_down and not success:
+            success = False
+            async with self.subscription_lock:
+                try:
+                    subscriptions = await self.data_store.get_subscriptions()
+                    for subscription in subscriptions:
+                        await self.wallet_rpc.dl_track_new(subscription.tree_id)
+                    success = True
+                except Exception as e:
+                    self.log.error(f"Exception on start-up subscribe: {type(e)} {e}. Retrying in 3s.")
+            if not success:
+                await asyncio.sleep(3)
+
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
         while not self._shut_down:
             async with self.subscription_lock:
