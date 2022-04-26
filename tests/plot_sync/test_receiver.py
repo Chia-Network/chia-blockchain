@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import random
 import time
 from secrets import token_bytes
 from typing import Any, Callable, List, Tuple, Type, Union
@@ -168,7 +169,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
             pool_contract_puzzle_hash=None,
             pool_public_key=None,
             plot_public_key=G1Element(),
-            file_size=uint64(0),
+            file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
         )
         for x in path_list
@@ -176,6 +177,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
 
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
+    receiver._total_plot_size = sum(plot.file_size for plot in receiver._plots.values())
 
     sync_steps: List[SyncStepData] = [
         SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
@@ -235,6 +237,7 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
     assert get_list_or_len(plot_sync_dict_1["failed_to_open_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
+    assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
@@ -274,6 +277,7 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(sync_steps[State.keys_missing].args[0], counts_only) == plot_sync_dict_3["no_key_filenames"]
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
+    assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
 
