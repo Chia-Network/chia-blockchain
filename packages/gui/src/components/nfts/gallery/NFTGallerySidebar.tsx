@@ -59,7 +59,7 @@ export default function NFTGallerySidebar() {
                 <InputLabel>
                   <Trans>Status</Trans>
                 </InputLabel>
-                <Select name="status" >
+                <Select name="status" label={<Trans>Status</Trans>}>
                   <MenuItem value="">
                     <em>
                       <Trans>All</Trans>
@@ -72,7 +72,7 @@ export default function NFTGallerySidebar() {
                 <InputLabel>
                   <Trans>Price</Trans>
                 </InputLabel>
-                <Select name="price">
+                <Select name="price" label={<Trans>Price</Trans>}>
                   <MenuItem value="">
                     <Slider
                       value={price}
@@ -87,7 +87,7 @@ export default function NFTGallerySidebar() {
                 <InputLabel>
                   <Trans>Tokens</Trans>
                 </InputLabel>
-                <Select name="tokens">
+                <Select name="tokens" label={<Trans>Tokens</Trans>}>
                   <MenuItem value="">
                     <em>
                       <Trans>All</Trans>
@@ -100,7 +100,7 @@ export default function NFTGallerySidebar() {
                 <InputLabel>
                   <Trans>Collections</Trans>
                 </InputLabel>
-                <Select name="collections">
+                <Select name="collections" label={<Trans>Collections</Trans>}>
                   <MenuItem value="">
                     <em>
                       <Trans>All</Trans>
