@@ -8,7 +8,6 @@ import tempfile
 excepted_packages = {
     "keyrings.cryptfile",  # pure python
     "dnslib",  # pure python
-    "pycryptodome",  # only m1 is missing, will figure out how to build properly
 }
 
 
