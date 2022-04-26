@@ -538,6 +538,16 @@ class DIDWallet:
         assert core is not None
         return core.hex()
 
+    async def set_name(self, new_name: str):
+        import dataclasses
+
+        new_info = dataclasses.replace(self.wallet_info, name=new_name)
+        self.wallet_info = new_info
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
+
+    async def get_name(self):
+        return self.wallet_info.name
+
     async def create_update_spend(self):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None

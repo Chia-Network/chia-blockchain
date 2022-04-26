@@ -327,6 +327,16 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_transfer_did", request)
         return response
 
+    async def did_set_wallet_name(self, wallet_id, name) -> Dict:
+        request = {"wallet_id": wallet_id, "name": name}
+        response = await self.fetch("did_set_wallet_name", request)
+        return response
+
+    async def did_get_wallet_name(self, wallet_id) -> Dict:
+        request = {"wallet_id": wallet_id}
+        response = await self.fetch("did_get_wallet_name", request)
+        return response
+
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
     async def create_new_pool_wallet(
         self,
