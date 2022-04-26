@@ -1306,7 +1306,9 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
 
     async def nft_transfer_nft(self, request):
+        assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
+        trade_price = request.get("trade_price", 0)
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         # nft_coin_info: NFTCoinInfo,
         # new_did,
@@ -1320,19 +1322,23 @@ class WalletRpcApi:
         if "new_did_inner_hash" in request:
             new_did_inner_hash = request["new_did_inner_hash"]
         else:
-            assert request["trade_price"] == 0
+            assert trade_price == 0
         if isinstance(request["new_did"], str):
             new_did = bytes.fromhex(request["new_did"])
         else:
             new_did = request["new_did"]
-        sb = await nft_wallet.transfer_nft(
-            request["nft_coin_info"],
-            new_did,
-            new_did_inner_hash,
-            request["trade_price"],
-            new_url,
-        )
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+        try:
+            sb = await nft_wallet.transfer_nft(
+                request["nft_coin_info"],
+                new_did,
+                new_did_inner_hash,
+                trade_price,
+                new_url,
+            )
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+        except Exception as e:
+            log.exception(f"Failed to transfer NFT: {e}")
+            return {"success": False, "error": str(e)}
 
     async def nft_receive_nft(self, request):
         wallet_id = int(request["wallet_id"])
