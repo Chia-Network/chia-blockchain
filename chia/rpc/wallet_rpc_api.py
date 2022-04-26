@@ -529,7 +529,7 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request.get("wallet_name", "DID Wallet"),
+                        request.get("wallet_name", None),
                         uint64(request.get("fee", 0)),
                     )
 

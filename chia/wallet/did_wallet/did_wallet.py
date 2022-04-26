@@ -1,6 +1,7 @@
 import logging
 import time
 import json
+import re
 
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -52,13 +53,16 @@ class DIDWallet:
         backups_ids: List = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
-        name: str = "DID Wallet",
+        name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ):
         """
         This must be called under the wallet state manager lock
         """
         self = DIDWallet()
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.generate_wallet_name()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
@@ -69,7 +73,7 @@ class DIDWallet:
             raise ValueError("Not enough balance")
         if amount & 1 == 0:
             raise ValueError("DID amount must be odd number")
-        self.wallet_state_manager = wallet_state_manager
+
         if num_of_backup_ids_needed is None:
             num_of_backup_ids_needed = uint64(len(backups_ids))
         if num_of_backup_ids_needed > len(backups_ids):
@@ -150,24 +154,28 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         filename: str,
-        name: str = "DID Wallet",
+        name: Optional[str] = None,
     ):
         self = DIDWallet()
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.generate_wallet_name()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DID wallet from recovery file ...")
-        self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, [], uint64(0), [], None, None, None, None, False, "")
+        # load backup will also set our DIDInfo
+        self.did_info = DIDWallet.get_did_from_file(filename)
+        self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DISTRIBUTED_ID.value, info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
-        # load backup will also set our DIDInfo
-        await self.load_backup(filename)
-
+        await self.save_info(self.did_info, False)
+        await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
+        await self.load_parent(self.did_info)
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
@@ -180,7 +188,7 @@ class DIDWallet:
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        name: str = "DID Wallet",
+        name: Optional[str] = None,
     ):
         """
         Create a DID wallet from a transfer
@@ -194,11 +202,14 @@ class DIDWallet:
         """
 
         self = DIDWallet()
+        self.wallet_state_manager = wallet_state_manager
+        if name is None:
+            name = self.generate_wallet_name()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        self.wallet_state_manager = wallet_state_manager
+
         self.log.info(f"Creating DID wallet from a coin spend {launch_coin}  ...")
         # Create did info from the coin spend
         args = did_wallet_puzzles.uncurry_innerpuz(inner_puzzle)
@@ -224,6 +235,7 @@ class DIDWallet:
             False,
             json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
         )
+        self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -399,58 +411,19 @@ class DIDWallet:
     def create_backup(self, filename: str):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        try:
-            f = open(filename, "w")
-            output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
-            output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
-            output_str += f"{self.did_info.origin_coin.amount}:"
-            if len(self.did_info.backup_ids) > 0:
-                for did in self.did_info.backup_ids:
-                    output_str = output_str + did.hex() + ","
-                output_str = output_str[:-1]
-            output_str += f":{bytes(self.did_info.current_inner).hex()}:{self.did_info.num_of_backup_ids_needed}"
-
-            output_str += f":{self.did_info.metadata}"
-            f.write(output_str)
-            f.close()
-        except Exception as e:
-            raise e
+        f = open(filename, "w")
+        output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
+        output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
+        output_str += f"{self.did_info.origin_coin.amount}:"
+        if len(self.did_info.backup_ids) > 0:
+            for did in self.did_info.backup_ids:
+                output_str = output_str + did.hex() + ","
+            output_str = output_str[:-1]
+        output_str += f":{bytes(self.did_info.current_inner).hex()}:{self.did_info.num_of_backup_ids_needed}"
+        output_str += f":{self.did_info.metadata}"
+        f.write(output_str)
+        f.close()
         return None
-
-    async def load_backup(self, filename: str):
-        try:
-            f = open(filename, "r")
-            details = f.readline().split(":")
-            f.close()
-            origin = Coin(
-                bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2]))
-            )
-            backup_ids = []
-            if len(details[3]) > 0:
-                for d in details[3].split(","):
-                    backup_ids.append(bytes.fromhex(d))
-            num_of_backup_ids_needed = uint64(int(details[5]))
-            if num_of_backup_ids_needed > len(backup_ids):
-                raise Exception
-            innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
-            metadata: str = details[6]
-            did_info: DIDInfo = DIDInfo(
-                origin,
-                backup_ids,
-                num_of_backup_ids_needed,
-                self.did_info.parent_info,
-                innerpuz,
-                None,
-                None,
-                None,
-                False,
-                metadata,
-            )
-            await self.save_info(did_info, False)
-            await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
-            await self.load_parent(did_info)
-        except Exception as e:
-            raise e
 
     async def load_parent(self, did_info: DIDInfo):
         """
@@ -1276,3 +1249,63 @@ class DIDWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+
+    def generate_wallet_name(self) -> str:
+        """
+        Generate a new DID wallet name
+        :return: wallet name
+        """
+        max_num = 0
+        for wallet in self.wallet_state_manager.wallets.values():
+            if wallet.type() == WalletType.DISTRIBUTED_ID:
+                matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)
+                if matched and int(matched.group(1)) > max_num:
+                    max_num = int(matched.group(1))
+        return f"Profile {max_num + 1}"
+
+    def check_existed_did(self):
+        """
+        Check if the current DID is existed
+        :return: None
+        """
+        for wallet in self.wallet_state_manager.wallets.values():
+            if (
+                wallet.type() == WalletType.DISTRIBUTED_ID
+                and self.did_info.origin_coin.name() == wallet.did_info.origin_coin.name()
+            ):
+                self.log.warning(f"DID {self.did_info.origin_coin} already existed, ignore the wallet creation.")
+                raise ValueError("Wallet already exists")
+
+    @staticmethod
+    def get_did_from_file(filename: str) -> DIDInfo:
+        """
+        Get a DIDInfo from a backup file
+        :param filename: Path of the backup file
+        :return: DIDInfo
+        """
+        f = open(filename, "r")
+        details = f.readline().split(":")
+        f.close()
+        origin = Coin(bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2])))
+        backup_ids = []
+        if len(details[3]) > 0:
+            for d in details[3].split(","):
+                backup_ids.append(bytes.fromhex(d))
+        num_of_backup_ids_needed = uint64(int(details[5]))
+        if num_of_backup_ids_needed > len(backup_ids):
+            raise Exception
+        innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
+        metadata: str = details[6]
+        did_info: DIDInfo = DIDInfo(
+            origin,
+            backup_ids,
+            num_of_backup_ids_needed,
+            [],
+            innerpuz,
+            None,
+            None,
+            None,
+            False,
+            metadata,
+        )
+        return did_info

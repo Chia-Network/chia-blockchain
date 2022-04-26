@@ -204,7 +204,7 @@ class TestDIDWallet:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
-
+        assert did_wallet.wallet_info.name == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -268,6 +268,7 @@ class TestDIDWallet:
                 wallet,
                 filename,
             )
+        assert did_wallet_4.wallet_info.name == "Profile 2"
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
@@ -578,6 +579,7 @@ class TestDIDWallet:
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
             )
+        assert did_wallet_1.wallet_info.name == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
