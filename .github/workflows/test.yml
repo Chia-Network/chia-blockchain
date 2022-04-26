@@ -79,11 +79,20 @@ jobs:
             apt: '3.9'
             install_sh: '3.9'
             matrix: '3.9'
+          - name: '3.10'
+            action: '3.10'
+            apt: '3.10'
+            install_sh: '3.10'
+            matrix: '3.10'
         exclude:
           - os:
               matrix: macos
             python:
               matrix: '3.7'
+          - os:
+              matrix: macos
+            python:
+              matrix: '3.8'
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
