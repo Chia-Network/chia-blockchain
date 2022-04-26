@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import os
 import types
 from pathlib import Path
 from typing import Any, Dict, List
@@ -85,13 +84,13 @@ configuration = []
 
 for path in test_paths:
     if path.is_dir():
-        test_files = sorted(dir.glob("test_*.py"))
+        test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
     else:
         paths_for_cli = path.relative_to(project_root_path).as_posix()
 
-    conf = update_config(module_dict(testconfig), dir_config(dir))
+    conf = update_config(module_dict(testconfig), dir_config(path))
 
     xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
     pytest_parallel_args = f" -n {xdist_numprocesses}"
