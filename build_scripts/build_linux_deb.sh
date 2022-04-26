@@ -12,6 +12,7 @@ else
 	PLATFORM="$1"
 	DIR_NAME="chia-blockchain-linux-arm64"
 fi
+export PLATFORM
 
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
@@ -21,6 +22,7 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 	CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
+export CHIA_INSTALLER_VERSION
 
 echo "Installing npm and electron packagers"
 cd npm_linux_deb || exit
@@ -41,6 +43,19 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
+
+# Builds CLI only .deb
+# need j2 for templating the control file
+pip install j2cli
+CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
+mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
+mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
+mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
+j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
+cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
+ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
+dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
+# CLI only .deb done
 
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 cd .. || exit
@@ -91,5 +106,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-debian failed!"
 	exit $LAST_EXIT_CODE
 fi
+
+# Move the cli only deb into final installers as well, so it gets uploaded as an artifact
+mv "dist/$CLI_DEB_BASE.deb" final_installer/
 
 ls final_installer/
