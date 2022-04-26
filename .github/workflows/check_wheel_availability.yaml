@@ -38,7 +38,7 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        python-version: ['3.7', '3.8', '3.9']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         exclude:
           - os:
               matrix: macos
