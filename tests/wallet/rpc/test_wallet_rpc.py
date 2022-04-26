@@ -682,9 +682,11 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len(all_offers) == 0
     assert offer is None
 
+    driver_dict: Dict[str, Any] = {col.hex(): {"type": "CAT", "tail": "0x" + col.hex()}}
+
     offer, trade_record = await client.create_offer_for_ids(
         {uint32(1): -5, col.hex(): 1},
-        driver_dict={col.hex(): {"type": "CAT", "tail": "0x" + col.hex()}},
+        driver_dict=driver_dict,
         fee=uint64(1),
     )
     assert offer is not None
@@ -692,7 +694,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     col = await client.get_cat_asset_id(cat_0_id)
 
     summary = await client.get_offer_summary(offer)
-    assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
+    assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "infos": driver_dict, "fees": 1}
 
     assert await client.check_offer_validity(offer)
 
