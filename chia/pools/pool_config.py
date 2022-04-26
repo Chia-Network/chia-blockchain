@@ -25,8 +25,8 @@ pool_list:
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolWalletConfig(Streamable):
     launcher_id: bytes32
     pool_url: str

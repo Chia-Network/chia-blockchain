@@ -173,7 +173,7 @@ jobs:
       - name: Test blockchain code with pytest
         run: |
           . ./activate
-          venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/${{ matrix.configuration.path }} --durations=10 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark" ${{ matrix.configuration.disable_pytest_monitor }}
+          venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark" ${{ matrix.configuration.disable_pytest_monitor }} tests/${{ matrix.configuration.test_files }}
 
       - name: Process coverage data
         run: |
@@ -185,7 +185,7 @@ jobs:
           venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coverage
           path: coverage_reports/*

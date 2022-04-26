@@ -88,10 +88,12 @@ for path in test_paths:
     dir: Path
     if path.is_dir():
         dir = path
-        path_for_cli = f"{os.fspath(relative_path)}/test_*.py"
+        test_files = sorted(dir.glob("test_*.py"))
+        test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
+        paths_for_cli = " ".join(test_file_paths)
     else:
         dir = path.parent
-        path_for_cli = f"{os.fspath(relative_path)}"
+        paths_for_cli = f"{os.fspath(relative_path)}"
 
     conf = update_config(module_dict(testconfig), dir_config(dir))
 
@@ -105,7 +107,7 @@ for path in test_paths:
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],
-        "path": os.fspath(path_for_cli),
+        "test_files": paths_for_cli,
         "name": ".".join(relative_path.with_suffix("").parts),
     }
     for_matrix = dict(sorted(for_matrix.items()))
