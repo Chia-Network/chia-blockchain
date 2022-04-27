@@ -485,14 +485,18 @@ def call_plotters(root_path: Path, args):
 
         if args.plotter == "bladebit":
             if found and version_or_exception[0] != "1":
-                print(f"You're trying to run bladebit version 1"
-                      f" but currently version {'.'.join(version_or_exception)} is installed")
+                print(
+                    f"You're trying to run bladebit version 1"
+                    f" but currently version {'.'.join(version_or_exception)} is installed"
+                )
                 return
             plot_bladebit(args, chia_root_path, root_path, version=1)
         if args.plotter == "bladebit2":
             if found and version_or_exception[0] != "2":
-                print(f"You're trying to run bladebit version 2"
-                      f" but currently version {'.'.join(version_or_exception)} is installed")
+                print(
+                    f"You're trying to run bladebit version 2"
+                    f" but currently version {'.'.join(version_or_exception)} is installed"
+                )
                 return
             plot_bladebit(args, chia_root_path, root_path, version=2)
     if args.plotter == "install":
