@@ -57,7 +57,7 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=120)
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=300)
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
     return all_coins_state.coin_states
@@ -72,7 +72,7 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg, timeout=120)
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg, timeout=300)
 
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_coin")
