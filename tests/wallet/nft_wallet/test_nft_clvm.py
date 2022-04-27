@@ -38,13 +38,11 @@ NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater.clvm")
 
 
 def test_new_nft_ownership_layer() -> None:
-    destination: bytes32 = Program.to("test").get_tree_hash()
-    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (destination, LAUNCHER_PUZZLE_HASH)))
-
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     my_amount = 1
-    condition_list = [make_create_coin_condition(destination, my_amount, [])]
+    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
+    condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
