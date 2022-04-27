@@ -357,8 +357,8 @@ class DataLayer:
                     for subscription in subscriptions:
                         await self.wallet_rpc.dl_track_new(subscription.tree_id)
                     success = True
-                except Exception as e:
-                    self.log.error(f"Exception on start-up subscribe: {type(e)} {e}. Retrying in 3s.")
+                except aiohttp.client_exceptions.ClientConnectorError:
+                    self.log.error("Cannot connect to the wallet. Retrying in 3s.")
             if not success:
                 await asyncio.sleep(3)
 
