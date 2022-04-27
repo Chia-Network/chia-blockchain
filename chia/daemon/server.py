@@ -782,6 +782,7 @@ class WebSocketServer:
 
         return command_args
 
+    # @TODO Do something for bladebit version 2.
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA

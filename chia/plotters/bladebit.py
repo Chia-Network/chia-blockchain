@@ -6,7 +6,7 @@ import sys
 import logging
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union, List
 from chia.plotting.create_plots import resolve_plot_keys
 from chia.plotters.plotters_util import run_plotter, run_command, check_git_repository, check_git_ref
 
@@ -74,6 +74,27 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
     return get_bladebit_exec_package_path()
 
 
+def get_bladebit_version(plotters_root_path: Path) -> Union[Tuple[None, Exception], Tuple[bool, List[str]]]:
+    bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
+    if bladebit_executable_path.exists():
+        try:
+            proc = run_command(
+                [os.fspath(bladebit_executable_path), "--version"],
+                "Failed to call bladebit with --version option",
+                capture_output=True,
+                text=True,
+            )
+            # (Found, versionStr)
+            version_str: str = proc.stdout.strip()
+            return True, version_str.split(".")
+        except Exception as e:
+            # (Unknown, Exception)
+            return None, e
+    else:
+        # (NotFound, "")
+        return False, ""
+
+
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
     info: Dict[str, Any] = {"display_name": "BladeBit Plotter"}
     installed: bool = False
@@ -82,16 +103,11 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
         version: Optional[str] = None
-        try:
-            proc = run_command(
-                [os.fspath(bladebit_executable_path), "--version"],
-                "Failed to call bladebit with --version option",
-                capture_output=True,
-                text=True,
-            )
-            version = proc.stdout.strip()
-        except Exception as e:
-            print(f"Failed to determine bladebit version: {e}")
+        found, response = get_bladebit_version(plotters_root_path)
+        if found:
+            version = ".".join(response)
+        elif found is None:
+            print(f"Failed to determine bladebit version: {response}")
 
         if version is not None:
             installed = True
@@ -214,13 +230,21 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
     )
 
 
-def plot_bladebit(args, chia_root_path, root_path):
+def plot_bladebit(args, chia_root_path, root_path, version: int):
     # When neither bladebit installed from git nor bladebit bundled with installer is available,
     # install bladebit from git repos.
     if not os.path.exists(get_bladebit_executable_path(root_path)):
         print("Installing bladebit plotter.")
         try:
-            install_bladebit(root_path)
+            # TODO: Change commit hash/branch name appropriately
+            if version == 1:
+                commit = "ad85a8f2cf99ca4c757932a21d937fdc9c7ae0ef"
+            elif version == 2:
+                commit = "disk_plot"
+            else:
+                raise f"Unknown bladebit version {version}"
+
+            install_bladebit(root_path, True, commit)
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
             return
@@ -260,6 +284,36 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
+    if args.buckets is not None:
+        call_args.append("-b")
+        call_args.append(str(args.buckets))
+    if args.tmpdir is not None:
+        call_args.append("-t1")
+        call_args.append(str(args.tmpdir))
+    if args.tmpdir2 is not None:
+        call_args.append("-t2")
+        call_args.append(str(args.tmpdir2))
+    if args.no_cpu_affinity:
+        call_args.append("--no-cpu-affinity")
+    if args.cache is not None:
+        call_args.append("--cache")
+        call_args.append(str(args.cache))
+    if args.f1_threads is not None:
+        call_args.append("--f1-threads")
+        call_args.append(str(args.f1_threads))
+    if args.fp_threads is not None:
+        call_args.append("--fp-threads")
+        call_args.append(str(args.fp_threads))
+    if args.c_threads is not None:
+        call_args.append("--c-threads")
+        call_args.append(str(args.c_threads))
+    if args.p2_threads is not None:
+        call_args.append("--p2-threads")
+        call_args.append(str(args.p2_threads))
+    if args.p3_threads is not None:
+        call_args.append("--p3-threads")
+        call_args.append(str(args.p3_threads))
+
     call_args.append(args.finaldir)
 
     try:

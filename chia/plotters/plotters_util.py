@@ -1,8 +1,8 @@
 import asyncio
+import re
 import signal
 import subprocess
 import sys
-import re
 
 
 # https://kevinmccarthy.org/2016/07/25/streaming-subprocess-stdin-and-stdout-with-asyncio-in-python/
