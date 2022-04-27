@@ -235,7 +235,7 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
     assert get_list_or_len(plot_sync_dict_1["failed_to_open_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
-    assert "last_sync_time" not in plot_sync_dict_1
+    assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
         "node_id": receiver.connection().peer_node_id,
         "host": receiver.connection().peer_host,

@@ -40,7 +40,7 @@ class Sync:
     plots_processed: uint32 = uint32(0)
     plots_total: uint32 = uint32(0)
     delta: Delta = field(default_factory=Delta)
-    time_done: float = 0
+    time_done: Optional[float] = None
 
     def bump_next_message_id(self) -> None:
         self.next_message_id = uint64(self.next_message_id + 1)
@@ -289,7 +289,7 @@ class Receiver:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
     def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
-        result: Dict[str, Any] = {
+        return {
             "connection": {
                 "node_id": self._connection.peer_node_id,
                 "host": self._connection.peer_host,
@@ -299,7 +299,5 @@ class Receiver:
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
+            "last_sync_time": self._last_sync.time_done,
         }
-        if self._last_sync.time_done != 0:
-            result["last_sync_time"] = self._last_sync.time_done
-        return result
