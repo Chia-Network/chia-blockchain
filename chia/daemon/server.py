@@ -220,7 +220,7 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug(f"Received message: {msg}")
+            self.log.debug("Received message: %s", msg)
             if msg.type == WSMsgType.TEXT:
                 try:
                     decoded = json.loads(msg.data)
@@ -613,7 +613,7 @@ class WebSocketServer:
 
         response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -672,7 +672,7 @@ class WebSocketServer:
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:

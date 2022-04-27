@@ -1,4 +1,5 @@
 import asyncio
+import math
 import copy
 import logging
 import os
@@ -50,7 +51,7 @@ from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRefreshEvents, parse_plot_info
 from chia.plotting.manager import PlotManager
-from chia.server.server import ssl_context_for_server
+from chia.server.server import ssl_context_for_client
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -130,6 +131,11 @@ class BlockTools:
     Tools to generate blocks for testing.
     """
 
+    _block_cache_header: bytes32
+    _block_cache_height_to_hash: Dict[uint32, bytes32]
+    _block_cache_difficulty: uint64
+    _block_cache: Dict[bytes32, BlockRecord]
+
     def __init__(
         self,
         constants: ConsensusConstants = test_constants,
@@ -137,6 +143,9 @@ class BlockTools:
         const_dict=None,
         keychain: Optional[Keychain] = None,
     ):
+
+        self._block_cache_header = bytes32([0] * 32)
+
         self._tempdir = None
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
@@ -144,6 +153,7 @@ class BlockTools:
 
         self.root_path = root_path
         self.local_keychain = keychain
+        self._block_time_residual = 0.0
 
         create_default_chia_config(root_path)
         create_all_ssl(
@@ -364,7 +374,7 @@ class BlockTools:
         key_path = self.root_path / self.config["daemon_ssl"]["private_key"]
         ca_cert_path = self.root_path / self.config["private_ssl_ca"]["crt"]
         ca_key_path = self.root_path / self.config["private_ssl_ca"]["key"]
-        return ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path)
+        return ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path)
 
     def get_plot_signature(self, m: bytes32, plot_pk: G1Element) -> G2Element:
         """
@@ -437,12 +447,14 @@ class BlockTools:
         previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
+        use_timestamp_residual: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
         else:
             block_list = []
+
         constants = self.constants
         transaction_data_included = False
         if time_per_block is None:
@@ -474,7 +486,12 @@ class BlockTools:
             return block_list
 
         blocks: Dict[bytes32, BlockRecord]
-        height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+        if block_list[-1].header_hash == self._block_cache_header:
+            height_to_hash = self._block_cache_height_to_hash
+            difficulty = self._block_cache_difficulty
+            blocks = self._block_cache
+        else:
+            height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -601,7 +618,10 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
-                        full_block, block_record = get_full_block_and_block_record(
+                        if not use_timestamp_residual:
+                            self._block_time_residual = 0.0
+
+                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -630,6 +650,7 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_time_residual=self._block_time_residual,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -657,6 +678,10 @@ class BlockTools:
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
                         if num_blocks <= 0 and not keep_going_until_tx_block:
+                            self._block_cache_header = block_list[-1].header_hash
+                            self._block_cache_height_to_hash = height_to_hash
+                            self._block_cache_difficulty = difficulty
+                            self._block_cache = blocks
                             return block_list
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -868,7 +893,11 @@ class BlockTools:
                         else:
                             block_generator = None
                             aggregate_signature = G2Element()
-                        full_block, block_record = get_full_block_and_block_record(
+
+                        if not use_timestamp_residual:
+                            self._block_time_residual = 0.0
+
+                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -899,6 +928,7 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_time_residual=self._block_time_residual,
                         )
 
                         if block_record.is_transaction_block:
@@ -921,13 +951,18 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
                         log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
                         num_blocks -= 1
-                        if num_blocks <= 0 and not keep_going_until_tx_block:
-                            return block_list
 
                         blocks[full_block.header_hash] = block_record
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+
+                        if num_blocks <= 0 and not keep_going_until_tx_block:
+                            self._block_cache_header = block_list[-1].header_hash
+                            self._block_cache_height_to_hash = height_to_hash
+                            self._block_cache_difficulty = difficulty
+                            self._block_cache = blocks
+                            return block_list
 
             finished_sub_slots_at_sp = finished_sub_slots_eos.copy()
             same_slot_as_last = False
@@ -1132,7 +1167,8 @@ class BlockTools:
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-        random.seed(seed)
+        rng = random.Random()
+        rng.seed(seed)
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
@@ -1180,9 +1216,9 @@ class BlockTools:
                         found_proofs.append((required_iters, proof_of_space))
         random_sample = found_proofs
         if len(found_proofs) >= 1:
-            if random.random() < 0.1:
+            if rng.random() < 0.1:
                 # Removes some proofs of space to create "random" chains, based on the seed
-                random_sample = random.sample(found_proofs, len(found_proofs) - 1)
+                random_sample = rng.sample(found_proofs, len(found_proofs) - 1)
         return random_sample
 
 
@@ -1469,6 +1505,11 @@ def get_icc(
     )
 
 
+def round_timestamp(timestamp: float, residual: float) -> Tuple[int, float]:
+    mod = math.modf(timestamp + residual)
+    return (int(mod[1]), mod[0])
+
+
 def get_full_block_and_block_record(
     constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
@@ -1501,14 +1542,19 @@ def get_full_block_and_block_record(
     overflow_rc_challenge: bytes32 = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
-) -> Tuple[FullBlock, BlockRecord]:
+    block_time_residual: float = 0.0,
+) -> Tuple[FullBlock, BlockRecord, float]:
     if current_time is True:
         if prev_block.timestamp is not None:
-            timestamp = uint64(max(int(time.time()), prev_block.timestamp + int(time_per_block)))
+            time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
+            timestamp = uint64(max(int(time.time()), prev_block.timestamp + time_delta))
         else:
             timestamp = uint64(int(time.time()))
     else:
-        timestamp = uint64(start_timestamp + int((prev_block.height + 1 - start_height) * time_per_block))
+        time_delta, block_time_residual = round_timestamp(
+            (prev_block.height + 1 - start_height) * time_per_block, block_time_residual
+        )
+        timestamp = uint64(start_timestamp + time_delta)
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
@@ -1559,7 +1605,7 @@ def get_full_block_and_block_record(
         normalized_to_identity_cc_ip,
     )
 
-    return full_block, block_record
+    return full_block, block_record, block_time_residual
 
 
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
@@ -1632,9 +1678,10 @@ def create_test_foliage(
         prev_transaction_block = None
         is_transaction_block = True
 
-    random.seed(seed)
+    rng = random.Random()
+    rng.seed(seed)
     # Use the extension data to create different blocks based on header hash
-    extension_data: bytes32 = bytes32(random.randint(0, 100000000).to_bytes(32, "big"))
+    extension_data: bytes32 = bytes32(rng.randint(0, 100000000).to_bytes(32, "big"))
     if prev_block is None:
         height: uint32 = uint32(0)
     else:
