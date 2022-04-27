@@ -889,7 +889,8 @@ class WalletNode:
         header_block: HeaderBlock = response.header_block
 
         latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, header_block, request_time)
-        if latest_timestamp is None:
+        allow_unsynced_node = self.config.get("allow_unsynced_full_node", False)
+        if latest_timestamp is None and not allow_unsynced_node:
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")
                 return
