@@ -412,7 +412,7 @@ def install_plotter(args: Namespace, root_path: Path):
         return
     elif plotter == "bladebit2":
         try:
-            install_bladebit(root_path, override, commit or "disk_plot")
+            install_bladebit(root_path, override, commit or "disk-plot")
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
         return
