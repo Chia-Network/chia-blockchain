@@ -127,7 +127,7 @@ if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
   if [ "$UBUNTU_PRE_20" = "1" ]; then
     # Ubuntu
-    echo "Installing on Ubuntu pre 20.* LTS."
+    echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_20" = "1" ]; then
