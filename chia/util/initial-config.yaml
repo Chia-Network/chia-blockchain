@@ -501,6 +501,9 @@ wallet:
   multiprocessing_start_method: default
 
   testing: False
+  # Allow unsynced full node will allow syncing the wallet from an unsynced full node
+  # Useful in edge cases like syncing an offline wallet from a backup/snapshot of a full node DB w/ an offline node
+  allow_unsynced_full_node: False
   # v2 used by the light wallet sync protocol
   database_path: wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite
   # wallet_peers_path is deprecated and has been replaced by wallet_peers_file_path
