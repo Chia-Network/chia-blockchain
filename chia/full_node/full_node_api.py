@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -53,9 +53,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.full_node.state_changed_callback = callback
 
     @property
     def server(self):

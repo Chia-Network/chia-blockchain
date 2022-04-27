@@ -143,7 +143,7 @@ class WalletNode:
         self.LONG_SYNC_THRESHOLD = 200
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
-        if not self.keychain_proxy:
+        if self.keychain_proxy is None:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
@@ -259,7 +259,7 @@ class WalletNode:
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
-    async def _await_closed(self):
+    async def _await_closed(self, shutting_down: bool = True):
         self.log.info("self._await_closed")
 
         if self.server is not None:
@@ -269,8 +269,10 @@ class WalletNode:
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
             self.wallet_state_manager = None
-        if self.keychain_proxy is not None:
-            await self.keychain_proxy.close()
+        if shutting_down and self.keychain_proxy is not None:
+            proxy = self.keychain_proxy
+            self.keychain_proxy = None
+            await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.logged_in = False
         self.wallet_peers = None
@@ -356,7 +358,7 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug(f"Pulled from queue: {item}")
+                self.log.debug("Pulled from queue: %s", item)
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
@@ -476,8 +478,8 @@ class WalletNode:
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
-                await self.wallet_state_manager.reorg_rollback(fork_height)
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
+                removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
                 else:
@@ -491,6 +493,11 @@ class WalletNode:
                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
+            else:
+                await self.wallet_state_manager.blockchain.clean_block_records()
+
+                for wallet_id in removed_wallet_ids:
+                    self.wallet_state_manager.wallets.pop(wallet_id)
 
     async def long_sync(
         self,
@@ -684,6 +691,9 @@ class WalletNode:
                                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
+                            else:
+                                await self.wallet_state_manager.blockchain.clean_block_records()
+
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -719,6 +729,9 @@ class WalletNode:
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
+                    else:
+                        await self.wallet_state_manager.blockchain.clean_block_records()
+
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)

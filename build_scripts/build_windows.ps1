@@ -31,9 +31,7 @@ Write-Output "   ---"
 
 
 Write-Output "   ---"
-Write-Output "Get CHIA_INSTALLER_VERSION"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
-$env:CHIA_INSTALLER_VERSION = python .\build_scripts\installer-version.py -win
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'

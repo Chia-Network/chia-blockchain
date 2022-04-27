@@ -1,7 +1,6 @@
 import logging
-
 from typing import Dict, Optional
-from clvm_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
+from chia_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.cost_calculator import NPCResult
