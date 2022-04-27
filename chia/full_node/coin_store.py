@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Dict, Any, Tuple
+from typing import List, Optional, Set, Dict, Any, Tuple, Awaitable
 
 from aiosqlite import Cursor
 
@@ -178,6 +178,36 @@ class CoinStore:
                     self.coin_record_cache.put(record.coin.name(), record)
                     return record
         return None
+
+    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+        if len(names) == 0:
+            return []
+
+        coins = set()
+        async with self.db_wrapper.read_db() as conn:
+            cursors: List[Awaitable[Cursor]] = []
+            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+                names_db: Tuple[Any, ...]
+                if self.db_wrapper.db_version == 2:
+                    names_db = tuple(names_chunk)
+                else:
+                    names_db = tuple([n.hex() for n in names_chunk])
+                cursors.append(
+                    conn.execute(
+                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                        f"coin_parent, amount, timestamp FROM coin_record "
+                        f'WHERE coin_name in ({"?," * (len(names_db) - 1)}?) ',
+                        names_db,
+                    )
+                )
+
+            for cur_handle in cursors:
+                cursor = await cur_handle
+                for row in await cursor.fetchall():
+                    coin = self.row_to_coin(row)
+                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+
+        return list(coins)
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
         async with self.db_wrapper.read_db() as conn:
