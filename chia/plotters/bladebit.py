@@ -152,6 +152,7 @@ progress = {
 def install_bladebit(root_path: Path, override: bool = False, commit: Optional[str] = None):
     if not override and os.path.exists(get_bladebit_executable_path(root_path)):
         print("Bladebit plotter already installed.")
+        print("You can override it with -o option")
         return
 
     if not is_bladebit_supported():
