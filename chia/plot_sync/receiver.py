@@ -42,6 +42,9 @@ class Sync:
     delta: Delta = field(default_factory=Delta)
     time_done: Optional[float] = None
 
+    def in_progress(self) -> bool:
+        return self.sync_id != 0
+
     def bump_next_message_id(self) -> None:
         self.next_message_id = uint64(self.next_message_id + 1)
 
@@ -87,6 +90,9 @@ class Receiver:
 
     def last_sync(self) -> Sync:
         return self._last_sync
+
+    def initial_sync(self) -> bool:
+        return self._last_sync.sync_id == 0
 
     def plots(self) -> Dict[str, Plot]:
         return self._plots
@@ -299,5 +305,12 @@ class Receiver:
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
+            "syncing": {
+                "initial": self.initial_sync(),
+                "plot_files_processed": self.current_sync().plots_processed,
+                "plot_files_total": self.current_sync().plots_total,
+            }
+            if self._current_sync.in_progress()
+            else None,
             "last_sync_time": self._last_sync.time_done,
         }

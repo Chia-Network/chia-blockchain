@@ -235,6 +235,7 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
     assert get_list_or_len(plot_sync_dict_1["failed_to_open_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
+    assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
         "node_id": receiver.connection().peer_node_id,
@@ -247,9 +248,23 @@ async def test_to_dict(counts_only: bool) -> None:
     # But unequal dicts wit the opposite counts_only value
     assert plot_sync_dict_1 != receiver.to_dict(not counts_only)
 
-    # Walk through all states from idle to done and run them with the test data
+    expected_plot_files_processed: int = 0
+    expected_plot_files_total: int = sync_steps[State.idle].args[2]
+
+    # Walk through all states from idle to done and run them with the test data and validate the sync progress
     for state in State:
         await run_sync_step(receiver, sync_steps[state], state)
+
+        if state != State.idle and state != State.removed and state != State.done:
+            expected_plot_files_processed += len(sync_steps[state].args[0])
+
+        sync_data = receiver.to_dict()["syncing"]
+        if state == State.done:
+            assert sync_data is None
+        else:
+            assert sync_data["initial"]
+            assert sync_data["plot_files_processed"] == expected_plot_files_processed
+            assert sync_data["plot_files_total"] == expected_plot_files_total
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
     assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
@@ -260,6 +275,21 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["last_sync_time"] > 0
+    assert plot_sync_dict_3["syncing"] is None
+
+    # Trigger a repeated plot sync
+    await receiver.sync_started(
+        PlotSyncStart(
+            PlotSyncIdentifier(uint64(time.time()), uint64(receiver.last_sync().sync_id + 1), uint64(0)),
+            False,
+            receiver.last_sync().sync_id,
+            uint32(1),
+        )
+    )
+    sync_data = receiver.to_dict()["syncing"]
+    assert not sync_data["initial"]
+    assert sync_data["plot_files_processed"] == 0
+    assert sync_data["plot_files_total"] == 1
 
 
 @pytest.mark.asyncio
