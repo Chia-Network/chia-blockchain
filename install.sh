@@ -56,7 +56,11 @@ fi
 # Get submodules
 git submodule update --init mozilla-ca
 
-UBUNTU_PRE_2004=false
+UBUNTU_PRE_20=0
+UBUNTU_20=0
+UBUNTU_21=0
+UBUNTU_22=0
+
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
   # In case Ubuntu minimal does not come with bc
@@ -64,8 +68,15 @@ if $UBUNTU; then
     sudo apt install bc -y
   fi
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
-  UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
-  UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
+  if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
+    UBUNTU_PRE_20=1
+  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
+    UBUNTU_20=1
+  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
+    UBUNTU_21=1
+  else
+    UBUNTU_22=1
+  fi
 fi
 
 install_python3_and_sqlite3_from_source_with_yum() {
@@ -114,19 +125,23 @@ install_python3_and_sqlite3_from_source_with_yum() {
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
+  if [ "$UBUNTU_PRE_20" = "1" ]; then
     # Ubuntu
-    echo "Installing on Ubuntu pre 20.04 LTS."
+    echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-  elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
-    echo "Installing on Ubuntu 20.04 LTS."
+  elif [ "$UBUNTU_20" = "1" ]; then
+    echo "Installing on Ubuntu 20.*."
     sudo apt-get update
     sudo apt-get install -y python3.8-venv python3-distutils openssl
-  elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
-    echo "Installing on Ubuntu 21.04 or newer."
+  elif [ "$UBUNTU_21" = "1" ]; then
+    echo "Installing on Ubuntu 21.*."
     sudo apt-get update
     sudo apt-get install -y python3.9-venv python3-distutils openssl
+  elif [ "$UBUNTU_22" = "1" ]; then
+    echo "Installing on Ubuntu 22.* or newer."
+    sudo apt-get update
+    sudo apt-get install -y python3.10-venv python3-distutils openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
@@ -186,14 +201,14 @@ fi
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 39 3.9 38 3.8 37 3.7 3; do
+  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.10"
+          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
+            echo "Chia requires Python version < 3.11.0"
             echo "Current Python version = $PY3_VERSION"
             # If Arch, direct to Arch Wiki
             if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
