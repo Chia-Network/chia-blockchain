@@ -410,9 +410,7 @@ class Blockchain(BlockchainInterface):
                 tx_additions,
                 tx_removals,
             )
-            removed_rec: List[Optional[CoinRecord]] = [
-                await self.coin_store.get_coin_record(name) for name in tx_removals
-            ]
+            removed_rec: List[CoinRecord] = await self.coin_store.get_coin_records(tx_removals)
 
             # Set additions first, then removals in order to handle ephemeral coin state
             # Add in height order is also required
