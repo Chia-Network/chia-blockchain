@@ -2,7 +2,6 @@ import pytest
 import pytest_asyncio
 
 from blspy import G2Element
-from clvm.EvalError import EvalError
 from typing import Dict, Tuple
 
 from chia.clvm.spend_sim import SpendSim, SimClient
@@ -247,7 +246,7 @@ class TestDLLifecycle:
             result = (await sim_client.push_tx(bundle))[0]
             assert result == MempoolInclusionStatus.FAILED
             offer_cs = bundle.coin_spends[1]
-            with pytest.raises(EvalError, match="clvm raise"):
+            with pytest.raises(ValueError, match="clvm raise"):
                 offer_cs.puzzle_reveal.to_program().run(offer_cs.solution.to_program())
         finally:
             # TODO: Fix hint errors and remove ignore
