@@ -116,7 +116,7 @@ class WSChiaConnection:
         protocol_version: str,
         server_port: int,
         local_type: NodeType,
-        capabilities: List[Tuple[Capability, str]],
+        capabilities: List[Tuple[uint16, str]],
     ):
         if self.is_outbound:
             outbound_handshake = make_msg(

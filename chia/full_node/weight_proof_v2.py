@@ -94,7 +94,7 @@ class WeightProofHandlerV2:
         valid, summaries, records = await validate_weight_proof_no_fork_point(
             self.constants, weight_proof, salt, skip_segments
         )
-        return True, self.get_fork_point(summaries), summaries, records
+        return valid, self.get_fork_point(summaries), summaries, records
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
@@ -121,7 +121,7 @@ class WeightProofHandlerV2:
         Creates a weight proof object
         """
         start = time.time()
-        sub_epoch_segments: List[SubEpochChallengeSegmentV2] = []
+        sub_epoch_segments: List[bytes] = []
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
             log.error("failed not tip in cache")
@@ -186,7 +186,7 @@ class WeightProofHandlerV2:
                 sampled_seg_index = rng.choice(range(len(segments)))
                 segments = compress_segments(sampled_seg_index, segments)
                 log.info(f"sub epoch {sub_epoch_n} has {len(segments)} segments sampled {sampled_seg_index}")
-                sub_epoch_segments.extend(segments)
+                sub_epoch_segments.append(bytes(SubEpochSegmentsV2(segments)))
             prev_ses_block = ses_block
         recent_chain = await recent_chain_task
         if recent_chain is None:
@@ -702,54 +702,49 @@ def _map_sub_epoch_summaries(
 def _validate_sub_epoch_segments(
     constants_dict: Dict[str, Any],
     rng: random.Random,
-    sub_epoch_segments: List[SubEpochChallengeSegmentV2],
+    sub_epoch_segments: List[bytes],
     summaries_bytes: List[bytes],
     executor: ProcessPoolExecutor,
-) -> bool:
+) -> Tuple[bool, List[uint32]]:
     ses_validation_futures = []
-    sub_epoch_to_segments: Dict[int, List[SubEpochChallengeSegmentV2]] = {}
-    curr_sub_epoch_n = -1
-    for idx, segment in enumerate(sub_epoch_segments):
-        if curr_sub_epoch_n < segment.sub_epoch_n:
-            curr_sub_epoch_n = segment.sub_epoch_n
-            sub_epoch_to_segments[curr_sub_epoch_n] = []
-        sub_epoch_to_segments[curr_sub_epoch_n].append(segment)
-    for sub_epoch_n, segments in sub_epoch_to_segments.items():
+    for segments in sub_epoch_segments:
         sampled_seg_index = rng.choice(range(len(segments)))
         ses_validation_futures.append(
             executor.submit(
                 validate_sub_epoch,
                 constants_dict,
                 sampled_seg_index,
-                bytes(SubEpochSegmentsV2(segments)),
-                sub_epoch_n,
+                segments,
                 summaries_bytes,
             )
         )
+    sub_epochs = []
     for idx, future in enumerate(as_completed(ses_validation_futures)):
         log.info(f"validated sub epoch sample {idx} out of {len(ses_validation_futures)}")
         if future.exception() is not None:
             log.error(f"error validating sub epoch sample {future.exception()}")
-            return False
-        if not future.result():
+            return False, []
+        res, sub_epoch_n = future.result()
+        if res is False:
             log.error(f"error validating sub epoch sample")
-            return False
+            return False, []
+        sub_epochs.append(sub_epoch_n)
 
-    return True
+    return True, sub_epochs
 
 
 def validate_sub_epoch(
     constants_dict: Dict[str, Any],
     sampled_seg_index: int,
     segment_bytes: bytes,
-    sub_epoch_n: uint32,
     summaries_bytes: List[bytes],
-) -> bool:
-    log.info(f"validate sub epoch {sub_epoch_n}")
+) -> Tuple[bool, uint32]:
+    segments = SubEpochSegmentsV2.from_bytes(segment_bytes).challenge_segments
+    sub_epoch_n = segments[0].sub_epoch_n
+    # log.info(f"validate sub epoch {sub_epoch_n}")
     prev_ses: Optional[SubEpochSummary] = None
     total_blocks, total_ip_iters, total_slot_iters, total_slots = 0, 0, 0, 0
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)  # ignore [no-untyped-call]
-    segments = SubEpochSegmentsV2.from_bytes(segment_bytes).challenge_segments
     # recreate RewardChainSubSlot for next ses rc_hash
     curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, sub_epoch_n, summaries)
     start_idx = 0
@@ -800,7 +795,7 @@ def validate_sub_epoch(
         raise Exception(
             f"bad avg challenge block positioning ratio: {avg_slot_iters / avg_ip_iters} sub_epoch {sub_epoch_n}"
         )
-    return True
+    return True, sub_epoch_n
 
 
 def _validate_segment(
@@ -1408,9 +1403,7 @@ def get_sp_total_iters(sp_iters: uint64, is_overflow: bool, ssi: uint64, sub_slo
     return uint128(sp_sub_slot_total_iters + sp_iters)
 
 
-def validate_sub_epoch_sampling(
-    rng: random.Random, sub_epoch_weight_list: List[uint128], weight_proof: WeightProofV2
-) -> bool:
+def preprocess_sub_epoch_sampling(rng: random.Random, sub_epoch_weight_list: List[uint128]) -> Dict[int, bool]:
     total_weight = sub_epoch_weight_list[-1]
     last_l_weight = uint128(sub_epoch_weight_list[-1] - sub_epoch_weight_list[-3])
     log.debug(f"total weight {total_weight} prev weight {sub_epoch_weight_list[-2]}")
@@ -1421,12 +1414,12 @@ def validate_sub_epoch_sampling(
             sampled_sub_epochs[idx - 1] = True
             if len(sampled_sub_epochs) == WeightProofHandlerV2.MAX_SAMPLES:
                 break
-    curr_sub_epoch_n = -1
-    for sub_epoch_segment in weight_proof.sub_epoch_segments:
-        if curr_sub_epoch_n < sub_epoch_segment.sub_epoch_n:
-            if sub_epoch_segment.sub_epoch_n in sampled_sub_epochs:
-                del sampled_sub_epochs[sub_epoch_segment.sub_epoch_n]
-        curr_sub_epoch_n = sub_epoch_segment.sub_epoch_n
+    return sampled_sub_epochs
+
+
+def validate_sub_epoch_sampling(sampled_sub_epochs: Dict[int, bool], sub_epochs: List[uint32]) -> bool:
+    for sub_epoch_n in sub_epochs:
+        del sampled_sub_epochs[sub_epoch_n]
     if len(sampled_sub_epochs) > 0:
         return False
     return True
@@ -1623,14 +1616,13 @@ def _validate_pospace_recent_chain(
 
 def vars_to_bytes(
     constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProofV2
-) -> Tuple[Dict[str, Any], List[bytes], bytes, bytes]:
+) -> Tuple[Dict[str, Any], List[bytes], bytes]:
     constants_dict = recurse_jsonify(dataclasses.asdict(constants))  # type: ignore
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
-    wp_segment_bytes = bytes(SubEpochSegmentsV2(weight_proof.sub_epoch_segments))
     summary_bytes = []
     for summary in summaries:
         summary_bytes.append(bytes(summary))
-    return constants_dict, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
+    return constants_dict, summary_bytes, wp_recent_chain_bytes
 
 
 def bytes_to_vars(
@@ -1718,25 +1710,25 @@ async def validate_weight_proof_no_fork_point(
         return False, [], []
 
     rng = random.Random(salt)
-    # rng = random.Random(std_hash(salt + bytes(summaries[-2].get_hash())))
-    if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
-        log.error("failed weight proof sub epoch sample validation")
-        return False, [], []
-
-    constants_bytes, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-        constants, summaries, weight_proof
-    )
+    sampled_sub_epochs = preprocess_sub_epoch_sampling(rng, sub_epoch_weight_list)
+    constants_bytes, summary_bytes, wp_recent_chain_bytes = vars_to_bytes(constants, summaries, weight_proof)
 
     with ProcessPoolExecutor() as executor:
         recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
             executor, _validate_recent_blocks, constants_bytes, wp_recent_chain_bytes, summary_bytes
         )
         if not skip_segments:
-            if not _validate_sub_epoch_segments(
+            valid, sub_epochs = _validate_sub_epoch_segments(
                 constants_bytes, rng, weight_proof.sub_epoch_segments, summary_bytes, executor
-            ):
+            )
+            if not valid:
                 log.error("failed validating weight proof sub epoch segments")
                 return False, [], []
+
+    if not validate_sub_epoch_sampling(sampled_sub_epochs, sub_epochs):
+        log.error("failed weight proof sub epoch sample validation")
+        return False, [], []
+
     valid, records_bytes = await recent_blocks_validation_task
     if not valid:
         log.error("failed validating weight proof recent blocks")

@@ -152,7 +152,7 @@ class SubEpochChallengeSegmentV2(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-# this is used only for serialization to database
+# this is used only for serialization purposes using streamable
 class SubEpochSegmentsV2(Streamable):
     challenge_segments: List[SubEpochChallengeSegmentV2]
 
@@ -161,5 +161,5 @@ class SubEpochSegmentsV2(Streamable):
 @dataclass(frozen=True)
 class WeightProofV2(Streamable):
     sub_epochs: List[SubEpochData]
-    sub_epoch_segments: List[SubEpochChallengeSegmentV2]  # sampled sub epoch
+    sub_epoch_segments: List[bytes]  # list where each bytes item represents List[SubEpochChallengeSegmentV2]
     recent_chain_data: List[HeaderBlock]
