@@ -506,16 +506,17 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         wallet_type = WalletType(args["type"])
     summaries_response = await wallet_client.get_wallets(wallet_type)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    wallet_config = config.get("wallet", {})
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
 
     is_synced: bool = await wallet_client.get_synced()
     is_syncing: bool = await wallet_client.get_sync_status()
-    allow_unsynced_node: bool = config.get("allow_unsynced_full_node", False)
+    allow_unsynced_node: bool = wallet_config.get("allow_unsynced_full_node", False)
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
     if is_syncing:
         print("Sync status: Syncing...")
-    elif is_synced or allow_unsynced_node:
+    elif is_synced:
         print("Sync status: Synced")
     else:
         print("Sync status: Not synced")
