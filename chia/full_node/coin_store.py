@@ -208,7 +208,7 @@ class CoinStore:
                     conn.execute(
                         f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                         f"coin_parent, amount, timestamp FROM coin_record "
-                        f'WHERE coin_name in ({"?," * (len(names_db) - 1)}?) ',
+                        f'WHERE coin_name in ({",".join(["?"] * len(names_db))}) ',
                         names_db,
                     )
                 )
