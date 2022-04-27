@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build:
     name: Linux ARM64 installer on Python 3.8
-    runs-on: [ARM64]
+    runs-on: [Linux, ARM64]
     container: chianetwork/ubuntu-18.04-builder:latest
     timeout-minutes: 120
     strategy:

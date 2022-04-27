@@ -626,7 +626,7 @@ class TestWalletRpc:
 
             # Transfer DID
             addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-            res = await client.did_transfer_did(did_wallet_id_0, addr, 0)
+            res = await client.did_transfer_did(did_wallet_id_0, addr, 0, True)
             assert res["success"]
 
             await asyncio.sleep(1)

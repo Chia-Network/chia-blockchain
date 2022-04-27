@@ -322,8 +322,13 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_recovery_spend", request)
         return response
 
-    async def did_transfer_did(self, wallet_id, address, fee) -> Dict:
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "inner_address": address, "fee": fee}
+    async def did_transfer_did(self, wallet_id, address, fee, with_recovery) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "inner_address": address,
+            "fee": fee,
+            "with_recovery_info": with_recovery,
+        }
         response = await self.fetch("did_transfer_did", request)
         return response
 
