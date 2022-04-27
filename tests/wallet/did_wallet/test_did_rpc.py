@@ -46,7 +46,7 @@ class TestDIDRPC:
         did_wallet_id = val["wallet_id"]
         val = await api_0.did_get_wallet_name({"wallet_id": did_wallet_id})
         assert val["success"]
-        assert val["name"] == "DID Wallet"
+        assert val["name"] == "Profile 1"
         new_wallet_name = "test name"
         val = await api_0.did_set_wallet_name({"wallet_id": did_wallet_id, "name": new_wallet_name})
         assert val["success"]
