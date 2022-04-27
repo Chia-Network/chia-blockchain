@@ -2067,3 +2067,22 @@ def create_block_tools(
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())
 
     return bt
+
+
+def make_unfinished_block(block: FullBlock, constants: ConsensusConstants) -> UnfinishedBlock:
+    if is_overflow_block(constants, block.reward_chain_block.signage_point_index):
+        finished_ss = block.finished_sub_slots[:-1]
+    else:
+        finished_ss = block.finished_sub_slots
+
+    return UnfinishedBlock(
+        finished_ss,
+        block.reward_chain_block.get_unfinished(),
+        block.challenge_chain_sp_proof,
+        block.reward_chain_sp_proof,
+        block.foliage,
+        block.foliage_transaction_block,
+        block.transactions_info,
+        block.transactions_generator,
+        block.transactions_generator_ref_list,
+    )
