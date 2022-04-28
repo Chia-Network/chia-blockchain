@@ -10,40 +10,50 @@ def get_hints_and_subscription_coin_ids(
     coin_subscriptions: Dict[bytes32, Set[bytes32]],
     ph_subscriptions: Dict[bytes32, Set[bytes32]],
 ) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
-    # Adds hints to the database based on recent changes, and compiles a list of changes to send to wallets
+    # Precondition: all hints passed in are max 32 bytes long
+    # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
     hint: bytes
     hints_to_add: List[Tuple[bytes32, bytes]] = []
 
     # Goes through additions and removals for each block and flattens to a map and a set
-    potential_ph_to_coin_id: Dict[bytes32, bytes32] = {}
+    potential_ph_to_coin_id: Dict[bytes32, List[bytes32]] = {}
     potential_coin_ids: Set[bytes32] = set()
+
+    def add_to_potential_ph(key: bytes32, value: bytes32) -> None:
+        if key not in potential_ph_to_coin_id:
+            potential_ph_to_coin_id[key] = []
+        potential_ph_to_coin_id[key].append(value)
+
     for npc_result in state_change_summary.new_npc_results:
         removals, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
 
         # Record all coin_ids that we are interested in, that had changes
         for removal_coin_id, removal_ph in removals:
             potential_coin_ids.add(removal_coin_id)
-            potential_ph_to_coin_id[removal_ph] = removal_coin_id
+            add_to_potential_ph(removal_ph, removal_coin_id)
 
         for addition_coin, hint in additions_with_h:
             addition_coin_name = addition_coin.name()
             potential_coin_ids.add(addition_coin_name)
-            potential_ph_to_coin_id[addition_coin.puzzle_hash] = addition_coin_name
+            add_to_potential_ph(addition_coin.puzzle_hash, addition_coin_name)
             if len(hint) == 32:
-                potential_ph_to_coin_id[bytes32(hint)] = addition_coin_name
+                add_to_potential_ph(bytes32(hint), addition_coin_name)
 
             if len(hint) > 0:
+                assert len(hint) <= 32
                 hints_to_add.append((addition_coin_name, hint))
 
     # Goes through all new reward coins
     for reward_coin in state_change_summary.new_rewards:
         potential_coin_ids.add(reward_coin.name())
-        potential_ph_to_coin_id[reward_coin.puzzle_hash] = reward_coin.name()
+        add_to_potential_ph(reward_coin.puzzle_hash, reward_coin.name())
 
     # Filters out any coin ID that connected wallets are not interested in
     lookup_coin_ids: List[bytes32] = [coin_id for coin_id in potential_coin_ids if coin_id in coin_subscriptions]
-    lookup_coin_ids.extend([coin_id for ph, coin_id in potential_ph_to_coin_id.items() if ph in ph_subscriptions])
+    for ph, coin_ids in potential_ph_to_coin_id.items():
+        if ph in ph_subscriptions:
+            lookup_coin_ids.extend(coin_ids)
 
     return hints_to_add, lookup_coin_ids

@@ -1057,7 +1057,6 @@ class FullNode:
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
-        self.log.warning(f"Updating wallets... {len(changes_for_peer)}")
         for peer, changes in changes_for_peer.items():
             self.log.warning(f"Updating with {len(changes)}")
             if peer not in self.server.all_connections:
