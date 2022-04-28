@@ -11,9 +11,8 @@ from chia.util.paginator import InvalidPageSizeError, InvalidPageSizeLimit, Page
     [([], 1, 1), ([1], 1, 2), ([1, 2], 2, 2), ([], 10, 100), ([1, 2, 10], 1000, 1000)],
 )
 def test_constructor_valid_inputs(source: List[int], page_size: int, page_size_limit: int) -> None:
-    paginator: Paginator = Paginator(source, page_size, page_size_limit)
+    paginator: Paginator = Paginator.create(source, page_size, page_size_limit)
     assert paginator.page_size() == page_size
-    assert paginator.page_size_limit() == page_size_limit
     assert paginator.page_count() == 1
     assert paginator.get_page(0) == source
 
@@ -30,17 +29,13 @@ def test_constructor_valid_inputs(source: List[int], page_size: int, page_size_l
 )
 def test_constructor_invalid_inputs(page_size: int, page_size_limit: int, exception: Type[Exception]) -> None:
     with pytest.raises(exception):
-        Paginator([], page_size, page_size_limit)
+        Paginator.create([], page_size, page_size_limit)
 
 
 def test_page_count() -> None:
     for page_size in range(1, 10):
         for i in range(0, 10):
-            assert Paginator(range(0, i), page_size).page_count() == max(1, ceil(i / page_size))
-
-
-def test_empty_source() -> None:
-    assert Paginator([], 5).get_page(0) == []
+            assert Paginator.create(range(0, i), page_size).page_count() == max(1, ceil(i / page_size))
 
 
 @pytest.mark.parametrize(
@@ -66,10 +61,10 @@ def test_empty_source() -> None:
     ],
 )
 def test_get_page_valid(length: int, page: int, page_size: int, expected_data: List[int]) -> None:
-    assert Paginator(list(range(0, length)), page_size).get_page(page) == expected_data
+    assert Paginator.create(list(range(0, length)), page_size).get_page(page) == expected_data
 
 
 @pytest.mark.parametrize("page", [-1000, -10, -1, 5, 10, 1000])
 def test_get_page_invalid(page: int) -> None:
     with pytest.raises(PageOutOfBoundsError):
-        Paginator(range(0, 17), 5).get_page(page)
+        Paginator.create(range(0, 17), 5).get_page(page)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 from math import ceil
 from typing import Sequence
@@ -22,19 +24,17 @@ class PageOutOfBoundsError(Exception):
 class Paginator:
     _source: Sequence[object]
     _page_size: int
-    _page_size_limit: int = 100
 
-    def __post_init__(self) -> None:
-        if self._page_size_limit < 1:
-            raise InvalidPageSizeLimit(self._page_size_limit)
-        if self._page_size > self._page_size_limit:
-            raise InvalidPageSizeError(self._page_size, self._page_size_limit)
+    @classmethod
+    def create(cls, source: Sequence[object], page_size: int, page_size_limit: int = 100) -> Paginator:
+        if page_size_limit < 1:
+            raise InvalidPageSizeLimit(page_size_limit)
+        if page_size > page_size_limit:
+            raise InvalidPageSizeError(page_size, page_size_limit)
+        return cls(source, page_size)
 
     def page_size(self) -> int:
         return self._page_size
-
-    def page_size_limit(self) -> int:
-        return self._page_size_limit
 
     def page_count(self) -> int:
         return max(1, ceil(len(self._source) / self._page_size))
