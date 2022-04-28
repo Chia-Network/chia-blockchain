@@ -64,6 +64,40 @@ def test_new_nft_ownership_layer() -> None:
     assert res.first().first().as_int() == 73
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER.get_tree_hash(), destination).get_tree_hash()
 
 
+def test_update_metadata() -> None:
+    pubkey = int_to_public_key(1)
+    innerpuz = puzzle_for_pk(pubkey)
+    my_amount = 1
+    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
+    condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
+    condition_list.append([-24, NFT_METADATA_UPDATER, "https://www.chia.net/img/branding/chia-logo-2.svg"])
+    metadata = [
+        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+    ]
+    solution = Program.to(
+        [
+            NFT_STATE_LAYER_MOD_HASH,
+            metadata,
+            NFT_METADATA_UPDATER.get_tree_hash(),
+            innerpuz,
+            # below here is the solution
+            solution_for_conditions(condition_list),
+            my_amount,
+            0,
+        ]
+    )
+
+    metadata = [
+        ("u", ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+    ]
+
+    cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)
+    assert res.first().first().as_int() == 73
+    assert res.first().rest().first().as_int() == 1
+    assert res.rest().rest().first().first().as_int() == 51
     assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER.get_tree_hash(), destination).get_tree_hash()
