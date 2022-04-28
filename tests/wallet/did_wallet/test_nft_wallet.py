@@ -191,6 +191,7 @@ class TestNFTWallet:
         full_sb = await nft_wallet_1.receive_nft(sb)
         assert full_sb is not None
         # await nft_wallet_0.receive_nft(sb)
+
         # from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
         # debug_spend_bundle(full_sb)
         # breakpoint()

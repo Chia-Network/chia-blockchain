@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -78,7 +78,7 @@ jobs:
     - name: Test wallet-rl_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/rl_wallet/test_*.py --durations=10  -n 0 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py
 
     - name: Process coverage data
       run: |
@@ -90,7 +90,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*
