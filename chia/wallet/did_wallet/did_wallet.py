@@ -796,7 +796,7 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    # Pushes the a SpendBundle to create a message coin on the blockchain
+    # Pushes a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
     async def create_attestment(
         self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element

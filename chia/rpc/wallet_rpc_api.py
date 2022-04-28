@@ -30,7 +30,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle, get_nft_info_from_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -124,6 +124,7 @@ class WalletRpcApi:
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_current_nfts": self.nft_get_current_nfts,
+            "/nft_get_nft_info": self.nft_get_nft_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_receive_nft": self.nft_receive_nft,
             # RL wallet
@@ -1321,6 +1322,15 @@ class WalletRpcApi:
             uri = get_uri_list_from_puzzle(nft.full_puzzle)
             nft_uri_pairs.append((nft, uri))
         return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
+
+    async def nft_get_nft_info(self, request):
+        wallet_id = int(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        nfts = nft_wallet.get_current_nfts()
+        nft_info_list = []
+        for nft in nfts:
+            nft_info_list.append(get_nft_info_from_puzzle(nft.full_puzzle, nft.coin))
+        return {"wallet_id": wallet_id, "success": True, "nft_info_list": nft_info_list}
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None

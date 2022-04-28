@@ -1,8 +1,10 @@
 from typing import Iterator, List, Optional, Tuple
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -205,6 +207,53 @@ def get_percentage_from_puzzle(puzzle: Program) -> Optional[uint64]:
     except Exception:
         return None
     return None
+
+
+def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
+    """
+    Extract NFT info from a full puzzle
+    :param puzzle: NFT full puzzle
+    :param nft_coin: NFT coin
+    :return: NFTInfo
+    """
+    # TODO Update this method after the NFT code finalized
+    curried_args = match_nft_puzzle(puzzle)[1]
+    (
+        _,
+        singleton_struct,
+        current_owner_did,
+        nft_transfer_program_hash,
+        transfer_program_curry_params,
+        metadata,
+    ) = curried_args
+    (
+        royalty_address,
+        trade_price_percentage,
+        settlement_mod_hash,
+        cat_mod_hash,
+    ) = transfer_program_curry_params.as_iter()
+    for kv_pair in metadata.as_iter():
+        if kv_pair.first().as_atom() == b"u":
+            data_uris = []
+            for uri in kv_pair.rest().as_python():
+                data_uris.append(str(uri, "utf-8"))
+        if kv_pair.first().as_atom() == b"h":
+            data_hash = kv_pair.rest().as_python().hex()
+    nft_info = NFTInfo(
+        singleton_struct.rest().first().as_python().hex(),
+        nft_coin.name().hex(),
+        current_owner_did.as_python(),
+        trade_price_percentage.as_int(),
+        data_uris,
+        data_hash,
+        [],
+        "",
+        [],
+        "",
+        "1.0.0",
+        uint64(1),
+    )
+    return nft_info
 
 
 def get_metadata_from_puzzle(puzzle: Program) -> Optional[Program]:
