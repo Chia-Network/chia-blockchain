@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plural, Trans } from '@lingui/macro';
 import styled from 'styled-components';
+import type { NFT } from '@chia/api';
 import {
   Button,
   ButtonLoading,
@@ -27,7 +28,6 @@ import {
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useTransferNFTMutation } from '@chia/api-react';
-import NFT from '../../types/NFT';
 
 /* ========================================================================== */
 /*                                   Styles                                   */

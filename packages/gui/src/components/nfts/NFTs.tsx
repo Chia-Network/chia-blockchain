@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { randomBytes } from 'crypto';
-import { Flex } from '@chia/core';
+import type { NFT } from '@chia/api';
+import { Flex, toBech32m } from '@chia/core';
 import { Routes, Route } from 'react-router-dom';
 import {
   Box,
@@ -14,7 +15,6 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import NFT from '../../types/NFT';
 import NFTSelection from '../../types/NFTSelection';
 import NFTContextualActions from './NFTContextualActions';
 import NFTGallery from './gallery/NFTGallery';
@@ -61,7 +61,7 @@ function NFTMockGalleryView() {
   const rows: NFT[] = useMemo(() => {
     return [...Array(5)].map((_, i) => {
       const walletId = 5;
-      const id = randomBytes(32).toString('hex');
+      const id = toBech32m(randomBytes(32).toString('hex'), 'nft');
       const name = getFakeNFTName(id);
       const description = `NFT ${i} description`;
 

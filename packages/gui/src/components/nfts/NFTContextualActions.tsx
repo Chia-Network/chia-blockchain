@@ -1,6 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { DropdownActions, Flex, useOpenDialog } from '@chia/core';
+import type { NFT } from '@chia/api';
+import {
+  DropdownActions,
+  type DropdownActionsChildProps,
+  Flex,
+  useOpenDialog,
+} from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
 import {
   Dialog,
@@ -11,9 +17,8 @@ import {
   Typography,
 } from '@mui/material';
 import { ArrowForward as TransferIcon } from '@mui/icons-material';
-import NFTCreateOfferDemo from './NFTCreateOfferDemo';
+import NFTCreateOfferDemoDialog from './NFTCreateOfferDemo';
 import NFTTransferDemo from './NFTTransferDemo';
-import NFT from '../../types/NFT';
 import NFTSelection from '../../types/NFTSelection';
 
 /* ========================================================================== */
@@ -45,27 +50,15 @@ function NFTCreateOfferContextualAction(
   const disabled = (selection?.items.length ?? 0) !== 1;
 
   function handleCreateOffer() {
-    const open = true;
+    if (!selectedNft) {
+      throw new Error('No NFT selected');
+    }
 
     openDialog(
-      <Dialog
-        open={open}
-        aria-labelledby="nft-create-offer-dialog-title"
-        aria-describedby="nft-create-offer-dialog-description"
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle id="nft-create-offer-dialog-title">
-          <Typography variant="h6">
-            <Trans>NFT Create Offer Demo</Trans>
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Flex justifyContent="center">
-            <NFTCreateOfferDemo nft={selectedNft} />
-          </Flex>
-        </DialogContent>
-      </Dialog>,
+      <NFTCreateOfferDemoDialog
+        nft={selectedNft}
+        referrerPath={location.hash.split('#').slice(-1)[0]}
+      />,
     );
   }
 
@@ -154,21 +147,23 @@ type NFTContextualActionsProps = {
 export default function NFTContextualActions(props: NFTContextualActionsProps) {
   const { selection, availableActions } = props;
 
-  const actionComponents = {
-    [NFTContextualActionTypes.CreateOffer]: NFTCreateOfferContextualAction,
-    [NFTContextualActionTypes.Transfer]: NFTTransferContextualAction,
-  };
+  const actions = useMemo(() => {
+    const actionComponents = {
+      [NFTContextualActionTypes.CreateOffer]: NFTCreateOfferContextualAction,
+      [NFTContextualActionTypes.Transfer]: NFTTransferContextualAction,
+    };
 
-  const actions = Object.keys(NFTContextualActionTypes)
-    .map(Number)
-    .filter(Number.isInteger)
-    .filter((key) => actionComponents.hasOwnProperty(key))
-    .filter((key) => availableActions & key)
-    .map((key) => actionComponents[key]);
+    return Object.keys(NFTContextualActionTypes)
+      .map(Number)
+      .filter(Number.isInteger)
+      .filter((key) => actionComponents.hasOwnProperty(key))
+      .filter((key) => availableActions & key)
+      .map((key) => actionComponents[key]);
+  }, [availableActions]);
 
   return (
     <DropdownActions label={<Trans>Actions</Trans>} variant="outlined">
-      {({ onClose }) => (
+      {({ onClose }: DropdownActionsChildProps) => (
         <>
           {actions.map((Action) => (
             <Action onClose={onClose} selection={selection} />

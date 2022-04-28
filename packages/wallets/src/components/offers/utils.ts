@@ -1,7 +1,8 @@
 import { WalletType } from '@chia/api';
-import { type ChipProps } from '@mui/material';
+import type { ChipProps } from '@mui/material';
 import type { OfferSummaryRecord } from '@chia/api';
 import {
+  fromBech32m,
   mojoToChiaLocaleString,
   mojoToCATLocaleString,
 } from '@chia/core';
@@ -13,26 +14,41 @@ let filenameCounter = 0;
 export function summaryStringsForOffer(
   summary: OfferSummaryRecord,
   lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
-  builder: (filename: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]) => string): [makerString: string, takerString: string] {
-    const makerEntries: [string, string][] = Object.entries(summary.offered);
-    const takerEntries: [string, string][] = Object.entries(summary.requested);
-    const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = makerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
-    const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = takerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+  builder: (
+    filename: string,
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
+  ) => string
+): [makerString: string, takerString: string] {
+  const makerEntries: [string, string][] = Object.entries(summary.offered);
+  const takerEntries: [string, string][] = Object.entries(summary.requested);
+  const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] =
+    makerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+  const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] =
+    takerEntries.map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
 
-    const makerString = makerAssetInfoAndAmounts.reduce(builder, '');
-    const takerString = takerAssetInfoAndAmounts.reduce(builder, '');
+  const makerString = makerAssetInfoAndAmounts.reduce(builder, '');
+  const takerString = takerAssetInfoAndAmounts.reduce(builder, '');
 
-    return [makerString, takerString];
+  return [makerString, takerString];
 }
 
-export function suggestedFilenameForOffer(summary: OfferSummaryRecord, lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): string {
+export function suggestedFilenameForOffer(
+  summary: OfferSummaryRecord,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined
+): string {
   if (!summary) {
-    const filename = filenameCounter === 0 ? 'Untitled Offer.offer' : `Untitled Offer ${filenameCounter}.offer`;
+    const filename =
+      filenameCounter === 0
+        ? 'Untitled Offer.offer'
+        : `Untitled Offer ${filenameCounter}.offer`;
     filenameCounter++;
     return filename;
   }
 
-  function filenameBuilder(filename: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]): string {
+  function filenameBuilder(
+    filename: string,
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
+  ): string {
     const [assetInfo, amount] = args;
 
     if (filename) {
@@ -40,23 +56,35 @@ export function suggestedFilenameForOffer(summary: OfferSummaryRecord, lookupByA
     }
 
     if (assetInfo && amount !== undefined) {
-      filename += formatAmountForWalletType(amount, assetInfo.walletType) + assetInfo.displayName.replace(/\s/g, '').substring(0, 9);
+      filename +=
+        formatAmountForWalletType(amount, assetInfo.walletType) +
+        assetInfo.displayName.replace(/\s/g, '').substring(0, 9);
     }
 
     return filename;
   }
 
-  const [makerString, takerString] = summaryStringsForOffer(summary, lookupByAssetId, filenameBuilder);
+  const [makerString, takerString] = summaryStringsForOffer(
+    summary,
+    lookupByAssetId,
+    filenameBuilder
+  );
 
   return `${makerString}_x_${takerString}.offer`;
 }
 
-export function shortSummaryForOffer(summary: OfferSummaryRecord, lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): string {
+export function shortSummaryForOffer(
+  summary: OfferSummaryRecord,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined
+): string {
   if (!summary) {
     return '';
   }
 
-  function summaryBuilder(shortSummary: string, args: [assetInfo: AssetIdMapEntry | undefined, amount: string]): string {
+  function summaryBuilder(
+    shortSummary: string,
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
+  ): string {
     const [assetInfo, amount] = args;
 
     if (shortSummary) {
@@ -64,13 +92,20 @@ export function shortSummaryForOffer(summary: OfferSummaryRecord, lookupByAssetI
     }
 
     if (assetInfo && amount !== undefined) {
-      shortSummary += formatAmountForWalletType(amount, assetInfo.walletType) + ' ' + assetInfo.displayName.replace(/\s/g, '');
+      shortSummary +=
+        formatAmountForWalletType(amount, assetInfo.walletType) +
+        ' ' +
+        assetInfo.displayName.replace(/\s/g, '');
     }
 
     return shortSummary;
   }
 
-  const [makerString, takerString] = summaryStringsForOffer(summary, lookupByAssetId, summaryBuilder);
+  const [makerString, takerString] = summaryStringsForOffer(
+    summary,
+    lookupByAssetId,
+    summaryBuilder
+  );
 
   return `Offering: [${makerString}], Requesting: [${takerString}]`;
 }
@@ -113,7 +148,11 @@ export function colorForOfferState(state: OfferState): ChipProps['color'] {
   }
 }
 
-export function formatAmountForWalletType(amount: string | number, walletType: WalletType, locale?: string): string {
+export function formatAmountForWalletType(
+  amount: string | number,
+  walletType: WalletType,
+  locale?: string
+): string {
   if (walletType === WalletType.STANDARD_WALLET) {
     return mojoToChiaLocaleString(amount, locale);
   } else if (walletType === WalletType.CAT) {
@@ -121,4 +160,32 @@ export function formatAmountForWalletType(amount: string | number, walletType: W
   }
 
   return amount.toString();
+}
+
+export function isValidNFTId(nftId: string): boolean {
+  if (nftId.length !== 62) {
+    return false;
+  }
+  try {
+    fromBech32m(nftId);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export function launcherIdFromNFTId(nftId: string): string | undefined {
+  if (nftId.length !== 62) {
+    return undefined;
+  }
+
+  let decoded: string | undefined = undefined;
+
+  try {
+    decoded = fromBech32m(nftId);
+  } catch (e) {
+    return undefined;
+  }
+
+  return decoded;
 }

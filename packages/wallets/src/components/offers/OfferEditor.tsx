@@ -11,68 +11,83 @@ import {
   ButtonLoading,
   Flex,
   Form,
+  useOpenDialog,
   useShowError,
-  useShowSaveDialog,
 } from '@chia/core';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
-import {
-  Grid,
-} from '@mui/material';
+import { Grid } from '@mui/material';
 import type OfferEditorRowData from './OfferEditorRowData';
-import { suggestedFilenameForOffer } from './utils';
-import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
 import OfferEditorConditionsPanel from './OfferEditorConditionsPanel';
+import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import { chiaToMojo, catToMojo } from '@chia/core';
-import fs from 'fs';
 
+/* ========================================================================== */
+/*                                Offer Editor                                */
+/* ========================================================================== */
 
 type FormData = {
   selectedTab: number;
   makerRows: OfferEditorRowData[];
   takerRows: OfferEditorRowData[];
-  fee: number;
+  fee: string;
 };
 
 type OfferEditorProps = {
-  onOfferCreated: (obj: { offerRecord: any, offerData: any }) => void;
+  onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 function OfferEditor(props: OfferEditorProps) {
   const { onOfferCreated } = props;
-  const showSaveDialog = useShowSaveDialog();
   const navigate = useNavigate();
   const defaultValues: FormData = {
     selectedTab: 0,
-    makerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: new BigNumber(0) }],
-    takerRows: [{ amount: '', assetWalletId: 0, walletType: WalletType.STANDARD_WALLET, spendableBalance: new BigNumber(0) }],
+    makerRows: [
+      {
+        amount: '',
+        assetWalletId: 0,
+        walletType: WalletType.STANDARD_WALLET,
+        spendableBalance: new BigNumber(0),
+      },
+    ],
+    takerRows: [
+      {
+        amount: '',
+        assetWalletId: 0,
+        walletType: WalletType.STANDARD_WALLET,
+        spendableBalance: new BigNumber(0),
+      },
+    ],
+    fee: '',
   };
   const methods = useForm<FormData>({
     defaultValues,
   });
+  const openDialog = useOpenDialog();
   const errorDialog = useShowError();
-  const { lookupByAssetId } = useAssetIdName();
-  const [suppressShareOnCreate] = useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
+  const [suppressShareOnCreate] = useLocalStorage<boolean>(
+    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE
+  );
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [processing, setIsProcessing] = useState<boolean>(false);
 
-  function updateOffer(offer: { [key: string]: BigNumber }, row: OfferEditorRowData, debit: boolean) {
+  function updateOffer(
+    offer: { [key: string]: BigNumber },
+    row: OfferEditorRowData,
+    debit: boolean
+  ) {
     const { amount, assetWalletId, walletType } = row;
     if (assetWalletId > 0) {
       let mojoAmount = new BigNumber(0);
       if (walletType === WalletType.STANDARD_WALLET) {
         mojoAmount = chiaToMojo(amount);
-      }
-      else if (walletType === WalletType.CAT) {
+      } else if (walletType === WalletType.CAT) {
         mojoAmount = catToMojo(amount);
       }
 
-      offer[assetWalletId] = debit
-        ? mojoAmount.negated()
-        : mojoAmount;
-    }
-    else {
+      offer[assetWalletId] = debit ? mojoAmount.negated() : mojoAmount;
+    } else {
       console.log('missing asset wallet id');
     }
   }
@@ -88,11 +103,11 @@ function OfferEditor(props: OfferEditorProps) {
       updateOffer(offer, row, true);
       if (row.assetWalletId === 0) {
         missingAssetSelection = true;
-      }
-      else if (!row.amount) {
+      } else if (!row.amount) {
         missingAmount = true;
-      }
-      else if (new BigNumber(row.amount).isGreaterThan(row.spendableBalance)) {
+      } else if (
+        new BigNumber(row.amount).isGreaterThan(row.spendableBalance)
+      ) {
         amountExceedsSpendableBalance = true;
       }
     });
@@ -103,62 +118,57 @@ function OfferEditor(props: OfferEditorProps) {
       }
     });
 
-    if (missingAssetSelection || missingAmount || amountExceedsSpendableBalance) {
+    if (
+      missingAssetSelection ||
+      missingAmount ||
+      amountExceedsSpendableBalance
+    ) {
       if (missingAssetSelection) {
         errorDialog(new Error(t`Please select an asset for each row`));
-      }
-      else if (missingAmount) {
+      } else if (missingAmount) {
         errorDialog(new Error(t`Please enter an amount for each row`));
-      }
-      else if (amountExceedsSpendableBalance) {
+      } else if (amountExceedsSpendableBalance) {
         errorDialog(new Error(t`Amount exceeds spendable balance`));
       }
 
       return;
     }
 
+    const confirmedCreation = await openDialog(
+      <OfferEditorConfirmationDialog />
+    );
+
+    if (!confirmedCreation) {
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // preflight offer creation to check validity
-      const response = await createOfferForIds({ walletIdsAndAmounts: offer, feeInMojos, validateOnly: true }).unwrap();
-
+      const response = await createOfferForIds({
+        walletIdsAndAmounts: offer,
+        feeInMojos,
+        validateOnly: false,
+      }).unwrap();
       if (response.success === false) {
-        const error = response.error || new Error("Encountered an unknown error while validating offer");
+        const error =
+          response.error ||
+          new Error('Encountered an unknown error while creating offer');
         errorDialog(error);
-      }
-      else {
-        const dialogOptions = { defaultPath: suggestedFilenameForOffer(response.tradeRecord.summary, lookupByAssetId) };
+      } else {
+        const { offer: offerData, tradeRecord: offerRecord } = response;
 
-        const result = await showSaveDialog(dialogOptions);
-        console.log('result', result, dialogOptions);
-        const { filePath, canceled } = result;
+        try {
+          navigate(-1);
 
-        if (!canceled && filePath) {
-          const response = await createOfferForIds({ walletIdsAndAmounts: offer, feeInMojos, validateOnly: false }).unwrap();
-          if (response.success === false) {
-            const error = response.error || new Error("Encountered an unknown error while creating offer");
-            errorDialog(error);
+          if (!suppressShareOnCreate) {
+            onOfferCreated({ offerRecord, offerData });
           }
-          else {
-            const { offer: offerData, tradeRecord: offerRecord } = response;
-
-            try {
-              fs.writeFileSync(filePath, offerData);
-              navigate(-1);
-
-              if (!suppressShareOnCreate) {
-                onOfferCreated({ offerRecord, offerData });
-              }
-            }
-            catch (err) {
-              console.error(err);
-            }
-          }
+        } catch (err) {
+          console.error(err);
         }
       }
-    }
-    catch (e) {
+    } catch (e) {
       let error = e as Error;
 
       if (error.message.startsWith('insufficient funds')) {
@@ -168,8 +178,7 @@ function OfferEditor(props: OfferEditorProps) {
         `);
       }
       errorDialog(error);
-    }
-    finally {
+    } finally {
       setIsProcessing(false);
     }
   }
@@ -199,7 +208,7 @@ function OfferEditor(props: OfferEditorProps) {
             type="submit"
             loading={processing}
           >
-            <Trans>Save Offer</Trans>
+            <Trans>Create Offer</Trans>
           </ButtonLoading>
         </Flex>
       </Flex>
@@ -212,7 +221,7 @@ OfferEditor.defaultProps = {
 };
 
 type CreateOfferEditorProps = {
-  onOfferCreated: (obj: { offerRecord: any, offerData: any }) => void;
+  onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 export function CreateOfferEditor(props: CreateOfferEditorProps) {
@@ -226,7 +235,7 @@ export function CreateOfferEditor(props: CreateOfferEditorProps) {
             <Trans>Create an Offer</Trans>
           </Back>
         </Flex>
-        <OfferEditor onOfferCreated={onOfferCreated}/>
+        <OfferEditor onOfferCreated={onOfferCreated} />
       </Flex>
     </Grid>
   );

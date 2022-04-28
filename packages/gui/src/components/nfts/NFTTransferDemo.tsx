@@ -1,10 +1,10 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import type { NFT } from '@chia/api';
 import { AlertDialog, Flex, Form, TextField, useOpenDialog } from '@chia/core';
 import { Button } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
-import NFT from '../../types/NFT';
 
 type NFTTransferDemoFormData = {
   walletId: number;
