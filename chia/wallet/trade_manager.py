@@ -12,7 +12,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer, NotarizedPayment
@@ -26,6 +26,38 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 class TradeManager:
+    """
+    This class is a driver for creating and accepting settlement_payments.clvm style offers.
+
+    By default, standard XCH is supported but to support other types of assets you must implement certain functions on
+    the asset's wallet as well as create a driver for its puzzle(s).  Here is a guide to integrating a new types of
+    assets with this trade manager:
+
+    Puzzle Drivers:
+      - See chia/wallet/outer_puzzles.py for a full description of how to build these
+      - The `solve` method must be able to be solved by a Solver that looks like this:
+            Solver(
+                {
+                    "coin": bytes
+                    "parent_spend": bytes
+                }
+            )
+
+    Wallet:
+      - Segments in this code that call general wallet methods are highlighted by comments: # ATTENTION: new wallets
+      - To be able to be traded, a wallet must implement these methods on itself:
+        - generate_signed_transaction(...) -> List[TransactionRecord]  (See cat_wallet.py for full API)
+        - convert_puzzle_hash(puzzle_hash: bytes32) -> bytes32  # Converts a puzzlehash from outer to inner puzzle
+        - get_puzzle_info(asset_id: bytes32) -> PuzzleInfo
+        - get_coins_to_offer(asset_id: bytes32, amount: uint64) -> Set[Coin]
+      - If you would like assets from your wallet to be referenced with just a wallet ID, you must also implement:
+        - get_asset_id() -> bytes32
+      - Finally, you must make sure that your wallet will respond appropriately when these WSM methods are called:
+        - get_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
+        - create_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
+        - get_wallet_for_asset_id(asset_id: bytes32) -> <Your wallet>
+    """
+
     wallet_state_manager: Any
     log: logging.Logger
     trade_store: TradeStore
@@ -188,6 +220,7 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a CAT but it has to for now
+            # ATTENTION: new_wallets
             if wallet.type() == WalletType.CAT:
                 txs = await wallet.generate_signed_transaction(
                     [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
@@ -246,9 +279,13 @@ class TradeManager:
         self.wallet_state_manager.state_changed("offer_added")
 
     async def create_offer_for_ids(
-        self, offer: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0), validate_only: bool = False
+        self,
+        offer: Dict[Union[int, bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        fee: uint64 = uint64(0),
+        validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer, fee=fee)
+        success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
 
@@ -273,7 +310,10 @@ class TradeManager:
         return success, trade_offer, error
 
     async def _create_offer_for_ids(
-        self, offer_dict: Dict[Union[int, bytes32], int], fee: uint64 = uint64(0)
+        self,
+        offer_dict: Dict[Union[int, bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -288,41 +328,67 @@ class TradeManager:
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
                         if wallet.type() == WalletType.STANDARD_WALLET:
-                            key: Optional[bytes32] = None
+                            asset_id: Optional[bytes32] = None
                             memos: List[bytes] = []
-                        elif wallet.type() == WalletType.CAT:
-                            key = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
                             memos = [p2_ph]
                         else:
-                            raise ValueError(f"Offers are not implemented for {wallet.type()}")
+                            raise ValueError(
+                                f"Cannot request assets from wallet id {wallet.id()} without more information"
+                            )
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
-                        key = id
+                        asset_id = id
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
                         memos = [p2_ph]
-                    requested_payments[key] = [Payment(p2_ph, uint64(amount), memos)]
+                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
-                    assert isinstance(id, int)
-                    wallet_id = uint32(id)
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
-                    balance = await wallet.get_confirmed_balance()
-                    if balance < abs(amount):
-                        raise Exception(f"insufficient funds in wallet {wallet_id}")
-                    coins_to_offer[wallet_id] = await wallet.select_coins(uint64(abs(amount)))
+                    if isinstance(id, int):
+                        wallet_id = uint32(id)
+                        wallet = self.wallet_state_manager.wallets[wallet_id]
+                        if wallet.type() == WalletType.STANDARD_WALLET:
+                            asset_id = None
+                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                        else:
+                            raise ValueError(
+                                f"Cannot offer assets from wallet id {wallet.id()} without more information"
+                            )
+                    else:
+                        asset_id = id
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                        wallet_id = wallet.id()
+                    if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
+                        raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+                    coins_to_offer[wallet_id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
+
+            if asset_id is not None and wallet is not None:
+                if callable(getattr(wallet, "get_puzzle_info", None)):
+                    puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
+                    if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                        raise ValueError(
+                            f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
+                        )
+                    else:
+                        driver_dict[asset_id] = puzzle_driver
+                else:
+                    raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
-            announcements_to_assert = Offer.calculate_announcements(notarized_payments)
+            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
-
+                # ATTENTION: new_wallets
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[int(wallet_id)])],
@@ -346,7 +412,7 @@ class TradeManager:
 
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
-            offer = Offer(notarized_payments, total_spend_bundle)
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 
         except Exception as e:
@@ -358,13 +424,12 @@ class TradeManager:
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
-            wallet: Wallet = wsm.main_wallet
             if key is None:
                 continue
-            exists: Optional[Wallet] = await wsm.get_wallet_for_asset_id(key.hex())
+            # ATTENTION: new_wallets
+            exists: Optional[Wallet] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
-                self.log.info(f"Creating wallet for asset ID: {key}")
-                await CATWallet.create_wallet_for_cat(wsm, wallet, key.hex())
+                await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
@@ -398,7 +463,7 @@ class TradeManager:
                 wallet_id, _ = wallet_info
                 if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_id]
-                    to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)
+                    to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
                             confirmed_at_height=uint32(0),
@@ -472,9 +537,10 @@ class TradeManager:
                 wallet = self.wallet_state_manager.main_wallet
                 key: Union[bytes32, int] = int(wallet.id())
             else:
+                # ATTENTION: new wallets
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
-                    return False, None, f"Do not have a CAT of asset ID: {asset_id} to fulfill offer"
+                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
                 elif wallet is None:
                     key = asset_id
                 else:
@@ -486,7 +552,7 @@ class TradeManager:
         if not valid:
             return False, None, "This offer is no longer valid"
 
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, fee=fee)
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
         if not success or take_offer is None:
             return False, None, error
 

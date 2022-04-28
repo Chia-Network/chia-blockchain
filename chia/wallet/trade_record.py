@@ -33,10 +33,11 @@ class TradeRecord(Streamable):
         formatted["status"] = TradeStatus(self.status).name
         offer_to_summarize: bytes = self.offer if self.taken_offer is None else self.taken_offer
         offer = Offer.from_bytes(offer_to_summarize)
-        offered, requested = offer.summary()
+        offered, requested, infos = offer.summary()
         formatted["summary"] = {
             "offered": offered,
             "requested": requested,
+            "infos": infos,
             "fees": offer.bundle.fees(),
         }
         formatted["pending"] = offer.get_pending_amounts()

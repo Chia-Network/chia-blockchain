@@ -5,7 +5,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 
 import logging
 from operator import attrgetter
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import pytest
 from blspy import G2Element
@@ -502,15 +502,21 @@ class TestWalletRpc:
             ##########
 
             # Create an offer of 5 chia for one CAT
-            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, validate_only=True)
+            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, col.hex(): 1}, validate_only=True)
             all_offers = await client.get_all_offers()
             assert len(all_offers) == 0
             assert offer is None
 
-            offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+            driver_dict: Dict[str, Any] = {col.hex(): {"type": "CAT", "tail": "0x" + col.hex()}}
+
+            offer, trade_record = await client.create_offer_for_ids(
+                {uint32(1): -5, col.hex(): 1},
+                driver_dict=driver_dict,
+                fee=uint64(1),
+            )
 
             summary = await client.get_offer_summary(offer)
-            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
+            assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "infos": driver_dict, "fees": 1}
 
             assert await client.check_offer_validity(offer)
 

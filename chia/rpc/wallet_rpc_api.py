@@ -26,9 +26,11 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_singleton_owner_sk, master_sk_to_wallet_sk_unhardened, MAX_POOL_WALLETS
+from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
-from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.trade_record import TradeRecord
@@ -956,10 +958,26 @@ class WalletRpcApi:
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
+        driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
+
+        # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
+        driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        if driver_dict_str is None:
+            for key in offer:
+                if len(key) == 64:
+                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                        {"type": AssetType.CAT.value, "tail": "0x" + key}
+                    )
+        else:
+            for key, value in driver_dict_str.items():
+                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            modified_offer[int(key)] = offer[key]
+            if len(key) == 64:
+                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+            else:
+                modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
             (
@@ -967,7 +985,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only
             )
         if success:
             return {
@@ -980,9 +998,9 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        offered, requested = offer.summary()
+        offered, requested, infos = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees()}}
+        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
