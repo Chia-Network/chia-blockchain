@@ -13,7 +13,7 @@ def test_constructor_valid_inputs(page_size: int, page_size_limit: int) -> None:
         paginator: Paginator = Paginator([], i, page_size_limit)
         assert paginator.page_size() == i
         assert paginator.page_count() == 1
-        assert paginator.get_page(1) == []
+        assert paginator.get_page(0) == []
 
 
 @pytest.mark.parametrize(
@@ -32,25 +32,23 @@ def test_constructor_invalid_inputs(page_size: int, page_size_limit: int, except
 
 
 def test_page_count() -> None:
-    source = [i for i in range(0, 100)]
-    for page_size in range(1, 100):
-        for i in range(0, len(source)):
-            assert Paginator(source[0:i], page_size).page_count() == max(1, ceil(i / page_size))
+    for page_size in range(1, 10):
+        for i in range(0, 10):
+            assert Paginator(range(0, i), page_size).page_count() == max(1, ceil(i / page_size))
+
+
+def test_empty_source() -> None:
+    assert Paginator([], 5).get_page(0) == []
 
 
 @pytest.mark.parametrize(
-    "page, expected_data", [(1, [0, 1, 2, 3, 4]), (2, [5, 6, 7, 8, 9]), (3, [10, 11, 12, 13, 14]), (4, [15, 16])]
+    "page, expected_data", [(0, [0, 1, 2, 3, 4]), (1, [5, 6, 7, 8, 9]), (2, [10, 11, 12, 13, 14]), (3, [15, 16])]
 )
 def test_get_page_valid(page: int, expected_data: List[int]) -> None:
-    # Empty source should lead to an empty first page
-    assert Paginator([], 5).get_page(1) == []
-    # Validate all pages are as expected
-    source = [i for i in range(0, 17)]
-    paginator: Paginator = Paginator(source, 5)
-    assert paginator.get_page(page) == expected_data
+    assert Paginator(list(range(0, 17)), 5).get_page(page) == expected_data
 
 
-@pytest.mark.parametrize("page", [-1, 0, 5])
+@pytest.mark.parametrize("page", [-1000, -10, -1, 5, 10, 1000])
 def test_get_page_invalid(page: int) -> None:
     with pytest.raises(PageOutOfBoundsError):
         Paginator(range(0, 17), 5).get_page(page)

@@ -15,7 +15,7 @@ class InvalidPageSizeError(Exception):
 
 class PageOutOfBoundsError(Exception):
     def __init__(self, page_size: int, max_page_size: int) -> None:
-        super().__init__(f"Page {page_size} out of bounds. Available pages: 1-{max_page_size}")
+        super().__init__(f"Page {page_size} out of bounds. Available pages: 0-{max_page_size}")
 
 
 @dataclasses.dataclass
@@ -40,7 +40,7 @@ class Paginator:
         return max(1, ceil(len(self._source) / self._page_size))
 
     def get_page(self, page: int) -> Sequence[object]:
-        if page <= 0 or page > self.page_count():
-            raise PageOutOfBoundsError(page, self.page_count())
-        offset = (page - 1) * self._page_size
+        if page < 0 or page > self.page_count() - 1:
+            raise PageOutOfBoundsError(page, self.page_count() - 1)
+        offset = page * self._page_size
         return self._source[offset : offset + self._page_size]
