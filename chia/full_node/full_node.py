@@ -84,6 +84,7 @@ from chia.util.db_version import lookup_db_version, set_db_version_async
 class PeakPostProcessingResult:
     mempool_peak_result: List[Tuple[SpendBundle, NPCResult, bytes32]]  # The result of calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
+    hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
@@ -1007,7 +1008,7 @@ class FullNode:
                         state_change_summary, self.coin_subscriptions, self.ph_subscriptions
                     )
                     await self.hint_store.add_hints(hints_to_add)
-                    await self.update_wallets(state_change_summary, lookup_coin_ids)
+                    await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
@@ -1040,11 +1041,20 @@ class FullNode:
         peers_with_peak: List = [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
         return peers_with_peak
 
-    async def update_wallets(self, state_change_summary: StateChangeSummary, lookup_coin_ids: List[bytes32]) -> None:
+    async def update_wallets(
+        self,
+        state_change_summary: StateChangeSummary,
+        hints: List[Tuple[bytes32, bytes]],
+        lookup_coin_ids: List[bytes32],
+    ) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
         new_states: List[Optional[CoinRecord]] = [
             await self.coin_store.get_coin_record(coin_id) for coin_id in list(lookup_coin_ids)
         ]
+        # Re-arrange to a map, and filter out any non-ph sized hint
+        coin_id_to_ph_hint: Dict[bytes32, bytes32] = {
+            coin_id: bytes32(hint) for coin_id, hint in hints if len(hint) == 32
+        }
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
@@ -1057,8 +1067,14 @@ class FullNode:
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
+
+            if coin_record.name in coin_id_to_ph_hint:
+                for peer in self.ph_subscriptions.get(coin_id_to_ph_hint[coin_record.name], []):
+                    if peer not in changes_for_peer:
+                        changes_for_peer[peer] = set()
+                    changes_for_peer[peer].add(coin_record.coin_state)
+
         for peer, changes in changes_for_peer.items():
-            self.log.warning(f"Updating with {len(changes)}")
             if peer not in self.server.all_connections:
                 continue
             ws_peer: ws.WSChiaConnection = self.server.all_connections[peer]
@@ -1358,7 +1374,7 @@ class FullNode:
                 self.log.info(f"Saving previous generator for height {block.height}")
                 self.full_node_store.previous_generator = generator_arg
 
-        return PeakPostProcessingResult(mempool_new_peak_result, fns_peak_result, lookup_coin_ids)
+        return PeakPostProcessingResult(mempool_new_peak_result, fns_peak_result, hints_to_add, lookup_coin_ids)
 
     async def peak_post_processing_2(
         self,
@@ -1434,7 +1450,7 @@ class FullNode:
                 state_change_summary.fork_height,
             ),
         )
-        await self.update_wallets(state_change_summary, ppp_result.lookup_coin_ids)
+        await self.update_wallets(state_change_summary, ppp_result.hints, ppp_result.lookup_coin_ids)
         await self.server.send_to_all([msg], NodeType.WALLET)
         self._state_changed("new_peak")
 
