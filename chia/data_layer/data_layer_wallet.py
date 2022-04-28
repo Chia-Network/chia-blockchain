@@ -105,7 +105,6 @@ class DataLayerWallet:
             import sys
             print(f" ==== in create_new_dl_wallet() A", file=sys.stderr)
             print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
             async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
                 async for debug_row in debug_cursor:
                     print(debug_row, file=sys.stderr)
@@ -144,7 +143,6 @@ class DataLayerWallet:
             import sys
             print(f" ==== in create_new_dl_wallet() C", file=sys.stderr)
             print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
             async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
                 async for debug_row in debug_cursor:
                     print(debug_row, file=sys.stderr)
@@ -350,7 +348,6 @@ class DataLayerWallet:
             import sys
             print(f" ==== in generate_new_reporter()", file=sys.stderr)
             print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
             async with self.standard_wallet.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
                 async for debug_row in debug_cursor:
                     print(debug_row, file=sys.stderr)

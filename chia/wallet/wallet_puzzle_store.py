@@ -138,7 +138,7 @@ class WalletPuzzleStore:
 
         import sys
         print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-        print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+        print(f" ==== db dump \\/ index={index}, wallet_id={wallet_id}, hard={hard}", file=sys.stderr)
         async with self.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
             async for debug_row in debug_cursor:
                 print(debug_row, file=sys.stderr)

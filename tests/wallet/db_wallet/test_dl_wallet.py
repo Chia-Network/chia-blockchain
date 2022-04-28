@@ -91,7 +91,6 @@ class TestDLWallet:
             import sys
             print(f" ==== in test_initial_creation() A", file=sys.stderr)
             print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
             async with wallet_node_0.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
                 async for debug_row in debug_cursor:
                     print(debug_row, file=sys.stderr)
@@ -120,7 +119,6 @@ class TestDLWallet:
             import sys
             print(f" ==== in test_initial_creation() C", file=sys.stderr)
             print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
-            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
             async with dl_wallet.standard_wallet.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
                 async for debug_row in debug_cursor:
                     print(debug_row, file=sys.stderr)

@@ -326,7 +326,6 @@ class WalletStateManager:
                 print(f" ==== in create_more_puzzle_hashes() A", file=sys.stderr)
                 print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened",
                       file=sys.stderr)
-                # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
                 async with self.puzzle_store.db_connection.execute(
                         "SELECT * FROM derivation_paths;") as debug_cursor:
                     async for debug_row in debug_cursor:
@@ -394,23 +393,23 @@ class WalletStateManager:
         same public key more than once (for privacy).
         """
         import sys
-        print(f" ==== {wallet_id=} entering get_unused_derivation_record()", file=sys.stderr)
+        print(f" ==== wallet_id={wallet_id} entering get_unused_derivation_record()", file=sys.stderr)
         async with self.puzzle_store.lock:
             # If we have no unused public keys, we will create new ones
             unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
-            print(f" ==== {wallet_id=} first {unused=}", file=sys.stderr)
+            print(f" ==== wallet_id={wallet_id} first unused={unused}", file=sys.stderr)
             if unused is None:
-                print(f" ==== {wallet_id=} creating more", file=sys.stderr)
+                print(f" ==== wallet_id={wallet_id} creating more", file=sys.stderr)
                 await self.create_more_puzzle_hashes()
 
             # Now we must have unused public keys
             unused = await self.puzzle_store.get_unused_derivation_path()
-            print(f" ==== {wallet_id=} second {unused=}", file=sys.stderr)
+            print(f" ==== wallet_id={wallet_id} second unused={unused}", file=sys.stderr)
             assert unused is not None
             record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
                 unused, wallet_id, hardened
             )
-            print(f" ==== {wallet_id=} {record=}", file=sys.stderr)
+            print(f" ==== wallet_id={wallet_id} record={record}", file=sys.stderr)
             if record is None:
                 print(" ==== {wallet_id=} ack, record is None", file=sys.stderr)
             assert record is not None
