@@ -40,7 +40,7 @@ class Paginator:
         return max(1, ceil(len(self._source) / self._page_size))
 
     def get_page(self, page: int) -> Sequence[object]:
-        if page < 0 or page > self.page_count() - 1:
+        if page < 0 or page >= self.page_count():
             raise PageOutOfBoundsError(page, self.page_count() - 1)
         offset = page * self._page_size
         return self._source[offset : offset + self._page_size]
