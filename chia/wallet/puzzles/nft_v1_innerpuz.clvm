@@ -1,4 +1,4 @@
-(mod ARGS
+(mod (CURRENT_PUBKEY)
 
   ; main
 )

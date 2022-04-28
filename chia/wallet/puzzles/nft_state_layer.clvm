@@ -5,7 +5,6 @@
     INNER_PUZZLE
     solution  ; either to inner puzzle or metadata updater
     my_amount
-    metadata_updater_reveal
   )
 
   (include condition_codes.clvm)
@@ -41,15 +40,35 @@
     )
   )
 
+  (defun cons_to_second (item list_of_items)
+    (c (f list_of_items) (c item (f (r list_of_items))))
+  )
+
+  (defun check_for_metadata_prog_reveal (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions_loop all_conditions)
+    (if conditions_loop
+      (if (= (f (f conditions_loop)) -24)
+        (if (= (sha256tree1 (f (r (f conditions_loop)))) METADATA_UPDATER_PUZZLE_HASH)
+          ()
+          (x)
+        )
+        (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA (r conditions_loop) all_conditions)
+      )
+      (list CURRENT_METADATA 0)
+    )
+  )
+
+  (defun metadata_updater_loader (CURRENT_METADATA conditions)
+    (check_for_metadata_prog_reveal CURRENT_METADATA conditions conditions)
+  )
+
   ; main
   (c
     (list ASSERT_MY_AMOUNT my_amount)
     (wrap_odd_create_coins
       NFT_STATE_LAYER_MOD_HASH
       METADATA_UPDATER_PUZZLE_HASH
-      (if metadata_updater_reveal
-       (list (a metadata_updater_reveal solution) (list (list CREATE_COIN (sha256tree1 INNER_PUZZLE) my_amount)))
-       (list METADATA (a INNER_PUZZLE solution))
+      (metadata_updater_loader
+       METADATA_UPDATER_PUZZLE_HASH METADATA (a INNER_PUZZLE solution)
       )
       my_amount
     )
