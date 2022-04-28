@@ -1,11 +1,16 @@
 import dataclasses
 from math import ceil
-from typing import Sequence, Tuple
+from typing import Sequence
+
+
+class InvalidPageSizeLimit(Exception):
+    def __init__(self, page_size_limit: int) -> None:
+        super().__init__(f"Page size limit must be one or more, not: {page_size_limit}")
 
 
 class InvalidPageSizeError(Exception):
-    def __init__(self, page_size: int) -> None:
-        super().__init__(f"Invalid page size {page_size}. Available sizes: {Paginator.page_sizes}")
+    def __init__(self, page_size: int, page_size_limit: int) -> None:
+        super().__init__(f"Invalid page size {page_size}. Must be between: 1 and {page_size_limit}")
 
 
 class PageOutOfBoundsError(Exception):
@@ -17,15 +22,19 @@ class PageOutOfBoundsError(Exception):
 class Paginator:
     _source: Sequence[object]
     _page_size: int
-
-    page_sizes: Tuple[int, ...] = (5, 10, 25, 50, 100)
+    _page_size_limit: int = 100
 
     def __post_init__(self) -> None:
-        if self._page_size not in Paginator.page_sizes:
-            raise InvalidPageSizeError(self._page_size)
+        if self._page_size_limit < 1:
+            raise InvalidPageSizeLimit(self._page_size_limit)
+        if self._page_size > self._page_size_limit:
+            raise InvalidPageSizeError(self._page_size, self._page_size_limit)
 
     def page_size(self) -> int:
         return self._page_size
+
+    def page_size_limit(self) -> int:
+        return self._page_size_limit
 
     def page_count(self) -> int:
         return max(1, ceil(len(self._source) / self._page_size))
