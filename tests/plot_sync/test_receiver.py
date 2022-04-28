@@ -213,7 +213,7 @@ async def test_reset() -> None:
     receiver._current_sync.delta.duplicates.additions = ["1"]
     receiver._current_sync.delta.duplicates.removals = ["1"]
     receiver._current_sync.time_done = time.time()
-    receiver._last_sync = Sync(**dataclasses.asdict(receiver._current_sync))
+    receiver._last_sync = dataclasses.replace(receiver._current_sync)
     receiver._invalid = ["1"]
     receiver._keys_missing = ["1"]
 
