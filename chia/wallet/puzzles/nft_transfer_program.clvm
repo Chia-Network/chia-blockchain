@@ -72,7 +72,7 @@
       trade_prices_list
       trade_prices_list_hash
     )
-    (c (list CREATE_PUZZLE_ANNOUNCEMENT trade_prices_list_hash new_did)
+    (c (list CREATE_PUZZLE_ANNOUNCEMENT trade_prices_list_hash)
       (c (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c new_did (r (r SINGLETON_STRUCT)))) new_did_inner_hash) trade_prices_list_hash (f (r SINGLETON_STRUCT))))
         (parse_trade_prices_list CURRY_PARAMS trade_prices_list (f (r SINGLETON_STRUCT)))
       )
