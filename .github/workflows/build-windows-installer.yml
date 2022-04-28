@@ -1,9 +1,10 @@
-name: Windows Installer on Windows 10 and Python 3.9
+name: Build Installer - Windows 10
 
 on:
   push:
     branches:
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: Windows Installer on Windows 10 and Python 3.9
+    name: Windows 10 Installer
     runs-on: [windows-2019]
     timeout-minutes: 50
 

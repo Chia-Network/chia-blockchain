@@ -24,37 +24,48 @@ class FarmerRpcApi:
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
+        payloads = []
+
         if change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
-            return [
+            payloads.append(
                 create_payload_dict(
                     "new_signage_point",
                     data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
         elif change == "new_farming_info":
-            return [
+            payloads.append(
                 create_payload_dict(
                     "new_farming_info",
                     change_data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
         elif change == "new_plots":
-            return [
+            payloads.append(
                 create_payload_dict(
                     "get_harvesters",
                     change_data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
+        elif change == "submitted_partial":
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
-        return []
+        return payloads
 
     async def get_signage_point(self, request: Dict) -> Dict:
         sp_hash = hexstr_to_bytes(request["sp_hash"])

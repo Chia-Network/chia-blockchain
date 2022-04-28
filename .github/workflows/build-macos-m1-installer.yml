@@ -1,9 +1,10 @@
-name: MacOS M1 installer on Python 3.9
+name: Build Installer - MacOS arm64
 
 on:
   push:
     branches:
       - main
+      - 'release/**'
     tags:
       - '**'
   pull_request:
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    name: MacOS M1 installer on Python 3.9
+    name: MacOS arm64 installer
     runs-on: [m1]
     timeout-minutes: 40
     strategy:
