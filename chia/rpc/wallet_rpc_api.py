@@ -1468,7 +1468,6 @@ class WalletRpcApi:
 
         try:
             async with self.service.wallet_state_manager.lock:
-                await self.service.wallet_state_manager.create_more_puzzle_hashes()
                 dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
                     bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
                 )
