@@ -40,25 +40,33 @@
     )
   )
 
-  (defun cons_to_second (item list_of_items)
-    (c (f list_of_items) (c item (f (r list_of_items))))
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
   )
 
-  (defun check_for_metadata_prog_reveal (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions_loop all_conditions)
+  (defun check_for_metadata_prog_reveal (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions_loop)
     (if conditions_loop
       (if (= (f (f conditions_loop)) -24)
         (if (= (sha256tree1 (f (r (f conditions_loop)))) METADATA_UPDATER_PUZZLE_HASH)
-          ()
+          (a (f (r (f conditions_loop))) (list CURRENT_METADATA (f (r (r (f conditions_loop))))))
           (x)
         )
-        (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA (r conditions_loop) all_conditions)
+        (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA (r conditions_loop))
       )
       (list CURRENT_METADATA 0)
     )
   )
 
-  (defun metadata_updater_loader (CURRENT_METADATA conditions)
-    (check_for_metadata_prog_reveal CURRENT_METADATA conditions conditions)
+  (defun process_metadata_updater (metadata_result conditions)
+    (c (f metadata_result) (list (merge_list (f (r metadata_result)) conditions)))
+  )
+
+  (defun metadata_updater_loader (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions)
+    (process_metadata_updater (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions) conditions)
   )
 
   ; main

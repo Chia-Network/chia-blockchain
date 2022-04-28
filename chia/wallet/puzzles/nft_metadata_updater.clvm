@@ -1,4 +1,4 @@
-(mod (CURRENT_METADATA conditions solution)
+(mod (CURRENT_METADATA solution)
 
   ; once we find 'u' we don't need to continue looping
   (defun add_url (METADATA new_url)
@@ -12,8 +12,9 @@
   )
 
   ; main
+  ; returns (new_metadata conditions)
   (if solution
-    (add_url CURRENT_METADATA solution)
-    CURRENT_METADATA
+    (list (add_url CURRENT_METADATA solution) 0)
+    (list CURRENT_METADATA 0)
   )
 )
