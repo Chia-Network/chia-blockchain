@@ -64,6 +64,15 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+        elif change == "proof":
+            payloads.append(
+                create_payload_dict(
+                    "proof",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
         return payloads
 
