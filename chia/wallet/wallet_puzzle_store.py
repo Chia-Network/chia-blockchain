@@ -40,11 +40,12 @@ class WalletPuzzleStore:
                 "CREATE TABLE IF NOT EXISTS derivation_paths("
                 "derivation_index int,"
                 " pubkey text,"
-                " puzzle_hash text PRIMARY KEY,"
+                " puzzle_hash text,"
                 " wallet_type int,"
                 " wallet_id int,"
                 " used tinyint,"
-                " hardened tinyint)"
+                " hardened tinyint,"
+                "PRIMARY KEY (puzzle_hash, wallet_id))"
             )
         )
         await self.db_connection.execute(
@@ -134,6 +135,14 @@ class WalletPuzzleStore:
         )
         row = await cursor.fetchone()
         await cursor.close()
+
+        import sys
+        print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+        print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+        async with self.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+            async for debug_row in debug_cursor:
+                print(debug_row, file=sys.stderr)
+        print(" ==== db dump /\\", file=sys.stderr)
 
         if row is not None and row[0] is not None:
             return DerivationRecord(

@@ -320,7 +320,33 @@ class WalletStateManager:
                         )
                     )
                 self.log.info(f"Done: {creating_msg}")
+
+            if True:
+                import sys
+                print(f" ==== in create_more_puzzle_hashes() A", file=sys.stderr)
+                print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened",
+                      file=sys.stderr)
+                # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+                async with self.puzzle_store.db_connection.execute(
+                        "SELECT * FROM derivation_paths;") as debug_cursor:
+                    async for debug_row in debug_cursor:
+                        print(debug_row, file=sys.stderr)
+                print(" ==== db dump /\\", file=sys.stderr)
+
             await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction)
+
+            if True:
+                import sys
+                print(f" ==== in create_more_puzzle_hashes() B", file=sys.stderr)
+                print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened",
+                      file=sys.stderr)
+                # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+                async with self.puzzle_store.db_connection.execute(
+                        "SELECT * FROM derivation_paths;") as debug_cursor:
+                    async for debug_row in debug_cursor:
+                        print(debug_row, file=sys.stderr)
+                print(" ==== db dump /\\", file=sys.stderr)
+
             await self.add_interested_puzzle_hashes(
                 [record.puzzle_hash for record in derivation_paths],
                 [record.wallet_id for record in derivation_paths],
@@ -367,18 +393,26 @@ class WalletStateManager:
         for every wallet to ensure we always have more in the database. Never reusue the
         same public key more than once (for privacy).
         """
+        import sys
+        print(f" ==== {wallet_id=} entering get_unused_derivation_record()", file=sys.stderr)
         async with self.puzzle_store.lock:
             # If we have no unused public keys, we will create new ones
             unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+            print(f" ==== {wallet_id=} first {unused=}", file=sys.stderr)
             if unused is None:
+                print(f" ==== {wallet_id=} creating more", file=sys.stderr)
                 await self.create_more_puzzle_hashes()
 
             # Now we must have unused public keys
             unused = await self.puzzle_store.get_unused_derivation_path()
+            print(f" ==== {wallet_id=} second {unused=}", file=sys.stderr)
             assert unused is not None
             record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
                 unused, wallet_id, hardened
             )
+            print(f" ==== {wallet_id=} {record=}", file=sys.stderr)
+            if record is None:
+                print(" ==== {wallet_id=} ack, record is None", file=sys.stderr)
             assert record is not None
 
             # Set this key to used so we never use it again

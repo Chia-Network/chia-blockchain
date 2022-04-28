@@ -87,12 +87,44 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
+        if True:
+            import sys
+            print(f" ==== in test_initial_creation() A", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with wallet_node_0.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
+
         async with wallet_node_0.wallet_state_manager.lock:
             dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+
+        assert wallet_node_0.wallet_state_manager is dl_wallet.standard_wallet.wallet_state_manager
+
+        if True:
+            import sys
+            print(f" ==== in test_initial_creation() B", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with dl_wallet.standard_wallet.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
+
+        if True:
+            import sys
+            print(f" ==== in test_initial_creation() C", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with dl_wallet.standard_wallet.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
 
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(

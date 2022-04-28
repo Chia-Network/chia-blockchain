@@ -101,6 +101,16 @@ class DataLayerWallet:
         This must be called under the wallet state manager lock
         """
 
+        if True:
+            import sys
+            print(f" ==== in create_new_dl_wallet() A", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
+
         self = cls()
         self.wallet_state_manager = wallet_state_manager
         self.log = logging.getLogger(name if name else __name__)
@@ -109,6 +119,16 @@ class DataLayerWallet:
         for _, wallet in self.wallet_state_manager.wallets.items():
             if wallet.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
+
+        if True:
+            import sys
+            print(f" ==== in create_new_dl_wallet() B", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name,
@@ -120,7 +140,29 @@ class DataLayerWallet:
             raise ValueError("Internal Error")
         self.wallet_id = uint8(self.wallet_info.id)
 
+        if True:
+            import sys
+            print(f" ==== in create_new_dl_wallet() C", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
+
+        print(" ==== readme read me here", file=sys.stderr)
+        print(" ==== i expect the next dump to not have swapped all of the rows with wallet_id 1 to be 2 suddenly", file=sys.stderr)
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
+
+        if True:
+            import sys
+            print(f" ==== in create_new_dl_wallet() D", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
 
         return self
 
@@ -294,6 +336,8 @@ class DataLayerWallet:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
+        import sys
+        print(f" ==== entering generate_new_reporter()", file=sys.stderr)
 
         coins: Set[Coin] = await self.standard_wallet.select_coins(uint64(fee + 1))
         if coins is None:
@@ -302,12 +346,23 @@ class DataLayerWallet:
         launcher_parent: Coin = list(coins)[0]
         launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
 
+        if True:
+            import sys
+            print(f" ==== in generate_new_reporter()", file=sys.stderr)
+            print(f" ==== derivation_index   pubkey   puzzle_hash   wallet_type   wallet_id   used   hardened", file=sys.stderr)
+            # print(f" ==== db dump \\/ {index=}, {wallet_id=}, {hard=}", file=sys.stderr)
+            async with self.standard_wallet.wallet_state_manager.puzzle_store.db_connection.execute("SELECT * FROM derivation_paths;") as debug_cursor:
+                async for debug_row in debug_cursor:
+                    print(debug_row, file=sys.stderr)
+            print(" ==== db dump /\\", file=sys.stderr)
+
         inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
         full_puzzle: Program = create_host_fullpuz(inner_puzzle.get_tree_hash(), initial_root, launcher_coin.name())
 
         genesis_launcher_solution: Program = Program.to(
             [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
         )
+
         announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
         announcement = Announcement(launcher_coin.name(), announcement_message)
         create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(

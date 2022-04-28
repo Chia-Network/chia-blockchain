@@ -1468,6 +1468,7 @@ class WalletRpcApi:
 
         try:
             async with self.service.wallet_state_manager.lock:
+                await self.service.wallet_state_manager.create_more_puzzle_hashes()
                 dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
                     bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
                 )
@@ -1476,6 +1477,13 @@ class WalletRpcApi:
         except ValueError as e:
             log.error(f"Error while generating new reporter {e}")
             return {"success": False, "error": str(e)}
+        except Exception as e:
+            import traceback
+            import sys
+            print(" ==== ", file=sys.stderr)
+            print(traceback.format_exc(), file=sys.stderr)
+            # return {"success": False, "error": traceback.format_exc()}
+            raise
 
         return {
             "success": True,
