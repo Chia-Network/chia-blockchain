@@ -1314,6 +1314,10 @@ class FullNodeAPI:
 
     @api_request
     async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
+        """Returns header blocks by directly streaming bytes into Message
+
+        This method should be used instead of RequestHeaderBlocks
+        """
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
@@ -1341,6 +1345,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        """DEPRECATED: please use RequestBlockHeaders"""
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
