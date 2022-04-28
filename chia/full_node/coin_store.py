@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Dict, Any, Tuple, Awaitable
+from typing import List, Optional, Set, Dict, Any, Tuple
 
 from aiosqlite import Cursor
 
@@ -197,7 +197,7 @@ class CoinStore:
             return coins
 
         async with self.db_wrapper.read_db() as conn:
-            cursors: List[Awaitable[Cursor]] = []
+            cursors: List[Cursor] = []
             for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
                 names_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
@@ -205,7 +205,7 @@ class CoinStore:
                 else:
                     names_db = tuple([n.hex() for n in names_chunk])
                 cursors.append(
-                    conn.execute(
+                    await conn.execute(
                         f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                         f"coin_parent, amount, timestamp FROM coin_record "
                         f'WHERE coin_name in ({",".join(["?"] * len(names_db))}) ',
@@ -213,8 +213,7 @@ class CoinStore:
                     )
                 )
 
-            for cur_handle in cursors:
-                cursor = await cur_handle
+            for cursor in cursors:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
