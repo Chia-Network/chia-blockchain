@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Set
+from typing import Dict, List, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary
 from chia.types.blockchain_format.sized_bytes import bytes32
