@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-simple_sync Tests
+name: MacOS wallet-simple_sync Test
 
 on:
   push:
