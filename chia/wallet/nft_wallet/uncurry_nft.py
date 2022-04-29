@@ -6,18 +6,14 @@ NFT_MOD = load_clvm("nft_innerpuz.clvm")
 
 
 class UncurriedNFT:
-    """
-    Uncurry result returned by the uncurry functions
-    """
+    """Uncurry a NFT puzzle"""
 
     matched: bool
-    """
-    If the puzzle is a NFT puzzle
-    """
+    """If the puzzle is a NFT puzzle"""
+
     nft_mod_hash: Program
-    """
-    Curried parameters
-    """
+    """NFT module hash"""
+
     singleton_struct: Program
     """
     Singleton struct
@@ -28,13 +24,11 @@ class UncurriedNFT:
     launcher_puzhash: Program
 
     owner_did: Program
-    """
-    DID of the owner
-    """
+    """Owner's DID"""
+
     transfer_program_hash: Program
-    """
-    Puzzle hash of the transfer program
-    """
+    """Puzzle hash of the transfer program"""
+
     transfer_program_curry_params: Program
     """
     Curried parameters of the transfer program
