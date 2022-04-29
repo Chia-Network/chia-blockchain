@@ -22,7 +22,6 @@ from chia.util.path import mkdir
 from chia.plotting.manager import PlotManager
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import bt
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -139,7 +138,7 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path) -> Iterator[TestEnvironment]:
+def test_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = get_test_plots()
@@ -448,7 +447,7 @@ async def test_keys_missing(test_environment: TestEnvironment) -> None:
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching(test_environment):
+async def test_plot_info_caching(test_environment, bt):
     env: TestEnvironment = test_environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))

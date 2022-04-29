@@ -12,7 +12,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult, calculate_cost_of_program
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_list
@@ -130,14 +130,14 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list()
+            generator_block_heights_list = block_generator.block_height_list
             result: NPCResult = get_name_puzzle_conditions(
                 block_generator,
                 constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=constants.COST_PER_BYTE,
                 mempool_mode=True,
             )
-            cost = calculate_cost_of_program(block_generator.program, result, constants.COST_PER_BYTE)
+            cost = result.cost
 
             removal_amount = 0
             addition_amount = 0
@@ -428,7 +428,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list() if block_generator else [],
+        block_generator.block_height_list if block_generator else [],
     )
 
 

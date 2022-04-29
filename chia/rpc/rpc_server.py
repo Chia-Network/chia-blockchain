@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import aiohttp
+from typing_extensions import Protocol
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
@@ -17,6 +18,11 @@ from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
+
+
+class RpcApiProtocol(Protocol):
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
+        pass
 
 
 class RpcServer:

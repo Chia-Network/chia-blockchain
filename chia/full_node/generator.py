@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Union, Tuple
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.generator_types import BlockGenerator, GeneratorArg, GeneratorBlockCacheInterface, CompressorArg
+from chia.types.generator_types import BlockGenerator, GeneratorBlockCacheInterface, CompressorArg
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
@@ -22,14 +22,16 @@ def create_block_generator(
     generator: SerializedProgram, block_heights_list: List[uint32], generator_block_cache: GeneratorBlockCacheInterface
 ) -> Optional[BlockGenerator]:
     """`create_block_generator` will returns None if it fails to look up any referenced block"""
-    generator_arg_list: List[GeneratorArg] = []
+    generator_list: List[SerializedProgram] = []
+    generator_heights: List[uint32] = []
     for i in block_heights_list:
         previous_generator = generator_block_cache.get_generator_for_block_height(i)
         if previous_generator is None:
             log.error(f"Failed to look up generator for block {i}. Ref List: {block_heights_list}")
             return None
-        generator_arg_list.append(GeneratorArg(i, previous_generator))
-    return BlockGenerator(generator, generator_arg_list)
+        generator_list.append(previous_generator)
+        generator_heights.append(i)
+    return BlockGenerator(generator, generator_list, generator_heights)
 
 
 def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Program:
@@ -53,12 +55,11 @@ def create_compressed_generator(
     program = DECOMPRESS_BLOCK.curry(
         DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
     )
-    generator_arg = GeneratorArg(original_generator.block_height, original_generator.generator)
-    return BlockGenerator(program, [generator_arg])
+    return BlockGenerator(program, [original_generator.generator], [original_generator.block_height])
 
 
 def setup_generator_args(self: BlockGenerator) -> Tuple[SerializedProgram, Program]:
-    args = create_generator_args(self.generator_refs())
+    args = create_generator_args(self.generator_refs)
     return self.program, args
 
 

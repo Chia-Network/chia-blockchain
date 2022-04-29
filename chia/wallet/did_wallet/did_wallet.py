@@ -20,6 +20,7 @@ from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -56,7 +57,7 @@ class DIDWallet:
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
         if amount & 1 == 0:
@@ -75,7 +76,7 @@ class DIDWallet:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet_already_locked(std_wallet_id)
+        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
 
@@ -129,7 +130,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -513,7 +514,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=token_bytes(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -582,7 +583,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -649,7 +650,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -718,7 +719,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         if filename is not None:
@@ -859,7 +860,7 @@ class DIDWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
         await self.standard_wallet.push_transaction(did_record)
         new_did_info = DIDInfo(

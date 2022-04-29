@@ -210,11 +210,14 @@ class FarmerAPI:
                             [sig_farmer, response.message_signatures[0][1], taproot_sig]
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
-                authentication_pk = pool_state_dict["pool_config"].authentication_public_key
-                if bytes(authentication_pk) is None:
-                    self.farmer.log.error(f"No authentication sk for {authentication_pk}")
+
+                authentication_sk: Optional[PrivateKey] = self.farmer.get_authentication_sk(
+                    pool_state_dict["pool_config"]
+                )
+                if authentication_sk is None:
+                    self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
                     return
-                authentication_sk: PrivateKey = self.farmer.authentication_keys[bytes(authentication_pk)]
+
                 authentication_signature = AugSchemeMPL.sign(authentication_sk, m_to_sign)
 
                 assert plot_signature is not None
@@ -227,7 +230,7 @@ class FarmerAPI:
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
-
+                self.farmer.log.debug(f"POST /partial request {post_partial_request}")
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(

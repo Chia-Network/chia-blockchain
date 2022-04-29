@@ -4,7 +4,8 @@ import logging
 import random
 import signal
 import traceback
-from typing import Any, List
+from pathlib import Path
+from typing import Any, Dict, List
 
 import aiosqlite
 from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
@@ -70,15 +71,15 @@ class DNSServer:
     pointer: int
     crawl_db: aiosqlite.Connection
 
-    def __init__(self):
+    def __init__(self, config: Dict, root_path: Path):
         self.reliable_peers_v4 = []
         self.reliable_peers_v6 = []
         self.lock = asyncio.Lock()
         self.pointer_v4 = 0
         self.pointer_v6 = 0
-        db_path_replaced: str = "crawler.db"
-        root_path = DEFAULT_ROOT_PATH
-        self.db_path = path_from_root(root_path, db_path_replaced)
+
+        crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
+        self.db_path = path_from_root(root_path, crawler_db_path)
         mkdir(self.db_path.parent)
 
     async def start(self):
@@ -227,8 +228,8 @@ class DNSServer:
             log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
 
-async def serve_dns():
-    dns_server = DNSServer()
+async def serve_dns(config: Dict, root_path: Path):
+    dns_server = DNSServer(config, root_path)
     await dns_server.start()
 
     # TODO: Make this cleaner?
@@ -278,7 +279,7 @@ def main():
         log.info("signal handlers unsupported")
 
     try:
-        loop.run_until_complete(serve_dns())
+        loop.run_until_complete(serve_dns(config, root_path))
     finally:
         loop.close()
 

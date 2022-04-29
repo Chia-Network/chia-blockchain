@@ -209,7 +209,9 @@ class ChiaServer:
             await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
-                if self._local_type == NodeType.FULL_NODE and connection.connection_type == NodeType.FULL_NODE:
+                if (
+                    self._local_type == NodeType.FULL_NODE or self._local_type == NodeType.WALLET
+                ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
                             to_remove.append(connection)
@@ -407,9 +409,7 @@ class ChiaServer:
         connection: Optional[WSChiaConnection] = None
         try:
             # Crawler/DNS introducer usually uses a lower timeout than the default
-            timeout_value = (
-                30 if "peer_connect_timeout" not in self.config else float(self.config["peer_connect_timeout"])
-            )
+            timeout_value = float(self.config.get("peer_connect_timeout", 30))
             timeout = ClientTimeout(total=timeout_value)
             session = ClientSession(timeout=timeout)
 

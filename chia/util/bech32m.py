@@ -65,13 +65,13 @@ def bech32_encode(hrp: str, data: List[int]) -> str:
     return hrp + "1" + "".join([CHARSET[d] for d in combined])
 
 
-def bech32_decode(bech: str) -> Tuple[Optional[str], Optional[List[int]]]:
+def bech32_decode(bech: str, max_length: int = 90) -> Tuple[Optional[str], Optional[List[int]]]:
     """Validate a Bech32 string, and determine HRP and data."""
     if (any(ord(x) < 33 or ord(x) > 126 for x in bech)) or (bech.lower() != bech and bech.upper() != bech):
         return (None, None)
     bech = bech.lower()
     pos = bech.rfind("1")
-    if pos < 1 or pos + 7 > len(bech) or len(bech) > 90:
+    if pos < 1 or pos + 7 > len(bech) or len(bech) > max_length:
         return (None, None)
     if not all(x in CHARSET for x in bech[pos + 1 :]):
         return (None, None)

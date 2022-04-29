@@ -4,6 +4,7 @@ import pathlib
 import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
+from multiprocessing.context import BaseContext
 from typing import IO, List, Tuple, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -24,12 +25,13 @@ from chia.types.weight_proof import (
 )
 
 from chia.util.ints import uint32
+from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
 
 def _create_shutdown_file() -> IO:
-    return tempfile.NamedTemporaryFile(prefix="chia_executor_shutdown_trigger")
+    return tempfile.NamedTemporaryFile(prefix="chia_wallet_weight_proof_handler_executor_shutdown_trigger")
 
 
 class WalletWeightProofHandler:
@@ -41,11 +43,17 @@ class WalletWeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
+        multiprocessing_context: BaseContext,
     ):
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
-        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(self._num_processes)
+        self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
+            self._num_processes,
+            mp_context=multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        )
         self._weight_proof_tasks: List[asyncio.Task] = []
 
     def cancel_weight_proof_tasks(self):
@@ -77,7 +85,13 @@ class WalletWeightProofHandler:
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
 
+        # TODO: Consider if this can be spun off to a thread as an alternative to
+        #       sprinkling async sleeps around.  Also see the corresponding comment
+        #       in the full node code.
+        #       all instances tagged as: 098faior2ru08d08ufa
+
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
+        await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
             return False, uint32(0), [], []
@@ -91,6 +105,7 @@ class WalletWeightProofHandler:
         constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
             self._constants, summaries, weight_proof
         )
+        await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
         vdf_tasks: List[asyncio.Future] = []
         recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
@@ -106,6 +121,7 @@ class WalletWeightProofHandler:
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
                     constants, rng, wp_segment_bytes, summary_bytes
                 )
+                await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
                 if not segments_validated:
                     return False, uint32(0), [], []
@@ -124,6 +140,8 @@ class WalletWeightProofHandler:
                         pathlib.Path(self._executor_shutdown_tempfile.name),
                     )
                     vdf_tasks.append(vdf_task)
+                    # give other stuff a turn
+                    await asyncio.sleep(0)
 
                 for vdf_task in vdf_tasks:
                     validated = await vdf_task

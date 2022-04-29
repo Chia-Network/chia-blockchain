@@ -1,5 +1,3 @@
-# flake8: noqa
-# pylint: disable
 from __future__ import annotations
 
 import dataclasses
@@ -7,7 +5,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Dict, List, Tuple, Type, Callable, Optional, Iterator
+from typing import Any, BinaryIO, Dict, get_type_hints, List, Tuple, Type, TypeVar, Callable, Optional, Iterator
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -22,7 +20,6 @@ if sys.version_info < (3, 8):
 
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
-
 
 else:
 
@@ -47,6 +44,8 @@ unhashable_types = [
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON
 big_ints = [uint64, int64, uint128, int512]
+
+_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 
 def dataclass_from_dict(klass, d):
@@ -125,7 +124,9 @@ def recurse_jsonify(d):
     return d
 
 
+STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS = {}
+FIELDS_FOR_STREAMABLE_CLASS = {}
 
 
 def streamable(cls: Any):
@@ -156,8 +157,10 @@ def streamable(cls: Any):
 
     1. A tuple of x items is serialized by appending the serialization of each item.
     2. A List is serialized into a 4 byte size prefix (number of items) and the serialization of each item.
-    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the serialization of the item.
-    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is a CLVM program.
+    3. An Optional is serialized into a 1 byte prefix of 0x00 or 0x01, and if it's one, it's followed by the
+       serialization of the item.
+    4. A Custom item is serialized by calling the .parse method, passing in the stream of bytes into it. An example is
+       a CLVM program.
 
     All of the constituents must have parse/from_bytes, and stream/__bytes__ and therefore
     be of fixed size. For example, int cannot be a constituent since it is not a fixed size,
@@ -177,15 +180,21 @@ def streamable(cls: Any):
     cls1 = strictdataclass(cls)
     t = type(cls.__name__, (cls1, Streamable), {})
 
+    stream_functions = []
     parse_functions = []
     try:
-        fields = cls1.__annotations__  # pylint: disable=no-member
+        hints = get_type_hints(t)
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(t)}
     except Exception:
         fields = {}
 
+    FIELDS_FOR_STREAMABLE_CLASS[t] = fields
+
     for _, f_type in fields.items():
+        stream_functions.append(cls.function_to_stream_one_item(f_type))
         parse_functions.append(cls.function_to_parse_one_item(f_type))
 
+    STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = stream_functions
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[t] = parse_functions
     return t
 
@@ -258,9 +267,40 @@ def parse_str(f: BinaryIO) -> str:
     return bytes.decode(str_read_bytes, "utf-8")
 
 
+def stream_optional(stream_inner_type_func: Callable[[Any, BinaryIO], None], item: Any, f: BinaryIO) -> None:
+    if item is None:
+        f.write(bytes([0]))
+    else:
+        f.write(bytes([1]))
+        stream_inner_type_func(item, f)
+
+
+def stream_bytes(item: Any, f: BinaryIO) -> None:
+    write_uint32(f, uint32(len(item)))
+    f.write(item)
+
+
+def stream_list(stream_inner_type_func: Callable[[Any, BinaryIO], None], item: Any, f: BinaryIO) -> None:
+    write_uint32(f, uint32(len(item)))
+    for element in item:
+        stream_inner_type_func(element, f)
+
+
+def stream_tuple(stream_inner_type_funcs: List[Callable[[Any, BinaryIO], None]], item: Any, f: BinaryIO) -> None:
+    assert len(stream_inner_type_funcs) == len(item)
+    for i in range(len(item)):
+        stream_inner_type_funcs[i](item[i], f)
+
+
+def stream_str(item: Any, f: BinaryIO) -> None:
+    str_bytes = item.encode("utf-8")
+    write_uint32(f, uint32(len(str_bytes)))
+    f.write(str_bytes)
+
+
 class Streamable:
     @classmethod
-    def function_to_parse_one_item(cls: Type[cls.__name__], f_type: Type):  # type: ignore
+    def function_to_parse_one_item(cls, f_type: Type) -> Callable[[BinaryIO], Any]:
         """
         This function returns a function taking one argument `f: BinaryIO` that parses
         and returns a value of the given type.
@@ -292,10 +332,10 @@ class Streamable:
         raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
-    def parse(cls: Type[cls.__name__], f: BinaryIO) -> cls.__name__:  # type: ignore
+    def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(getattr(cls, "__annotations__", {}))
+        obj: _T_Streamable = object.__new__(cls)
+        fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
             object.__setattr__(obj, field, value)
@@ -307,51 +347,47 @@ class Streamable:
             raise ValueError("Failed to parse unknown data in Streamable object")
         return obj
 
-    def stream_one_item(self, f_type: Type, item, f: BinaryIO) -> None:
+    @classmethod
+    def function_to_stream_one_item(cls, f_type: Type) -> Callable[[Any, BinaryIO], Any]:
         inner_type: Type
         if is_type_SpecificOptional(f_type):
             inner_type = get_args(f_type)[0]
-            if item is None:
-                f.write(bytes([0]))
-            else:
-                f.write(bytes([1]))
-                self.stream_one_item(inner_type, item, f)
+            stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
+            return lambda item, f: stream_optional(stream_inner_type_func, item, f)
         elif f_type == bytes:
-            write_uint32(f, uint32(len(item)))
-            f.write(item)
+            return stream_bytes
         elif hasattr(f_type, "stream"):
-            item.stream(f)
+            return lambda item, f: item.stream(f)
         elif hasattr(f_type, "__bytes__"):
-            f.write(bytes(item))
+            return lambda item, f: f.write(bytes(item))
         elif is_type_List(f_type):
-            assert is_type_List(type(item))
-            write_uint32(f, uint32(len(item)))
             inner_type = get_args(f_type)[0]
-            # wjb assert inner_type != get_args(List)[0]  # type: ignore
-            for element in item:
-                self.stream_one_item(inner_type, element, f)
+            stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
+            return lambda item, f: stream_list(stream_inner_type_func, item, f)
         elif is_type_Tuple(f_type):
             inner_types = get_args(f_type)
-            assert len(item) == len(inner_types)
-            for i in range(len(item)):
-                self.stream_one_item(inner_types[i], item[i], f)
-
+            stream_inner_type_funcs = []
+            for i in range(len(inner_types)):
+                stream_inner_type_funcs.append(cls.function_to_stream_one_item(inner_types[i]))
+            return lambda item, f: stream_tuple(stream_inner_type_funcs, item, f)
         elif f_type is str:
-            str_bytes = item.encode("utf-8")
-            write_uint32(f, uint32(len(str_bytes)))
-            f.write(str_bytes)
+            return stream_str
         elif f_type is bool:
-            f.write(int(item).to_bytes(1, "big"))
+            return lambda item, f: f.write(int(item).to_bytes(1, "big"))
         else:
-            raise NotImplementedError(f"can't stream {item}, {f_type}")
+            raise NotImplementedError(f"can't stream {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
+        self_type = type(self)
         try:
-            fields = self.__annotations__  # pylint: disable=no-member
+            fields = FIELDS_FOR_STREAMABLE_CLASS[self_type]
+            functions = STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[self_type]
         except Exception:
             fields = {}
-        for f_name, f_type in fields.items():
-            self.stream_one_item(f_type, getattr(self, f_name), f)
+            functions = []
+
+        for field, stream_func in zip(fields, functions):
+            stream_func(getattr(self, field), f)
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self)))

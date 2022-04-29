@@ -194,6 +194,11 @@ class BlockHeightMap:
                     ):
                         return
                     self.__sub_epoch_summaries[height] = entry[2]
+                elif height in self.__sub_epoch_summaries:
+                    # if the database file was swapped out and the existing
+                    # cache doesn't represent any of it at all, a missing sub
+                    # epoch summary needs to be removed from the cache too
+                    del self.__sub_epoch_summaries[height]
                 self.__set_hash(height, prev_hash)
                 prev_hash = entry[1]
 

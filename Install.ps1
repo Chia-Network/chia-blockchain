@@ -41,6 +41,14 @@ if ([version]$pythonVersion -lt [version]"3.7.0")
 }
 Write-Output "Python version is:" $pythonVersion
 
+$openSSLVersionStr = (py -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+$openSSLVersion = (py -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+if ($openSSLVersion -lt 269488367)
+{
+    Write-Output "Found Python with OpenSSL version:" $openSSLVersionStr
+    Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
+}
+
 py -m venv venv
 
 venv\scripts\python -m pip install --upgrade pip setuptools wheel

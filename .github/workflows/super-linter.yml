@@ -25,6 +25,11 @@ on:
     branches:
       - '**'
 
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
 ###############
 # Set the Job #
 ###############
@@ -55,7 +60,11 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
-          LINTER_RULES_PATH: .github/linters
+          LINTER_RULES_PATH: .
+          MARKDOWN_CONFIG_FILE: .markdown-lint.yml
+          PYTHON_FLAKE8_CONFIG_FILE: .flake8
+          PYTHON_ISORT_CONFIG_FILE: .isort.cfg
+          PYTHON_PYLINT_CONFIG_FILE: pylintrc
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
@@ -65,10 +74,8 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_MD: true
           VALIDATE_POWERSHELL: true
-          VALIDATE_PYTHON: true
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
-          VALIDATE_PYTHON_BLACK: true
 #          VALIDATE_PYTHON_ISORT: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true

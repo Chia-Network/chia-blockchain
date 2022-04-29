@@ -308,7 +308,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[uint32, WalletType]]:
+    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[int, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.

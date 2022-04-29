@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 import io
 
@@ -106,3 +107,15 @@ class TestStructStream:
 
         roundtrip(int8(0x7F))
         roundtrip(int8(-0x80))
+
+    def test_uint32_from_decimal(self) -> None:
+        assert uint32(Decimal("137")) == 137
+
+    def test_uint32_from_float(self) -> None:
+        assert uint32(4.0) == 4
+
+    def test_uint32_from_str(self) -> None:
+        assert uint32("43") == 43
+
+    def test_uint32_from_bytes(self) -> None:
+        assert uint32(b"273") == 273

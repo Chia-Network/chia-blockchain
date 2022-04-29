@@ -12,15 +12,6 @@ class GeneratorBlockCacheInterface:
 
 
 @dataclass(frozen=True)
-@streamable
-class GeneratorArg(Streamable):
-    """`GeneratorArg` contains data from already-buried blocks in the blockchain"""
-
-    block_height: uint32
-    generator: SerializedProgram
-
-
-@dataclass(frozen=True)
 class CompressorArg:
     """`CompressorArg` is used as input to the Block Compressor"""
 
@@ -34,10 +25,7 @@ class CompressorArg:
 @streamable
 class BlockGenerator(Streamable):
     program: SerializedProgram
-    generator_args: List[GeneratorArg]
+    generator_refs: List[SerializedProgram]
 
-    def block_height_list(self) -> List[uint32]:
-        return [a.block_height for a in self.generator_args]
-
-    def generator_refs(self) -> List[SerializedProgram]:
-        return [a.generator for a in self.generator_args]
+    # the heights are only used when creating new blocks, never when validating
+    block_height_list: List[uint32]

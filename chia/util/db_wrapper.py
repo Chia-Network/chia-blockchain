@@ -28,7 +28,7 @@ class DBWrapper:
             cursor = await self.db.execute("ROLLBACK")
             await cursor.close()
 
-    async def commit_transaction(self):
+    async def commit_transaction(self) -> None:
         await self.db.commit()
 
     @contextlib.asynccontextmanager

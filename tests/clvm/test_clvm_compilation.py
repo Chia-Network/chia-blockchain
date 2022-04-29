@@ -1,11 +1,10 @@
 from pathlib import Path
 from unittest import TestCase
 
-from clvm_tools.clvmc import compile_clvm
 import pytest
+from clvm_tools.clvmc import compile_clvm
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
-
 
 pytestmark = pytest.mark.data_layer
 

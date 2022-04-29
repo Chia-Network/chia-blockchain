@@ -6,7 +6,9 @@ import random
 import time
 from typing import Dict
 
+from clvm.casts import int_to_bytes
 import pytest
+import pytest_asyncio
 import cProfile
 
 from chia.consensus.block_record import BlockRecord
@@ -15,15 +17,14 @@ from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.clvm import int_to_bytes
 from chia.util.ints import uint64
 from tests.wallet_tools import WalletTool
 
-from tests.connection_utils import add_dummy_connection, connect_and_get_peer
-from tests.core.full_node.test_coin_store import get_future_reward_coins
+from tests.connection_utils import add_dummy_connection
+from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import bt, setup_simulators_and_wallets, test_constants
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from tests.setup_nodes import setup_simulators_and_wallets
+from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -38,14 +39,8 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
-@pytest.fixture(scope="module")
-async def wallet_nodes():
+@pytest_asyncio.fixture(scope="module")
+async def wallet_nodes(bt):
     async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -60,7 +55,7 @@ async def wallet_nodes():
 
 class TestPerformance:
     @pytest.mark.asyncio
-    async def test_full_block_performance(self, wallet_nodes):
+    async def test_full_block_performance(self, bt, wallet_nodes, self_hostname):
         full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
@@ -81,7 +76,7 @@ class TestPerformance:
             if full_node_1.full_node.blockchain.get_peak() is not None
             else -1
         )
-        incoming_queue, node_id = await add_dummy_connection(server_1, 12312)
+        incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []

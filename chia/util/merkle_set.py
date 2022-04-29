@@ -349,23 +349,23 @@ class SetError(Exception):
     pass
 
 
-def confirm_included(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_included_already_hashed(root: Node, val: bytes, proof: bytes) -> bool:
+def confirm_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, True)
 
 
-def confirm_not_included(root: Node, val: bytes, proof: bytes32) -> bool:
+def confirm_not_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
     return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
-def confirm_not_included_already_hashed(root: Node, val: bytes, proof: bytes) -> bool:
+def confirm_not_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, False)
 
 
-def _confirm(root: Node, val: bytes, proof: bytes, expected: bool) -> bool:
+def _confirm(root: bytes32, val: bytes, proof: bytes, expected: bool) -> bool:
     try:
         p = deserialize_proof(proof)
         if p.get_root() != root:

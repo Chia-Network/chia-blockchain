@@ -1,5 +1,4 @@
 # RLWallet is subclass of Wallet
-import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -29,6 +28,7 @@ from chia.wallet.rl_wallet.rl_wallet_puzzles import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -320,10 +320,10 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
-        asyncio.create_task(self.push_transaction(tx_record))
+        await self.push_transaction(tx_record)
 
     async def rl_available_balance(self) -> uint64:
         self.rl_coin_record = await self._get_rl_coin_record()
@@ -546,7 +546,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     async def rl_sign_transaction(self, spends: List[CoinSpend]) -> SpendBundle:
@@ -623,7 +623,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

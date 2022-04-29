@@ -1,6 +1,9 @@
 import asyncio
 import logging
+from typing import AsyncIterator, List, Tuple
+
 import pytest
+import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -8,20 +11,28 @@ from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from tests.setup_nodes import bt, setup_simulators_and_wallets, self_hostname
+from chia.wallet.wallet_node import WalletNode
+
+from tests.block_tools import BlockTools
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
 
 
+SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
+
+
 class TestWalletRpc:
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes(self):
+    @pytest_asyncio.fixture(scope="function")
+    async def two_wallet_nodes(self) -> AsyncIterator[SimulatorsAndWallets]:
         async for _ in setup_simulators_and_wallets(1, 2, {}):
             yield _
 
@@ -30,7 +41,9 @@ class TestWalletRpc:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_wallet_make_transaction(self, two_wallet_nodes, trusted):
+    async def test_wallet_make_transaction(
+        self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, bt: BlockTools, self_hostname: str
+    ) -> None:
         test_rpc_port = uint16(21529)
         test_rpc_port_2 = uint16(21536)
         test_rpc_port_node = uint16(21530)
@@ -40,6 +53,7 @@ class TestWalletRpc:
         full_node_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
+        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
@@ -67,7 +81,7 @@ class TestWalletRpc:
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
-        def stop_node_cb():
+        def stop_node_cb() -> None:
             pass
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
@@ -119,7 +133,7 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
                 await asyncio.sleep(0.5)
 
-            async def is_singleton_confirmed(rpc_client, lid) -> bool:
+            async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
                 rec = await rpc_client.dl_latest_singleton(lid)
                 if rec is None:
                     return False
@@ -144,9 +158,11 @@ class TestWalletRpc:
 
             await client_2.dl_track_new(launcher_id)
 
-            async def is_singleton_generation(rpc_client, lid, generation) -> bool:
+            async def is_singleton_generation(rpc_client: WalletRpcClient, lid: bytes32, generation: int) -> bool:
                 if await is_singleton_confirmed(rpc_client, lid):
                     rec = await rpc_client.dl_latest_singleton(lid)
+                    if rec is None:
+                        raise Exception("No latest singleton for: {lid!r}")
                     return rec.generation == generation
                 else:
                     return False
