@@ -12,7 +12,7 @@ from tests.util.socket import find_available_listen_port
 
 test_constants_modified = test_constants.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 8,
+        "DIFFICULTY_STARTING": 2**8,
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -20,7 +20,7 @@ test_constants_modified = test_constants.replace(
         "MAX_SUB_SLOT_BLOCKS": 50,
         "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
         "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2 ** 20,
+        "SUB_SLOT_ITERS_STARTING": 2**20,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
     }
 )
