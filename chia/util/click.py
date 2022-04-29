@@ -1,4 +1,6 @@
-from typing import Any, Callable, Optional, Sequence, TypeVar
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, Union
 
 import click
 
@@ -6,12 +8,15 @@ F = TypeVar("F", bound=Callable[..., Any])
 CmdType = TypeVar("CmdType", bound=click.Command)
 
 
-# TODO: handle hinting of pass-through parameters better
-
-
 class _Group(click.Group):
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        commands: Optional[Union[Dict[str, _Command], Sequence[_Command]]] = None,
+        **attrs: Any,
+    ) -> None:
+        # TODO: remove ignore after we get https://github.com/pallets/click/pull/2265
+        super().__init__(name=name, commands=commands, **attrs)  # type: ignore[arg-type]
         self.command_class = _Command
 
     def main(
