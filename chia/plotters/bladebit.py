@@ -231,7 +231,34 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
     )
 
 
-def plot_bladebit(args, chia_root_path, root_path, version: int):
+def plot_bladebit(args, chia_root_path, root_path):
+    (found, version_or_exception) = get_bladebit_version(root_path)
+    if found is None:
+        print(f"Error: {version_or_exception}")
+        return
+
+    version = None
+    if args.plotter == "bladebit":
+        version = 1
+        if found and version_or_exception[0] != "1":
+            print(
+                f"You're trying to run bladebit version 1"
+                f" but currently version {'.'.join(version_or_exception)} is installed"
+            )
+            return
+    elif args.plotter == "bladebit2":
+        version = 2
+        if found and version_or_exception[0] != "2":
+            print(
+                f"You're trying to run bladebit version 2"
+                f" but currently version {'.'.join(version_or_exception)} is installed"
+            )
+            return
+
+    if version is None:
+        print(f"Unknown version of bladebit: {args.plotter}")
+        return
+
     # When neither bladebit installed from git nor bladebit bundled with installer is available,
     # install bladebit from git repos.
     if not os.path.exists(get_bladebit_executable_path(root_path)):
