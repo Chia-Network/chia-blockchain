@@ -352,9 +352,9 @@ async def fetch_header_blocks_in_range(
     all_peers: List[WSChiaConnection],
 ) -> Optional[List[HeaderBlock]]:
     blocks: List[HeaderBlock] = []
-    for i in range(start - (start % 32), end + 1, 32):
+    for i in range(start - (start % 128), end + 1, 128):
         request_start = min(uint32(i), end)
-        request_end = min(uint32(i + 31), end)
+        request_end = min(uint32(i + 127), end)
         res_h_blocks_task: Optional[asyncio.Task] = peer_request_cache.get_block_request(request_start, request_end)
 
         if res_h_blocks_task is not None:
