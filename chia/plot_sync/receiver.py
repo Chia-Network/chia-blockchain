@@ -1,5 +1,6 @@
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any, Callable, Collection, Coroutine, Dict, List, Optional
 
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
@@ -24,21 +25,34 @@ from chia.protocols.harvester_protocol import (
 )
 from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint64
+from chia.util.ints import int16, uint32, uint64
 from chia.util.misc import get_list_or_len
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class Sync:
+    state: State = State.idle
+    sync_id: uint64 = uint64(0)
+    next_message_id: uint64 = uint64(0)
+    plots_processed: uint32 = uint32(0)
+    plots_total: uint32 = uint32(0)
+    delta: Delta = field(default_factory=Delta)
+    time_done: float = 0
+
+    def bump_next_message_id(self) -> None:
+        self.next_message_id = uint64(self.next_message_id + 1)
+
+    def bump_plots_processed(self) -> None:
+        self.plots_processed = uint32(self.plots_processed + 1)
+
+
 class Receiver:
     _connection: WSChiaConnection
-    _sync_state: State
-    _delta: Delta
-    _expected_sync_id: uint64
-    _expected_message_id: uint64
-    _last_sync_id: uint64
-    _last_sync_time: float
+    _current_sync: Sync
+    _last_sync: Sync
     _plots: Dict[str, Plot]
     _invalid: List[str]
     _keys_missing: List[str]
@@ -49,12 +63,8 @@ class Receiver:
         self, connection: WSChiaConnection, update_callback: Callable[[bytes32, Delta], Coroutine[Any, Any, None]]
     ) -> None:
         self._connection = connection
-        self._sync_state = State.idle
-        self._delta = Delta()
-        self._expected_sync_id = uint64(0)
-        self._expected_message_id = uint64(0)
-        self._last_sync_id = uint64(0)
-        self._last_sync_time = 0
+        self._current_sync = Sync()
+        self._last_sync = Sync()
         self._plots = {}
         self._invalid = []
         self._keys_missing = []
@@ -62,37 +72,21 @@ class Receiver:
         self._update_callback = update_callback  # type: ignore[assignment, misc]
 
     def reset(self) -> None:
-        self._sync_state = State.idle
-        self._expected_sync_id = uint64(0)
-        self._expected_message_id = uint64(0)
-        self._last_sync_id = uint64(0)
-        self._last_sync_time = 0
+        self._current_sync = Sync()
+        self._last_sync = Sync()
         self._plots.clear()
         self._invalid.clear()
         self._keys_missing.clear()
         self._duplicates.clear()
-        self._delta.clear()
-
-    def bump_expected_message_id(self) -> None:
-        self._expected_message_id = uint64(self._expected_message_id + 1)
 
     def connection(self) -> WSChiaConnection:
         return self._connection
 
-    def state(self) -> State:
-        return self._sync_state
+    def current_sync(self) -> Sync:
+        return self._current_sync
 
-    def expected_sync_id(self) -> uint64:
-        return self._expected_sync_id
-
-    def expected_message_id(self) -> uint64:
-        return self._expected_message_id
-
-    def last_sync_id(self) -> uint64:
-        return self._last_sync_id
-
-    def last_sync_time(self) -> float:
-        return self._last_sync_time
+    def last_sync(self) -> Sync:
+        return self._last_sync
 
     def plots(self) -> Dict[str, Plot]:
         return self._plots
@@ -132,12 +126,12 @@ class Receiver:
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
-        sync_id_match = identifier.sync_id == self._expected_sync_id
-        message_id_match = identifier.message_id == self._expected_message_id
+        sync_id_match = identifier.sync_id == self._current_sync.sync_id
+        message_id_match = identifier.message_id == self._current_sync.next_message_id
         identifier_match = sync_id_match and message_id_match
         if (start and not message_id_match) or (not start and not identifier_match):
             expected: PlotSyncIdentifier = PlotSyncIdentifier(
-                identifier.timestamp, self._expected_sync_id, self._expected_message_id
+                identifier.timestamp, self._current_sync.sync_id, self._current_sync.next_message_id
             )
             raise InvalidIdentifierError(
                 identifier,
@@ -148,14 +142,15 @@ class Receiver:
         if data.initial:
             self.reset()
         self._validate_identifier(data.identifier, True)
-        if data.last_sync_id != self.last_sync_id():
-            raise InvalidLastSyncIdError(data.last_sync_id, self.last_sync_id())
+        if data.last_sync_id != self._last_sync.sync_id:
+            raise InvalidLastSyncIdError(data.last_sync_id, self._last_sync.sync_id)
         if data.last_sync_id == data.identifier.sync_id:
             raise SyncIdsMatchError(State.idle, data.last_sync_id)
-        self._expected_sync_id = data.identifier.sync_id
-        self._delta.clear()
-        self._sync_state = State.loaded
-        self.bump_expected_message_id()
+        self._current_sync.sync_id = data.identifier.sync_id
+        self._current_sync.delta.clear()
+        self._current_sync.state = State.loaded
+        self._current_sync.plots_total = data.plot_file_count
+        self._current_sync.bump_next_message_id()
 
     async def sync_started(self, data: PlotSyncStart) -> None:
         await self._process(self._sync_started, ProtocolMessageTypes.plot_sync_start, data)
@@ -164,14 +159,15 @@ class Receiver:
         self._validate_identifier(plot_infos.identifier)
 
         for plot_info in plot_infos.data:
-            if plot_info.filename in self._plots or plot_info.filename in self._delta.valid.additions:
+            if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
                 raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
-            self._delta.valid.additions[plot_info.filename] = plot_info
+            self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
+            self._current_sync.bump_plots_processed()
 
         if plot_infos.final:
-            self._sync_state = State.removed
+            self._current_sync.state = State.removed
 
-        self.bump_expected_message_id()
+        self._current_sync.bump_next_message_id()
 
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
@@ -194,18 +190,20 @@ class Receiver:
             if not is_removal and path in delta:
                 raise PlotAlreadyAvailableError(state, path)
             delta.append(path)
+            if not is_removal:
+                self._current_sync.bump_plots_processed()
 
         if paths.final:
-            self._sync_state = next_state
+            self._current_sync.state = next_state
 
-        self.bump_expected_message_id()
+        self._current_sync.bump_next_message_id()
 
     async def _process_removed(self, paths: PlotSyncPathList) -> None:
         await self.process_path_list(
             state=State.removed,
             next_state=State.invalid,
             target=self._plots,
-            delta=self._delta.valid.removals,
+            delta=self._current_sync.delta.valid.removals,
             paths=paths,
             is_removal=True,
         )
@@ -218,7 +216,7 @@ class Receiver:
             state=State.invalid,
             next_state=State.keys_missing,
             target=self._invalid,
-            delta=self._delta.invalid.additions,
+            delta=self._current_sync.delta.invalid.additions,
             paths=paths,
         )
 
@@ -230,7 +228,7 @@ class Receiver:
             state=State.keys_missing,
             next_state=State.duplicates,
             target=self._keys_missing,
-            delta=self._delta.keys_missing.additions,
+            delta=self._current_sync.delta.keys_missing.additions,
             paths=paths,
         )
 
@@ -242,7 +240,7 @@ class Receiver:
             state=State.duplicates,
             next_state=State.done,
             target=self._duplicates,
-            delta=self._delta.duplicates.additions,
+            delta=self._current_sync.delta.duplicates.additions,
             paths=paths,
         )
 
@@ -251,39 +249,41 @@ class Receiver:
 
     async def _sync_done(self, data: PlotSyncDone) -> None:
         self._validate_identifier(data.identifier)
-        # Update ids
-        self._last_sync_id = self._expected_sync_id
-        self._expected_sync_id = uint64(0)
-        self._expected_message_id = uint64(0)
+        self._current_sync.time_done = time.time()
         # First create the update delta (i.e. transform invalid/keys_missing into additions/removals) which we will
         # send to the callback receiver below
-        delta_invalid: PathListDelta = PathListDelta.from_lists(self._invalid, self._delta.invalid.additions)
-        delta_keys_missing: PathListDelta = PathListDelta.from_lists(
-            self._keys_missing, self._delta.keys_missing.additions
+        delta_invalid: PathListDelta = PathListDelta.from_lists(
+            self._invalid, self._current_sync.delta.invalid.additions
         )
-        delta_duplicates: PathListDelta = PathListDelta.from_lists(self._duplicates, self._delta.duplicates.additions)
+        delta_keys_missing: PathListDelta = PathListDelta.from_lists(
+            self._keys_missing, self._current_sync.delta.keys_missing.additions
+        )
+        delta_duplicates: PathListDelta = PathListDelta.from_lists(
+            self._duplicates, self._current_sync.delta.duplicates.additions
+        )
         update = Delta(
-            PlotListDelta(self._delta.valid.additions.copy(), self._delta.valid.removals.copy()),
+            PlotListDelta(
+                self._current_sync.delta.valid.additions.copy(), self._current_sync.delta.valid.removals.copy()
+            ),
             delta_invalid,
             delta_keys_missing,
             delta_duplicates,
         )
         # Apply delta
-        self._plots.update(self._delta.valid.additions)
-        for removal in self._delta.valid.removals:
+        self._plots.update(self._current_sync.delta.valid.additions)
+        for removal in self._current_sync.delta.valid.removals:
             del self._plots[removal]
-        self._invalid = self._delta.invalid.additions.copy()
-        self._keys_missing = self._delta.keys_missing.additions.copy()
-        self._duplicates = self._delta.duplicates.additions.copy()
-        # Update state and bump last sync time
-        self._sync_state = State.idle
-        self._last_sync_time = time.time()
+        self._invalid = self._current_sync.delta.invalid.additions.copy()
+        self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
+        self._duplicates = self._current_sync.delta.duplicates.additions.copy()
+        # Save current sync as last sync and create a new current sync
+        self._last_sync = self._current_sync
+        self._current_sync = Sync()
         # Let the callback receiver know if this sync cycle caused any update
         try:
             await self._update_callback(self._connection.peer_node_id, update)  # type: ignore[misc,call-arg]
         except Exception as e:
             log.error(f"_update_callback raised: {e}")
-        self._delta.clear()
 
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
@@ -300,6 +300,6 @@ class Receiver:
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
         }
-        if self._last_sync_time != 0:
-            result["last_sync_time"] = self._last_sync_time
+        if self._last_sync.time_done != 0:
+            result["last_sync_time"] = self._last_sync.time_done
         return result
