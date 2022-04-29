@@ -166,12 +166,12 @@ class TestNFTRPC:
 
         await asyncio.sleep(5)
 
-        val = await api_0.nft_get_current_nfts({"wallet_id": nft_wallet_id_0})
+        val = await api_0.nft_get_nfts({"wallet_id": nft_wallet_id_0})
 
         assert val["success"]
-        assert len(val["nfts"]) == 1
-        nft_coin_info = val["nfts"][0][0]
-        assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo.svg"]
+        assert len(val["nft_list"]) == 1
+        nft_coin_id = val["nft_list"][0].nft_coin_id
+        assert val["nft_list"][0].data_uris[0] == "https://www.chia.net/img/branding/chia-logo.svg"
 
         val = await api_1.did_get_current_coin_info({"wallet_id": did_wallet_id_1})
         assert val["success"]
@@ -181,7 +181,7 @@ class TestNFTRPC:
         val = await api_0.nft_transfer_nft(
             {
                 "wallet_id": nft_wallet_id_0,
-                "nft_coin_info": nft_coin_info,
+                "nft_coin_id": nft_coin_id,
                 "new_did": did_1,
                 "new_did_inner_hash": val["did_innerpuz"],
                 "trade_price": trade_price,
@@ -205,12 +205,11 @@ class TestNFTRPC:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await asyncio.sleep(5)
 
-        val = await api_1.nft_get_current_nfts({"wallet_id": nft_wallet_id_1})
-
+        val = await api_1.nft_get_nfts({"wallet_id": nft_wallet_id_1})
         assert val["success"]
-        assert len(val["nfts"]) == 1
-        assert val["nfts"][0][1] == [b"https://www.chia.net/img/branding/chia-logo.svg"]
-
+        assert len(val["nft_list"]) == 1
+        assert val["nft_list"][0].did_owner == did_1
+        assert val["nft_list"][0].data_uris[0] == "https://www.chia.net/img/branding/chia-logo.svg"
         # Test adding a url
         # TODO: un comment out this code when DID isn't broken
 

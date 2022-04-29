@@ -1,10 +1,11 @@
-from typing import Iterator, List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -27,7 +28,6 @@ def create_nft_layer_puzzle(
     backpayment_address: bytes32,
     percentage: uint64,
 ) -> Program:
-
     transfer_program_curry_params = [
         backpayment_address,
         percentage,
@@ -101,38 +101,6 @@ def get_transfer_puzzle() -> Program:
     return NFT_TRANSFER_PROGRAM
 
 
-def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
-    """
-    Given a puzzle test if it's an NFT and, if it is, return the curried arguments
-    """
-    try:
-        mod, curried_args = puzzle.uncurry()
-        if mod == SINGLETON_TOP_LAYER_MOD:
-            mod, curried_args = curried_args.rest().first().uncurry()
-            if mod == NFT_MOD:
-                return True, curried_args.as_iter()
-    except Exception:
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
-        return False, iter(())
-    return False, iter(())
-
-
-def get_nft_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
-    """
-    Given a puzzle test if it's an NFT and, if it is, return the curried arguments
-    """
-    try:
-        mod, curried_args = puzzle.uncurry()
-        if mod == SINGLETON_TOP_LAYER_MOD:
-            nft_id: bytes32 = curried_args.first().rest().first().as_atom()
-            return nft_id
-    except Exception:
-        return None
-    return None
-
-
 def update_metadata(metadata: Program, solution: Program) -> Program:
     tp_solution: Optional[Program] = get_transfer_program_solution_from_solution(solution)
     if tp_solution is None or tp_solution.rest().first() == Program.to(0):
@@ -153,60 +121,6 @@ def get_transfer_program_from_inner_solution(solution: Program) -> Optional[Prog
         return prog
     except Exception:
         return None
-    return None
-
-
-def get_transfer_program_curried_args_from_puzzle(puzzle: Program) -> Optional[Program]:
-    try:
-        curried_args = match_nft_puzzle(puzzle)[1]
-        (
-            NFT_MOD_HASH,
-            singleton_struct,
-            current_owner_did,
-            nft_transfer_program_hash,
-            transfer_program_curry_params,
-            metadata,
-        ) = curried_args
-        return transfer_program_curry_params
-    except Exception:
-        return None
-    return None
-
-
-def get_royalty_address_from_puzzle(puzzle: Program) -> Optional[bytes32]:
-    try:
-        transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
-        if transfer_program_curry_params is not None:
-            (
-                ROYALTY_ADDRESS,
-                TRADE_PRICE_PERCENTAGE,
-                SETTLEMENT_MOD_HASH,
-                CAT_MOD_HASH,
-            ) = transfer_program_curry_params.as_iter()
-            assert ROYALTY_ADDRESS is not None
-            royalty_address: bytes32 = ROYALTY_ADDRESS.as_atom()
-            return royalty_address
-    except Exception:
-        return None
-    return None
-
-
-def get_percentage_from_puzzle(puzzle: Program) -> Optional[uint64]:
-    try:
-        transfer_program_curry_params = get_transfer_program_curried_args_from_puzzle(puzzle)
-        if transfer_program_curry_params is not None:
-            (
-                ROYALTY_ADDRESS,
-                TRADE_PRICE_PERCENTAGE,
-                SETTLEMENT_MOD_HASH,
-                CAT_MOD_HASH,
-            ) = transfer_program_curry_params.as_iter()
-            assert TRADE_PRICE_PERCENTAGE is not None
-            percentage: uint64 = TRADE_PRICE_PERCENTAGE.as_int()
-            return percentage
-    except Exception:
-        return None
-    return None
 
 
 def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
@@ -217,35 +131,18 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     :return: NFTInfo
     """
     # TODO Update this method after the NFT code finalized
-    curried_args = match_nft_puzzle(puzzle)[1]
-    (
-        _,
-        singleton_struct,
-        current_owner_did,
-        nft_transfer_program_hash,
-        transfer_program_curry_params,
-        metadata,
-    ) = curried_args
-    (
-        royalty_address,
-        trade_price_percentage,
-        settlement_mod_hash,
-        cat_mod_hash,
-    ) = transfer_program_curry_params.as_iter()
-    for kv_pair in metadata.as_iter():
-        if kv_pair.first().as_atom() == b"u":
-            data_uris = []
-            for uri in kv_pair.rest().as_python():
-                data_uris.append(str(uri, "utf-8"))
-        if kv_pair.first().as_atom() == b"h":
-            data_hash = kv_pair.rest().as_python().hex()
+    uncurried_nft: UncurriedNFT = UncurriedNFT(puzzle, True)
+    data_uris = []
+    for uri in uncurried_nft.data_uris.as_python():
+        data_uris.append(str(uri, "utf-8"))
+
     nft_info = NFTInfo(
-        singleton_struct.rest().first().as_python().hex(),
+        uncurried_nft.singleton_launcher_id.as_python().hex(),
         nft_coin.name().hex(),
-        current_owner_did.as_python(),
-        trade_price_percentage.as_int(),
+        uncurried_nft.owner_did.as_python(),
+        uint64(uncurried_nft.trade_price_percentage.as_int()),
         data_uris,
-        data_hash,
+        uncurried_nft.data_hash.as_python().hex(),
         [],
         "",
         [],
@@ -256,45 +153,12 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     return nft_info
 
 
-def get_metadata_from_puzzle(puzzle: Program) -> Optional[Program]:
-    try:
-        curried_args = match_nft_puzzle(puzzle)[1]
-        (
-            NFT_MOD_HASH,
-            singleton_struct,
-            current_owner_did,
-            nft_transfer_program_hash,
-            transfer_program_curry_params,
-            metadata,
-        ) = curried_args
-        return metadata
-    except Exception:
-        return None
-    return None
-
-
-def get_uri_list_from_puzzle(puzzle: Program) -> Optional[List[str]]:
-    try:
-        uri_list = []
-        metadata = get_metadata_from_puzzle(puzzle)
-        assert metadata is not None
-        for kv_pair in metadata.as_iter():
-            if kv_pair.first().as_atom() == b"u":
-                for uri in kv_pair.rest().as_iter():
-                    uri_list.append(uri.as_atom())
-        return uri_list
-    except Exception:
-        return None
-    return None
-
-
 def get_trade_prices_list_from_inner_solution(solution: Program) -> Optional[Program]:
     try:
         prog: Program = solution.rest().rest().rest().rest().first().first()
         return prog
     except Exception:
         return None
-    return None
 
 
 def get_transfer_program_solution_from_solution(solution: Program) -> Optional[Program]:
@@ -303,4 +167,3 @@ def get_transfer_program_solution_from_solution(solution: Program) -> Optional[P
         return prog_sol
     except Exception:
         return None
-    return None

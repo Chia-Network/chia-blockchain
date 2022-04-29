@@ -21,7 +21,7 @@ DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
 
 def create_innerpuz(
     p2_puzzle: Program,
-    recovery_list: List[bytes],
+    recovery_list: List[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
@@ -42,7 +42,7 @@ def create_innerpuz(
 
 def get_inner_puzhash_by_p2(
     p2_puzhash: bytes32,
-    recovery_list: List[bytes],
+    recovery_list: List[bytes32],
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),

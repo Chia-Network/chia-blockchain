@@ -26,7 +26,7 @@ class NFTInfo(Streamable):
     """
     royalty: uint64
     """
-    Percentage of the transaction fee paid to the author
+    Percentage of the transaction fee paid to the author, e.g. 1000 = 1%
     """
     data_uris: List[str]
     """
