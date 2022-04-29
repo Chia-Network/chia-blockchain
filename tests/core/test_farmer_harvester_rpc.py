@@ -301,3 +301,65 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
     for pool_dict in client_pool_state["pool_state"]:
         for key in ["points_found_24h", "points_acknowledged_24h"]:
             assert pool_dict[key][0] == list(since_24h)
+
+
+@pytest.mark.asyncio
+async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, self_hostname: str) -> None:
+    (
+        farmer_service,
+        farmer_rpc_api,
+        farmer_rpc_client,
+        harvester_service,
+        harvester_rpc_api,
+        harvester_rpc_client,
+    ) = harvester_farmer_environment
+    farmer_api = farmer_service._api
+
+    async def wait_for_plot_sync() -> bool:
+        try:
+            return (await farmer_rpc_client.get_harvesters_summary())["harvesters"][0]["plots"] > 0
+        except Exception:
+            return False
+
+    await time_out_assert(15, wait_for_plot_sync, True)
+
+    assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
+
+    pool_contract_puzzle_hash: bytes32 = bytes32.from_hexstr(
+        "1b9d1eaa3c6a9b27cd90ad9070eb012794a74b277446417bc7b904145010c087"
+    )
+    pool_list = [
+        {
+            "launcher_id": "ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa",
+            "owner_public_key": "aa11e92274c0f6a2449fd0c7cfab4a38f943289dbe2214c808b36390c34eacfaa1d4c8f3c6ec582ac502ff32228679a0",  # noqa
+            "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
+            "pool_url": self_hostname,
+            "p2_singleton_puzzle_hash": pool_contract_puzzle_hash.hex(),
+            "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+        }
+    ]
+
+    root_path = farmer_api.farmer._root_path
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        config["pool"]["pool_list"] = pool_list
+        save_config(root_path, "config.yaml", config)
+    await farmer_api.farmer.update_pool_state()
+
+    pool_plot_count = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
+    assert pool_plot_count == 5
+
+    # TODO: Maybe improve this to not remove from Receiver directly but instead from the harvester and then wait for
+    #       plot sync event.
+    async def remove_all_and_validate() -> bool:
+        nonlocal pool_plot_count
+        receiver = farmer_api.farmer.plot_sync_receivers[harvester_service._server.node_id]
+        for path, plot in receiver.plots().copy().items():
+            if plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash:
+                del receiver.plots()[path]
+                pool_plot_count -= 1
+        plot_count = (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"]
+        assert plot_count == pool_plot_count
+        return plot_count
+
+    await time_out_assert(15, remove_all_and_validate, False)
+    assert (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"] == 0
