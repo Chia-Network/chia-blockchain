@@ -2001,12 +2001,10 @@ class TestBodyValidation:
             "transactions_info",
             None,
         )
-        try:
+        with pytest.raises(AssertionError):
             await _validate_and_add_block_multi_error(
                 b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
             )
-        except AssertionError:
-            return None
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_info_hash(self, empty_blockchain, bt):
@@ -3239,10 +3237,8 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
     await b.coin_store.rollback_to_block(2)
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
-    try:
+    with pytest.raises(ValueError):
         await _validate_and_add_block(b, blocks_reorg_chain[-1])
-    except ValueError:
-        pass
 
     assert b.get_peak().height == 19
 

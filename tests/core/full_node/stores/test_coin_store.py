@@ -128,21 +128,33 @@ class TestCoinStoreWithBlocks:
                                     tx_removals,
                                 )
 
+                    all_records = set()
                     for expected_coin in should_be_included_prev:
                         # Check that the coinbase rewards are added
                         record = await coin_store.get_coin_record(expected_coin.name())
                         assert record is not None
                         assert not record.spent
                         assert record.coin == expected_coin
+                        all_records.add(record)
                     for coin_name in tx_removals:
                         # Check that the removed coins are set to spent
                         record = await coin_store.get_coin_record(coin_name)
                         assert record.spent
+                        all_records.add(record)
                     for coin in tx_additions:
                         # Check that the added coins are added
                         record = await coin_store.get_coin_record(coin.name())
                         assert not record.spent
                         assert coin == record.coin
+                        all_records.add(record)
+
+                    db_records = await coin_store.get_coin_records(
+                        [c.name() for c in list(should_be_included_prev) + tx_additions] + tx_removals
+                    )
+                    assert len(db_records) == len(should_be_included_prev) + len(tx_removals) + len(tx_additions)
+                    assert len(db_records) == len(all_records)
+                    for record in db_records:
+                        assert record in all_records
 
                     should_be_included_prev = should_be_included.copy()
                     should_be_included = set()

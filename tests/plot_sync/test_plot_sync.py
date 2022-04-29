@@ -30,8 +30,8 @@ from tests.time_out_assert import time_out_assert
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
     return (
         sender._last_sync_id != previous_last_sync_id
-        and sender._last_sync_id == receiver._last_sync_id != 0
-        and receiver.state() == State.idle
+        and sender._last_sync_id == receiver._last_sync.sync_id != 0
+        and receiver.current_sync().state == State.idle
         and not sender._lock.locked()
     )
 
@@ -211,7 +211,7 @@ class Environment:
             # Make sure to reset the passed flag always before a new run
             self.expected[self.harvesters.index(harvester)].callback_passed = False
             receiver._update_callback = self.plot_sync_callback
-            assert harvester.plot_sync_sender._last_sync_id == receiver._last_sync_id
+            assert harvester.plot_sync_sender._last_sync_id == receiver._last_sync.sync_id
             last_sync_ids.append(harvester.plot_sync_sender._last_sync_id)
             plot_manager.start_refreshing()
             plot_manager.trigger_refresh()
