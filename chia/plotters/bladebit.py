@@ -6,7 +6,7 @@ import sys
 import logging
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union, List
+from typing import Any, Dict, Optional, Tuple
 from chia.plotting.create_plots import resolve_plot_keys
 from chia.plotters.plotters_util import run_plotter, run_command, check_git_repository, check_git_ref
 
@@ -74,7 +74,7 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
     return get_bladebit_exec_package_path()
 
 
-def get_bladebit_version(plotters_root_path: Path) -> Union[Tuple[None, Exception], Tuple[bool, List[str]]]:
+def get_bladebit_version(plotters_root_path: Path):
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
         try:
@@ -270,7 +270,8 @@ def plot_bladebit(args, chia_root_path, root_path):
             elif version == 2:
                 commit = "disk-plot"
             else:
-                raise f"Unknown bladebit version {version}"
+                print(f"Unknown bladebit version {version}")
+                return
 
             install_bladebit(root_path, True, commit)
         except Exception as e:
