@@ -1320,17 +1320,14 @@ class FullNodeAPI:
         """
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return None
-        height_to_hash = self.full_node.blockchain.height_to_hash
-        header_hashes: List[bytes32] = []
-        for i in range(request.start_height, request.end_height + 1):
-            header_hash: Optional[bytes32] = height_to_hash(uint32(i))
-            if header_hash is None:
-                reject = RejectBlockHeaders(request.start_height, request.end_height)
-                msg = make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-                return msg
-            header_hashes.append(header_hash)
 
-        blocks_bytes: List[bytes] = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
+        blocks_bytes: List[bytes] = await self.full_node.block_store.get_block_bytes_in_range(
+            request.start_height, request.end_height
+        )
+        if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
+            reject = RejectBlockHeaders(request.start_height, request.end_height)
+            msg = make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+            return msg
         header_blocks_bytes: List[bytes] = [
             header_block_from_block(memoryview(b), request.return_filter) for b in blocks_bytes
         ]

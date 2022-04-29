@@ -529,6 +529,34 @@ class BlockStore:
 
         return ret
 
+    async def get_block_bytes_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> List[bytes]:
+        """
+        Returns a list with all full blocks in range between start and stop
+        if present.
+        """
+
+        if self.db_wrapper.db_version == 2:
+
+            async with self.db_wrapper.read_db() as conn:
+                async with conn.execute(
+                    "SELECT block FROM full_blocks WHERE height >= ? AND height <= ?",
+                    (start, stop),
+                ) as cursor:
+                    maybe_decompress_blob = self.maybe_decompress_blob
+                    return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
+
+        else:
+
+            formatted_str = f"SELECT block from full_blocks WHERE height >= {start} and height <= {stop}"
+
+            async with self.db_wrapper.read_db() as conn:
+                async with await conn.execute(formatted_str) as cursor:
+                    return [row[0] for row in await cursor.fetchall()]
+
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 
         if self.db_wrapper.db_version == 2:
