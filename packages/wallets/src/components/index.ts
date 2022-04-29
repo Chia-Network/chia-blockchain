@@ -6,4 +6,3 @@ export { default as WalletImport } from './WalletImport';
 export { default as Wallets } from './Wallets';
 export { default as WalletStatus } from './WalletStatus';
 export { default as WalletStatusHeader } from './WalletStatusHeader';
-export { CreateOffer as Offers } from './offers/OfferManager';
