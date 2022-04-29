@@ -15,7 +15,14 @@ class _Group(click.Group):
         standalone_mode: bool = True,
         **extra: Any,
     ) -> Any:
-        return super().main(windows_expand_args=True)
+        return super().main(
+            args=args,
+            prog_name=prog_name,
+            complete_var=complete_var,
+            standalone_mode=standalone_mode,
+            windows_expand_args=True,
+            **extra,
+        )
 
 
 class _Command(click.Command):
@@ -27,7 +34,14 @@ class _Command(click.Command):
         standalone_mode: bool = True,
         **extra: Any,
     ) -> Any:
-        return super().main(windows_expand_args=True)
+        return super().main(
+            args=args,
+            prog_name=prog_name,
+            complete_var=complete_var,
+            standalone_mode=standalone_mode,
+            windows_expand_args=True,
+            **extra,
+        )
 
 
 def command(
