@@ -315,8 +315,8 @@ class Receiver:
             "total_plot_size": self._total_plot_size,
             "syncing": {
                 "initial": self.initial_sync(),
-                "plot_files_processed": self.current_sync().plots_processed,
-                "plot_files_total": self.current_sync().plots_total,
+                "plot_files_processed": self._current_sync.plots_processed,
+                "plot_files_total": self._current_sync.plots_total,
             }
             if self._current_sync.in_progress()
             else None,
