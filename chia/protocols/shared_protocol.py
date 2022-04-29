@@ -33,4 +33,5 @@ class Handshake(Streamable):
     capabilities: List[Tuple[uint16, str]]
 
 
-capabilities = [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOCK_HEADERS.value), "2")]
+# "1" means capability is enabled
+capabilities = [(uint16(Capability.BASE.value), "1"), (uint16(Capability.BLOCK_HEADERS.value), "1")]

@@ -144,10 +144,15 @@ class FullNode:
         if disable_capabilities_values and isinstance(disable_capabilities_values, list):
             try:
                 if Capability.BASE.value in disable_capabilities_values:
+                    # BASE capability cannot be removed
                     disable_capabilities_values.remove(Capability.BASE.value)
-                self.capabilities = [
-                    x for x in self.capabilities if not Capability(int(x[0])).name in disable_capabilities_values
-                ]
+
+                updated_capabilities = []
+                for capability in self.capabilities:
+                    if not Capability(int(capability[0])).name in disable_capabilities_values:
+                        updated_capabilities.append((capability[0], "0"))
+                    updated_capabilities.append(capability)
+                self.capabilities = updated_capabilities
             except Exception:
                 self.log.exception("Error disabling capabilities, defaulting to all capabilities")
         # TODO: Logging isn't setup yet so the log entries related to parsing the

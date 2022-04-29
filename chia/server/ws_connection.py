@@ -151,7 +151,8 @@ class WSChiaConnection:
             self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-            self.capabilities = [x[0] for x in inbound_handshake.capabilities]
+            # "1" means capability is enabled
+            self.capabilities = [x[0] for x in inbound_handshake.capabilities if x[1] == "1"]
         else:
             try:
                 message = await self._read_one_message()
@@ -187,7 +188,8 @@ class WSChiaConnection:
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-            self.capabilities = [x[0] for x in inbound_handshake.capabilities]
+            # "1" means capability is enabled
+            self.capabilities = [x[0] for x in inbound_handshake.capabilities if x[1] == "1"]
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
