@@ -1,4 +1,5 @@
 import logging
+from sqlite3.dbapi2 import NotSupportedError
 from typing import Dict, List, Optional, Tuple, Any
 
 import zstd
@@ -518,15 +519,7 @@ class BlockStore:
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         else:
-
-            formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
-
-            async with self.db_wrapper.read_db() as conn:
-                async with await conn.execute(formatted_str) as cursor:
-                    for row in await cursor.fetchall():
-                        header_hash = bytes32(self.maybe_from_hex(row[0]))
-                        ret[header_hash] = BlockRecord.from_bytes(row[1])
-
+            raise NotSupportedError("Only supported for db version>=2")
         return ret
 
     async def get_block_bytes_in_range(
@@ -539,14 +532,14 @@ class BlockStore:
         if present.
         """
 
+        maybe_decompress_blob = self.maybe_decompress_blob
         if self.db_wrapper.db_version == 2:
 
             async with self.db_wrapper.read_db() as conn:
                 async with conn.execute(
-                    "SELECT block FROM full_blocks WHERE height >= ? AND height <= ?",
+                    "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain = 1",
                     (start, stop),
                 ) as cursor:
-                    maybe_decompress_blob = self.maybe_decompress_blob
                     return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
 
         else:
@@ -555,7 +548,7 @@ class BlockStore:
 
             async with self.db_wrapper.read_db() as conn:
                 async with await conn.execute(formatted_str) as cursor:
-                    return [row[0] for row in await cursor.fetchall()]
+                    return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 
