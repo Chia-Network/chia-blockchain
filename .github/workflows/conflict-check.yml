@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: check if prs are behind main
-        uses: eps1lon/actions-label-merge-conflict@releases/2.x
+        uses: eps1lon/actions-label-merge-conflict@v2.0.0
         with:
           dirtyLabel: "Conflict: needs rebase"
           removeOnDirtyLabel: "Clean: caught up to main"
