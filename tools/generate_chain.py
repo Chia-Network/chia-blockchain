@@ -10,6 +10,7 @@ from typing import Iterator, List, Optional
 import click
 import zstd
 
+import chia.util.click
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
@@ -33,7 +34,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
     pr.dump_stats(f"generate-chain-{counter}.profile")
 
 
-@click.command()
+@chia.util.click.command()
 @click.option("--length", type=int, default=None, required=False, help="the number of blocks to generate")
 @click.option(
     "--fill-rate",

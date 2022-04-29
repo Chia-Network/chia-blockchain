@@ -2,8 +2,10 @@ from typing import Optional
 
 import click
 
+import chia.util.click
 
-@click.command("netspace", short_help="Estimate total farmed space on the network")
+
+@chia.util.click.command("netspace", short_help="Estimate total farmed space on the network")
 @click.option(
     "-p",
     "--rpc-port",

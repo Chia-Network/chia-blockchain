@@ -16,6 +16,7 @@ from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+import chia.util.click
 from chia.util.ints import uint32
 
 GENERATOR_ROM = bytes(get_generator())
@@ -50,7 +51,7 @@ def run_gen(env_data: bytes, block_program_args: bytes, flags: uint32):
         return 117, None, 0
 
 
-@click.command()
+@chia.util.click.command()
 @click.argument("file", type=click.Path(), required=True)
 @click.option(
     "--mempool-mode", default=False, is_flag=True, help="execute all block generators in the strict mempool mode"

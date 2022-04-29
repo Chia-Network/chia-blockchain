@@ -3,6 +3,7 @@ from typing import Optional
 
 import click
 
+import chia.util.click
 from chia.util.config import lock_and_load_config, save_config, str2bool
 
 
@@ -191,7 +192,7 @@ def configure(
             save_config(root_path, "config.yaml", config)
 
 
-@click.command("configure", short_help="Modify configuration")
+@chia.util.click.command("configure", short_help="Modify configuration")
 @click.option(
     "--testnet",
     "-t",

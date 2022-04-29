@@ -9,6 +9,7 @@ from typing import List, Optional
 import aiosqlite
 import click
 
+import chia.util.click
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
@@ -91,7 +92,7 @@ async def main(db_path: Path):
         blockchain.shut_down()
 
 
-@click.command()
+@chia.util.click.command()
 @click.argument("db-path", type=click.Path())
 def entry_point(db_path: Path):
     asyncio.run(main(Path(db_path)))

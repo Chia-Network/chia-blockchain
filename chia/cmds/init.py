@@ -1,8 +1,9 @@
 import click
+import chia.util.click
 from chia.util.keychain import supports_keyring_passphrase
 
 
-@click.command("init", short_help="Create or migrate the configuration")
+@chia.util.click.command("init", short_help="Create or migrate the configuration")
 @click.option(
     "--create-certs",
     "-c",

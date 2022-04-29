@@ -2,8 +2,10 @@ import click
 
 from typing import Optional, Tuple
 
+import chia.util.click
 
-@click.group("keys", short_help="Manage your keys")
+
+@chia.util.click.group("keys", short_help="Manage your keys")
 @click.pass_context
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""

@@ -2,9 +2,10 @@ from pathlib import Path
 import click
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
+import chia.util.click
 
 
-@click.group("db", short_help="Manage the blockchain database")
+@chia.util.click.group("db", short_help="Manage the blockchain database")
 def db_cmd() -> None:
     pass
 

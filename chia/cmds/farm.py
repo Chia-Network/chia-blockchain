@@ -2,8 +2,10 @@ from typing import Optional
 
 import click
 
+import chia.util.click
 
-@click.group("farm", short_help="Manage your farm")
+
+@chia.util.click.group("farm", short_help="Manage your farm")
 def farm_cmd() -> None:
     pass
 

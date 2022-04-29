@@ -15,6 +15,7 @@ import click
 import zstd
 
 import chia.server.ws_connection as ws
+import chia.util.click
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
@@ -195,7 +196,7 @@ async def run_sync_test(
             await full_node._await_closed()
 
 
-@click.group()
+@chia.util.click.group()
 def main() -> None:
     pass
 

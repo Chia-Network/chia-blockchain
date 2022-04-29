@@ -1,8 +1,9 @@
 import click
 from chia.plotters.plotters import call_plotters
+import chia.util.click
 
 
-@click.command(
+@chia.util.click.command(
     "plotters",
     short_help="Advanced plotting options",
     context_settings={"ignore_unknown_options": True},

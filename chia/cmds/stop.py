@@ -3,6 +3,7 @@ from pathlib import Path
 
 import click
 
+import chia.util.click
 from chia.util.service_groups import all_groups, services_for_groups
 
 
@@ -36,7 +37,7 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     return return_val
 
 
-@click.command("stop", short_help="Stop services")
+@chia.util.click.command("stop", short_help="Stop services")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context

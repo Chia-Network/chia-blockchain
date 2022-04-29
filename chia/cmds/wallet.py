@@ -3,11 +3,12 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
+import chia.util.click
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.transaction_sorting import SortKey
 
 
-@click.group("wallet", short_help="Manage your wallet")
+@chia.util.click.group("wallet", short_help="Manage your wallet")
 def wallet_cmd() -> None:
     pass
 

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, TextIO
 import click
 from aiohttp import ClientResponseError
 
+import chia.util.click
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
@@ -50,7 +51,7 @@ def get_routes(service: str, config: Dict[str, Any]) -> Dict[str, Any]:
     return asyncio.run(call_endpoint(service, "get_routes", {}, config))
 
 
-@click.group("rpc", short_help="RPC Client")
+@chia.util.click.group("rpc", short_help="RPC Client")
 def rpc_cmd() -> None:
     pass
 

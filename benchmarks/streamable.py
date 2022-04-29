@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, Type, Uni
 import click
 from utils import EnumType, get_commit_hash, rand_bytes, rand_full_block, rand_hash
 
+import chia.util.click
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint64
@@ -216,7 +217,7 @@ def compare_results(
             print_compare_row(mode, old_us, new_us, int((new_us - old_us) / old_us * 10000) / 100)
 
 
-@click.command()
+@chia.util.click.command()
 @click.option("-d", "--data", default=Data.all, type=EnumType(Data))
 @click.option("-m", "--mode", default=Mode.all, type=EnumType(Mode))
 @click.option("-r", "--runs", default=100, help="Number of benchmark runs to average results")

@@ -3,6 +3,7 @@ from typing import Any, Optional, Union, Dict
 from chia.types.blockchain_format.sized_bytes import bytes32
 import click
 
+import chia.util.click
 from chia.util.network import is_trusted_inner
 
 
@@ -289,7 +290,7 @@ async def show_async(
     await client.await_closed()
 
 
-@click.command("show", short_help="Show node information")
+@chia.util.click.command("show", short_help="Show node information")
 @click.option(
     "-p",
     "--rpc-port",

@@ -17,6 +17,7 @@ from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.db import db_cmd
+import chia.util.click
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import (
     Keychain,
@@ -46,7 +47,7 @@ def monkey_patch_click() -> None:
     click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore[attr-defined]
 
 
-@click.group(
+@chia.util.click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,

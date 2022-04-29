@@ -53,6 +53,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
+import chia.util.click
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
@@ -198,7 +199,7 @@ def run_generator_with_args(
     return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost), height)
 
 
-@click.command()
+@chia.util.click.command()
 @click.argument("filename", type=click.Path(exists=True), default="testnet10.396963.json")
 def cmd_run_json_block_file(filename):
     """`file` is a file containing a FullBlock in JSON format"""

@@ -4,8 +4,10 @@ import sys
 from io import TextIOWrapper
 from typing import Optional
 
+import chia.util.click
 
-@click.group("passphrase", short_help="Manage your keyring passphrase")
+
+@chia.util.click.group("passphrase", short_help="Manage your keyring passphrase")
 def passphrase_cmd():
     pass
 

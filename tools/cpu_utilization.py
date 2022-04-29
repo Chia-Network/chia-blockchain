@@ -6,6 +6,8 @@ from typing import Dict, List
 import click
 import psutil
 
+import chia.util.click
+
 
 @dataclass(frozen=True)
 class Counters:
@@ -13,7 +15,7 @@ class Counters:
     system_time: int
 
 
-@click.command()
+@chia.util.click.command()
 @click.argument("pid", type=int, required=True)
 @click.option(
     "--output",

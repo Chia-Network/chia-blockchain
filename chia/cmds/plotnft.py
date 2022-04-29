@@ -3,6 +3,8 @@ from typing import Optional
 
 import click
 
+import chia.util.click
+
 
 MAX_CMDLINE_FEE = Decimal(0.5)
 
@@ -17,7 +19,7 @@ def validate_fee(ctx, param, value):
     return value
 
 
-@click.group("plotnft", short_help="Manage your plot NFTs")
+@chia.util.click.group("plotnft", short_help="Manage your plot NFTs")
 def plotnft_cmd() -> None:
     pass
 

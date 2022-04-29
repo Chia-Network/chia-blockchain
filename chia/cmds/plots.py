@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 
+import chia.util.click
 from chia.plotting.util import add_plot_directory, validate_plot_size
 
 DEFAULT_STRIPE_SIZE = 65536
@@ -26,7 +27,7 @@ def show_plots(root_path: Path):
         print(f"{str_path}")
 
 
-@click.group("plots", short_help="Manage your plots")
+@chia.util.click.group("plots", short_help="Manage your plots")
 @click.pass_context
 def plots_cmd(ctx: click.Context):
     """Create, add, remove and check your plots"""

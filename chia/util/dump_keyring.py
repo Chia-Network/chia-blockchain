@@ -14,6 +14,8 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import chia.util.click
+
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
 
@@ -42,7 +44,7 @@ def get_passphrase_prompt(keyring_file: str) -> str:
     return prompt
 
 
-@click.command()
+@chia.util.click.command()
 @click.argument("keyring_file", nargs=1, default=DEFAULT_KEYRING_YAML)
 @click.option(
     "--full-payload", is_flag=True, default=False, help="Print the full keyring contents, including plaintext"
