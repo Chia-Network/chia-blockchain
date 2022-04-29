@@ -643,3 +643,17 @@ async def execute_with_wallet(
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()
     await wallet_client.await_closed()
+
+
+async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    amount = args["amount"]
+    fee = args["fee"]
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_did_wallet(amount, fee, name)
+        wallet_id = response["wallet_id"]
+        my_did = response["my_did"]
+        print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
+        print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+    except Exception as e:
+        print(f"Failed to create DID wallet: {e}")
