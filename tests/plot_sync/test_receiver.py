@@ -263,11 +263,14 @@ async def test_to_dict(counts_only: bool) -> None:
 
         sync_data = receiver.to_dict()["syncing"]
         if state == State.done:
-            assert sync_data is None
+            expected_sync_data = None
         else:
-            assert sync_data["initial"]
-            assert sync_data["plot_files_processed"] == expected_plot_files_processed
-            assert sync_data["plot_files_total"] == expected_plot_files_total
+            expected_sync_data = {
+                "initial": True,
+                "plot_files_processed": expected_plot_files_processed,
+                "plot_files_total": expected_plot_files_total,
+            }
+        assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
     assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
@@ -290,10 +293,11 @@ async def test_to_dict(counts_only: bool) -> None:
             uint32(1),
         )
     )
-    sync_data = receiver.to_dict()["syncing"]
-    assert not sync_data["initial"]
-    assert sync_data["plot_files_processed"] == 0
-    assert sync_data["plot_files_total"] == 1
+    assert receiver.to_dict()["syncing"] == {
+        "initial": False,
+        "plot_files_processed": 0,
+        "plot_files_total": 1,
+    }
 
 
 @pytest.mark.asyncio
