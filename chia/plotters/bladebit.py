@@ -313,18 +313,18 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
-    if args.memo:
+    if args.memo is not None and args.memo != b"":
         call_args.append("--memo")
         call_args.append(args.memo)
     if version > 1:
         call_args.append("diskplot")
-    if args.buckets is not None:
+    if args.buckets:
         call_args.append("-b")
         call_args.append(str(args.buckets))
-    if args.tmpdir is not None:
+    if args.tmpdir:
         call_args.append("-t1")
         call_args.append(str(args.tmpdir))
-    if args.tmpdir2 is not None:
+    if args.tmpdir2:
         call_args.append("-t2")
         call_args.append(str(args.tmpdir2))
     if args.no_cpu_affinity:
@@ -332,19 +332,19 @@ def plot_bladebit(args, chia_root_path, root_path):
     if args.cache is not None:
         call_args.append("--cache")
         call_args.append(str(args.cache))
-    if args.f1_threads is not None:
+    if args.f1_threads:
         call_args.append("--f1-threads")
         call_args.append(str(args.f1_threads))
-    if args.fp_threads is not None:
+    if args.fp_threads:
         call_args.append("--fp-threads")
         call_args.append(str(args.fp_threads))
-    if args.c_threads is not None:
+    if args.c_threads:
         call_args.append("--c-threads")
         call_args.append(str(args.c_threads))
-    if args.p2_threads is not None:
+    if args.p2_threads:
         call_args.append("--p2-threads")
         call_args.append(str(args.p2_threads))
-    if args.p3_threads is not None:
+    if args.p3_threads:
         call_args.append("--p3-threads")
         call_args.append(str(args.p3_threads))
 
