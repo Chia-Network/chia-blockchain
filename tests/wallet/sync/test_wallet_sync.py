@@ -38,7 +38,9 @@ class TestWalletSync:
         for block in default_1000_blocks[:100]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 15, False))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(10), uint32(15), False)
+        )
         assert msg.type == ProtocolMessageTypes.respond_block_headers.value
         res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
         bh = res_block_headers.header_blocks
@@ -58,7 +60,9 @@ class TestWalletSync:
         for i in range(0, len(new_blocks)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(110, 115, True))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(110), uint32(115), True)
+        )
         res_block_headers = RespondBlockHeaders.from_bytes(msg.data)
         bh = res_block_headers.header_blocks
         assert len(bh) == 6
@@ -69,23 +73,41 @@ class TestWalletSync:
         full_node_api: FullNodeAPI
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(1000000, 1000010, False))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(1000000), uint32(1000010), False)
+        )
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
-        for block in default_1000_blocks[:100]:
+        for block in default_1000_blocks[:150]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(80, 99, False))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(80), uint32(99), False)
+        )
         assert msg.type == ProtocolMessageTypes.respond_block_headers.value
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 8, False))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), False)
+        )
         assert msg is None
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(10, 8, True))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), True)
+        )
         assert msg is None
 
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(90, 110, False))
+        # test for 128 blocks to fetch at once limit
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(10), uint32(140), True)
+        )
+        assert msg is None
+
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(90), uint32(160), False)
+        )
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
-        msg = await full_node_api.request_block_headers(wallet_protocol.RequestBlockHeaders(90, 110, True))
+        msg = await full_node_api.request_block_headers(
+            wallet_protocol.RequestBlockHeaders(uint32(90), uint32(160), True)
+        )
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
 
