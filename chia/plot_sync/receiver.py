@@ -25,6 +25,7 @@ from chia.protocols.harvester_protocol import (
 from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint64
+from chia.util.misc import get_list_or_len
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
@@ -287,17 +288,17 @@ class Receiver:
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
         result: Dict[str, Any] = {
             "connection": {
                 "node_id": self._connection.peer_node_id,
                 "host": self._connection.peer_host,
                 "port": self._connection.peer_port,
             },
-            "plots": list(self._plots.values()),
-            "failed_to_open_filenames": self._invalid,
-            "no_key_filenames": self._keys_missing,
-            "duplicates": self._duplicates,
+            "plots": get_list_or_len(list(self._plots.values()), counts_only),
+            "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
+            "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
+            "duplicates": get_list_or_len(self._duplicates, counts_only),
         }
         if self._last_sync_time != 0:
             result["last_sync_time"] = self._last_sync_time
