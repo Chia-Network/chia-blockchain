@@ -8,7 +8,7 @@ from chia.util.streamable import Streamable, streamable
 @streamable
 @dataclass(frozen=True)
 class NFTInfo(Streamable):
-    """NFT Info"""
+    """NFT Info for displaying NFT on the UI"""
 
     launcher_id: str
     """Launcher coin ID"""
@@ -44,4 +44,4 @@ class NFTInfo(Streamable):
     """Current NFT version"""
 
     edition_count: uint64
-    """Times of modification"""
+    """Number of the NFT in a series"""

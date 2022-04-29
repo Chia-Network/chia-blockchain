@@ -6,7 +6,11 @@ NFT_MOD = load_clvm("nft_innerpuz.clvm")
 
 
 class UncurriedNFT:
-    """Uncurry a NFT puzzle"""
+    """
+    A simple solution for uncurry NFT puzzle.
+    Initial the class with a full NFT puzzle, it will do a deep uncurry.
+    This is the only place you need to change after modified the Chialisp curried parameters.
+    """
 
     matched: bool
     """If the puzzle is a NFT puzzle"""
@@ -92,6 +96,3 @@ class UncurriedNFT:
                 raise ValueError(f"Cannot uncurry puzzle {puzzle}, it's not a NFT puzzle.")
             else:
                 self.matched = False
-                import traceback
-
-                print(f"exception: {traceback.format_exc()}")

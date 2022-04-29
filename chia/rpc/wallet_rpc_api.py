@@ -1289,10 +1289,6 @@ class WalletRpcApi:
     async def nft_mint_nft(self, request):
         wallet_id = int(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        # uri: str,
-        # percentage: uint64,
-        # backpayment_address: bytes32,
-        # amount: int = 1
         address = request["artist_address"]
         if isinstance(address, str):
             address = decode_puzzle_hash(address)
@@ -1320,11 +1316,6 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         trade_price = request.get("trade_price", 0)
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        # nft_coin_id: bytes32,
-        # new_did,
-        # new_did_inner_hash,
-        # trade_prices_list,
-        # new_url=0,
         new_url = 0
         if "new_url" in request:
             new_url = request["new_url"]
@@ -1372,11 +1363,6 @@ class WalletRpcApi:
         did_wallet = self.service.wallet_state_manager.wallets[nft_wallet.nft_wallet_info.did_wallet_id]
         new_did_inner_hash = did_wallet.did_info.current_inner.get_tree_hash()
         new_url = request["new_url"]
-        # nft_coin_id: bytes32,
-        # new_did,
-        # new_did_inner_hash,
-        # trade_prices_list,
-        # new_url=0,
         sb = await nft_wallet.transfer_nft(
             bytes32.from_hexstr(request["nft_coin_id"]),
             my_did,
