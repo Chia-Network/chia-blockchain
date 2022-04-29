@@ -45,6 +45,7 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
                     # create a new connection, unlock the keyring, and then close the old connection.
                     old_connection = connection
                     connection = await connect_to_daemon_and_validate(root_path)
+                    assert connection is not None
 
         if passphrase is not None:
             print("Unlocking daemon keyring")
