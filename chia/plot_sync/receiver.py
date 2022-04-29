@@ -302,6 +302,13 @@ class Receiver:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
     def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
+        syncing = None
+        if self._current_sync.in_progress():
+            syncing = {
+                "initial": self.initial_sync(),
+                "plot_files_processed": self._current_sync.plots_processed,
+                "plot_files_total": self._current_sync.plots_total,
+            }
         return {
             "connection": {
                 "node_id": self._connection.peer_node_id,
@@ -313,12 +320,6 @@ class Receiver:
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
             "total_plot_size": self._total_plot_size,
-            "syncing": {
-                "initial": self.initial_sync(),
-                "plot_files_processed": self._current_sync.plots_processed,
-                "plot_files_total": self._current_sync.plots_total,
-            }
-            if self._current_sync.in_progress()
-            else None,
+            "syncing": syncing,
             "last_sync_time": self._last_sync.time_done,
         }
