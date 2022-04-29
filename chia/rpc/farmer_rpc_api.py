@@ -1,9 +1,53 @@
-from typing import Any, Callable, Dict, List, Optional
+import dataclasses
+import operator
+from typing import Any, Callable, Dict, List, Optional, Union
+
+from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
+from chia.plot_sync.receiver import Receiver
+from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.misc import KeyValue
+from chia.util.paginator import Paginator
+from chia.util.streamable import dataclass_from_dict
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+class PaginatedRequestData(Protocol):
+    peer_id: bytes32
+    page: int
+    page_size: int
+
+
+@dataclasses.dataclass
+class PlotInfoRequestData:
+    peer_id: bytes32
+    page: int
+    page_size: int
+    filter: List[KeyValue] = dataclasses.field(default_factory=list)
+    sort_key: str = "filename"
+    reverse: bool = False
+
+
+@dataclasses.dataclass
+class PlotPathRequestData:
+    peer_id: bytes32
+    page: int
+    page_size: int
+    filter: List[str] = dataclasses.field(default_factory=list)
+    reverse: bool = False
+
+
+def is_filter_match(plot: Union[Plot, Dict[str, Any]], filter_item: KeyValue) -> bool:
+    if isinstance(plot, Plot):
+        plot_attribute = getattr(plot, filter_item.key)
+    else:
+        plot_attribute = plot[filter_item.key]
+    none_match = filter_item.value is None and plot_attribute is None
+    attribute_match = filter_item.value is not None and filter_item.value in str(plot_attribute)
+    return none_match or attribute_match
 
 
 class FarmerRpcApi:
@@ -21,6 +65,10 @@ class FarmerRpcApi:
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_harvesters": self.get_harvesters,
             "/get_harvesters_summary": self.get_harvesters_summary,
+            "/get_harvester_plots_valid": self.get_harvester_plots_valid,
+            "/get_harvester_plots_invalid": self.get_harvester_plots_invalid,
+            "/get_harvester_plots_keys_missing": self.get_harvester_plots_keys_missing,
+            "/get_harvester_plots_duplicates": self.get_harvester_plots_duplicates,
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
@@ -158,6 +206,64 @@ class FarmerRpcApi:
 
     async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
         return await self.service.get_harvesters(True)
+
+    def paginated_plot_request(self, source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
+        try:
+            paginator: Paginator = Paginator(source, request.page_size)
+            return {
+                "peer_id": request.peer_id.hex(),
+                "page": request.page,
+                "page_count": paginator.page_count(),
+                "total_count": len(source),
+                "plots": paginator.get_page(request.page),
+            }
+        except Exception as e:
+            self.service.log.error(f"paginated_plot_request: failed with {e}")
+            return {"error": str(e)}
+
+    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
+        try:
+            request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+            plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
+            # Apply filter
+            for filter_item in request.filter:
+                plot_list = [plot for plot in plot_list if is_filter_match(plot, filter_item)]
+            restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
+            # Apply sort_key and reverse if sort_key is not restricted
+            if request.sort_key in restricted_sort_keys:
+                raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
+            # Sort by plot_id also by default since its unique
+            plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+            return self.paginated_plot_request(plot_list, request)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def paginated_plot_path_request(
+        self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
+    ) -> Dict[str, object]:
+        try:
+            request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+            receiver = self.service.get_receiver(request.peer_id)
+            source = source_func(receiver)
+            request = dataclass_from_dict(PlotPathRequestData, request_dict)
+            # Apply filter
+            for filter_item in request.filter:
+                source = [plot for plot in source if filter_item in plot]
+            # Apply reverse
+            source = sorted(source, reverse=request.reverse)
+            return self.paginated_plot_request(source, request)
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.invalid, request_dict)
+
+    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.keys_missing, request_dict)
+
+    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
