@@ -1241,10 +1241,10 @@ class WalletNode:
                 # Peer is telling us that coin that was previously known to be spent is not spent anymore
                 # Check old state
 
-                spent_state_blocks = await request_header_blocks(
+                spent_state_blocks: Optional[List[HeaderBlock]] = await request_header_blocks(
                     peer, current.spent_block_height, current.spent_block_height
                 )
-                if not spent_state_blocks:
+                if spent_state_blocks is None:
                     return False
                 spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == current.spent_block_height
