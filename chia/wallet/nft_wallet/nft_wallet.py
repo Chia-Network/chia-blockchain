@@ -27,7 +27,10 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.outer_puzzles import AssetType, match_puzzle
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.singleton_top_layer import match_singleton_puzzle
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import subscribe_to_phs
@@ -619,3 +622,63 @@ class NFTWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+
+    async def convert_puzzle_hash(self, puzhash: bytes32) -> bytes32:
+        return puzhash
+
+    def get_nft(self, launcher_id: bytes32) -> Optional[NFTCoinInfo]:
+        for coin in self.nft_wallet_info.my_nft_coins:
+            matched, curried_args = match_singleton_puzzle(coin.full_puzzle)
+            if matched:
+                singleton_struct, inner_puzzle = curried_args
+                launcher: bytes32 = singleton_struct.as_python()[1][0]
+                if launcher == launcher_id:
+                    return coin
+        return None
+
+    def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
+        nft_coin: Optional[NFTCoinInfo] = self.get_nft(asset_id)
+        if nft_coin is None:
+            raise ValueError("An asset ID was specified that this wallet doesn't track")
+        puzzle_info: Optional[PuzzleInfo] = match_puzzle(nft_coin.full_puzzle)
+        if puzzle_info is None:
+            raise ValueError("Internal Error: NFT wallet is tracking a non NFT coin")
+        else:
+            return puzzle_info
+
+    async def get_coins_to_offer(self, asset_id: bytes32, amount: uint64) -> Set[Coin]:
+        nft_coin: Optional[NFTCoinInfo] = self.get_nft(asset_id)
+        if nft_coin is None:
+            raise ValueError("An asset ID was specified that this wallet doesn't track")
+        return set([nft_coin.coin])
+
+    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+        return (
+            AssetType(puzzle_driver.type()) == AssetType.SINGLETON
+            and self.get_nft(puzzle_driver["launcher_id"]) is not None
+            and puzzle_driver.also() is not None
+            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
+            and puzzle_driver.also().also() is None  # type: ignore
+        )
+
+    @classmethod
+    async def create_from_puzzle_info(
+        cls,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        puzzle_driver: PuzzleInfo,
+        name=None,
+        in_transaction=False,
+    ) -> Any:
+        # Off the bat we don't support multiple profile but when we do this will have to change
+        for wallet in wallet_state_manager.wallets.values():
+            if wallet.type() == WalletType.NFT:
+                return wallet
+
+        # TODO: These are not the arguments to this function yet but they will be
+        return await cls.create_new_nft_wallet(
+            wallet_state_manager,
+            wallet,
+            name,
+            in_transaction,
+        )

@@ -54,7 +54,7 @@ class TradeManager:
         - get_asset_id() -> bytes32
       - Finally, you must make sure that your wallet will respond appropriately when these WSM methods are called:
         - get_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
-        - create_wallet_for_puzzle_info(puzzle_info: PuzzleInfo) -> <Your wallet>
+        - create_wallet_for_puzzle_info(..., puzzle_info: PuzzleInfo) -> <Your wallet>  (See cat_wallet.py for full API)
         - get_wallet_for_asset_id(asset_id: bytes32) -> <Your wallet>
     """
 
@@ -219,14 +219,8 @@ class TradeManager:
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            # This should probably not switch on whether or not we're spending a CAT but it has to for now
-            # ATTENTION: new_wallets
-            if wallet.type() == WalletType.CAT:
-                txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
-                )
-                all_txs.extend(txs)
-            else:
+            # This should probably not switch on whether or not we're spending a XCH but it has to for now
+            if wallet.type() == WalletType.STANDARD_WALLET:
                 if fee_to_pay > coin.amount:
                     selected_coins: Set[Coin] = await wallet.select_coins(
                         uint64(fee_to_pay - coin.amount),
@@ -243,6 +237,12 @@ class TradeManager:
                     ignore_max_send_amount=True,
                 )
                 all_txs.append(tx)
+            else:
+                # ATTENTION: new_wallets
+                txs = await wallet.generate_signed_transaction(
+                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                )
+                all_txs.extend(txs)
             fee_to_pay = uint64(0)
 
             cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
@@ -387,18 +387,8 @@ class TradeManager:
             fee_left_to_pay: uint64 = fee
             for wallet_id, selected_coins in coins_to_offer.items():
                 wallet = self.wallet_state_manager.wallets[wallet_id]
-                # This should probably not switch on whether or not we're spending a CAT but it has to for now
-                # ATTENTION: new_wallets
-                if wallet.type() == WalletType.CAT:
-                    txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[int(wallet_id)])],
-                        [Offer.ph()],
-                        fee=fee_left_to_pay,
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.extend(txs)
-                else:
+                # This should probably not switch on whether or not we're spending XCH but it has to for now
+                if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[int(wallet_id)]),
                         Offer.ph(),
@@ -407,6 +397,16 @@ class TradeManager:
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
+                else:
+                    # ATTENTION: new_wallets
+                    txs = await wallet.generate_signed_transaction(
+                        [abs(offer_dict[int(wallet_id)])],
+                        [Offer.ph()],
+                        fee=fee_left_to_pay,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
+                    )
+                    all_transactions.extend(txs)
 
                 fee_left_to_pay = uint64(0)
 

@@ -17,7 +17,10 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 
 # TODO: This driver won't work until the following functions exist and are imported above
-def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:  # type: ignore
+from typing import Tuple, Iterator
+
+
+def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     pass
 
 
@@ -37,20 +40,21 @@ class MetadataOuterPuzzle:
     _solve: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
-        matched, curried_args = match_metadata_layer_puzzle(puzzle)
-        if matched:
-            _, metadata, updater_hash, inner_puzzle = curried_args
-            constructor_dict = {
-                "type": "metadata",
-                "metadata": disassemble(metadata),  # type: ignore
-                "updater_hash": "0x" + updater_hash.as_python().hex(),
-            }
-            next_constructor = self._match(inner_puzzle)
-            if next_constructor is not None:
-                constructor_dict["also"] = next_constructor.info
-            return PuzzleInfo(constructor_dict)
-        else:
-            return None
+        # matched, curried_args = match_metadata_layer_puzzle(puzzle)
+        # if matched:
+        #     _, metadata, updater_hash, inner_puzzle = curried_args
+        #     constructor_dict = {
+        #         "type": "metadata",
+        #         "metadata": disassemble(metadata),  # type: ignore
+        #         "updater_hash": "0x" + updater_hash.as_python().hex(),
+        #     }
+        #     next_constructor = self._match(inner_puzzle)
+        #     if next_constructor is not None:
+        #         constructor_dict["also"] = next_constructor.info
+        #     return PuzzleInfo(constructor_dict)
+        # else:
+        #     return None
+        return None  # Uncomment above when match_metadata_layer_puzzle works
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
         return bytes32(constructor["updater_hash"])
