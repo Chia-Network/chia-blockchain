@@ -6,7 +6,14 @@ F = TypeVar("F", bound=Callable[..., Any])
 CmdType = TypeVar("CmdType", bound=click.Command)
 
 
+# TODO: handle hinting of pass-through parameters better
+
+
 class _Group(click.Group):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.command_class = _Command
+
     def main(
         self,
         args: Optional[Sequence[str]] = None,
