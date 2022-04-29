@@ -185,7 +185,7 @@ class NFTWallet:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-        uncurried_nft: UncurriedNFT = UncurriedNFT(puzzle)
+        uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
         nft_transfer_program = None
         if uncurried_nft.matched:
             # check if we already know this hash, if not then try to find reveal in solution
@@ -515,7 +515,7 @@ class NFTWallet:
         trade_price_list_discovered = None
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
-            uncurried_nft: UncurriedNFT = UncurriedNFT(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
             if uncurried_nft.matched:
                 inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
