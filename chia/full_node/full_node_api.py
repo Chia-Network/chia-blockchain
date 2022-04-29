@@ -1318,7 +1318,7 @@ class FullNodeAPI:
 
         This method should be used instead of RequestHeaderBlocks
         """
-        if request.end_height < request.start_height or request.end_height - request.start_height > 32:
+        if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return None
         height_to_hash = self.full_node.blockchain.height_to_hash
         header_hashes: List[bytes32] = []
