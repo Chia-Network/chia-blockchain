@@ -5,7 +5,6 @@ from enum import Enum
 from chia.plotters.bladebit import (
     get_bladebit_install_info,
     plot_bladebit,
-    get_bladebit_version,
     install_bladebit,
 )
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
