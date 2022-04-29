@@ -236,13 +236,14 @@ class WalletRpcClient(RpcClient):
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
 
     # DID wallet
-    async def create_new_did_wallet(self, amount, name="DID Wallet", backup_ids=[], required_num=0) -> Dict:
+    async def create_new_did_wallet(self, amount, fee=0, name="DID Wallet", backup_ids=[], required_num=0) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
             "did_type": "new",
             "backup_dids": backup_ids,
             "num_of_backup_ids_needed": required_num,
             "amount": amount,
+            "fee": fee,
             "wallet_name": name,
         }
         response = await self.fetch("create_new_wallet", request)
