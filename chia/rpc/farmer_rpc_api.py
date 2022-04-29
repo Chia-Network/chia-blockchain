@@ -20,6 +20,7 @@ class FarmerRpcApi:
             "/get_pool_state": self.get_pool_state,
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_harvesters": self.get_harvesters,
+            "/get_harvesters_summary": self.get_harvesters_summary,
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
@@ -59,6 +60,15 @@ class FarmerRpcApi:
             payloads.append(
                 create_payload_dict(
                     "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "proof":
+            payloads.append(
+                create_payload_dict(
+                    "proof",
                     change_data,
                     self.service_name,
                     "metrics",
@@ -135,7 +145,10 @@ class FarmerRpcApi:
         return {}
 
     async def get_harvesters(self, _: Dict):
-        return await self.service.get_harvesters()
+        return await self.service.get_harvesters(False)
+
+    async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
+        return await self.service.get_harvesters(True)
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
