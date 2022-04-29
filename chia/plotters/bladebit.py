@@ -285,6 +285,11 @@ def plot_bladebit(args, chia_root_path, root_path, version: int):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
+    if args.memo:
+        call_args.append("--memo")
+        call_args.append(args.memo)
+    if version > 1:
+        call_args.append("diskplot")
     if args.buckets is not None:
         call_args.append("-b")
         call_args.append(str(args.buckets))

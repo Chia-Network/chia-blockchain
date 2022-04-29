@@ -124,6 +124,10 @@ bladebit2_plotter_options = [
     Options.BLADEBIT_C_THREAD,
     Options.BLADEBIT_P2_THREAD,
     Options.BLADEBIT_P3_THREAD,
+    Options.TMP_DIR,
+    Options.TMP_DIR2,
+    Options.NUM_BUCKETS,
+    Options.MEMO,
 ]
 
 
@@ -299,7 +303,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.BLADEBIT_NONUMA:
             parser.add_argument(
-                "-m",
                 "--nonuma",
                 action="store_true",
                 help="Disable numa",
