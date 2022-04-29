@@ -481,27 +481,7 @@ def call_plotters(root_path: Path, args):
     if args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)
     if args.plotter.startswith("bladebit"):
-        (found, version_or_exception) = get_bladebit_version(root_path)
-        if found is None:
-            print(f"Error: {version_or_exception}")
-            return
-
-        if args.plotter == "bladebit":
-            if found and version_or_exception[0] != "1":
-                print(
-                    f"You're trying to run bladebit version 1"
-                    f" but currently version {'.'.join(version_or_exception)} is installed"
-                )
-                return
-            plot_bladebit(args, chia_root_path, root_path, version=1)
-        if args.plotter == "bladebit2":
-            if found and version_or_exception[0] != "2":
-                print(
-                    f"You're trying to run bladebit version 2"
-                    f" but currently version {'.'.join(version_or_exception)} is installed"
-                )
-                return
-            plot_bladebit(args, chia_root_path, root_path, version=2)
+        plot_bladebit(args, chia_root_path, root_path)
     if args.plotter == "install":
         install_plotter(args, root_path)
     if args.plotter == "version":
