@@ -28,5 +28,6 @@ jobs:
           commit-message: "adding ca updates"
           delete-branch: true
           reviewers: "wjblanke,emlowe"
+          assignees: "wallentx"
           title: "CA Cert updates"
           token: "${{ secrets.GITHUB_TOKEN }}"

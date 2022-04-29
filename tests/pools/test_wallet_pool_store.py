@@ -17,10 +17,7 @@ from chia.wallet.wallet_pool_store import WalletPoolStore
 
 
 def make_child_solution(coin_spend: CoinSpend, new_coin: Optional[Coin] = None) -> CoinSpend:
-    # TODO: address hint error and remove ignore
-    #       error: Incompatible types in assignment (expression has type "bytes", variable has type "bytes32")
-    #       [assignment]
-    new_puzzle_hash: bytes32 = token_bytes(32)  # type: ignore[assignment]
+    new_puzzle_hash: bytes32 = bytes32(token_bytes(32))
     solution = "()"
     puzzle = f"(q . ((51 0x{new_puzzle_hash.hex()} 1)))"
     puzzle_prog = Program.to(binutils.assemble(puzzle))

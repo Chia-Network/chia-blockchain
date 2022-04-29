@@ -12,9 +12,7 @@ from chia.util.files import write_file_async
 
 
 def gen_block_hash(height: int) -> bytes32:
-    # TODO: address hint errors and remove ignores
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return struct.pack(">I", height + 1) * (32 // 4)  # type: ignore[return-value]
+    return bytes32(struct.pack(">I", height + 1) * (32 // 4))
 
 
 def gen_ses(height: int) -> SubEpochSummary:
