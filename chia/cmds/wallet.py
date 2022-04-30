@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
+from chia.cmds.plotnft import validate_fee
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.transaction_sorting import SortKey
 
@@ -391,3 +392,45 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     from .wallet_funcs import execute_with_wallet, cancel_offer
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
+
+
+@wallet_cmd.group("did", short_help="DID related actions")
+def did_cmd():
+    pass
+
+
+@did_cmd.command("create", short_help="Create DID wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-n", "--name", help="Set the DID wallet name", type=str)
+@click.option(
+    "-a",
+    "--amount",
+    help="Set the DID amount in mojos. Value must be an odd number.",
+    type=int,
+    default=1,
+    show_default=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def did_create_wallet_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: Optional[int], fee: Optional[int]
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, create_did_wallet
+
+    extra_params = {"amount": amount, "fee": fee, "name": name}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
