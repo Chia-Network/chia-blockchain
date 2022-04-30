@@ -60,7 +60,11 @@ class UncurriedNFT:
     # TODO: If we make raise_exception=True result in no None return we could overload
     #       this to express that and avoid None handling in that case.
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program, raise_exception: bool = False) -> Optional[_T_UncurriedNFT]:
+    def uncurry(
+        cls: Type[_T_UncurriedNFT],
+        puzzle: Program,
+        raise_exception: bool = False,
+    ) -> Optional[_T_UncurriedNFT]:
         """Try to uncurry a NFT puzzle
 
         :param puzzle: Puzzle
