@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Type, TypeVar
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -57,30 +57,24 @@ class UncurriedNFT:
     data_uris: Program
     data_hash: Program
 
-    # TODO: If we make raise_exception=True result in no None return we could overload
-    #       this to express that and avoid None handling in that case.
     @classmethod
-    def uncurry(
-        cls: Type[_T_UncurriedNFT],
-        puzzle: Program,
-        raise_exception: bool = False,
-    ) -> Optional[_T_UncurriedNFT]:
+    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> _T_UncurriedNFT:
         """Try to uncurry a NFT puzzle
 
         :param puzzle: Puzzle
         :param raise_exception: If want to raise an exception when the puzzle is invalid
         :return Uncurried NFT
         """
+        exception = ValueError(f"Cannot uncurry puzzle {puzzle}, it's not an NFT puzzle.")
+
         try:
             mod, curried_args = puzzle.uncurry()
             if mod != SINGLETON_TOP_LAYER_MOD:
-                # TODO: shouldn't this raise if raise_exception?
-                return None
+                raise exception
 
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod != NFT_MOD:
-                # TODO: shouldn't this raise if raise_exception?
-                return None
+                raise exception
 
             # nft parameters
             # TODO: Centralize the definition of this order with a class and construct
@@ -132,7 +126,4 @@ class UncurriedNFT:
                 data_hash=data_hash,
             )
         except Exception as e:
-            if raise_exception:
-                raise ValueError(f"Cannot uncurry puzzle {puzzle}, it's not an NFT puzzle.") from e
-
-            return None
+            raise exception from e

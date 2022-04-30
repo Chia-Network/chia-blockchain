@@ -185,9 +185,11 @@ class NFTWallet:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-        uncurried_nft = UncurriedNFT.uncurry(puzzle)
         nft_transfer_program = None
-        if uncurried_nft is None:
+
+        try:
+            uncurried_nft = UncurriedNFT.uncurry(puzzle)
+        except ValueError:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
             child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
             if len(child_coin_records) > 0:
@@ -197,63 +199,64 @@ class NFTWallet:
                         # await self.remove_lineage(record.coin.name())
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
-        else:
-            # check if we already know this hash, if not then try to find reveal in solution
-            for hash, reveal in self.nft_wallet_info.known_transfer_programs:
-                if hash == bytes32(uncurried_nft.transfer_program_hash.as_atom()):
-                    nft_transfer_program = reveal
-            if nft_transfer_program is None:
-                attempt = nft_puzzles.get_transfer_program_from_inner_solution(solution)
-                if attempt is not None:
-                    nft_transfer_program = attempt
-                    await self.add_transfer_program(nft_transfer_program, in_transaction=in_transaction)
+            return
 
-            assert nft_transfer_program is not None
-            self.log.info(f"found the info for coin {coin_name}")
-            parent_coin = None
-            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-            if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin_name]
-                )
-                if coin_states is not None:
-                    parent_coin = coin_states[0].coin
-            if coin_record is not None:
-                parent_coin = coin_record.coin
-            if parent_coin is None:
-                raise ValueError("Error in finding parent")
-            inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle_with_curry_params(
-                uncurried_nft.singleton_launcher_id.as_atom(),
-                uncurried_nft.owner_did.as_atom(),
-                uncurried_nft.transfer_program_hash.as_atom(),
-                uncurried_nft.metadata,
-                uncurried_nft.transfer_program_curry_params,
-            )
-            child_coin: Optional[Coin] = None
-            for new_coin in coin_spend.additions():
-                if new_coin.amount % 2 == 1:
-                    child_coin = new_coin
-                    break
-            assert child_coin is not None
+        # check if we already know this hash, if not then try to find reveal in solution
+        for hash, reveal in self.nft_wallet_info.known_transfer_programs:
+            if hash == bytes32(uncurried_nft.transfer_program_hash.as_atom()):
+                nft_transfer_program = reveal
+        if nft_transfer_program is None:
+            attempt = nft_puzzles.get_transfer_program_from_inner_solution(solution)
+            if attempt is not None:
+                nft_transfer_program = attempt
+                await self.add_transfer_program(nft_transfer_program, in_transaction=in_transaction)
 
-            metadata = nft_puzzles.update_metadata(uncurried_nft.metadata, solution)
-            # TODO: add smarter check for -22 to see if curry_params changed and use this for metadata too
-            child_puzzle: Program = nft_puzzles.create_full_puzzle_with_curry_params(
-                uncurried_nft.singleton_launcher_id.as_atom(),
-                self.nft_wallet_info.my_did,
-                uncurried_nft.transfer_program_hash.as_atom(),
-                metadata,
-                uncurried_nft.transfer_program_curry_params,
+        assert nft_transfer_program is not None
+        self.log.info(f"found the info for coin {coin_name}")
+        parent_coin = None
+        coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
+        if coin_record is None:
+            coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                [coin_name]
             )
+            if coin_states is not None:
+                parent_coin = coin_states[0].coin
+        if coin_record is not None:
+            parent_coin = coin_record.coin
+        if parent_coin is None:
+            raise ValueError("Error in finding parent")
+        inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle_with_curry_params(
+            uncurried_nft.singleton_launcher_id.as_atom(),
+            uncurried_nft.owner_did.as_atom(),
+            uncurried_nft.transfer_program_hash.as_atom(),
+            uncurried_nft.metadata,
+            uncurried_nft.transfer_program_curry_params,
+        )
+        child_coin: Optional[Coin] = None
+        for new_coin in coin_spend.additions():
+            if new_coin.amount % 2 == 1:
+                child_coin = new_coin
+                break
+        assert child_coin is not None
 
-            assert child_puzzle.get_tree_hash() == child_coin.puzzle_hash
-            await self.add_coin(
-                child_coin,
-                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
-                nft_transfer_program,
-                child_puzzle,
-                in_transaction=in_transaction,
-            )
+        metadata = nft_puzzles.update_metadata(uncurried_nft.metadata, solution)
+        # TODO: add smarter check for -22 to see if curry_params changed and use this for metadata too
+        child_puzzle: Program = nft_puzzles.create_full_puzzle_with_curry_params(
+            uncurried_nft.singleton_launcher_id.as_atom(),
+            self.nft_wallet_info.my_did,
+            uncurried_nft.transfer_program_hash.as_atom(),
+            metadata,
+            uncurried_nft.transfer_program_curry_params,
+        )
+
+        assert child_puzzle.get_tree_hash() == child_coin.puzzle_hash
+        await self.add_coin(
+            child_coin,
+            LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
+            nft_transfer_program,
+            child_puzzle,
+            in_transaction=in_transaction,
+        )
 
     async def add_coin(
         self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program, in_transaction: bool
@@ -515,8 +518,9 @@ class NFTWallet:
         trade_price_list_discovered = None
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
-            uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-            if uncurried_nft is None:
+            try:
+                uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+            except ValueError:
                 continue
 
             inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
