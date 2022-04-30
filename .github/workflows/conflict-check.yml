@@ -15,7 +15,7 @@ jobs:
       - name: check if prs are behind main
         uses: eps1lon/actions-label-merge-conflict@v2.0.0
         with:
-          dirtyLabel: "Conflict: needs fixed"
+          dirtyLabel: "merge_conflict"
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           commentOnDirty: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
           commentOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."
