@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import random
 import time
 from secrets import token_bytes
 from typing import Any, Callable, List, Tuple, Type, Union
@@ -168,7 +169,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
             pool_contract_puzzle_hash=None,
             pool_public_key=None,
             plot_public_key=G1Element(),
-            file_size=uint64(0),
+            file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
         )
         for x in path_list
@@ -176,6 +177,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
 
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
+    receiver._total_plot_size = sum(plot.file_size for plot in receiver._plots.values())
 
     sync_steps: List[SyncStepData] = [
         SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
@@ -235,7 +237,9 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
     assert get_list_or_len(plot_sync_dict_1["failed_to_open_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
-    assert "last_sync_time" not in plot_sync_dict_1
+    assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    assert plot_sync_dict_1["syncing"] is None
+    assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
         "node_id": receiver.connection().peer_node_id,
         "host": receiver.connection().peer_host,
@@ -247,9 +251,26 @@ async def test_to_dict(counts_only: bool) -> None:
     # But unequal dicts wit the opposite counts_only value
     assert plot_sync_dict_1 != receiver.to_dict(not counts_only)
 
-    # Walk through all states from idle to done and run them with the test data
+    expected_plot_files_processed: int = 0
+    expected_plot_files_total: int = sync_steps[State.idle].args[2]
+
+    # Walk through all states from idle to done and run them with the test data and validate the sync progress
     for state in State:
         await run_sync_step(receiver, sync_steps[state], state)
+
+        if state != State.idle and state != State.removed and state != State.done:
+            expected_plot_files_processed += len(sync_steps[state].args[0])
+
+        sync_data = receiver.to_dict()["syncing"]
+        if state == State.done:
+            expected_sync_data = None
+        else:
+            expected_sync_data = {
+                "initial": True,
+                "plot_files_processed": expected_plot_files_processed,
+                "plot_files_total": expected_plot_files_total,
+            }
+        assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
     assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
@@ -259,7 +280,24 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(sync_steps[State.keys_missing].args[0], counts_only) == plot_sync_dict_3["no_key_filenames"]
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
+    assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_3["last_sync_time"] > 0
+    assert plot_sync_dict_3["syncing"] is None
+
+    # Trigger a repeated plot sync
+    await receiver.sync_started(
+        PlotSyncStart(
+            PlotSyncIdentifier(uint64(time.time()), uint64(receiver.last_sync().sync_id + 1), uint64(0)),
+            False,
+            receiver.last_sync().sync_id,
+            uint32(1),
+        )
+    )
+    assert receiver.to_dict()["syncing"] == {
+        "initial": False,
+        "plot_files_processed": 0,
+        "plot_files_total": 1,
+    }
 
 
 @pytest.mark.asyncio
