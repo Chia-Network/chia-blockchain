@@ -21,7 +21,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 
 
 async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProxy]:
-    connection: Optional[DaemonProxy] = await connect_to_daemon_and_validate(root_path)
+    connection = await connect_to_daemon_and_validate(root_path)
     if connection is None:
         print("Starting daemon")
         # launch a daemon
@@ -32,28 +32,16 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
         await asyncio.sleep(1)
         # it prints "daemon: listening"
         connection = await connect_to_daemon_and_validate(root_path)
-    if connection is not None:
-        old_connection: Optional[DaemonProxy] = None
-        passphrase: Optional[str] = None
+    if connection:
+        passphrase = None
         if await connection.is_keyring_locked():
             passphrase = Keychain.get_cached_master_passphrase()
             if not Keychain.master_passphrase_is_valid(passphrase):
-                passphrase = get_current_passphrase()
-                if passphrase is not None:
-                    # While waiting for for the user to enter their passphrase, it's possible that
-                    # the daemon connection has timed-out. We can't reliably detect this, so we'll
-                    # create a new connection, unlock the keyring, and then close the old connection.
-                    old_connection = connection
-                    connection = await connect_to_daemon_and_validate(root_path)
-                    assert connection is not None
+                passphrase = await asyncio.get_running_loop().run_in_executor(None, get_current_passphrase)
 
-        if passphrase is not None:
+        if passphrase:
             print("Unlocking daemon keyring")
             await connection.unlock_keyring(passphrase)
-
-        # Close the original connection (which may have already timed-out)
-        if old_connection is not None:
-            await old_connection.close()
 
         return connection
     return None
