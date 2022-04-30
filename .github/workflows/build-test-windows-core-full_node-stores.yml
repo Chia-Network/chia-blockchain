@@ -103,7 +103,7 @@ jobs:
     - name: Test core-full_node-stores code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10 --num-processes 0 -m "not benchmark"  tests/core/full_node/stores/test_block_store.py tests/core/full_node/stores/test_coin_store.py tests/core/full_node/stores/test_full_node_store.py tests/core/full_node/stores/test_hint_store.py tests/core/full_node/stores/test_sync_store.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10 --numprocesses 0 -m "not benchmark"  tests/core/full_node/stores/test_block_store.py tests/core/full_node/stores/test_coin_store.py tests/core/full_node/stores/test_full_node_store.py tests/core/full_node/stores/test_hint_store.py tests/core/full_node/stores/test_sync_store.py
 
     - name: Process coverage data
       run: |
