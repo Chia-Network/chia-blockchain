@@ -40,7 +40,10 @@ class Sync:
     plots_processed: uint32 = uint32(0)
     plots_total: uint32 = uint32(0)
     delta: Delta = field(default_factory=Delta)
-    time_done: float = 0
+    time_done: Optional[float] = None
+
+    def in_progress(self) -> bool:
+        return self.sync_id != 0
 
     def bump_next_message_id(self) -> None:
         self.next_message_id = uint64(self.next_message_id + 1)
@@ -57,6 +60,7 @@ class Receiver:
     _invalid: List[str]
     _keys_missing: List[str]
     _duplicates: List[str]
+    _total_plot_size: int
     _update_callback: Callable[[bytes32, Delta], Coroutine[Any, Any, None]]
 
     def __init__(
@@ -69,6 +73,7 @@ class Receiver:
         self._invalid = []
         self._keys_missing = []
         self._duplicates = []
+        self._total_plot_size = 0
         self._update_callback = update_callback  # type: ignore[assignment, misc]
 
     def reset(self) -> None:
@@ -78,6 +83,7 @@ class Receiver:
         self._invalid.clear()
         self._keys_missing.clear()
         self._duplicates.clear()
+        self._total_plot_size = 0
 
     def connection(self) -> WSChiaConnection:
         return self._connection
@@ -87,6 +93,9 @@ class Receiver:
 
     def last_sync(self) -> Sync:
         return self._last_sync
+
+    def initial_sync(self) -> bool:
+        return self._last_sync.sync_id == 0
 
     def plots(self) -> Dict[str, Plot]:
         return self._plots
@@ -99,6 +108,9 @@ class Receiver:
 
     def duplicates(self) -> List[str]:
         return self._duplicates
+
+    def total_plot_size(self) -> int:
+        return self._total_plot_size
 
     async def _process(
         self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
@@ -276,6 +288,7 @@ class Receiver:
         self._invalid = self._current_sync.delta.invalid.additions.copy()
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
+        self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync
         self._current_sync = Sync()
@@ -289,7 +302,14 @@ class Receiver:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
     def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
-        result: Dict[str, Any] = {
+        syncing = None
+        if self._current_sync.in_progress():
+            syncing = {
+                "initial": self.initial_sync(),
+                "plot_files_processed": self._current_sync.plots_processed,
+                "plot_files_total": self._current_sync.plots_total,
+            }
+        return {
             "connection": {
                 "node_id": self._connection.peer_node_id,
                 "host": self._connection.peer_host,
@@ -299,7 +319,7 @@ class Receiver:
             "failed_to_open_filenames": get_list_or_len(self._invalid, counts_only),
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
+            "total_plot_size": self._total_plot_size,
+            "syncing": syncing,
+            "last_sync_time": self._last_sync.time_done,
         }
-        if self._last_sync.time_done != 0:
-            result["last_sync_time"] = self._last_sync.time_done
-        return result
