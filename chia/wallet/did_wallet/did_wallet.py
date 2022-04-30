@@ -237,11 +237,11 @@ class DIDWallet:
         _, recovery_list_hash, num_verification, _, metadata = args
         full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
         inner_solution: Program = full_solution.rest().rest().first()
-        recovery_list: List[bytes] = []
+        recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
         if recovery_list_hash != Program.to([]).get_tree_hash():
-            for did in list(inner_solution.rest().rest().rest().rest().rest().as_iter()):
-                recovery_list.append(did.as_python()[0])
+            for did in inner_solution.rest().rest().rest().rest().rest().as_python():
+                recovery_list.append(did[0])
         self.did_info = DIDInfo(
             launch_coin,
             recovery_list,
@@ -796,7 +796,7 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    # Pushes the a SpendBundle to create a message coin on the blockchain
+    # Pushes a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
     async def create_attestment(
         self, recovering_coin_name: bytes32, newpuz: bytes32, pubkey: G1Element
@@ -898,7 +898,7 @@ class DIDWallet:
                 new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
                 spend_bundle_list.append(new_sb)
             # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            my_recovery_list: List[bytes] = self.did_info.backup_ids
+            my_recovery_list: List[bytes32] = self.did_info.backup_ids
 
             # convert info dict into recovery list - same order as wallet
             info_list = []
@@ -1234,7 +1234,7 @@ class DIDWallet:
         )
         await self.save_info(did_info, in_transaction)
 
-    async def update_recovery_list(self, recover_list: List[bytes], num_of_backup_ids_needed: uint64) -> bool:
+    async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
         if num_of_backup_ids_needed > len(recover_list):
             return False
         did_info: DIDInfo = DIDInfo(
@@ -1316,7 +1316,7 @@ class DIDWallet:
         backup_ids = []
         if len(details[3]) > 0:
             for d in details[3].split(","):
-                backup_ids.append(bytes.fromhex(d))
+                backup_ids.append(bytes32.from_hexstr(d))
         num_of_backup_ids_needed = uint64(int(details[5]))
         if num_of_backup_ids_needed > len(backup_ids):
             raise Exception

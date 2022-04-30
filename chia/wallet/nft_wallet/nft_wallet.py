@@ -27,6 +27,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -184,20 +185,12 @@ class NFTWallet:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-        matched, curried_args = nft_puzzles.match_nft_puzzle(puzzle)
+        uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
         nft_transfer_program = None
-        if matched:
-            (
-                NFT_MOD_HASH,
-                singleton_struct,
-                current_owner,
-                nft_transfer_program_hash,
-                transfer_program_curry_params,
-                metadata,
-            ) = curried_args
+        if uncurried_nft.matched:
             # check if we already know this hash, if not then try to find reveal in solution
             for hash, reveal in self.nft_wallet_info.known_transfer_programs:
-                if hash == bytes32(nft_transfer_program_hash.as_atom()):
+                if hash == bytes32(uncurried_nft.transfer_program_hash.as_atom()):
                     nft_transfer_program = reveal
             if nft_transfer_program is None:
                 attempt = nft_puzzles.get_transfer_program_from_inner_solution(solution)
@@ -220,11 +213,11 @@ class NFTWallet:
             if parent_coin is None:
                 raise ValueError("Error in finding parent")
             inner_puzzle: Program = nft_puzzles.create_nft_layer_puzzle_with_curry_params(
-                singleton_struct.rest().first().as_atom(),
-                current_owner.as_atom(),
-                nft_transfer_program_hash.as_atom(),
-                metadata,
-                transfer_program_curry_params,
+                uncurried_nft.singleton_launcher_id.as_atom(),
+                uncurried_nft.owner_did.as_atom(),
+                uncurried_nft.transfer_program_hash.as_atom(),
+                uncurried_nft.metadata,
+                uncurried_nft.transfer_program_curry_params,
             )
             child_coin: Optional[Coin] = None
             for new_coin in coin_spend.additions():
@@ -233,14 +226,14 @@ class NFTWallet:
                     break
             assert child_coin is not None
 
-            metadata = nft_puzzles.update_metadata(metadata, solution)
+            metadata = nft_puzzles.update_metadata(uncurried_nft.metadata, solution)
             # TODO: add smarter check for -22 to see if curry_params changed and use this for metadata too
             child_puzzle: Program = nft_puzzles.create_full_puzzle_with_curry_params(
-                singleton_struct.rest().first().as_atom(),
+                uncurried_nft.singleton_launcher_id.as_atom(),
                 self.nft_wallet_info.my_did,
-                nft_transfer_program_hash.as_atom(),
+                uncurried_nft.transfer_program_hash.as_atom(),
                 metadata,
-                transfer_program_curry_params,
+                uncurried_nft.transfer_program_curry_params,
             )
 
             assert child_puzzle.get_tree_hash() == child_coin.puzzle_hash
@@ -450,13 +443,19 @@ class NFTWallet:
 
     async def transfer_nft(
         self,
-        nft_coin_info: NFTCoinInfo,
+        nft_coin_id: bytes32,
         new_did,
         new_did_inner_hash,
         trade_prices_list,
         new_url=0,
     ):
         did_wallet = self.wallet_state_manager.wallets[self.nft_wallet_info.did_wallet_id]
+        nft_coin_info: Optional[NFTCoinInfo] = None
+        for info in self.nft_wallet_info.my_nft_coins:
+            if info.coin.name() == nft_coin_id:
+                nft_coin_info = info
+                break
+        assert nft_coin_info is not None
         transfer_prog = nft_coin_info.transfer_program
         # (sha256tree1 (list transfer_program_solution new_did))
         transfer_program_solution = [trade_prices_list, new_url]  # TODO: Make this flexible for other transfer_programs
@@ -515,18 +514,14 @@ class NFTWallet:
     async def receive_nft(self, sending_sb: SpendBundle, fee: uint64 = uint64(0)) -> SpendBundle:
         trade_price_list_discovered = None
         nft_id = None
-
         for coin_spend in sending_sb.coin_spends:
-            if nft_puzzles.match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))[0]:
+            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+            if uncurried_nft.matched:
                 inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
                 trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
-                nft_id = nft_puzzles.get_nft_id_from_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-                royalty_address = nft_puzzles.get_royalty_address_from_puzzle(
-                    Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-                )
-                royalty_percentage = nft_puzzles.get_percentage_from_puzzle(
-                    Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-                )
+                nft_id = uncurried_nft.singleton_launcher_id.as_atom()
+                royalty_address: bytes32 = uncurried_nft.royalty_address.as_atom()
+                royalty_percentage: uint64 = uint64(uncurried_nft.trade_price_percentage.as_int())
 
         assert trade_price_list_discovered is not None
         assert nft_id is not None
