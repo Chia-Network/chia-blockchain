@@ -185,9 +185,19 @@ class NFTWallet:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-        uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
+        uncurried_nft = UncurriedNFT.uncurry(puzzle)
         nft_transfer_program = None
-        if uncurried_nft.matched:
+        if uncurried_nft is None:
+            # The parent is not an NFT which means we need to scrub all of its children from our DB
+            child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
+            if len(child_coin_records) > 0:
+                for record in child_coin_records:
+                    if record.wallet_id == self.id():
+                        await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
+                        # await self.remove_lineage(record.coin.name())
+                        # We also need to make sure there's no record of the transaction
+                        await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
+        else:
             # check if we already know this hash, if not then try to find reveal in solution
             for hash, reveal in self.nft_wallet_info.known_transfer_programs:
                 if hash == bytes32(uncurried_nft.transfer_program_hash.as_atom()):
@@ -244,16 +254,6 @@ class NFTWallet:
                 child_puzzle,
                 in_transaction=in_transaction,
             )
-        else:
-            # The parent is not an NFT which means we need to scrub all of its children from our DB
-            child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
-            if len(child_coin_records) > 0:
-                for record in child_coin_records:
-                    if record.wallet_id == self.id():
-                        await self.wallet_state_manager.coin_store.delete_coin_record(record.coin.name())
-                        # await self.remove_lineage(record.coin.name())
-                        # We also need to make sure there's no record of the transaction
-                        await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
     async def add_coin(
         self, coin: Coin, lineage_proof: LineageProof, transfer_program: Program, puzzle: Program, in_transaction: bool
@@ -515,13 +515,15 @@ class NFTWallet:
         trade_price_list_discovered = None
         nft_id = None
         for coin_spend in sending_sb.coin_spends:
-            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-            if uncurried_nft.matched:
-                inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
-                trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
-                nft_id = uncurried_nft.singleton_launcher_id.as_atom()
-                royalty_address: bytes32 = uncurried_nft.royalty_address.as_atom()
-                royalty_percentage: uint64 = uint64(uncurried_nft.trade_price_percentage.as_int())
+            uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+            if uncurried_nft is None:
+                continue
+
+            inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()
+            trade_price_list_discovered = nft_puzzles.get_trade_prices_list_from_inner_solution(inner_sol)
+            nft_id = uncurried_nft.singleton_launcher_id.as_atom()
+            royalty_address: bytes32 = uncurried_nft.royalty_address.as_atom()
+            royalty_percentage: uint64 = uint64(uncurried_nft.trade_price_percentage.as_int())
 
         assert trade_price_list_discovered is not None
         assert nft_id is not None

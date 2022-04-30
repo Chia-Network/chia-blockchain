@@ -131,7 +131,13 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     :return: NFTInfo
     """
     # TODO Update this method after the NFT code finalized
-    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle, True)
+    uncurried_nft = UncurriedNFT.uncurry(puzzle, raise_exception=True)
+    # Even with raise_exception=True you can still get None back
+    if uncurried_nft is None:
+        # The code below would have raised anyways as None does not have a
+        # .data_uris attribute.
+        raise ValueError(f"UncurriedNFT.uncurry() call was unable to uncurry puzzle {puzzle} but also did not raise.")
+
     data_uris = []
     for uri in uncurried_nft.data_uris.as_python():
         data_uris.append(str(uri, "utf-8"))

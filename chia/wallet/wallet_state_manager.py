@@ -560,8 +560,8 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-        if uncurried_nft.matched:
+        uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        if uncurried_nft is not None:
             return await self.handle_nft(coin_spend)
 
         # Check if the coin is a DID
