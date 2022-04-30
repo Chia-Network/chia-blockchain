@@ -103,7 +103,7 @@ jobs:
     - name: Test core-full_node-full_sync code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/full_node/full_sync/test_full_sync.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10 -m "not benchmark" -p no:monitor tests/core/full_node/full_sync/test_full_sync.py
 
     - name: Process coverage data
       run: |
