@@ -28,13 +28,13 @@ def main() -> int:
         artifact_directory_path.mkdir()
 
         # TODO: reimplement or otherwise handle miniupnpc
-        extras = ["upnp"]
-        package_path_string = os.fspath(pathlib.Path(__file__).parent.parent)
-
-        if len(extras) > 0:
-            package_and_extras = f"{package_path_string}[{','.join(extras)}]"
-        else:
-            package_and_extras = package_path_string
+        # extras = ["upnp"]
+        # package_path_string = os.fspath(pathlib.Path(__file__).parent.parent)
+        #
+        # if len(extras) > 0:
+        #     package_and_extras = f"{package_path_string}[{','.join(extras)}]"
+        # else:
+        #     package_and_extras = package_path_string
 
         print("Downloading packages for Python version:")
         lines = [
