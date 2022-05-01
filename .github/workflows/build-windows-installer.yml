@@ -1,9 +1,10 @@
-name: Windows Installer on Windows 10 and Python 3.9
+name: Build Installer - Windows 10
 
 on:
   push:
     branches:
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -17,9 +18,13 @@ concurrency:
 
 jobs:
   build:
-    name: Windows Installer on Windows 10 and Python 3.9
+    name: Windows 10 Installer
     runs-on: [windows-2019]
-    timeout-minutes: 40
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]
 
     steps:
     - name: Checkout Code
@@ -60,9 +65,9 @@ jobs:
 
 #  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
-      name: Install Python 3.9
+      name: Install Python ${{ matrix.python-version }}
       with:
-        python-version: "3.9.11"
+        python-version: ${{ matrix.python-version }}
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
@@ -111,11 +116,11 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.rest.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest madmax plotter
       run: |
@@ -130,11 +135,11 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.rest.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'bladebit',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest bladebit plotter
       run: |
@@ -143,25 +148,35 @@ jobs:
         Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
         rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
 
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
+        .\Install.ps1 -d
+
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
         HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        .\build_scripts\build_windows.ps1
+        git -C .\chia-blockchain-gui status
+        .\venv\Scripts\Activate.ps1
+        cd .\build_scripts
+        .\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v3
       with:
         name: Windows-Exe
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v3
       with:
-        name: Windows-Installers
+        name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
 
     - name: Install AWS CLI

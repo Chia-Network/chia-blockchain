@@ -179,6 +179,49 @@ class CoinStore:
                     return record
         return None
 
+    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+        if len(names) == 0:
+            return []
+
+        coins: List[CoinRecord] = []
+        new_names: List[bytes32] = []
+        for n in names:
+            cached = self.coin_record_cache.get(n)
+            if cached is not None:
+                coins.append(cached)
+            else:
+                new_names.append(n)
+        names = new_names
+
+        if len(names) == 0:
+            return coins
+
+        async with self.db_wrapper.read_db() as conn:
+            cursors: List[Cursor] = []
+            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+                names_db: Tuple[Any, ...]
+                if self.db_wrapper.db_version == 2:
+                    names_db = tuple(names_chunk)
+                else:
+                    names_db = tuple([n.hex() for n in names_chunk])
+                cursors.append(
+                    await conn.execute(
+                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                        f"coin_parent, amount, timestamp FROM coin_record "
+                        f'WHERE coin_name in ({",".join(["?"] * len(names_db))}) ',
+                        names_db,
+                    )
+                )
+
+            for cursor in cursors:
+                for row in await cursor.fetchall():
+                    coin = self.row_to_coin(row)
+                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
+                    coins.append(record)
+                    self.coin_record_cache.put(record.coin.name(), record)
+
+        return coins
+
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
@@ -428,6 +471,7 @@ class CoinStore:
             self.coin_record_cache.remove(coin_name)
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
+        # Add coins that are confirmed in the reverted blocks to the list of updated coins.
         async with self.db_wrapper.write_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -439,12 +483,13 @@ class CoinStore:
                     record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
                     coin_changes[record.name] = record
 
-            # Delete from storage
+            # Delete reverted blocks from storage
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
+            # Add coins that are confirmed in the reverted blocks to the list of changed coins.
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index>?",
+                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index>?",
                 (block_index,),
             ) as cursor:
                 for row in await cursor.fetchall():

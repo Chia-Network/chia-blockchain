@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -53,9 +53,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.full_node.state_changed_callback = callback
 
     @property
     def server(self):
@@ -1250,8 +1247,9 @@ class FullNodeAPI:
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
-        for i in range(450):
-            await asyncio.sleep(0.1)
+        sleep_time = 0.01
+        for i in range(int(45 / sleep_time)):
+            await asyncio.sleep(sleep_time)
             for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
                 if spend_name == potential_name:
                     status = potential_status
@@ -1319,12 +1317,11 @@ class FullNodeAPI:
 
         header_hashes: List[bytes32] = []
         for i in range(request.start_height, request.end_height + 1):
-            if not self.full_node.blockchain.contains_height(uint32(i)):
+            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+            if header_hash is None:
                 reject = RejectHeaderBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
                 return msg
-            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
-            assert header_hash is not None
             header_hashes.append(header_hash)
 
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)

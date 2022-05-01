@@ -1,3 +1,6 @@
+from typing import Sequence, Union
+
+
 def format_bytes(bytes: int) -> str:
 
     if not isinstance(bytes, int) or bytes < 0:
@@ -68,3 +71,7 @@ def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
             return True
         elif ch == "n":
             return False
+
+
+def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+    return len(list_in) if length else list_in
