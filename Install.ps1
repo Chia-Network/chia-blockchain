@@ -101,9 +101,9 @@ else
 }
 
 # TODO: consider if this is safe and good
-Remove-Item -Force -Recurse -Path .penv
-Remove-Item -Force -Recurse -Path venv
-Remove-Item -Force -Recurse -Path .venv
+Remove-Item -ErrorAction Ignore -Force -Recurse -Path .penv
+Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
+Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
 py -$pythonVersion -m venv .penv
 .penv/Scripts/python -m pip install --upgrade pip setuptools wheel
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
