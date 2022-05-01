@@ -59,5 +59,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Setup Poetry
+      run: |
+        sh setup-poetry.sh -c python${{ matrix.python-version }}
+
     - name: Check Wheel Availability
       run: python build_scripts/check_dependency_artifacts.py

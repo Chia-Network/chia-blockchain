@@ -1,3 +1,4 @@
+import contextlib
 import os
 import pathlib
 import platform
@@ -52,7 +53,7 @@ def main() -> int:
         # TODO: this depends on cwd, make it not so
         subprocess.run(
             [
-                ".penv/bin/poetry",
+                "./poetry",
                 "export",
                 "--format",
                 "requirements.txt",
@@ -64,6 +65,10 @@ def main() -> int:
             ],
             check=True,
         )
+
+        env = dict(os.environ)
+        with contextlib.suppress(KeyError):
+            del env["PIP_REQUIRE_VIRTUALENV"]
 
         subprocess.run(
             [
@@ -78,6 +83,7 @@ def main() -> int:
                 "--requirement",
                 os.fspath(requirements_path),
             ],
+            env=env,
             check=True,
         )
 
