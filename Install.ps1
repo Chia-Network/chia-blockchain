@@ -100,11 +100,16 @@ else
     $extras_cli = ""
 }
 
-py -$pythonVersion -m venv venv
-
-venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-venv\scripts\pip install --editable ".$extras_cli" --extra-index-url https://pypi.chia.net/simple/
+# TODO: consider if this is safe and good
+Remove-Item -Force -Recurse -Path .penv
+Remove-Item -Force -Recurse -Path venv
+Remove-Item -Force -Recurse -Path .venv
+py -$pythonVersion -m venv .penv
+.penv/Scripts/python -m pip install --upgrade pip setuptools wheel
+# TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
+.penv/Scripts/python -m pip install poetry
+.penv/Scripts/poetry install
+New-Item -ItemType SymbolicLink -Path "venv" -Target ".venv"
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."

@@ -277,11 +277,11 @@ if [ -e venv/bin/python ]; then
   fi
 fi
 
-rm -rf .penv .venv venv
+# TODO: consider if this is safe and good
+rm -rf .penv venv .venv
 $INSTALL_PYTHON_PATH -m venv .penv
 .penv/bin/python -m pip install --upgrade pip setuptools wheel
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
-#.penv/bin/python -m pip install --requirement requirements.penv.txt
 .penv/bin/python -m pip install poetry
 .penv/bin/poetry install
 ln -s .venv venv
@@ -295,7 +295,7 @@ if [ -n "${EXTRAS}" ]; then
 fi
 
 # shellcheck disable=SC1091
-. ./activate
+#. ./activate
 # pip 20.x+ supports Linux binary wheels
 #python -m pip install --upgrade pip
 #python -m pip install wheel
