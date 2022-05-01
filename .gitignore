@@ -46,6 +46,7 @@ build_scripts/build
 .venv*/
 venv*
 activate
+poetry
 
 # Editors
 .vscode
