@@ -281,11 +281,8 @@ fi
 
 # TODO: consider if this is safe and good
 rm -rf .penv venv .venv
-$INSTALL_PYTHON_PATH -m venv .penv
-.penv/bin/python -m pip install --upgrade pip setuptools wheel
-# TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
-.penv/bin/python -m pip install poetry
-.penv/bin/poetry install
+./setup-poetry.sh -c "$INSTALL_PYTHON_PATH"
+./poetry install
 ln -s .venv venv
 if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .

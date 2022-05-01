@@ -104,11 +104,8 @@ else
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path .penv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
-py -$pythonVersion -m venv .penv
-.penv/Scripts/python -m pip install --upgrade pip setuptools wheel
-# TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
-.penv/Scripts/python -m pip install poetry
-.penv/Scripts/poetry install
+./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
+./poetry install
 New-Item -ItemType SymbolicLink -Path "venv" -Target ".venv"
 
 Write-Output ""
