@@ -47,7 +47,8 @@ THE_PATH=$(python -c 'import pkg_resources; print( pkg_resources.get_distributio
 #CHIAVDF_VERSION=$(python -c 'from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
 # TODO: this isn't the version...  it's the requirement
 .penv/bin/poetry show --no-ansi --no-interaction chiavdf
-CHIAVDF_VERSION="chiavdf==$(.penv/bin/poetry show --no-ansi --no-interaction chiavdf | sed -n 's/version\s*: //p')"
+.penv/bin/poetry show --no-ansi --no-interaction chiavdf | grep 'version[[:space:]]*:' | sed 's/version[[:space:]]*: //'
+CHIAVDF_VERSION="chiavdf==$(.penv/bin/poetry show --no-ansi --no-interaction chiavdf | grep 'version[[:space:]]*:' | sed 's/version[[:space:]]*: //')"
 
 ubuntu_cmake_install() {
 	UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
