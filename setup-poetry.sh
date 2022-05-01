@@ -15,7 +15,7 @@ usage() {
 
 PYTHON_COMMAND=
 
-while getopts ch flag
+while getopts c:h flag
 do
   case "${flag}" in
     c) PYTHON_COMMAND=${OPTARG};;
