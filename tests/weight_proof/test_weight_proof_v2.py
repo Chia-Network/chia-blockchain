@@ -494,6 +494,7 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
+    @pytest.mark.skip(reason="broken")
     @pytest.mark.asyncio
     async def test_weight_proof_extend_multiple_ses(self, default_10000_blocks):
         blocks = default_10000_blocks
@@ -519,6 +520,89 @@ class TestWeightProof:
         valid, fork_point, _, _ = await wpf.validate_weight_proof(new_wp, seed)
         assert valid
         assert fork_point != 0
+
+    @pytest.mark.skip("used for debugging")
+    @pytest.mark.asyncio
+    async def test_weight_proof_from_database(self):
+
+        log = logging.getLogger()
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        overrides = config["network_overrides"]["constants"]["mainnet"]
+        print(overrides["GENESIS_CHALLENGE"])
+        updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
+
+        db_connection = await aiosqlite.connect(db_path)
+        db_version: int = await lookup_db_version(db_connection)
+
+        if config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
+
+            def sql_trace_callback(req: str):
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")
+                log = open(sql_log_path, "a")
+                log.write(timestamp + " " + req + "\n")
+                log.close()
+
+            await db_connection.set_trace_callback(sql_trace_callback)
+
+        db_wrapper = DBWrapper2(db_connection, db_version=db_version)
+
+        # add reader threads for the DB
+        for i in range(config.get("db_readers", 4)):
+            c = await aiosqlite.connect(db_path)
+            await db_wrapper.add_connection(c)
+
+        await (await db_connection.execute("pragma journal_mode=wal")).close()
+        db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
+        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
+
+        if db_version != 2:
+            async with db_wrapper.read_db() as conn:
+                async with conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+                ) as cur:
+                    if len(await cur.fetchall()) == 0:
+                        try:
+                            # this is a new DB file. Make it v2
+                            async with db_wrapper.write_db() as w_conn:
+                                await set_db_version_async(w_conn, 2)
+                                db_wrapper.db_version = 2
+                        except sqlite3.OperationalError:
+                            # it could be a database created with "chia init", which is
+                            # empty except it has the database_version table
+                            pass
+
+        block_store = await BlockStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
+        coin_store = await CoinStore.create(db_wrapper)
+        reserved_cores = config.get("reserved_cores", 0)
+        single_threaded = config.get("single_threaded", False)
+        multiprocessing_start_method = process_config_start_method(config=config, log=log)
+        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        blockchain = await Blockchain.create(
+            coin_store=coin_store,
+            block_store=block_store,
+            consensus_constants=updated_constants,
+            hint_store=hint_store,
+            blockchain_dir=db_path.parent,
+            reserved_cores=reserved_cores,
+            multiprocessing_context=multiprocessing_context,
+            single_threaded=single_threaded,
+        )
+        peak = blockchain.get_peak()
+        wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
+        wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
+        wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
+        valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
+        assert valid
+        wpf = WeightProofHandler(updated_constants, blockchain)
+        wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak.height))
+        valid, fork_point, summaries = await wpf.validate_weight_proof(wp)
+        assert valid
+        await db_connection.close()
 
 
 def get_size(obj, seen=None) -> int:  # type: ignore

@@ -845,14 +845,17 @@ class Blockchain(BlockchainInterface):
         return await self.block_store.get_sub_epoch_challenge_segments(ses_block_hash)
 
     async def persist_sub_epoch_challenge_segments_v2(
-        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
+        self,
+        ses_block_hash: bytes32,
+        segments: bytes,
+        num_of_segmetns: int,
     ):
-        return await self.block_store.persist_sub_epoch_challenge_segments_v2(ses_block_hash, segments)
+        return await self.block_store.persist_sub_epoch_challenge_segments_v2(ses_block_hash, segments, num_of_segmetns)
 
     async def get_sub_epoch_challenge_segments_v2(
         self,
         ses_block_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
+    ) -> Optional[Tuple[bytes, int]]:
         return await self.block_store.get_sub_epoch_challenge_segments_v2(ses_block_hash)
 
     # Returns 'True' if the info is already in the set, otherwise returns 'False' and stores it.

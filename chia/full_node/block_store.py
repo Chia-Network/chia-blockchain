@@ -7,12 +7,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import SerializedProgram
-from chia.types.weight_proof import (
-    SubEpochChallengeSegment,
-    SubEpochSegments,
-    SubEpochChallengeSegmentV2,
-    SubEpochSegmentsV2,
-)
+from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.errors import Err
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
@@ -64,7 +59,7 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
                 )
 
                 # backward compatible Sub epoch segments for weight proofs
@@ -98,7 +93,7 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
                 )
 
                 # backward compatible Sub epoch segments for weight proofs
@@ -264,27 +259,30 @@ class BlockStore:
         return None
 
     async def persist_sub_epoch_challenge_segments_v2(
-        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegmentV2]
+        self,
+        ses_block_hash: bytes32,
+        segments: bytes,
+        num_of_segments: int,
     ) -> None:
         async with self.db_wrapper.write_db() as conn:
             await conn.execute(
-                "INSERT OR REPLACE INTO segments VALUES(?, ?)",
-                (ses_block_hash.hex(), bytes(SubEpochSegmentsV2(segments))),
+                "INSERT OR REPLACE INTO segments VALUES(?, ?, ?)",
+                (ses_block_hash.hex(), segments, num_of_segments),
             )
 
     async def get_sub_epoch_challenge_segments_v2(
         self,
         ses_block_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
+    ) -> Optional[Tuple[bytes, int]]:
         async with self.db_wrapper.read_db() as conn:
             cursor = await conn.execute(
-                "SELECT challenge_segments from segments WHERE ses_block_hash=?", (ses_block_hash.hex(),)
+                "SELECT challenge_segments, num_of_segments from segments WHERE ses_block_hash=?",
+                (ses_block_hash.hex(),),
             )
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
-            challenge_segments = SubEpochSegmentsV2.from_bytes(row[0]).challenge_segments
-            return challenge_segments
+            return row[0], row[1]
         return None
 
     def rollback_cache_block(self, header_hash: bytes32):

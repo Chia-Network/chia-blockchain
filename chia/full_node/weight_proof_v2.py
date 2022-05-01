@@ -3,7 +3,6 @@ import dataclasses
 import logging
 import math
 import random
-import time
 from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -120,14 +119,12 @@ class WeightProofHandlerV2:
         """
         Creates a weight proof object
         """
-        start = time.time()
-        sub_epoch_segments: List[bytes] = []
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
             log.error("failed not tip in cache")
             return None
         log.info(f"create weight proof peak {tip} {tip_rec.height}")
-        recent_chain_task = get_recent_chain(self.blockchain, tip_rec.height)
+        recent_chain_task = asyncio.create_task(get_recent_chain(self.blockchain, tip_rec.height))
         summary_heights = self.blockchain.get_ses_heights()
         sub_epoch_data: List[SubEpochData] = []
         for sub_epoch_n, ses_height in enumerate(summary_heights):
@@ -158,6 +155,7 @@ class WeightProofHandlerV2:
         if prev_ses_block is None:
             return None
 
+        sub_epoch_segments_tasks: List[asyncio.Task[Optional[Tuple[bytes, int]]]] = []
         sample_n = 0
         for sub_epoch_n, ses_height in enumerate(summary_heights):
             if ses_height > tip_rec.height:
@@ -176,23 +174,30 @@ class WeightProofHandlerV2:
 
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):
                 sample_n += 1
-                segments = await self.__create_persist_sub_epoch(
-                    prev_ses_block, ses_block, ses_height, uint32(sub_epoch_n)
+                sub_epoch_segments_tasks.append(
+                    asyncio.create_task(
+                        self.__create_persist_sub_epoch(prev_ses_block, ses_block, ses_height, uint32(sub_epoch_n))
+                    )
                 )
-                if segments is None:
-                    log.error(f"error while building sub epoch {sub_epoch_n}")
-                    return None
-                # remove proofs from unsampled
-                sampled_seg_index = rng.choice(range(len(segments)))
-                segments = compress_segments(sampled_seg_index, segments)
-                log.info(f"sub epoch {sub_epoch_n} has {len(segments)} segments sampled {sampled_seg_index}")
-                sub_epoch_segments.append(bytes(SubEpochSegmentsV2(segments)))
             prev_ses_block = ses_block
+        sub_epoch_segments = await asyncio.gather(*sub_epoch_segments_tasks)
+        compress_sub_epoch_futures = []
+        with ProcessPoolExecutor() as executor:
+            for sub_epoch, num_of_segments in sub_epoch_segments:
+                sampled_seg_index = rng.choice(range(num_of_segments))
+                compress_sub_epoch_futures.append(executor.submit(compress_segments, sampled_seg_index, sub_epoch))
+        compressed_sub_epochs = []
+        for idx, future in enumerate(compress_sub_epoch_futures):
+            if future.exception() is not None:
+                log.error(f"error while compressing sub epoch")
+                return None
+            compressed_sub_epochs.append(future.result())
+
         recent_chain = await recent_chain_task
         if recent_chain is None:
+            log.error(f"error getting recent chain")
             return None
-        log.info(f"time to create proof: {time.time() - start}")
-        return WeightProofV2(sub_epoch_data, sub_epoch_segments, recent_chain)
+        return WeightProofV2(sub_epoch_data, compressed_sub_epochs, recent_chain)
 
     async def get_last_l(
         self, summary_heights: List[uint32], peak: uint32
@@ -244,15 +249,20 @@ class WeightProofHandlerV2:
 
     async def __create_persist_sub_epoch(
         self, prev_ses_block: BlockRecord, ses_block: BlockRecord, ses_height: uint32, sub_epoch_n: uint32
-    ) -> Optional[List[SubEpochChallengeSegmentV2]]:
-        segments = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
+    ) -> Optional[Tuple[bytes, int]]:
+        res = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
+        if res is not None:
+            return res[0], res[1]
+        segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
         if segments is None:
-            segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(sub_epoch_n))
-            if segments is None:
-                log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
-                return None
-            await self.blockchain.persist_sub_epoch_challenge_segments_v2(ses_block.header_hash, segments)
-        return segments
+            log.error(f"failed while building segments for sub epoch {sub_epoch_n}, ses height {ses_height} ")
+            return None
+        num_of_segments = len(segments)
+        segments_bytes = bytes(SubEpochSegmentsV2(segments))
+        await self.blockchain.persist_sub_epoch_challenge_segments_v2(
+            ses_block.header_hash, segments_bytes, num_of_segments
+        )
+        return segments_bytes, num_of_segments
 
     async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
@@ -265,7 +275,9 @@ class WeightProofHandlerV2:
         assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
-        await self.blockchain.persist_sub_epoch_challenge_segments_v2(ses_sub_block.header_hash, segments)
+        await self.blockchain.persist_sub_epoch_challenge_segments_v2(
+            ses_sub_block.header_hash, bytes(SubEpochSegmentsV2(segments)), len(segments)
+        )
         log.debug("sub_epoch_segments done")
         return
 
@@ -588,10 +600,9 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle) -> SubSlotDataV2:
     )
 
 
-def compress_segments(
-    full_segment_index: int, segments: List[SubEpochChallengeSegmentV2]
-) -> List[SubEpochChallengeSegmentV2]:
+def compress_segments(full_segment_index: int, segments_bytes: bytes) -> bytes:
     compressed_segments = []
+    segments = SubEpochSegmentsV2.from_bytes(segments_bytes).challenge_segments
     for idx, segment in enumerate(segments):
         if idx == full_segment_index:
             compressed_segments.append(segment)
@@ -610,20 +621,28 @@ def compress_segments(
             for subslot_data in segment.sub_slot_data:
                 new_slot = subslot_data
                 if after_challenge:
-                    new_slot = dataclasses.replace(
-                        subslot_data,
-                        cc_signage_point=None,
-                        cc_infusion_point=None,
-                        cc_slot_end=None,
-                        icc_infusion_point=None,
-                        icc_slot_end=None,
+                    new_slot = SubSlotDataV2(
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        subslot_data.cc_slot_end_output,
+                        None,
+                        None,
+                        None,
+                        subslot_data.icc_slot_end_output,
+                        None,
+                        subslot_data.ip_iters,
+                        None,
                     )
                 if subslot_data.is_challenge():
                     after_challenge = True
                 comp_seg.sub_slot_data.append(new_slot)
             compressed_segments.append(comp_seg)
-
-    return compressed_segments
+    return bytes(SubEpochSegmentsV2(compressed_segments))
 
 
 # ///////////////////////
@@ -720,7 +739,7 @@ def _validate_sub_epoch_segments(
         )
     sub_epochs = []
     for idx, future in enumerate(as_completed(ses_validation_futures)):
-        log.info(f"validated sub epoch sample {idx} out of {len(ses_validation_futures)}")
+        log.debug(f"validated sub epoch sample {idx} out of {len(ses_validation_futures)}")
         if future.exception() is not None:
             log.error(f"error validating sub epoch sample {future.exception()}")
             return False, []
@@ -1436,7 +1455,7 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
         if count_ses == 2:
             min_height = ses_height - 1
             break
-    log.debug(f"start {min_height} end {tip_height}")
+    log.info(f"start {min_height} end {tip_height}")
     headers = await blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
     blocks = await blockchain.get_block_records_in_range(min_height, tip_height)
     ses_count = 0
