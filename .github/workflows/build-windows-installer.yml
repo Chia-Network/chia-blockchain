@@ -164,6 +164,10 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         git -C .\chia-blockchain-gui status
         .\venv\Scripts\Activate.ps1
+        pip --version
+        pip list
+        .\venv\Scripts\pip --version
+        .\venv\Scripts\pip list
         cd .\build_scripts
         .\build_windows.ps1
 
