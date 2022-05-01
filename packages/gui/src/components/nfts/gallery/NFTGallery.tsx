@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, useTrans } from '@chia/core';
+import { Flex, LayoutDashboardSub, Loading, toBech32m, useTrans } from '@chia/core';
 import { defineMessage } from '@lingui/macro';
+import type { NFT } from '@chia/api';
 import { useGetCurrentNFTsQuery } from '@chia/api-react';
 import { Grid } from '@mui/material';
 import NFTGallerySidebar from './NFTGallerySidebar';
@@ -17,16 +18,26 @@ export default function NFTGallery() {
     items: [],
   });
 
-  const filteredData = useMemo(() => {
-    if (!data || !search) {
+  const transformedData = useMemo(() => {
+    if (!data) {
       return data;
     }
 
-    return data.filter(({ metadata = {} }) => {
+    return data.map((nft: NFT) => {
+      return { ...nft, id: toBech32m(nft.id, 'nft') };
+    });
+  }, [data]);
+
+  const filteredData = useMemo(() => {
+    if (!transformedData || !search) {
+      return transformedData;
+    }
+
+    return transformedData.filter(({ metadata = {} }) => {
       const { name = 'Test' } = metadata;
       return name.toLowerCase().includes(search.toLowerCase());
     });
-  }, [search, data]);
+  }, [search, transformedData]);
 
   function handleSelect(nft: NFT, selected: boolean) {
     setSelection((currentSelection) => {

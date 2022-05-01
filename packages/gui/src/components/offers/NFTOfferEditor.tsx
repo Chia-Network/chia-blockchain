@@ -23,7 +23,7 @@ import {
   Box,
   Divider,
   Grid,
-  Skeleton,
+  // Skeleton,
   Tabs,
   Tab,
   Typography,
@@ -31,6 +31,7 @@ import {
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
 import { isValidNFTId, launcherIdFromNFTId } from './utils';
+import NFTCard from '../nfts/NFTCard';
 
 /* ========================================================================== */
 /*              Temporary home for the NFT-specific Offer Editor              */
@@ -81,6 +82,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
         label={<Trans>NFT</Trans>}
         defaultValue={defaultValues.nftId}
         placeholder={t`NFT Identifier`}
+        inputProps={{ spellCheck: false }}
         fullWidth
         required
       />
@@ -209,10 +211,12 @@ NFTOfferConditionalsPanel.defaultProps = {
 
 /* ========================================================================== */
 
-type NFTOfferPreviewProps = {};
+type NFTOfferPreviewProps = {
+  nft: NFT
+};
 
 function NFTOfferPreview(props: NFTOfferPreviewProps) {
-  const {} = props;
+  const { nft } = props;
   const methods = useFormContext();
   const nftId = methods.watch('nftId');
 
@@ -254,55 +258,57 @@ function NFTOfferPreview(props: NFTOfferPreviewProps) {
             border: `${borderStyle}`,
             borderRadius: '24px',
             display: 'flex',
+            overflow: 'hidden',
           }}
         >
           {isValidNFT ? (
-            // TODO: The following is a placeholder for the NFT preview component
-            <Flex flexDirection="column" flexGrow={1} gap={0}>
-              <Flex
-                flexDirection="column"
-                alignItems="center"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.5rem 5px 0.5rem',
-                }}
-              >
-                <Skeleton
-                  variant="rectangular"
-                  width="100%"
-                  height="59px"
-                  style={{ borderRadius: '18px 18px 0px 0px' }}
-                />
-              </Flex>
-              <Flex
-                flexDirection="column"
-                alignItems="center"
-                style={{ width: '100%', padding: '0 0.5rem 0 0.5rem' }}
-              >
-                <Skeleton variant="rectangular" width="100%" height="264px" />
-              </Flex>
-              <Flex
-                flexDirection="column"
-                alignItems="center"
-                style={{ width: '100%', padding: '5px 0.5rem 0px 0.5rem' }}
-              >
-                <Skeleton variant="rectangular" width="100%" height="67px" />
-              </Flex>
-              <Flex
-                flexDirection="column"
-                style={{
-                  width: '100%',
-                  padding: '5px 0.5rem 0.5rem 0.5rem',
-                }}
-              >
-                <Skeleton
-                  variant="rectangular"
-                  width="100%"
-                  height="31px"
-                  style={{ borderRadius: '0px 0px 18px 18px' }}
-                />
-              </Flex>
-            </Flex>
+            <NFTCard nft={nft} />
+            // // TODO: The following is a placeholder for the NFT preview component
+            // <Flex flexDirection="column" flexGrow={1} gap={0}>
+            //   <Flex
+            //     flexDirection="column"
+            //     alignItems="center"
+            //     style={{
+            //       width: '100%',
+            //       padding: '0.5rem 0.5rem 5px 0.5rem',
+            //     }}
+            //   >
+            //     <Skeleton
+            //       variant="rectangular"
+            //       width="100%"
+            //       height="59px"
+            //       style={{ borderRadius: '18px 18px 0px 0px' }}
+            //     />
+            //   </Flex>
+            //   <Flex
+            //     flexDirection="column"
+            //     alignItems="center"
+            //     style={{ width: '100%', padding: '0 0.5rem 0 0.5rem' }}
+            //   >
+            //     <Skeleton variant="rectangular" width="100%" height="264px" />
+            //   </Flex>
+            //   <Flex
+            //     flexDirection="column"
+            //     alignItems="center"
+            //     style={{ width: '100%', padding: '5px 0.5rem 0px 0.5rem' }}
+            //   >
+            //     <Skeleton variant="rectangular" width="100%" height="67px" />
+            //   </Flex>
+            //   <Flex
+            //     flexDirection="column"
+            //     style={{
+            //       width: '100%',
+            //       padding: '5px 0.5rem 0.5rem 0.5rem',
+            //     }}
+            //   >
+            //     <Skeleton
+            //       variant="rectangular"
+            //       width="100%"
+            //       height="31px"
+            //       style={{ borderRadius: '0px 0px 18px 18px' }}
+            //     />
+            //   </Flex>
+            // </Flex>
           ) : (
             <Flex
               flexDirection="column"
@@ -506,7 +512,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
             defaultValues={defaultValues}
             isProcessing={isProcessing}
           />
-          <NFTOfferPreview />
+          <NFTOfferPreview nft={nft} />
         </Flex>
       </Flex>
     </Form>
