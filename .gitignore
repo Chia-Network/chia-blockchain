@@ -42,6 +42,8 @@ build_scripts/build
 
 # pyenv
 .python-version
+.penv*/
+.venv*/
 venv*/
 activate
 
