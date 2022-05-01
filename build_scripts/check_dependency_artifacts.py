@@ -24,7 +24,10 @@ def main() -> int:
         print(f"Working in: {directory_string}")
         print()
         directory_path = pathlib.Path(directory_string)
+        artifact_directory_path = directory_path.joinpath("artifacts")
+        artifact_directory_path.mkdir()
 
+        # TODO: reimplement or otherwise handle miniupnpc
         extras = ["upnp"]
         package_path_string = os.fspath(pathlib.Path(__file__).parent.parent)
 
@@ -44,6 +47,24 @@ def main() -> int:
             print(f"    {line}")
         print(flush=True)
 
+        requirements_path = directory_path.joinpath("exported_requirements.txt")
+
+        # TODO: this depends on cwd, make it not so
+        subprocess.run(
+            [
+                ".penv/bin/poetry",
+                "export",
+                "--format",
+                "requirements.txt",
+                "--output",
+                os.fspath(requirements_path),
+                "--without-hashes",
+                "--no-ansi",
+                "--no-interaction",
+            ],
+            check=True,
+        )
+
         subprocess.run(
             [
                 sys.executable,
@@ -51,17 +72,18 @@ def main() -> int:
                 "pip",
                 "download",
                 "--dest",
-                os.fspath(directory_path),
+                os.fspath(artifact_directory_path),
                 "--extra-index",
                 "https://pypi.chia.net/simple/",
-                package_and_extras,
+                "--requirement",
+                os.fspath(requirements_path),
             ],
             check=True,
         )
 
         failed_artifacts = []
 
-        for artifact in directory_path.iterdir():
+        for artifact in artifact_directory_path.iterdir():
             if artifact.suffix == ".whl":
                 # everything being a wheel is the target
                 continue
