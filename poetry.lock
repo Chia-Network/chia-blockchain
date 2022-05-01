@@ -165,7 +165,10 @@ pathspec = ">=0.9.0,<1"
 platformdirs = ">=2"
 tomli = ">=0.2.6,<2.0.0"
 typed-ast = {version = ">=1.4.2", markers = "python_version < \"3.8\" and implementation_name == \"cpython\""}
-typing-extensions = ">=3.10.0.0"
+typing-extensions = [
+    {version = ">=3.10.0.0", markers = "python_version < \"3.10\""},
+    {version = "!=3.10.0.1", markers = "python_version >= \"3.10\""},
+]
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -1302,8 +1305,8 @@ reference = "chia"
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.7, <3.10"
-content-hash = "36655a6c5bff8969f7af297a5125dc41f5537867ca1d6069f630876d4c1ac29b"
+python-versions = ">=3.7, <3.11"
+content-hash = "bc9b96bca7c9424668a59fad5aa32286042cc687b2bd3f4165a88d8ad94d75b1"
 
 [metadata.files]
 aiofiles = [

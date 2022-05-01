@@ -28,7 +28,7 @@ name = "chia"
 url = "https://pypi.chia.net/simple/"
 
 [tool.poetry.dependencies]
-python = ">=3.7, <3.10"
+python = ">=3.7, <3.11"
 aiofiles = "0.7.0"  # Async IO for files
 aiohttp = "3.8.1"  # HTTP server for full node rpc
 aiosqlite = "0.17.0"  # asyncio wrapper for sqlite, to store blocks
