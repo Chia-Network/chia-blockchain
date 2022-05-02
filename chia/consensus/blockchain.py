@@ -671,7 +671,7 @@ class Blockchain(BlockchainInterface):
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
 
-    async def warmup(self, fork_point: uint32):
+    async def warmup(self, fork_point: uint32) -> None:
         """
         Loads blocks into the cache. The blocks loaded include all blocks from
         fork point - BLOCKS_CACHE_SIZE up to and including the fork_point.
@@ -688,7 +688,7 @@ class Blockchain(BlockchainInterface):
         for block_record in block_records.values():
             self.add_block_record(block_record)
 
-    def clean_block_record(self, height: int):
+    def clean_block_record(self, height: int) -> None:
         """
         Clears all block records in the cache which have block_record < height.
         Args:
@@ -707,7 +707,7 @@ class Blockchain(BlockchainInterface):
             height = height - 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
-    def clean_block_records(self):
+    def clean_block_records(self) -> None:
         """
         Cleans the cache so that we only maintain relevant blocks. This removes
         block records that have height < peak - BLOCKS_CACHE_SIZE.
@@ -798,12 +798,12 @@ class Blockchain(BlockchainInterface):
             return self.__block_records[header_hash]
         return await self.block_store.get_block_record(header_hash)
 
-    def remove_block_record(self, header_hash: bytes32):
+    def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
         self.__heights_in_cache[sbr.height].remove(header_hash)
 
-    def add_block_record(self, block_record: BlockRecord):
+    def add_block_record(self, block_record: BlockRecord) -> None:
         """
         Adds a block record to the cache.
         """
@@ -815,8 +815,8 @@ class Blockchain(BlockchainInterface):
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
-    ):
-        return await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
+    ) -> None:
+        await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
