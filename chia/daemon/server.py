@@ -286,8 +286,8 @@ class WebSocketServer:
                         self.log.warning("Ping task received Cancel")
                         restart = False
                         break
-                    except Exception as e:
-                        self.log.exception(f"Ping error")
+                    except Exception:
+                        self.log.exception("Ping error")
                         self.log.error("Ping failed, connection closed.")
                         self.remove_connection(socket)
                         await socket.close()
