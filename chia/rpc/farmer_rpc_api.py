@@ -131,11 +131,20 @@ class FarmerRpcApi:
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
 
+    def get_pool_contract_puzzle_hash_plot_count(self, pool_contract_puzzle_hash: bytes32) -> int:
+        plot_count: int = 0
+        for receiver in self.service.plot_sync_receivers.values():
+            plot_count += sum(
+                plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash for plot in receiver.plots().values()
+            )
+        return plot_count
+
     async def get_pool_state(self, _: Dict) -> Dict:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
             pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
