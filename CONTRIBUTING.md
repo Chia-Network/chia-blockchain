@@ -53,7 +53,7 @@ to configure how the tests are run. For example, for more logging: change the lo
 ```bash
 sh install.sh -d
 . ./activate
-black chia tests tools && isort chia tests tools  && mypy chia tests tools && flake8 chia tests tools
+black . && isort benchmarks build_scripts chia tests tools *.py && mypy && flake8 benchmarks build_scripts chia tests tools *.py
 py.test tests -v --durations 0
 ```
 
