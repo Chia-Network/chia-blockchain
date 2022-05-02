@@ -220,9 +220,10 @@ class DataLayer:
         for ip, port in zip(subscription.ip, subscription.port):
             try:
                 downloaded = await download_delta_files(
+                    self.data_store,
                     subscription.tree_id,
                     int(wallet_current_generation),
-                    singleton_record.generation,
+                    [record.root for record in to_check],
                     ip,
                     port,
                     self.client_download_location,
@@ -249,7 +250,6 @@ class DataLayer:
                 self.data_store,
                 tree_id,
                 int(wallet_current_generation),
-                singleton_record.generation,
                 [record.root for record in to_check],
                 self.client_download_location,
             )

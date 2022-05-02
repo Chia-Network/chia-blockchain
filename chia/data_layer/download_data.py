@@ -17,27 +17,37 @@ def get_delta_filename(tree_id: bytes32, generation: int) -> str:
 
 
 async def download_delta_files(
+    data_store: DataStore,
     tree_id: bytes32,
     existing_generation: int,
-    target_generation: int,
+    root_hashes: List[bytes32],
     ip: str,
     port: uint16,
     client_foldername: Path,
 ) -> bool:
-    while existing_generation + 1 <= target_generation:
+    for root_hash in root_hashes:
         existing_generation += 1
         filename = get_delta_filename(tree_id, existing_generation)
         url = f"http://{ip}:{port}/{filename}"
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    raise RuntimeError("Didn't get 200 response status.")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        raise RuntimeError("Didn't get 200 response status.")
 
-                target_filename = os.path.join(client_foldername, filename)
-                with open(target_filename, "wb") as writer:
-                    text = await resp.read()
-                    writer.write(text)
+                    target_filename = os.path.join(client_foldername, filename)
+                    with open(target_filename, "wb") as writer:
+                        text = await resp.read()
+                        writer.write(text)
+        except Exception:
+            if await data_store.get_last_tree_root_by_hash(tree_id, root_hash) is not None:
+                # If we don't have the delta file, but we have the tree in the past, create an empty delta file.
+                # It's possible the wallet record to be created by a proof of inclusion, not a batch update,
+                # hence the delta file might be missing.
+                open(filename, "ab").close()
+                pass
+            raise
     return True
 
 
@@ -69,7 +79,6 @@ async def parse_delta_files(
     data_store: DataStore,
     tree_id: bytes32,
     existing_generation: int,
-    target_generation: int,
     root_hashes: List[bytes32],
     foldername: Path,
 ) -> None:
