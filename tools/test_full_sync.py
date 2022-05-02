@@ -18,6 +18,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.types.full_block import FullBlock
 from chia.util.config import load_config
+from tools.test_constants import test_constants as TEST_CONSTANTS
 
 
 class ExitOnError(logging.Handler):
@@ -46,7 +47,7 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
         pr.dump_stats(f"slow-batch-{counter:05d}.profile")
 
 
-async def run_sync_test(file: Path, db_version, profile: bool) -> None:
+async def run_sync_test(file: Path, db_version, profile: bool, single_thread: bool, test_constants: bool) -> None:
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
@@ -64,11 +65,17 @@ async def run_sync_test(file: Path, db_version, profile: bool) -> None:
     with tempfile.TemporaryDirectory() as root_dir:
 
         root_path = Path(root_dir)
-        chia_init(root_path, should_check_keys=False)
+        chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
 
-        overrides = config["network_overrides"]["constants"][config["selected_network"]]
-        constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+        if test_constants:
+            constants = TEST_CONSTANTS
+        else:
+            overrides = config["network_overrides"]["constants"][config["selected_network"]]
+            constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+        if single_thread:
+            config["full_node"]["single_threaded"] = True
+        config["full_node"]["db_sync"] = "off"
         full_node = FullNode(
             config["full_node"],
             root_path=root_path,
@@ -80,32 +87,43 @@ async def run_sync_test(file: Path, db_version, profile: bool) -> None:
 
             print()
             counter = 0
+            height = 0
             async with aiosqlite.connect(file) as in_db:
-
-                rows = await in_db.execute("SELECT header_hash, height, block FROM full_blocks ORDER BY height")
+                await in_db.execute("pragma query_only")
+                rows = await in_db.execute(
+                    "SELECT header_hash, height, block FROM full_blocks WHERE in_main_chain=1 ORDER BY height"
+                )
 
                 block_batch = []
 
                 start_time = time.monotonic()
                 async for r in rows:
-                    block = FullBlock.from_bytes(zstd.decompress(r[2]))
-
-                    block_batch.append(block)
-                    if len(block_batch) < 32:
-                        continue
-
                     with enable_profiler(profile, counter):
+                        block = FullBlock.from_bytes(zstd.decompress(r[2]))
+
+                        block_batch.append(block)
+                        if len(block_batch) < 32:
+                            continue
+
                         success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
                             block_batch, None, None  # type: ignore[arg-type]
                         )
+                        end_height = block_batch[-1].height
+                        full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                     assert success
                     assert advanced_peak
                     counter += len(block_batch)
-                    print(f"\rheight {counter} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
+                    height += len(block_batch)
+                    print(f"\rheight {height} {counter/(time.monotonic() - start_time):0.2f} blocks/s   ", end="")
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")
+
+                    if counter >= 100000:
+                        start_time = time.monotonic()
+                        counter = 0
+                        print()
         finally:
             print("closing full node")
             full_node._close()
@@ -119,10 +137,27 @@ def main() -> None:
 
 @main.command("run", short_help="run simulated full sync from an existing blockchain db")
 @click.argument("file", type=click.Path(), required=True)
-@click.option("--db-version", type=int, required=False, default=2, help="the version of the specified db file")
+@click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
-def run(file: Path, db_version: int, profile: bool) -> None:
-    asyncio.run(run_sync_test(Path(file), db_version, profile))
+@click.option(
+    "--test-constants",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="expect the blockchain database to be blocks using the test constants",
+)
+@click.option(
+    "--single-thread",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="run node in a single process, to include validation in profiles",
+)
+def run(file: Path, db_version: int, profile: bool, single_thread: bool, test_constants: bool) -> None:
+    """
+    The FILE parameter should point to an existing blockchain database file (in v2 format)
+    """
+    asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread, test_constants))
 
 
 @main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")

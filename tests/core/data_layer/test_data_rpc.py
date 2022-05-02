@@ -41,7 +41,7 @@ async def init_data_layer(wallet_rpc_port: int, bt: BlockTools) -> AsyncIterator
     save_config(bt.root_path, "config.yaml", config)
     kwargs = service_kwargs_for_data_layer(root_path=bt.root_path, config=config)
     kwargs.update(parse_cli_args=False)
-    service = Service(**kwargs, handle_signals=False)
+    service = Service(**kwargs, running_new_process=False)
     await service.start()
     yield service._api.data_layer
     service.stop()

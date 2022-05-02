@@ -7,7 +7,7 @@ from blspy import G1Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import get_config_lock, load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -25,8 +25,8 @@ pool_list:
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolWalletConfig(Streamable):
     launcher_id: bytes32
     pool_url: str
@@ -61,8 +61,7 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
 # TODO: remove this a few versions after 1.3, since authentication_public_key is deprecated. This is here to support
 # downgrading to versions older than 1.3.
 def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1Element):
-    with get_config_lock(root_path, "config.yaml"):
-        config = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as config:
         pool_list = config["pool"].get("pool_list", [])
         updated = False
         if pool_list is not None:
@@ -82,7 +81,6 @@ def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1El
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
-    with get_config_lock(root_path, "config.yaml"):
-        full_config = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as full_config:
         full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
         save_config(root_path, "config.yaml", full_config)

@@ -6,6 +6,11 @@ repos:
         entry: ./tests/build-workflows.py --fail-on-update
         language: python
         pass_filenames: false
+    -   id: check-sql
+        name: Validate SQL statements
+        entry: ./tests/check_sql_statements.py
+        language: python
+        pass_filenames: false
 -   repo: local
     hooks:
     -   id: init_py_files
@@ -55,7 +60,7 @@ repos:
     hooks:
     - id: flake8
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.940
+    rev: v0.942
     hooks:
     - id: mypy
       additional_dependencies: [filelock, pytest, pytest-asyncio, types-aiofiles, types-click, types-setuptools, types-PyYAML]

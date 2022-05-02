@@ -1,9 +1,7 @@
 # flake8: noqa: F811, F401
-import logging
 from typing import List
 
 import pytest
-import pytest_asyncio
 from blspy import AugSchemeMPL
 
 from chia.consensus.pot_iterations import is_overflow_block
@@ -16,30 +14,24 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
-from tests.block_tools import get_signage_point
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint8
+from chia.util.ints import uint8
+from tests.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
 from tests.connection_utils import connect_and_get_peer
-from tests.setup_nodes import setup_simulators_and_wallets, test_constants
+from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes():
-    async for _ in setup_simulators_and_wallets(2, 0, {}):
-        yield _
+from tests.wallet_tools import WalletTool
 
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes, bt, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets, bt, self_hostname):
         num_blocks = 5
         test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
@@ -196,6 +188,46 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
+            memo = 32 * b"\f"
+
+            for i in range(2):
+                await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+                state = await client.get_blockchain_state()
+                block = await client.get_block(state["peak"].header_hash)
+
+                coin_to_spend = list(block.get_included_reward_coins())[0]
+
+                spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
+                await client.push_tx(spend_bundle)
+
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            coin_to_spend = (await client.get_coin_records_by_hint(memo))[0].coin
+
+            # Spend the most recent coin so we can test including spent coins later
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
+            await client.push_tx(spend_bundle)
+
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+
+            coin_records = await client.get_coin_records_by_hint(memo)
+
+            assert len(coin_records) == 3
+
+            coin_records = await client.get_coin_records_by_hint(memo, include_spent_coins=False)
+
+            assert len(coin_records) == 2
+
+            state = await client.get_blockchain_state()
+
+            # Get coin records by hint
+            coin_records = await client.get_coin_records_by_hint(
+                memo, start_height=state["peak"].height - 1, end_height=state["peak"].height
+            )
+
+            assert len(coin_records) == 1
+
             assert len(await client.get_connections()) == 0
 
             await client.open_connection(self_hostname, server_2._port)
@@ -232,9 +264,9 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes, empty_blockchain, bt):
+    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain, bt):
         test_rpc_port = find_available_listen_port()
-        nodes, _ = two_nodes
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
