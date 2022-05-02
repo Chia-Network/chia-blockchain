@@ -77,14 +77,15 @@ def generate_replacements(conf, dir):
         "PYTEST_PARALLEL_ARGS": "",
     }
 
+    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    replacements["PYTEST_PARALLEL_ARGS"] = f" -n {xdist_numprocesses}"
+
     if not conf["checkout_blocks_and_plots"]:
         replacements[
             "CHECKOUT_TEST_BLOCKS_AND_PLOTS"
         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-    if conf["parallel"]:
-        replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
     replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
@@ -130,7 +131,9 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
-current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
+current_workflows: Dict[Path, str] = {
+    file: read_file(file) for file in args.output_dir.iterdir() if str(file).endswith(".yml")
+}
 changed: bool = False
 
 for os in testconfig.oses:

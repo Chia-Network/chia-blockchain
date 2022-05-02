@@ -9,7 +9,7 @@ from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, save_config, get_config_lock
+from chia.util.config import load_config, lock_and_load_config, save_config
 
 log = logging.getLogger(__name__)
 
@@ -79,18 +79,16 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
 
 def add_plot_directory(root_path: Path, str_path: str) -> Dict:
     log.debug(f"add_plot_directory {str_path}")
-    with get_config_lock(root_path, "config.yaml"):
-        config = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as config:
         if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
             config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
-        return config
+    return config
 
 
 def remove_plot_directory(root_path: Path, str_path: str) -> None:
     log.debug(f"remove_plot_directory {str_path}")
-    with get_config_lock(root_path, "config.yaml"):
-        config = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as config:
         str_paths: List[str] = get_plot_directories(root_path, config)
         # If path str matches exactly, remove
         if str_path in str_paths:
@@ -207,3 +205,15 @@ def find_duplicate_plot_IDs(all_filenames=None) -> None:
         for filename_str in duplicate_filenames:
             log_message += "\t" + filename_str + "\n"
         log.warning(f"{log_message}")
+
+
+def validate_plot_size(root_path: Path, k: int, override_k: bool) -> None:
+    config = load_config(root_path, "config.yaml")
+    min_k = config["min_mainnet_k_size"]
+    if k < min_k and not override_k:
+        raise ValueError(
+            f"k={min_k} is the minimum size for farming.\n"
+            "If you are testing and you want to use smaller size please add the --override-k flag."
+        )
+    elif k < 25 and override_k:
+        raise ValueError("Error: The minimum k size allowed from the cli is k=25.")

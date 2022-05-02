@@ -138,7 +138,7 @@ class TestEnvironment:
 
 
 @pytest.fixture(scope="function")
-def test_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
+def test_plot_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = get_test_plots()
@@ -162,8 +162,8 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing(test_environment):
-    env: TestEnvironment = test_environment
+async def test_plot_refreshing(test_plot_environment):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     dir_duplicates: TestDirectory = TestDirectory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
 
@@ -236,7 +236,7 @@ async def test_plot_refreshing(test_environment):
         trigger=trigger_remove_plot,
         test_path=drop_path,
         expect_loaded=[],
-        expect_removed=[drop_path],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(dir_duplicates),
         expected_directories=3,
@@ -262,7 +262,7 @@ async def test_plot_refreshing(test_environment):
         trigger=remove_plot_directory,
         test_path=dir_duplicates.path,
         expect_loaded=[],
-        expect_removed=dir_duplicates.path_list(),
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2),
         expect_duplicates=0,
         expected_directories=2,
@@ -316,7 +316,7 @@ async def test_plot_refreshing(test_environment):
         trigger=trigger_remove_plot,
         test_path=drop_path,
         expect_loaded=[],
-        expect_removed=[drop_path],
+        expect_removed=[],
         expect_processed=len(env.dir_1) + len(env.dir_2) + len(dir_duplicates),
         expect_duplicates=len(env.dir_1),
         expected_directories=3,
@@ -358,8 +358,19 @@ async def test_plot_refreshing(test_environment):
 
 
 @pytest.mark.asyncio
-async def test_invalid_plots(test_environment):
-    env: TestEnvironment = test_environment
+async def test_initial_refresh_flag(test_plot_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_plot_environment
+    assert env.refresh_tester.plot_manager.initial_refresh()
+    for _ in range(2):
+        await env.refresh_tester.run(PlotRefreshResult())
+        assert not env.refresh_tester.plot_manager.initial_refresh()
+    env.refresh_tester.plot_manager.reset()
+    assert env.refresh_tester.plot_manager.initial_refresh()
+
+
+@pytest.mark.asyncio
+async def test_invalid_plots(test_plot_environment):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     # Test re-trying if processing a plot failed
     # First create a backup of the plot
@@ -409,8 +420,8 @@ async def test_invalid_plots(test_environment):
 
 
 @pytest.mark.asyncio
-async def test_keys_missing(test_environment: TestEnvironment) -> None:
-    env: TestEnvironment = test_environment
+async def test_keys_missing(test_plot_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_plot_environment
     not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
     dir_not_in_keychain: TestDirectory = TestDirectory(
         env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots
@@ -447,8 +458,8 @@ async def test_keys_missing(test_environment: TestEnvironment) -> None:
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching(test_environment, bt):
-    env: TestEnvironment = test_environment
+async def test_plot_info_caching(test_plot_environment, bt):
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))
     expected_result.loaded = env.dir_1.plot_info_list()
@@ -513,7 +524,7 @@ async def test_plot_info_caching(test_environment, bt):
     ],
 )
 @pytest.mark.asyncio
-async def test_callback_event_raises(test_environment, event_to_raise: PlotRefreshEvents):
+async def test_callback_event_raises(test_plot_environment, event_to_raise: PlotRefreshEvents):
     last_event_fired: Optional[PlotRefreshEvents] = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
@@ -522,7 +533,7 @@ async def test_callback_event_raises(test_environment, event_to_raise: PlotRefre
         if event == event_to_raise:
             raise Exception(f"run_raise_in_callback {event_to_raise}")
 
-    env: TestEnvironment = test_environment
+    env: TestEnvironment = test_plot_environment
     expected_result = PlotRefreshResult()
     # Load dir_1
     add_plot_directory(env.root_path, str(env.dir_1.path))

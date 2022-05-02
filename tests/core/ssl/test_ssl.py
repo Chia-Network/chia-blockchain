@@ -10,15 +10,9 @@ from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import test_constants
 from chia.util.ints import uint16
-from tests.setup_nodes import (
-    setup_farmer_harvester,
-    setup_introducer,
-    setup_simulators_and_wallets,
-    setup_timelord,
-)
-from tests.util.socket import find_available_listen_port
+from tests.block_tools import test_constants
+from tests.setup_nodes import setup_harvester_farmer
 
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> bool:
@@ -53,37 +47,14 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 
 @pytest_asyncio.fixture(scope="function")
 async def harvester_farmer(bt):
-    async for _ in setup_farmer_harvester(bt, test_constants):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def introducer(bt):
-    introducer_port = find_available_listen_port("introducer")
-    async for _ in setup_introducer(bt, introducer_port):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def timelord(bt):
-    timelord_port = find_available_listen_port("timelord")
-    node_port = find_available_listen_port("node")
-    rpc_port = find_available_listen_port("rpc")
-    vdf_port = find_available_listen_port("vdf")
-    async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
+    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
         yield _
 
 
 class TestSSL:
     @pytest.mark.asyncio
-    async def test_public_connections(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_public_connections(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -130,8 +101,8 @@ class TestSSL:
         assert connected is False
 
     @pytest.mark.asyncio
-    async def test_full_node(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_full_node(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -151,8 +122,8 @@ class TestSSL:
         assert connected is True
 
     @pytest.mark.asyncio
-    async def test_wallet(self, wallet_node, self_hostname):
-        full_nodes, wallets = wallet_node
+    async def test_wallet(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
         wallet_node, wallet_server = wallets[0]
 
         # Wallet should not accept incoming connections

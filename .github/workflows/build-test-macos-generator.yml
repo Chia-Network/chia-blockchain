@@ -29,10 +29,13 @@ jobs:
       matrix:
         python-version: [3.8, 3.9]
         os: [macOS-latest]
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_generator
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -54,7 +57,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
@@ -62,39 +65,37 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v2
-      with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
-
-    - name: Link home directory
-      run: |
-        cd $HOME
-        ln -s $GITHUB_WORKSPACE/.chia
-        echo "$HOME/.chia"
-        ls -al $HOME/.chia
+# Omitted checking out blocks and plots repo Chia-Network/test-cache
 
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
         sh install.sh -d
 
-    - name: Install timelord
-      run: |
-        . ./activate
-        sh install-timelord.sh
-        ./vdf_bench square_asm 400000
+# Omitted installing Timelord
 
     - name: Test generator code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/generator/test_*.py -s -v --durations 0
+        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/generator/test_*.py --durations=10  -n 4 -m "not benchmark"
+
+    - name: Process coverage data
+      run: |
+        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        mkdir coverage_reports
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+    - name: Publish coverage
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage
+        path: coverage_reports/*
+        if-no-files-found: error
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

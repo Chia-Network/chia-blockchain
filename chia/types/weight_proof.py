@@ -11,8 +11,8 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubEpochData(Streamable):
     reward_chain_hash: bytes32
     num_blocks_overflow: uint8
@@ -31,8 +31,8 @@ class SubEpochData(Streamable):
 # total number of challenge blocks == total number of reward chain blocks
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubSlotData(Streamable):
     # if infused
     proof_of_space: Optional[ProofOfSpace]
@@ -65,37 +65,37 @@ class SubSlotData(Streamable):
         return False
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubEpochChallengeSegment(Streamable):
     sub_epoch_n: uint32
     sub_slots: List[SubSlotData]
     rc_slot_end_info: Optional[VDFInfo]  # in first segment of each sub_epoch
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 # this is used only for serialization to database
 class SubEpochSegments(Streamable):
     challenge_segments: List[SubEpochChallengeSegment]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 # this is used only for serialization to database
 class RecentChainData(Streamable):
     recent_chain_data: List[HeaderBlock]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ProofBlockHeader(Streamable):
     finished_sub_slots: List[EndOfSubSlotBundle]
     reward_chain_block: RewardChainBlock
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch

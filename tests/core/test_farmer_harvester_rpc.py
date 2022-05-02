@@ -14,11 +14,11 @@ from chia.rpc.rpc_server import start_rpc_server
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from tests.setup_nodes import setup_farmer_harvester, test_constants
+from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
 from tests.util.socket import find_available_listen_port
@@ -27,14 +27,14 @@ log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async for _ in setup_farmer_harvester(bt, test_constants):
+async def harvester_farmer_simulation(bt):
+    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def environment(bt, simulation, self_hostname):
-    harvester_service, farmer_service = simulation
+async def harvester_farmer_environment(bt, harvester_farmer_simulation, self_hostname):
+    harvester_service, farmer_service = harvester_farmer_simulation
 
     def stop_node_cb():
         pass
@@ -89,7 +89,7 @@ async def environment(bt, simulation, self_hostname):
 
 
 @pytest.mark.asyncio
-async def test_get_routes(environment):
+async def test_get_routes(harvester_farmer_environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -97,13 +97,13 @@ async def test_get_routes(environment):
         harvester_service,
         harvester_rpc_api,
         harvester_rpc_client,
-    ) = environment
+    ) = harvester_farmer_environment
     await validate_get_routes(farmer_rpc_client, farmer_rpc_api)
     await validate_get_routes(harvester_rpc_client, harvester_rpc_api)
 
 
 @pytest.mark.asyncio
-async def test_farmer_get_harvesters(environment):
+async def test_farmer_get_harvesters(harvester_farmer_environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -111,18 +111,18 @@ async def test_farmer_get_harvesters(environment):
         harvester_service,
         harvester_rpc_api,
         harvester_rpc_client,
-    ) = environment
-    farmer_api = farmer_service._api
+    ) = harvester_farmer_environment
     harvester = harvester_service._node
 
-    res = await harvester_rpc_client.get_plots()
-    num_plots = len(res["plots"])
-    assert num_plots > 0
+    num_plots = 0
 
-    # Reset cache and force updates cache every second to make sure the farmer gets the most recent data
-    update_interval_before = farmer_api.farmer.update_harvester_cache_interval
-    farmer_api.farmer.update_harvester_cache_interval = 1
-    farmer_api.farmer.harvester_cache = {}
+    async def non_zero_plots() -> bool:
+        res = await harvester_rpc_client.get_plots()
+        nonlocal num_plots
+        num_plots = len(res["plots"])
+        return num_plots > 0
+
+    await time_out_assert(10, non_zero_plots)
 
     async def test_get_harvesters():
         harvester.plot_manager.trigger_refresh()
@@ -138,13 +138,9 @@ async def test_farmer_get_harvesters(environment):
 
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
-    # Reset cache and reset update interval to avoid hitting the rate limit
-    farmer_api.farmer.update_harvester_cache_interval = update_interval_before
-    farmer_api.farmer.harvester_cache = {}
-
 
 @pytest.mark.asyncio
-async def test_farmer_signage_point_endpoints(environment):
+async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -152,7 +148,7 @@ async def test_farmer_signage_point_endpoints(environment):
         harvester_service,
         harvester_rpc_api,
         harvester_rpc_client,
-    ) = environment
+    ) = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is None
@@ -171,7 +167,7 @@ async def test_farmer_signage_point_endpoints(environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_reward_target_endpoints(bt, environment):
+async def test_farmer_reward_target_endpoints(bt, harvester_farmer_environment):
     (
         farmer_service,
         farmer_rpc_api,
@@ -179,7 +175,7 @@ async def test_farmer_reward_target_endpoints(bt, environment):
         harvester_service,
         harvester_rpc_api,
         harvester_rpc_client,
-    ) = environment
+    ) = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     targets_1 = await farmer_rpc_client.get_reward_targets(False)
@@ -220,7 +216,7 @@ async def test_farmer_reward_target_endpoints(bt, environment):
 
 
 @pytest.mark.asyncio
-async def test_farmer_get_pool_state(environment, self_hostname):
+async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname):
     (
         farmer_service,
         farmer_rpc_api,
@@ -228,7 +224,7 @@ async def test_farmer_get_pool_state(environment, self_hostname):
         harvester_service,
         harvester_rpc_api,
         harvester_rpc_client,
-    ) = environment
+    ) = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
@@ -244,9 +240,9 @@ async def test_farmer_get_pool_state(environment, self_hostname):
     ]
 
     root_path = farmer_api.farmer._root_path
-    config = load_config(root_path, "config.yaml")
-    config["pool"]["pool_list"] = pool_list
-    save_config(root_path, "config.yaml", config)
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        config["pool"]["pool_list"] = pool_list
+        save_config(root_path, "config.yaml", config)
     await farmer_api.farmer.update_pool_state()
 
     pool_state = (await farmer_rpc_client.get_pool_state())["pool_state"]
