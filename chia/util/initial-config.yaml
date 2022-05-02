@@ -566,6 +566,7 @@ data_layer:
   start_rpc_server: True
   # TODO: what considerations are there in choosing this?
   rpc_port: 8562
+  rpc_server_max_request_body_size: 26214400
   fee: 1000000000
   logging: *logging
 
