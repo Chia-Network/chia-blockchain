@@ -349,18 +349,23 @@ class DataLayer:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def periodically_fetch_data(self) -> None:
-        success = False
-        while not self._shut_down and not success:
+        while not self._shut_down:
             async with self.subscription_lock:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
                     for subscription in subscriptions:
                         await self.wallet_rpc.dl_track_new(subscription.tree_id)
-                    success = True
+                    break
                 except aiohttp.client_exceptions.ClientConnectorError:
-                    self.log.error("Cannot connect to the wallet. Retrying in 3s.")
-            if not success:
-                await asyncio.sleep(3)
+                    pass
+
+            self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
+
+            delay_until = time.monotonic() + 3
+            while time.monotonic() < delay_until:
+                if self._shut_down:
+                    break
+                await asyncio.sleep(0.1)
 
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
         while not self._shut_down:
