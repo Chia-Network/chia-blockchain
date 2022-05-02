@@ -781,7 +781,7 @@ class FullNodeAPI:
             def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature
 
-            prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+            prev_b: Optional[BlockRecord] = peak
 
             # Finds the previous block from the signage point, ensuring that the reward chain VDF is correct
             if prev_b is not None:
