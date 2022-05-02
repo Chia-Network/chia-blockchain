@@ -288,7 +288,7 @@ class FullNode:
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            state_change_summary = StateChangeSummary(max(peak.height - 1, 0), [], [], [])
+            state_change_summary = StateChangeSummary(peak, max(peak.height - 1, 0), [], [], [])
             ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                 full_peak, state_change_summary, None
             )
