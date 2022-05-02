@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         os: [windows-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -49,7 +49,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache npm
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -62,7 +62,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -82,7 +82,7 @@ jobs:
     - name: Test util code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10 --numprocesses 0 -m "not benchmark" -p no:monitor tests/util/test_chunks.py tests/util/test_full_block_utils.py tests/util/test_lock_queue.py tests/util/test_network_protocol_files.py tests/util/test_paginator.py tests/util/test_struct_stream.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/util/test_chunks.py tests/util/test_full_block_utils.py tests/util/test_lock_queue.py tests/util/test_network_protocol_files.py tests/util/test_paginator.py tests/util/test_struct_stream.py
 
     - name: Process coverage data
       run: |
@@ -95,7 +95,7 @@ jobs:
         venv/Scripts/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*
