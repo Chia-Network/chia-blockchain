@@ -873,6 +873,11 @@ def _validate_segment(
     prev_challenge_ip_iters: uint64,
     start_from: int = 0,
 ) -> Tuple[uint64, uint64, int, bytes32, bytes32, bool]:
+    """
+    validates all segments
+    if this is the "sampled" challenge segment we validate all the vdfs
+    if not we validate all the hashes for the end of slots
+    """
     slot_iters, slots = uint64(0), 0
     output_cache: Dict[B, ClassgroupElement] = {}
     sub_slot_data = segment.sub_slot_data[start_from:]
@@ -892,6 +897,7 @@ def _validate_segment(
 
         if ssd.is_challenge():
             # validate challenge block vdfs and pospace
+            # we validate this in non sampled segments as well so we can validate the end of slot hashes
             assert cc_challenge is not None
             icc_challenge = _validate_challenge_sub_slot_data(
                 constants,
@@ -907,6 +913,7 @@ def _validate_segment(
             after_challenge_block = True
         elif sampled and after_challenge_block:
             # all vdfs from challenge block to end of segment
+            # only if this is a sampled segment
             assert icc_challenge
             if ssd.is_end_of_slot():
                 validate_eos(cc_challenge, icc_challenge, constants, sub_slot_data, idx, curr_ssi, output_cache)
@@ -923,13 +930,15 @@ def _validate_segment(
                 )
         elif not after_challenge_block and not ssd.is_end_of_slot():
             # overflow blocks before challenge block
+            # we always validate this so we can also validate the challenge block (we need the uncompressed inputs)
             assert icc_challenge
             validate_overflow(cc_challenge, icc_challenge, constants, first_block, idx, output_cache, sub_slot_data)
         if ssd.is_end_of_slot():
+            # calculate the end of slot challenges
             if after_challenge_block:
                 slot_after_challenge_block = True
             prev_cc_challenge = cc_challenge
-            cc_challenge, icc_challenge = get_cc_sub_slot(
+            cc_challenge, icc_challenge = get_end_of_slot_hashes(
                 cc_challenge,
                 icc_challenge,
                 curr_ssi,
@@ -952,7 +961,7 @@ def _validate_segment(
     return prev_challenge_ip_iters, slot_iters, slots, cc_challenge, icc_challenge, slot_after_challenge_block
 
 
-def get_cc_sub_slot(
+def get_end_of_slot_hashes(
     challenge: bytes32,
     icc_challenge: Optional[bytes32],
     curr_ssi: uint64,
@@ -1002,6 +1011,9 @@ def validate_overflow(
     long_outputs: Dict[B, ClassgroupElement],
     sub_slots_data: List[SubSlotDataV2],
 ) -> None:
+    """
+    validate overflow block vdfs for blocks before the challenge block
+    """
     ssd = sub_slots_data[idx]
     assert ssd.ip_iters is not None
     assert ssd.cc_infusion_point is not None
@@ -1061,6 +1073,9 @@ def validate_eos(
     ssi: uint64,
     long_outputs: Dict[B, ClassgroupElement],
 ) -> None:
+    """
+    validates end of slot vdfs
+    """
     cc_eos_iters = ssi
     cc_input = ClassgroupElement.get_default_element()
     ssd = sub_slots_data[idx]
@@ -1113,6 +1128,9 @@ def _validate_challenge_sub_slot_data(
     long_outputs: Dict[B, ClassgroupElement],
     sampled: bool,
 ) -> bytes32:
+    """
+    validate vdfs from a challenge block
+    """
     sub_slot_data = sub_slots[ssd_idx]
     prev_ssd = None
     if ssd_idx > 0:
@@ -1206,6 +1224,9 @@ def _validate_sub_slot_data(
     icc_challenge: bytes32,
     long_outputs: Dict[B, ClassgroupElement],
 ) -> None:
+    """
+    validate vdfs from a block
+    """
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = sub_slots[sub_slot_idx - 1]
     # find next end of slot
