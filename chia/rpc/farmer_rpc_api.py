@@ -227,8 +227,7 @@ class FarmerRpcApi:
             request = dataclass_from_dict(PlotInfoRequestData, request_dict)
             plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
             # Apply filter
-            for filter_item in request.filter:
-                plot_list = [plot for plot in plot_list if is_filter_match(plot, filter_item)]
+            plot_list = [plot for plot in plot_list if all(is_filter_match(plot, filter_item) for filter_item in request.filter)]
             restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
             # Apply sort_key and reverse if sort_key is not restricted
             if request.sort_key in restricted_sort_keys:
