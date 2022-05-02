@@ -434,3 +434,22 @@ def did_create_wallet_cmd(
 
     extra_params = {"amount": amount, "fee": fee, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
+
+
+@did_cmd.command("set_name", short_help="Set DID wallet name")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
+@click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
+def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, did_set_wallet_name
+
+    extra_params = {"wallet_id": id, "name": name}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_set_wallet_name))
