@@ -130,8 +130,8 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     :param nft_coin: NFT coin
     :return: NFTInfo
     """
-    uncurried_nft = UncurriedNFT.uncurry(puzzle)
-
+    # TODO Update this method after the NFT code finalized
+    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
     data_uris = []
     for uri in uncurried_nft.data_uris.as_python():
         data_uris.append(str(uri, "utf-8"))

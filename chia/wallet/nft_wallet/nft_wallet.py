@@ -189,7 +189,7 @@ class NFTWallet:
 
         try:
             uncurried_nft = UncurriedNFT.uncurry(puzzle)
-        except ValueError:
+        except Exception:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
             child_coin_records = await self.wallet_state_manager.coin_store.get_coin_records_by_parent_id(coin_name)
             if len(child_coin_records) > 0:
@@ -520,7 +520,7 @@ class NFTWallet:
         for coin_spend in sending_sb.coin_spends:
             try:
                 uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-            except ValueError:
+            except Exception:
                 continue
 
             inner_sol = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first()

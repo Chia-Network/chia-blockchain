@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import json
 import logging
 import multiprocessing
@@ -561,8 +560,11 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        with contextlib.suppress(ValueError):
+        try:
             UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        except Exception:
+            pass
+        else:
             return await self.handle_nft(coin_spend)
 
         # Check if the coin is a DID

@@ -65,20 +65,20 @@ class UncurriedNFT:
         :param raise_exception: If want to raise an exception when the puzzle is invalid
         :return Uncurried NFT
         """
-        exception = ValueError(f"Cannot uncurry puzzle {puzzle}, it's not an NFT puzzle.")
+        mod, curried_args = puzzle.uncurry()
+        if mod != SINGLETON_TOP_LAYER_MOD:
+            # TODO: proper message
+            raise ValueError(f"Cannot uncurry puzzle, mod not a single top layer: {puzzle}")
 
+        mod, curried_args = curried_args.rest().first().uncurry()
+        if mod != NFT_MOD:
+            # TODO: proper message
+            raise ValueError(f"Cannot uncurry puzzle, mod not an NFT mode: {puzzle}")
+
+        # nft parameters
+        # TODO: Centralize the definition of this order with a class and construct
+        #       an instance of it instead of using free variables.
         try:
-            mod, curried_args = puzzle.uncurry()
-            if mod != SINGLETON_TOP_LAYER_MOD:
-                raise exception
-
-            mod, curried_args = curried_args.rest().first().uncurry()
-            if mod != NFT_MOD:
-                raise exception
-
-            # nft parameters
-            # TODO: Centralize the definition of this order with a class and construct
-            #       an instance of it instead of using free variables.
             (
                 nft_mod_hash,
                 singleton_struct,
@@ -87,43 +87,54 @@ class UncurriedNFT:
                 transfer_program_curry_params,
                 metadata,
             ) = curried_args.as_iter()
+        except ValueError as e:
+            # TODO: proper message
+            raise ValueError(f"Cannot uncurry puzzle, incorrect number of arguemnts: {puzzle}") from e
 
-            # singleton
-            singleton_mod_hash = singleton_struct.first()
-            singleton_launcher_id = singleton_struct.rest().first()
-            launcher_puzhash = singleton_struct.rest().rest()
+        # singleton
+        singleton_mod_hash = singleton_struct.first()
+        singleton_launcher_id = singleton_struct.rest().first()
+        launcher_puzhash = singleton_struct.rest().rest()
 
-            # transfer program parameters
+        # transfer program parameters
+        try:
             (
                 royalty_address,
                 trade_price_percentage,
                 settlement_mod_hash,
                 cat_mod_hash,
             ) = transfer_program_curry_params.as_iter()
+        except ValueError as e:
+            # TODO: proper message
+            raise ValueError(
+                f"Cannot uncurry puzzle, incorrect number of transfer program curry parameters: {puzzle}",
+            ) from e
 
-            # metadata
-            for kv_pair in metadata.as_iter():
-                if kv_pair.first().as_atom() == b"u":
-                    data_uris = kv_pair.rest()
-                if kv_pair.first().as_atom() == b"h":
-                    data_hash = kv_pair.rest()
+        # metadata
+        for kv_pair in metadata.as_iter():
+            if kv_pair.first().as_atom() == b"u":
+                data_uris = kv_pair.rest()
+            if kv_pair.first().as_atom() == b"h":
+                data_hash = kv_pair.rest()
 
-            return cls(
-                nft_mod_hash=nft_mod_hash,
-                singleton_struct=singleton_struct,
-                singleton_mod_hash=singleton_mod_hash,
-                singleton_launcher_id=singleton_launcher_id,
-                launcher_puzhash=launcher_puzhash,
-                owner_did=owner_did,
-                transfer_program_hash=transfer_program_hash,
-                transfer_program_curry_params=transfer_program_curry_params,
-                royalty_address=royalty_address,
-                trade_price_percentage=trade_price_percentage,
-                settlement_mod_hash=settlement_mod_hash,
-                cat_mod_hash=cat_mod_hash,
-                metadata=metadata,
-                data_uris=data_uris,
-                data_hash=data_hash,
-            )
-        except Exception as e:
-            raise exception from e
+        # TODO: How should we handle the case that no data_uris or no data_hash
+        #       is found?  Is it ok if we find them multiple times and just
+        #       ignore the first ones?
+
+        return cls(
+            nft_mod_hash=nft_mod_hash,
+            singleton_struct=singleton_struct,
+            singleton_mod_hash=singleton_mod_hash,
+            singleton_launcher_id=singleton_launcher_id,
+            launcher_puzhash=launcher_puzhash,
+            owner_did=owner_did,
+            transfer_program_hash=transfer_program_hash,
+            transfer_program_curry_params=transfer_program_curry_params,
+            royalty_address=royalty_address,
+            trade_price_percentage=trade_price_percentage,
+            settlement_mod_hash=settlement_mod_hash,
+            cat_mod_hash=cat_mod_hash,
+            metadata=metadata,
+            data_uris=data_uris,
+            data_hash=data_hash,
+        )
