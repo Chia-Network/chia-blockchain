@@ -8,7 +8,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Any
 
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
@@ -78,7 +78,7 @@ class StateChangeSummary:
 
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
-    constants_json: Dict
+    constants_json: Dict[str, Any]
 
     # peak of the blockchain
     _peak_height: Optional[uint32]
@@ -117,7 +117,7 @@ class Blockchain(BlockchainInterface):
         multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
-    ):
+    ) -> "Blockchain":
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
@@ -151,11 +151,11 @@ class Blockchain(BlockchainInterface):
         self.hint_store = hint_store
         return self
 
-    def shut_down(self):
+    def shut_down(self) -> None:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, blockchain_dir):
+    async def _load_chain_from_store(self, blockchain_dir: Path) -> None:
         """
         Initializes the state of the Blockchain class from the database.
         """
@@ -174,7 +174,7 @@ class Blockchain(BlockchainInterface):
         assert peak is not None
         self._peak_height = self.block_record(peak).height
         assert self.__height_map.contains_height(self._peak_height)
-        assert not self.__height_map.contains_height(self._peak_height + 1)
+        assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
     def get_peak(self) -> Optional[BlockRecord]:
         """
@@ -539,7 +539,7 @@ class Blockchain(BlockchainInterface):
         return list(reversed(recent_rc))
 
     async def validate_unfinished_block(
-        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation=True
+        self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
     ) -> PreValidationResult:
         if (
             not self.contains_block(block.prev_header_hash)
@@ -632,9 +632,9 @@ class Blockchain(BlockchainInterface):
         npc_result_bytes = await task
         if npc_result_bytes is None:
             raise ConsensusError(Err.UNKNOWN)
-        ret = NPCResult.from_bytes(npc_result_bytes)
+        ret: NPCResult = NPCResult.from_bytes(npc_result_bytes)
         if ret.error is not None:
-            raise ConsensusError(ret.error)
+            raise ConsensusError(Err(ret.error))
         return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
@@ -771,7 +771,7 @@ class Blockchain(BlockchainInterface):
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32], batch_size=900) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: List[uint32], batch_size: int = 900) -> List[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
@@ -841,7 +841,7 @@ class Blockchain(BlockchainInterface):
         return False
 
     async def get_block_generator(
-        self, block: BlockInfo, additional_blocks: Dict[bytes32, FullBlock] = None
+        self, block: BlockInfo, additional_blocks: Optional[Dict[bytes32, FullBlock]] = None
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:
             additional_blocks = {}
