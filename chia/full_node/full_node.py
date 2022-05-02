@@ -920,7 +920,8 @@ class FullNode:
             try:
                 if weight_proof_peer.has_wp_capability():
                     validated, fork_point, summaries, _ = await self.weight_proof_handler_v2.validate_weight_proof(
-                        response.wp, seed)
+                        response.wp, seed
+                    )
                 else:
                     validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(
                         response.wp
