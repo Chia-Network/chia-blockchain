@@ -1048,9 +1048,8 @@ class FullNode:
         lookup_coin_ids: List[bytes32],
     ) -> None:
         # Looks up coin records in DB for the coins that wallets are interested in
-        new_states: List[Optional[CoinRecord]] = [
-            await self.coin_store.get_coin_record(coin_id) for coin_id in list(lookup_coin_ids)
-        ]
+        new_states: List[CoinRecord] = await self.coin_store.get_coin_records(list(lookup_coin_ids))
+
         # Re-arrange to a map, and filter out any non-ph sized hint
         coin_id_to_ph_hint: Dict[bytes32, bytes32] = {
             coin_id: bytes32(hint) for coin_id, hint in hints if len(hint) == 32
@@ -1058,7 +1057,8 @@ class FullNode:
 
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
         for coin_record in state_change_summary.rolled_back_records + [s for s in new_states if s is not None]:
-            for peer in self.coin_subscriptions.get(coin_record.name, []):
+            cr_name: bytes32 = coin_record.name
+            for peer in self.coin_subscriptions.get(cr_name, []):
                 if peer not in changes_for_peer:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
@@ -1068,8 +1068,8 @@ class FullNode:
                     changes_for_peer[peer] = set()
                 changes_for_peer[peer].add(coin_record.coin_state)
 
-            if coin_record.name in coin_id_to_ph_hint:
-                for peer in self.ph_subscriptions.get(coin_id_to_ph_hint[coin_record.name], []):
+            if cr_name in coin_id_to_ph_hint:
+                for peer in self.ph_subscriptions.get(coin_id_to_ph_hint[cr_name], []):
                     if peer not in changes_for_peer:
                         changes_for_peer[peer] = set()
                     changes_for_peer[peer].add(coin_record.coin_state)
@@ -2381,7 +2381,6 @@ class FullNode:
                         expected_header_hash = self.blockchain.height_to_hash(header.height)
                         if header.header_hash != expected_header_hash:
                             continue
-                        record: Optional[BlockRecord] = None
                         if sanitize_weight_proof_only:
                             assert header.header_hash in records
                             record = records[header.header_hash]
@@ -2414,7 +2413,6 @@ class FullNode:
                         # Running in 'sanitize_weight_proof_only' ignores CC_SP_VDF and CC_IP_VDF
                         # unless this is a challenge block.
                         if sanitize_weight_proof_only:
-                            assert record is not None
                             if not record.is_challenge_block(self.constants):
                                 continue
                         if header.challenge_chain_sp_proof is not None and (
