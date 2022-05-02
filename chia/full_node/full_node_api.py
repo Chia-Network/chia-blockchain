@@ -322,9 +322,6 @@ class FullNodeAPI:
         message = make_msg(
             ProtocolMessageTypes.respond_proof_of_weight_v2, full_node_protocol.RespondProofOfWeightV2(wp)
         )
-        self.full_node.full_node_store.serialized_wp_message_tip = request.tip
-        self.full_node.full_node_store.serialized_wp_message = message
-        self.full_node.full_node_store.serialized_wp_is_v2 = True
         return message
 
     @api_request

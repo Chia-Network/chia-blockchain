@@ -88,10 +88,10 @@ class WeightProofHandlerV2:
         return True, self.get_fork_point(summaries)
 
     async def validate_weight_proof(
-        self, weight_proof: WeightProofV2, salt: bytes32, skip_segments: bool = False
+        self, weight_proof: WeightProofV2, seed: bytes32, skip_segments: bool = False
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
         valid, summaries, records = await validate_weight_proof_no_fork_point(
-            self.constants, weight_proof, salt, skip_segments
+            self.constants, weight_proof, seed, skip_segments
         )
         return valid, self.get_fork_point(summaries), summaries, records
 
@@ -1715,7 +1715,7 @@ async def get_prev_two_slots_height(blockchain: BlockchainInterface, se_start: B
 
 
 async def validate_weight_proof_no_fork_point(
-    constants: ConsensusConstants, weight_proof: WeightProofV2, salt: bytes32, skip_segments: bool = False
+    constants: ConsensusConstants, weight_proof: WeightProofV2, seed: bytes32, skip_segments: bool = False
 ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
     if len(weight_proof.sub_epochs) == 0:
         return False, [], []
@@ -1728,7 +1728,7 @@ async def validate_weight_proof_no_fork_point(
         log.error("weight proof failed sub epoch data validation")
         return False, [], []
 
-    rng = random.Random(salt)
+    rng = random.Random(seed)
     sampled_sub_epochs = preprocess_sub_epoch_sampling(rng, sub_epoch_weight_list)
     constants_bytes, summary_bytes, wp_recent_chain_bytes = vars_to_bytes(constants, summaries, weight_proof)
 
