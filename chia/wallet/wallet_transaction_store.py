@@ -34,7 +34,6 @@ class WalletTransactionStore:
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
     last_wallet_tx_resend_time: int  # Epoch time in seconds
-    wallet_tx_resend_timeout_secs: int  # Duration in seconds
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper):
@@ -92,7 +91,6 @@ class WalletTransactionStore:
         self.tx_submitted = {}
         self.unconfirmed_for_wallet = {}
         self.last_wallet_tx_resend_time = int(time.time())
-        self.wallet_tx_resend_timeout_secs = 60 * 60
         await self.rebuild_tx_cache()
         return self
 
