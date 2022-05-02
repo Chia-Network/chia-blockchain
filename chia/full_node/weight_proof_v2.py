@@ -96,9 +96,10 @@ class WeightProofHandlerV2:
             self.constants, weight_proof, seed, skip_segments
         )
         return valid, self.get_fork_point(summaries), summaries, records
+
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         """
-         given a list of SubEpochSummary finds the forkpoint with the local chain
+        given a list of SubEpochSummary finds the forkpoint with the local chain
         """
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
@@ -405,7 +406,6 @@ class WeightProofHandlerV2:
             )
         return SubEpochChallengeSegmentV2(sub_epoch_n, sub_slots, None, None, None, None), end_height
 
-
     def __first_sub_slot_vdfs(
         self,
         header_block: HeaderBlock,
@@ -455,7 +455,6 @@ class WeightProofHandlerV2:
             sub_slots_data.append(handle_finished_slots(sub_slot))
 
         return sub_slots_data, end_of_slot_bundle
-
 
     def __slot_end_vdf(
         self,
@@ -512,6 +511,7 @@ def _get_weights_for_sampling(
 
 
 # wp creation methods
+
 
 def handle_block_vdfs(
     executor: ProcessPoolExecutor,
@@ -629,7 +629,6 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle) -> SubSlotDataV2:
         None,
         None,
     )
-
 
 
 def compress_segments(full_segment_index: int, segments_bytes: bytes) -> bytes:
@@ -1475,15 +1474,10 @@ def preprocess_sub_epoch_sampling(rng: random.Random, sub_epoch_weight_list: Lis
     return sampled_sub_epochs
 
 
-def validate_sub_epoch_sampling(sampled_sub_epochs: Dict[int, bool], sub_epochs: List[uint32]) -> bool:
-    for sub_epoch_n in sub_epochs:
-        del sampled_sub_epochs[sub_epoch_n]
-    if len(sampled_sub_epochs) > 0:
-        return False
-    return True
-
-
 async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) -> Optional[List[HeaderBlock]]:
+    """
+    returns the latest chain part to attach to the WP,  all the blocks since the previous to last ses
+    """
     recent_chain: List[HeaderBlock] = []
     ses_heights = blockchain.get_ses_heights()
     min_height = 0
@@ -1567,6 +1561,10 @@ def _sample_sub_epoch(
 def _validate_recent_blocks(
     constants_dict: Dict[str, Any], recent_chain_bytes: bytes, summaries_bytes: List[bytes]
 ) -> Tuple[bool, List[bytes]]:
+    """
+    validate pospace for blocks after the first two slots, full validation for last 100 blocks
+    returns the result and the list of blocks records as bytes
+    """
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     sub_blocks = BlockCache({})
@@ -1783,7 +1781,10 @@ async def validate_weight_proof_no_fork_point(
                 log.error("failed validating weight proof sub epoch segments")
                 return False, [], []
 
-    if not validate_sub_epoch_sampling(sampled_sub_epochs, sub_epochs):
+    # check that all sampled sub epochs are in the WP
+    for sub_epoch_n in sub_epochs:
+        del sampled_sub_epochs[sub_epoch_n]
+    if len(sampled_sub_epochs) > 0:
         log.error("failed weight proof sub epoch sample validation")
         return False, [], []
 
