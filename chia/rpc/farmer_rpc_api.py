@@ -40,6 +40,17 @@ class PlotPathRequestData:
     reverse: bool = False
 
 
+def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
+    paginator: Paginator = Paginator(source, request.page_size)
+    return {
+        "peer_id": request.peer_id.hex(),
+        "page": request.page,
+        "page_count": paginator.page_count(),
+        "total_count": len(source),
+        "plots": paginator.get_page(request.page),
+    }
+
+
 def is_filter_match(plot: Union[Plot, Dict[str, Any]], filter_item: KeyValue) -> bool:
     if isinstance(plot, Plot):
         plot_attribute = getattr(plot, filter_item.key)
@@ -207,53 +218,35 @@ class FarmerRpcApi:
     async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
         return await self.service.get_harvesters(True)
 
-    def paginated_plot_request(self, source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
-        try:
-            paginator: Paginator = Paginator(source, request.page_size)
-            return {
-                "peer_id": request.peer_id.hex(),
-                "page": request.page,
-                "page_count": paginator.page_count(),
-                "total_count": len(source),
-                "plots": paginator.get_page(request.page),
-            }
-        except Exception as e:
-            self.service.log.error(f"paginated_plot_request: failed with {e}")
-            return {"error": str(e)}
-
     async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
-        try:
-            request = dataclass_from_dict(PlotInfoRequestData, request_dict)
-            plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
-            # Apply filter
-            plot_list = [plot for plot in plot_list if all(is_filter_match(plot, filter_item) for filter_item in request.filter)]
-            restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
-            # Apply sort_key and reverse if sort_key is not restricted
-            if request.sort_key in restricted_sort_keys:
-                raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
-            # Sort by plot_id also by default since its unique
-            plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
-            return self.paginated_plot_request(plot_list, request)
-        except Exception as e:
-            return {"error": str(e)}
+        request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+        plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
+        # Apply filter
+        plot_list = [
+            plot for plot in plot_list if all(is_filter_match(plot, filter_item) for filter_item in request.filter)
+        ]
+        restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
+        # Apply sort_key and reverse if sort_key is not restricted
+        if request.sort_key in restricted_sort_keys:
+            raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
+        # Sort by plot_id also by default since its unique
+        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+        return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(
         self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
     ) -> Dict[str, object]:
-        try:
-            request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
-            receiver = self.service.get_receiver(request.peer_id)
-            source = source_func(receiver)
-            request = dataclass_from_dict(PlotPathRequestData, request_dict)
-            # Apply filter
-            for filter_item in request.filter:
-                source = [plot for plot in source if filter_item in plot]
-            # Apply reverse
-            source = sorted(source, reverse=request.reverse)
-            return self.paginated_plot_request(source, request)
-        except Exception as e:
-            return {"error": str(e)}
+        request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+        receiver = self.service.get_receiver(request.peer_id)
+        source = source_func(receiver)
+        request = dataclass_from_dict(PlotPathRequestData, request_dict)
+        # Apply filter
+        for filter_item in request.filter:
+            source = [plot for plot in source if filter_item in plot]
+        # Apply reverse
+        source = sorted(source, reverse=request.reverse)
+        return paginated_plot_request(source, request)
 
     async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
         return self.paginated_plot_path_request(Receiver.invalid, request_dict)
