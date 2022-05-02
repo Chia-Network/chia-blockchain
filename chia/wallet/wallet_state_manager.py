@@ -258,11 +258,12 @@ class WalletStateManager:
         that we can restore the wallet from only the private keys.
         """
         targets = list(self.wallets.keys())
-
+        self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
         unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
         if unused is None:
             # This handles the case where the database has entries but they have all been used
             unused = await self.puzzle_store.get_last_derivation_path()
+            self.log.debug("Tried finding unused: %s", unused)
             if unused is None:
                 # This handles the case where the database is empty
                 unused = uint32(0)
@@ -377,11 +378,13 @@ class WalletStateManager:
             # If we have no unused public keys, we will create new ones
             unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
             if unused is None:
+                self.log.debug("No unused paths, generate more ")
                 await self.create_more_puzzle_hashes()
+                # Now we must have unused public keys
+                unused = await self.puzzle_store.get_unused_derivation_path()
+                assert unused is not None
 
-            # Now we must have unused public keys
-            unused = await self.puzzle_store.get_unused_derivation_path()
-            assert unused is not None
+            self.log.debug("Fetching derivation record for: %s %s %s", unused, wallet_id, hardened)
             record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record(
                 unused, wallet_id, hardened
             )
@@ -577,9 +580,11 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        nft_matched, nft_curried_args = match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        nft_matched, singleton_curried_args, nft_curried_args = match_nft_puzzle(
+            Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        )
         if nft_matched:
-            return await self.handle_nft(coin_spend, nft_curried_args)
+            return await self.handle_nft(coin_spend, iter(nft_curried_args))
 
         # Check if the coin is a DID
         did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
