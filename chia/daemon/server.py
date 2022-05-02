@@ -741,10 +741,8 @@ class WebSocketServer:
 
         if f is not None:
             command_args.append(f"-f{f}")
-
         if p is not None:
             command_args.append(f"-p{p}")
-
         if c is not None:
             command_args.append(f"-c{c}")
 
@@ -770,19 +768,15 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
-
         if e is True:
             command_args.append("-e")
-
         if x is True:
             command_args.append("-x")
-
         if override_k is True:
             command_args.append("--override-k")
 
         return command_args
 
-    # @TODO Do something for bladebit version 2.
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
@@ -791,9 +785,55 @@ class WebSocketServer:
 
         if w is True:
             command_args.append("-w")
-
         if m is True:
             command_args.append("-m")
+
+        return command_args
+
+    def _bladebit2_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        # memo = request["memo"]
+        t1 = request["t"]  # Temp directory
+        t2 = request["t2"]  # Temp2 directory
+        u = request["u"]  # Buckets
+        cache = request["cache"]
+        f1_threads = request["f1_threads"]
+        fp_threads = request["fp_threads"]
+        c_threads = request["c_threads"]
+        p2_threads = request["p2_threads"]
+        p3_threads = request["p3_threads"]
+
+        command_args: List[str] = []
+
+        if w is True:
+            command_args.append("-w")
+        if m is True:
+            command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        command_args.append("diskplot")
+
+        if t1:
+            command_args.append(f"-t1 {t1}")
+        if t2:
+            command_args.append(f"-t2 {t2}")
+        if u:
+            command_args.append(f"-b {u}")
+        if cache:
+            command_args.append(f"--cache {cache}")
+        if f1_threads:
+            command_args.append(f"--f1-threads {f1_threads}")
+        if fp_threads:
+            command_args.append(f"--fp-threads {fp_threads}")
+        if c_threads:
+            command_args.append(f"--c-threads {c_threads}")
+        if p2_threads:
+            command_args.append(f"--p2-threads {p2_threads}")
+        if p3_threads:
+            command_args.append(f"--p3-threads {p3_threads}")
 
         return command_args
 
@@ -835,6 +875,8 @@ class WebSocketServer:
             command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
             command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
+        elif plotter == "bladebit2":
+            command_args.extend(self._bladebit2_plotting_command_args(request, ignoreCount))
 
         return command_args
 
@@ -887,7 +929,7 @@ class WebSocketServer:
             if state is not PlotState.SUBMITTED:
                 raise Exception(f"Plot with ID {id} has no state submitted")
 
-            id = config["id"]
+            assert id == config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
 
