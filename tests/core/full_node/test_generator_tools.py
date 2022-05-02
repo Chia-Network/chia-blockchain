@@ -2,7 +2,7 @@ from typing import List
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.generator_tools import tx_removals_additions_and_hints, tx_removals_and_additions
+from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 
@@ -36,29 +36,17 @@ spends: List[Spend] = [
 ]
 
 
-class TestGeneratorTools:
-    def test_tx_removals_and_additions(self) -> None:
-        conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), [], uint64(0))
-        expected_rems = [coin_ids[0], coin_ids[1]]
-        expected_additions = []
-        for spend in spends:
-            for puzzle_hash, am, _ in spend.create_coin:
-                expected_additions.append(Coin(spend.coin_id, puzzle_hash, am))
-        rems, adds = tx_removals_and_additions(conditions)
-        assert rems == expected_rems
-        assert adds == expected_additions
+def test_tx_removals_and_additions() -> None:
+    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), [], uint64(0))
+    expected_rems = [coin_ids[0], coin_ids[1]]
+    expected_additions = []
+    for spend in spends:
+        for puzzle_hash, am, _ in spend.create_coin:
+            expected_additions.append(Coin(spend.coin_id, puzzle_hash, am))
+    rems, adds = tx_removals_and_additions(conditions)
+    assert rems == expected_rems
+    assert adds == expected_additions
 
-    def test_empty_conditions(self) -> None:
-        assert tx_removals_and_additions(None) == ([], [])
 
-    def test_tx_removals_additions_and_hints(self) -> None:
-        conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), [], uint64(0))
-        expected_rems = [(coin_ids[0], phs[0]), (coin_ids[1], phs[0])]
-        expected_additions = []
-        for spend in spends:
-            for puzzle_hash, am, hint in spend.create_coin:
-                expected_additions.append((Coin(spend.coin_id, puzzle_hash, am), hint))
-        assert tx_removals_additions_and_hints(conditions) == (expected_rems, expected_additions)
-
-    def test_empty_tx_removals_additions_and_hints(self) -> None:
-        assert tx_removals_additions_and_hints(None) == ([], [])
+def test_empty_conditions() -> None:
+    assert tx_removals_and_additions(None) == ([], [])

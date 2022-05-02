@@ -1,8 +1,8 @@
 from typing import Dict, List, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.generator_tools import tx_removals_additions_and_hints
 
 
 def get_hints_and_subscription_coin_ids(
@@ -29,23 +29,23 @@ def get_hints_and_subscription_coin_ids(
             lookup_coin_ids.add(coin_id)
 
     for npc_result in state_change_summary.new_npc_results:
-        removals, additions_with_h = tx_removals_additions_and_hints(npc_result.conds)
+        if npc_result.conds is not None:
+            for spend in npc_result.conds.spends:
+                # Record all coin_ids that we are interested in, that had changes
+                add_if_coin_subscription(spend.coin_id)
+                add_if_ph_subscription(spend.puzzle_hash, spend.coin_id)
 
-        # Record all coin_ids that we are interested in, that had changes
-        for removal_coin_id, removal_ph in removals:
-            add_if_coin_subscription(removal_coin_id)
-            add_if_ph_subscription(removal_ph, removal_coin_id)
+                for new_ph, new_am, hint in spend.create_coin:
+                    addition_coin: Coin = Coin(spend.coin_id, new_ph, new_am)
+                    addition_coin_name = addition_coin.name()
+                    add_if_coin_subscription(addition_coin_name)
+                    add_if_ph_subscription(addition_coin.puzzle_hash, addition_coin_name)
+                    if len(hint) == 32:
+                        add_if_ph_subscription(bytes32(hint), addition_coin_name)
 
-        for addition_coin, hint in additions_with_h:
-            addition_coin_name = addition_coin.name()
-            add_if_coin_subscription(addition_coin_name)
-            add_if_ph_subscription(addition_coin.puzzle_hash, addition_coin_name)
-            if len(hint) == 32:
-                add_if_ph_subscription(bytes32(hint), addition_coin_name)
-
-            if len(hint) > 0:
-                assert len(hint) <= 32
-                hints_to_add.append((addition_coin_name, hint))
+                    if len(hint) > 0:
+                        assert len(hint) <= 32
+                        hints_to_add.append((addition_coin_name, hint))
 
     # Goes through all new reward coins
     for reward_coin in state_change_summary.new_rewards:

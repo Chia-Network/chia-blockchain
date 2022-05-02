@@ -55,27 +55,19 @@ def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple
     """
     Doesn't return farmer and pool reward.
     """
-    removals: List[Tuple[bytes32, bytes32]]
-    removals, additions_with_h = tx_removals_additions_and_hints(results)
-    additions: List[Coin] = [c for c, hint in additions_with_h]
-    return [r[0] for r in removals], additions
 
+    removals: List[bytes32] = []
+    additions: List[Coin] = []
 
-def tx_removals_additions_and_hints(
-    results: Optional[SpendBundleConditions],
-) -> Tuple[List[Tuple[bytes32, bytes32]], List[Tuple[Coin, bytes]]]:
-    # Returns (coin_id, puzzle_hash) for each removal, and (Coin, hint) for each addition
-
+    # build removals list
     if results is None:
         return [], []
-    ret_removals: List[Tuple[bytes32, bytes32]] = []
-    ret_additions: List[Tuple[Coin, bytes]] = []
     for spend in results.spends:
-        ret_removals.append((spend.coin_id, spend.puzzle_hash))
-        for puzzle_hash, amount, hint in spend.create_coin:
-            coin = Coin(spend.coin_id, puzzle_hash, amount)
-            ret_additions.append((coin, hint))
-    return ret_removals, ret_additions
+        removals.append(spend.coin_id)
+        for puzzle_hash, amount, _ in spend.create_coin:
+            additions.append(Coin(spend.coin_id, puzzle_hash, uint64(amount)))
+
+    return removals, additions
 
 
 def list_to_batches(list_to_split: List[Any], batch_size: int) -> Iterator[Tuple[int, List[Any]]]:
