@@ -128,6 +128,15 @@ def install_bladebit(root_path):
             [
                 "sudo",
                 "apt",
+                "update",
+                "-y",
+            ],
+            "Could not update get package information from apt",
+        )
+        run_command(
+            [
+                "sudo",
+                "apt",
                 "install",
                 "-y",
                 "build-essential",
