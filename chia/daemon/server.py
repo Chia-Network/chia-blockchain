@@ -280,15 +280,15 @@ class WebSocketServer:
                 sockets = self.connections[service_name]
                 for socket in sockets:
                     try:
-                        self.log.info(f"About to ping: {service_name}")
+                        self.log.debug(f"About to ping: {service_name}")
                         await socket.ping()
                     except asyncio.CancelledError:
-                        self.log.info("Ping task received Cancel")
+                        self.log.warning("Ping task received Cancel")
                         restart = False
                         break
                     except Exception as e:
-                        self.log.info(f"Ping error: {e}")
-                        self.log.warning("Ping failed, connection closed.")
+                        self.log.exception(f"Ping error")
+                        self.log.error("Ping failed, connection closed.")
                         self.remove_connection(socket)
                         await socket.close()
         if restart is True:
