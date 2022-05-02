@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
 import aiosqlite
+import time
 import traceback
 import asyncio
 import aiohttp
@@ -71,9 +72,6 @@ class DataLayer:
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
             await self.data_layer_server.start()
-        subscriptions = await self.get_subscriptions()
-        for subscription in subscriptions:
-            await self.wallet_rpc.dl_track_new(subscription.tree_id)
         self.periodically_fetch_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_fetch_data())
         return True
 
@@ -352,6 +350,24 @@ class DataLayer:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 
     async def periodically_fetch_data(self) -> None:
+        while not self._shut_down:
+            async with self.subscription_lock:
+                try:
+                    subscriptions = await self.data_store.get_subscriptions()
+                    for subscription in subscriptions:
+                        await self.wallet_rpc.dl_track_new(subscription.tree_id)
+                    break
+                except aiohttp.client_exceptions.ClientConnectorError:
+                    pass
+
+            self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
+
+            delay_until = time.monotonic() + 3
+            while time.monotonic() < delay_until:
+                if self._shut_down:
+                    break
+                await asyncio.sleep(0.1)
+
         fetch_data_interval = self.config.get("fetch_data_interval", 60)
         while not self._shut_down:
             async with self.subscription_lock:
