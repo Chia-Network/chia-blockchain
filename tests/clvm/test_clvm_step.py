@@ -1,4 +1,5 @@
 from unittest import TestCase
+
 from clvm_tools_rs import start_clvm_program
 
 factorial = (
