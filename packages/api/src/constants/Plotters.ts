@@ -55,7 +55,7 @@ export const bladebit2Options: PlotterOptions = {
   haveBladebitWarmStart: true,
   haveBladebitNoCpuAffinity: true,
   haveBladebitDisableNUMA: true,
-  haveBladebitOutputDir: true,
+  haveBladebitOutputDir: false,
   haveBladebit2Cache: true,
   haveBladebit2F1Threads: true,
   haveBladebit2FpThreads: true,
