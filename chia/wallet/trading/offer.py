@@ -274,6 +274,7 @@ class Offer:
                 assert arbitrage_ph is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
 
+            spendable_cat_list: List[SpendableCAT] = []
             for coin in offered_coins:
                 inner_solutions = []
                 if coin == offered_coins[0]:
@@ -300,21 +301,20 @@ class Offer:
                             parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
                         ),
                     )
-                    solution: Program = (
-                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
-                        .coin_spends[0]
-                        .solution.to_program()
-                    )
+                    spendable_cat_list.append(spendable_cat)
                 else:
                     solution = Program.to(inner_solutions)
 
-                completion_spends.append(
-                    CoinSpend(
-                        coin,
-                        construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD,
-                        solution,
+                    completion_spends.append(
+                        CoinSpend(
+                            coin,
+                            OFFER_MOD,
+                            solution,
+                        )
                     )
-                )
+            if spendable_cat_list:
+                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
+                completion_spends.extend(cat_spend_bundle.coin_spends)
 
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self.bundle])
 
