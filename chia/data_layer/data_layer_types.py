@@ -186,8 +186,8 @@ class DiffData:
     value: bytes
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SerializedNode(Streamable):
     is_terminal: bool
     value1: bytes
