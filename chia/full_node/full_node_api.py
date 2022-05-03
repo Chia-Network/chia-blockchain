@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -53,9 +53,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.full_node.state_changed_callback = callback
 
     @property
     def server(self):
@@ -784,7 +781,7 @@ class FullNodeAPI:
             def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature
 
-            prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+            prev_b: Optional[BlockRecord] = peak
 
             # Finds the previous block from the signage point, ensuring that the reward chain VDF is correct
             if prev_b is not None:

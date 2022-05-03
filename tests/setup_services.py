@@ -6,6 +6,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import AsyncGenerator, Optional
 
+from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
 from chia.server.start_farmer import service_kwargs_for_farmer
@@ -185,6 +186,7 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(
+    b_tools: BlockTools,
     root_path: Path,
     self_hostname: str,
     port,
@@ -193,11 +195,17 @@ async def setup_harvester(
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ):
+    init(None, root_path)
+    init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
     config = load_config(root_path, "config.yaml")
+    config["logging"]["log_stdout"] = True
+    config["selected_network"] = "testnet0"
+    config["harvester"]["selected_network"] = "testnet0"
     config["harvester"]["port"] = port
     config["harvester"]["rpc_port"] = rpc_port
     config["harvester"]["farmer_peer"]["host"] = self_hostname
     config["harvester"]["farmer_peer"]["port"] = farmer_port
+    config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
     save_config(root_path, "config.yaml", config)
     kwargs = service_kwargs_for_harvester(root_path, config["harvester"], consensus_constants)
     kwargs.update(
@@ -219,6 +227,7 @@ async def setup_harvester(
 
 async def setup_farmer(
     b_tools: BlockTools,
+    root_path: Path,
     self_hostname: str,
     port,
     rpc_port,
@@ -226,8 +235,15 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
 ):
-    config = b_tools.config["farmer"]
-    config_pool = b_tools.config["pool"]
+    init(None, root_path)
+    init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
+    root_config = load_config(root_path, "config.yaml")
+    root_config["logging"]["log_stdout"] = True
+    root_config["selected_network"] = "testnet0"
+    root_config["farmer"]["selected_network"] = "testnet0"
+    save_config(root_path, "config.yaml", root_config)
+    config = root_config["farmer"]
+    config_pool = root_config["pool"]
 
     config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
@@ -241,9 +257,7 @@ async def setup_farmer(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(
-        b_tools.root_path, config, config_pool, consensus_constants, b_tools.local_keychain
-    )
+    kwargs = service_kwargs_for_farmer(root_path, config, config_pool, consensus_constants, b_tools.local_keychain)
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
