@@ -109,10 +109,19 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
-        elif change == "new_plots":
+        elif change == "harvester_update":
             payloads.append(
                 create_payload_dict(
-                    "get_harvesters",
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "harvester_removed":
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
                     change_data,
                     self.service_name,
                     "wallet_ui",
