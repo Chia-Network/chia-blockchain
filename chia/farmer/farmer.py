@@ -650,6 +650,12 @@ class Farmer:
 
         return {"harvesters": harvesters}
 
+    def get_receiver(self, node_id: bytes32) -> Receiver:
+        receiver: Optional[Receiver] = self.plot_sync_receivers.get(node_id)
+        if receiver is None:
+            raise KeyError(f"Receiver missing for {node_id}")
+        return receiver
+
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
         config_path: Path = config_path_for_filename(self._root_path, "config.yaml")
