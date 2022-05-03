@@ -10,7 +10,7 @@ dependencies = [
     "clvm==0.9.7",
     "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.1",
-    "clvm-tools-rs==0.1.8",  # Rust implementation of clvm_tools
+    "clvm-tools-rs==0.1.9",  # Rust implementation of clvm_tools
     "aiohttp==3.7.4",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
