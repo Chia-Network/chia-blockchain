@@ -1,8 +1,9 @@
 from unittest import TestCase
 from clvm_tools_rs import start_clvm_program
 
-factorial = "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02" \
-    + "ffff03ffff09ff05ffff010180ffff01ff0101ffff01ff12ff05ffff02ff02ff" \
+factorial = (
+    "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02"
+    + "ffff03ffff09ff05ffff010180ffff01ff0101ffff01ff12ff05ffff02ff02ff"
     + "ff04ff02ffff04ffff11ff05ffff010180ff808080808080ff0180ff018080"
 
 
