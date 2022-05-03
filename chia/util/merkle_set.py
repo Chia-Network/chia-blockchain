@@ -171,6 +171,16 @@ class EmptyNode(Node):
 _empty = EmptyNode()
 
 
+def _make_middle(children: Any, depth: int) -> Node:
+    cbits = [get_bit(child.hash, depth) for child in children]
+    if cbits[0] != cbits[1]:
+        return MiddleNode(children)
+    nextvals: List[Node] = [_empty, _empty]
+    nextvals[cbits[0] ^ 1] = _empty
+    nextvals[cbits[0]] = _make_middle(children, depth + 1)
+    return MiddleNode(nextvals)
+
+
 class TerminalNode(Node):
     def __init__(self, hash: bytes, bits: List[int] = None):
         assert len(hash) == 32
@@ -194,18 +204,9 @@ class TerminalNode(Node):
         if toadd == self.hash:
             return self
         if toadd > self.hash:
-            return self._make_middle([self, TerminalNode(toadd)], depth)
+            return _make_middle([self, TerminalNode(toadd)], depth)
         else:
-            return self._make_middle([TerminalNode(toadd), self], depth)
-
-    def _make_middle(self, children: Any, depth: int) -> Node:
-        cbits = [get_bit(child.hash, depth) for child in children]
-        if cbits[0] != cbits[1]:
-            return MiddleNode(children)
-        nextvals: List[Node] = [_empty, _empty]
-        nextvals[cbits[0] ^ 1] = _empty
-        nextvals[cbits[0]] = self._make_middle(children, depth + 1)
-        return MiddleNode(nextvals)
+            return _make_middle([TerminalNode(toadd), self], depth)
 
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(TERMINAL + self.hash)
