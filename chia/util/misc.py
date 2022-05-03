@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Sequence, Union
 
 from chia.util.streamable import recurse_jsonify
 
@@ -82,9 +82,3 @@ def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Seque
 
 def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
     return recurse_jsonify(dataclasses.asdict(instance))
-
-
-@dataclasses.dataclass
-class KeyValue:
-    key: str
-    value: Optional[str]

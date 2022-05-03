@@ -9,7 +9,6 @@ from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.misc import KeyValue
 from chia.util.paginator import Paginator
 from chia.util.streamable import dataclass_from_dict
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -22,11 +21,17 @@ class PaginatedRequestData(Protocol):
 
 
 @dataclasses.dataclass
+class FilterItem:
+    key: str
+    value: Optional[str]
+
+
+@dataclasses.dataclass
 class PlotInfoRequestData:
     peer_id: bytes32
     page: int
     page_size: int
-    filter: List[KeyValue] = dataclasses.field(default_factory=list)
+    filter: List[FilterItem] = dataclasses.field(default_factory=list)
     sort_key: str = "filename"
     reverse: bool = False
 
@@ -51,7 +56,7 @@ def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> 
     }
 
 
-def plot_matches_filter(plot: Plot, filter_item: KeyValue) -> bool:
+def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
     plot_attribute = getattr(plot, filter_item.key)
     if filter_item.value is None:
         return plot_attribute is None

@@ -17,6 +17,7 @@ from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.farmer_rpc_api import (
     FarmerRpcApi,
+    FilterItem,
     PaginatedRequestData,
     PlotInfoRequestData,
     PlotPathRequestData,
@@ -32,7 +33,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.util.misc import KeyValue, get_list_or_len
+from chia.util.misc import get_list_or_len
 from chia.util.streamable import dataclass_from_dict
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.block_tools import get_plot_dir
@@ -398,18 +399,18 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
 @pytest.mark.parametrize(
     "filter_item, match",
     [
-        (KeyValue("filename", "1"), True),
-        (KeyValue("filename", "12"), True),
-        (KeyValue("filename", "123"), True),
-        (KeyValue("filename", "1234"), False),
-        (KeyValue("filename", "23"), True),
-        (KeyValue("filename", "3"), True),
-        (KeyValue("filename", "0123"), False),
-        (KeyValue("pool_contract_puzzle_hash", None), True),
-        (KeyValue("pool_contract_puzzle_hash", "1"), False),
+        (FilterItem("filename", "1"), True),
+        (FilterItem("filename", "12"), True),
+        (FilterItem("filename", "123"), True),
+        (FilterItem("filename", "1234"), False),
+        (FilterItem("filename", "23"), True),
+        (FilterItem("filename", "3"), True),
+        (FilterItem("filename", "0123"), False),
+        (FilterItem("pool_contract_puzzle_hash", None), True),
+        (FilterItem("pool_contract_puzzle_hash", "1"), False),
     ],
 )
-def test_plot_matches_filter(filter_item: KeyValue, match: bool):
+def test_plot_matches_filter(filter_item: FilterItem, match: bool):
     assert plot_matches_filter(dummy_plot("123"), filter_item) == match
 
 
@@ -420,14 +421,14 @@ def test_plot_matches_filter(filter_item: KeyValue, match: bool):
         (FarmerRpcClient.get_harvester_plots_valid, [], "size", True, 20),
         (
             FarmerRpcClient.get_harvester_plots_valid,
-            [KeyValue("pool_contract_puzzle_hash", None)],
+            [FilterItem("pool_contract_puzzle_hash", None)],
             "file_size",
             True,
             15,
         ),
         (
             FarmerRpcClient.get_harvester_plots_valid,
-            [KeyValue("size", "20"), KeyValue("filename", "81")],
+            [FilterItem("size", "20"), FilterItem("filename", "81")],
             "plot_id",
             False,
             4,
@@ -445,7 +446,7 @@ def test_plot_matches_filter(filter_item: KeyValue, match: bool):
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
-    filtering: Union[List[KeyValue], List[str]],
+    filtering: Union[List[FilterItem], List[str]],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
@@ -471,7 +472,7 @@ async def test_farmer_get_harvester_plots_endpoints(
 
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
-        request = PlotInfoRequestData(harvester_id, 0, -1, cast(List[KeyValue], filtering), sort_key, reverse)
+        request = PlotInfoRequestData(harvester_id, 0, -1, cast(List[FilterItem], filtering), sort_key, reverse)
     else:
         request = PlotPathRequestData(harvester_id, 0, -1, cast(List[str], filtering), reverse)
 
@@ -512,7 +513,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     # Sort and filter the data
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
-            assert isinstance(filter_item, KeyValue)
+            assert isinstance(filter_item, FilterItem)
             plots = [plot for plot in plots if plot_matches_filter(dataclass_from_dict(Plot, plot), filter_item)]
         plots.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
     else:
