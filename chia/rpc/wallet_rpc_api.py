@@ -32,7 +32,6 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk, master_sk_to_wallet_sk
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
