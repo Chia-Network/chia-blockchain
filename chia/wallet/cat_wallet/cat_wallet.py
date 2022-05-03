@@ -36,7 +36,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
+from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -92,8 +92,6 @@ class CATWallet:
             name = "CAT WALLET"
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
-
-        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
 
         try:
             chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[

@@ -1,4 +1,7 @@
 from typing import List, Optional, Set, Dict, Any, Tuple
+
+from aiosqlite import Cursor
+
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -176,6 +179,49 @@ class CoinStore:
                     return record
         return None
 
+    async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
+        if len(names) == 0:
+            return []
+
+        coins: List[CoinRecord] = []
+        new_names: List[bytes32] = []
+        for n in names:
+            cached = self.coin_record_cache.get(n)
+            if cached is not None:
+                coins.append(cached)
+            else:
+                new_names.append(n)
+        names = new_names
+
+        if len(names) == 0:
+            return coins
+
+        async with self.db_wrapper.read_db() as conn:
+            cursors: List[Cursor] = []
+            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+                names_db: Tuple[Any, ...]
+                if self.db_wrapper.db_version == 2:
+                    names_db = tuple(names_chunk)
+                else:
+                    names_db = tuple([n.hex() for n in names_chunk])
+                cursors.append(
+                    await conn.execute(
+                        f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                        f"coin_parent, amount, timestamp FROM coin_record "
+                        f'WHERE coin_name in ({",".join(["?"] * len(names_db))}) ',
+                        names_db,
+                    )
+                )
+
+            for cursor in cursors:
+                for row in await cursor.fetchall():
+                    coin = self.row_to_coin(row)
+                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
+                    coins.append(record)
+                    self.coin_record_cache.put(record.coin.name(), record)
+
+        return coins
+
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
@@ -285,7 +331,8 @@ class CoinStore:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f'coin_parent, amount, timestamp FROM coin_record WHERE coin_name in ({"?," * (len(names) - 1)}?) '
+                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                f'WHERE coin_name in ({"?," * (len(names) - 1)}?) '
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
                 names_db + (start_height, end_height),
@@ -424,6 +471,7 @@ class CoinStore:
             self.coin_record_cache.remove(coin_name)
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
+        # Add coins that are confirmed in the reverted blocks to the list of updated coins.
         async with self.db_wrapper.write_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -435,12 +483,13 @@ class CoinStore:
                     record = CoinRecord(coin, uint32(0), row[1], row[2], uint64(0))
                     coin_changes[record.name] = record
 
-            # Delete from storage
+            # Delete reverted blocks from storage
             await conn.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
 
+            # Add coins that are confirmed in the reverted blocks to the list of changed coins.
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index>?",
+                "coin_parent, amount, timestamp FROM coin_record WHERE spent_index>?",
                 (block_index,),
             ) as cursor:
                 for row in await cursor.fetchall():
@@ -515,16 +564,27 @@ class CoinStore:
         for coin_name in coin_names:
             r = self.coin_record_cache.get(coin_name)
             if r is not None:
+                if r.spent_block_index != uint32(0):
+                    raise ValueError(f"Coin already spent in cache: {coin_name}")
+
                 self.coin_record_cache.put(
                     r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
                 )
             updates.append((index, self.maybe_to_hex(coin_name)))
 
-        if updates != []:
-            async with self.db_wrapper.write_db() as conn:
-                if self.db_wrapper.db_version == 2:
-                    await conn.executemany("UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=?", updates)
-                else:
-                    await conn.executemany(
-                        "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=?", updates
-                    )
+        assert len(updates) == len(coin_names)
+        async with self.db_wrapper.write_db() as conn:
+            if self.db_wrapper.db_version == 2:
+                ret: Cursor = await conn.executemany(
+                    "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
+                )
+
+            else:
+                ret = await conn.executemany(
+                    "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
+                    updates,
+                )
+            if ret.rowcount != len(coin_names):
+                raise ValueError(
+                    f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}"
+                )

@@ -202,6 +202,7 @@ class FullNode:
                             # this is a new DB file. Make it v2
                             async with self.db_wrapper.write_db() as w_conn:
                                 await set_db_version_async(w_conn, 2)
+                                self.db_wrapper.db_version = 2
                         except sqlite3.OperationalError:
                             # it could be a database created with "chia init", which is
                             # empty except it has the database_version table
@@ -1296,10 +1297,9 @@ class FullNode:
         fork_block: Optional[BlockRecord] = None
         if fork_height != block.height - 1 and block.height != 0:
             # This is a reorg
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "block_record" of "Blockchain" has incompatible type "Optional[bytes32]";
-            #       expected "bytes32"  [arg-type]
-            fork_block = self.blockchain.block_record(self.blockchain.height_to_hash(fork_height))  # type: ignore[arg-type]  # noqa: E501
+            fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(fork_height)
+            assert fork_hash is not None
+            fork_block = self.blockchain.block_record(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
@@ -1629,6 +1629,8 @@ class FullNode:
             "k_size": block.reward_chain_block.proof_of_space.size,
             "header_hash": block.header_hash,
             "height": block.height,
+            "validation_time": validation_time,
+            "pre_validation_time": pre_validation_time,
         }
 
         if block.transactions_info is not None:
@@ -1736,7 +1738,10 @@ class FullNode:
             npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
             pre_validation_time = time.time() - pre_validation_start
 
-            pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+            # blockchain.run_generator throws on errors, so npc_result is
+            # guaranteed to represent a successful run
+            assert npc_result.conds is not None
+            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
             if not cached_bls.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):

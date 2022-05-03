@@ -38,15 +38,15 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimFullBlock(Streamable):
     transactions_generator: Optional[BlockGenerator]
     height: uint32  # Note that height is not on a regular FullBlock
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimBlockRecord(Streamable):
     reward_claims_incorporated: List[Coin]
     height: uint32
@@ -69,8 +69,8 @@ class SimBlockRecord(Streamable):
         )
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SimStore(Streamable):
     timestamp: uint64
     block_height: uint32
@@ -89,9 +89,12 @@ class SpendSim:
     defaults: ConsensusConstants
 
     @classmethod
-    async def create(cls, db_path=":memory:", defaults=DEFAULT_CONSTANTS):
+    async def create(cls, db_path=None, defaults=DEFAULT_CONSTANTS):
         self = cls()
-        uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+        if db_path is None:
+            uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+        else:
+            uri = f"file:{db_path}"
         connection = await aiosqlite.connect(uri, uri=True)
         self.db_wrapper = DBWrapper2(connection)
         await self.db_wrapper.add_connection(await aiosqlite.connect(uri, uri=True))
@@ -111,6 +114,7 @@ class SpendSim:
                 self.block_height = store_data.block_height
                 self.block_records = store_data.block_records
                 self.blocks = store_data.blocks
+                self.mempool_manager.peak = self.block_records[-1]
             else:
                 self.timestamp = 1
                 self.block_height = 0
@@ -268,6 +272,20 @@ class SimClient:
 
     async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
         return await self.service.mempool_manager.coin_store.get_coin_record(name)
+
+    async def get_coin_records_by_names(
+        self,
+        names: List[bytes32],
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+        include_spent_coins: bool = False,
+    ) -> List[CoinRecord]:
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "names": names}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_names(**kwargs)
 
     async def get_coin_records_by_parent_ids(
         self,

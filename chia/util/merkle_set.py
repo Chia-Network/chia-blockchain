@@ -100,10 +100,6 @@ class Node(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def remove(self, toremove: bytes, depth: int):
-        pass
-
-    @abstractmethod
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         pass
 
@@ -130,9 +126,6 @@ class MerkleSet:
 
     def add_already_hashed(self, toadd: bytes):
         self.root = self.root.add(toadd, 0)
-
-    def remove_already_hashed(self, toremove: bytes):
-        self.root = self.root.remove(toremove, 0)
 
     def is_included_already_hashed(self, tocheck: bytes) -> Tuple[bool, bytes]:
         proof: List = []
@@ -163,9 +156,6 @@ class EmptyNode(Node):
 
     def add(self, toadd: bytes, depth: int) -> Node:
         return TerminalNode(toadd)
-
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        return self
 
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(EMPTY)
@@ -216,11 +206,6 @@ class TerminalNode(Node):
         nextvals[cbits[0] ^ 1] = _empty
         nextvals[cbits[0]] = self._make_middle(children, depth + 1)
         return MiddleNode(nextvals)
-
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        if toremove == self.hash:
-            return _empty
-        return self
 
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(TERMINAL + self.hash)
@@ -277,21 +262,6 @@ class MiddleNode(Node):
         newvals[bit] = newchild
         return MiddleNode(newvals)
 
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        bit = get_bit(toremove, depth)
-        child = self.children[bit]
-        newchild = child.remove(toremove, depth + 1)
-        if newchild is child:
-            return self
-        otherchild = self.children[bit ^ 1]
-        if newchild.is_empty() and otherchild.is_terminal():
-            return otherchild
-        if newchild.is_terminal() and otherchild.is_empty():
-            return newchild
-        newvals = [x for x in self.children]
-        newvals[bit] = newchild
-        return MiddleNode(newvals)
-
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         p.append(MIDDLE)
         if get_bit(tocheck, depth) == 0:
@@ -332,9 +302,6 @@ class TruncatedNode(Node):
     def add(self, toadd: bytes, depth: int) -> Node:
         return self
 
-    def remove(self, toremove: bytes, depth: int) -> Node:
-        return self
-
     def is_included(self, tocheck: bytes, depth: int, p: List[bytes]) -> bool:
         raise SetError()
 
@@ -349,16 +316,8 @@ class SetError(Exception):
     pass
 
 
-def confirm_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
-    return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
-
-
 def confirm_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:
     return _confirm(root, val, proof, True)
-
-
-def confirm_not_included(root: bytes32, val: bytes, proof: bytes32) -> bool:
-    return confirm_not_included_already_hashed(root, sha256(val).digest(), proof)
 
 
 def confirm_not_included_already_hashed(root: bytes32, val: bytes, proof: bytes) -> bool:

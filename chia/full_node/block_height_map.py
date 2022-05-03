@@ -13,8 +13,8 @@ from chia.util.db_wrapper import DBWrapper2
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SesCache(Streamable):
     content: List[Tuple[uint32, bytes]]
 
@@ -184,6 +184,10 @@ class BlockHeightMap:
                             ordered[bytes32.fromhex(r[0])] = (r[2], bytes32.fromhex(r[1]), r[3])
 
             while height > window_end:
+                if prev_hash not in ordered:
+                    raise ValueError(
+                        f"block with header hash is missing from your blockchain database: {prev_hash.hex()}"
+                    )
                 entry = ordered[prev_hash]
                 assert height == entry[0] + 1
                 height = entry[0]
@@ -226,6 +230,7 @@ class BlockHeightMap:
                 heights_to_delete.append(ses_included_height)
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
+        del self.__height_to_hash[(fork_height + 1) * 32 :]
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])

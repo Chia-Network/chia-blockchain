@@ -20,41 +20,62 @@ class FarmerRpcApi:
             "/get_pool_state": self.get_pool_state,
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_harvesters": self.get_harvesters,
+            "/get_harvesters_summary": self.get_harvesters_summary,
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
     async def _state_changed(self, change: str, change_data: Dict) -> List[WsRpcMessage]:
+        payloads = []
+
         if change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
-            return [
+            payloads.append(
                 create_payload_dict(
                     "new_signage_point",
                     data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
         elif change == "new_farming_info":
-            return [
+            payloads.append(
                 create_payload_dict(
                     "new_farming_info",
                     change_data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
         elif change == "new_plots":
-            return [
+            payloads.append(
                 create_payload_dict(
                     "get_harvesters",
                     change_data,
                     self.service_name,
                     "wallet_ui",
                 )
-            ]
+            )
+        elif change == "submitted_partial":
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "proof":
+            payloads.append(
+                create_payload_dict(
+                    "proof",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
-        return []
+        return payloads
 
     async def get_signage_point(self, request: Dict) -> Dict:
         sp_hash = hexstr_to_bytes(request["sp_hash"])
@@ -97,7 +118,8 @@ class FarmerRpcApi:
 
     async def get_reward_targets(self, request: Dict) -> Dict:
         search_for_private_key = request["search_for_private_key"]
-        return await self.service.get_reward_targets(search_for_private_key)
+        max_ph_to_search = request.get("max_ph_to_search", 500)
+        return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
     async def set_reward_targets(self, request: Dict) -> Dict:
         farmer_target, pool_target = None, None
@@ -109,11 +131,20 @@ class FarmerRpcApi:
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
 
+    def get_pool_contract_puzzle_hash_plot_count(self, pool_contract_puzzle_hash: bytes32) -> int:
+        plot_count: int = 0
+        for receiver in self.service.plot_sync_receivers.values():
+            plot_count += sum(
+                plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash for plot in receiver.plots().values()
+            )
+        return plot_count
+
     async def get_pool_state(self, _: Dict) -> Dict:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
             pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
@@ -123,7 +154,10 @@ class FarmerRpcApi:
         return {}
 
     async def get_harvesters(self, _: Dict):
-        return await self.service.get_harvesters()
+        return await self.service.get_harvesters(False)
+
+    async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
+        return await self.service.get_harvesters(True)
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))

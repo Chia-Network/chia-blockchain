@@ -15,8 +15,8 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ProofOfSpace(Streamable):
     challenge: bytes32
     pool_public_key: Optional[G1Element]  # Only one of these two should be present
@@ -28,10 +28,8 @@ class ProofOfSpace(Streamable):
     def get_plot_id(self) -> bytes32:
         assert self.pool_public_key is None or self.pool_contract_puzzle_hash is None
         if self.pool_public_key is None:
-            # TODO: address hint error and remove ignore
-            #       error: Argument 1 to "calculate_plot_id_ph" of "ProofOfSpace" has incompatible type
-            #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-            return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)  # type: ignore[arg-type]  # noqa: E501
+            assert self.pool_contract_puzzle_hash is not None
+            return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)
         return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
