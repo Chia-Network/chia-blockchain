@@ -208,7 +208,9 @@ class TestOfferLifecycle:
                 red_requested_payments, red_coins_1
             )
             red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments)
-            red_secured_bundle: SpendBundle = generate_secure_bundle(red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red")
+            red_secured_bundle: SpendBundle = generate_secure_bundle(
+                red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red"
+            )
             red_offer = Offer(red_requested_payments, red_secured_bundle)
             assert not red_offer.is_valid()
 
@@ -222,7 +224,9 @@ class TestOfferLifecycle:
                 red_requested_payments_2, red_coins_2
             )
             red_announcements_2: List[Announcement] = Offer.calculate_announcements(red_requested_payments_2)
-            red_secured_bundle_2: SpendBundle = generate_secure_bundle(red_coins_2, red_announcements_2, sum([c.amount for c in red_coins_2]), tail_str="red")
+            red_secured_bundle_2: SpendBundle = generate_secure_bundle(
+                red_coins_2, red_announcements_2, sum([c.amount for c in red_coins_2]), tail_str="red"
+            )
             red_offer_2 = Offer(red_requested_payments_2, red_secured_bundle_2)
             assert not red_offer_2.is_valid()
 
