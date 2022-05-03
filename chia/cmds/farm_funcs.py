@@ -235,11 +235,15 @@ async def summary(
 
         def process_harvesters(harvester_peers_in: dict):
             for harvester_peer_id, harvester_dict in harvester_peers_in.items():
-                total_plot_size_harvester = harvester_dict["total_plot_size"]
-                plot_count_harvester = harvester_dict["plots"]
-                PlotStats.total_plot_size += total_plot_size_harvester
-                PlotStats.total_plots += plot_count_harvester
-                print(f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)}")
+                syncing = harvester_dict["syncing"]
+                if syncing is not None and syncing["initial"]:
+                    print(f"   Loading plots: {syncing['plot_files_processed']} / {syncing['plot_files_total']}")
+                else:
+                    total_plot_size_harvester = harvester_dict["total_plot_size"]
+                    plot_count_harvester = harvester_dict["plots"]
+                    PlotStats.total_plot_size += total_plot_size_harvester
+                    PlotStats.total_plots += plot_count_harvester
+                    print(f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)}")
 
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
