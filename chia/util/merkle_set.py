@@ -170,6 +170,7 @@ class EmptyNode(Node):
 
 _empty = EmptyNode()
 
+
 def _make_middle(children: Any, depth: int) -> Node:
     cbits = [get_bit(child.hash, depth) for child in children]
     if cbits[0] != cbits[1]:
@@ -178,6 +179,7 @@ def _make_middle(children: Any, depth: int) -> Node:
     nextvals[cbits[0] ^ 1] = _empty
     nextvals[cbits[0]] = _make_middle(children, depth + 1)
     return MiddleNode(nextvals)
+
 
 class TerminalNode(Node):
     def __init__(self, hash: bytes, bits: List[int] = None):
