@@ -4,7 +4,7 @@ import tempfile
 import aiosqlite
 
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
-from chia.data_layer.download_data import insert_from_delta_file
+from chia.data_layer.download_data import insert_into_data_store
 from pathlib import Path
 
 from random import Random
@@ -1143,7 +1143,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             else:
                 filename = foldername + f"/{generation}-delta.dat"
             assert root.node_hash is not None
-            await insert_from_delta_file(data_store, tree_id, root.node_hash, filename)
+            await insert_into_data_store(data_store, tree_id, root.node_hash, filename)
             current_root = await data_store.get_tree_root(tree_id=tree_id)
             assert current_root.node_hash == root.node_hash
             generation += 1

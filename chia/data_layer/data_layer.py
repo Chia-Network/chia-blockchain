@@ -18,8 +18,7 @@ from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.download_data import (
-    download_delta_files,
-    parse_delta_files,
+    insert_from_delta_file,
     get_full_tree_filename,
     get_delta_filename,
 )
@@ -220,10 +219,9 @@ class DataLayer:
             f"Target wallet generation: {singleton_record.generation}."
         )
 
-        downloaded = False
         for ip, port in zip(subscription.ip, subscription.port):
             try:
-                downloaded = await download_delta_files(
+                success = await insert_from_delta_file(
                     self.data_store,
                     subscription.tree_id,
                     int(wallet_current_generation),
@@ -232,41 +230,24 @@ class DataLayer:
                     port,
                     self.client_download_location,
                 )
-                if downloaded:
-                    break
+                if success:
+                    self.log.info(
+                        f"Finished downloading and validating {subscription.tree_id}. "
+                        f"Wallet generation saved: {singleton_record.generation}. "
+                        f"Root hash saved: {singleton_record.root}."
+                    )
+                    await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
+                    return
             except asyncio.CancelledError:
                 raise
             except aiohttp.client_exceptions.ClientConnectorError:
-                self.log.error(f"Server {ip}:{port} unavailable for {tree_id}.")
-                downloaded = False
+                self.log.warning(f"Server {ip}:{port} unavailable for {tree_id}.")
             except Exception as e:
-                self.log.error(f"Exception while downloading files for {tree_id}: {e}.")
-                downloaded = False
-        if downloaded:
-            self.log.info(f"Successfully downloaded data for {tree_id}.")
-        else:
-            self.log.error(f"Can't download files for {tree_id}.")
-            return
+                self.log.warning(f"Exception while downloading files for {tree_id}: {e}.")
 
-        self.log.info(f"Parsing downloaded files for {subscription.tree_id}.")
-        try:
-            await parse_delta_files(
-                self.data_store,
-                tree_id,
-                int(wallet_current_generation),
-                [record.root for record in to_check],
-                self.client_download_location,
-            )
-        except Exception as e:
-            self.log.error(f"Can't find on-chain hash in our local store. {type(e)} {e}")
-            await self.data_store.rollback_to_generation(tree_id, (0 if old_root is None else old_root.generation))
-
-        self.log.info(
-            f"Finished downloading and validating {subscription.tree_id}. "
-            f"Wallet generation saved: {singleton_record.generation}. "
-            f"Root hash saved: {singleton_record.root}."
-        )
-        await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
+            rollback_generation = 0 if old_root is None else old_root.generation
+            self.log.warning(f"Rolling back {tree_id} to the last validated state, generation {rollback_generation}.")
+            await self.data_store.rollback_to_generation(tree_id, rollback_generation)
 
     async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> None:
         subscription = Subscription(store_id, ip, port)
