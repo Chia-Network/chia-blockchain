@@ -1,17 +1,16 @@
-import React, { ReactNode, Suspense, useMemo } from 'react';
+import React, { ReactNode, Suspense } from 'react';
 import styled from 'styled-components';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { t, Trans } from '@lingui/macro';
-import { Box, AppBar, Toolbar, Drawer, Container, IconButton, MenuItem, Typography } from '@mui/material';
+import { Box, AppBar, Toolbar, Drawer, Container, IconButton, Typography } from '@mui/material';
 import Flex from '../Flex';
 import Logo from '../Logo';
 import ToolbarSpacing from '../ToolbarSpacing';
 import Loading from '../Loading';
 import { useLogout, useGetLoggedInFingerprintQuery } from '@chia/api-react';
-import { ExitToApp as ExitToAppIcon, Notifications } from '@mui/icons-material';
+import { ExitToApp as ExitToAppIcon } from '@mui/icons-material';
 import Settings from '../Settings';
 import Tooltip from '../Tooltip';
-import { DropdownIconButton } from '../Dropdown';
 // import LayoutFooter from '../LayoutMain/LayoutFooter';
 
 const StyledRoot = styled(Flex)`
@@ -65,14 +64,6 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
   const navigate = useNavigate();
   const logout = useLogout();
   const { data: fingerprint } = useGetLoggedInFingerprintQuery();
-  const partial = useMemo(() => {
-    if (fingerprint) {
-      // return last 6 digits of fingerprint
-      return `(...${fingerprint.toString().slice(-6)})`;
-    }
-
-    return null;
-  }, [fingerprint]);
 
   async function handleLogout() {
     await logout();
@@ -94,12 +85,10 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                           Wallet
                         </Trans>
                         &nbsp;
-                        {partial && (
-                          <Tooltip title={fingerprint ?? 'Loading...'}>
-                            <StyledInlineTypography color="textSecondary" variant="h5">
-                              {partial}
-                            </StyledInlineTypography>
-                          </Tooltip>
+                        {fingerprint && (
+                          <StyledInlineTypography color="textSecondary" variant="h5">
+                            {fingerprint}
+                          </StyledInlineTypography>
                         )}
                       </Typography>
                     </Box>

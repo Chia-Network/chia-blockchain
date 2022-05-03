@@ -110,8 +110,8 @@ export default class Wallet extends Service {
   }
 
   async addKey(
-    mnemonic: string[], 
-    type: 'new_wallet' | 'skip' | 'restore_backup', 
+    mnemonic: string[],
+    type: 'new_wallet' | 'skip' | 'restore_backup',
     filePath?: string,
   ) {
     return this.command('add_key', {
@@ -138,7 +138,7 @@ export default class Wallet extends Service {
   }
 
   async logIn(
-    fingerprint: string, 
+    fingerprint: string,
     type: 'normal' | 'skip' | 'restore_backup' = 'normal', // skip is used to skip import
     host: string = this.client.backupHost,
     filePath?: string,
@@ -167,7 +167,7 @@ export default class Wallet extends Service {
   }
 
   async getBackupInfo(
-    filePath: string, 
+    filePath: string,
     options: { fingerprint: string } | { words: string },
   ) {
     return this.command('get_backup_info', {
@@ -318,16 +318,25 @@ export default class Wallet extends Service {
     });
   }
 
-  onSyncChanged(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('sync_changed', callback);
+  onSyncChanged(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('sync_changed', callback, processData);
   }
 
-  onNewBlock(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('new_block', callback);
+  onNewBlock(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('new_block', callback, processData);
   }
 
-  onNewPeak(callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('new_peak', callback);
+  onNewPeak(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('new_peak', callback, processData);
   }
 
   onCoinAdded(callback: (
@@ -336,7 +345,7 @@ export default class Wallet extends Service {
       state: 'coin_added';
       success: boolean;
       walletId: number;
-    }, 
+    },
     message: Message,
   ) => void) {
     return this.onStateChanged('coin_added', callback);
@@ -348,7 +357,7 @@ export default class Wallet extends Service {
       state: "coin_removed"
       success: boolean;
       walletId: number;
-    }, 
+    },
     message: Message,
   ) => void) {
     return this.onStateChanged('coin_removed', callback);
@@ -383,12 +392,16 @@ export default class Wallet extends Service {
   }
 
   onOfferAdded(
-    callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('offer_added', callback);
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('offer_added', callback, processData);
   }
 
   onOfferUpdated(
-    callback: (data: any, message: Message) => void) {
-    return this.onStateChanged('offer_cancelled', callback);
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('offer_cancelled', callback, processData);
   }
 }

@@ -118,7 +118,7 @@ const BlocksCard = () => {
   }
 
   return (
-    <Card title={<Trans>Blocks</Trans>} action={<FullNodeBlockSearch />} transparent>
+    <Card title={<Trans>Blocks</Trans>} titleVariant="h6" action={<FullNodeBlockSearch />} transparent>
       <Table cols={cols} rows={rows} onRowClick={handleRowClick} isLoading={isLoading}/>
     </Card>
   );

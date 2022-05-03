@@ -90,6 +90,7 @@ export default function FarmFullNodeConnections() {
     <Card
       gap={1}
       title={<Trans>Your Full Node Connection</Trans>}
+      titleVariant="h6"
       tooltip={
         <Trans>
           {'The full node that your farmer is connected to is below. '}

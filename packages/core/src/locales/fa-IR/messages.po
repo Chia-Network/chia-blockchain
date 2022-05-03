@@ -705,7 +705,8 @@ msgstr "حذف کلید {fingerprint}"
 
 #: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
+msgstr ""
+"حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
 " آیا مطمئنید که می‌خواهید ادامه دهید؟"
 
 #: src/components/app/AppPassPrompt.tsx:89
@@ -753,6 +754,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Disable bitfield plotting"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "لغو"
@@ -828,6 +830,10 @@ msgstr "لغو"
 #: src/components/CardSimple/CardSimple.tsx:58
 #: src/hooks/useShowError.tsx:11
 msgid "Error"
+msgstr ""
+
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:78
+msgid "Error:"
 msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
@@ -1266,8 +1272,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:111
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
 msgstr ""
 
@@ -1275,8 +1281,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
 msgstr ""
 
@@ -2105,6 +2111,10 @@ msgstr ""
 #~ msgid "Release Notes"
 #~ msgstr "Release Notes"
 
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:91
+msgid "Reload Application"
+msgstr ""
+
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
 #: src/components/settings/Settings.tsx:194
@@ -2122,6 +2132,10 @@ msgstr ""
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:265
 #~ msgid "Rename"
 #~ msgstr "Rename"
+
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:87
+msgid "Report an Issue"
+msgstr ""
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2329,9 +2343,9 @@ msgstr ""
 #~ msgid "Smooth out your XCH farming rewards by joining a pool."
 #~ msgstr "Smooth out your XCH farming rewards by joining a pool."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
-#~ msgid "Something went wrong"
-#~ msgstr "Something went wrong"
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:73
+msgid "Something went wrong"
+msgstr "Something went wrong"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -2786,6 +2800,7 @@ msgstr ""
 #~ msgid "Unlock Keyring"
 #~ msgstr "Unlock Keyring"
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr ""
@@ -2868,7 +2883,7 @@ msgstr ""
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Waiting for the transaction to be confirmed"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:84
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3010,6 +3025,7 @@ msgstr "به چیـا خوش آمدید. لطفا با کلیدی که از قب
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr ""
@@ -3201,4 +3217,3 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-

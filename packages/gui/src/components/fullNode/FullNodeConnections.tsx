@@ -104,6 +104,7 @@ export default function Connections() {
   return (
     <Card
       title={<Trans>Connections</Trans>}
+      titleVariant="h6"
       action={
         <Button onClick={handleAddPeer} variant="outlined">
           <Trans>Connect to other peers</Trans>

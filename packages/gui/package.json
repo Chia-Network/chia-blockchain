@@ -55,7 +55,7 @@
         "lodash": "4.17.21",
         "make-plural": "7.0.0",
         "match-sorter": "6.3.1",
-        "moment": "2.29.1",
+        "moment": "2.29.3",
         "normalize-url": "7.0.3",
         "react": "17.0.2",
         "react-dom": "17.0.2",
@@ -108,7 +108,7 @@
         "copy-webpack-plugin": "10.2.0",
         "cross-env": "7.0.3",
         "css-loader": "6.5.1",
-        "electron": "14.2.3",
+        "electron": "14.2.9",
         "electron-winstaller": "5.0.0",
         "html-loader": "3.1.0",
         "html-webpack-plugin": "5.5.0",
@@ -121,7 +121,7 @@
         "url-loader": "4.1.1",
         "webpack": "5.66.0",
         "webpack-cli": "4.9.1",
-        "webpack-dev-server": "4.7.3",
+        "webpack-dev-server": "4.8.1",
         "xmldom": "github:xmldom/xmldom#0.8.0"
     },
     "browserslist": {

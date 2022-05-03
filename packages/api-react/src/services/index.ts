@@ -39,6 +39,11 @@ export const {
 
   useFarmerPingQuery,
   useGetHarvestersQuery,
+  useGetHarvestersSummaryQuery,
+  useGetHarvesterPlotsValidQuery,
+  useGetHarvesterPlotsDuplicatesQuery,
+  useGetHarvesterPlotsInvalidQuery,
+  useGetHarvesterPlotsKeysMissingQuery,
   useGetRewardTargetsQuery,
   useSetRewardTargetsMutation,
   useGetFarmerConnectionsQuery,

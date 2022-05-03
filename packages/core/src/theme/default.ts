@@ -96,6 +96,19 @@ export default deepmerge(greyTheme, {
         },
       }],
     },
+    MuiChip: {
+      variants: [{
+        props: { size: "extraSmall" },
+        style: {
+          height: '20px',
+          fontSize: '0.75rem',
+          '.MuiChip-label': {
+            paddingLeft: '6px',
+            paddingRight: '6px',
+          },
+        },
+      }],
+    },
     MuiButton: {
       variants: [
         {

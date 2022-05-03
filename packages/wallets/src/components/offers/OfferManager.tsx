@@ -441,7 +441,7 @@ function OfferList(props: OfferListProps) {
   const hasOffers = !!offers?.length;
 
   return (
-    <Card title={title} transparent>
+    <Card title={title} titleVariant="h6" transparent>
       <LoadingOverlay loading={isWalletOffersLoading || isLoadingWallets}>
         <TableControlled
           rows={offers}

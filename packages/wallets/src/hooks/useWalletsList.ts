@@ -98,8 +98,8 @@ export default function useWalletsList(search?: string): {
       return wallet?.name ?? assetId;
     }
 
-    const catKnown = catList.find((cat) => cat.assetId === assetId)
-    const strayCAT = strayCats.find((cat) => cat.assetId === assetId);
+    const catKnown = catList?.find((cat) => cat.assetId === assetId)
+    const strayCAT = strayCats?.find((cat) => cat.assetId === assetId);
 
     return catKnown?.name ?? strayCAT?.name ?? assetId;
   }
@@ -179,7 +179,7 @@ export default function useWalletsList(search?: string): {
       if (typeof id === 'string') {
         // assign wallet for CAT
 
-        const cat = catList.find((cat) => cat.assetId === id);
+        const cat = catList?.find((cat) => cat.assetId === id);
         if (cat) {
           return await addCATToken({
             name: cat.name,
@@ -189,7 +189,7 @@ export default function useWalletsList(search?: string): {
         }
 
         // assign stray cat
-        const strayCat = strayCats.find((cat) => cat.assetId === id);
+        const strayCat = strayCats?.find((cat) => cat.assetId === id);
         if (strayCat) {
           return await addCATToken({
             name: strayCat.name,
