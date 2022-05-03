@@ -8,7 +8,9 @@ factorial = "ff02ffff01ff02ff02ffff04ff02ffff04ff05ff80808080ffff04ffff01ff02fff
 
 class TestRunProgram(TestCase):
     def test_simple_program_run(self):
-        p = start_clvm_program(factorial, "ff0580", {"de3687023fa0a095d65396f59415a859dd46fc84ed00504bf4c9724fca08c9de":"factorial"})
+        p = start_clvm_program(
+            factorial, "ff0580", {"de3687023fa0a095d65396f59415a859dd46fc84ed00504bf4c9724fca08c9de":"factorial"}
+        )
 
         last = None
         location = None
