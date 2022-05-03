@@ -13,11 +13,11 @@ factorial_sym = {factorial_function_hash: "factorial"}
 
 
 class TestRunProgram(TestCase):
-    def test_simple_program_run(self):
+    def test_simple_program_run(self) -> None:
         p = start_clvm_program(factorial, "ff0580", factorial_sym)
 
-        last = None
-        location = None
+        last: Optional[Any] = None
+        location: Optional[Any] = None
 
         while not p.is_ended():
             step_result = p.step()
@@ -28,5 +28,9 @@ class TestRunProgram(TestCase):
                 if "Operator-Location" in last:
                     location = last["Operator-Location"]
 
-        self.assertEqual(int(last["Final"]), 120)
-        self.assertTrue(location.startswith("factorial"))
+        self.assertTrue(last is not None)
+        self.assertTrue(location is not None)
+        if last is not None and location is not None:
+            self.assertTrue("Final" in last)
+            self.assertEqual(int(last["Final"]), 120)
+            self.assertTrue(location.startswith("factorial"))
