@@ -242,8 +242,7 @@ class FarmerRpcApi:
         source = source_func(receiver)
         request = dataclass_from_dict(PlotPathRequestData, request_dict)
         # Apply filter
-        for filter_item in request.filter:
-            source = [plot for plot in source if filter_item in plot]
+        source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
         # Apply reverse
         source = sorted(source, reverse=request.reverse)
         return paginated_plot_request(source, request)
