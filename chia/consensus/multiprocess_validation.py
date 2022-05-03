@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Any, Coroutine
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Any, Coroutine
 
 from blspy import AugSchemeMPL, G1Element
 
