@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
 import time
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -38,6 +40,9 @@ from chia.wallet.wallet_info import WalletInfo
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
@@ -54,48 +59,55 @@ class NFTCoinInfo(Streamable):
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     my_did: bytes32
-    did_wallet_id: uint64
+    did_wallet_id: uint32
     my_nft_coins: List[NFTCoinInfo]
     known_transfer_programs: List[Tuple[bytes32, Program]]
 
 
+@dataclass
 class NFTWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     nft_wallet_info: NFTWalletInfo
     standard_wallet: Wallet
     wallet_id: int
-    base_puzzle_program: Optional[Program]
-    base_inner_puzzle_hash: Optional[Program]
+    base_puzzle_program: Optional[Program] = None
+    base_inner_puzzle_hash: Optional[Program] = None
 
     @classmethod
     async def create_new_nft_wallet(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        did_wallet_id: int,
-        name: str = "",
+        did_wallet_id: uint32,
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
         """
         This must be called under the wallet state manager lock
         """
-        self = cls()
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
-        self.standard_wallet = wallet
-        self.log = logging.getLogger(name if name else __name__)
-        self.wallet_state_manager = wallet_state_manager
-        did_wallet = self.wallet_state_manager.wallets[did_wallet_id]
+        did_wallet = wallet_state_manager.wallets[did_wallet_id]
         my_did = did_wallet.did_info.origin_coin.name()
-        self.nft_wallet_info = NFTWalletInfo(my_did, uint64(did_wallet_id), [], [])
-        info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+
+        nft_wallet_info = NFTWalletInfo(my_did, did_wallet_id, [], [])
+
+        info_as_string = json.dumps(nft_wallet_info.to_json_dict())
+        wallet_info = await wallet_state_manager.user_store.create_wallet(
             "NFT Wallet", WalletType.NFT.value, info_as_string
         )
-        if self.wallet_info is None:
+
+        if wallet_info is None:
             raise ValueError("Internal Error")
-        self.wallet_id = self.wallet_info.id
+
+        self = cls(
+            standard_wallet=wallet,
+            log=logging.getLogger(name if name is not None else __name__),
+            wallet_state_manager=wallet_state_manager,
+            nft_wallet_info=nft_wallet_info,
+            wallet_info=wallet_info,
+            wallet_id=wallet_info.id,
+        )
+
         # std_wallet_id = self.standard_wallet.wallet_id
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # TODO: check if I need both
@@ -111,22 +123,19 @@ class NFTWallet:
     @classmethod
     async def create(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: str = "",
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
-        self = cls()
-        self.log = logging.getLogger(name if name else __name__)
-        self.wallet_state_manager = wallet_state_manager
-        self.wallet_info = wallet_info
-        self.wallet_id = wallet_info.id
-        self.standard_wallet = wallet
-        self.wallet_info = wallet_info
-        self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-        self.base_puzzle_program = None
-        self.base_inner_puzzle_hash = None
-        return self
+        return cls(
+            log=logging.getLogger(name if name is not None else __name__),
+            wallet_state_manager=wallet_state_manager,
+            wallet_info=wallet_info,
+            wallet_id=wallet_info.id,
+            standard_wallet=wallet,
+            nft_wallet_info=NFTWalletInfo.from_json_dict(json.loads(wallet_info.data)),
+        )
 
     @classmethod
     def type(cls) -> uint8:
