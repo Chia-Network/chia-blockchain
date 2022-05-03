@@ -118,32 +118,39 @@ export default class Daemon extends Service {
   }
 
   startPlotting(
-    plotterName, // plotterName
-    k, // plotSize
-    n, // plotCount
-    t, // workspaceLocation
-    t2, // workspaceLocation2
-    d, // finalLocation
-    b, // maxRam
-    u, // numBuckets
-    r, // numThreads,
-    queue, // queue
-    a, // fingerprint
-    parallel, // parallel
-    delay, // delay
-    e, // disableBitfieldPlotting
-    x, // excludeFinalDir
-    overrideK, //overrideK
-    f, // farmerPublicKey
-    p, // poolPublicKey
-    c, // poolContractAddress
-    bb_disable_numa, // bladebitDisableNUMA,
-    bb_warm_start, // bladebitWarmStart,
-    mm_v, // madmaxNumBucketsPhase3,
-    mm_G, // madmaxTempToggle,
-    mm_K, // madmaxThreadMultiplier,
+    plotterName: string, // plotterName
+    k: number, // plotSize
+    n: number, // plotCount
+    t: string, // workspaceLocation
+    t2: string, // workspaceLocation2
+    d: string, // finalLocation
+    b: number, // maxRam
+    u: number, // numBuckets
+    r: number, // numThreads,
+    queue: string, // queue
+    a: number|undefined, // fingerprint
+    parallel: boolean, // parallel
+    delay: number, // delay
+    e?: boolean, // disableBitfieldPlotting
+    x?: boolean, // excludeFinalDir
+    overrideK?: boolean, //overrideK
+    f?: string, // farmerPublicKey
+    p?: string, // poolPublicKey
+    c?: string, // poolContractAddress
+    bb_disable_numa?: boolean, // bladebitDisableNUMA,
+    bb_warm_start?: boolean, // bladebitWarmStart,
+    mm_v?: number, // madmaxNumBucketsPhase3,
+    mm_G?: boolean, // madmaxTempToggle,
+    mm_K?: number, // madmaxThreadMultiplier,
+    bb_no_cpu_affinity?: boolean, // bladebitNoCpuAffinity
+    bb2_cache?: number, // bladebit2Cache
+    bb2_f1_threads?: number, // bladebit2F1Threads
+    bb2_fp_threads?: number, // bladebit2FpThreads
+    bb2_c_threads?: number, // bladebit2CThreads
+    bb2_p2_threads?: number, // bladebit2P2Threads
+    bb2_p3_threads?: number, // bladebit2P3Threads
   ) {
-    const args = {
+    const args: Record<string, unknown> = {
       service: ServiceName.PLOTTER,
       plotter: plotterName,
       k,
@@ -176,6 +183,20 @@ export default class Daemon extends Service {
     if (mm_G) args.G = mm_G;
     // madmaxThreadMultiplier
     if (mm_K) args.K = mm_K;
+    // bladebitNoCpuAffinity
+    if(bb_no_cpu_affinity) args.no_cpu_affinity = bb_no_cpu_affinity;
+    // bladebit2Cache
+    if(bb2_cache) args.cache = bb2_cache;
+    // bladebit2F1Threads
+    if(bb2_f1_threads) args.f1_threads = bb2_f1_threads;
+    // bladebit2FpThreads
+    if(bb2_fp_threads) args.fp_threads = bb2_fp_threads;
+    // bladebit2CThreads
+    if(bb2_c_threads) args.c_threads = bb2_c_threads;
+    // bladebit2P2Threads
+    if(bb2_p2_threads) args.p2_threads = bb2_p2_threads;
+    // bladebit2P3Threads
+    if(bb2_p3_threads) args.p3_threads = bb2_p3_threads;
 
     return this.command('start_plotting', args, undefined, undefined, true);
   }
