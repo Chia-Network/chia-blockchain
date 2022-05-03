@@ -8,12 +8,12 @@ from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode
 from chia.util.ints import uint16
 
 
-def get_full_tree_filename(tree_id: bytes32, generation: int) -> str:
-    return f"{tree_id}-{generation}-v1.0.dat"
+def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
+    return f"{tree_id}-{node_hash}-{generation}-v1.0.dat"
 
 
-def get_delta_filename(tree_id: bytes32, generation: int) -> str:
-    return f"{tree_id}-delta-{generation}-v1.0.dat"
+def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
+    return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
 
 
 async def download_delta_files(
@@ -27,7 +27,7 @@ async def download_delta_files(
 ) -> bool:
     for root_hash in root_hashes:
         existing_generation += 1
-        filename = get_delta_filename(tree_id, existing_generation)
+        filename = get_delta_filename(tree_id, root_hash, existing_generation)
         url = f"http://{ip}:{port}/{filename}"
 
         try:
@@ -84,5 +84,5 @@ async def parse_delta_files(
 ) -> None:
     for root_hash in root_hashes:
         existing_generation += 1
-        filename = os.path.join(foldername, get_delta_filename(tree_id, existing_generation))
+        filename = os.path.join(foldername, get_delta_filename(tree_id, root_hash, existing_generation))
         await insert_from_delta_file(data_store, tree_id, root_hash, filename)

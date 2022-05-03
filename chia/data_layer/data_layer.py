@@ -131,8 +131,12 @@ class DataLayer:
         assert transaction_record
         # Write the server files.
         generation = root.generation
-        filename_full_tree = os.path.join(self.server_files_location, get_full_tree_filename(tree_id, generation))
-        filename_diff_tree = os.path.join(self.server_files_location, get_delta_filename(tree_id, generation))
+        filename_full_tree = os.path.join(
+            self.server_files_location, get_full_tree_filename(tree_id, node_hash, generation)
+        )
+        filename_diff_tree = os.path.join(
+            self.server_files_location, get_delta_filename(tree_id, node_hash, generation)
+        )
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
         await self.data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
         # todo register callback to change status in data store
