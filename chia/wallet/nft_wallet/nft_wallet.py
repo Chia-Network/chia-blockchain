@@ -453,54 +453,52 @@ class NFTWallet:
         puzzle_hash=None,
         did_hash=None,
     ):
-        return None
-        # self.log.debug("Attempt to transfer a new NFT")
-        # coin = nft_coin_info.coin
-        # self.log.debug("Spending NFT with launcher coin %s and metadata: %s", launcher_coin, metadata)
+        self.log.debug("Attempt to transfer a new NFT")
+        coin = nft_coin_info.coin
+        self.log.debug("Transfering NFT coin %s", coin)
 
-        # full_puzzle = nft_coin_info.full_puzzle
-
-        # condition_list = [make_create_coin_condition(inner_puzzle.get_tree_hash(), amount, [])]
-        # innersol = solution_for_conditions(condition_list)
-        # # EVE SPEND BELOW
-
-        # fullsol = Program.to(
-        #     [
-        #         [launcher_coin.parent_coin_info, launcher_coin.amount],
-        #         eve_coin.amount,
-        #         Program.to(
-        #             [
-        #                 innersol,
-        #                 amount,
-        #                 0,
-        #             ]
-        #         ),
-        #     ]
-        # )
-        # list_of_coinspends = [CoinSpend(eve_coin, eve_fullpuz, fullsol)]
-        # eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
-        # eve_spend_bundle = await self.sign(eve_spend_bundle)
-        # full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb])
-        # nft_record = TransactionRecord(
-        #     confirmed_at_height=uint32(0),
-        #     created_at_time=uint64(int(time.time())),
-        #     to_puzzle_hash=eve_fullpuz.get_tree_hash(),
-        #     amount=uint64(amount),
-        #     fee_amount=uint64(0),
-        #     confirmed=False,
-        #     sent=uint32(0),
-        #     spend_bundle=full_spend,
-        #     additions=full_spend.additions(),
-        #     removals=full_spend.removals(),
-        #     wallet_id=self.wallet_info.id,
-        #     sent_to=[],
-        #     trade_id=None,
-        #     type=uint32(TransactionType.OUTGOING_TX.value),
-        #     name=bytes32(token_bytes()),
-        #     memos=[],
-        # )
-        # await self.standard_wallet.push_transaction(nft_record)
-        # return full_spend
+        full_puzzle = nft_coin_info.full_puzzle
+        amount = coin.amount
+        condition_list = [make_create_coin_condition(puzzle_hash, amount, [])]
+        innersol = solution_for_conditions(condition_list)
+        lineage_proof = nft_coin_info.lineage_proof
+        fullsol = Program.to(
+            [
+                [lineage_proof.parent_name, lineage_proof.inner_puzzle_hash, lineage_proof.amount],
+                coin.amount,
+                Program.to(
+                    [
+                        innersol,
+                        amount,
+                        0,
+                    ]
+                ),
+            ]
+        )
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
+        spend_bundle = await self.sign(spend_bundle)
+        full_spend = SpendBundle.aggregate([spend_bundle])
+        nft_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=full_puzzle.get_tree_hash(),
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32(token_bytes()),
+            memos=[],
+        )
+        await self.standard_wallet.push_transaction(nft_record)
+        return full_spend
 
     def get_current_nfts(self) -> List[NFTCoinInfo]:
         return self.nft_wallet_info.my_nft_coins
