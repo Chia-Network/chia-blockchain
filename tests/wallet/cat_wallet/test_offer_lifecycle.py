@@ -203,7 +203,7 @@ class TestOfferLifecycle:
                     Payment(acs_ph, 350, [b"red memo"]),
                 ]
             }
-            
+
             red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 red_requested_payments, red_coins_1
             )
