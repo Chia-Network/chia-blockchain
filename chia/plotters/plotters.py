@@ -496,8 +496,12 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
 
     if chiapos is not None:
         plotters["chiapos"] = chiapos
-    if bladebit is not None:
-        plotters["bladebit"] = bladebit
+    if bladebit and bladebit["version"] is not None:
+        bladebit_major_version = bladebit["version"].split(".")[0]
+        if bladebit_major_version == "2":
+            plotters["bladebit2"] = bladebit
+        else:
+            plotters["bladebit"] = bladebit
     if madmax is not None:
         plotters["madmax"] = madmax
 
@@ -510,5 +514,7 @@ def show_plotters_version(root_path: Path):
         print(f"chiapos: {info['chiapos']['version']}")
     if "bladebit" in info and "version" in info["bladebit"]:
         print(f"bladebit: {info['bladebit']['version']}")
+    if "bladebit2" in info and "version" in info["bladebit2"]:
+        print(f"bladebit: {info['bladebit2']['version']}")
     if "madmax" in info and "version" in info["madmax"]:
         print(f"madmax: {info['madmax']['version']}")
