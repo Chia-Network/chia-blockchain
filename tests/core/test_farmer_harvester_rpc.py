@@ -520,8 +520,7 @@ async def test_farmer_get_harvester_plots_endpoints(
         plots.sort(reverse=reverse)
 
     total_count = len(plots)
-    assert total_count > 0
-    assert len(plots) == total_count == expected_plot_count
+    assert total_count == expected_plot_count
 
     last_sync_id = receiver.last_sync().sync_id
 
