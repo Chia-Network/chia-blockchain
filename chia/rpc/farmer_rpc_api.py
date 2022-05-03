@@ -15,7 +15,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class PaginatedRequestData(Protocol):
-    peer_id: bytes32
+    node_id: bytes32
     page: int
     page_size: int
 
@@ -28,7 +28,7 @@ class FilterItem:
 
 @dataclasses.dataclass
 class PlotInfoRequestData:
-    peer_id: bytes32
+    node_id: bytes32
     page: int
     page_size: int
     filter: List[FilterItem] = dataclasses.field(default_factory=list)
@@ -38,7 +38,7 @@ class PlotInfoRequestData:
 
 @dataclasses.dataclass
 class PlotPathRequestData:
-    peer_id: bytes32
+    node_id: bytes32
     page: int
     page_size: int
     filter: List[str] = dataclasses.field(default_factory=list)
@@ -48,7 +48,7 @@ class PlotPathRequestData:
 def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
     paginator: Paginator = Paginator(source, request.page_size)
     return {
-        "peer_id": request.peer_id.hex(),
+        "node_id": request.node_id.hex(),
         "page": request.page,
         "page_count": paginator.page_count(),
         "total_count": len(source),
@@ -224,7 +224,7 @@ class FarmerRpcApi:
     async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
         request = dataclass_from_dict(PlotInfoRequestData, request_dict)
-        plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
+        plot_list = list(self.service.get_receiver(request.node_id).plots().values())
         # Apply filter
         plot_list = [
             plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
@@ -241,7 +241,7 @@ class FarmerRpcApi:
         self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
     ) -> Dict[str, object]:
         request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
-        receiver = self.service.get_receiver(request.peer_id)
+        receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
         request = dataclass_from_dict(PlotPathRequestData, request_dict)
         # Apply filter

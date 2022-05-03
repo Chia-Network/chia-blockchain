@@ -541,7 +541,7 @@ async def test_farmer_get_harvester_plots_endpoints(
             expected_plots = plots[offset : offset + page_size]
             assert page_result == {
                 "success": True,
-                "peer_id": harvester_id.hex(),
+                "node_id": harvester_id.hex(),
                 "page": page,
                 "page_count": expected_page_count,
                 "total_count": total_count,

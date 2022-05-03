@@ -650,10 +650,10 @@ class Farmer:
 
         return {"harvesters": harvesters}
 
-    def get_receiver(self, peer_id: bytes32) -> Receiver:
-        receiver: Optional[Receiver] = self.plot_sync_receivers.get(peer_id)
+    def get_receiver(self, node_id: bytes32) -> Receiver:
+        receiver: Optional[Receiver] = self.plot_sync_receivers.get(node_id)
         if receiver is None:
-            raise KeyError(f"Receiver missing for {peer_id}")
+            raise KeyError(f"Receiver missing for {node_id}")
         return receiver
 
     async def _periodically_update_pool_state_task(self):
