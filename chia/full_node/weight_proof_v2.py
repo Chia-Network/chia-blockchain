@@ -87,11 +87,13 @@ class WeightProofHandlerV2:
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
-    # validates a WP
-    # returns validation result, fork point, list of summaries and the latest l blocks as block records
     async def validate_weight_proof(
         self, weight_proof: WeightProofV2, seed: bytes32, skip_segments: bool = False
     ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
+        """
+        validates a WP
+        returns validation result, fork point, list of summaries and the latest l blocks as block records
+        """
         valid, summaries, records = await validate_weight_proof_no_fork_point(
             self.constants, weight_proof, seed, skip_segments
         )
@@ -123,6 +125,10 @@ class WeightProofHandlerV2:
     async def _create_proof_of_weight(self, tip: bytes32, seed: bytes32) -> Optional[WeightProofV2]:
         """
         Creates a weight proof object
+        the Weight proof contains:
+        sub_epochs - a list of SubEpochData for each sub epoch summary in the chain
+        sub_epoch_segments -  a list of SubEpochSegmentsV2 for each sampled sub epoch
+        recent_chain_data - all the blocks from the previous to last sub epoch to the tip
         """
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
@@ -204,10 +210,12 @@ class WeightProofHandlerV2:
             return None
         return WeightProofV2(sub_epoch_data, compressed_sub_epochs, recent_chain)
 
-    # returns the last ses and prev ses blocks
     async def get_last_l(
         self, summary_heights: List[uint32], peak: uint32
     ) -> Tuple[Optional[BlockRecord], Optional[BlockRecord]]:
+        """
+        returns the last ses and prev ses blocks
+        """
         summaries_n = len(summary_heights)
         for idx, height in enumerate(reversed(summary_heights)):
             if height <= peak:
@@ -787,11 +795,7 @@ def _validate_sub_epoch_segments(
         if future.exception() is not None:
             log.error(f"error validating sub epoch sample {future.exception()}")
             return False, []
-        res, sub_epoch_n = future.result()
-        if res is False:
-            log.error(f"error validating sub epoch sample")
-            return False, []
-        sub_epochs.append(sub_epoch_n)
+        sub_epochs.append(future.result())
 
     return True, sub_epochs
 
@@ -801,10 +805,10 @@ def validate_sub_epoch(
     sampled_seg_index: int,
     segment_bytes: bytes,
     summaries_bytes: List[bytes],
-) -> Tuple[bool, uint32]:
+) -> uint32:
     segments = SubEpochSegmentsV2.from_bytes(segment_bytes).challenge_segments
-    sub_epoch_n = segments[0].sub_epoch_n
-    # log.info(f"validate sub epoch {sub_epoch_n}")
+    sub_epoch_n: uint32 = segments[0].sub_epoch_n
+    log.debug(f"validate sub epoch {sub_epoch_n}")
     prev_ses: Optional[SubEpochSummary] = None
     total_blocks, total_ip_iters, total_slot_iters, total_slots = 0, 0, 0, 0
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)  # ignore [no-untyped-call]
@@ -858,7 +862,7 @@ def validate_sub_epoch(
         raise Exception(
             f"bad avg challenge block positioning ratio: {avg_slot_iters / avg_ip_iters} sub_epoch {sub_epoch_n}"
         )
-    return True, sub_epoch_n
+    return sub_epoch_n
 
 
 def _validate_segment(
@@ -877,7 +881,15 @@ def _validate_segment(
     validates all segments
     if this is the "sampled" challenge segment we validate all the vdfs
     if not we validate all the hashes for the end of slots
+
+    start_from is used for an edge case where this is the first segment
+    of the sub epoch and there are multiple empty slots
+    in that case we already have have the end of slot challenges so we can skip those first slots
+
+    when we validate vdfs with compressed values we get the uncompressed value as a result
+    output_cache is used to store all these converted B objects to use as inputs for later vdfs
     """
+
     slot_iters, slots = uint64(0), 0
     output_cache: Dict[B, ClassgroupElement] = {}
     sub_slot_data = segment.sub_slot_data[start_from:]
@@ -971,6 +983,9 @@ def get_end_of_slot_hashes(
     prev_deficit: int,
     prev_challenge_ip_iters: uint64,
 ) -> Tuple[bytes32, Optional[bytes32]]:
+    """
+    get cc and icc hash  for end of slot
+    """
     ssd = segment.sub_slot_data[index]
     icc_hash = None
     if ssd.icc_slot_end_output is not None:
