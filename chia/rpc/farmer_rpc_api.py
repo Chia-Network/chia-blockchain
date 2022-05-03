@@ -1,6 +1,6 @@
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from typing_extensions import Protocol
 
@@ -51,14 +51,12 @@ def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> 
     }
 
 
-def is_filter_match(plot: Union[Plot, Dict[str, Any]], filter_item: KeyValue) -> bool:
-    if isinstance(plot, Plot):
-        plot_attribute = getattr(plot, filter_item.key)
+def plot_matches_filter(plot: Plot, filter_item: KeyValue) -> bool:
+    plot_attribute = getattr(plot, filter_item.key)
+    if filter_item.value is None:
+        return plot_attribute is None
     else:
-        plot_attribute = plot[filter_item.key]
-    none_match = filter_item.value is None and plot_attribute is None
-    attribute_match = filter_item.value is not None and filter_item.value in str(plot_attribute)
-    return none_match or attribute_match
+        return filter_item.value in str(plot_attribute)
 
 
 class FarmerRpcApi:
@@ -224,7 +222,7 @@ class FarmerRpcApi:
         plot_list = list(self.service.get_receiver(request.peer_id).plots().values())
         # Apply filter
         plot_list = [
-            plot for plot in plot_list if all(is_filter_match(plot, filter_item) for filter_item in request.filter)
+            plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
         ]
         restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
         # Apply sort_key and reverse if sort_key is not restricted

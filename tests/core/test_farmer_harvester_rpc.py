@@ -14,12 +14,13 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
+from chia.protocols.harvester_protocol import Plot
 from chia.rpc.farmer_rpc_api import (
     FarmerRpcApi,
     PaginatedRequestData,
     PlotInfoRequestData,
     PlotPathRequestData,
-    is_filter_match,
+    plot_matches_filter,
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_api import HarvesterRpcApi
@@ -32,6 +33,7 @@ from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import KeyValue, get_list_or_len
+from chia.util.streamable import dataclass_from_dict
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
@@ -407,9 +409,8 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
         (KeyValue("pool_contract_puzzle_hash", "1"), False),
     ],
 )
-def test_is_filter_match(filter_item: KeyValue, match: bool):
-    assert is_filter_match(dummy_plot("123"), filter_item) == match
-    assert is_filter_match({"filename": "123", "pool_contract_puzzle_hash": None}, filter_item) == match
+def test_plot_matches_filter(filter_item: KeyValue, match: bool):
+    assert plot_matches_filter(dummy_plot("123"), filter_item) == match
 
 
 @pytest.mark.parametrize(
@@ -512,7 +513,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         for filter_item in filtering:
             assert isinstance(filter_item, KeyValue)
-            plots = [plot for plot in plots if is_filter_match(plot, filter_item)]
+            plots = [plot for plot in plots if plot_matches_filter(dataclass_from_dict(Plot, plot), filter_item)]
         plots.sort(key=operator.itemgetter(sort_key, "plot_id"), reverse=reverse)
     else:
         for filter_item in filtering:
