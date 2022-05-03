@@ -136,6 +136,10 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
             log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
             return False
 
+        if farmer_res["harvesters"][0]["last_sync_time"] is None:
+            log.error(f"test_get_harvesters: sync not done {list(farmer_res['harvesters'])}")
+            return False
+
         harvester_dict = farmer_res["harvesters"][0]
         counts_only: bool = endpoint == "get_harvesters_summary"
 
