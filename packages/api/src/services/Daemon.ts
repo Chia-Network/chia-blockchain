@@ -137,11 +137,11 @@ export default class Daemon extends Service {
     f, // farmerPublicKey
     p, // poolPublicKey
     c, // poolContractAddress
-    m, // bladebitDisableNUMA,
-    w, // bladebitWarmStart,
-    v, // madmaxNumBucketsPhase3,
-    G, // madmaxTempToggle,
-    K // madmaxThreadMultiplier,
+    bb_disable_numa, // bladebitDisableNUMA,
+    bb_warm_start, // bladebitWarmStart,
+    mm_v, // madmaxNumBucketsPhase3,
+    mm_G, // madmaxTempToggle,
+    mm_K, // madmaxThreadMultiplier,
   ) {
     const args = {
       service: ServiceName.PLOTTER,
@@ -162,46 +162,20 @@ export default class Daemon extends Service {
       overrideK,
     };
 
-    if (a) {
-      args.a = a;
-    }
-
-    if (f) {
-      args.f = f;
-    }
-
-    if (p) {
-      args.p = p;
-    }
-
-    if (c) {
-      args.c = c;
-    }
-
-    if (m) {
-      // bladebitDisableNUMA
-      args.m = m;
-    }
-
-    if (w) {
-      // bladebitWarmStart
-      args.w = w;
-    }
-
-    if (v) {
-      // madmaxNumBucketsPhase3
-      args.v = v;
-    }
-
-    if (G) {
-      // madmaxTempToggle
-      args.G = G;
-    }
-
-    if (K) {
-      // madmaxThreadMultiplier
-      args.K = K;
-    }
+    if (a) args.a = a;
+    if (f) args.f = f;
+    if (p) args.p = p;
+    if (c) args.c = c;
+    // bladebitDisableNUMA
+    if (bb_disable_numa) args.m = bb_disable_numa;
+    // bladebitWarmStart
+    if (bb_warm_start) args.w = bb_warm_start;
+    // madmaxNumBucketsPhase3
+    if (mm_v) args.v = mm_v;
+    // madmaxTempToggle
+    if (mm_G) args.G = mm_G;
+    // madmaxThreadMultiplier
+    if (mm_K) args.K = mm_K;
 
     return this.command('start_plotting', args, undefined, undefined, true);
   }
