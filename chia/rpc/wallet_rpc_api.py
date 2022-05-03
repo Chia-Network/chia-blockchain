@@ -1084,8 +1084,11 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        await wallet.set_name(str(request["name"]))
-        return {"success": True, "wallet_id": wallet_id}
+        if wallet.type() == WalletType.DISTRIBUTED_ID:
+            await wallet.set_name(str(request["name"]))
+            return {"success": True, "wallet_id": wallet_id}
+        else:
+            return {"success": False, "error": f"Wallet id {wallet_id} is not a DID wallet"}
 
     async def did_get_wallet_name(self, request):
         assert self.service.wallet_state_manager is not None
