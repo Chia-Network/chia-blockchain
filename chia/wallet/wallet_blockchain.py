@@ -7,7 +7,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.weight_proof_v2 import WeightProofHandlerV2, validate_weight_proof_no_fork_point
+from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof, WeightProofV2
@@ -23,10 +23,8 @@ class WalletBlockchain(BlockchainInterface):
     constants: ConsensusConstants
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
-    _weight_proof_handler_v2: WeightProofHandlerV2
 
     synced_weight_proof: Optional[Union[WeightProof, WeightProofV2]]
-    wp_v2_salt: bytes32
     _finished_sync_up_to: uint32
 
     _peak: Optional[HeaderBlock]
@@ -54,7 +52,6 @@ class WalletBlockchain(BlockchainInterface):
         self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS * 3
         self._weight_proof_handler = weight_proof_handler
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
-        self.wp_v2_salt = await self._basic_store.get_object("salt", bytes32)
         self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if self._finished_sync_up_to is None:
             self._finished_sync_up_to = uint32(0)

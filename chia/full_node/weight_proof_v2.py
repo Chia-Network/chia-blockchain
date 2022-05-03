@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import math
 import random
+from asyncio import Task
 from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -52,7 +53,7 @@ class WeightProofHandlerV2:
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
     ):
-        self.tip: Optional[bytes32] = None
+        self.peak: Optional[bytes32] = None
         self.proof: Optional[WeightProofV2] = None
         self.constants = constants
         self.blockchain = blockchain
@@ -74,7 +75,7 @@ class WeightProofHandlerV2:
             if wp is None:
                 return None
             self.proof = wp
-            self.tip = tip
+            self.peak = tip
             return wp
 
     def get_fork_point_no_validations(self, weight_proof: WeightProofV2) -> Tuple[bool, uint32]:
@@ -130,16 +131,18 @@ class WeightProofHandlerV2:
         sub_epoch_segments -  a list of SubEpochSegmentsV2 for each sampled sub epoch
         recent_chain_data - all the blocks from the previous to last sub epoch to the tip
         """
-        tip_rec = self.blockchain.try_block_record(tip)
-        if tip_rec is None:
+        peak_rec = self.blockchain.try_block_record(tip)
+        if peak_rec is None:
             log.error("failed not tip in cache")
             return None
-        log.info(f"create weight proof peak {tip} {tip_rec.height}")
-        recent_chain_task = asyncio.create_task(get_recent_chain(self.blockchain, tip_rec.height))
-        summary_heights = self.blockchain.get_ses_heights()
+        log.info(f"create weight proof peak {tip} {peak_rec.height}")
+        recent_chain_task: Task[Optional[List[HeaderBlock]]] = asyncio.create_task(
+            get_recent_chain(self.blockchain, peak_rec.height)
+        )
+        summary_heights: List[uint32] = self.blockchain.get_ses_heights()
         sub_epoch_data: List[SubEpochData] = []
         for sub_epoch_n, ses_height in enumerate(summary_heights):
-            if ses_height > tip_rec.height:
+            if ses_height > peak_rec.height:
                 break
             ses = self.blockchain.get_ses(ses_height)
             log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height}  ")
@@ -147,15 +150,15 @@ class WeightProofHandlerV2:
                 SubEpochData(ses.reward_chain_hash, ses.num_blocks_overflow, ses.new_sub_slot_iters, ses.new_difficulty)
             )
         rng = random.Random(seed)
-        last_ses_block, prev_prev_ses_block = await self.get_last_l(summary_heights, tip_rec.height)
+        last_ses_block, prev_prev_ses_block = await self.get_last_l(summary_heights, peak_rec.height)
         if last_ses_block is None or prev_prev_ses_block is None:
             log.error("failed getting chain last L")
             return None
         last_l_weight = uint128(last_ses_block.weight - prev_prev_ses_block.weight)
         log.debug(f"total weight {last_ses_block.weight} prev weight {prev_prev_ses_block.weight}")
-        weight_to_check = _get_weights_for_sampling(rng, last_ses_block.weight, last_l_weight)
+        weight_to_check: Optional[List[uint128]] = _get_weights_for_sampling(rng, last_ses_block.weight, last_l_weight)
         if weight_to_check is None:
-            log.debug("chain to light, will choose all sub epochs until cap is reached")
+            log.debug("chain is too light, will choose all sub epochs until cap is reached")
         ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
         if ses_blocks is None:
             log.error("failed pulling ses blocks from database")
@@ -169,7 +172,7 @@ class WeightProofHandlerV2:
         sub_epoch_segments_tasks: List[asyncio.Task[Optional[Tuple[bytes, int]]]] = []
         sample_n = 0
         for sub_epoch_n, ses_height in enumerate(summary_heights):
-            if ses_height > tip_rec.height:
+            if ses_height > peak_rec.height:
                 break
 
             # if we have enough sub_epoch samples, dont sample
@@ -220,7 +223,7 @@ class WeightProofHandlerV2:
         for idx, height in enumerate(reversed(summary_heights)):
             if height <= peak:
                 if summaries_n - idx < 3:
-                    log.warning("chain to short not enough sub epochs ")
+                    log.warning("chain too short not enough sub epochs ")
                     return None, None
                 last_ses_block = await self.blockchain.get_block_record_from_db(
                     self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
