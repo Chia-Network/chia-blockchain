@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt):
-    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
+async def harvester_farmer_simulation(bt, tmp_path):
+    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
         yield _
 
 
@@ -134,6 +134,10 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
 
         if len(list(farmer_res["harvesters"])) != 1:
             log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
+            return False
+
+        if farmer_res["harvesters"][0]["last_sync_time"] is None:
+            log.error(f"test_get_harvesters: sync not done {list(farmer_res['harvesters'])}")
             return False
 
         harvester_dict = farmer_res["harvesters"][0]
