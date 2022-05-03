@@ -53,7 +53,7 @@ from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRef
 from chia.plotting.manager import PlotManager
 from chia.server.server import ssl_context_for_client
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import INFINITE_COST
@@ -1798,18 +1798,18 @@ def create_test_foliage(
             removal_merkle_set.add_already_hashed(coin_name)
 
         # Create addition Merkle set
-        puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
+        puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
 
         for coin in tx_additions:
             if coin.puzzle_hash in puzzlehash_coin_map:
-                puzzlehash_coin_map[coin.puzzle_hash].append(coin)
+                puzzlehash_coin_map[coin.puzzle_hash].append(coin.name())
             else:
-                puzzlehash_coin_map[coin.puzzle_hash] = [coin]
+                puzzlehash_coin_map[coin.puzzle_hash] = [coin.name()]
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coins in puzzlehash_coin_map.items():
+        for puzzle, coin_ids in puzzlehash_coin_map.items():
             addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+            addition_merkle_set.add_already_hashed(hash_coin_ids(coin_ids))
 
         additions_root = addition_merkle_set.get_root()
         removals_root = removal_merkle_set.get_root()
