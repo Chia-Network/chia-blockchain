@@ -13,8 +13,29 @@ class SupportsTrunc(Protocol):
         ...
 
 
+def calculate_data(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
+    # TODO: turn this around to calculate the PACK from the size and signedness
+
+    cls.SIZE = struct.calcsize(cls.PACK)
+    cls.BITS = cls.SIZE * 8
+    cls.SIGNED = cls.PACK == cls.PACK.lower()
+    if cls.SIGNED:
+        cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
+        cls.MINIMUM = -(2 ** (cls.BITS - 1))
+    else:
+        cls.MAXIMUM_EXCLUSIVE = 2 ** cls.BITS
+        cls.MINIMUM = 0
+
+    return cls
+
+
 class StructStream(int):
     PACK = ""
+    SIZE = 0
+    BITS = 0
+    SIGNED = False
+    MAXIMUM_EXCLUSIVE = 0
+    MINIMUM = 0
 
     """
     Create a class that can parse and stream itself based on a struct.pack template string.
@@ -22,24 +43,13 @@ class StructStream(int):
 
     # This is just a partial exposure of the underlying int constructor.  Liskov...
     # https://github.com/python/typeshed/blob/5d07ebc864577c04366fcc46b84479dbec033921/stdlib/builtins.pyi#L181-L185
-    def __new__(
-        cls: Type[_T_StructStream], value: Union[str, bytes, SupportsInt, SupportsIndex, SupportsTrunc]
-    ) -> _T_StructStream:
-        value = int(value)
-        try:
-            v1 = struct.unpack(cls.PACK, struct.pack(cls.PACK, value))[0]
-            if value != v1:
-                raise ValueError(f"Value {value} does not fit into {cls.__name__}")
-        except Exception:
-            bits = struct.calcsize(cls.PACK) * 8
-            raise ValueError(
-                f"Value {value} of size {value.bit_length()} does not fit into " f"{cls.__name__} of size {bits}"
-            )
-        return int.__new__(cls, value)
+    def __init__(self, value: Union[str, bytes, SupportsInt, SupportsIndex, SupportsTrunc]) -> None:
+        if not (self.MINIMUM <= self < self.MAXIMUM_EXCLUSIVE):
+            raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
     @classmethod
     def parse(cls: Any, f: BinaryIO) -> Any:
-        bytes_to_read = struct.calcsize(cls.PACK)
+        bytes_to_read = cls.SIZE
         read_bytes = f.read(bytes_to_read)
         assert read_bytes is not None and len(read_bytes) == bytes_to_read
         return cls(*struct.unpack(cls.PACK, read_bytes))
@@ -48,13 +58,8 @@ class StructStream(int):
         f.write(struct.pack(self.PACK, self))
 
     @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:  # type: ignore
-        f = io.BytesIO(blob)
-        result = cls.parse(f)
-        assert f.read() == b""
-        return result
+    def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore
+        return cls(*struct.unpack(cls.PACK, blob))
 
     def __bytes__(self: Any) -> bytes:
-        f = io.BytesIO()
-        self.stream(f)
-        return bytes(f.getvalue())
+        return struct.pack(self.PACK, self)

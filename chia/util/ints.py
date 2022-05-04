@@ -1,36 +1,45 @@
+import struct
 from typing import Any, BinaryIO
 
-from chia.util.struct_stream import StructStream
+from chia.util.struct_stream import calculate_data, StructStream
 
 
+@calculate_data
 class int8(StructStream):
     PACK = "!b"
 
 
+@calculate_data
 class uint8(StructStream):
     PACK = "!B"
 
 
+@calculate_data
 class int16(StructStream):
     PACK = "!h"
 
 
+@calculate_data
 class uint16(StructStream):
     PACK = "!H"
 
 
+@calculate_data
 class int32(StructStream):
     PACK = "!l"
 
 
+@calculate_data
 class uint32(StructStream):
     PACK = "!L"
 
 
+@calculate_data
 class int64(StructStream):
     PACK = "!q"
 
 
+@calculate_data
 class uint64(StructStream):
     PACK = "!Q"
 

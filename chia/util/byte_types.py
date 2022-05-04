@@ -20,17 +20,13 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    @staticmethod
-    def __new__(cls: Type[_T_SizedBytes], v) -> _T_SizedBytes:
-        v = bytes(v)
-        if not isinstance(v, bytes) or len(v) != cls._size:
-            raise ValueError("bad %s initializer %s" % (cls.__name__, v))
-        return bytes.__new__(cls, v)
+    def __init__(self, v) -> None:
+        if len(self) != self._size:
+            raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
 
     @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
         b = f.read(cls._size)
-        assert len(b) == cls._size
         return cls(b)
 
     def stream(self, f):
@@ -38,22 +34,13 @@ class SizedBytes(bytes):
 
     @classmethod
     def from_bytes(cls: Type[_T_SizedBytes], blob: bytes) -> _T_SizedBytes:
-        # pylint: disable=no-member
-        f = io.BytesIO(blob)
-        result = cls.parse(f)
-        assert f.read() == b""
-        return result
+        return cls(blob)
 
     @classmethod
     def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
         if input_str.startswith("0x") or input_str.startswith("0X"):
             return cls.fromhex(input_str[2:])
         return cls.fromhex(input_str)
-
-    def __bytes__(self) -> bytes:
-        f = io.BytesIO()
-        self.stream(f)
-        return bytes(f.getvalue())
 
     def __str__(self):
         return self.hex()
