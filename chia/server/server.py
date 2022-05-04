@@ -154,7 +154,7 @@ class ChiaServer:
         self.shut_down_event = asyncio.Event()
         self.capabilities: List[Tuple[uint16, str]] = [
             (Capability.BASE.value, "1"),
-            (Capability.WP.value, "1"),
+            (Capability.WP.value, "v2"),
         ]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()

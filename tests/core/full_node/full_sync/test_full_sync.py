@@ -23,10 +23,10 @@ log = logging.getLogger(__name__)
 
 class TestFullSync:
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_1000_blocks, bt, self_hostname):
+    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_1000_blocks)
-        blocks: List[FullBlock] = default_1000_blocks
+        num_blocks = len(default_400_blocks)
+        blocks: List[FullBlock] = default_400_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server

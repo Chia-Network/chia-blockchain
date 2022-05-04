@@ -7,6 +7,7 @@ import os
 import sqlite3
 import sys
 import time
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
@@ -27,8 +28,10 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.protocols import full_node_protocol
 from chia.server.start_full_node import SERVICE_NAME
+from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
 from chia.types.weight_proof import WeightProofV2, WeightProof
 from chia.util.block_cache import BlockCache
 from chia.util.config import load_config, process_config_start_method
@@ -521,7 +524,35 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
+    @pytest.mark.asyncio
+    async def test_vdf_compress_validate(self, default_1000_blocks):
+        header_cache, height_to_hash, block_records, summaries = await load_blocks_dont_validate(default_1000_blocks)
+        block = header_cache[height_to_hash[0]]
+        block_rec = block_records[height_to_hash[0]]
+        cc_ip_iters = block_rec.ip_iters(test_constants)
+        with ProcessPoolExecutor() as executor:
+            compressed_output = compress_output(
+                test_constants.DISCRIMINANT_SIZE_BITS,
+                block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+                ClassgroupElement.get_default_element(),
+                block.reward_chain_block.challenge_chain_ip_vdf.output,
+                block.challenge_chain_ip_proof,
+                cc_ip_iters,
+                executor,
+            )
+        valid, output = verify_compressed_vdf(
+            test_constants,
+            block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+            ClassgroupElement.get_default_element(),
+            B.from_hex(compressed_output.result()),
+            block.challenge_chain_ip_proof,
+            cc_ip_iters,
+        )
+
+        assert valid
+        assert output == block.reward_chain_block.challenge_chain_ip_vdf.output
+
+    # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
 
@@ -596,12 +627,34 @@ class TestWeightProof:
         wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
         wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
         wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
+        start = time.time()
         valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
+        elapsed = time.time() - start
         assert valid
+        start = time.time()
+        wp2bytes = bytes(wp2)
+        elapsed_wp_2_bytes = time.time() - start
+        print(f"wp v2 size is {len(wp2bytes)} time to validate {elapsed}")
         wpf = WeightProofHandler(updated_constants, blockchain)
         wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak.height))
+        start = time.time()
         valid, fork_point, summaries = await wpf.validate_weight_proof(wp)
+        elapsed = time.time() - start
         assert valid
+        start = time.time()
+        wpbytes = bytes(wp)
+        elapsed_wp_bytes = time.time() - start
+        print(f"wp size is {len(bytes(wp))} time to validate {elapsed}")
+        # print(f"ses size is {len(bytes(full_node_protocol.RespondSubEpochSummary(summaries[-1])))} ")
+        start = time.time()
+        WeightProofV2.from_bytes(wp2bytes)
+        elapsed_wp2_from_bytes = time.time() - start
+        start = time.time()
+        WeightProof.from_bytes(wpbytes)
+        elapsed_wp_from_bytes = time.time() - start
+        print(f"wp2 to bytes {elapsed_wp_2_bytes} from bytes {elapsed_wp2_from_bytes}")
+        print(f"wp to bytes {elapsed_wp_bytes} from bytes {elapsed_wp_from_bytes}")
+
         await db_connection.close()
 
 

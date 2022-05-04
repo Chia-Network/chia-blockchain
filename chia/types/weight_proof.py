@@ -58,14 +58,10 @@ class SubSlotData(Streamable):
     total_iters: Optional[uint128]
 
     def is_challenge(self) -> bool:
-        if self.proof_of_space is not None:
-            return True
-        return False
+        return self.proof_of_space is not None
 
     def is_end_of_slot(self) -> bool:
-        if self.cc_slot_end_info is not None:
-            return True
-        return False
+        return self.cc_slot_end_info is not None
 
 
 @streamable

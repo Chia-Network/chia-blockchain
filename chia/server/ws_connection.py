@@ -518,12 +518,12 @@ class WSChiaConnection:
         else:
             return info
 
-    def has_capability(self, c: Capability, value: int) -> bool:
+    def has_capability(self, c: Capability, value: str) -> bool:
         capabilities = self.capabilities
         if capabilities is not None and (c.value, value) in capabilities:
             self.log.debug("has new weight proof format capability")
             return True
         return False
 
-    def has_wp_capability(self) -> bool:
-        return self.has_capability(Capability.WP, 1)
+    def has_wp_v2_capability(self) -> bool:
+        return self.has_capability(Capability.WP, "v2")

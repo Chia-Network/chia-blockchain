@@ -3,7 +3,6 @@ import dataclasses
 import logging
 import math
 import random
-from asyncio import Task
 from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -14,7 +13,12 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
-from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_iters, is_overflow_block
+from chia.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    is_overflow_block,
+    calculate_sp_interval_iters,
+)
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -44,6 +48,10 @@ log = logging.getLogger(__name__)
 
 
 class WeightProofHandlerV2:
+    """
+    "https://eprint.iacr.org/2019/226.pdf  fly client paper "
+    """
+
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 140
@@ -82,11 +90,11 @@ class WeightProofHandlerV2:
         log.debug("get fork point skip validations")
         if len(weight_proof.sub_epochs) == 0:
             return False, uint32(0)
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
-        if summaries is None:
+        result = _validate_sub_epoch_summaries(self.constants, weight_proof)
+        if result is None:
             log.warning("weight proof failed to validate sub epoch summaries")
             return False, uint32(0)
-        return True, self.get_fork_point(summaries)
+        return True, self.get_fork_point(result[0])
 
     async def validate_weight_proof(
         self, weight_proof: WeightProofV2, seed: bytes32, skip_segments: bool = False
@@ -136,7 +144,7 @@ class WeightProofHandlerV2:
             log.error("failed not tip in cache")
             return None
         log.info(f"create weight proof peak {tip} {peak_rec.height}")
-        recent_chain_task: Task[Optional[List[HeaderBlock]]] = asyncio.create_task(
+        recent_chain_task: asyncio.Task[Optional[List[HeaderBlock]]] = asyncio.create_task(
             get_recent_chain(self.blockchain, peak_rec.height)
         )
         summary_heights: List[uint32] = self.blockchain.get_ses_heights()
@@ -697,16 +705,16 @@ def compress_segments(full_segment_index: int, segments_bytes: bytes) -> bytes:
 def _validate_sub_epoch_summaries(
     constants: ConsensusConstants,
     weight_proof: WeightProofV2,
-) -> Tuple[Optional[List[SubEpochSummary]], Optional[List[uint128]]]:
+) -> Optional[Tuple[List[SubEpochSummary], List[uint128]]]:
     """
     converts weight_proof.sub_epochs to a list of SubEpochSummary by adding the missing ses_hash and rebuilding the
     SubEpochSummary object
     validates the weight and the last ses hash against the latest chain attached to the WP
     """
-    last_ses_hash, last_ses_sub_height, last_ses_sub_weight = _get_last_ses(constants, weight_proof.recent_chain_data)
+    last_ses_hash, last_ses_height, last_ses_sub_weight = _get_last_ses(constants, weight_proof.recent_chain_data)
     if last_ses_hash is None:
         log.warning("could not find last ses block")
-        return None, None
+        return None
 
     summaries, total, sub_epoch_weight_list = _map_sub_epoch_summaries(
         constants,
@@ -717,16 +725,16 @@ def _validate_sub_epoch_summaries(
     # validate weight
     if not _validate_summaries_weight(constants, total, summaries, weight_proof):
         log.error("failed validating weight")
-        return None, None
+        return None
 
     # add last ses weight from recent chain
     sub_epoch_weight_list.append(last_ses_sub_weight)
     last_ses = summaries[-1]
-    log.debug(f"last ses sub height {last_ses_sub_height}")
+    log.debug(f"last ses height {last_ses_height}")
     # validate last ses_hash
     if last_ses.get_hash() != last_ses_hash:
-        log.error(f"failed to validate ses hashes block height {last_ses_sub_height}")
-        return None, None
+        log.error(f"failed to validate ses hashes block height {last_ses_height}")
+        return None
 
     return summaries, sub_epoch_weight_list
 
@@ -754,8 +762,11 @@ def _map_sub_epoch_summaries(
             delta = sub_epoch_data[idx].num_blocks_overflow
             log.debug(f"sub epoch {idx} start weight is {total_weight + curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
-            total_weight = total_weight + uint128(  # type: ignore
-                curr_difficulty * (constants.SUB_EPOCH_BLOCKS + sub_epoch_data[idx + 1].num_blocks_overflow - delta)
+            total_weight = uint128(
+                total_weight
+                + uint128(
+                    curr_difficulty * (constants.SUB_EPOCH_BLOCKS + sub_epoch_data[idx + 1].num_blocks_overflow - delta)
+                )
             )
 
         # if new epoch update diff and iters
@@ -901,8 +912,10 @@ def _validate_segment(
     after_challenge_block = False
     slot_after_challenge_block = False
     deficit = 0
+    challenge_included = False
     for idx, ssd in enumerate(sub_slot_data):
         if ssd.is_challenge():
+            challenge_included = True
             assert ssd.ip_iters
             prev_challenge_ip_iters = ssd.ip_iters
             deficit = constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK - 1
@@ -973,6 +986,8 @@ def _validate_segment(
         else:
             first_block = False
     assert icc_challenge
+    if not challenge_included:
+        raise Exception("no challenge was found in segment")
     return prev_challenge_ip_iters, slot_iters, slots, cc_challenge, icc_challenge, slot_after_challenge_block
 
 
@@ -1154,12 +1169,13 @@ def _validate_challenge_sub_slot_data(
     if ssd_idx > 0:
         prev_ssd = sub_slots[ssd_idx - 1]
     assert sub_slot_data.signage_point_index is not None
-    assert sub_slot_data.proof_of_space
-    assert sub_slot_data.ip_iters
+    assert sub_slot_data.proof_of_space is not None
+    assert sub_slot_data.ip_iters is not None
     sp_info = None
-    if sub_slot_data.cc_signage_point:
+    sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
+    if sp_iters != 0:
+        assert sub_slot_data.cc_signage_point
         is_overflow = is_overflow_block(constants, sub_slot_data.signage_point_index)
-        sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
         sp_challenge = challenge
         assert sub_slot_data.cc_sp_vdf_output
         cc_sp_input = ClassgroupElement.get_default_element()
@@ -1248,10 +1264,12 @@ def _validate_sub_slot_data(
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = sub_slots[sub_slot_idx - 1]
     # find next end of slot
-    if sub_slot_data.cc_signage_point:
+    assert sub_slot_data.signage_point_index
+    sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
+    if sp_iters != 0:
+        assert sub_slot_data.cc_signage_point is not None
         assert sub_slot_data.cc_sp_vdf_output is not None
         assert sub_slot_data.signage_point_index is not None
-        sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
         cc_sp_input = ClassgroupElement.get_default_element()
         iterations = sp_iters
         challenge = cc_challenge
@@ -1275,7 +1293,7 @@ def _validate_sub_slot_data(
         )
         if not sp_valid:
             raise Exception(f"failed cc signage point vdf validation")
-        assert sub_slot_data.cc_sp_vdf_output
+        assert sub_slot_data.cc_sp_vdf_output is not None
         long_outputs[sub_slot_data.cc_sp_vdf_output] = sp_output
     cc_ip_input = ClassgroupElement.get_default_element()
     assert sub_slot_data.ip_iters
@@ -1378,7 +1396,7 @@ def __validate_pospace(
     cc_sub_slot_hash: bytes32,
     ssi: uint64,
     long_outputs: Dict[B, ClassgroupElement],
-) -> Optional[uint64]:
+) -> None:
     assert ssd.signage_point_index is not None
     sp_iters = calculate_sp_iters(constants, ssi, ssd.signage_point_index)
     if sp_iters == uint64(0):
@@ -1396,13 +1414,19 @@ def __validate_pospace(
     )
     if q_str is None:
         raise Exception(f"could not validate proof of space")
-    return calculate_iterations_quality(
+
+    iterations = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         ssd.proof_of_space.size,
         curr_diff,
         cc_sp_hash,
     )
+
+    if iterations >= calculate_sp_interval_iters(constants, ssi):
+        raise Exception(f"invalid required iters for proof of space")
+
+    return
 
 
 def __get_rc_sub_slot_hash(
@@ -1481,6 +1505,10 @@ def _get_curr_diff_ssi(
 def _get_last_ses(
     constants: ConsensusConstants, recent_reward_chain: List[HeaderBlock]
 ) -> Tuple[Optional[bytes32], uint32, uint128]:
+    """
+    find the last sub epoch summary in the chain
+    return ses, ses_block height, ses_block weight
+    """
     for idx, block in enumerate(reversed(recent_reward_chain)):
         if (block.reward_chain_block.height % constants.SUB_EPOCH_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
@@ -1496,7 +1524,7 @@ def _get_last_ses(
                                 curr.reward_chain_block.weight,
                             )
                 idx += 1
-    raise Exception(f"not enough slots while calculating rc sub slot")
+    raise Exception(f"did not find sub epoch summary in recent chain")
 
 
 def preprocess_sub_epoch_sampling(rng: random.Random, sub_epoch_weight_list: List[uint128]) -> Dict[int, bool]:
@@ -1611,7 +1639,6 @@ def _validate_recent_blocks(
     ses_idx = len(summaries) - len(first_ses_idx)
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
     diff: Optional[uint64] = constants.DIFFICULTY_STARTING
-    last_blocks_to_validate = 100
     for summary in summaries[:ses_idx]:
         if summary.new_sub_slot_iters is not None:
             ssi = summary.new_sub_slot_iters
@@ -1645,7 +1672,12 @@ def _validate_recent_blocks(
             overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             log.debug(f"wp, validate block {block.height}")
-            if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
+            if (
+                sub_slots > 2
+                and transaction_blocks > 11
+                and (tip_height - block.height < constants.LAST_BLOCKS_FULL_VALIDATION)
+            ):
+
                 required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
                 )
@@ -1799,11 +1831,11 @@ async def validate_weight_proof_no_fork_point(
     peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
     log.info(f"validate weight proof peak height {peak_height}")
 
-    summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(constants, weight_proof)
-    if summaries is None or sub_epoch_weight_list is None:
+    result = _validate_sub_epoch_summaries(constants, weight_proof)
+    if result is None:
         log.error("weight proof failed sub epoch data validation")
         return False, [], []
-
+    summaries, sub_epoch_weight_list = result
     rng = random.Random(seed)
     sampled_sub_epochs = preprocess_sub_epoch_sampling(rng, sub_epoch_weight_list)
     constants_bytes, summary_bytes, wp_recent_chain_bytes = vars_to_bytes(constants, summaries, weight_proof)
