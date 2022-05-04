@@ -1,3 +1,4 @@
+from chia.wallet.util.compute_memos import compute_memos
 import json
 import logging
 import time
@@ -96,11 +97,12 @@ class NFTWallet:
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "NFT Wallet", uint32(WalletType.NFT.value), info_as_string
+            "NFT Wallet" if not name else name, uint32(WalletType.NFT.value), info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
+        self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
         # await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_id)
@@ -147,7 +149,7 @@ class NFTWallet:
 
     async def coin_added(self, coin: Coin, height: uint32, in_transaction: bool) -> None:
         """Notification from wallet state manager that wallet has been received."""
-        self.log.info(f"NFT wallet has been notified that {coin} was added")
+        self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
         for coin_info in self.nft_wallet_info.my_nft_coins:
             if coin_info.coin == coin:
                 return
@@ -172,6 +174,7 @@ class NFTWallet:
         await self.puzzle_solution_received(cs, in_transaction=in_transaction)
 
     async def puzzle_solution_received(self, coin_spend: CoinSpend, in_transaction: bool) -> None:
+        self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
@@ -181,8 +184,8 @@ class NFTWallet:
             params = singleton_curried_args.first()
             self.log.info(f"found the info for NFT coin {coin_name} {inner_puzzle} {params}")
             singleton_id = bytes32(params.rest().first().atom)
-            new_inner_puzzle = inner_puzzle
-            puzhash = None
+            new_inner_puzzle = None
+            parent_inner_puzhash = singleton_curried_args.rest().first().get_tree_hash()
             self.log.debug("Before spend metadata: %s %s \n%s", metadata, singleton_id, disassemble(solution))
             for condition in solution.rest().first().rest().as_iter():
                 self.log.debug("Checking solution condition: %s", disassemble(condition))
@@ -195,11 +198,16 @@ class NFTWallet:
                     # metadata update
                     # (-24 (meta updater puzzle) url)
                     metadata = condition.rest().rest().first() + metadata
-                elif condition_code == 51:
+                elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
                     puzhash = bytes32(condition.rest().first().atom)
+                    self.log.debug("Got back puzhash from solution: %s", puzhash)
                     record: DerivationRecord = (
                         await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
                     )
+                    if record is None:
+                        # we potentially sent it somewhere
+                        self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
+                        return
                     new_inner_puzzle = puzzle_for_pk(record.pubkey)
 
                 else:
@@ -250,7 +258,7 @@ class NFTWallet:
             await self.add_coin(
                 child_coin,
                 child_puzzle,
-                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
+                LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, parent_coin.amount),
                 in_transaction=in_transaction,
             )
         else:
@@ -299,6 +307,9 @@ class NFTWallet:
         else:
             raise NotImplementedError
         provenance_puzzle = Program.to([NFT_STATE_LAYER_MOD_HASH, inner_puzzle])
+        self.log.debug(
+            "Wallet name %s generated a puzzle: %s", self.wallet_info.name, provenance_puzzle.get_tree_hash()
+        )
         return provenance_puzzle
 
     async def generate_new_nft(self, metadata: Program) -> Optional[TransactionRecord]:
@@ -353,7 +364,6 @@ class NFTWallet:
         condition_list = [make_create_coin_condition(inner_puzzle.get_tree_hash(), amount, [])]
         innersol = solution_for_conditions(condition_list)
         # EVE SPEND BELOW
-
         fullsol = Program.to(
             [
                 [launcher_coin.parent_coin_info, launcher_coin.amount],
@@ -450,18 +460,20 @@ class NFTWallet:
     async def transfer_nft(
         self,
         nft_coin_info: NFTCoinInfo,
-        puzzle_hash=None,
+        puzzle_hash: bytes32 = None,
         did_hash=None,
     ):
         self.log.debug("Attempt to transfer a new NFT")
         coin = nft_coin_info.coin
-        self.log.debug("Transfering NFT coin %s", coin)
+        self.log.debug("Transfering NFT coin %r to puzhash: %s", nft_coin_info, puzzle_hash)
 
         full_puzzle = nft_coin_info.full_puzzle
         amount = coin.amount
-        condition_list = [make_create_coin_condition(puzzle_hash, amount, [])]
+        condition_list = [make_create_coin_condition(puzzle_hash, amount, [puzzle_hash])]
+        self.log.debug("Condition for new coin: %r", condition_list)
         innersol = solution_for_conditions(condition_list)
         lineage_proof = nft_coin_info.lineage_proof
+        self.log.debug("Inner solution: %r", disassemble(innersol))
         fullsol = Program.to(
             [
                 [lineage_proof.parent_name, lineage_proof.inner_puzzle_hash, lineage_proof.amount],
@@ -479,6 +491,7 @@ class NFTWallet:
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         spend_bundle = await self.sign(spend_bundle)
         full_spend = SpendBundle.aggregate([spend_bundle])
+        self.log.debug("Memos are: %r", list(compute_memos(full_spend).items()))
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -495,9 +508,10 @@ class NFTWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=[],
+            memos=list(compute_memos(full_spend).items()),
         )
         await self.standard_wallet.push_transaction(nft_record)
+        full_spend.debug()
         return full_spend
 
     def get_current_nfts(self) -> List[NFTCoinInfo]:

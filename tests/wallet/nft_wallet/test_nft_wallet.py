@@ -2,6 +2,7 @@ import asyncio
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 import logging
+from tests.conftest import two_wallet_nodes
 
 import pytest
 
@@ -21,6 +22,7 @@ logging.getLogger("fsevents").setLevel(logging.INFO)  # Too much logging on debu
 logging.getLogger("chia.plotting.create_plots").setLevel(logging.INFO)  # Too much logging on debug level
 logging.getLogger("filelock").setLevel(logging.INFO)  # Too much logging on debug level
 logging.getLogger("chia.plotting").setLevel(logging.INFO)  # Too much logging on debug level
+logging.getLogger("cchia.full_node.block_store").setLevel(logging.INFO)  # Too much logging on debug level
 
 logging.getLogger("wallet_server").setLevel(logging.INFO)  # Too much logging on debug level
 logging.getLogger("full_node_server").setLevel(logging.INFO)  # Too much logging on debug level
@@ -39,9 +41,9 @@ class TestNFTWallet:
         [True],
     )
     @pytest.mark.asyncio
-    async def test_nft_wallet_creation_and_transfer(self, three_wallet_nodes, trusted):
+    async def test_nft_wallet_creation_and_transfer(self, two_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
@@ -86,8 +88,10 @@ class TestNFTWallet:
         # for i in range(1, num_blocks):
         #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-        await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
-        nft_wallet_0 = await NFTWallet.create_new_nft_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+        # await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
+        nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
+        )
         metadata = Program.to(
             [
                 ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
@@ -108,28 +112,25 @@ class TestNFTWallet:
         coins = nft_wallet_0.nft_wallet_info.my_nft_coins
         assert len(coins) == 1, "nft not generated"
 
-        nft_wallet_1 = await NFTWallet.create_new_nft_wallet(wallet_node_1.wallet_state_manager, wallet_1)
-
-        sb = await nft_wallet_0.transfer_nft(coins[0], ph1)
+        nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
+            wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
+        )
+        # nft_puzzle = await nft_wallet_1.get_new_puzzle()
+        sb = await nft_wallet_0.transfer_nft(coins[0], ph1)  # nft_puzzle.get_tree_hash())
 
         assert sb is not None
+        await asyncio.sleep(3)
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
-        # full_sb = await nft_wallet_1.receive_nft(sb)
-        # await nft_wallet_1.receive_nft(sb)
-        assert sb is not None
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await asyncio.sleep(5)
 
-        for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-        await asyncio.sleep(5)
-
-        # coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-        # assert len(coins) == 0
+        coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+        assert len(coins) == 0
         coins = nft_wallet_1.nft_wallet_info.my_nft_coins
         assert len(coins) == 1
 
         # Send it back to original owner
-
         nsb = await nft_wallet_1.transfer_nft(coins[0], ph)
         assert sb is not None
 

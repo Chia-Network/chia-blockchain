@@ -724,12 +724,14 @@ class WalletStateManager:
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.NFT:
                 nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+                self.log.debug(
+                    "Checking NFT wallet %r and inner puzzle %s", wallet_info.name, inner_puzzle.get_tree_hash()
+                )
                 if not nft_wallet_info.did_wallet_id:
                     # standard NFT wallet
-                    if inner_puzzle.get_tree_hash() in await self.puzzle_store.get_all_puzzle_hashes():
-                        wallet_id = wallet_info.id
-                        wallet_type = WalletType.NFT
-                        break
+                    wallet_id = wallet_info.id
+                    wallet_type = WalletType.NFT
+                    break
         return wallet_id, wallet_type
 
     async def new_coin_state(
@@ -1079,7 +1081,9 @@ class WalletStateManager:
         if existing is not None:
             return None
 
-        self.log.info(f"Adding coin: {coin} at {height} wallet_id:{wallet_id}")
+        self.log.info(
+            f"Adding record to state manager coin: {coin} at {height} wallet_id:{wallet_id} and type: {wallet_type}"
+        )
         farmer_reward = False
         pool_reward = False
         if self.is_farmer_reward(height, coin.parent_coin_info):

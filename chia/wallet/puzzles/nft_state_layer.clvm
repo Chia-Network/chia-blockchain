@@ -31,7 +31,7 @@
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (if (logand (f (r (r (f conditions)))) ONE)
-          (c (list CREATE_COIN (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (f conditions)))) my_amount) (r conditions))
+          (c (list CREATE_COIN (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (f conditions)))) my_amount (f (r (r (r (f conditions))))) ) (r conditions))
           (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
         )
         (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
