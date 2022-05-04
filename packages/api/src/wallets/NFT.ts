@@ -1,8 +1,8 @@
 import Wallet from '../services/Wallet';
 
 export default class NFTWallet extends Wallet {
-  async getCurrentNfts(walletId: number) {
-    return this.command('nft_get_current_nfts', {
+  async getNfts(walletId: number) {
+    return this.command('nft_get_nfts', {
       walletId,
     });
   }

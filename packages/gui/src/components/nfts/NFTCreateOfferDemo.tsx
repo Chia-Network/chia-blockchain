@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import type { NFT } from '@chia/api';
+import type { NFTInfo } from '@chia/api';
 import { Flex, Form, TextField } from '@chia/core';
 import {
   Button,
@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 /* ========================================================================== */
 
 type NFTCreateOfferDemoDialogProps = {
-  nft: NFT;
+  nft: NFTInfo;
   referrerPath?: string;
   onClose: () => void;
   open: boolean;
@@ -71,7 +71,7 @@ type NFTCreateOfferDemoFormData = {
 };
 
 type NFTCreateOfferDemoProps = {
-  nft?: NFT;
+  nft?: NFTInfo;
   referrerPath?: string;
   onComplete: () => void;
 };
@@ -83,7 +83,7 @@ export function NFTCreateOfferDemo(props: NFTCreateOfferDemoProps) {
     shouldUnregister: false,
     defaultValues: {
       walletId: nft?.walletId ?? 0,
-      nftAssetId: nft?.id ?? '',
+      nftAssetId: nft?.launcherId ?? '',
     },
   });
 

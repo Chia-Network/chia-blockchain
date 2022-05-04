@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import type { NFT } from '@chia/api';
+import type { NFTInfo } from '@chia/api';
 import { AlertDialog, Flex, Form, TextField, useOpenDialog } from '@chia/core';
 import { Button } from '@mui/material';
 import { useForm } from 'react-hook-form';
@@ -13,7 +13,7 @@ type NFTTransferDemoFormData = {
 };
 
 type NFTTransferDemoProps = {
-  nft?: NFT;
+  nft?: NFTInfo;
 };
 
 export default function NFTTransferDemo(props: NFTTransferDemoProps) {
@@ -23,7 +23,7 @@ export default function NFTTransferDemo(props: NFTTransferDemoProps) {
     shouldUnregister: false,
     defaultValues: {
       walletId: nft?.walletId ?? 0,
-      nftAssetId: nft?.id ?? '',
+      nftAssetId: nft?.launcherId ?? '',
       destinationDID: '',
     },
   });
@@ -53,7 +53,7 @@ export default function NFTTransferDemo(props: NFTTransferDemoProps) {
   async function handleInitiateTransfer(formData: NFTTransferDemoFormData) {
     const { walletId, nftAssetId, destinationDID } = formData;
     const nftToTransfer = {
-      ...(nft ?? { walletId: 0, id: '', name: '', description: '' }),
+      ...(nft ?? { walletId: 0, launcherId: '', name: '', description: '' }),
       walletId,
       id: nftAssetId,
     };

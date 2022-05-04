@@ -1,8 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, toBech32m, useTrans } from '@chia/core';
+import {
+  Flex,
+  LayoutDashboardSub,
+  Loading,
+  toBech32m,
+  useTrans,
+} from '@chia/core';
 import { defineMessage } from '@lingui/macro';
-import type { NFT } from '@chia/api';
-import { useGetCurrentNFTsQuery } from '@chia/api-react';
+import type { NFTInfo } from '@chia/api';
+import { useGetNFTsQuery } from '@chia/api-react';
 import { Grid } from '@mui/material';
 import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCard from '../NFTCard';
@@ -11,7 +17,7 @@ import NFTContextualActions from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 
 export default function NFTGallery() {
-  const { isLoading, data } = useGetCurrentNFTsQuery();
+  const { isLoading, data } = useGetNFTsQuery({ walletId: 5 });
   const [search, setSearch] = useState('');
   const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
@@ -23,8 +29,8 @@ export default function NFTGallery() {
       return data;
     }
 
-    return data.map((nft: NFT) => {
-      return { ...nft, id: toBech32m(nft.id, 'nft') };
+    return data.map((nft: NFTInfo) => {
+      return { ...nft, id: toBech32m(nft.launcherId, 'nft') };
     });
   }, [data]);
 
@@ -39,33 +45,36 @@ export default function NFTGallery() {
     });
   }, [search, transformedData]);
 
-  function handleSelect(nft: NFT, selected: boolean) {
+  function handleSelect(nft: NFTInfo, selected: boolean) {
     setSelection((currentSelection) => {
       const { items } = currentSelection;
 
       return {
-        items: selected ? [...items, nft] : items.filter((item) => item.id !== nft.id),
+        items: selected
+          ? [...items, nft]
+          : items.filter((item) => item.id !== nft.id),
       };
     });
   }
 
-
   if (isLoading) {
-    return (
-      <Loading center />
-    );
+    return <Loading center />;
   }
 
   return (
     <LayoutDashboardSub sidebar={<NFTGallerySidebar />}>
       <Flex flexDirection="column" gap={2}>
         <Flex justifyContent="space-between" alignItems="Center">
-          <Search onChange={setSearch} value={search} placeholder={t(defineMessage({ message: `Search...` }))} />
+          <Search
+            onChange={setSearch}
+            value={search}
+            placeholder={t(defineMessage({ message: `Search...` }))}
+          />
           <NFTContextualActions selection={selection} />
         </Flex>
 
         <Grid spacing={2} alignItems="stretch" container>
-          {filteredData?.map((nft) => (
+          {filteredData?.map((nft: NFTInfo) => (
             <Grid xs={12} md={6} lg={4} xl={3} key={nft.id} item>
               <NFTCard
                 nft={nft}

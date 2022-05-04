@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BigNumber from 'bignumber.js';
 import { Trans, t } from '@lingui/macro';
 import { useLocalStorage } from '@rehooks/local-storage';
-import type { NFT } from '@chia/api';
+import type { NFTInfo } from '@chia/api';
 import { useCreateOfferForIdsMutation } from '@chia/api-react';
 import {
   Amount,
@@ -212,7 +212,7 @@ NFTOfferConditionalsPanel.defaultProps = {
 /* ========================================================================== */
 
 type NFTOfferPreviewProps = {
-  nft: NFT
+  nft: NFTInfo;
 };
 
 function NFTOfferPreview(props: NFTOfferPreviewProps) {
@@ -263,6 +263,7 @@ function NFTOfferPreview(props: NFTOfferPreviewProps) {
         >
           {isValidNFT ? (
             <NFTCard nft={nft} />
+          ) : (
             // // TODO: The following is a placeholder for the NFT preview component
             // <Flex flexDirection="column" flexGrow={1} gap={0}>
             //   <Flex
@@ -309,7 +310,6 @@ function NFTOfferPreview(props: NFTOfferPreviewProps) {
             //     />
             //   </Flex>
             // </Flex>
-          ) : (
             <Flex
               flexDirection="column"
               alignItems="center"
@@ -351,14 +351,14 @@ type NFTOfferEditorValidatedFormData = {
 };
 
 type NFTOfferEditorProps = {
-  nft?: NFT;
+  nft?: NFTInfo;
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 function buildOfferRequest(
   exchangeType: NFTOfferEditorExchangeType,
   nftLauncherId: string,
-  xchAmount: string
+  xchAmount: string,
 ) {
   const baseMojoAmount: BigNumber = chiaToMojo(xchAmount);
   const mojoAmount =
@@ -392,11 +392,11 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   const errorDialog = useShowError();
   const navigate = useNavigate();
   const [suppressShareOnCreate] = useLocalStorage<boolean>(
-    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE
+    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
   );
   const defaultValues: NFTOfferEditorFormData = {
     exchangeType: NFTOfferEditorExchangeType.NFTForXCH,
-    nftId: nft?.id ?? '',
+    nftId: nft?.launcherId ?? '',
     xchAmount: '',
     fee: '',
   };
@@ -406,7 +406,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   });
 
   function validateFormData(
-    unvalidatedFormData: NFTOfferEditorFormData
+    unvalidatedFormData: NFTOfferEditorFormData,
   ): NFTOfferEditorValidatedFormData | undefined {
     const { exchangeType, nftId, xchAmount, fee } = unvalidatedFormData;
     const nftLauncherId = nftId ? launcherIdFromNFTId(nftId) : undefined;
@@ -451,7 +451,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     console.log(offer);
 
     const confirmedCreation = await openDialog(
-      <OfferEditorConfirmationDialog />
+      <OfferEditorConfirmationDialog />,
     );
 
     if (!confirmedCreation) {
@@ -461,7 +461,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     setIsProcessing(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       // const response = await createOfferForIds({
       //   walletIdsAndAmounts: offer,
       //   feeInMojos: fee,
@@ -524,7 +524,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
 /* ========================================================================== */
 
 type CreateNFTOfferEditorProps = {
-  nft?: NFT;
+  nft?: NFTInfo;
   referrerPath?: string;
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };

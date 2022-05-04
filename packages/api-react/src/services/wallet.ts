@@ -31,7 +31,7 @@ const apiWithTag = api.enhanceEndpoints({
     'DIDRecoveryList',
     'Keys',
     'LoggedInFingerprint',
-    'NFT',
+    'NFTInfo',
     'OfferCounts',
     'OfferTradeRecord',
     'PlotNFT',
@@ -222,7 +222,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: [
         { type: 'Transactions', id: 'LIST' },
-        { type: 'NFTs', id: 'LIST' },
+        { type: 'PlotNFT', id: 'LIST' },
       ],
     }),
 
@@ -1762,24 +1762,26 @@ export const walletApi = apiWithTag.injectEndpoints({
     // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
 
     // NFTs
-    getCurrentNFTs: build.query<any, { walletId?: number }>({
+    getNFTs: build.query<any, { walletId?: number }>({
       query: ({ walletId } = {}) => ({
-        command: 'getCurrentNfts',
+        command: 'getNfts',
         service: NFT,
         args: [walletId],
-        mockResponse: {
-          nfts: [...Array(11)].map(() => ({
-            walletId: walletId ?? Math.floor(Math.random() * 100), // TODO remove when mock is fixed
-            id: randomBytes(32).toString('hex'),
-          })),
-        }
+        // mockResponse: {
+        //   nfts: [...Array(11)].map(() => ({
+        //     walletId: walletId ?? Math.floor(Math.random() * 100), // TODO remove when mock is fixed
+        //     id: randomBytes(32).toString('hex'),
+        //   })),
+        // },
       }),
-      transformResponse: (response: any) => response.nfts,
+      transformResponse: (response: any) => response.nftList,
       providesTags: (nfts, _error) =>
-        nfts ? [
-          ...nfts.map(({ id }) => ({ type: 'NFT', id: id } as const)),
-          { type: 'NFT', id: 'LIST' },
-        ] : [{ type: 'NFT', id: 'LIST' }],
+        nfts
+          ? [
+              ...nfts.map(({ id }) => ({ type: 'NFTInfo', id: id } as const)),
+              { type: 'NFTInfo', id: 'LIST' },
+            ]
+          : [{ type: 'NFTInfo', id: 'LIST' }],
     }),
 
     transferNFT: build.mutation<
@@ -1804,7 +1806,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [walletId, nftCoinInfo, newDid, newDidInnerHash, tradePrice],
       }),
       invalidatesTags: (result, _error, { walletId }) =>
-        result ? [{ type: 'NFT', id: walletId }] : [],
+        result ? [{ type: 'NFTInfo', id: walletId }] : [],
     }),
 
     receiveNFT: build.mutation<
@@ -1821,7 +1823,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [walletId, spendBundle, fee],
       }),
       invalidatesTags: (result, _error, { walletId }) =>
-        result ? [{ type: 'NFT', id: 'LIST' }] : [],
+        result ? [{ type: 'NFTInfo', id: 'LIST' }] : [],
     }),
   }),
 });
@@ -1902,7 +1904,7 @@ export const {
   useGetDIDCurrentCoinInfoQuery,
 
   // NFTs
-  useGetCurrentNFTsQuery,
+  useGetNFTsQuery,
   useTransferNFTMutation,
   useReceiveNFTMutation,
 } = walletApi;

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plural, Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import type { NFT } from '@chia/api';
+import type { NFTInfo } from '@chia/api';
 import {
   Button,
   ButtonLoading,
@@ -155,7 +155,7 @@ type NFTTransferFormData = {
 };
 
 type NFTTransferActionProps = {
-  nft: NFT;
+  nft: NFTInfo;
   destinationDID?: string;
   onComplete?: (result?: NFTTransferResult) => void;
 };
@@ -198,7 +198,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
 
       const { error, data: response } = await transferNFT({
         walletId: nft.walletId,
-        nftCoinInfo: nft.id,
+        nftCoinInfo: nft.nftCoinid,
         newDid: destinationDID,
         newDidInnerHash: '',
         tradePrice: 0,
@@ -212,7 +212,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
         onComplete({
           success,
           transferInfo: {
-            nftAssetId: nft.id,
+            nftAssetId: nft.launcherId,
             destinationDID,
             fee,
           },
@@ -266,7 +266,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {nft.id}
+                {nft.launcherId}
               </Typography>
               <TooltipIcon interactive>
                 <Flex flexDirection="column" gap={1}>
@@ -274,7 +274,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
                     <Trans>NFT Asset ID</Trans>
                   </StyledTitle>
                   <StyledValue>
-                    <Typography variant="caption">{nft.id}</Typography>
+                    <Typography variant="caption">{nft.launcherId}</Typography>
                   </StyledValue>
                 </Flex>
               </TooltipIcon>
@@ -332,7 +332,7 @@ type NFTTransferDialogProps = {
   open: boolean;
   onClose: (value: any) => void;
   onComplete?: (result?: NFTTransferResult) => void;
-  nft: NFT;
+  nft: NFTInfo;
   destinationDID?: string;
 };
 

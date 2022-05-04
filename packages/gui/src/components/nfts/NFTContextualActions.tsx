@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import type { NFT } from '@chia/api';
+import type { NFTInfo } from '@chia/api';
 import {
   DropdownActions,
   type DropdownActionsChildProps,
@@ -46,7 +46,7 @@ function NFTCreateOfferContextualAction(
 ) {
   const { onClose, selection } = props;
   const openDialog = useOpenDialog();
-  const selectedNft: NFT | undefined = selection?.items[0];
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
 
   function handleCreateOffer() {
@@ -89,7 +89,7 @@ type NFTTransferContextualActionProps = NFTContextualActionProps;
 function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   const { onClose, selection } = props;
   const openDialog = useOpenDialog();
-  const selectedNft: NFT | undefined = selection?.items[0];
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
 
   function handleTransferNFT() {

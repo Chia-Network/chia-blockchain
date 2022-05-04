@@ -1,7 +1,7 @@
-import type NFT from './NFT';
+import type NFTInfo from '@chia/api';
 
 type NFTSelection = {
-  items: NFT[];
+  items: NFTInfo[];
 };
 
 export default NFTSelection;
