@@ -169,7 +169,10 @@ export default function PlotAddNumberOfPlots(props: Props) {
                   variant="filled"
                   placeholder=""
                   label={<Trans>Number of buckets</Trans>}
-                  helperText={<Trans>{plotter.defaults.numBuckets} buckets is recommended</Trans>}
+                  helperText={plotter.defaults.plotterName === "bladebit2" ?
+                    <Trans>You may specify one of: 128, 256, 512, 1024</Trans>
+                    : <Trans>{plotter.defaults.numBuckets} buckets is recommended</Trans>
+                  }
                   InputProps={{
                     inputProps: { min: 0 },
                   }}
@@ -202,6 +205,75 @@ export default function PlotAddNumberOfPlots(props: Props) {
                 variant="filled"
                 placeholder="default"
                 label={<Trans>Queue Name</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2Cache"
+                type="number"
+                variant="filled"
+                placeholder="192"
+                label={<Trans>Cache size (GB)</Trans>}
+                InputProps={{
+                  inputProps: { min: 0 },
+                }}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2F1Threads"
+                type="number"
+                variant="filled"
+                placeholder=""
+                label={<Trans>Thread count override for F1 generation</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2FpThreads"
+                type="number"
+                variant="filled"
+                placeholder=""
+                label={<Trans>Thread count override for forward propagation</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2CThreads"
+                type="number"
+                variant="filled"
+                placeholder=""
+                label={<Trans>Thread count override for C table processing</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2P2Threads"
+                type="number"
+                variant="filled"
+                placeholder=""
+                label={<Trans>Thread count override for Phase 2</Trans>}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl variant="filled" fullWidth>
+              <TextField
+                name="bladebit2P3Threads"
+                type="number"
+                variant="filled"
+                placeholder=""
+                label={<Trans>Thread count override for Phase 3</Trans>}
               />
             </FormControl>
           </Grid>
@@ -264,6 +336,20 @@ export default function PlotAddNumberOfPlots(props: Props) {
                   label={
                     <>
                       <Trans>Disable NUMA</Trans>{' '}
+                    </>
+                  }
+                />
+              </FormControl>
+            </Grid>
+          )}
+          {plotter.options.haveBladebitNoCpuAffinity && (
+            <Grid xs={12} item>
+              <FormControl variant="filled" fullWidth>
+                <FormControlLabel
+                  control={<Checkbox name="bladebitNoCpuAffinity" />}
+                  label={
+                    <>
+                      <Trans>No CPU Affinity</Trans>{' '}
                     </>
                   }
                 />

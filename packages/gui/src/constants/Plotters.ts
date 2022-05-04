@@ -48,7 +48,7 @@ export const bladebitDefaults: PlotterDefaults = {
 
 export const bladebit2Options: PlotterOptions = {
   kSizes: [32],
-  haveNumBuckets: false,
+  haveNumBuckets: true,
   haveMadmaxNumBucketsPhase3: false,
   haveMadmaxThreadMultiplier: false,
   haveMadmaxTempToggle: false,
@@ -72,7 +72,7 @@ export const bladebit2Defaults: PlotterDefaults = {
   plotterName: PlotterName.BLADEBIT2,
   plotSize: 32,
   numThreads: 0,
-  numBuckets: undefined,
+  numBuckets: 256,
   madmaxNumBucketsPhase3: undefined,
   madmaxThreadMultiplier: undefined,
   madmaxWaitForCopy: undefined,
