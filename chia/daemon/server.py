@@ -220,7 +220,7 @@ class WebSocketServer:
 
         while True:
             msg = await ws.receive()
-            self.log.debug(f"Received message: {msg}")
+            self.log.debug("Received message: %s", msg)
             if msg.type == WSMsgType.TEXT:
                 try:
                     decoded = json.loads(msg.data)
@@ -613,7 +613,7 @@ class WebSocketServer:
 
         response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -672,7 +672,7 @@ class WebSocketServer:
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -1401,13 +1401,13 @@ def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
     return result
 
 
-def main(argv) -> int:
+def main() -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.keychain import Keychain
 
-    wait_for_unlock = "--wait-for-unlock" in argv and Keychain.is_keyring_locked()
+    wait_for_unlock = "--wait-for-unlock" in sys.argv[1:] and Keychain.is_keyring_locked()
     return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

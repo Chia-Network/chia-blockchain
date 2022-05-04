@@ -30,7 +30,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -632,7 +632,7 @@ class TestWalletRpc:
 
             # Transfer DID
             addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-            res = await client.did_transfer_did(did_wallet_id_0, addr, 0)
+            res = await client.did_transfer_did(did_wallet_id_0, addr, 0, True)
             assert res["success"]
 
             await asyncio.sleep(1)
@@ -726,7 +726,37 @@ class TestWalletRpc:
             assert sk_dict["used_for_pool_rewards"] is True
 
             # Check unknown key
-            sk_dict = await client.check_delete_key(123456)
+            sk_dict = await client.check_delete_key(123456, 10)
+            assert sk_dict["fingerprint"] == 123456
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is False
+
+            # Add in observer reward addresses into farmer and pool for testing delete key checks
+            # set farmer to first private key
+            sk = await wallet_node.get_key_for_fingerprint(pks[0])
+            test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
+            with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
+                test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+                # set pool to second private key
+                sk = await wallet_node.get_key_for_fingerprint(pks[1])
+                test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
+                test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
+                save_config(wallet_node.root_path, "config.yaml", test_config)
+
+            # Check first key
+            sk_dict = await client.check_delete_key(pks[0])
+            assert sk_dict["fingerprint"] == pks[0]
+            assert sk_dict["used_for_farmer_rewards"] is True
+            assert sk_dict["used_for_pool_rewards"] is False
+
+            # Check second key
+            sk_dict = await client.check_delete_key(pks[1])
+            assert sk_dict["fingerprint"] == pks[1]
+            assert sk_dict["used_for_farmer_rewards"] is False
+            assert sk_dict["used_for_pool_rewards"] is True
+
+            # Check unknown key
+            sk_dict = await client.check_delete_key(123456, 10)
             assert sk_dict["fingerprint"] == 123456
             assert sk_dict["used_for_farmer_rewards"] is False
             assert sk_dict["used_for_pool_rewards"] is False

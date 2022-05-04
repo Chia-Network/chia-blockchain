@@ -97,13 +97,12 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 201)
         await time_out_assert(15, did_wallet_1.get_pending_change_balance, 0)
 
-        filename = "test.backup"
-        did_wallet_1.create_backup(filename)
+        backup_data = did_wallet_1.create_backup()
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
-                wallet_node_2.wallet_state_manager, wallet_2, filename
+                wallet_node_2.wallet_state_manager, wallet_2, backup_data
             )
         coins = await did_wallet_1.select_coins(1)
         coin = coins.copy().pop()
@@ -112,8 +111,8 @@ class TestDIDWallet:
         pubkey = bytes(
             (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
         )
-        message_spend_bundle = await did_wallet_0.create_attestment(
-            did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, "test.attest"
+        message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
+            did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey
         )
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_0.id()
@@ -129,7 +128,7 @@ class TestDIDWallet:
         (
             test_info_list,
             test_message_spend_bundle,
-        ) = await did_wallet_2.load_attest_files_for_recovery_spend(["test.attest"])
+        ) = await did_wallet_2.load_attest_files_for_recovery_spend([attest_data])
         assert message_spend_bundle == test_message_spend_bundle
 
         spend_bundle = await did_wallet_2.recovery_spend(
@@ -204,7 +203,7 @@ class TestDIDWallet:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager, wallet, uint64(101)
             )
-
+        assert did_wallet.wallet_info.name == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -259,25 +258,25 @@ class TestDIDWallet:
         coins = await did_wallet_3.select_coins(1)
         coin = coins.pop()
 
-        filename = "test.backup"
-        did_wallet_3.create_backup(filename)
+        backup_data = did_wallet_3.create_backup()
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
                 wallet_node.wallet_state_manager,
                 wallet,
-                filename,
+                backup_data,
             )
+        assert did_wallet_4.wallet_info.name == "Profile 2"
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
         new_ph = await did_wallet_4.get_new_did_inner_hash()
-        message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test1.attest")
+        message_spend_bundle, attest1 = await did_wallet.create_attestment(coin.name(), new_ph, pubkey)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        message_spend_bundle2 = await did_wallet_2.create_attestment(coin.name(), new_ph, pubkey, "test2.attest")
+        message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(coin.name(), new_ph, pubkey)
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
         )
@@ -289,7 +288,7 @@ class TestDIDWallet:
         (
             test_info_list,
             test_message_spend_bundle,
-        ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test1.attest", "test2.attest"])
+        ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1, attest2])
         assert message_spend_bundle == test_message_spend_bundle
 
         for i in range(1, num_blocks):
@@ -355,15 +354,15 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
+        print(f"Old coin id {coin.name()}")
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         try:
             spend_bundle = await did_wallet.recovery_spend(
                 coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
             )
-            additions = spend_bundle.additions()
-            assert additions == []
         except Exception:
+            # We expect a CLVM 80 error for this test
             pass
         else:
             assert False
@@ -443,14 +442,13 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
 
         # DID Wallet 2 recovers into DID Wallet 3 with new innerpuz
-        filename = "test.backup"
-        did_wallet_2.create_backup(filename)
+        backup_data = did_wallet_2.create_backup()
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
                 wallet_node.wallet_state_manager,
                 wallet,
-                filename,
+                backup_data,
             )
         new_ph = await did_wallet_3.get_new_did_inner_hash()
         coins = await did_wallet_2.select_coins(1)
@@ -458,7 +456,7 @@ class TestDIDWallet:
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
-        message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
+        attest_data = (await did_wallet.create_attestment(coin.name(), new_ph, pubkey))[1]
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -469,7 +467,7 @@ class TestDIDWallet:
         (
             info,
             message_spend_bundle,
-        ) = await did_wallet_3.load_attest_files_for_recovery_spend(["test.attest"])
+        ) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
         await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
@@ -485,14 +483,13 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 101)
 
         # DID Wallet 1 recovery spends into DID Wallet 4
-        filename = "test.backup"
-        did_wallet.create_backup(filename)
+        backup_data = did_wallet.create_backup()
 
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_4 = await DIDWallet.create_new_did_wallet_from_recovery(
                 wallet_node_2.wallet_state_manager,
                 wallet2,
-                filename,
+                backup_data,
             )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
@@ -501,7 +498,7 @@ class TestDIDWallet:
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey
-        await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, "test.attest")
+        attest1 = (await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey))[1]
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
         )
@@ -513,7 +510,7 @@ class TestDIDWallet:
         (
             test_info_list,
             test_message_spend_bundle,
-        ) = await did_wallet_4.load_attest_files_for_recovery_spend(["test.attest"])
+        ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
         await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -531,8 +528,12 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
 
+    @pytest.mark.parametrize(
+        "with_recovery",
+        [True, False],
+    )
     @pytest.mark.asyncio
-    async def test_did_transfer(self, two_wallet_nodes):
+    async def test_did_transfer(self, two_wallet_nodes, with_recovery):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -574,6 +575,7 @@ class TestDIDWallet:
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
             )
+        assert did_wallet_1.wallet_info.name == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -584,7 +586,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
-        await did_wallet_1.transfer_did(new_puzhash, uint64(0))
+        await did_wallet_1.transfer_did(new_puzhash, uint64(0), with_recovery)
         print(f"Original launch_id {did_wallet_1.did_info.origin_coin.name()}")
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -606,8 +608,9 @@ class TestDIDWallet:
         )
         did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
-        # assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
-        # assert did_wallet_1.did_info.num_of_backup_ids_needed == did_wallet_2.did_info.num_of_backup_ids_needed
+        if with_recovery:
+            assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
+            assert did_wallet_1.did_info.num_of_backup_ids_needed == did_wallet_2.did_info.num_of_backup_ids_needed
         metadata = json.loads(did_wallet_1.did_info.metadata)
         assert metadata["Twitter"] == "Test"
         assert metadata["GitHub"] == "测试"

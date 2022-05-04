@@ -13,7 +13,7 @@ from chia.types.blockchain_format.coin import Coin
 @dataclass(frozen=True)
 class DIDInfo(Streamable):
     origin_coin: Optional[Coin]  # Coin ID of this coin is our DID
-    backup_ids: List[bytes]
+    backup_ids: List[bytes32]
     num_of_backup_ids_needed: uint64
     parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_inner: Optional[Program]  # represents a Program as bytes

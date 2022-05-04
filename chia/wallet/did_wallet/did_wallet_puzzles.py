@@ -21,49 +21,85 @@ DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
 
 def create_innerpuz(
     p2_puzzle: Program,
-    identities: List[bytes],
+    recovery_list: List[bytes32],
     num_of_backup_ids_needed: uint64,
-    singleton_id: bytes32,
+    launcher_id: bytes32,
     metadata: Program = Program.to([]),
 ) -> Program:
-    backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    """
+    Create DID inner puzzle
+    :param p2_puzzle: Standard P2 puzzle
+    :param recovery_list: A list of DIDs used for the recovery
+    :param num_of_backup_ids_needed: Need how many DIDs for the recovery
+    :param launcher_id: ID of the launch coin
+    :param metadata: DID customized metadata
+    :return: DID inner puzzle
+    """
+    backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(p2_puzzle, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata)
 
 
 def get_inner_puzhash_by_p2(
     p2_puzhash: bytes32,
-    identities: List[bytes],
+    recovery_list: List[bytes32],
     num_of_backup_ids_needed: uint64,
-    singleton_id: bytes32,
+    launcher_id: bytes32,
     metadata: Program = Program.to([]),
 ) -> bytes32:
-    backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
+    """
+    Calculate DID inner puzzle hash based on a P2 puzzle hash
+    :param p2_puzhash: P2 puzzle hash
+    :param recovery_list: A list of DIDs used for the recovery
+    :param num_of_backup_ids_needed: Need how many DIDs for the recovery
+    :param launcher_id: ID of the launch coin
+    :param metadata: DID customized metadata
+    :return: DID inner puzzle hash
+    """
+    backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(
         p2_puzhash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
     ).get_tree_hash(p2_puzhash)
 
 
-def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
+def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
+    """
+    Create a full puzzle of DID
+    :param innerpuz: DID inner puzzle
+    :param launcher_id:
+    :return: DID full puzzle
+    """
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((mod_hash, (genesis_id, LAUNCHER_PUZZLE.get_tree_hash())))
+    singleton_struct = Program.to((mod_hash, (launcher_id, LAUNCHER_PUZZLE.get_tree_hash())))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
 def is_did_innerpuz(inner_f: Program) -> bool:
     """
-    You may want to generalize this if different `CAT_MOD` templates are supported.
+    Check if a puzzle is a DID inner mode
+    :param inner_f: puzzle
+    :return: Boolean
     """
     return inner_f == DID_INNERPUZ_MOD
 
 
 def is_did_core(inner_f: Program) -> bool:
+    """
+    Check if a puzzle is a singleton mod
+    :param inner_f: puzzle
+    :return: Boolean
+    """
     return inner_f == SINGLETON_TOP_LAYER_MOD
 
 
 def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Program, Program, Program]]:
+    """
+    Uncurry a DID inner puzzle
+    :param puzzle: DID puzzle
+    :return: Curried parameters
+    """
     r = puzzle.uncurry()
     if r is None:
         return r
@@ -76,6 +112,11 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program, Progra
 
 
 def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
+    """
+    Extract the inner puzzle of a singleton
+    :param puzzle: Singleton puzzle
+    :return: Inner puzzle
+    """
     r = puzzle.uncurry()
     if r is None:
         return None
@@ -87,14 +128,35 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
 
 
 def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32, pubkey: G1Element) -> Program:
-    puzstring = f"(q . ((0x{ConditionOpcode.CREATE_COIN_ANNOUNCEMENT.hex()} 0x{recovering_coin_id.hex()}) (0x{ConditionOpcode.AGG_SIG_UNSAFE.hex()} 0x{bytes(pubkey).hex()} 0x{newpuz.hex()})))"  # noqa
-    puz = assemble(puzstring)
-    return Program.to(puz)
+    """
+    Create attestment message puzzle
+    :param recovering_coin_id: ID of the DID coin needs to recover
+    :param newpuz: New wallet puzzle hash
+    :param pubkey: New wallet pubkey
+    :return: Message puzzle
+    """
+    return Program.to(
+        (
+            1,
+            [
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, recovering_coin_id],
+                [ConditionOpcode.AGG_SIG_UNSAFE, bytes(pubkey), newpuz],
+            ],
+        )
+    )
 
 
 def create_spend_for_message(
     parent_of_message: bytes32, recovering_coin: bytes32, newpuz: bytes32, pubkey: G1Element
 ) -> CoinSpend:
+    """
+    Create a CoinSpend for a atestment
+    :param parent_of_message: Parent coin ID
+    :param recovering_coin: ID of the DID coin needs to recover
+    :param newpuz: New wallet puzzle hash
+    :param pubkey: New wallet pubkey
+    :return: CoinSpend
+    """
     puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
@@ -104,7 +166,9 @@ def create_spend_for_message(
 
 def match_did_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     """
-    Given a puzzle test if it's an DID and, if it is, return the curried arguments
+        Given a puzzle test if it's a DID, if it is, return the curried arguments
+    :param puzzle: Puzzle
+    :return: Curried parameters
     """
     try:
         mod, curried_args = puzzle.uncurry()
@@ -120,8 +184,12 @@ def match_did_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     return False, iter(())
 
 
-# inspect puzzle and check it is a DID puzzle
 def check_is_did_puzzle(puzzle: Program) -> bool:
+    """
+    Check if a puzzle is a DID puzzle
+    :param puzzle: Puzzle
+    :return: Boolean
+    """
     r = puzzle.uncurry()
     if r is None:
         return r

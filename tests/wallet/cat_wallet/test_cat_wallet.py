@@ -98,6 +98,46 @@ class TestCATWallet:
         assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
         assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
+    @pytest.mark.asyncio
+    async def test_cat_creation_unique_lineage_store(self, self_hostname, two_wallet_nodes):
+        num_blocks = 3
+        full_nodes, wallets = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node, wallet_server = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks + 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+
+        async with wallet_node.wallet_state_manager.lock:
+            cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            )
+            cat_wallet_2: CATWallet = await CATWallet.create_new_cat_wallet(
+                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(200)
+            )
+
+        proofs_1 = await cat_wallet_1.lineage_store.get_all_lineage_proofs()
+        proofs_2 = await cat_wallet_2.lineage_store.get_all_lineage_proofs()
+        assert len(proofs_1) == len(proofs_2)
+        assert proofs_1 != proofs_2
+        assert cat_wallet_1.lineage_store.table_name != cat_wallet_2.lineage_store.table_name
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],

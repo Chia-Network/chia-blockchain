@@ -3,7 +3,9 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
+from chia.cmds.plotnft import validate_fee
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.transaction_sorting import SortKey
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -65,6 +67,25 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=None,
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
+@click.option(
+    "--sort-by-height",
+    "sort_key",
+    flag_value=SortKey.CONFIRMED_AT_HEIGHT,
+    help="Sort transactions by height",
+)
+@click.option(
+    "--sort-by-relevance",
+    "sort_key",
+    flag_value=SortKey.RELEVANCE,
+    default=True,
+    help="Sort transactions by {confirmed, height, time}",
+)
+@click.option(
+    "--reverse",
+    is_flag=True,
+    default=False,
+    help="Reverse the transaction ordering",
+)
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -73,8 +94,19 @@ def get_transactions_cmd(
     limit: int,
     verbose: bool,
     paginate: Optional[bool],
+    sort_key: SortKey,
+    reverse: bool,
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "limit": limit}
+    extra_params = {
+        "id": id,
+        "verbose": verbose,
+        "offset": offset,
+        "paginate": paginate,
+        "limit": limit,
+        "sort_key": sort_key,
+        "reverse": reverse,
+    }
+
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
@@ -360,3 +392,64 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     from .wallet_funcs import execute_with_wallet, cancel_offer
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
+
+
+@wallet_cmd.group("did", short_help="DID related actions")
+def did_cmd():
+    pass
+
+
+@did_cmd.command("create", short_help="Create DID wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-n", "--name", help="Set the DID wallet name", type=str)
+@click.option(
+    "-a",
+    "--amount",
+    help="Set the DID amount in mojos. Value must be an odd number.",
+    type=int,
+    default=1,
+    show_default=True,
+)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def did_create_wallet_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: Optional[int], fee: Optional[int]
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, create_did_wallet
+
+    extra_params = {"amount": amount, "fee": fee, "name": name}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
+
+
+@did_cmd.command("set_name", short_help="Set DID wallet name")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
+@click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
+def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, did_set_wallet_name
+
+    extra_params = {"wallet_id": id, "name": name}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_set_wallet_name))
