@@ -3,6 +3,7 @@ import type { Plot, FarmerConnection, RewardTargets, SignagePoint, Pool, Farming
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import api, { baseQuery } from '../api';
 
+const MAX_SIGNAGE_POINTS = 500;
 export const apiWithTag = api.enhanceEndpoints({addTagTypes: ['Harvesters', 'RewardTargets', 'FarmerConnections', 'SignagePoints', 'PoolLoginLink', 'Pools', 'PayoutInstructions', 'HarvesterPlots', 'HarvesterPlotsInvalid', 'HarvestersSummary', 'HarvesterPlotsKeysMissing', 'HarvesterPlotsDuplicates']})
 
 export const farmerApi = apiWithTag.injectEndpoints({
@@ -276,6 +277,9 @@ export const farmerApi = apiWithTag.injectEndpoints({
         service: Farmer,
         onUpdate: (draft, data) => {
           draft.unshift(data);
+          if (draft.length > MAX_SIGNAGE_POINTS) {
+            draft.splice(MAX_SIGNAGE_POINTS, draft.length - MAX_SIGNAGE_POINTS);
+          }
         },
       }]),
     }),
