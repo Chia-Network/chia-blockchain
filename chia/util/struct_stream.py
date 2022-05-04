@@ -43,7 +43,7 @@ class StructStream(int):
     # This is just a partial exposure of the underlying int constructor.  Liskov...
     # https://github.com/python/typeshed/blob/5d07ebc864577c04366fcc46b84479dbec033921/stdlib/builtins.pyi#L181-L185
     def __init__(self, value: Union[str, bytes, SupportsInt, SupportsIndex, SupportsTrunc]) -> None:
-        super().__init__(value)
+        super().__init__()
         if not (self.MINIMUM <= self < self.MAXIMUM_EXCLUSIVE):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
