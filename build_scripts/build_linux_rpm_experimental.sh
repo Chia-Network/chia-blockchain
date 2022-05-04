@@ -1,11 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
+elif [ "$1" = "amd64" ]; then
+	#PLATFORM="$1"
+	REDHAT_PLATFORM="x86_64"
 fi
-
-PLATFORM="$1"
 
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
@@ -83,9 +85,9 @@ ls -alh dist/
 mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
-mv dist/chia-"$CHIA_INSTALLER_VERSION".deb dist/chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".deb
-DEB_NAME=chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".deb
+mv dist/chia-"$CHIA_INSTALLER_VERSION".rpm dist/chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".rpm
+RPM_NAME=chia-"$CHIA_INSTALLER_VERSION"-1."$REDHAT_PLATFORM".rpm
 rm -rf final_installer
 mkdir final_installer
-mv dist/"$DEB_NAME" final_installer/
+mv dist/"$RPM_NAME" final_installer/
 ls final_installer/
