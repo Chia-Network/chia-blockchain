@@ -529,6 +529,8 @@ class TestWeightProof:
         header_cache, height_to_hash, block_records, summaries = await load_blocks_dont_validate(default_1000_blocks)
         block = header_cache[height_to_hash[0]]
         block_rec = block_records[height_to_hash[0]]
+
+        block1 = header_cache[height_to_hash[0]]
         cc_ip_iters = block_rec.ip_iters(test_constants)
         with ProcessPoolExecutor() as executor:
             compressed_output = compress_output(
@@ -540,6 +542,26 @@ class TestWeightProof:
                 cc_ip_iters,
                 executor,
             )
+
+            compressed_output_invalid = compress_output(
+                test_constants.DISCRIMINANT_SIZE_BITS,
+                block1.reward_chain_block.challenge_chain_ip_vdf.challenge,
+                block.reward_chain_block.challenge_chain_ip_vdf.output,
+                block1.reward_chain_block.challenge_chain_ip_vdf.output,
+                block1.challenge_chain_ip_proof,
+                cc_ip_iters,
+                executor,
+            )
+
+        invalid_res, invalid_output = verify_compressed_vdf(
+            test_constants,
+            block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+            ClassgroupElement.get_default_element(),
+            B.from_hex(compressed_output_invalid.result()),
+            block.challenge_chain_ip_proof,
+            cc_ip_iters,
+        )
+        assert not invalid_res
         valid, output = verify_compressed_vdf(
             test_constants,
             block.reward_chain_block.challenge_chain_ip_vdf.challenge,
@@ -548,9 +570,7 @@ class TestWeightProof:
             block.challenge_chain_ip_proof,
             cc_ip_iters,
         )
-
         assert valid
-        assert output == block.reward_chain_block.challenge_chain_ip_vdf.output
 
     # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
