@@ -20,6 +20,7 @@ class SizedBytes(bytes):
     _size = 0
 
     def __init__(self, v) -> None:
+        super().__init__(v)
         if len(self) != self._size:
             raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
 
