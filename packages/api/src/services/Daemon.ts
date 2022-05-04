@@ -186,7 +186,7 @@ export default class Daemon extends Service {
     // bladebitNoCpuAffinity
     if(bb_no_cpu_affinity) args.no_cpu_affinity = bb_no_cpu_affinity;
     // bladebit2Cache
-    if(bb2_cache) args.cache = bb2_cache;
+    if(bb2_cache) args.cache = `${bb2_cache}G`;
     // bladebit2F1Threads
     if(bb2_f1_threads) args.f1_threads = bb2_f1_threads;
     // bladebit2FpThreads
