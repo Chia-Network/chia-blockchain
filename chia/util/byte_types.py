@@ -1,4 +1,3 @@
-import io
 from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")

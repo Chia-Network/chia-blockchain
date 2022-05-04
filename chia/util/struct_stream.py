@@ -1,4 +1,3 @@
-import io
 import struct
 from typing import Any, BinaryIO, SupportsInt, Type, TypeVar, Union
 

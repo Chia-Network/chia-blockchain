@@ -1,7 +1,6 @@
-import struct
 from typing import Any, BinaryIO
 
-from chia.util.struct_stream import calculate_data, StructStream
+from chia.util.struct_stream import StructStream, calculate_data
 
 
 @calculate_data
