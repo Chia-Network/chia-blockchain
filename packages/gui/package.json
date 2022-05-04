@@ -19,6 +19,10 @@
       "target": "nsis",
       "icon": "src/assets/img/chia.ico"
     },
+    "linux": {
+      "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
+      "icon": "src/assets/img/chia.icns"
+    },
     "nsis": {
       "oneClick": false,
       "deleteAppDataOnUninstall": true,
