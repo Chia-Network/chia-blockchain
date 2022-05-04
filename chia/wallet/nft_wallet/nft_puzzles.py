@@ -142,7 +142,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         uncurried_nft.owner_did.as_python(),
         uint64(uncurried_nft.trade_price_percentage.as_int()),
         data_uris,
-        uncurried_nft.data_hash.as_python().hex(),
+        str(uncurried_nft.data_hash.as_python(), "utf-8"),
         [],
         "",
         [],

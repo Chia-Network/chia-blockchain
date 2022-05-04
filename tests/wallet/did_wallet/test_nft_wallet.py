@@ -110,7 +110,7 @@ class TestNFTWallet:
         metadata = Program.to(
             [
                 ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+                ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
         tr = await nft_wallet_0.generate_new_nft(metadata, uint64(2000), ph)
@@ -323,7 +323,7 @@ class TestNFTWallet:
         metadata = Program.to(
             [
                 ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+                ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
         tr = await nft_wallet_0.generate_new_nft(metadata, 2000, ph)

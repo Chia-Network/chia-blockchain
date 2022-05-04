@@ -151,7 +151,7 @@ class TestNFTRPC:
             {
                 "wallet_id": nft_wallet_id_0,
                 "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
-                "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+                "hash": "c520c99955118784734af730590cf74e9c8961b9036b772052597fdb5206ee40",
                 "artist_percentage": 2000,
                 "artist_address": ph2,
             }
@@ -210,6 +210,7 @@ class TestNFTRPC:
         assert len(val["nft_list"]) == 1
         assert val["nft_list"][0].did_owner == did_1
         assert val["nft_list"][0].data_uris[0] == "https://www.chia.net/img/branding/chia-logo.svg"
+        assert val["nft_list"][0].data_hash == "c520c99955118784734af730590cf74e9c8961b9036b772052597fdb5206ee40"
         # Test adding a url
         # TODO: un comment out this code when DID isn't broken
 
