@@ -17,6 +17,8 @@ def calculate_data(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
 
     cls.SIZE = struct.calcsize(cls.PACK)
     cls.BITS = cls.SIZE * 8
+    # The packing strings are lower case for the signed types and upper case for the unsigned types.
+    # https://docs.python.org/3.10/library/struct.html#format-characters
     cls.SIGNED = cls.PACK == cls.PACK.lower()
     if cls.SIGNED:
         cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
