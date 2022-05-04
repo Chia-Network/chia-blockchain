@@ -77,7 +77,7 @@
         (parse_trade_prices_list CURRY_PARAMS trade_prices_list (f (r SINGLETON_STRUCT)))
       )
     )
-  )
+    )
 
   ; once we find 'u' we don't need to continue looping
     (defun add_url (METADATA new_url)
