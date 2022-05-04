@@ -801,14 +801,14 @@ class WebSocketServer:
         no_cpu_affinity = request.get("no_cpu_affinity", False)
         # memo = request["memo"]
         t1 = request["t"]  # Temp directory
-        t2 = request["t2"]  # Temp2 directory
-        u = request["u"]  # Buckets
-        cache = request["cache"]
-        f1_threads = request["f1_threads"]
-        fp_threads = request["fp_threads"]
-        c_threads = request["c_threads"]
-        p2_threads = request["p2_threads"]
-        p3_threads = request["p3_threads"]
+        t2 = request.get("t2")  # Temp2 directory
+        u = request.get("u")  # Buckets
+        cache = request.get("cache")
+        f1_threads = request.get("f1_threads")
+        fp_threads = request.get("fp_threads")
+        c_threads = request.get("c_threads")
+        p2_threads = request.get("p2_threads")
+        p3_threads = request.get("p3_threads")
 
         command_args: List[str] = []
 
@@ -819,8 +819,7 @@ class WebSocketServer:
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
 
-        if t1:
-            command_args.append(f"-t{t1}")
+        command_args.append(f"-t{t1}")
         if t2:
             command_args.append(f"-2{t2}")
         if u:
