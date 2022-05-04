@@ -1,10 +1,11 @@
 import aiohttp
 import os
+import logging
 from pathlib import Path
 from typing import List, Optional
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode
+from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, Root
 from chia.util.ints import uint16
 
 
@@ -40,6 +41,22 @@ async def insert_into_data_store(
     await data_store.insert_batch_root(tree_id, root_hash, Status.COMMITTED)
 
 
+async def write_file_for_root(
+    data_store: DataStore,
+    tree_id: bytes32,
+    root: Root,
+    foldername: str,
+) -> None:
+    if root.node_hash is not None:
+        node_hash = root.node_hash
+    else:
+        node_hash = bytes32([0] * 32)  # todo change
+    filename_full_tree = os.path.join(foldername, get_full_tree_filename(tree_id, node_hash, root.generation))
+    filename_diff_tree = os.path.join(foldername, get_delta_filename(tree_id, node_hash, root.generation))
+    await data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
+    await data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
+
+
 async def insert_from_delta_file(
     data_store: DataStore,
     tree_id: bytes32,
@@ -48,6 +65,7 @@ async def insert_from_delta_file(
     ip: str,
     port: uint16,
     client_foldername: Path,
+    log: logging.Logger,
 ) -> bool:
     for root_hash in root_hashes:
         existing_generation += 1
@@ -70,11 +88,18 @@ async def insert_from_delta_file(
                 # It's possible the wallet record to be created by a proof of inclusion, not a batch update,
                 # hence the delta file might be missing.
                 open(filename, "ab").close()
-                pass
-            raise
+            else:
+                raise
 
-        await insert_into_data_store(
-            data_store, tree_id, None if root_hash == bytes32([0] * 32) else root_hash, filename
-        )
+        try:
+            await insert_into_data_store(
+                data_store, tree_id, None if root_hash == bytes32([0] * 32) else root_hash, filename
+            )
+        except Exception:
+            os.remove(filename)
+            await data_store.rollback_to_generation(tree_id, existing_generation - 1)
+            raise
+        await data_store.set_validated_wallet_generation(tree_id, existing_generation)
+        log.info(f"Successfully inserted generation {existing_generation} to tree_id {tree_id}.")
 
     return True

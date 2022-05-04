@@ -1,4 +1,3 @@
-import os
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
@@ -6,7 +5,7 @@ import aiosqlite
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, Root, DiffData
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -17,11 +16,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
-from chia.data_layer.download_data import (
-    insert_from_delta_file,
-    get_full_tree_filename,
-    get_delta_filename,
-)
+from chia.data_layer.download_data import insert_from_delta_file
 from chia.data_layer.data_layer_server import DataLayerServer
 
 
@@ -63,12 +58,7 @@ class DataLayer:
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
         self.server_files_location = path_from_root(root_path, server_files_replaced)
-        client_download_replaced: str = config.get(
-            "client_download_location", "data_layer/db/client_downloaded_files_CHALLENGE"
-        ).replace("CHALLENGE", config["selected_network"])
-        self.client_download_location = path_from_root(root_path, client_download_replaced)
         mkdir(self.server_files_location)
-        mkdir(self.client_download_location)
         self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
 
@@ -119,28 +109,24 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        await self.data_store.insert_batch(tree_id, changelist)
-        root = await self.data_store.get_tree_root(tree_id=tree_id)
-        # todo return empty node hash from get_tree_root
-        if root.node_hash is not None:
-            node_hash = root.node_hash
-        else:
-            node_hash = self.none_bytes  # todo change
-        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-        assert transaction_record
-        # Write the server files.
-        generation = root.generation
-        filename_full_tree = os.path.join(
-            self.server_files_location, get_full_tree_filename(tree_id, node_hash, generation)
-        )
-        filename_diff_tree = os.path.join(
-            self.server_files_location, get_delta_filename(tree_id, node_hash, generation)
-        )
-        await self.data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
-        await self.data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
-        # todo register callback to change status in data store
-        # await self.data_store.change_root_status(root, Status.COMMITTED)
-        return transaction_record
+        old_root = await self.data_store.get_tree_root(tree_id=tree_id)
+        rollback_generation = 0 if old_root is None else old_root.generation
+        try:
+            await self.data_store.insert_batch(tree_id, changelist)
+            root = await self.data_store.get_tree_root(tree_id=tree_id)
+            # todo return empty node hash from get_tree_root
+            if root.node_hash is not None:
+                node_hash = root.node_hash
+            else:
+                node_hash = self.none_bytes  # todo change
+            transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
+            assert transaction_record
+            # todo register callback to change status in data store
+            # await self.data_store.change_root_status(root, Status.COMMITTED)
+            return transaction_record
+        except Exception:
+            await self.data_store.rollback_to_generation(tree_id, rollback_generation)
+            raise
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
@@ -195,23 +181,10 @@ class DataLayer:
         if singleton_record.generation == uint32(0):
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
-        old_root: Optional[Root] = None
-        try:
-            old_root = await self.data_store.get_tree_root(tree_id=tree_id)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            pass
         wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
-        assert int(wallet_current_generation) <= singleton_record.generation
-        # Wallet generation didn't change, so no new data committed on chain.
         if wallet_current_generation is not None and uint32(wallet_current_generation) == singleton_record.generation:
             self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
             return
-
-        to_check = await self.wallet_rpc.dl_history(
-            launcher_id=tree_id, min_generation=uint32(wallet_current_generation + 1)
-        )
 
         self.log.info(
             f"Downloading files {subscription.tree_id}. "
@@ -220,6 +193,17 @@ class DataLayer:
         )
 
         for ip, port in zip(subscription.ip, subscription.port):
+            wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
+            if int(wallet_current_generation) == singleton_record.generation:
+                return
+            assert int(wallet_current_generation) < singleton_record.generation
+
+            to_check = await self.wallet_rpc.dl_history(
+                launcher_id=tree_id,
+                min_generation=uint32(wallet_current_generation + 1),
+                max_generation=singleton_record.generation,
+            )
+
             try:
                 success = await insert_from_delta_file(
                     self.data_store,
@@ -228,7 +212,8 @@ class DataLayer:
                     [record.root for record in to_check],
                     ip,
                     port,
-                    self.client_download_location,
+                    self.server_files_location,
+                    self.log,
                 )
                 if success:
                     self.log.info(
@@ -236,18 +221,13 @@ class DataLayer:
                         f"Wallet generation saved: {singleton_record.generation}. "
                         f"Root hash saved: {singleton_record.root}."
                     )
-                    await self.data_store.set_validated_wallet_generation(tree_id, int(singleton_record.generation))
                     return
             except asyncio.CancelledError:
                 raise
             except aiohttp.client_exceptions.ClientConnectorError:
                 self.log.warning(f"Server {ip}:{port} unavailable for {tree_id}.")
             except Exception as e:
-                self.log.warning(f"Exception while downloading files for {tree_id}: {e}.")
-
-            rollback_generation = 0 if old_root is None else old_root.generation
-            self.log.warning(f"Rolling back {tree_id} to the last validated state, generation {rollback_generation}.")
-            await self.data_store.rollback_to_generation(tree_id, rollback_generation)
+                self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
     async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> None:
         subscription = Subscription(store_id, ip, port)
