@@ -250,7 +250,7 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
     build_path: str = os.fspath(Path(bladebit_path) / "build")
 
     print("Build bladebit.")
-    if not os.path.exists(bladebit_path):
+    if not os.path.exists(build_path):
         run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
     run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
     run_command(
