@@ -41,7 +41,7 @@ async def insert_into_data_store(
     await data_store.insert_batch_root(tree_id, root_hash, Status.COMMITTED)
 
 
-async def write_file_for_root(
+async def write_files_for_root(
     data_store: DataStore,
     tree_id: bytes32,
     root: Root,
@@ -87,19 +87,29 @@ async def insert_from_delta_file(
                 # If we don't have the delta file, but we have the tree in the past, create an empty delta file.
                 # It's possible the wallet record to be created by a proof of inclusion, not a batch update,
                 # hence the delta file might be missing.
+                log.info(f"Already seen {root_hash} for {tree_id}. Writing an empty delta file.")
                 open(filename, "ab").close()
             else:
                 raise
 
+        log.info(f"Successfully downloaded delta file {filename}.")
         try:
             await insert_into_data_store(
                 data_store, tree_id, None if root_hash == bytes32([0] * 32) else root_hash, filename
             )
+            log.info(
+                f"Successfully inserted hash {root_hash} from delta file. "
+                f"Generation: {existing_generation}. Tree id: {tree_id}."
+            )
+
+            filename_full_tree = get_full_tree_filename(tree_id, root_hash, existing_generation)
+            root = await data_store.get_tree_root(tree_id=tree_id)
+            await data_store.write_tree_to_file(root, root_hash, tree_id, False, filename_full_tree)
+            log.info(f"Successfully written full tree filename {filename_full_tree}.")
         except Exception:
             os.remove(filename)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
         await data_store.set_validated_wallet_generation(tree_id, existing_generation)
-        log.info(f"Successfully inserted generation {existing_generation} to tree_id {tree_id}.")
 
     return True
