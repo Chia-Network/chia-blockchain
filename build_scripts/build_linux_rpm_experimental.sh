@@ -6,7 +6,7 @@ if [ ! "$1" ]; then
 	exit 1
 elif [ "$1" = "amd64" ]; then
 	#PLATFORM="$1"
-	REDHAT_PLATFORM="x86_64"
+export REDHAT_PLATFORM="x86_64"
 fi
 
 pip install setuptools_scm
@@ -85,8 +85,8 @@ ls -alh dist/
 mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
-mv dist/chia-"$CHIA_INSTALLER_VERSION".rpm dist/chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".rpm
-RPM_NAME=chia-"$CHIA_INSTALLER_VERSION"-1."$REDHAT_PLATFORM".rpm
+RPM_NAME=chia-blockchain-"$CHIA_INSTALLER_VERSION"-1."$REDHAT_PLATFORM".rpm
+mv dist/chia-"$CHIA_INSTALLER_VERSION".rpm dist/"$RPM_NAME"
 rm -rf final_installer
 mkdir final_installer
 mv dist/"$RPM_NAME" final_installer/

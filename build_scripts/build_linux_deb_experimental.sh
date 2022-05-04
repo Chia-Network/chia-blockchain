@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
@@ -83,8 +84,8 @@ ls -alh dist/
 mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
-mv dist/chia-"$CHIA_INSTALLER_VERSION".deb dist/chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".deb
-DEB_NAME=chia-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".deb
+DEB_NAME=chia-blockchain-"$CHIA_INSTALLER_VERSION"_"$PLATFORM".deb
+mv dist/chia-"$CHIA_INSTALLER_VERSION".deb dist/"$DEB_NAME"
 rm -rf final_installer
 mkdir final_installer
 mv dist/"$DEB_NAME" final_installer/
