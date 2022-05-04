@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-import aiohttp
+from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol
 
 from chia.rpc.util import wrap_http_handler
@@ -18,6 +18,7 @@ from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
+max_message_size = 50 * 1024 * 1024  # 50MB
 
 
 class RpcApiProtocol(Protocol):
@@ -35,7 +36,8 @@ class RpcServer:
         self.stop_cb: Callable = stop_cb
         self.log = log
         self.shut_down = False
-        self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.websocket: Optional[ClientWebSocketResponse] = None
+        self.client_session: Optional[ClientSession] = None
         self.service_name = service_name
         self.root_path = root_path
         self.net_config = net_config
@@ -51,6 +53,8 @@ class RpcServer:
         self.shut_down = True
         if self.websocket is not None:
             await self.websocket.close()
+        if self.client_session is not None:
+            await self.client_session.close()
 
     async def _state_changed(self, *args):
         if self.websocket is None:
@@ -93,6 +97,7 @@ class RpcServer:
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
             "/get_routes": self._get_routes,
+            "/healthz": self.healthz,
         }
 
     async def _get_routes(self, request: Dict) -> Dict:
@@ -173,7 +178,7 @@ class RpcServer:
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
-            raise aiohttp.web.HTTPInternalServerError()
+            raise web.HTTPInternalServerError()
         connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
@@ -188,6 +193,11 @@ class RpcServer:
         if self.stop_cb is not None:
             self.stop_cb()
         return {}
+
+    async def healthz(self, request: Dict) -> Dict:
+        return {
+            "success": "true",
+        }
 
     async def ws_api(self, message):
         """
@@ -243,52 +253,52 @@ class RpcServer:
 
         while True:
             msg = await ws.receive()
-            if msg.type == aiohttp.WSMsgType.TEXT:
+            if msg.type == WSMsgType.TEXT:
                 message = msg.data.strip()
                 # self.log.info(f"received message: {message}")
                 await self.safe_handle(ws, message)
-            elif msg.type == aiohttp.WSMsgType.BINARY:
+            elif msg.type == WSMsgType.BINARY:
                 self.log.debug("Received binary data")
-            elif msg.type == aiohttp.WSMsgType.PING:
+            elif msg.type == WSMsgType.PING:
                 self.log.debug("Ping received")
                 await ws.pong()
-            elif msg.type == aiohttp.WSMsgType.PONG:
+            elif msg.type == WSMsgType.PONG:
                 self.log.debug("Pong received")
             else:
-                if msg.type == aiohttp.WSMsgType.CLOSE:
+                if msg.type == WSMsgType.CLOSE:
                     self.log.debug("Closing RPC websocket")
                     await ws.close()
-                elif msg.type == aiohttp.WSMsgType.ERROR:
+                elif msg.type == WSMsgType.ERROR:
                     self.log.error("Error during receive %s" % ws.exception())
-                elif msg.type == aiohttp.WSMsgType.CLOSED:
+                elif msg.type == WSMsgType.CLOSED:
                     pass
 
                 break
 
-        await ws.close()
-
     async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
-        while True:
+        while not self.shut_down:
             try:
-                if self.shut_down:
-                    break
-                async with aiohttp.ClientSession() as session:
-                    async with session.ws_connect(
-                        f"wss://{self_hostname}:{daemon_port}",
-                        autoclose=True,
-                        autoping=True,
-                        heartbeat=60,
-                        ssl_context=self.ssl_context,
-                        max_msg_size=100 * 1024 * 1024,
-                    ) as ws:
-                        self.websocket = ws
-                        await self.connection(ws)
-                    self.websocket = None
-            except aiohttp.ClientConnectorError:
+                self.client_session = ClientSession()
+                self.websocket = await self.client_session.ws_connect(
+                    f"wss://{self_hostname}:{daemon_port}",
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl_context=self.ssl_context,
+                    max_msg_size=max_message_size,
+                )
+                await self.connection(self.websocket)
+            except ClientConnectorError:
                 self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
+            if self.websocket is not None:
+                await self.websocket.close()
+            if self.client_session is not None:
+                await self.client_session.close()
+            self.websocket = None
+            self.client_session = None
             await asyncio.sleep(2)
 
 
@@ -310,17 +320,16 @@ async def start_rpc_server(
     try:
         if max_request_body_size is None:
             max_request_body_size = 1024 ** 2
-        app = aiohttp.web.Application(client_max_size=max_request_body_size)
+        app = web.Application(client_max_size=max_request_body_size)
         rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        app.add_routes(
-            [aiohttp.web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()]
-        )
+        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
+
         if connect_to_daemon:
             daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
-        runner = aiohttp.web.AppRunner(app, access_log=None)
+        runner = web.AppRunner(app, access_log=None)
         await runner.setup()
-        site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
+        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
         await site.start()
     except Exception:
         # TODO: move this logging to it's own PR

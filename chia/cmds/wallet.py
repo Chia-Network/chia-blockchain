@@ -1,7 +1,9 @@
 import sys
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import click
+
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -138,11 +140,21 @@ def send_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+@click.option(
+    "-w",
+    "--wallet_type",
+    help="Choose a specific wallet type to return",
+    type=click.Choice([x.name.lower() for x in WalletType]),
+    default=None,
+)
+def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, print_balances
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {}, print_balances))
+    args: Dict[str, Any] = {}
+    if wallet_type is not None:
+        args["type"] = WalletType[wallet_type.upper()]
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
 @wallet_cmd.command("get_address", short_help="Get a wallet receive address")
@@ -155,8 +167,18 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
-    extra_params = {"id": id}
+@click.option(
+    "-n/-l",
+    "--new-address/--latest-address",
+    help=(
+        "Create a new wallet receive address, or show the most recently created wallet receive address"
+        "  [default: show most recent address]"
+    ),
+    is_flag=True,
+    default=False,
+)
+def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_address: bool) -> None:
+    extra_params = {"id": id, "new_address": new_address}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_address
 

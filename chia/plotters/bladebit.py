@@ -173,7 +173,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
             return
-    plot_keys = asyncio.get_event_loop().run_until_complete(
+    plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
             None,
@@ -209,8 +209,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-m")
     call_args.append(args.finaldir)
     try:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(run_plotter(call_args, progress))
+        asyncio.run(run_plotter(call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")
         print(f"Traceback: {traceback.format_exc()}")

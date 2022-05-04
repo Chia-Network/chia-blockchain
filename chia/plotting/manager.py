@@ -32,16 +32,16 @@ log = logging.getLogger(__name__)
 CURRENT_VERSION: uint16 = uint16(0)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class CacheEntry(Streamable):
     pool_public_key: Optional[G1Element]
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class DiskCache(Streamable):
     version: uint16
     data: List[Tuple[bytes32, CacheEntry]]
@@ -131,6 +131,7 @@ class PlotManager:
     _refresh_thread: Optional[threading.Thread]
     _refreshing_enabled: bool
     _refresh_callback: Callable
+    _initial: bool
 
     def __init__(
         self,
@@ -158,6 +159,7 @@ class PlotManager:
         self._refresh_thread = None
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback  # type: ignore
+        self._initial = True
 
     def __enter__(self):
         self._lock.acquire()
@@ -172,6 +174,7 @@ class PlotManager:
             self.plot_filename_paths.clear()
             self.failed_to_open_filenames.clear()
             self.no_key_filenames.clear()
+            self._initial = True
 
     def set_refresh_callback(self, callback: Callable):
         self._refresh_callback = callback  # type: ignore
@@ -179,6 +182,9 @@ class PlotManager:
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
+
+    def initial_refresh(self):
+        return self._initial
 
     def public_keys_available(self):
         return len(self.farmer_public_keys) and len(self.pool_public_keys)
@@ -198,11 +204,11 @@ class PlotManager:
     def needs_refresh(self) -> bool:
         return time.time() - self.last_refresh_time > float(self.refresh_parameter.interval_seconds)
 
-    def start_refreshing(self):
+    def start_refreshing(self, sleep_interval_ms: int = 1000):
         self._refreshing_enabled = True
         if self._refresh_thread is None or not self._refresh_thread.is_alive():
             self.cache.load()
-            self._refresh_thread = threading.Thread(target=self._refresh_task)
+            self._refresh_thread = threading.Thread(target=self._refresh_task, args=(sleep_interval_ms,))
             self._refresh_thread.start()
 
     def stop_refreshing(self):
@@ -215,11 +221,11 @@ class PlotManager:
         log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
-    def _refresh_task(self):
+    def _refresh_task(self, sleep_interval_ms: int):
         while self._refreshing_enabled:
             try:
                 while not self.needs_refresh() and self._refreshing_enabled:
-                    time.sleep(1)
+                    time.sleep(sleep_interval_ms / 1000.0)
 
                 if not self._refreshing_enabled:
                     return
@@ -258,13 +264,12 @@ class PlotManager:
                         continue
 
                     paths_to_remove: List[str] = []
-                    for path in duplicated_paths:
-                        loaded_plot = Path(path) / Path(plot_filename)
+                    for path_str in duplicated_paths:
+                        loaded_plot = Path(path_str) / Path(plot_filename)
                         if loaded_plot not in plot_paths:
-                            paths_to_remove.append(path)
-                            total_result.removed.append(loaded_plot)
-                    for path in paths_to_remove:
-                        duplicated_paths.remove(path)
+                            paths_to_remove.append(path_str)
+                    for path_str in paths_to_remove:
+                        duplicated_paths.remove(path_str)
 
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
@@ -289,6 +294,9 @@ class PlotManager:
 
                 if self._refreshing_enabled:
                     self._refresh_callback(PlotRefreshEvents.done, total_result)
+
+                # Reset the initial refresh indication
+                self._initial = False
 
                 # Cleanup unused cache
                 available_ids = set([plot_info.prover.get_id() for plot_info in self.plots.values()])

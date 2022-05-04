@@ -8,6 +8,76 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## 1.3.4 Chia blockchain 2022-4-19
+
+## What's Changed
+
+### Added
+
+- Creating an offer now allows you to edit the exchange between two tokens that will auto calculate either the sending token amount or the receiving token amount
+- When making an offer, makers can now create an offer including a fee to help get the transaction into the mempool when an offer is accepted
+- Implemented `chia rpc` command
+- New RPC `get_coin_records_by_hint` - Get coins for a given hint (Thanks @freddiecoleman)
+- Add maker fee to remaining offer RPCs
+- Add healthcheck endpoint to rpc services
+- Optional wallet type parameter for `get_wallets` and `wallet show`
+- Add `select_coins` RPC method by (Thanks @ftruzzi)
+- Added `-n`/`--new-address` option to `chia wallet get_address`
+- New DBWrapper supporting concurrent readers
+- Added `config.yaml` option to run the `full_node` in single-threaded mode
+- Build cli only version of debs
+- Add `/get_stray_cats` API for accessing unknown CATs
+
+### Changed
+
+- Left navigation bar in the GUI has been reorganized and icons have been updated
+- Settings has been moved to the new left hand nav bar
+- Token selection has been changed to a permanent column in the GUI instead of the drop down list along
+- Manage token option has been added at the bottom of the Token column to all users to show/hide token wallets
+- Users can show/hide token wallets. If you have auto-discover cats in config.yaml turned off, new tokens will still show up there, but those wallets won’t get created until the token has been toggled on for the first time
+- CATs now have a link to Taildatabase.com to look up the Asset ID
+- Ongoing improvements to the internal test framework for speed and reliability.
+- Significant harvester protocol update: You will need to update your farmer and all your harvesters as this is a breaking change in the harvester protocol. The new protocol solves many scaling issues. In particular, the protocol supports sending delta changes to the farmer - so for example, adding plots to a farm results in only the new plots being reported. We recommend you update your farmer first.
+- Updated clvm_tools to 0.4.4
+- Updated clvm_tools_rs to 0.1.7
+- Changed code to use by default the Rust implementation of clvm_tools (clvm_tools_rs)
+- Consolidated socket library to aiohttp and removed websockets dependency
+- During node startup, missing blocks in the DB will throw an exception
+- Updated cryptography to 36.0.2
+- The rust implementation of CLVM is now called `chia_rs` instead of `clvm_rs`.
+- Updated code to use improved rust interface `run_generator2`
+- Code improvements to prefer connecting to a local trusted node over untrusted nodes
+
+### Fixed
+
+- Fixed issues with claiming self-pool rewards with and without a fee
+- Fixed wallet creation in edge cases around chain reorgs
+- Harvester: Reuse legacy refresh interval if new params aren't available
+- Fixed typos `lastest` > `latest` (Thanks @daverof)
+- Fixed typo in command line argument parsing for `chia db validate`
+- Improved backwards compatibility for node RPC calls `get_blockchain_state` and `get_additions_and_removals`
+- Fixed issue where `--root_path` option was not honored by `chia configure` CLI command
+- Fixed cases where node DB was not created initially using v2 format
+- Improved error messages from `chia db upgrade`
+- Capitalized display of `Rpc` -> `RPC` in `chia show -s` by (Thanks @hugepants)
+- Improved handling of chain reorgs with atomic rollback for the wallet
+- Handled cases where one node doesn't have the coin we are looking for
+- Fixed timelord installation for Debian
+- Checked for requesting items when creating an offer
+- Minor output formatting/enhancements for `chia wallet show`
+- Fixed typo and index issues in wallet database
+- Used the rust clvm version instead of python in more places
+- Fixed trailing bytes shown in CAT asset ID row when using `chia wallet show`
+- Maintain all chain state during reorg until the new fork has been fully validated
+- Improved performance of `get_coin_records_by_names` by using proper index (Thanks @roseiliend)
+- Improved handling of unknown pending balances
+- Improved plot load times
+
+### Known Issues
+
+- You cannot install and run chia blockchain using the macOS packaged DMG on macOS Mojave (10.14).
+- Pending transactions are not retried correctly and so can be stuck in the pending state unless manually removed and re-submitted
+
 ## 1.3.3 Chia blockchain 2022-4-02
 
 ### Fixed
@@ -48,7 +118,6 @@ for setuptools_scm/PEP 440 reasons.
 
 - Update the database queries for the `block_count_metrics` RPC endpoint to utilize indexes effectively for V2 DBs.
 - Several improvements to tests.
-
 
 ## 1.3.0 Chia blockchain 2022-3-07
 
@@ -139,7 +208,6 @@ for setuptools_scm/PEP 440 reasons.
   - Workaround: Restart the GUI, or clear unconfirmed TX.
 - Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
 
-
 ## 1.2.11 Chia blockchain 2021-11-4
 
 Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
@@ -173,7 +241,6 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
-
 
 ## 1.2.10 Chia blockchain 2021-10-25
 

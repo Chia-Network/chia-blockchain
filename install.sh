@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+
+set -o errexit
 
 USAGE_TEXT="\
 Usage: $0 [-d]
@@ -95,11 +96,11 @@ install_python3_and_sqlite3_from_source_with_yum() {
   sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
   # yum install python3 brings Python3.6 which is not supported by chia
   cd ..
-  echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
-  wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
-  tar xf Python-3.9.9.tgz
-  echo "cd Python-3.9.9"
-  cd Python-3.9.9
+  echo "wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz"
+  wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz
+  tar xf Python-3.9.11.tgz
+  echo "cd Python-3.9.11"
+  cd Python-3.9.11
   echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
   # '| stdbuf ...' seems weird but this makes command outputs stay in single line.
   LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
@@ -132,21 +133,17 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt-get install -y python3-venv openssl
   elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
+    # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
     echo "Installing on Arch Linux."
-    echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
     case $(uname -m) in
-      x86_64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
-        ;;
-      aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
+      x86_64|aarch64)
+        sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
         ;;
       *)
         echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
         exit 1
         ;;
-      esac
-    sudo pacman ${PACMAN_AUTOMATED} -S --needed git
+    esac
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
@@ -196,8 +193,12 @@ find_python() {
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
           if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.9"
+            echo "Chia requires Python version <= 3.9.10"
             echo "Current Python version = $PY3_VERSION"
+            # If Arch, direct to Arch Wiki
+            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support."
+            fi
             exit 1
           fi
         fi

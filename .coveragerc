@@ -1,0 +1,17 @@
+[run]
+branch=True
+relative_files=True
+source=
+  chia
+  tests
+concurrency=multiprocessing
+parallel=True
+
+[report]
+precision = 1
+exclude_lines =
+  pragma: no cover
+  abc\.abstractmethod
+  typing\.overload
+  ^\s*\.\.\.\s*$
+  if typing.TYPE_CHECKING:
