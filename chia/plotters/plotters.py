@@ -357,7 +357,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
         if option is Options.BLADEBIT_CACHE:
             parser.add_argument(
                 "--cache",
-                type=int,
+                type=str,
                 help="Size of cache to reserve for I/O",
             )
         if option is Options.BLADEBIT_F1_THREAD:
