@@ -1,5 +1,5 @@
 import struct
-from typing import Any, BinaryIO, SupportsInt, Type, TypeVar, Union
+from typing import Any, BinaryIO, Dict, SupportsInt, Tuple, Type, TypeVar, Union
 
 from typing_extensions import Protocol, SupportsIndex
 
@@ -12,14 +12,35 @@ class SupportsTrunc(Protocol):
         ...
 
 
-def calculate_data(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
+packing_strings: Dict[Tuple[int, bool], str] = {
+    (1, False): "!B",
+    (1, True): "!b",
+    (2, False): "!H",
+    (2, True): "!h",
+    (4, False): "!L",
+    (4, True): "!l",
+    (8, False): "!Q",
+    (8, True): "!q",
+}
+
+
+def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
     # TODO: turn this around to calculate the PACK from the size and signedness
 
-    cls.SIZE = struct.calcsize(cls.PACK)
-    cls.BITS = cls.SIZE * 8
-    # The packing strings are lower case for the signed types and upper case for the unsigned types.
-    # https://docs.python.org/3.10/library/struct.html#format-characters
-    cls.SIGNED = cls.PACK == cls.PACK.lower()
+    name_signedness, _, name_bit_size = cls.__name__.partition("int")
+    cls.SIGNED = False if name_signedness == "u" else True
+    cls.BITS = int(name_bit_size)
+
+    expected_name = f"{'' if cls.SIGNED else 'u'}int{cls.BITS}"
+    if cls.__name__ != expected_name:
+        raise ValueError(f"expected class name is {expected_name} but got: {cls.__name__}")
+
+    cls.SIZE, remainder = divmod(cls.BITS, 8)
+    if remainder != 0:
+        raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
+
+    cls.PACK = packing_strings[(cls.SIZE, cls.SIGNED)]
+
     if cls.SIGNED:
         cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
         cls.MINIMUM = -(2 ** (cls.BITS - 1))

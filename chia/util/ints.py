@@ -1,46 +1,46 @@
 from typing import Any, BinaryIO
 
-from chia.util.struct_stream import StructStream, calculate_data
+from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
-@calculate_data
+@parse_metadata_from_name
 class int8(StructStream):
-    PACK = "!b"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class uint8(StructStream):
-    PACK = "!B"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class int16(StructStream):
-    PACK = "!h"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class uint16(StructStream):
-    PACK = "!H"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class int32(StructStream):
-    PACK = "!l"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class uint32(StructStream):
-    PACK = "!L"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class int64(StructStream):
-    PACK = "!q"
+    pass
 
 
-@calculate_data
+@parse_metadata_from_name
 class uint64(StructStream):
-    PACK = "!Q"
+    pass
 
 
 class uint128(int):
