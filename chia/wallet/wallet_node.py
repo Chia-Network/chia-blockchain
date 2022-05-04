@@ -142,7 +142,7 @@ class WalletNode:
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
         self.last_wallet_tx_resend_time: int = 0
-        self.wallet_tx_resend_timeout_secs: int = 60
+        self.wallet_tx_resend_timeout_secs: int = 1800  # Duration in seconds
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -233,8 +233,7 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.last_wallet_tx_resend_time = int(time.time())
-        if "tx_resend_timeout_secs" in self.config:
-            self.wallet_tx_resend_timeout_secs = self.config["tx_resend_timeout_secs"]
+        self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
