@@ -3,13 +3,9 @@
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
-elif [ "$1" = "amd64" ]; then
-	PLATFORM="$1"
-	ELECTRON_BUILDER_OPTS="npx electron-builder build -l deb --x64"
-else
-	PLATFORM="$1"
-	ELECTRON_BUILDER_OPTS="npx electron-builder build -l deb --arm64"
 fi
+
+PLATFORM="$1"
 
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
@@ -70,7 +66,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 echo "Building Linux .deb Electron app"
-"$ELECTRON_BUILDER_OPTS"
+npx electron-builder build -l deb
 LAST_EXIT_CODE=$?
 
 # reset the package.json to the original
