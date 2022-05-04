@@ -9,7 +9,7 @@ export const bladebitOptions: PlotterOptions = {
   haveMadmaxTempToggle: false,
   haveBladebitWarmStart: true,
   haveBladebitDisableNUMA: true,
-  haveBladebitNoCpuAffinity: false,
+  haveBladebitNoCpuAffinity: true,
   haveBladebitOutputDir: true,
   haveBladebit2Cache: false,
   haveBladebit2F1Threads: false,
