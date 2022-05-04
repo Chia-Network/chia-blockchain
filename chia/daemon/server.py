@@ -693,6 +693,8 @@ class WebSocketServer:
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
+        elif plotter == "bladebit2":
+            final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]

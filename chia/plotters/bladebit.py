@@ -127,7 +127,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     return info
 
 
-progress = {
+progress_bladebit1 = {
     "Finished F1 sort": 0.01,
     "Finished forward propagating table 2": 0.06,
     "Finished forward propagating table 3": 0.12,
@@ -146,6 +146,35 @@ progress = {
     "Finished compressing tables 4 and 5": 0.85,
     "Finished compressing tables 5 and 6": 0.92,
     "Finished compressing tables 6 and 7": 0.98,
+}
+
+
+progress_bladebit2 = {
+    # "Running Phase 1": 0.01,
+    "Finished f1 generation in ": 0.01,
+    "Completed table 2 in ": 0.06,
+    "Completed table 3 in ": 0.12,
+    "Completed table 4 in ": 0.2,
+    "Completed table 5 in ": 0.28,
+    "Completed table 6 in ": 0.36,
+    "Completed table 7 in ": 0.42,
+    # "Finished Phase 1 ": 0.43,
+    # "Running Phase 2": 0.43,
+    "Finished marking table 6 in ": 0.43,
+    "Finished marking table 5 in ": 0.48,
+    "Finished marking table 4 in ": 0.51,
+    "Finished marking table 3 in ": 0.55,
+    "Finished marking table 2 in ": 0.58,
+    # "Finished Phase 2 ": 0.59,
+    # "Running Phase 3": 0.60,
+    "Finished compressing tables 1 and 2 in ": 0.66,
+    "Finished compressing tables 2 and 3 in ": 0.73,
+    "Finished compressing tables 3 and 4 in ": 0.79,
+    "Finished compressing tables 4 and 5 in ": 0.85,
+    "Finished compressing tables 5 and 6 in ": 0.92,
+    "Finished compressing tables 6 and 7 in ": 0.98,
+    # "Finished Phase 3 ": 0.99,
+    "Finished writing plot ": 0.99,
 }
 
 
@@ -351,6 +380,7 @@ def plot_bladebit(args, chia_root_path, root_path):
     call_args.append(args.finaldir)
 
     try:
+        progress = progress_bladebit1 if version == 1 else progress_bladebit2
         asyncio.run(run_plotter(call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")
