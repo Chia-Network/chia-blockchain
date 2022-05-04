@@ -312,7 +312,9 @@ class NFTWallet:
         )
         return provenance_puzzle
 
-    async def generate_new_nft(self, metadata: Program) -> Optional[TransactionRecord]:
+    async def generate_new_nft(
+        self, metadata: Program, target_puzzle_hash: bytes32 = None
+    ) -> Optional[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
         """
@@ -325,6 +327,7 @@ class NFTWallet:
         genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), uint64(amount))
         self.log.debug("Generating NFT with launcher coin %s and metadata: %s", launcher_coin, metadata)
+
         inner_puzzle = await self.standard_wallet.get_new_puzzle()
         # singleton eve
         eve_fullpuz = nft_puzzles.create_full_puzzle(
@@ -361,7 +364,9 @@ class NFTWallet:
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        condition_list = [make_create_coin_condition(inner_puzzle.get_tree_hash(), amount, [])]
+        if not target_puzzle_hash:
+            target_puzzle_hash = inner_puzzle.get_tree_hash()
+        condition_list = [make_create_coin_condition(target_puzzle_hash, amount, [])]
         innersol = solution_for_conditions(condition_list)
         # EVE SPEND BELOW
         fullsol = Program.to(

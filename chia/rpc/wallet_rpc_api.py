@@ -1,4 +1,5 @@
 import asyncio
+from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 import dataclasses
 import json
 import logging
@@ -122,8 +123,8 @@ class WalletRpcApi:
             "/did_transfer_did": self.did_transfer_did,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
-            "/nft_get_current_nfts": self.nft_get_current_nfts,
-            # "/nft_transfer_nft": self.nft_transfer_nft,
+            "/nft_get_nfts": self.nft_get_nfts,
+            "/nft_transfer_nft": self.nft_transfer_nft,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -572,7 +573,6 @@ class WalletRpcApi:
                 nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
                     wallet_state_manager,
                     main_wallet,
-                    request["did_wallet_id"],
                 )
             assert nft_wallet.nft_wallet_info is not None
             return {
@@ -1292,21 +1292,26 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def nft_mint_nft(self, request):
+        log.debug("Got minting RPC request: %s", request)
         wallet_id = uint32(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        address = request["artist_address"]
+        address = request.get("artist_address")
         if isinstance(address, str):
-            address = decode_puzzle_hash(address)
+            puzzle_hash = decode_puzzle_hash(address)
+        elif address is None:
+            puzzle_hash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            puzzle_hash = address
         metadata = Program.to(
             [
                 ("u", request["uris"]),
                 ("h", request["hash"]),
             ]
         )
-        await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
-        return {"wallet_id": wallet_id, "success": True}
+        nft_record = await nft_wallet.generate_new_nft(metadata, puzzle_hash)
+        return {"wallet_id": wallet_id, "success": True, "nft": nft_record}
 
-    async def nft_get_current_nfts(self, request):
+    async def nft_get_nfts(self, request):
         wallet_id = uint32(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
@@ -1314,7 +1319,23 @@ class WalletRpcApi:
         for nft in nfts:
             uri = get_uri_list_from_puzzle(nft.full_puzzle)
             nft_uri_pairs.append((nft, uri))
-        return {"wallet_id": wallet_id, "success": True, "nfts": nft_uri_pairs}
+        return {"wallet_id": wallet_id, "success": True, "nft_list": nft_uri_pairs}
+
+    async def nft_transfer_nft(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = int(request["wallet_id"])
+        address = request["target_address"]
+        if isinstance(address, str):
+            puzzle_hash = decode_puzzle_hash(address)
+        else:
+            return dict(success=False, error="target_address parameter missing")
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            sb = await nft_wallet.transfer_nft(bytes32.from_hexstr(request["nft_coin_id"]), puzzle_hash)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+        except Exception as e:
+            log.exception(f"Failed to transfer NFT: {e}")
+            return {"success": False, "error": str(e)}
 
     async def nft_add_url(self, request):
         raise NotImplementedError

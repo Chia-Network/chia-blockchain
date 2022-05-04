@@ -49,6 +49,12 @@ def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Prog
     return full_puzzle
 
 
+def get_uri_list_from_puzzle(puzzle: Program):
+    matched, singleton_args, curried_args = match_nft_puzzle(puzzle)
+    if matched:
+        return list(curried_args[1].as_iter())
+
+
 def create_full_puzzle(
     singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
 ) -> Program:
