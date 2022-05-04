@@ -241,7 +241,7 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    tx_for_bip158: List[bytearray] = [
+    tx_for_bip158: List[bytes32] = [
         *(coin.puzzle_hash for coin in additions),
         *(coin.puzzle_hash for coin in coinbase_additions),
         *(removal for removal in removals),
