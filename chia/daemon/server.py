@@ -782,6 +782,7 @@ class WebSocketServer:
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
 
         command_args: List[str] = []
 
@@ -789,6 +790,8 @@ class WebSocketServer:
             command_args.append("-w")
         if m is True:
             command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
 
         return command_args
 
