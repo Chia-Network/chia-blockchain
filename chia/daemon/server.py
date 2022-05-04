@@ -814,26 +814,30 @@ class WebSocketServer:
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
 
-        command_args.append("diskplot")
-
         if t1:
-            command_args.append(f"-t1 {t1}")
+            command_args.append(f"-t{t1}")
         if t2:
-            command_args.append(f"-t2 {t2}")
+            command_args.append(f"-2{t2}")
         if u:
-            command_args.append(f"-b {u}")
+            command_args.append(f"-u{u}")
         if cache:
-            command_args.append(f"--cache {cache}")
+            command_args.append("--cache")
+            command_args.append(str(cache))
         if f1_threads:
-            command_args.append(f"--f1-threads {f1_threads}")
+            command_args.append("--f1-threads")
+            command_args.append(str(f1_threads))
         if fp_threads:
-            command_args.append(f"--fp-threads {fp_threads}")
+            command_args.append("--fp-threads")
+            command_args.append(str(fp_threads))
         if c_threads:
-            command_args.append(f"--c-threads {c_threads}")
+            command_args.append("--c-threads")
+            command_args.append(str(c_threads))
         if p2_threads:
-            command_args.append(f"--p2-threads {p2_threads}")
+            command_args.append("--p2-threads")
+            command_args.append(str(p2_threads))
         if p3_threads:
-            command_args.append(f"--p3-threads {p3_threads}")
+            command_args.append("--p3-threads")
+            command_args.append(str(p3_threads))
 
         return command_args
 
