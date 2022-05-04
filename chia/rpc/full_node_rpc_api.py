@@ -385,10 +385,9 @@ class FullNodeRpcApi:
             if peak_height < uint32(a):
                 self.service.log.warning("requested block is higher than known peak ")
                 break
-            # TODO: address hint error and remove ignore
-            #       error: Incompatible types in assignment (expression has type "Optional[bytes32]", variable has type
-            #       "bytes32")  [assignment]
-            header_hash: bytes32 = self.service.blockchain.height_to_hash(uint32(a))  # type: ignore[assignment]
+            header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash(uint32(a))
+            if header_hash is None:
+                raise ValueError(f"Height not in blockchain: {a}")
             record: Optional[BlockRecord] = self.service.blockchain.try_block_record(header_hash)
             if record is None:
                 # Fetch from DB
@@ -471,10 +470,10 @@ class FullNodeRpcApi:
 
         newer_block = await self.service.block_store.get_block_record(newer_block_bytes)
         if newer_block is None:
-            raise ValueError("Newer block not found")
+            raise ValueError(f"Newer block {newer_block_hex} not found")
         older_block = await self.service.block_store.get_block_record(older_block_bytes)
         if older_block is None:
-            raise ValueError("Newer block not found")
+            raise ValueError(f"Older block {older_block_hex} not found")
         delta_weight = newer_block.weight - older_block.weight
 
         delta_iters = newer_block.total_iters - older_block.total_iters

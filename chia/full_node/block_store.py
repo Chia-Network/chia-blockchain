@@ -421,12 +421,9 @@ class BlockStore:
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(formatted_str, header_hashes_db) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = self.maybe_from_hex(row[0])
+                    header_hash = bytes32(self.maybe_from_hex(row[0]))
                     full_block: FullBlock = self.maybe_decompress(row[1])
-                    # TODO: address hint error and remove ignore
-                    #       error: Invalid index type "bytes" for "Dict[bytes32, FullBlock]";
-                    # expected type "bytes32"  [index]
-                    all_blocks[header_hash] = full_block  # type: ignore[index]
+                    all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
         for hh in header_hashes:

@@ -35,9 +35,6 @@ from chia.util.recursive_replace import recursive_replace
 log = logging.getLogger(__name__)
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_foliage(
     constants: ConsensusConstants,
     reward_block_unfinished: RewardChainBlockUnfinished,
@@ -53,7 +50,7 @@ def create_foliage(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
 ) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
@@ -285,9 +282,6 @@ def create_foliage(
     return foliage, foliage_transaction_block, transactions_info
 
 
-# TODO: address hint error and remove ignore
-#       error: Incompatible default for argument "seed" (default has type "bytes", argument has type "bytes32")
-#       [assignment]
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
@@ -304,7 +298,7 @@ def create_unfinished_block(
     signage_point: SignagePoint,
     timestamp: uint64,
     blocks: BlockchainInterface,
-    seed: bytes32 = b"",  # type: ignore[assignment]
+    seed: bytes = b"",
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
     additions: Optional[List[Coin]] = None,

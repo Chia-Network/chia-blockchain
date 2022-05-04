@@ -8,6 +8,9 @@ import pytest_asyncio
 import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
+from pathlib import Path
+from typing import Any, AsyncIterator, Dict, List, Tuple
+from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
@@ -39,6 +42,7 @@ from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
+from tests.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(scope="session")
@@ -97,21 +101,21 @@ def softfork_height(request):
     return request.param
 
 
-block_format_version = "rc4"
+saved_blocks_version = "rc5"
 
 
 @pytest.fixture(scope="session")
 def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{block_format_version}.db", bt, seed=b"alternate2")
+    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{block_format_version}.db", bt)
+    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
@@ -119,22 +123,63 @@ def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        1000, f"pre_genesis_empty_slots_1000_blocks{block_format_version}.db", bt, seed=b"alternate2", empty_sub_slots=1
+        1000,
+        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
+        bt,
+        seed=b"empty_slots",
+        empty_sub_slots=1,
     )
+
+
+@pytest.fixture(scope="session")
+def default_1500_blocks(bt):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
 
 
 @pytest.fixture(scope="session")
 def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(10000, f"test_blocks_10000_{block_format_version}.db", bt)
+    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
 def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(20000, f"test_blocks_20000_{block_format_version}.db", bt)
+    return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
+
+
+@pytest.fixture(scope="session")
+def test_long_reorg_blocks(bt, default_1500_blocks):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        758,
+        f"test_blocks_long_reorg_{saved_blocks_version}.db",
+        bt,
+        block_list_input=default_1500_blocks[:320],
+        seed=b"reorg_blocks",
+        time_per_block=8,
+    )
+
+
+@pytest.fixture(scope="session")
+def default_2000_blocks_compact(bt):
+    from tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        2000,
+        f"test_blocks_2000_compact_{saved_blocks_version}.db",
+        bt,
+        normalized_to_identity_cc_eos=True,
+        normalized_to_identity_icc_eos=True,
+        normalized_to_identity_cc_ip=True,
+        normalized_to_identity_cc_sp=True,
+        seed=b"2000_compact",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -143,12 +188,13 @@ def default_10000_blocks_compact(bt):
 
     return persistent_blocks(
         10000,
-        f"test_blocks_10000_compact_{block_format_version}.db",
+        f"test_blocks_10000_compact_{saved_blocks_version}.db",
         bt,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
         normalized_to_identity_cc_ip=True,
         normalized_to_identity_cc_sp=True,
+        seed=b"1000_compact",
     )
 
 
@@ -206,9 +252,9 @@ async def five_nodes(db_version, self_hostname):
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(bt):
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 2, "MAX_BLOCK_COST_CLVM": 400000000})
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -343,6 +389,84 @@ async def wallet_and_node():
         yield _
 
 
+@pytest_asyncio.fixture(scope="function")
+async def one_node_one_block(bt, wallet_a):
+    async_gen = setup_simulators_and_wallets(1, 0, {})
+    nodes, _ = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    server_1 = full_node_1.full_node.server
+
+    reward_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=reward_ph,
+        pool_reward_puzzle_hash=reward_ph,
+        genesis_timestamp=10000,
+        time_per_block=10,
+    )
+    assert blocks[0].height == 0
+
+    for block in blocks:
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
+
+    yield full_node_1, server_1
+
+    async for _ in async_gen:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_nodes_one_block(bt, wallet_a):
+    async_gen = setup_simulators_and_wallets(2, 0, {})
+    nodes, _ = await async_gen.__anext__()
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+    server_1 = full_node_1.full_node.server
+    server_2 = full_node_2.full_node.server
+
+    reward_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        1,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=reward_ph,
+        pool_reward_puzzle_hash=reward_ph,
+        genesis_timestamp=10000,
+        time_per_block=10,
+    )
+    assert blocks[0].height == 0
+
+    for block in blocks:
+        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
+
+    yield full_node_1, full_node_2, server_1, server_2
+
+    async for _ in async_gen:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_two_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_three_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants):
+        yield _
+
+
 # TODO: Ideally, the db_version should be the (parameterized) db_version
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
@@ -448,34 +572,6 @@ async def timelord(bt):
     rpc_port = find_available_listen_port("rpc")
     vdf_port = find_available_listen_port("vdf")
     async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="module")
-async def two_nodes_mempool(bt, wallet_a):
-    async_gen = setup_simulators_and_wallets(2, 1, {})
-    nodes, _ = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-
-    reward_ph = wallet_a.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        3,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-    )
-
-    for block in blocks:
-        await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
-    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
-
-    yield full_node_1, full_node_2, server_1, server_2
-
-    async for _ in async_gen:
         yield _
 
 

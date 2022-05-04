@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         os: [ubuntu-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -65,13 +65,21 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Checkout test blocks and plots
-      uses: actions/checkout@v3
+    - name: Cache test blocks and plots
+      uses: actions/cache@v2
+      id: test-blocks-plots
       with:
-        repository: 'Chia-Network/test-cache'
-        path: '.chia'
-        ref: '0.28.0'
-        fetch-depth: 1
+        path: |
+          ${{ github.workspace }}/.chia/blocks
+          ${{ github.workspace }}/.chia/test-plots
+        key: 0.29.0
+
+    - name: Checkout test blocks and plots
+      if: steps.test-blocks-plots.outputs.cache-hit != 'true'
+      run: |
+        wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
+        mkdir ${{ github.workspace }}/.chia
+        mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
 
     - name: Run install script
       env:
@@ -84,7 +92,7 @@ jobs:
     - name: Test wallet-rpc code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/rpc/test_*.py -s -v --durations 0 -n 0 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/wallet/rpc/test_wallet_rpc.py
 
     - name: Process coverage data
       run: |
@@ -96,7 +104,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*

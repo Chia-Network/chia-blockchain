@@ -72,10 +72,13 @@ def generate_replacements(conf, dir):
             Path(root_path / "runner_templates/check-resource-usage.include.yml")
         ).rstrip(),
         "DISABLE_PYTEST_MONITOR": "",
-        "TEST_DIR": "",
+        "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
     }
+
+    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    replacements["PYTEST_PARALLEL_ARGS"] = f" -n {xdist_numprocesses}"
 
     if not conf["checkout_blocks_and_plots"]:
         replacements[
@@ -83,13 +86,11 @@ def generate_replacements(conf, dir):
         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-    if conf.get("custom_parallel_n", None):
-        replacements["PYTEST_PARALLEL_ARGS"] = f" -n {conf['custom_parallel_n']}"
-    else:
-        replacements["PYTEST_PARALLEL_ARGS"] = " -n 4" if conf["parallel"] else " -n 0"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
+    test_files = sorted(dir.glob("test_*.py"))
+    test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
+    replacements["TEST_FILES"] = " ".join(test_file_paths)
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
