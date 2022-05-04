@@ -101,8 +101,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
     return generated_funds
 
 
-@pytest_asyncio.fixture(scope="function")
-async def wallet_rpc_environment(two_wallet_nodes, bt: BlockTools, self_hostname):
+@pytest_asyncio.fixture(scope="function", params=[True, False])
+async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self_hostname):
     test_rpc_port: uint16 = uint16(find_available_listen_port())
     test_rpc_port_2: uint16 = uint16(find_available_listen_port())
     test_rpc_port_node: uint16 = uint16(find_available_listen_port())
@@ -120,6 +120,13 @@ async def wallet_rpc_environment(two_wallet_nodes, bt: BlockTools, self_hostname
     config = bt.config
     hostname = config["self_hostname"]
     daemon_port = config["daemon_port"]
+
+    if request.param:
+        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    else:
+        wallet_node.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
 
     def stop_node_cb():
         pass
