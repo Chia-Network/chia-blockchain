@@ -1,4 +1,3 @@
-from collections import Counter
 from decimal import Decimal
 from dataclasses import replace
 
@@ -116,7 +115,6 @@ async def pprint_pool_wallet_state(
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
     pool_state_dict: Dict,
-    plot_counts: Counter,
 ):
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
@@ -129,7 +127,7 @@ async def pprint_pool_wallet_state(
         "Target address (not for plotting): "
         f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
     )
-    print(f"Number of plots: {plot_counts[pool_wallet_info.p2_singleton_puzzle_hash]}")
+    print(f"Number of plots: {pool_state_dict[pool_wallet_info.launcher_id]['plot_count']}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
@@ -183,15 +181,8 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     summaries_response = await wallet_client.get_wallets()
     wallet_id_passed_in = args.get("id", None)
-    plot_counts: Counter = Counter()
     try:
-        pool_state_list: List = (await farmer_client.get_pool_state())["pool_state"]
-        harvesters = await farmer_client.get_harvesters()
-        for d in harvesters["harvesters"]:
-            for plot in d["plots"]:
-                if plot.get("pool_contract_puzzle_hash", None) is not None:
-                    # Non pooled plots will have a None pool_contract_puzzle_hash
-                    plot_counts[hexstr_to_bytes(plot["pool_contract_puzzle_hash"])] += 1
+        pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
             print(
@@ -220,7 +211,6 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             pool_wallet_info,
             address_prefix,
             pool_state_dict,
-            plot_counts,
         )
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
@@ -237,7 +227,6 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                     pool_wallet_info,
                     address_prefix,
                     pool_state_dict,
-                    plot_counts,
                 )
                 print("")
     farmer_client.close()
