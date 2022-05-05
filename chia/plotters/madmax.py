@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import run_plotter, run_command
+from chia.plotters.plotters_util import run_plotter, run_command, reset_loop_policy_for_windows
 
 log = logging.getLogger(__name__)
 
@@ -181,7 +181,9 @@ def dir_with_trailing_slash(dir: str) -> str:
 
 
 def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
-    if sys.platform != "win32" and sys.platform != "cygwin":
+    if sys.platform in ["win32", "cygwin"]:
+        reset_loop_policy_for_windows()
+    else:
         import resource
 
         # madMAx has a ulimit -n requirement > 296:

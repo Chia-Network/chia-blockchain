@@ -96,3 +96,7 @@ def check_git_ref(git_ref: str):
     )
 
     return False if test else True
+
+
+def reset_loop_policy_for_windows():
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
