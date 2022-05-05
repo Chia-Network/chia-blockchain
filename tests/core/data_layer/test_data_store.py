@@ -1,11 +1,16 @@
 import itertools
+from pathlib import Path
 import logging
 import tempfile
 import aiosqlite
 
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
-from chia.data_layer.download_data import insert_into_data_store
-from pathlib import Path
+from chia.data_layer.download_data import (
+    insert_into_data_store,
+    maybe_write_files_for_root,
+    get_full_tree_filename,
+    get_delta_filename,
+)
 
 from random import Random
 import pytest
@@ -1126,23 +1131,19 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                         changelist.append({"action": "delete", "key": key})
                     counter += 1
                 await data_store_server.insert_batch(tree_id, changelist)
-                filename_full_tree = foldername + f"/{batch}.dat"
-                filename_diff_tree = foldername + f"/{batch}-delta.dat"
                 root = await data_store_server.get_tree_root(tree_id)
-                if root.node_hash is not None:
-                    await data_store_server.write_tree_to_file(root, root.node_hash, tree_id, False, filename_full_tree)
-                    await data_store_server.write_tree_to_file(root, root.node_hash, tree_id, True, filename_diff_tree)
+                await maybe_write_files_for_root(data_store_server, tree_id, root, Path(foldername))
                 roots.append(root)
             await connection.close()
 
-        generation = 0
+        generation = 1
         assert len(roots) == num_batches
         for root in roots:
-            if not test_delta:
-                filename = foldername + f"/{generation}.dat"
-            else:
-                filename = foldername + f"/{generation}-delta.dat"
             assert root.node_hash is not None
+            if not test_delta:
+                filename = get_full_tree_filename(tree_id, root.node_hash, generation)
+            else:
+                filename = get_delta_filename(tree_id, root.node_hash, generation)
             await insert_into_data_store(data_store, tree_id, root.node_hash, filename)
             current_root = await data_store.get_tree_root(tree_id=tree_id)
             assert current_root.node_hash == root.node_hash
