@@ -134,7 +134,7 @@ class SpendSim:
         await self.db_wrapper.close()
 
     async def new_peak(self):
-        await self.mempool_manager.new_peak(self.block_records[-1], [])
+        await self.mempool_manager.new_peak(self.block_records[-1], None)
 
     def new_coin_record(self, coin: Coin, coinbase=False) -> CoinRecord:
         return CoinRecord(

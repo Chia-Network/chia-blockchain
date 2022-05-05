@@ -1721,7 +1721,7 @@ class TestPreValidation:
                 assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _, _ = await empty_blockchain.receive_block(block, res[n])
+                result, err, _ = await empty_blockchain.receive_block(block, res[n])
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -1815,7 +1815,10 @@ class TestBodyValidation:
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == (ReceiveBlockResult.NEW_PEAK, None, 2)
+        code, err, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert code == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+        assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
@@ -1871,7 +1874,8 @@ class TestBodyValidation:
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == expected
+        res, error, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -2365,7 +2369,7 @@ class TestBodyValidation:
             mempool_mode=False,
             height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2390,7 +2394,7 @@ class TestBodyValidation:
             mempool_mode=False,
             height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2416,7 +2420,7 @@ class TestBodyValidation:
             height=softfork_height,
         )
 
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # when the CLVM program exceeds cost during execution, it will fail with
@@ -3341,12 +3345,12 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block1], {}, validate_signatures=False
         )
-        result, err, _, _ = await b.receive_block(block1, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.receive_block(block1, preval[0], fork_point_with_peak=fork_height)
         assert not err
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block2], {}, validate_signatures=False
         )
-        result, err, _, _ = await b.receive_block(block2, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.receive_block(block2, preval[0], fork_point_with_peak=fork_height)
         assert not err
 
     assert b.get_peak().height == 39
