@@ -56,6 +56,31 @@ class NFTCoinInfo(Streamable):
     lineage_proof: LineageProof
     full_puzzle: Program
 
+    def get_rpc_dict(self):
+
+        matched, singleton_curried_args, curried_args = nft_puzzles.match_nft_puzzle(self.full_puzzle)
+        if matched:
+            (_, metadata, metadata_updater_puzzle_hash, inner_puzzle) = curried_args
+            params = singleton_curried_args.first()
+            singleton_id = bytes32(params.rest().first().atom)
+            metadata_dict = {}
+            for item in metadata.as_python():
+                key, values = item[0], item[1:]
+
+                if key == b"h":
+                    # hash value
+                    value = values[0].hex()
+                else:
+                    value = [x.decode("utf-8") for x in values]
+                metadata_dict[key.decode("utf-8")] = value
+            return {
+                "nft_id": singleton_id,
+                "metadata": metadata_dict,
+                "metadata_updater_puzzle_hash": metadata_updater_puzzle_hash.atom.hex(),
+                "inner_puzzle_hash": inner_puzzle.get_tree_hash().hex(),
+            }
+        raise ValueError("Not an NFT puzzle")
+
 
 @streamable
 @dataclass(frozen=True)

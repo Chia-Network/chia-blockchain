@@ -196,7 +196,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
             "wallet_id": nft_wallet_0_id,
             "artist_address": ph,
             "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
-            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "uris": ["https://www.chia.net/img/branding/chia-logo.svg", "hehe"],
         }
     )
 
@@ -204,25 +204,27 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert tr1.get("success")
     sb = tr1["nft"].spend_bundle
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(3)
     tr2 = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_0_id,
             "artist_address": ph,
             "hash": 0xD4584AD463139FA8C0D9F68F4B59F184,
-            "uris": ["https://chialisp.com/img/logo.svg"],
+            "uris": ["https://chialisp.com/img/logo.svg", "hehe2"],
         }
     )
     assert isinstance(tr2, dict)
     assert tr2.get("success")
     sb = tr2["nft"].spend_bundle
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(3)
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert isinstance(coins_response, dict)
     assert coins_response.get("success")
@@ -232,8 +234,8 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     coins = coins_response["nft_list"]
     assert len(coins) == 2
     uris = []
-    for x in coins:
-        uris.append(x[1][0].as_python()[1])
+    for coin in coins:
+        uris.append(coin["metadata"]["u"][0])
     print(uris)
     assert len(uris) == 2
-    assert b"https://chialisp.com/img/logo.svg" in uris
+    assert "https://chialisp.com/img/logo.svg" in uris

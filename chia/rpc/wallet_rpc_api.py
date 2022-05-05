@@ -35,7 +35,6 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_puzzles import get_uri_list_from_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -1332,11 +1331,12 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
-        nft_uri_pairs = []
+        nfts_output = []
         for nft in nfts:
-            uri = get_uri_list_from_puzzle(nft.full_puzzle)
-            nft_uri_pairs.append((nft, uri))
-        return {"wallet_id": wallet_id, "success": True, "nft_list": nft_uri_pairs}
+            nft_dict = nft.get_rpc_dict()
+            nfts_output.append(nft_dict)
+
+        return {"wallet_id": wallet_id, "success": True, "nft_list": nfts_output}
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
