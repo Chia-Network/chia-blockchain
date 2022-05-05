@@ -213,6 +213,9 @@ class WSChiaConnection:
             if self.close_event is not None:
                 self.close_event.set()
             self.cancel_pending_requests()
+        except asyncio.CancelledError:
+            # https://docs.python.org/3.7/library/asyncio-exceptions.html#asyncio.CancelledError
+            raise
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
