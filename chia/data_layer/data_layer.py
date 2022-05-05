@@ -181,24 +181,28 @@ class DataLayer:
         if singleton_record.generation == uint32(0):
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
-        wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
-        if wallet_current_generation is not None and uint32(wallet_current_generation) == singleton_record.generation:
-            self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
-            return
-
-        self.log.info(
-            f"Downloading files {subscription.tree_id}. "
-            f"Current wallet generation: {int(wallet_current_generation)}. "
-            f"Target wallet generation: {singleton_record.generation}."
-        )
 
         for ip, port in zip(subscription.ip, subscription.port):
-            wallet_current_generation = await self.data_store.get_validated_wallet_generation(tree_id)
-            if int(wallet_current_generation) == singleton_record.generation:
-                return
-            assert int(wallet_current_generation) < singleton_record.generation
+            root = await self.data_store.get_tree_root(tree_id=tree_id)
+            wallet_current_generation = 0 if root is None else root.generation
+            if wallet_current_generation > int(singleton_record.generation):
+                self.log.info(
+                    f"Fetch data: local DL store is ahead of chain generation for {tree_id}. "
+                    "Most likely waiting for our batch update to be confirmed on chain."
+                )
+                break
+            if wallet_current_generation == int(singleton_record.generation):
+                self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
+                break
 
-            to_check = await self.wallet_rpc.dl_history(
+            self.log.info(
+                f"Downloading files {subscription.tree_id}. "
+                f"Current wallet generation: {int(wallet_current_generation)}. "
+                f"Target wallet generation: {singleton_record.generation}. "
+                f"Server used: {ip}:{port}."
+            )
+
+            to_download = await self.wallet_rpc.dl_history(
                 launcher_id=tree_id,
                 min_generation=uint32(wallet_current_generation + 1),
                 max_generation=singleton_record.generation,
@@ -208,8 +212,8 @@ class DataLayer:
                 success = await insert_from_delta_file(
                     self.data_store,
                     subscription.tree_id,
-                    int(wallet_current_generation),
-                    [record.root for record in to_check],
+                    wallet_current_generation,
+                    [record.root for record in to_download],
                     ip,
                     port,
                     self.server_files_location,
@@ -221,7 +225,7 @@ class DataLayer:
                         f"Wallet generation saved: {singleton_record.generation}. "
                         f"Root hash saved: {singleton_record.root}."
                     )
-                    return
+                    break
             except asyncio.CancelledError:
                 raise
             except aiohttp.client_exceptions.ClientConnectorError:

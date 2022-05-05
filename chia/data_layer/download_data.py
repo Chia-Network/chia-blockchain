@@ -110,6 +110,5 @@ async def insert_from_delta_file(
             os.remove(filename)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
-        await data_store.set_validated_wallet_generation(tree_id, existing_generation)
 
     return True

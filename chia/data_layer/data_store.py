@@ -109,7 +109,6 @@ class DataStore:
                     tree_id TEXT NOT NULL,
                     servers_ip TEXT NOT NULL,
                     servers_port TEXT NOT NULL,
-                    validated_wallet_generation INTEGER NOT NULL,
                     PRIMARY KEY(tree_id)
                 )
                 """
@@ -1100,8 +1099,8 @@ class DataStore:
             servers_ip = json.dumps(subscription.ip)
             servers_port = json.dumps(subscription.port)
             await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, servers_ip, servers_port, validated_wallet_generation) "
-                "VALUES (:tree_id, :servers_ip, :servers_port, 0)",
+                "INSERT INTO subscriptions(tree_id, servers_ip, servers_port) "
+                "VALUES (:tree_id, :servers_ip, :servers_port)",
                 {
                     "tree_id": subscription.tree_id.hex(),
                     "servers_ip": servers_ip,
@@ -1161,27 +1160,6 @@ class DataStore:
                 subscriptions.append(Subscription(tree_id, servers_ip, servers_port))
 
         return subscriptions
-
-    async def get_validated_wallet_generation(self, tree_id: bytes32, *, lock: bool = True) -> int:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT validated_wallet_generation FROM subscriptions WHERE tree_id == :tree_id",
-                {"tree_id": tree_id.hex()},
-            )
-            row = await cursor.fetchone()
-
-        assert row is not None
-        generation: int = row["validated_wallet_generation"]
-        return generation
-
-    async def set_validated_wallet_generation(self, tree_id: bytes32, generation: int, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
-                """
-                UPDATE subscriptions SET validated_wallet_generation = :generation WHERE tree_id == :tree_id
-                """,
-                {"tree_id": tree_id.hex(), "generation": generation},
-            )
 
     async def get_kv_diff(
         self,
