@@ -48,10 +48,11 @@ def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Prog
     return full_puzzle
 
 
-def get_uri_list_from_puzzle(puzzle: Program):
+def get_uri_list_from_puzzle(puzzle: Program) -> List[Tuple[bytes, bytes]]:
     matched, singleton_args, curried_args = match_nft_puzzle(puzzle)
     if matched:
         return list(curried_args[1].as_iter())
+    raise ValueError("Not an NFT puzzle ")
 
 
 def create_full_puzzle(

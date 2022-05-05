@@ -1,42 +1,27 @@
 import asyncio
-from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import encode_puzzle_hash
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
-import logging
-from tests.conftest import two_wallet_nodes
+from typing import Any
 
 import pytest
 
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
+async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
     tx = mempool.get_spendbundle(tx_id)
     if tx is None:
         return False
     return True
-
-
-# TODO: remove me
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("websockets").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("fsevents").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.plotting.create_plots").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("filelock").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.plotting").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.full_node.block_store").setLevel(logging.INFO)  # Too much logging on debug level
-
-logging.getLogger("wallet_server").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("full_node_server").setLevel(logging.INFO)  # Too much logging on debug level
 
 
 @pytest.mark.parametrize(
@@ -44,7 +29,7 @@ logging.getLogger("full_node_server").setLevel(logging.INFO)  # Too much logging
     [True],
 )
 @pytest.mark.asyncio
-async def test_nft_wallet_creation_and_transfer(two_wallet_nodes, trusted):
+async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -74,24 +59,19 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes, trusted):
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    # funds = sum(
-    #     [
-    #         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-    #         for i in range(1, num_blocks - 1)
-    #     ]
-    # )
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
 
-    # await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-    # await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
-    # for i in range(1, num_blocks):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    # for i in range(1, num_blocks):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    # for i in range(1, num_blocks):
-    #     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    # await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
     )
@@ -103,7 +83,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes, trusted):
     )
 
     tr = await nft_wallet_0.generate_new_nft(metadata)
-
+    assert tr
+    assert tr.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name())
 
     for i in range(1, num_blocks):
@@ -121,7 +102,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes, trusted):
     )
 
     tr = await nft_wallet_0.generate_new_nft(metadata)
-
+    assert tr
+    assert tr.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name())
 
     for i in range(1, num_blocks):
@@ -173,7 +155,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes, trusted):
     [True],
 )
 @pytest.mark.asyncio
-async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes, trusted):
+async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -184,7 +166,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes, trusted):
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
     ph = await wallet_0.get_new_puzzlehash()
-    ph1 = await wallet_1.get_new_puzzlehash()
+    _ = await wallet_1.get_new_puzzlehash()
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -250,7 +232,8 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes, trusted):
     coins = coins_response["nft_list"]
     assert len(coins) == 2
     uris = []
-    [uris.append(x[1][0].as_python()[1]) for x in coins]
+    for x in coins:
+        uris.append(x[1][0].as_python()[1])
     print(uris)
     assert len(uris) == 2
     assert b"https://chialisp.com/img/logo.svg" in uris

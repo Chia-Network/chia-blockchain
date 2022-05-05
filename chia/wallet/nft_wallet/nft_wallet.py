@@ -1,11 +1,9 @@
-from chia.wallet.util.compute_memos import compute_memos
 import json
 import logging
 import time
 from dataclasses import dataclass
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Type, TypeVar
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
@@ -21,14 +19,12 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_puzzles import LAUNCHER_PUZZLE, NFT_STATE_LAYER_MOD_HASH
-from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -38,6 +34,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -48,8 +45,6 @@ from tests.wallet.nft_wallet.test_nft_clvm import NFT_METADATA_UPDATER
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
-if TYPE_CHECKING:
-    from chia.wallet.wallet_state_manager import WalletStateManager
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
@@ -76,9 +71,8 @@ def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
-@dataclass
 class NFTWallet:
-    wallet_state_manager: WalletStateManager
+    wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
     nft_wallet_info: NFTWalletInfo
@@ -88,7 +82,7 @@ class NFTWallet:
     @classmethod
     async def create_new_nft_wallet(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         did_wallet_id: uint32 = None,
         name: str = "",
@@ -103,17 +97,17 @@ class NFTWallet:
         self.nft_wallet_info = NFTWalletInfo([], did_wallet_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        wallet_info = await wallet_state_manager.user_store.create_wallet(
             "NFT Wallet" if not name else name, uint32(WalletType.NFT.value), info_as_string
         )
 
         if wallet_info is None:
             raise ValueError("Internal Error")
+        self.wallet_info = wallet_info
         self.wallet_id = self.wallet_info.id
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
-        # await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_id)
         if not did_wallet_id:
             # default profile wallet
             self.log.debug("Standard NFT wallet created")
@@ -126,7 +120,7 @@ class NFTWallet:
     @classmethod
     async def create(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: WalletStateManager,
+        wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
@@ -228,14 +222,14 @@ class NFTWallet:
                 elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
                     puzhash = bytes32(condition.rest().first().atom)
                     self.log.debug("Got back puzhash from solution: %s", puzhash)
-                    record: DerivationRecord = (
-                        await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
-                    )
-                    if record is None:
+                    derivation_record: Optional[
+                        DerivationRecord
+                    ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
+                    if derivation_record is None:
                         # we potentially sent it somewhere
                         self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
                         return
-                    new_inner_puzzle = puzzle_for_pk(record.pubkey)
+                    new_inner_puzzle = puzzle_for_pk(derivation_record.pubkey)
 
                 else:
                     raise ValueError("Invalid condition")
@@ -467,7 +461,9 @@ class NFTWallet:
                 self.log.debug("Found a NFT state layer to sign")
                 (_, metadata, metadata_updater_puzzle_hash, inner_puzzle) = puzzle_args
                 puzzle_hash = inner_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                keys = await self.wallet_state_manager.get_keys(puzzle_hash)
+                assert keys
+                _, private = keys
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
@@ -492,7 +488,7 @@ class NFTWallet:
     async def transfer_nft(
         self,
         nft_coin_info: NFTCoinInfo,
-        puzzle_hash: bytes32 = None,
+        puzzle_hash: bytes32,
         did_hash=None,
     ):
         self.log.debug("Attempt to transfer a new NFT")

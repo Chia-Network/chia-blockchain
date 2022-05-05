@@ -32,12 +32,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.ints import uint32, uint64, uint128, uint8
-from chia.util.db_synchronous import db_synchronous_on
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle, construct_cat_puzzle
-from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, create_fullpuz, DID_INNERPUZ_MOD
-from chia.wallet.nft_wallet.nft_wallet import NFTWalletInfo
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -50,7 +44,6 @@ from chia.wallet.nft_wallet.nft_puzzles import match_nft_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTWalletInfo
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -576,9 +569,7 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        nft_matched, singleton_curried_args, nft_curried_args = match_nft_puzzle(
-            Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        )
+        nft_matched, _, nft_curried_args = match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
         self.log.debug("Matching NFT: %s", nft_matched)
         if nft_matched:
             return await self.handle_nft(coin_spend, iter(nft_curried_args))
@@ -711,8 +702,7 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def handle_nft(
-        self,
-        coin_spend: CoinSpend,
+        self, coin_spend: CoinSpend, curried_args: Iterator[Program]
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
