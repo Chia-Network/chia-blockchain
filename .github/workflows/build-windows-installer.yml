@@ -64,7 +64,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-#  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
       name: Install Python ${{ matrix.python-version }}
       with:
