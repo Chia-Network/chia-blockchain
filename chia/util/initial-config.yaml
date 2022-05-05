@@ -552,7 +552,7 @@ data_layer:
   # Switch this to True if we want to run the server.
   run_server: True
   # Data for running a data layer client.
-  fetch_data_interval: 60
+  manage_data_interval: 60
   selected_network: *selected_network
   # If True, starts an RPC server at the following port
   start_rpc_server: True
