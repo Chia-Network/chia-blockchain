@@ -83,7 +83,7 @@ export function NFTCreateOfferDemo(props: NFTCreateOfferDemoProps) {
     shouldUnregister: false,
     defaultValues: {
       walletId: nft?.walletId ?? 0,
-      nftAssetId: nft?.launcherId ?? '',
+      nftAssetId: nft?.id ?? '',
     },
   });
 
@@ -116,7 +116,7 @@ export function NFTCreateOfferDemo(props: NFTCreateOfferDemoProps) {
             <TextField
               name="nftAssetId"
               variant="outlined"
-              label="NFT Coin Info"
+              label="NFT ID"
               required
               fullWidth
             />

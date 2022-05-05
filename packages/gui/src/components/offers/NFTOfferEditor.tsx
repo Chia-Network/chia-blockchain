@@ -396,7 +396,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   );
   const defaultValues: NFTOfferEditorFormData = {
     exchangeType: NFTOfferEditorExchangeType.NFTForXCH,
-    nftId: nft?.launcherId ?? '',
+    nftId: nft?.id ?? '',
     xchAmount: '',
     fee: '',
   };
