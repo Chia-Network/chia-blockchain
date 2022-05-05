@@ -5,7 +5,8 @@ export { default as useGetLatestPeakTimestampQuery } from './useGetLatestPeakTim
 export { default as useGetCombinedNotFoundFilenamesQuery } from './useGetCombinedNotFoundFilenamesQuery';
 export { default as useGetCombinedPlotsQuery } from './useGetCombinedPlotsQuery';
 export { default as useGetFarmerFullNodeConnectionsQuery } from './useGetFarmerFullNodeConnectionsQuery';
-export { default as useGetHarvesterConnectionsQuery} from './useGetHarvesterConnectionsQuery';
+export { default as useGetHarvesterConnectionsQuery } from './useGetHarvesterConnectionsQuery';
+export { default as useGetNFTWallets } from './useGetNFTWallets';
 export { default as useLogout } from './useLogout';
 export { default as useNFTMetadata } from './useNFTMetadata';
 export { default as useService } from './useService';

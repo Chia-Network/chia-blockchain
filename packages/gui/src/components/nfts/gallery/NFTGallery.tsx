@@ -1,49 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Flex,
-  LayoutDashboardSub,
-  Loading,
-  toBech32m,
-  useTrans,
-} from '@chia/core';
+import { Flex, LayoutDashboardSub, Loading, useTrans } from '@chia/core';
 import { defineMessage } from '@lingui/macro';
-import type { NFTInfo } from '@chia/api';
-import { useGetNFTsQuery } from '@chia/api-react';
+import type { NFTInfo, Wallet } from '@chia/api';
+import { useGetNFTWallets } from '@chia/api-react';
 import { Grid } from '@mui/material';
 import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCard from '../NFTCard';
 import Search from './NFTGallerySearch';
 import NFTContextualActions from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
+import useFetchNFTs from '../../../hooks/useFetchNFTs';
 
 export default function NFTGallery() {
-  const { isLoading, data } = useGetNFTsQuery({ walletId: 5 });
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
+  const isLoading = isLoadingWallets || isLoadingNFTs;
   const [search, setSearch] = useState('');
   const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
   });
 
-  const transformedData = useMemo(() => {
-    if (!data) {
-      return data;
-    }
-
-    return data.map((nft: NFTInfo) => {
-      return { ...nft, id: toBech32m(nft.launcherId, 'nft') };
-    });
-  }, [data]);
-
   const filteredData = useMemo(() => {
-    if (!transformedData || !search) {
-      return transformedData;
+    if (!nfts || !search) {
+      return nfts;
     }
 
-    return transformedData.filter(({ metadata = {} }) => {
+    return nfts.filter(({ metadata = {} }) => {
       const { name = 'Test' } = metadata;
       return name.toLowerCase().includes(search.toLowerCase());
     });
-  }, [search, transformedData]);
+  }, [search, nfts]);
 
   function handleSelect(nft: NFTInfo, selected: boolean) {
     setSelection((currentSelection) => {

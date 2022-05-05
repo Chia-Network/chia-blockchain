@@ -9,6 +9,7 @@ import {
   WalletType,
 } from '@chia/api';
 import type {
+  NFTInfo,
   PlotNFT,
   PlotNFTExternal,
   Transaction,
@@ -1762,7 +1763,11 @@ export const walletApi = apiWithTag.injectEndpoints({
     // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
 
     // NFTs
-    getNFTs: build.query<any, { walletId?: number }>({
+    getNFTs: build.query<
+      { [walletId: number]: NFTInfo[] },
+      { walletIds: number[] }
+    >({
+      /*
       query: ({ walletId } = {}) => ({
         command: 'getNfts',
         service: NFT,
@@ -1774,11 +1779,51 @@ export const walletApi = apiWithTag.injectEndpoints({
         //   })),
         // },
       }),
-      transformResponse: (response: any) => response.nftList,
-      providesTags: (nfts, _error) =>
-        nfts
+      */
+      async queryFn(args, _queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          const nftData: { [walletId: number]: NFTInfo[] }[] =
+            await Promise.all(
+              args.walletIds.map(async walletId => {
+                const { data: nftsData, error: nftsError } = await fetchWithBQ({
+                  command: 'getNfts',
+                  service: NFT,
+                  args: [walletId],
+                });
+
+                if (nftsError) {
+                  throw nftsError;
+                }
+
+                return {
+                  [walletId]: nftsData.nftList,
+                };
+              })
+            );
+          const nftsByWalletId: { [walletId: number]: NFTInfo[] } = {};
+          nftData.forEach(entry => {
+            Object.entries(entry).forEach(([walletId, nfts]) => {
+              nftsByWalletId[walletId] = nfts;
+            });
+          });
+          return {
+            data: nftsByWalletId,
+          };
+        } catch (error: any) {
+          return {
+            error,
+          };
+        }
+      },
+      // transformResponse: (response: any) => response.nftList,
+      providesTags: (nftsByWalletId, _error) =>
+        nftsByWalletId
           ? [
-              ...nfts.map(({ id }) => ({ type: 'NFTInfo', id: id } as const)),
+              ...Object.entries(nftsByWalletId).flatMap(([_walletId, nfts]) => {
+                return nfts.map(
+                  nft => ({ type: 'NFTInfo', id: nft.launcherId } as const)
+                );
+              }),
               { type: 'NFTInfo', id: 'LIST' },
             ]
           : [{ type: 'NFTInfo', id: 'LIST' }],
