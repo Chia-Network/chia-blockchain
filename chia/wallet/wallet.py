@@ -330,7 +330,7 @@ class Wallet:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
-
+            self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             coins = await self.select_coins(total_amount)
         assert len(coins) > 0
@@ -448,6 +448,7 @@ class Wallet:
         else:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
+        self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
@@ -462,8 +463,7 @@ class Wallet:
             negative_change_allowed,
         )
         assert len(transaction) > 0
-
-        self.log.info("About to sign a transaction")
+        self.log.info("About to sign a transaction: %s", transaction)
         await self.hack_populate_secret_keys_for_coin_spends(transaction)
         spend_bundle: SpendBundle = await sign_coin_spends(
             transaction,
@@ -546,3 +546,9 @@ class Wallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
         return spend_bundle
+
+    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+        balance = await self.get_confirmed_balance()
+        if balance < amount:
+            raise Exception(f"insufficient funds in wallet {self.id()}")
+        return await self.select_coins(amount)
