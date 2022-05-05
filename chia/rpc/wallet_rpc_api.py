@@ -41,7 +41,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.util.config import load_config
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -109,6 +108,8 @@ class WalletRpcApi:
             "/cancel_offer": self.cancel_offer,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
+            "/did_set_wallet_name": self.did_set_wallet_name,
+            "/did_get_wallet_name": self.did_get_wallet_name,
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_update_metadata": self.did_update_metadata,
             "/did_get_pubkey": self.did_get_pubkey,
@@ -315,25 +316,12 @@ class WalletRpcApi:
         config: Dict = load_config(new_root, "config.yaml")
         farmer_target = config["farmer"].get("xch_target_address")
         pool_target = config["pool"].get("xch_target_address")
-        found_farmer = False
-        found_pool = False
-        selected = config["selected_network"]
-        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
-        for i in range(max_ph_to_search):
-            if found_farmer and found_pool:
-                break
+        address_to_check: List[bytes32] = [decode_puzzle_hash(farmer_target), decode_puzzle_hash(pool_target)]
 
-            phs = [
-                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()), prefix),
-                encode_puzzle_hash(
-                    create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()), prefix
-                ),
-            ]
-            for ph in phs:
-                if ph == farmer_target:
-                    found_farmer = True
-                if ph == pool_target:
-                    found_pool = True
+        found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+
+        found_farmer = address_to_check[0] in found_addresses
+        found_pool = address_to_check[1] in found_addresses
 
         return found_farmer, found_pool
 
@@ -347,9 +335,12 @@ class WalletRpcApi:
         walletBalance: bool = False
 
         fingerprint = request["fingerprint"]
+        max_ph_to_search = request.get("max_ph_to_search", 100)
         sk, _ = await self._get_private_key(fingerprint)
         if sk is not None:
-            used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(self.service.root_path, sk, 100)
+            used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
+                self.service.root_path, sk, max_ph_to_search
+            )
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
@@ -530,7 +521,8 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request.get("wallet_name", "DID Wallet"),
+                        request.get("wallet_name", None),
+                        uint64(request.get("fee", 0)),
                     )
 
                 my_did = did_wallet.get_my_DID()
@@ -544,7 +536,7 @@ class WalletRpcApi:
             elif request["did_type"] == "recovery":
                 async with self.service.wallet_state_manager.lock:
                     did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
-                        wallet_state_manager, main_wallet, request["filename"]
+                        wallet_state_manager, main_wallet, request["backup_data"]
                     )
                 assert did_wallet.did_info.temp_coin is not None
                 assert did_wallet.did_info.temp_puzhash is not None
@@ -1099,6 +1091,23 @@ class WalletRpcApi:
     # Distributed Identities
     ##########################################################################################
 
+    async def did_set_wallet_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() == WalletType.DISTRIBUTED_ID:
+            await wallet.set_name(str(request["name"]))
+            return {"success": True, "wallet_id": wallet_id}
+        else:
+            return {"success": False, "error": f"Wallet id {wallet_id} is not a DID wallet"}
+
+    async def did_get_wallet_name(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        name: str = await wallet.get_name()
+        return {"success": True, "wallet_id": wallet_id, "name": name}
+
     async def did_update_recovery_ids(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -1175,14 +1184,14 @@ class WalletRpcApi:
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if len(request["attest_filenames"]) < wallet.did_info.num_of_backup_ids_needed:
+        if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
 
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
                 message_spend_bundle,
-            ) = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
+            ) = await wallet.load_attest_files_for_recovery_spend(request["attest_data"])
 
             if "pubkey" in request:
                 pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
@@ -1218,14 +1227,17 @@ class WalletRpcApi:
             info = await wallet.get_info_for_recovery()
             coin = hexstr_to_bytes(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            spend_bundle = await wallet.create_attestment(
-                coin, hexstr_to_bytes(request["puzhash"]), pubkey, request["filename"]
+            spend_bundle, attest_data = await wallet.create_attestment(
+                coin,
+                hexstr_to_bytes(request["puzhash"]),
+                pubkey,
             )
         if info is not None and spend_bundle is not None:
             return {
                 "success": True,
                 "message_spend_bundle": bytes(spend_bundle).hex(),
                 "info": [info[0].hex(), info[1].hex(), info[2]],
+                "attest_data": attest_data,
             }
         else:
             return {"success": False}
@@ -1264,8 +1276,7 @@ class WalletRpcApi:
     async def did_create_backup_file(self, request):
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        did_wallet.create_backup(request["filename"])
-        return {"wallet_id": wallet_id, "success": True}
+        return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
 
     async def did_transfer_did(self, request):
         assert self.service.wallet_state_manager is not None
@@ -1274,12 +1285,10 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
-        if "fee" in request:
-            fee = uint64(request["fee"])
-        else:
-            fee = uint64(0)
         async with self.service.wallet_state_manager.lock:
-            txs: TransactionRecord = await did_wallet.transfer_did(puzzle_hash, fee)
+            txs: TransactionRecord = await did_wallet.transfer_did(
+                puzzle_hash, uint64(request.get("fee", 0)), request.get("with_recovery_info", True)
+            )
 
         return {
             "success": True,
@@ -1315,7 +1324,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
-        nft_uri_pairs = []
+        nft_info_list = []
         for nft in nfts:
             uri = get_uri_list_from_puzzle(nft.full_puzzle)
             nft_uri_pairs.append((nft, uri))

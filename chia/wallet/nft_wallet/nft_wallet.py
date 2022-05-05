@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Type, TypeVar
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
@@ -21,11 +22,13 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_puzzles import LAUNCHER_PUZZLE, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -44,6 +47,9 @@ from chia.wallet.wallet_info import WalletInfo
 from tests.wallet.nft_wallet.test_nft_clvm import NFT_METADATA_UPDATER
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
@@ -70,8 +76,9 @@ def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
+@dataclass
 class NFTWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     nft_wallet_info: NFTWalletInfo
@@ -81,7 +88,7 @@ class NFTWallet:
     @classmethod
     async def create_new_nft_wallet(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         did_wallet_id: uint32 = None,
         name: str = "",
@@ -99,7 +106,8 @@ class NFTWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "NFT Wallet" if not name else name, uint32(WalletType.NFT.value), info_as_string
         )
-        if self.wallet_info is None:
+
+        if wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
@@ -118,10 +126,10 @@ class NFTWallet:
     @classmethod
     async def create(
         cls: Type[_T_NFTWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: str = "",
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
         self = cls()
         self.log = logging.getLogger(name if name else __name__)
@@ -143,6 +151,25 @@ class NFTWallet:
 
     def id(self) -> uint32:
         return self.wallet_info.id
+
+    async def get_confirmed_balance(self, record_list=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+        """The NFT wallet doesn't really have a balance."""
+        return uint128(0)
+
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
+
+    async def get_max_send_amount(self, records=None):
+        """This is the confirmed balance, which we set to 0 as the NFT wallet doesn't have one."""
+        return uint128(0)
 
     async def add_nft_coin(self, coin: Coin, spent_height: uint32, in_transaction: bool) -> None:
         await self.coin_added(coin, spent_height, in_transaction=in_transaction)

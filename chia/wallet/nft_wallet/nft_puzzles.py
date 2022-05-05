@@ -1,10 +1,9 @@
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.util.debug_spend_bundle import disassemble
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")

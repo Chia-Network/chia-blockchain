@@ -31,7 +31,7 @@ python -m venv venv
 python -m pip install --upgrade pip
 pip install wheel pep517
 pip install pywin32
-pip install pyinstaller==4.9
+pip install pyinstaller==5.0
 
 Write-Output "   ---"
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
