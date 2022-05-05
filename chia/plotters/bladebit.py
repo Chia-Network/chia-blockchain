@@ -297,7 +297,7 @@ def plot_bladebit(args, chia_root_path, root_path):
             if version == 1:
                 commit = "ad85a8f2cf99ca4c757932a21d937fdc9c7ae0ef"
             elif version == 2:
-                commit = "disk-plot"
+                commit = "develop"
             else:
                 print(f"Unknown bladebit version {version}")
                 return
