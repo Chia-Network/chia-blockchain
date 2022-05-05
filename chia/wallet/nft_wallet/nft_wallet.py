@@ -227,7 +227,7 @@ class NFTWallet:
                     ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
                     if derivation_record is None:
                         # we potentially sent it somewhere
-                        self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
+                        await self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
                         return
                     new_inner_puzzle = puzzle_for_pk(derivation_record.pubkey)
 
