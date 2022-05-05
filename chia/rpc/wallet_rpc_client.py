@@ -549,3 +549,12 @@ class WalletRpcClient(RpcClient):
 
     async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
+
+    # NFT wallet
+    async def create_new_nft_wallet(self, did_wallet_id):
+        request: Dict[str, Any] = {
+            "wallet_type": "nft_wallet",
+            "did_wallet_id": did_wallet_id,
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
