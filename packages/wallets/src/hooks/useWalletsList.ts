@@ -115,12 +115,12 @@ export default function useWalletsList(search?: string): {
     // hidden by default because they are not known
     const nonAddedKnownCats = catList?.filter(
       (cat) => !hasCatAssignedWallet(cat.assetId),
-    );
+    ) ?? [];
 
     // hidden by default
     const nonAddedStrayCats = strayCats?.filter(
       (strayCat) => !hasCatAssignedWallet(strayCat.assetId),
-    );
+    ) ?? [];
 
     let tokens = [
       ...baseWallets.map((wallet: Wallet) => ({
