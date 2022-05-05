@@ -8,7 +8,13 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import run_plotter, run_command, check_git_repository, check_git_ref
+from chia.plotters.plotters_util import (
+    run_plotter,
+    run_command,
+    check_git_repository,
+    check_git_ref,
+    reset_loop_policy_for_windows,
+)
 
 log = logging.getLogger(__name__)
 
@@ -306,6 +312,9 @@ def plot_bladebit(args, chia_root_path, root_path):
         except Exception as e:
             print(f"Exception while installing bladebit plotter: {e}")
             return
+
+    if sys.platform in ["win32", "cygwin"]:
+        reset_loop_policy_for_windows()
 
     plot_keys = asyncio.run(
         resolve_plot_keys(
