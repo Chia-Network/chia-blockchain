@@ -228,9 +228,6 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert isinstance(coins_response, dict)
     assert coins_response.get("success")
-    import pprint
-
-    pprint.pprint(coins_response)
     coins = coins_response["nft_list"]
     assert len(coins) == 2
     uris = []
@@ -240,3 +237,102 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
     assert coins[1]["nft_coin_id"] in [x.name().hex() for x in sb.additions()]
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True],
+)
+@pytest.mark.asyncio
+async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 5
+    full_nodes, wallets = two_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+    ph = await wallet_0.get_new_puzzlehash()
+    _ = await wallet_1.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    api_0 = WalletRpcApi(wallet_node_0)
+    nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    assert isinstance(nft_wallet_0, dict)
+    assert nft_wallet_0.get("success")
+    nft_wallet_0_id = nft_wallet_0["wallet_id"]
+
+    # mint NFT
+    tr1 = await api_0.nft_mint_nft(
+        {
+            "wallet_id": nft_wallet_0_id,
+            "artist_address": ph,
+            "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+        }
+    )
+
+    assert isinstance(tr1, dict)
+    assert tr1.get("success")
+    sb = tr1["nft"].spend_bundle
+
+    await asyncio.sleep(5)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(3)
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    nft_coin_id = coins[0]["nft_coin_id"]
+    # add another URI
+    tr1 = await api_0.nft_add_uri(
+        {
+            "wallet_id": nft_wallet_0_id,
+            "nft_coin_id": nft_coin_id,
+            "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+            "uri": "https://www.chia.net/img/branding/chia-logo-white.svg",
+        }
+    )
+
+    assert isinstance(tr1, dict)
+    assert tr1.get("success")
+    sb = tr1["nft"].spend_bundle
+
+    await asyncio.sleep(5)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(3)
+
+    # check that new URI was added
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    assert len(coins) == 2
+    uris = []
+    for coin in coins:
+        uris.append(coin["data_uris"][0])
+    print(uris)
+    assert len(uris) == 2
+    assert "https://www.chia.net/img/branding/chia-logo-white.svg" in uris
