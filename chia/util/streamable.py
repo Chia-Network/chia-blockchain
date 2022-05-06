@@ -239,10 +239,13 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int) -> Any:
+def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    return f_type.from_bytes(bytes_read)
+    if unchecked:
+        return f_type.from_bytes_unchecked(bytes_read)
+    else:
+        return f_type.from_bytes(bytes_read)
 
 
 def parse_str(f: BinaryIO) -> str:
@@ -475,9 +478,12 @@ class Streamable:
             inner_types = get_args(f_type)
             list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
             return lambda f: parse_tuple(f, list_parse_inner_type_f)
+        if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
+            bytes_to_read = size_hints[f_type.__name__]
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
         if f_type is str:
             return parse_str
         raise NotImplementedError(f"Type {f_type} does not have parse")
