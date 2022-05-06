@@ -7,7 +7,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import run_plotter, run_command, reset_loop_policy_for_windows
+from chia.plotters.plotters_util import (
+    run_plotter,
+    run_command,
+    reset_loop_policy_for_windows,
+    get_linux_distro,
+    is_libsodium_available_on_redhat_like_os,
+)
 
 log = logging.getLogger(__name__)
 
@@ -83,29 +89,58 @@ def install_madmax(plotters_root_path: Path):
 
     print("Installing dependencies.")
     if sys.platform.startswith("linux"):
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "update",
-                "-y",
-            ],
-            "Could not update get package information from apt",
-        )
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "install",
-                "-y",
-                "libsodium-dev",
-                "cmake",
-                "g++",
-                "git",
-                "build-essential",
-            ],
-            "Could not install dependencies",
-        )
+        distro = get_linux_distro()
+        if distro == "debian":
+            run_command(
+                [
+                    "sudo",
+                    "apt",
+                    "update",
+                    "-y",
+                ],
+                "Could not update get package information from apt",
+            )
+            run_command(
+                [
+                    "sudo",
+                    "apt",
+                    "install",
+                    "-y",
+                    "libsodium-dev",
+                    "cmake",
+                    "g++",
+                    "git",
+                    "build-essential",
+                ],
+                "Could not install dependencies",
+            )
+        elif distro == "redhat":
+            if not is_libsodium_available_on_redhat_like_os():
+                print("libsodium-devel is required but not available")
+                return
+
+            run_command(
+                [
+                    "sudo",
+                    "yum",
+                    "groupinstall",
+                    "-y",
+                    "Development Tools",
+                ],
+                "Could not install Development Tools",
+            )
+            run_command(
+                [
+                    "sudo",
+                    "yum",
+                    "install",
+                    "-y",
+                    "cmake",
+                    "gcc-c++",
+                    "git",
+                ],
+                "Could not install dependencies",
+            )
     if sys.platform.startswith("darwin"):
         run_command(
             [

@@ -100,3 +100,24 @@ def check_git_ref(git_ref: str):
 
 def reset_loop_policy_for_windows():
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+
+def get_linux_distro():
+    result = subprocess.run(["sh", "-c", "type apt"])
+    if result.returncode == 0:
+        return "debian"
+    result = subprocess.run(["sh", "-c", "type yum"])
+    if result.returncode == 0:
+        return "redhat"
+    return "unknown"
+
+
+def is_libsodium_available_on_redhat_like_os():
+    result = subprocess.run(["ls", "/usr/include/sodium.h"])
+    if result.returncode == 0:
+        return True
+    result = subprocess.run(["sudo", "yum", "info", "libsodium-devel"])
+    if result.returncode != 0:
+        return False
+    result = subprocess.run(["sudo", "yum", "install", "-y", "libsodium-devel"])
+    return result.returncode == 0

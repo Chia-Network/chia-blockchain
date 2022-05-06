@@ -14,6 +14,7 @@ from chia.plotters.plotters_util import (
     check_git_repository,
     check_git_ref,
     reset_loop_policy_for_windows,
+    get_linux_distro,
 )
 
 log = logging.getLogger(__name__)
@@ -204,20 +205,48 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
         raise RuntimeError("Automatic install not supported on Windows")
 
     if sys.platform.startswith("linux"):
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "install",
-                "-y",
-                "build-essential",
-                "cmake",
-                "libnuma-dev",
-                "git",
-                "libgmp-dev",
-            ],
-            "Could not install dependencies",
-        )
+        distro = get_linux_distro()
+        if distro == "debian":
+            run_command(
+                [
+                    "sudo",
+                    "apt",
+                    "install",
+                    "-y",
+                    "build-essential",
+                    "cmake",
+                    "libnuma-dev",
+                    "git",
+                    "libgmp-dev",
+                ],
+                "Could not install dependencies",
+            )
+        elif distro == "redhat":
+            run_command(
+                [
+                    "sudo",
+                    "yum",
+                    "groupinstall",
+                    "-y",
+                    "Development Tools",
+                ],
+                "Could not install Development Tools",
+            )
+            run_command(
+                [
+                    "sudo",
+                    "yum",
+                    "install",
+                    "-y",
+                    "cmake",
+                    "numa-devel",
+                    "git",
+                ],
+                "Could not install dependencies",
+            )
+        else:
+            print("Unknown Linux distribution detected")
+            print("Tried to build with cmake anyway but it may require manual build if it fails")
     elif sys.platform in ["darwin"]:
         # 'brew' is a requirement for chia on macOS, so it should be available.
         run_command(["brew", "install", "cmake"], "Could not install dependencies")
