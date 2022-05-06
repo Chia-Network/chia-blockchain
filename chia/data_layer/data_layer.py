@@ -310,6 +310,8 @@ class DataLayer:
                     try:
                         await self.fetch_and_validate(subscription)
                         await self.upload_files(subscription.tree_id)
+                    except asyncio.CancelledError:
+                        break
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
             try:
