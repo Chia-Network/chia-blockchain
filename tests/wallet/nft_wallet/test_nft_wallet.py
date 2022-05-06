@@ -235,7 +235,8 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert len(coins) == 2
     uris = []
     for coin in coins:
-        uris.append(coin["metadata"]["u"][0])
+        uris.append(coin["data_uris"][0])
     print(uris)
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
+    assert coins[1]["nft_coin_id"] in [x.name().hex() for x in sb.additions()]
