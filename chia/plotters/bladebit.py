@@ -239,7 +239,7 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
                     "install",
                     "-y",
                     "cmake",
-                    "numa-devel",
+                    "numactl-devel",
                     "git",
                 ],
                 "Could not install dependencies",
