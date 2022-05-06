@@ -534,7 +534,7 @@ class FailFromBytes:
 
 
 def test_parse_size_hints() -> None:
-    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4).b == b"1337"
+    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4, False).b == b"1337"
 
     # EOF
     with pytest.raises(AssertionError):
