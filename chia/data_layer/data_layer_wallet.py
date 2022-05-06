@@ -38,8 +38,8 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
 
-@dataclasses.dataclass(frozen=True)
 @streamable
+@dataclasses.dataclass(frozen=True)
 class SingletonRecord(Streamable):
     coin_id: bytes32
     launcher_id: bytes32

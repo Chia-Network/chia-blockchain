@@ -17,7 +17,6 @@ from tests.core.node_height import node_height_exactly, node_height_between
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
 
-
 log = logging.getLogger(__name__)
 
 
@@ -279,7 +278,7 @@ class TestFullSync:
 
     @pytest.mark.asyncio
     async def test_sync_bad_peak_while_synced(
-        self, three_nodes, default_1000_blocks, default_10000_blocks, self_hostname
+        self, three_nodes, default_1000_blocks, default_1500_blocks, self_hostname
     ):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks_initial = len(default_1000_blocks) - 250
@@ -293,7 +292,7 @@ class TestFullSync:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
         # Node 3 syncs from a different blockchain
 
-        for block in default_10000_blocks[:1100]:
+        for block in default_1500_blocks[:1100]:
             await full_node_3.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
@@ -305,7 +304,7 @@ class TestFullSync:
         # node 2 should keep being synced and receive blocks
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_3.full_node.on_connect)
         # trigger long sync in full node 2
-        peak_block = default_10000_blocks[1050]
+        peak_block = default_1500_blocks[1050]
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_2.full_node.on_connect)
         con = server_2.all_connections[full_node_3.full_node.server.node_id]
         peak = full_node_protocol.NewPeak(

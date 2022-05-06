@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+
+set -o errexit
+
 export NODE_OPTIONS="--max-old-space-size=3000"
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")"; pwd)

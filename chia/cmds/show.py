@@ -107,7 +107,7 @@ async def show_async(
             full_node_port = config["full_node"]["port"]
             full_node_rpc_port = config["full_node"]["rpc_port"]
 
-            print(f"Network: {network_name}    Port: {full_node_port}   Rpc Port: {full_node_rpc_port}")
+            print(f"Network: {network_name}    Port: {full_node_port}   RPC Port: {full_node_rpc_port}")
             print(f"Node ID: {node_id}")
 
             print(f"Genesis Challenge: {genesis_challenge}")

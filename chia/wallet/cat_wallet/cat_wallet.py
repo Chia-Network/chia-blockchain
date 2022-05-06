@@ -11,7 +11,6 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,7 +36,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
-from chia.wallet.puzzles.genesis_checkers import ALL_LIMITATIONS_PROGRAMS
+from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -92,9 +91,11 @@ class CATWallet:
         if name is None:
             name = "CAT WALLET"
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
-        if self.wallet_info is None:
+        new_wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
+        if new_wallet_info is None:
             raise ValueError("Internal Error")
+
+        self.wallet_info = new_wallet_info
 
         self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
 
@@ -193,11 +194,12 @@ class CATWallet:
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.CAT, info_as_string, in_transaction=in_transaction
         )
-        if self.wallet_info is None:
+        if new_wallet_info is None:
             raise Exception("wallet_info is None")
+        self.wallet_info = new_wallet_info
 
         self.lineage_store = await CATLineageStore.create(
             self.wallet_state_manager.db_wrapper, self.get_asset_id(), in_transaction=in_transaction
@@ -328,34 +330,26 @@ class CATWallet:
                     coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
                         [coin.parent_coin_info], None, node
                     )
+                    # check for empty list and continue on to next node
+                    if not coin_state:
+                        continue
                     assert coin_state[0].coin.name() == coin.parent_coin_info
                     coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
                         node, coin_state[0].spent_height, coin_state[0].coin
                     )
-                    await self.puzzle_solution_received(coin_spend)
+                    await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
                     break
                 except Exception as e:
                     self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend):
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         matched, curried_args = match_cat_puzzle(puzzle)
         if matched:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
             self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
-            parent_coin = None
-            coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-            if coin_record is None:
-                coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin_name]
-                )
-                if coin_states is not None:
-                    parent_coin = coin_states[0].coin
-            if coin_record is not None:
-                parent_coin = coin_record.coin
-            if parent_coin is None:
-                raise ValueError("Error in finding parent")
+
             await self.add_lineage(
                 coin_name,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
@@ -390,13 +384,13 @@ class CATWallet:
     async def get_new_cat_puzzle_hash(self):
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    async def get_spendable_balance(self, records=None) -> uint64:
+    async def get_spendable_balance(self, records=None) -> uint128:
         coins = await self.get_cat_spendable_coins(records)
         amount = 0
         for record in coins:
             amount += record.coin.amount
 
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
@@ -486,7 +480,11 @@ class CATWallet:
             if matched:
                 _, _, inner_puzzle = puzzle_args
                 puzzle_hash = inner_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                ret = await self.wallet_state_manager.get_keys(puzzle_hash)
+                if ret is None:
+                    # Abort signing the entire SpendBundle - sign all or none
+                    raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
+                pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
@@ -508,18 +506,20 @@ class CATWallet:
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            cat_hash
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        if record is None:
+            raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            puzzle_hash
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
-            return puzzle_hash
+            return puzzle_hash  # TODO: check if we have a test for this case!
         else:
             return (await self.inner_puzzle_for_cat_puzhash(puzzle_hash)).get_tree_hash()
 

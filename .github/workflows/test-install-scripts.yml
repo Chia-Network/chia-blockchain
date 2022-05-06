@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -40,7 +40,6 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: sh install.sh
 
     - name: Run install-gui script
@@ -125,6 +124,10 @@ jobs:
       if: ${{ matrix.distribution.type == 'arch' }}
       run: |
         pacman --noconfirm --refresh base --sync git sudo
+        # The behavior we follow in install.sh is unique with Arch in that
+        # we leave it to the user to install the appropriate version of python,
+        # so we need to install python here in order for the test to succeed.
+        pacman --noconfirm -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
 
     - name: Prepare CentOS
       if: ${{ matrix.distribution.type == 'centos' }}
@@ -153,6 +156,16 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
+    # @TODO this step can be removed once Python 3.10 is supported
+    # Python 3.10 is now the default in bookworm, so install 3.9 specifically so install does not fail
+    - name: Prepare debian:bookworm
+      if: ${{ matrix.distribution.name == 'debian:bookworm' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update -y
+        apt-get install -y python3.9-venv
+
     - name: Prepare Fedora
       if: ${{ matrix.distribution.type == 'fedora' }}
       run: |
@@ -175,16 +188,18 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
+    - name: Add safe git directory
+      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
     # after installing git so we use that copy
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: sh install.sh -a
 
     - name: Run chia --help

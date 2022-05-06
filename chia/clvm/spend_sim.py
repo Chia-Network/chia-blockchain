@@ -1,5 +1,7 @@
 import aiosqlite
+import random
 
+from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple, Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -8,7 +10,8 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.util.errors import Err, ValidationError
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.streamable import Streamable, streamable
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.types.generator_types import BlockGenerator
@@ -35,26 +38,49 @@ and is designed so that you could test with it and then swap in a real rpc clien
 """
 
 
-class SimFullBlock:
-    def __init__(self, generator: Optional[BlockGenerator], height: uint32):
-        self.height = height  # Note that height is not on a regular FullBlock
-        self.transactions_generator = generator
+@streamable
+@dataclass(frozen=True)
+class SimFullBlock(Streamable):
+    transactions_generator: Optional[BlockGenerator]
+    height: uint32  # Note that height is not on a regular FullBlock
 
 
-class SimBlockRecord:
-    def __init__(self, rci: List[Coin], height: uint32, timestamp: uint64):
-        self.reward_claims_incorporated = rci
-        self.height = height
-        self.prev_transaction_block_height = uint32(height - 1) if height > 0 else 0
-        self.timestamp = timestamp
-        self.is_transaction_block = True
-        self.header_hash = std_hash(bytes(height))
-        self.prev_transaction_block_hash = std_hash(std_hash(height))
+@streamable
+@dataclass(frozen=True)
+class SimBlockRecord(Streamable):
+    reward_claims_incorporated: List[Coin]
+    height: uint32
+    prev_transaction_block_height: uint32
+    timestamp: uint64
+    is_transaction_block: bool
+    header_hash: bytes32
+    prev_transaction_block_hash: bytes32
+
+    @classmethod
+    def create(cls, rci: List[Coin], height: uint32, timestamp: uint64):
+        return cls(
+            rci,
+            height,
+            uint32(height - 1 if height > 0 else 0),
+            timestamp,
+            True,
+            std_hash(bytes(height)),
+            std_hash(std_hash(height)),
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class SimStore(Streamable):
+    timestamp: uint64
+    block_height: uint32
+    block_records: List[SimBlockRecord]
+    blocks: List[SimFullBlock]
 
 
 class SpendSim:
 
-    connection: aiosqlite.Connection
+    db_wrapper: DBWrapper2
     mempool_manager: MempoolManager
     block_records: List[SimBlockRecord]
     blocks: List[SimFullBlock]
@@ -63,20 +89,49 @@ class SpendSim:
     defaults: ConsensusConstants
 
     @classmethod
-    async def create(cls, defaults=DEFAULT_CONSTANTS):
+    async def create(cls, db_path=None, defaults=DEFAULT_CONSTANTS):
         self = cls()
-        self.connection = await aiosqlite.connect(":memory:")
-        coin_store = await CoinStore.create(DBWrapper(self.connection))
+        if db_path is None:
+            uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+        else:
+            uri = f"file:{db_path}"
+        connection = await aiosqlite.connect(uri, uri=True)
+        self.db_wrapper = DBWrapper2(connection)
+        await self.db_wrapper.add_connection(await aiosqlite.connect(uri, uri=True))
+        coin_store = await CoinStore.create(self.db_wrapper)
         self.mempool_manager = MempoolManager(coin_store, defaults)
-        self.block_records = []
-        self.blocks = []
-        self.timestamp = 1
-        self.block_height = 0
         self.defaults = defaults
-        return self
+
+        # Load the next data if there is any
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+            cursor = await conn.execute("SELECT * from block_data")
+            row = await cursor.fetchone()
+            await cursor.close()
+            if row is not None:
+                store_data = SimStore.from_bytes(row[0])
+                self.timestamp = store_data.timestamp
+                self.block_height = store_data.block_height
+                self.block_records = store_data.block_records
+                self.blocks = store_data.blocks
+                self.mempool_manager.peak = self.block_records[-1]
+            else:
+                self.timestamp = 1
+                self.block_height = 0
+                self.block_records = []
+                self.blocks = []
+            return self
 
     async def close(self):
-        await self.connection.close()
+        async with self.db_wrapper.write_db() as conn:
+            c = await conn.execute("DELETE FROM block_data")
+            await c.close()
+            c = await conn.execute(
+                "INSERT INTO block_data VALUES(?)",
+                (bytes(SimStore(self.timestamp, self.block_height, self.block_records, self.blocks)),),
+            )
+            await c.close()
+        await self.db_wrapper.close()
 
     async def new_peak(self):
         await self.mempool_manager.new_peak(self.block_records[-1], [])
@@ -92,12 +147,13 @@ class SpendSim:
 
     async def all_non_reward_coins(self) -> List[Coin]:
         coins = set()
-        cursor = await self.mempool_manager.coin_store.coin_record_db.execute(
-            "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
-        )
-        rows = await cursor.fetchall()
+        async with self.mempool_manager.coin_store.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
+            )
+            rows = await cursor.fetchall()
 
-        await cursor.close()
+            await cursor.close()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
             coins.add(coin)
@@ -158,7 +214,7 @@ class SpendSim:
         # SimBlockRecord is created
         generator: Optional[BlockGenerator] = await self.generate_transaction_generator(generator_bundle)
         self.block_records.append(
-            SimBlockRecord(
+            SimBlockRecord.create(
                 [pool_coin, farmer_coin],
                 next_block_height,
                 self.timestamp,
@@ -216,6 +272,20 @@ class SimClient:
 
     async def get_coin_record_by_name(self, name: bytes32) -> CoinRecord:
         return await self.service.mempool_manager.coin_store.get_coin_record(name)
+
+    async def get_coin_records_by_names(
+        self,
+        names: List[bytes32],
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+        include_spent_coins: bool = False,
+    ) -> List[CoinRecord]:
+        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "names": names}
+        if start_height is not None:
+            kwargs["start_height"] = start_height
+        if end_height is not None:
+            kwargs["end_height"] = end_height
+        return await self.service.mempool_manager.coin_store.get_coin_records_by_names(**kwargs)
 
     async def get_coin_records_by_parent_ids(
         self,

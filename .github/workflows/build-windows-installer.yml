@@ -23,7 +23,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         submodules: recursive
@@ -38,7 +38,7 @@ jobs:
         echo "::set-output name=dir::$(npm config get cache)"
 
     - name: Cache npm
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ${{ steps.npm-cache.outputs.dir }}
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -51,7 +51,7 @@ jobs:
         echo "::set-output name=dir::$(pip cache dir)"
 
     - name: Cache pip
-      uses: actions/cache@v2.1.6
+      uses: actions/cache@v3
       with:
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
@@ -65,7 +65,7 @@ jobs:
         python-version: "3.9.11"
 
     - name: Setup Node 16.x
-      uses: actions/setup-node@v2.4.1
+      uses: actions/setup-node@v3
       with:
         node-version: '16.x'
 
@@ -105,17 +105,17 @@ jobs:
         deactivate
 
       # Get the most recent release from chia-plotter-madmax
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-madmax'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'chia-plotter-madmax',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest madmax plotter
       run: |
@@ -124,17 +124,17 @@ jobs:
         Invoke-WebRequest https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}.exe -OutFile "$env:GITHUB_WORKSPACE\madmax\chia_plot_k34.exe"
 
       # Get the most recent release from bladebit
-    - uses: actions/github-script@v4
+    - uses: actions/github-script@v6
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         result-encoding: string
         script: |
-          const releases = await github.repos.listReleases({
+          const release = await github.rest.repos.getLatestRelease({
             owner: 'Chia-Network',
             repo: 'bladebit',
           });
-          return releases.data[0].tag_name;
+          return release.data.tag_name;
 
     - name: Get latest bladebit plotter
       run: |
@@ -145,17 +145,19 @@ jobs:
 
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
         HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
+        git -C .\chia-blockchain-gui status
         .\build_scripts\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v2.2.2
       with:
-        name: Windows-Exe
+        name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts

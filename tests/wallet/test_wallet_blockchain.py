@@ -3,7 +3,6 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-import pytest_asyncio
 
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.protocols import full_node_protocol
@@ -13,13 +12,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from tests.setup_nodes import test_constants, setup_node_and_wallet
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname):
-        yield _
+from tests.setup_nodes import test_constants
 
 
 class TestWalletBlockchain:
@@ -50,7 +43,7 @@ class TestWalletBlockchain:
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
 
-        db_filename = Path("wallet_store_test.db")
+        db_filename = Path("wallet_blockchain_store_test.db")
 
         if db_filename.exists():
             db_filename.unlink()
