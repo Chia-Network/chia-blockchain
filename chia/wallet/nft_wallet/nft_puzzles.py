@@ -95,6 +95,6 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         "",
         "NFT0",
         uint64(1),
-        uint64(1)
+        uint64(1),
     )
     return nft_info

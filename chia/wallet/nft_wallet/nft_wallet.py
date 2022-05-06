@@ -202,7 +202,7 @@ class NFTWallet:
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
         try:
             uncurried_nft = UncurriedNFT.uncurry(puzzle)
-        except Exception as e:
+        except Exception:
             # The parent is not an NFT which means we need to scrub all of its children from our DB
             child_coin_records: List[
                 WalletCoinRecord
@@ -215,7 +215,9 @@ class NFTWallet:
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
         else:
-            self.log.info(f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}")
+            self.log.info(
+                f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}"
+            )
             singleton_id = bytes32(uncurried_nft.singleton_launcher_id.atom)
             metadata = uncurried_nft.metadata
             new_inner_puzzle = None

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
-from typing import TypeVar, Type
+from dataclasses import dataclass
+from typing import Type, TypeVar
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -90,13 +89,7 @@ class UncurriedNFT:
             raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
         try:
             # Set nft parameters
-            (
-                nft_mod_hash,
-                metadata,
-                metdata_updater_hash,
-                inner_puzzle
-
-            ) = curried_args.as_iter()
+            (nft_mod_hash, metadata, metdata_updater_hash, inner_puzzle) = curried_args.as_iter()
 
             # Set metadata
             for kv_pair in metadata.as_iter():

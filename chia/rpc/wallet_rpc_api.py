@@ -1328,7 +1328,8 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "nft": nft_record}
 
     async def nft_get_nfts(self, request) -> Dict:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
+        assert self.service.wallet_state_manager is not None
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
         nft_info_list = []

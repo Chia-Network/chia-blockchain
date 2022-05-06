@@ -720,7 +720,9 @@ class WalletStateManager:
             if wallet_info.type == WalletType.NFT:
                 nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
                 self.log.debug(
-                    "Checking NFT wallet %r and inner puzzle %s", wallet_info.name, uncurried_nft.inner_puzzle.get_tree_hash()
+                    "Checking NFT wallet %r and inner puzzle %s",
+                    wallet_info.name,
+                    uncurried_nft.inner_puzzle.get_tree_hash(),
                 )
                 if not nft_wallet_info.did_wallet_id:
                     # standard NFT wallet
