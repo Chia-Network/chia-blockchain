@@ -289,6 +289,8 @@ class DataLayer:
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
+                except asyncio.CancelledError:
+                    break
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
@@ -296,7 +298,10 @@ class DataLayer:
             while time.monotonic() < delay_until:
                 if self._shut_down:
                     break
-                await asyncio.sleep(0.1)
+                try:
+                    await asyncio.sleep(0.1)
+                except asyncio.CancelledError:
+                    break
 
         while not self._shut_down:
             async with self.subscription_lock:
