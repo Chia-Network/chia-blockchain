@@ -1,3 +1,4 @@
+import os
 import itertools
 from pathlib import Path
 import logging
@@ -1144,7 +1145,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 filename = get_full_tree_filename(tree_id, root.node_hash, generation)
             else:
                 filename = get_delta_filename(tree_id, root.node_hash, generation)
-            await insert_into_data_store(data_store, tree_id, root.node_hash, filename)
+            await insert_into_data_store(data_store, tree_id, root.node_hash, os.path.join(foldername, filename))
             current_root = await data_store.get_tree_root(tree_id=tree_id)
             assert current_root.node_hash == root.node_hash
             generation += 1
