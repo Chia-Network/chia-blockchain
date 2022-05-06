@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-did_wallet Test
+name: Ubuntu wallet-nft_wallet Test
 
 on:
   push:
@@ -20,9 +20,9 @@ concurrency:
 
 jobs:
   build:
-    name: Ubuntu wallet-did_wallet Test
+    name: Ubuntu wallet-nft_wallet Test
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -31,7 +31,7 @@ jobs:
         os: [ubuntu-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-did_wallet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-nft_wallet
 
     steps:
     - name: Checkout Code
@@ -89,10 +89,10 @@ jobs:
 
 # Omitted installing Timelord
 
-    - name: Test wallet-did_wallet code with pytest
+    - name: Test wallet-nft_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/wallet/did_wallet/test_did.py tests/wallet/did_wallet/test_did_rpc.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_wallet.py
 
     - name: Process coverage data
       run: |

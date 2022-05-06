@@ -3,23 +3,25 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Set, Any
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from blspy import PrivateKey, G1Element
-from chia.types.blockchain_format.program import Program
+from blspy import G1Element, PrivateKey
+
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
-from chia.pools.pool_wallet_info import create_pool_state, FARMING_TO_POOL, PoolWalletInfo, PoolState
+from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64, uint8
+from chia.util.config import load_config
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -33,8 +35,10 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.nft_puzzles import get_nft_info_from_puzzle
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -43,7 +47,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
-from chia.util.config import load_config
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -129,7 +132,6 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_transfer_nft": self.nft_transfer_nft,
-            "/nft_receive_nft": self.nft_receive_nft,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -569,7 +571,6 @@ class WalletRpcApi:
                 nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
                     wallet_state_manager,
                     main_wallet,
-                    request["did_wallet_id"],
                 )
             assert nft_wallet.nft_wallet_info is not None
             return {
@@ -953,10 +954,26 @@ class WalletRpcApi:
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
+        driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
+
+        # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
+        driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        if driver_dict_str is None:
+            for key in offer:
+                if len(key) == 64:
+                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                        {"type": AssetType.CAT.value, "tail": "0x" + key}
+                    )
+        else:
+            for key, value in driver_dict_str.items():
+                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            modified_offer[int(key)] = offer[key]
+            if len(key) == 64:
+                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+            else:
+                modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
             (
@@ -964,7 +981,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only
             )
         if success:
             return {
@@ -977,9 +994,9 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        offered, requested = offer.summary()
+        offered, requested, infos = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees()}}
+        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
@@ -1289,23 +1306,28 @@ class WalletRpcApi:
     # NFT Wallet
     ##########################################################################################
 
-    async def nft_mint_nft(self, request):
-        wallet_id = int(request["wallet_id"])
+    async def nft_mint_nft(self, request) -> Dict:
+        log.debug("Got minting RPC request: %s", request)
+        wallet_id = uint32(request["wallet_id"])
+        assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        address = request["artist_address"]
+        address = request.get("artist_address")
         if isinstance(address, str):
-            address = decode_puzzle_hash(address)
+            puzzle_hash = decode_puzzle_hash(address)
+        elif address is None:
+            puzzle_hash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            puzzle_hash = address
         metadata = Program.to(
             [
                 ("u", request["uris"]),
-                ("h", request["hash"]),
+                ("h", hexstr_to_bytes(request["hash"])),
             ]
         )
+        nft_record = await nft_wallet.generate_new_nft(metadata, puzzle_hash)
+        return {"wallet_id": wallet_id, "success": True, "nft": nft_record}
 
-        await nft_wallet.generate_new_nft(metadata, request["artist_percentage"], address)
-        return {"wallet_id": wallet_id, "success": True}
-
-    async def nft_get_nfts(self, request):
+    async def nft_get_nfts(self, request) -> Dict:
         wallet_id = int(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
@@ -1317,63 +1339,21 @@ class WalletRpcApi:
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
-        trade_price = request.get("trade_price", 0)
+        address = request["target_address"]
+        if isinstance(address, str):
+            puzzle_hash = decode_puzzle_hash(address)
+        else:
+            return dict(success=False, error="target_address parameter missing")
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        new_url = 0
-        if "new_url" in request:
-            new_url = request["new_url"]
-        new_did_inner_hash = 0
-        if "new_did_inner_hash" in request:
-            new_did_inner_hash = request["new_did_inner_hash"]
-        else:
-            assert trade_price == 0
-        if isinstance(request["new_did"], str):
-            new_did = bytes.fromhex(request["new_did"])
-        else:
-            new_did = request["new_did"]
         try:
-            sb = await nft_wallet.transfer_nft(
-                bytes32.from_hexstr(request["nft_coin_id"]),
-                new_did,
-                new_did_inner_hash,
-                trade_price,
-                new_url,
-            )
+            sb = await nft_wallet.transfer_nft(bytes32.from_hexstr(request["nft_coin_id"]), puzzle_hash)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_receive_nft(self, request):
-        wallet_id = int(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if isinstance(request["spend_bundle"], str):
-            sending_sb = SpendBundle.from_bytes(bytes.fromhex(request["spend_bundle"]))
-        else:
-            sending_sb = request["spend_bundle"]
-
-        if "fee" in request:
-            fee = request["fee"]
-        else:
-            fee = 0
-        sb = await nft_wallet.receive_nft(sending_sb, fee)
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
-
     async def nft_add_url(self, request):
-        wallet_id = int(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = nft_wallet.nft_wallet_info.my_did
-        did_wallet = self.service.wallet_state_manager.wallets[nft_wallet.nft_wallet_info.did_wallet_id]
-        new_did_inner_hash = did_wallet.did_info.current_inner.get_tree_hash()
-        new_url = request["new_url"]
-        sb = await nft_wallet.transfer_nft(
-            bytes32.from_hexstr(request["nft_coin_id"]),
-            my_did,
-            new_did_inner_hash,
-            0,
-            new_url,
-        )
-        return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+        raise NotImplementedError
 
     ##########################################################################################
     # Rate Limited Wallet

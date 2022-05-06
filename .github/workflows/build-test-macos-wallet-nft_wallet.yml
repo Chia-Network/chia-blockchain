@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-did_wallet Test
+name: MacOS wallet-nft_wallet Test
 
 on:
   push:
@@ -20,18 +20,18 @@ concurrency:
 
 jobs:
   build:
-    name: Ubuntu wallet-did_wallet Test
+    name: MacOS wallet-nft_wallet Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-        os: [ubuntu-latest]
+        python-version: ['3.9', '3.10']
+        os: [macOS-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-did_wallet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-nft_wallet
 
     steps:
     - name: Checkout Code
@@ -44,13 +44,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache npm
-      uses: actions/cache@v3
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+    - name: Create keychain for CI use
+      run: |
+        security create-keychain -p foo chiachain
+        security default-keychain -s chiachain
+        security unlock-keychain -p foo chiachain
+        security set-keychain-settings -t 7200 -u chiachain
 
     - name: Get pip cache dir
       id: pip-cache
@@ -60,6 +59,7 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v3
       with:
+        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
@@ -85,14 +85,15 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
+        brew install boost
         sh install.sh -d
 
 # Omitted installing Timelord
 
-    - name: Test wallet-did_wallet code with pytest
+    - name: Test wallet-nft_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/wallet/did_wallet/test_did.py tests/wallet/did_wallet/test_did_rpc.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_wallet.py
 
     - name: Process coverage data
       run: |
@@ -109,9 +110,6 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
-
-# Omitted resource usage check
-
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
