@@ -239,6 +239,8 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
                     "install",
                     "-y",
                     "cmake",
+                    "gcc-c++",
+                    "gmp-devel",
                     "numactl-devel",
                     "git",
                 ],
