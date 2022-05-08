@@ -17,7 +17,7 @@ from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_version import lookup_db_version
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 
 # the first transaction block. Each byte in transaction_height_delta is the
@@ -57,7 +57,9 @@ async def main(db_path: Path):
         await connection.execute("pragma query_only=ON")
         db_version: int = await lookup_db_version(connection)
 
-        db_wrapper = DBWrapper(connection, db_version=db_version)
+        db_wrapper = DBWrapper2(connection, db_version=db_version)
+        await db_wrapper.add_connection(await aiosqlite.connect(db_path))
+
         block_store = await BlockStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)

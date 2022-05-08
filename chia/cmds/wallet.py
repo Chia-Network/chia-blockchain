@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 import click
 
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.transaction_sorting import SortKey
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -65,6 +66,25 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=None,
     help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
+@click.option(
+    "--sort-by-height",
+    "sort_key",
+    flag_value=SortKey.CONFIRMED_AT_HEIGHT,
+    help="Sort transactions by height",
+)
+@click.option(
+    "--sort-by-relevance",
+    "sort_key",
+    flag_value=SortKey.RELEVANCE,
+    default=True,
+    help="Sort transactions by {confirmed, height, time}",
+)
+@click.option(
+    "--reverse",
+    is_flag=True,
+    default=False,
+    help="Reverse the transaction ordering",
+)
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -73,8 +93,19 @@ def get_transactions_cmd(
     limit: int,
     verbose: bool,
     paginate: Optional[bool],
+    sort_key: SortKey,
+    reverse: bool,
 ) -> None:
-    extra_params = {"id": id, "verbose": verbose, "offset": offset, "paginate": paginate, "limit": limit}
+    extra_params = {
+        "id": id,
+        "verbose": verbose,
+        "offset": offset,
+        "paginate": paginate,
+        "limit": limit,
+        "sort_key": sort_key,
+        "reverse": reverse,
+    }
+
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_transactions
 
@@ -167,8 +198,18 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
-    extra_params = {"id": id}
+@click.option(
+    "-n/-l",
+    "--new-address/--latest-address",
+    help=(
+        "Create a new wallet receive address, or show the most recently created wallet receive address"
+        "  [default: show most recent address]"
+    ),
+    is_flag=True,
+    default=False,
+)
+def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_address: bool) -> None:
+    extra_params = {"id": id, "new_address": new_address}
     import asyncio
     from .wallet_funcs import execute_with_wallet, get_address
 

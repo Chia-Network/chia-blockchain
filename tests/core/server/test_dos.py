@@ -3,7 +3,6 @@ import asyncio
 import logging
 
 import pytest
-import pytest_asyncio
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
 from chia.full_node.full_node_api import FullNodeAPI
@@ -15,9 +14,8 @@ from chia.server.rate_limits import RateLimiter
 from chia.server.server import ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
-from tests.setup_nodes import setup_simulators_and_wallets
+from chia.util.ints import uint16, uint64
 from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
@@ -31,12 +29,6 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
-
-
-@pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
-        yield _
 
 
 class FakeRateLimiter:

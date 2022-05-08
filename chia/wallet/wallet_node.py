@@ -6,33 +6,32 @@ import time
 import traceback
 from asyncio import CancelledError
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Any, Iterator
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
+    KeychainProxy,
     KeychainProxyConnectionFailure,
+    KeyringIsEmpty,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
-    KeychainProxy,
-    KeyringIsEmpty,
 )
-from chia.util.chunks import chunks
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
-    RespondToCoinUpdates,
     CoinState,
-    RespondToPhUpdates,
-    RespondBlockHeader,
-    RequestSESInfo,
-    RespondSESInfo,
     RequestHeaderBlocks,
+    RequestSESInfo,
+    RespondBlockHeader,
+    RespondSESInfo,
+    RespondToCoinUpdates,
+    RespondToPhUpdates,
 )
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -46,29 +45,30 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import WeightProof, SubEpochData
+from chia.types.weight_proof import SubEpochData, WeightProof
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import KeyringIsLocked, Keychain
+from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
-from chia.wallet.util.new_peak_queue import NewPeakQueue, NewPeakQueueTypes, NewPeakItem
+from chia.util.profiler import profile_task
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
 from chia.wallet.util.wallet_sync_utils import (
-    request_and_validate_removals,
-    request_and_validate_additions,
-    fetch_last_tx_from_peer,
-    subscribe_to_phs,
-    subscribe_to_coin_updates,
-    last_change_height_cs,
     fetch_header_blocks_in_range,
+    fetch_last_tx_from_peer,
+    last_change_height_cs,
+    request_and_validate_additions,
+    request_and_validate_removals,
+    subscribe_to_coin_updates,
+    subscribe_to_phs,
 )
+from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_action import WalletAction
-from chia.util.profiler import profile_task
 
 
 class WalletNode:
@@ -143,7 +143,7 @@ class WalletNode:
         self.LONG_SYNC_THRESHOLD = 200
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
-        if not self.keychain_proxy:
+        if self.keychain_proxy is None:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
@@ -259,7 +259,7 @@ class WalletNode:
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
-    async def _await_closed(self):
+    async def _await_closed(self, shutting_down: bool = True):
         self.log.info("self._await_closed")
 
         if self.server is not None:
@@ -269,6 +269,11 @@ class WalletNode:
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager._await_closed()
             self.wallet_state_manager = None
+        if shutting_down and self.keychain_proxy is not None:
+            proxy = self.keychain_proxy
+            self.keychain_proxy = None
+            await proxy.close()
+            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.logged_in = False
         self.wallet_peers = None
 
@@ -353,7 +358,7 @@ class WalletNode:
             try:
                 peer, item = None, None
                 item = await self.new_peak_queue.get()
-                self.log.debug(f"Pulled from queue: {item}")
+                self.log.debug("Pulled from queue: %s", item)
                 assert item is not None
                 if item.item_type == NewPeakQueueTypes.COIN_ID_SUBSCRIPTION:
                     # Subscriptions are the highest priority, because we don't want to process any more peaks or
@@ -473,8 +478,8 @@ class WalletNode:
         async with self.wallet_state_manager.db_wrapper.lock:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
-                await self.wallet_state_manager.reorg_rollback(fork_height)
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height)
+                removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True, in_rollback=True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
                 else:
@@ -488,6 +493,11 @@ class WalletNode:
                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
+            else:
+                await self.wallet_state_manager.blockchain.clean_block_records()
+
+                for wallet_id in removed_wallet_ids:
+                    self.wallet_state_manager.wallets.pop(wallet_id)
 
     async def long_sync(
         self,
@@ -681,6 +691,9 @@ class WalletNode:
                                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
+                            else:
+                                await self.wallet_state_manager.blockchain.clean_block_records()
+
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while adding state: {e} {tb}")
@@ -694,9 +707,11 @@ class WalletNode:
         for states in chunks(items, chunk_size):
             if self.server is None:
                 self.log.error("No server")
+                await asyncio.gather(*all_tasks)
                 return False
             if peer.peer_node_id not in self.server.all_connections:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
+                await asyncio.gather(*all_tasks)
                 return False
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.lock:
@@ -716,11 +731,15 @@ class WalletNode:
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
+                    else:
+                        await self.wallet_state_manager.blockchain.clean_block_records()
+
             else:
                 while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
                     await asyncio.sleep(0.1)
                     if self._shut_down:
                         self.log.info("Terminating receipt and validation due to shut down request")
+                        await asyncio.gather(*all_tasks)
                         return False
                 concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
                 all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
