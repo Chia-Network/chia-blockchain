@@ -259,8 +259,14 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
 
     if bladebit_git_repos_exist:
         if commit:
-            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
-            run_command(["git", "checkout", "-f", commit], f"Failed to reset to {commit}", cwd=bladebit_path)
+            run_command(["git", "reset", "--hard"], "Failed to reset head", cwd=bladebit_path)
+            run_command(["git", "clean", "-fd"], "Failed to clean working tree", cwd=bladebit_path)
+            from datetime import datetime
+            now = datetime.now().strftime("%Y%m%d%H%M%S")
+            run_command(["git", "branch", "-m", now], f"Failed to rename branch to {now}", cwd=bladebit_path)
+            run_command(["git", "fetch", "origin", "--prune"], "Failed to fetch remote branches ", cwd=bladebit_path)
+            run_command(["git", "checkout", "-f", commit], f"Failed to checkout {commit}", cwd=bladebit_path)
+            run_command(["git", "branch", "-D", now], f"Failed to delete branch {now}", cwd=bladebit_path)
         elif override:
             run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
             run_command(
