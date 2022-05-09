@@ -27,16 +27,22 @@
     )
   )
 
-  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (METADATA conditions) my_amount)
+  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions) my_amount new_puzhash)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (if (logand (f (r (r (f conditions)))) ONE)
-          (c (list CREATE_COIN (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (f conditions)))) my_amount) (r conditions))
-          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
+          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount (f (r (f conditions))))
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_puzhash))
         )
-        (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH METADATA_UPDATER_PUZZLE_HASH (list METADATA (r conditions)) my_amount))
+        (if (> (f (f conditions)) 0)
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_puzhash))
+          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_puzhash)
+        )
       )
-      ()
+      (if new_puzhash
+        (list (list CREATE_COIN (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH new_puzhash) my_amount))
+        (x)
+      )
     )
   )
 
@@ -52,12 +58,12 @@
     (if conditions_loop
       (if (= (f (f conditions_loop)) -24)
         (if (= (sha256tree1 (f (r (f conditions_loop)))) METADATA_UPDATER_PUZZLE_HASH)
-          (a (f (r (f conditions_loop))) (list CURRENT_METADATA (f (r (r (f conditions_loop))))))
+          (a (f (r (f conditions_loop))) (list CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (r (f conditions_loop))))))
           (x)
         )
         (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA (r conditions_loop))
       )
-      (list CURRENT_METADATA 0)
+      (list (list CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH) 0)
     )
   )
 
@@ -74,11 +80,11 @@
     (list ASSERT_MY_AMOUNT my_amount)
     (wrap_odd_create_coins
       NFT_STATE_LAYER_MOD_HASH
-      METADATA_UPDATER_PUZZLE_HASH
       (metadata_updater_loader
        METADATA_UPDATER_PUZZLE_HASH METADATA (a INNER_PUZZLE solution)
       )
       my_amount
+      0
     )
   )
 )

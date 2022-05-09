@@ -1,4 +1,42 @@
-(mod (CURRENT_PUBKEY)
+(mod
+  (
+    NFT_V1_MOD_HASH
+    PUBKEY
+    delegated_puzzle  ; returns (new_owner, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution] Conditions)
+    delegated_solution
+  )
 
-  ; main
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+   (defconstant NEW_OWNER_CONDITION -10)
+   (defconstant METADATA_REVEAL_NUMBER -23)
+   (defconstant RECURRY_TRANSFER_PROGRAM -22)
+
+   ; New Price and New Pubkey both go into the Transfer Program's Solution
+   ; New Pubkey must sign New Price and this gets added to our returned conditions
+
+   (defun sha256tree1
+          (TREE)
+          (if (l TREE)
+              (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+              (sha256 1 TREE)
+          )
+   )
+
+   (defun-inline recurry_self (NFT_V1_MOD_HASH PUBKEY)
+      (list CREATE_COIN (puzzle-hash-of-curried-function NFT_V1_MOD_HASH
+                                       (sha256 ONE inner_puzzle_hash)
+                                       (sha256 ONE NFT_V1_MOD_HASH)
+      ) ONE)
+    )
+
+    (defun process_results (NFT_V1_MOD_HASH conditions)  ; conditions are (new_owner, new_pk, new_price)
+      (list (recurry_self (f (r conditions))) (list NEW_OWNER_CONDITION (f conditions)) (list AGG_SIG_ME (f (r conditions)) (f (r (r conditions)))))
+    )
+
+    (c
+      (list AGG_SIG_ME PUBKEY (sha256tree1 delegated_puzzle))
+      (process_results NFT_V1_MOD_HASH (a delegated_puzzle delegated_solution))
+    )
 )
