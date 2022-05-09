@@ -212,13 +212,13 @@ class WeightProofHandlerV2:
         compressed_sub_epochs = []
         for idx, future in enumerate(compress_sub_epoch_futures):
             if future.exception() is not None:
-                log.error(f"error while compressing sub epoch")
+                log.error("error while compressing sub epoch")
                 return None
             compressed_sub_epochs.append(future.result())
 
         recent_chain = await recent_chain_task
         if recent_chain is None:
-            log.error(f"error getting recent chain")
+            log.error("error getting recent chain")
             return None
         return WeightProofV2(sub_epoch_data, compressed_sub_epochs, recent_chain)
 
@@ -1096,7 +1096,7 @@ def validate_overflow(
         constants, cc_sub_slot_hash, ip_input, ssd.cc_ip_vdf_output, ssd.cc_infusion_point, cc_sp_iterations
     )
     if not valid:
-        raise Exception(f"failed cc infusion point vdf validation")
+        raise Exception("failed cc infusion point vdf validation")
     long_outputs[ssd.cc_ip_vdf_output] = output
     if ssd.icc_infusion_point is not None:
         icc_ip_input = ClassgroupElement.get_default_element()
@@ -1107,7 +1107,7 @@ def validate_overflow(
             and not ssd.icc_infusion_point.normalized_to_identity
         ):
             if prev_ssd.icc_ip_vdf_output not in long_outputs:
-                raise Exception(f"missing uncompressed output for vdf")
+                raise Exception("missing uncompressed output for vdf")
             icc_ip_input = long_outputs[prev_ssd.icc_ip_vdf_output]
         assert ssd.icc_ip_vdf_output
         valid, output = verify_compressed_vdf(
@@ -1119,7 +1119,7 @@ def validate_overflow(
             cc_sp_iterations,
         )
         if not valid:
-            raise Exception(f"failed icc signage point vdf validation ")
+            raise Exception("failed icc signage point vdf validation ")
         assert ssd.icc_ip_vdf_output
         long_outputs[ssd.icc_ip_vdf_output] = output
 
@@ -1321,7 +1321,7 @@ def _validate_sub_slot_data(
             iterations,
         )
         if not sp_valid:
-            raise Exception(f"failed cc signage point vdf validation")
+            raise Exception("failed cc signage point vdf validation")
         assert sub_slot_data.cc_sp_vdf_output is not None
         long_outputs[sub_slot_data.cc_sp_vdf_output] = sp_output
     cc_ip_input = ClassgroupElement.get_default_element()
@@ -1369,7 +1369,7 @@ def _validate_sub_slot_data(
             icc_ip_vdf_iters,
         )
         if not icc_ip_valid:
-            raise Exception(f"failed icc infusion point vdf validation")
+            raise Exception("failed icc infusion point vdf validation")
         long_outputs[sub_slot_data.icc_ip_vdf_output] = icc_ip_output
     return
 
@@ -1442,7 +1442,7 @@ def __validate_pospace(
         cc_sp_hash,
     )
     if q_str is None:
-        raise Exception(f"could not validate proof of space")
+        raise Exception("could not validate proof of space")
 
     iterations = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -1453,7 +1453,7 @@ def __validate_pospace(
     )
 
     if iterations >= calculate_sp_interval_iters(constants, ssi):
-        raise Exception(f"invalid required iters for proof of space")
+        raise Exception("invalid required iters for proof of space")
 
     return
 
@@ -1476,7 +1476,7 @@ def __get_rc_sub_slot_hash(
             break
 
     if first_idx is None or first is None:
-        raise Exception(f"could not find first block in sub epoch")
+        raise Exception("could not find first block in sub epoch")
 
     assert first.signage_point_index is not None
 
@@ -1553,7 +1553,7 @@ def _get_last_ses(
                                 curr.reward_chain_block.weight,
                             )
                 idx += 1
-    raise Exception(f"did not find sub epoch summary in recent chain")
+    raise Exception("did not find sub epoch summary in recent chain")
 
 
 def preprocess_sub_epoch_sampling(rng: random.Random, sub_epoch_weight_list: List[uint128]) -> Dict[int, bool]:
@@ -1727,8 +1727,8 @@ def _validate_recent_blocks(
             assert required_iters
         if prev_block_record is None:
             # this is the first ses block in the recent chain
-            if ses == False:
-                raise Exception(f"second block in recent chain must have sub epoch summary")
+            if ses is False:
+                raise Exception("second block in recent chain must have sub epoch summary")
             if not (overflow and deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
                 deficit = uint8(deficit - uint8(1))
         else:
@@ -1783,14 +1783,14 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
     )
     if required_iters >= calculate_sp_interval_iters(constants, ssi):
-        raise Exception(f"invalid iters for proof of space")
+        raise Exception("invalid iters for proof of space")
     return required_iters
 
 
 def vars_to_bytes(
     constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProofV2
 ) -> Tuple[Dict[str, Any], List[bytes], bytes]:
-    constants_dict = recurse_jsonify(dataclasses.asdict(constants))  # type: ignore
+    constants_dict = recurse_jsonify(dataclasses.asdict(constants))
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     summary_bytes = []
     for summary in summaries:
@@ -1804,7 +1804,7 @@ def bytes_to_vars(
     summaries = []
     for summary in summaries_bytes:
         summaries.append(SubEpochSummary.from_bytes(summary))
-    constants = dataclass_from_dict(ConsensusConstants, constants_dict)  # type: ignore
+    constants = dataclass_from_dict(ConsensusConstants, constants_dict)
     return constants, summaries
 
 

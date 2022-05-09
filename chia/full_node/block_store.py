@@ -59,7 +59,8 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, "
+                    "challenge_segments blob, num_of_segments bigint)"
                 )
 
                 # backward compatible Sub epoch segments for weight proofs
@@ -93,7 +94,8 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash "
+                    "text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
                 )
 
                 # backward compatible Sub epoch segments for weight proofs

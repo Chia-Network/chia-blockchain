@@ -1117,7 +1117,7 @@ class WalletNode:
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
         if peer.has_wp_v2_capability():
             if ses_response is None:
-                self.log.error(f"did not receive ses response")
+                self.log.error("did not receive ses response")
                 return False, None, [], []
             seed = std_hash(self.salt + bytes(peak.header_hash))
             self.log.info(f"wp salt is {self.salt}, salted seed is {seed}")

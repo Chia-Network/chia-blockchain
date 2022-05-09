@@ -151,7 +151,7 @@ def verify_compressed_vdf(
     number_of_iterations: uint64,
 ) -> Tuple[bool, ClassgroupElement]:
     if proof.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-        raise Exception(f"invalid witness type")
+        raise Exception("invalid witness type")
     valid, y_bytes = verify_n_wesolowski_with_b(
         str(get_discriminant(challenge, constants.DISCRIMINANT_SIZE_BITS)),
         f"0x{vdf_output.data.hex()}",
