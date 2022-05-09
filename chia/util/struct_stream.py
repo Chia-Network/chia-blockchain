@@ -85,10 +85,7 @@ class StructStream(int):
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
     def to_bytes(  # type: ignore[override]
-        self,
-        length: Optional[int] = None,
-        byteorder: Literal["little", "big"] = "big",
-        signed: bool = None
+        self, length: Optional[int] = None, byteorder: Literal["little", "big"] = "big", signed: bool = None
     ) -> bytes:
         if length is None:
             length = self.SIZE
