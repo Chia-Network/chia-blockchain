@@ -55,52 +55,6 @@ class NFTCoinInfo(Streamable):
     lineage_proof: LineageProof
     full_puzzle: Program
 
-    def get_rpc_dict(self):
-        """Returns metadata schema in JSON format
-
-        {
-        "data_url": ["https://..."],
-        "data_hash": "...",
-        "metadata_url": ]"https://..."],
-        "metadata_hash": "...",
-        "license_url": ["https://..."],
-        "license_hash": "...",
-        "edition_number": 1,
-        "edition_count": 1,
-        }
-        For more see: https://developers.chia.net/t/nft-on-chain-metadata/466
-        """
-        matched, singleton_curried_args, curried_args = nft_puzzles.match_nft_puzzle(self.full_puzzle)
-        if matched:
-            (_, metadata, metadata_updater_puzzle_hash, inner_puzzle) = curried_args
-            params = singleton_curried_args.first()
-            singleton_id = bytes32(params.rest().first().atom)
-            data_uris = []
-            data_hash = ""
-            unsupported_metadata_entries = {}
-            for item in metadata.as_python():
-                key, values = item[0], item[1:]
-                if key == b"h":
-                    # hash value
-                    data_hash = values[0].hex()
-                elif key == b"u":
-                    data_uris = [x.decode("utf-8") for x in values]
-                else:
-                    # not an entry that we support, so we return hex format
-                    # and hopefully client knows how to decode and display
-                    unsupported_metadata_entries[key] = [x.hex() for x in values]
-            return {
-                "nft_id": singleton_id,
-                "nft_coin_id": self.coin.name_str,
-                "data_uris": data_uris,
-                "data_hash": data_hash,
-                "metadata_updater_puzzle_hash": metadata_updater_puzzle_hash.atom.hex(),
-                "inner_puzzle_hash": inner_puzzle.get_tree_hash().hex(),
-                "unsupported_metadata_entries": unsupported_metadata_entries,
-                # TODO: add the rest of the fields once NFT1 is implemented
-            }
-        raise ValueError("Not an NFT puzzle")
-
 
 @streamable
 @dataclass(frozen=True)
