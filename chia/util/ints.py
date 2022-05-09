@@ -66,7 +66,7 @@ class uint128(int):
         return cls(n)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> uint128:
+    def from_bytes(cls, blob: bytes) -> uint128:  # type: ignore[override]
         if len(blob) != cls.SIZE:
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes, got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=False))
@@ -98,7 +98,7 @@ class int512(int):
         return cls(n)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> int512:
+    def from_bytes(cls, blob: bytes) -> int512:  # type: ignore[override]
         if len(blob) != cls.SIZE:
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes, got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=True))
