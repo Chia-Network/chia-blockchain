@@ -24,7 +24,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_puzzles import LAUNCHER_PUZZLE, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.nft_wallet.nft_puzzles import LAUNCHER_PUZZLE, NFT_METADATA_UPDATER, NFT_STATE_LAYER_MOD_HASH
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -41,7 +41,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from tests.wallet.nft_wallet.test_nft_clvm import NFT_METADATA_UPDATER
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
@@ -255,10 +254,10 @@ class NFTWallet:
         if matched:
             (_, metadata, metadata_updater_puzzle_hash, inner_puzzle) = curried_args
             params = singleton_curried_args.first()
+            parent_inner_puzhash = singleton_curried_args.rest().first().get_tree_hash()
             self.log.info(f"found the info for NFT coin {coin_name} {inner_puzzle} {params}")
             singleton_id = bytes32(params.rest().first().atom)
             new_inner_puzzle = None
-            parent_inner_puzhash = singleton_curried_args.rest().first().get_tree_hash()
             self.log.debug("Before spend metadata: %s %s \n%s", metadata, singleton_id, disassemble(solution))
             for condition in solution.rest().first().rest().as_iter():
                 self.log.debug("Checking solution condition: %s", disassemble(condition))
@@ -269,8 +268,12 @@ class NFTWallet:
                 self.log.debug("Checking condition code: %r", condition_code)
                 if condition_code == -24:
                     # metadata update
-                    # (-24 (meta updater puzzle) url)
-                    metadata = condition.rest().rest().first() + metadata
+                    metadata_dict = dict(metadata.as_python())
+                    new_metadata = [
+                        (b"u", ([condition.rest().rest().first().atom] + [metadata[b"u"]])),
+                        (b"h", metadata_dict[b"h"]),
+                    ]
+                    metadata = Program.to(new_metadata)
                 elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
                     puzhash = bytes32(condition.rest().first().atom)
                     self.log.debug("Got back puzhash from solution: %s", puzhash)
@@ -588,30 +591,15 @@ class NFTWallet:
     async def update_metadata(self, nft_coin_info: NFTCoinInfo, uri: str):
         coin = nft_coin_info.coin
         # we're not changing it
-        puzzle_hash = nft_coin_info.full_puzzle.get_tree_hash()
+        _, _, nft_params = nft_puzzles.match_nft_puzzle(nft_coin_info.full_puzzle)
+        (_, _, _, inner_puzzle) = nft_params
 
+        puzzle_hash = inner_puzzle.get_tree_hash()
         condition_list = [make_create_coin_condition(puzzle_hash, coin.amount, [puzzle_hash])]
         condition_list.append([int_to_bytes(-24), NFT_METADATA_UPDATER, uri.encode("utf-8")])
 
+        self.log.info("Attempting to add a url to NFT coin %s in the metadata: %s", nft_coin_info, uri)
         inner_solution = solution_for_conditions(condition_list)
-        lineage_proof = nft_coin_info.lineage_proof
-        self.log.debug("Inner solution: %r", disassemble(inner_solution))
-        full_solution = Program.to(
-            [
-                [lineage_proof.parent_name, lineage_proof.inner_puzzle_hash, lineage_proof.amount],
-                coin.amount,
-                Program.to(
-                    [
-                        inner_solution,
-                        coin.amount,
-                        0,
-                    ]
-                ),
-            ]
-        )
-        full_puzzle = nft_coin_info.full_puzzle
-        conditions = full_puzzle.run(full_solution)
-        print(conditions)
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution)
         await self.standard_wallet.push_transaction(nft_tx_record)
         return nft_tx_record

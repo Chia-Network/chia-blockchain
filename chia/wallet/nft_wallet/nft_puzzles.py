@@ -14,6 +14,7 @@ SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 OFFER_MOD = load_clvm("settlement_payments.clvm")
+NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 
 
 def create_nft_layer_puzzle_with_curry_params(

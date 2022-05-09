@@ -285,7 +285,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         {
             "wallet_id": nft_wallet_0_id,
             "artist_address": ph,
-            "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
         }
     )
@@ -309,30 +309,25 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         {
             "wallet_id": nft_wallet_0_id,
             "nft_coin_id": nft_coin_id,
-            "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uri": "https://www.chia.net/img/branding/chia-logo-white.svg",
         }
     )
 
     assert isinstance(tr1, dict)
     assert tr1.get("success")
-    sb = tr1["nft"].spend_bundle
-
+    sb = tr1["spend_bundle"]
     await asyncio.sleep(5)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(3)
-
+    await asyncio.sleep(5)
     # check that new URI was added
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert isinstance(coins_response, dict)
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
-    assert len(coins) == 2
-    uris = []
-    for coin in coins:
-        uris.append(coin["data_uris"][0])
-    print(uris)
+    assert len(coins) == 1
+    uris = coins[0]["data_uris"]
     assert len(uris) == 2
     assert "https://www.chia.net/img/branding/chia-logo-white.svg" in uris

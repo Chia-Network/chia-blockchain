@@ -14,7 +14,7 @@ NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 
 LAUNCHER_ID = Program.to("launcher-id").get_tree_hash()
-NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater.clvm")
+NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 
 
 def test_new_nft_ownership_layer() -> None:
