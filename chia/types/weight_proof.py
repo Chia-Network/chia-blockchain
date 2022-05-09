@@ -139,7 +139,8 @@ class SubSlotDataV2(Streamable):
 class SubEpochChallengeSegmentV2(Streamable):
     sub_epoch_n: uint32
     sub_slot_data: List[SubSlotDataV2]
-    # only in first segment of each sub_epoch
+    # only in first segment of each sub_epoch, these will be used for vdf/hash validation
+    # in the start of the sub epoch
     rc_slot_end_info: Optional[VDFInfo]
     cc_slot_end_info: Optional[VDFInfo]
     icc_sub_slot_hash: Optional[bytes32]
@@ -157,5 +158,7 @@ class SubEpochSegmentsV2(Streamable):
 @dataclass(frozen=True)
 class WeightProofV2(Streamable):
     sub_epochs: List[SubEpochData]
-    sub_epoch_segments: List[bytes]  # list where each bytes item represents List[SubEpochChallengeSegmentV2]
+    # list where each bytes item represents List[SubEpochChallengeSegmentV2]
+    # using bytes here allows avoiding redundant conversions in the receiving node
+    sub_epoch_segments: List[bytes]
     recent_chain_data: List[HeaderBlock]

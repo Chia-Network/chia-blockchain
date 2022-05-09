@@ -55,6 +55,7 @@ class WeightProofHandlerV2:
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 140
+    SUB_EPOCHS_RECENT_CHAIN = 2
 
     def __init__(
         self,
@@ -207,7 +208,7 @@ class WeightProofHandlerV2:
         with ProcessPoolExecutor() as executor:
             for sub_epoch, num_of_segments in sub_epoch_segments:
                 sampled_seg_index = rng.choice(range(num_of_segments))
-                compress_sub_epoch_futures.append(executor.submit(compress_segments, sampled_seg_index, sub_epoch))
+                compress_sub_epoch_futures.append(executor.submit(reduce_segments, sampled_seg_index, sub_epoch))
         compressed_sub_epochs = []
         for idx, future in enumerate(compress_sub_epoch_futures):
             if future.exception() is not None:
@@ -650,7 +651,7 @@ def handle_finished_slots(end_of_slot: EndOfSubSlotBundle) -> SubSlotDataV2:
     )
 
 
-def compress_segments(full_segment_index: int, segments_bytes: bytes) -> bytes:
+def reduce_segments(full_segment_index: int, segments_bytes: bytes) -> bytes:
     """
     given a sub epoch remove all the unneeded fields from the
     challenge segments not selected for validation
@@ -723,7 +724,13 @@ def _validate_sub_epoch_summaries(
 
     log.info(f"validating {len(summaries)} sub epochs, sub epoch data weight {total}")
     # validate weight
-    if not _validate_summaries_weight(constants, total, summaries, weight_proof):
+    num_over = summaries[-1].num_blocks_overflow
+    ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
+    curr = None
+    for block in weight_proof.recent_chain_data:
+        if block.reward_chain_block.height == ses_end_height:
+            curr = block
+    if curr is None or not curr.reward_chain_block.weight == total:
         log.error("failed validating weight")
         return None
 
@@ -759,14 +766,13 @@ def _map_sub_epoch_summaries(
         )
 
         if idx < len(sub_epoch_data) - 1:
-            delta = sub_epoch_data[idx].num_blocks_overflow
             log.debug(f"sub epoch {idx} start weight is {total_weight + curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
+            extra_sub_epoch_blocks = (
+                sub_epoch_data[idx + 1].num_blocks_overflow - sub_epoch_data[idx].num_blocks_overflow
+            )
             total_weight = uint128(
-                total_weight
-                + uint128(
-                    curr_difficulty * (constants.SUB_EPOCH_BLOCKS + sub_epoch_data[idx + 1].num_blocks_overflow - delta)
-                )
+                total_weight + uint128(curr_difficulty * (constants.SUB_EPOCH_BLOCKS + extra_sub_epoch_blocks))
             )
 
         # if new epoch update diff and iters
@@ -1552,7 +1558,7 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
     for ses_height in reversed(ses_heights):
         if ses_height <= tip_height:
             count_ses += 1
-        if count_ses == 2:
+        if count_ses == WeightProofHandlerV2.SUB_EPOCHS_RECENT_CHAIN:
             min_height = ses_height - 1
             break
     log.info(f"start {min_height} end {tip_height}")
@@ -1561,7 +1567,7 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
     ses_count = 0
     curr_height = tip_height
     blocks_n = 0
-    while ses_count < 2:
+    while ses_count < WeightProofHandlerV2.SUB_EPOCHS_RECENT_CHAIN:
         if curr_height == 0:
             break
         # add to needed reward chain recent blocks
@@ -1627,32 +1633,45 @@ def _sample_sub_epoch(
 
 def _validate_recent_blocks(
     constants_dict: Dict[str, Any], recent_chain_bytes: bytes, summaries_bytes: List[bytes]
-) -> Tuple[bool, List[bytes]]:
+) -> List[bytes]:
     """
     validate pospace for blocks after the first two slots, full validation for last 100 blocks
     returns the result and the list of blocks records as bytes
     """
+
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    sub_blocks = BlockCache({})
-    first_ses_idx = _get_ses_idx(recent_chain.recent_chain_data)
-    ses_idx = len(summaries) - len(first_ses_idx)
+    full_validation = 100
+    if constants.LAST_BLOCKS_FULL_VALIDATION is not None:
+        full_validation = constants.LAST_BLOCKS_FULL_VALIDATION
+    count = 0
+    for idx, curr in enumerate(recent_chain.recent_chain_data):
+        if len(curr.finished_sub_slots) > 0:
+            for slot in curr.finished_sub_slots:
+                if slot.challenge_chain.subepoch_summary_hash is not None:
+                    count += 1
+
+    if count != WeightProofHandlerV2.SUB_EPOCHS_RECENT_CHAIN:
+        raise Exception(f"wrong ses count in recent chain. {count}")
+    # find ses previous to first block in recent blocks
+    ses_idx: int = len(summaries) - count
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
     diff: Optional[uint64] = constants.DIFFICULTY_STARTING
+    # find ssi diff up to first block
     for summary in summaries[:ses_idx]:
         if summary.new_sub_slot_iters is not None:
             ssi = summary.new_sub_slot_iters
         if summary.new_difficulty is not None:
             diff = summary.new_difficulty
-
-    ses_blocks, sub_slots, transaction_blocks = 0, 0, 0
+    sub_blocks = BlockCache({})
+    ses_blocks, sub_slots, tx_blocks = 0, 0, 0
     challenge, prev_challenge = None, None
     tip_height = recent_chain.recent_chain_data[-1].height
     prev_block_record = None
-    deficit = uint8(0)
-    for idx, block in enumerate(recent_chain.recent_chain_data):
+    deficit: uint8 = uint8(0)
+    for idx, block in enumerate(recent_chain.recent_chain_data[1:]):
         required_iters = uint64(0)
-        overflow = False
+        overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:
@@ -1667,29 +1686,28 @@ def _validate_recent_blocks(
                 ssi = sub_slot.challenge_chain.new_sub_slot_iters
             if sub_slot.challenge_chain.new_difficulty is not None:
                 diff = sub_slot.challenge_chain.new_difficulty
-
         if (challenge is not None) and (prev_challenge is not None):
-            overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-            deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             log.debug(f"wp, validate block {block.height}")
-            if (
-                sub_slots > 2
-                and transaction_blocks > 11
-                and (tip_height - block.height < constants.LAST_BLOCKS_FULL_VALIDATION)
-            ):
-
+            if sub_slots > 2 and tx_blocks > 11 and (tip_height - block.height < full_validation):
                 required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
                 )
                 if error is not None:
-                    log.error(f"block {block.header_hash} failed validation {error}")
-                    return False, []
+                    raise Exception(f"block {block.header_hash} failed validation {error}")
+
             else:
                 required_iters = _validate_pospace_recent_chain(
-                    constants, block, challenge, diff, overflow, prev_challenge
+                    constants, block, challenge, diff, overflow, prev_challenge, ssi
                 )
-                if required_iters is None:
-                    return False, []
+
+        if prev_block_record is None:
+            # this is the first ses block in the recent chain
+            if ses == False:
+                raise Exception(f"second block in recent chain must have sub epoch summary")
+            if not (overflow and deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
+                deficit = uint8(deficit - uint8(1))
+        else:
+            deficit = calculate_deficit(constants, height, prev_block_record, overflow, len(block.finished_sub_slots))
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
         block_record = header_block_to_sub_block_record(
@@ -1701,12 +1719,12 @@ def _validate_recent_blocks(
         if block.first_in_sub_slot:
             sub_slots += 1
         if block.is_transaction_block:
-            transaction_blocks += 1
+            tx_blocks += 1
         if ses:
             ses_blocks += 1
         prev_block_record = block_record
 
-    return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
+    return [bytes(sub) for sub in sub_blocks._block_records.values()]
 
 
 def _validate_pospace_recent_chain(
@@ -1716,7 +1734,8 @@ def _validate_pospace_recent_chain(
     diff: uint64,
     overflow: bool,
     prev_challenge: bytes32,
-) -> Optional[uint64]:
+    ssi: uint64,
+) -> uint64:
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
         # Edge case of first sp (start of slot), where sp_iters == 0
         cc_sp_hash: bytes32 = challenge
@@ -1729,8 +1748,7 @@ def _validate_pospace_recent_chain(
         cc_sp_hash,
     )
     if q_str is None:
-        log.error(f"could not verify proof of space block {block.height} {overflow}")
-        return None
+        raise Exception(f"could not verify proof of space block {block.height} {overflow}")
     required_iters = calculate_iterations_quality(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
@@ -1738,6 +1756,8 @@ def _validate_pospace_recent_chain(
         diff,
         cc_sp_hash,
     )
+    if required_iters >= calculate_sp_interval_iters(constants, ssi):
+        raise Exception(f"invalid iters for proof of space")
     return required_iters
 
 
@@ -1762,51 +1782,8 @@ def bytes_to_vars(
     return constants, summaries
 
 
-def _get_ses_idx(recent_reward_chain: List[HeaderBlock]) -> List[int]:
-    idxs: List[int] = []
-    for idx, curr in enumerate(recent_reward_chain):
-        if len(curr.finished_sub_slots) > 0:
-            for slot in curr.finished_sub_slots:
-                if slot.challenge_chain.subepoch_summary_hash is not None:
-                    idxs.append(idx)
-    return idxs
-
-
-def get_deficit(
-    constants: ConsensusConstants,
-    curr_deficit: uint8,
-    prev_block: BlockRecord,
-    overflow: bool,
-    num_finished_sub_slots: int,
-) -> uint8:
-    if prev_block is None:
-        if curr_deficit >= 1 and not (overflow and curr_deficit == constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK):
-            curr_deficit -= 1
-        return curr_deficit
-
-    return calculate_deficit(constants, uint32(prev_block.height + 1), prev_block, overflow, num_finished_sub_slots)
-
-
-def _validate_summaries_weight(
-    constants: ConsensusConstants,
-    sub_epoch_data_weight: uint128,
-    summaries: List[SubEpochSummary],
-    weight_proof: WeightProofV2,
-) -> bool:
-    num_over = summaries[-1].num_blocks_overflow
-    ses_end_height = (len(summaries) - 1) * constants.SUB_EPOCH_BLOCKS + num_over - 1
-    curr = None
-    for block in weight_proof.recent_chain_data:
-        if block.reward_chain_block.height == ses_end_height:
-            curr = block
-    if curr is None:
-        return False
-
-    return curr.reward_chain_block.weight == sub_epoch_data_weight
-
-
 async def get_prev_two_slots_height(blockchain: BlockchainInterface, se_start: BlockRecord) -> uint32:
-    # find prev 2 slots height
+    # find block height where the previous to last slot ended before the start of the sub epoch.
     slot = 0
     batch_size = 50
     curr_rec = se_start
@@ -1838,15 +1815,15 @@ async def validate_weight_proof_no_fork_point(
     summaries, sub_epoch_weight_list = result
     rng = random.Random(seed)
     sampled_sub_epochs = preprocess_sub_epoch_sampling(rng, sub_epoch_weight_list)
-    constants_bytes, summary_bytes, wp_recent_chain_bytes = vars_to_bytes(constants, summaries, weight_proof)
+    constants_dict, summary_bytes, wp_recent_chain_bytes = vars_to_bytes(constants, summaries, weight_proof)
 
     with ProcessPoolExecutor() as executor:
-        recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
-            executor, _validate_recent_blocks, constants_bytes, wp_recent_chain_bytes, summary_bytes
+        recent_blocks_validation_task = executor.submit(
+            _validate_recent_blocks, constants_dict, wp_recent_chain_bytes, summary_bytes
         )
         if not skip_segments:
             valid, sub_epochs = _validate_sub_epoch_segments(
-                constants_bytes, rng, weight_proof.sub_epoch_segments, summary_bytes, executor
+                constants_dict, rng, weight_proof.sub_epoch_segments, summary_bytes, executor
             )
             if not valid:
                 log.error("failed validating weight proof sub epoch segments")
@@ -1859,11 +1836,9 @@ async def validate_weight_proof_no_fork_point(
         log.error("failed weight proof sub epoch sample validation")
         return False, [], []
 
-    valid, records_bytes = await recent_blocks_validation_task
-    if not valid:
-        log.error("failed validating weight proof recent blocks")
+    if recent_blocks_validation_task.exception() is not None:
+        log.error(f"error validating recent chain {recent_blocks_validation_task.exception()}")
         return False, [], []
 
-    records = [BlockRecord.from_bytes(b) for b in records_bytes]
-
-    return True, summaries, records
+    records_bytes = recent_blocks_validation_task.result()
+    return True, summaries, [BlockRecord.from_bytes(b) for b in records_bytes]

@@ -6,10 +6,9 @@ import multiprocessing
 import os
 import sqlite3
 import sys
-import time
+from concurrent.futures import as_completed
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
-from pathlib import Path
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
 
@@ -25,14 +24,13 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
-from chia.protocols import full_node_protocol
+from chia.full_node.weight_proof_v2 import WeightProofHandlerV2, _validate_recent_blocks, get_recent_chain
 from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
-from chia.types.weight_proof import WeightProofV2, WeightProof
+from chia.types.weight_proof import WeightProofV2, WeightProof, RecentChainData
 from chia.util.block_cache import BlockCache
 from chia.util.config import load_config, process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
@@ -42,6 +40,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.path import path_from_root
+from chia.util.streamable import recurse_jsonify
 from tests.block_tools import test_constants
 
 try:
@@ -572,6 +571,77 @@ class TestWeightProof:
         )
         assert valid
 
+    @pytest.mark.asyncio
+    async def test_weight_proof_recent_chain_validation(self, default_1000_blocks, bt):
+        blocks: List[FullBlock] = default_1000_blocks
+
+        # need to add no more then 2 sub epochs here
+        blocks = bt.get_consecutive_blocks(
+            360, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=False, skip_slots=4
+        )
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        summary_heights: List[uint32] = blockchain.get_ses_heights()
+        summaries_list: List[SubEpochSummary] = []
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            summaries_list.append(blockchain.get_ses(ses_height))
+
+        constants_dict = recurse_jsonify(dataclasses.asdict(test_constants))
+        summary_bytes = []
+        for height in blockchain.get_ses_heights():
+            summary_bytes.append(bytes(summaries[height]))
+
+        futures = []
+        with ProcessPoolExecutor() as executor:
+            for idx in range(100):
+                recent_chain = await get_recent_chain(blockchain, blocks[len(blocks) - idx - 1].height)
+                futures.append(
+                    executor.submit(
+                        _validate_recent_blocks, constants_dict, bytes(RecentChainData(recent_chain)), summary_bytes
+                    )
+                )
+
+        for idx, future in enumerate(as_completed(futures)):
+            assert future.exception() is None
+            res = future.result()
+            assert res is not None
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_recent_chain_validation_start_on_overflow(self, default_1000_blocks, bt):
+        blocks: List[FullBlock] = default_1000_blocks
+
+        start_from = 0
+        for block in reversed(blocks):
+            for slot in block.finished_sub_slots:
+                if slot.challenge_chain.subepoch_summary_hash is not None:
+                    start_from = block.height
+            if start_from > 0:
+                break
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks[:start_from], seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+        # need to add no more then 2 sub epochs here
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=b"asdfghjkl")
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        summary_heights: List[uint32] = blockchain.get_ses_heights()
+        summaries_list: List[SubEpochSummary] = []
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            summaries_list.append(blockchain.get_ses(ses_height))
+
+        constants_dict = recurse_jsonify(dataclasses.asdict(test_constants))  # type: ignore
+        headers = await blockchain.get_header_blocks_in_range(start_from, len(blocks) - 1, False)
+        recent_chain = []
+        for i in range(start_from - 1, len(blocks) - 1):
+            recent_chain.append(headers[blockchain.height_to_hash(uint32(i))])
+        summary_bytes = []
+        for height in blockchain.get_ses_heights():
+            summary_bytes.append(bytes(summaries[height]))
+
+        valid = _validate_recent_blocks(constants_dict, bytes(RecentChainData(recent_chain)), summary_bytes)
+        assert valid
+
     # @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
@@ -647,34 +717,8 @@ class TestWeightProof:
         wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
         wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
         wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
-        start = time.time()
         valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
-        elapsed = time.time() - start
         assert valid
-        start = time.time()
-        wp2bytes = bytes(wp2)
-        elapsed_wp_2_bytes = time.time() - start
-        print(f"wp v2 size is {len(wp2bytes)} time to validate {elapsed}")
-        wpf = WeightProofHandler(updated_constants, blockchain)
-        wp = await wpf.get_proof_of_weight(blockchain.height_to_hash(peak.height))
-        start = time.time()
-        valid, fork_point, summaries = await wpf.validate_weight_proof(wp)
-        elapsed = time.time() - start
-        assert valid
-        start = time.time()
-        wpbytes = bytes(wp)
-        elapsed_wp_bytes = time.time() - start
-        print(f"wp size is {len(bytes(wp))} time to validate {elapsed}")
-        # print(f"ses size is {len(bytes(full_node_protocol.RespondSubEpochSummary(summaries[-1])))} ")
-        start = time.time()
-        WeightProofV2.from_bytes(wp2bytes)
-        elapsed_wp2_from_bytes = time.time() - start
-        start = time.time()
-        WeightProof.from_bytes(wpbytes)
-        elapsed_wp_from_bytes = time.time() - start
-        print(f"wp2 to bytes {elapsed_wp_2_bytes} from bytes {elapsed_wp2_from_bytes}")
-        print(f"wp to bytes {elapsed_wp_bytes} from bytes {elapsed_wp_from_bytes}")
-
         await db_connection.close()
 
 
