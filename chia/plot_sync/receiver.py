@@ -123,6 +123,10 @@ class Receiver:
     async def _process(
         self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
     ) -> None:
+        log.debug(
+            f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
+        )
+
         async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
             if self._connection is not None:
                 await self._connection.send_message(
