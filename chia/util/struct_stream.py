@@ -1,6 +1,6 @@
-from typing import Any, BinaryIO, Dict, SupportsInt, Tuple, Type, TypeVar, Union
+from typing import Any, BinaryIO, Dict, Optional, SupportsInt, Tuple, Type, TypeVar, Union
 
-from typing_extensions import Protocol, SupportsIndex
+from typing_extensions import Literal, Protocol, SupportsIndex
 
 _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 
@@ -84,8 +84,14 @@ class StructStream(int):
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
-    def to_bytes(self) -> bytes:  # type: ignore[override]
-        return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
+    def to_bytes(  # type: ignore[override]
+        self,
+        length: Optional[int] = None,
+        byteorder: Literal["little", "big"] = "big",
+    ) -> bytes:
+        if length is None:
+            length = self.SIZE
+        return super().to_bytes(length=length, byteorder=byteorder, signed=self.SIGNED)
 
     def __bytes__(self: Any) -> bytes:
         return self.to_bytes()
