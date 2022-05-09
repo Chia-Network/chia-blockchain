@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetThrottlePlotQueueQuery } from '@chia/api-react';
-import { TableCell, TableRow } from '@mui/material';
+import { TableRow } from '@mui/material';
 import { Card, Table } from '@chia/core';
 import styled from 'styled-components';
 import PlotQueueSize from './queue/PlotQueueSize';
@@ -18,26 +18,30 @@ export const StyledTableRow = styled(({ odd, ...rest }) => <TableRow {...rest} /
 const cols = [
   {
     title: <Trans>K-Size</Trans>,
+    field: (queueItem) => <PlotQueueSize queueItem={queueItem} />,
   },
   {
     title: <Trans>Queue Name</Trans>,
+    field: 'queue',
   },
   {
     title: <Trans>Status</Trans>,
+    field: (queueItem) => <PlotQueueIndicator queueItem={queueItem} />,
   },
   {
     title: <Trans>Action</Trans>,
+    field: (queueItem) => <PlotQueueActions queueItem={queueItem} />,
   },
 ];
 
 export default function PlotPlotting() {
   const { isLoading, queue } = useGetThrottlePlotQueueQuery();
 
-  const nonFinisged = useMemo(() => {
+  const nonFinished = useMemo(() => {
     return queue?.filter((item) => item.state !== 'FINISHED');
   }, [queue]);
 
-  if (isLoading || !nonFinisged?.length) {
+  if (isLoading || !nonFinished?.length) {
     return null;
   }
 
@@ -45,23 +49,9 @@ export default function PlotPlotting() {
     <Card title={<Trans>Plotting</Trans>} titleVariant="h6" transparent>
       <Table
         cols={cols}
-        rows={[]}
-      >
-        {nonFinisged.map((item, index) => (
-          <StyledTableRow key={item.id} odd={index % 2}>
-            <TableCell>
-              <PlotQueueSize queueItem={item} />
-            </TableCell>
-            <TableCell>{item.queue}</TableCell>
-            <TableCell>
-              <PlotQueueIndicator queueItem={item} />
-            </TableCell>
-            <TableCell>
-              <PlotQueueActions queueItem={item} />
-            </TableCell>
-          </StyledTableRow>
-        ))}
-      </Table>
+        rows={nonFinished}
+        isLoading={isLoading}
+      />
     </Card>
   );
 }
