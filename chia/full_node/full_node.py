@@ -889,12 +889,9 @@ class FullNode:
             seed = None
             if weight_proof_peer.has_wp_v2_capability():
                 # use v2 if peer has capability
-                request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_hash)
-                ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=20)
                 salt = bytes32.from_bytes(token_bytes(32))
-                ses_hash = ses_response.sub_epoch_summary.get_hash()
-                seed = std_hash(salt + bytes(ses_hash))
-                self.log.debug(f"wp salt is {salt}, ses hash is {ses_hash}, salted seed is {seed}")
+                seed = std_hash(salt + bytes(heaviest_peak_hash))
+                self.log.debug(f"wp salt is {salt}, salted seed is {seed}")
                 request = full_node_protocol.RequestProofOfWeightV2(heaviest_peak_height, heaviest_peak_hash, seed)
                 response = await weight_proof_peer.request_proof_of_weight_v2(request, timeout=wp_timeout)
             else:

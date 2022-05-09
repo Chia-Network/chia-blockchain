@@ -65,12 +65,6 @@ class RespondProofOfWeight(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class RequestSubEpochSummary(Streamable):
-    tip: bytes32
-
-
-@streamable
-@dataclass(frozen=True)
 class RespondSubEpochSummary(Streamable):
     sub_epoch_summary: SubEpochSummary
 

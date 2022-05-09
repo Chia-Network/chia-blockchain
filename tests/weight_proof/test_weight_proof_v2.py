@@ -30,15 +30,14 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement, B
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
-from chia.types.weight_proof import WeightProofV2, WeightProof, RecentChainData
+from chia.types.weight_proof import RecentChainData
 from chia.util.block_cache import BlockCache
 from chia.util.config import load_config, process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
-from chia.util.db_wrapper import DBWrapper, DBWrapper2
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
-from chia.util.hash import std_hash
 from chia.util.path import path_from_root
 from chia.util.streamable import recurse_jsonify
 from tests.block_tools import test_constants
@@ -642,7 +641,7 @@ class TestWeightProof:
         valid = _validate_recent_blocks(constants_dict, bytes(RecentChainData(recent_chain)), summary_bytes)
         assert valid
 
-    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
 

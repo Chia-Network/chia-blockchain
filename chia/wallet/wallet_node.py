@@ -26,7 +26,6 @@ from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import (
     RequestProofOfWeight,
-    RequestSubEpochSummary,
     RequestProofOfWeightV2,
     RespondSubEpochSummary,
 )
@@ -1103,15 +1102,11 @@ class WalletNode:
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
         if peer.has_wp_v2_capability():
-            request = RequestSubEpochSummary(peak.weight)
-            ses_response = await peer.request_sub_epoch_summary(request, timeout=10)
             if ses_response is None:
                 self.log.error(f"did not receive ses response")
                 return False, None, [], []
-            self.log.debug(f"salt for wp is {self.salt}")
-            ses_hash = ses_response.sub_epoch_summary.get_hash()
-            seed = std_hash(self.salt + bytes(ses_hash))
-            self.log.info(f"wp salt is {self.salt}, ses hash is {ses_hash}, salted seed is {seed}")
+            seed = std_hash(self.salt + bytes(peak.header_hash))
+            self.log.info(f"wp salt is {self.salt}, salted seed is {seed}")
             wp_request = RequestProofOfWeightV2(peak.weight, peak.header_hash, seed)
             weight_proof_response = await peer.request_proof_of_weight_v2(wp_request, timeout=wp_timeout)
         else:

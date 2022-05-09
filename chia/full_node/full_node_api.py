@@ -330,26 +330,6 @@ class FullNodeAPI:
         return None
 
     @api_request
-    async def request_sub_epoch_summary(
-        self,
-        request: full_node_protocol.RequestSubEpochSummary,
-    ) -> Optional[Message]:
-        summary_heights = self.full_node.blockchain.get_ses_heights()
-        count = 0
-        block = self.full_node.blockchain.block_record(request.tip)
-        for sub_epoch_n, ses_height in enumerate(reversed(summary_heights)):
-            if ses_height <= block.height:
-                count += 1
-            if count == 2:
-                ses = self.full_node.blockchain.get_ses(ses_height)
-                message = make_msg(
-                    ProtocolMessageTypes.respond_sub_epoch_summary, full_node_protocol.RespondSubEpochSummary(ses)
-                )
-                return message
-        self.log.warning("did not find ses for wp request ")
-        return None
-
-    @api_request
     async def respond_sub_epoch_summary(self, request: full_node_protocol.RespondSubEpochSummary) -> Optional[Message]:
         self.log.warning("Received proof of weight too late.")
         return None

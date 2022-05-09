@@ -527,8 +527,10 @@ class WeightProofHandlerV2:
         log.debug(f"slot end vdf end height {curr.height} ")
         return sub_slots_data, curr.height
 
+    # util to avoid asserting height in height_to_hash
+    # the base assumption is that we have all the heights needed in height_to_hash
     def height_to_hash(self, height: uint32) -> bytes32:
-        hash: bytes32 = self.height_to_hash(height)
+        hash = self.blockchain.height_to_hash(height)
         assert hash
         return hash
 
