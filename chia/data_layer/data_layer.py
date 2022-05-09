@@ -100,7 +100,7 @@ class DataLayer:
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
-        # await self.subscribe(tree_id, [], [])
+        await self.subscribe(tree_id, [], [])
         return txs, tree_id
 
     async def batch_update(
