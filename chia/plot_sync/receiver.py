@@ -82,7 +82,7 @@ class Receiver:
         try:
             await self._update_callback(self._connection.peer_node_id, update)  # type: ignore[misc,call-arg]
         except Exception as e:
-            log.error(f"_update_callback raised: {e}")
+            log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
     def reset(self) -> None:
         self._current_sync = Sync()
@@ -136,13 +136,13 @@ class Receiver:
             await method(message)
             await send_response()
         except InvalidIdentifierError as e:
-            log.warning(f"_process: InvalidIdentifierError {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, InvalidIdentifierError {e}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
-            log.warning(f"_process: Error {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, Error {e}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
-            log.warning(f"_process: Exception {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, Exception {e}")
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:
