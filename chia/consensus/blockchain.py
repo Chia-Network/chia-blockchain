@@ -8,7 +8,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
