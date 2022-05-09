@@ -51,6 +51,17 @@ class Sync:
     def bump_plots_processed(self) -> None:
         self.plots_processed = uint32(self.plots_processed + 1)
 
+    def __str__(self) -> str:
+        return (
+            f"[state {self.state}, "
+            f"sync_id {self.sync_id}, "
+            f"next_message_id {self.next_message_id}, "
+            f"plots_processed {self.plots_processed}, "
+            f"plots_total {self.plots_total}, "
+            f"delta {self.delta}, "
+            f"time_done {self.time_done}]"
+        )
+
 
 class Receiver:
     _connection: WSChiaConnection
