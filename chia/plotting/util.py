@@ -121,20 +121,9 @@ def get_filenames(directory: Path, recursive: bool) -> List[Path]:
         return []
     all_files: List[Path] = []
     try:
-        if recursive:
-            all_files = [
-                child
-                for child in directory.rglob("*.plot")
-                if child.is_file() and child.suffix == ".plot" and not child.name.startswith("._")
-            ]
-        else:
-            for child in directory.iterdir():
-                if not child.is_dir():
-                    # If it is a file ending in .plot, add it - work around MacOS ._ files
-                    if child.suffix == ".plot" and not child.name.startswith("._"):
-                        all_files.append(child)
-                else:
-                    log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
+        glob_function = directory.rglob if recursive else directory.glob
+        all_files = [child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")]
+        log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
