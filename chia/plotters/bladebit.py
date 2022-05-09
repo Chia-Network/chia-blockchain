@@ -143,6 +143,7 @@ def install_bladebit(root_path):
                 "cmake",
                 "libnuma-dev",
                 "git",
+                "libgmp-dev",
             ],
             "Could not install dependencies",
         )

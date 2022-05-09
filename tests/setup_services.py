@@ -19,7 +19,7 @@ from chia.server.start_wallet import service_kwargs_for_wallet
 from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config, save_config
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from tests.block_tools import BlockTools
@@ -197,16 +197,16 @@ async def setup_harvester(
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    config = load_config(root_path, "config.yaml")
-    config["logging"]["log_stdout"] = True
-    config["selected_network"] = "testnet0"
-    config["harvester"]["selected_network"] = "testnet0"
-    config["harvester"]["port"] = port
-    config["harvester"]["rpc_port"] = rpc_port
-    config["harvester"]["farmer_peer"]["host"] = self_hostname
-    config["harvester"]["farmer_peer"]["port"] = farmer_port
-    config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
-    save_config(root_path, "config.yaml", config)
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        config["logging"]["log_stdout"] = True
+        config["selected_network"] = "testnet0"
+        config["harvester"]["selected_network"] = "testnet0"
+        config["harvester"]["port"] = port
+        config["harvester"]["rpc_port"] = rpc_port
+        config["harvester"]["farmer_peer"]["host"] = self_hostname
+        config["harvester"]["farmer_peer"]["port"] = farmer_port
+        config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
+        save_config(root_path, "config.yaml", config)
     kwargs = service_kwargs_for_harvester(root_path, config["harvester"], consensus_constants)
     kwargs.update(
         parse_cli_args=False,
@@ -237,11 +237,11 @@ async def setup_farmer(
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    root_config = load_config(root_path, "config.yaml")
-    root_config["logging"]["log_stdout"] = True
-    root_config["selected_network"] = "testnet0"
-    root_config["farmer"]["selected_network"] = "testnet0"
-    save_config(root_path, "config.yaml", root_config)
+    with lock_and_load_config(root_path, "config.yaml") as root_config:
+        root_config["logging"]["log_stdout"] = True
+        root_config["selected_network"] = "testnet0"
+        root_config["farmer"]["selected_network"] = "testnet0"
+        save_config(root_path, "config.yaml", root_config)
     config = root_config["farmer"]
     config_pool = root_config["pool"]
 

@@ -146,7 +146,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
         for block in blocks:
             results = PreValidationResult(None, uint64(1), None, False)
-            result, err, _, _ = await bc.receive_block(block, results)
+            result, err, _ = await bc.receive_block(block, results)
             assert err is None
     finally:
         await db_wrapper.close()

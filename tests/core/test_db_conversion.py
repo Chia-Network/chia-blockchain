@@ -77,7 +77,7 @@ class TestDbUpgrade:
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
                     results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _, _ = await bc.receive_block(block, results)
+                    result, err, _ = await bc.receive_block(block, results)
                     assert err is None
             finally:
                 await db_wrapper1.close()

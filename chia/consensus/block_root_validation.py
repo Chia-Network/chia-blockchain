@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err
 from chia.util.merkle_set import MerkleSet
@@ -24,18 +24,18 @@ def validate_block_merkle_roots(
         removal_merkle_set.add_already_hashed(coin_name)
 
     # Create addition Merkle set
-    puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+    puzzlehash_coins_map: Dict[bytes32, List[bytes32]] = {}
 
     for coin in tx_additions:
         if coin.puzzle_hash in puzzlehash_coins_map:
-            puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            puzzlehash_coins_map[coin.puzzle_hash].append(coin.name())
         else:
-            puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+            puzzlehash_coins_map[coin.puzzle_hash] = [coin.name()]
 
     # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-    for puzzle, coins in puzzlehash_coins_map.items():
+    for puzzle, coin_ids in puzzlehash_coins_map.items():
         addition_merkle_set.add_already_hashed(puzzle)
-        addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+        addition_merkle_set.add_already_hashed(hash_coin_ids(coin_ids))
 
     additions_root = addition_merkle_set.get_root()
     removals_root = removal_merkle_set.get_root()
