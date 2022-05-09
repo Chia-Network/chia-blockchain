@@ -7,7 +7,7 @@ from chia.util.ints import int8, uint8, int16, uint16, int32, uint32, int64, uin
 
 
 class TestStructStream:
-    def _test_impl(self, cls, upper_boundary, lower_boundary, length):
+    def _test_impl(self, cls, upper_boundary, lower_boundary, length, struct_format):
 
         with pytest.raises(ValueError):
             t = cls(upper_boundary + 1)
@@ -33,6 +33,20 @@ class TestStructStream:
         with pytest.raises((struct.error, ValueError)):
             cls.from_bytes(b"\0" * (length + 1))
 
+        if struct_format is not None:
+            bytes_io = io.BytesIO()
+            cls(lower_boundary).stream(bytes_io)
+            assert bytes_io.getvalue() == struct.pack(struct_format, lower_boundary)
+
+            bytes_io = io.BytesIO()
+            cls(upper_boundary).stream(bytes_io)
+            assert bytes_io.getvalue() == struct.pack(struct_format, upper_boundary)
+
+            with pytest.raises(struct.error):
+                struct.pack(struct_format, lower_boundary - 1)
+            with pytest.raises(struct.error):
+                struct.pack(struct_format, upper_boundary + 1)
+
     def test_int512(self):
         # int512 is special. it uses 65 bytes to allow positive and negative
         # "uint512"
@@ -41,34 +55,35 @@ class TestStructStream:
             0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,  # noqa: E501
             -0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,  # noqa: E501
             length=65,
+            struct_format=None,
         )
 
     def test_uint128(self):
-        self._test_impl(uint128, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0, length=16)
+        self._test_impl(uint128, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0, length=16, struct_format=None)
 
     def test_uint64(self):
-        self._test_impl(uint64, 0xFFFFFFFFFFFFFFFF, 0, length=8)
+        self._test_impl(uint64, 0xFFFFFFFFFFFFFFFF, 0, length=8, struct_format="!Q")
 
     def test_int64(self):
-        self._test_impl(int64, 0x7FFFFFFFFFFFFFFF, -0x8000000000000000, length=8)
+        self._test_impl(int64, 0x7FFFFFFFFFFFFFFF, -0x8000000000000000, length=8, struct_format="!q")
 
     def test_uint32(self):
-        self._test_impl(uint32, 0xFFFFFFFF, 0, length=4)
+        self._test_impl(uint32, 0xFFFFFFFF, 0, length=4, struct_format="!L")
 
     def test_int32(self):
-        self._test_impl(int32, 0x7FFFFFFF, -0x80000000, length=4)
+        self._test_impl(int32, 0x7FFFFFFF, -0x80000000, length=4, struct_format="!l")
 
     def test_uint16(self):
-        self._test_impl(uint16, 0xFFFF, 0, length=2)
+        self._test_impl(uint16, 0xFFFF, 0, length=2, struct_format="!H")
 
     def test_int16(self):
-        self._test_impl(int16, 0x7FFF, -0x8000, length=2)
+        self._test_impl(int16, 0x7FFF, -0x8000, length=2, struct_format="!h")
 
     def test_uint8(self):
-        self._test_impl(uint8, 0xFF, 0, length=1)
+        self._test_impl(uint8, 0xFF, 0, length=1, struct_format="!B")
 
     def test_int8(self):
-        self._test_impl(int8, 0x7F, -0x80, length=1)
+        self._test_impl(int8, 0x7F, -0x80, length=1, struct_format="!b")
 
     def test_roundtrip(self):
         def roundtrip(v):
