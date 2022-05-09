@@ -634,9 +634,7 @@ async def test_recursive_plot_scan(test_plot_environment: TestEnvironment) -> No
 
     # With the flag enabled it should load all expected plots
     expected_result.loaded = expected_plot_list  # type: ignore[assignment]
-    expected_result.removed = []
     expected_result.processed = len(expected_plot_list)
-    expected_result.remaining = 0
     await env.refresh_tester.run(expected_result)
 
     # Adding the subdirectories also should not lead to some failure or duplicated loading
