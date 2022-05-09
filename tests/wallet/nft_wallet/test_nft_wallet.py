@@ -83,6 +83,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     )
 
     sb = await nft_wallet_0.generate_new_nft(metadata)
+    assert sb
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
