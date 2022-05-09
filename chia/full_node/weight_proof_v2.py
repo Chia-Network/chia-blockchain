@@ -1681,7 +1681,7 @@ def _validate_recent_blocks(
     # find ses previous to first block in recent blocks
     ses_idx: int = len(summaries) - count
     ssi: uint64 = constants.SUB_SLOT_ITERS_STARTING
-    diff: Optional[uint64] = constants.DIFFICULTY_STARTING
+    diff: uint64 = constants.DIFFICULTY_STARTING
     # find ssi diff up to first block
     for summary in summaries[:ses_idx]:
         if summary.new_sub_slot_iters is not None:
@@ -1695,7 +1695,7 @@ def _validate_recent_blocks(
     prev_block_record = None
     deficit: uint8 = uint8(0)
     for idx, block in enumerate(recent_chain.recent_chain_data[1:]):
-        required_iters = uint64(0)
+        required_iters: Optional[uint64] = uint64(0)
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         ses = False
         height = block.height
@@ -1724,7 +1724,7 @@ def _validate_recent_blocks(
                 required_iters = _validate_pospace_recent_chain(
                     constants, block, challenge, diff, overflow, prev_challenge, ssi
                 )
-
+            assert required_iters
         if prev_block_record is None:
             # this is the first ses block in the recent chain
             if ses == False:
@@ -1735,6 +1735,7 @@ def _validate_recent_blocks(
             deficit = calculate_deficit(constants, height, prev_block_record, overflow, len(block.finished_sub_slots))
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
+        assert required_iters
         block_record = header_block_to_sub_block_record(
             constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
         )
