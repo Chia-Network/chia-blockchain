@@ -887,7 +887,7 @@ class FullNode:
             self.log.debug(f"weight proof timeout is {wp_timeout} sec")
 
             seed = None
-            if weight_proof_peer.has_wp_capability():
+            if weight_proof_peer.has_wp_v2_capability():
                 # use v2 if peer has capability
                 request = full_node_protocol.RequestSubEpochSummary(heaviest_peak_hash)
                 ses_response = await weight_proof_peer.request_sub_epoch_summary(request, timeout=20)
@@ -919,7 +919,7 @@ class FullNode:
                 if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
                     raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
             try:
-                if weight_proof_peer.has_wp_capability():
+                if weight_proof_peer.has_wp_v2_capability():
                     validated, fork_point, summaries, _ = await self.weight_proof_handler_v2.validate_weight_proof(
                         response.wp, seed
                     )

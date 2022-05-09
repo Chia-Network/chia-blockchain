@@ -28,7 +28,7 @@ class BlockchainInterface:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         pass
 
-    def height_to_hash(self, height: uint32) -> bytes32:
+    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         pass
 
     def contains_block(self, header_hash: bytes32) -> bool:

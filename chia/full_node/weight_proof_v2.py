@@ -174,7 +174,7 @@ class WeightProofHandlerV2:
             return None
 
         # set prev_ses to genesis
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.height_to_hash(uint32(0)))
         if prev_ses_block is None:
             return None
 
@@ -235,10 +235,10 @@ class WeightProofHandlerV2:
                     log.warning("chain too short not enough sub epochs ")
                     return None, None
                 last_ses_block = await self.blockchain.get_block_record_from_db(
-                    self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
+                    self.height_to_hash(uint32(summary_heights[summaries_n - idx - 1]))
                 )
                 prev_prev_ses_block = await self.blockchain.get_block_record_from_db(
-                    self.blockchain.height_to_hash(uint32(summary_heights[summaries_n - idx - 3]))
+                    self.height_to_hash(uint32(summary_heights[summaries_n - idx - 3]))
                 )
                 return last_ses_block, prev_prev_ses_block
         return None, None
@@ -255,7 +255,7 @@ class WeightProofHandlerV2:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        prev_ses_block = await self.blockchain.get_block_record_from_db(self.height_to_hash(uint32(0)))
         if prev_ses_block is None:
             return None
 
@@ -322,7 +322,7 @@ class WeightProofHandlerV2:
         uses the ProcessPoolExecutor to handle the conversions from CompressedElement to B
         """
         segments: List[SubEpochChallengeSegmentV2] = []
-        start_height = await get_prev_two_slots_height(self.blockchain, se_start)
+        start_height = await self.get_prev_two_slots_height(se_start)
         blocks = await self.blockchain.get_block_records_in_range(
             start_height, ses_block.height + self.constants.MAX_SUB_SLOT_BLOCKS
         )
@@ -349,11 +349,27 @@ class WeightProofHandlerV2:
                     first = False
                 else:
                     height = height + uint32(1)  # type: ignore
-                curr = header_blocks[self.blockchain.height_to_hash(height)]
+                curr = header_blocks[self.height_to_hash(height)]
                 if curr is None:
                     return None
         log.debug(f"next sub epoch starts at {height}")
         return segments
+
+    async def get_prev_two_slots_height(self, se_start: BlockRecord) -> uint32:
+        # find block height where the previous to last slot ended before the start of the sub epoch.
+        slot = 0
+        batch_size = 50
+        curr_rec = se_start
+        blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
+        end = curr_rec.height
+        while slot < 2 and curr_rec.height > 0:
+            if curr_rec.first_in_sub_slot:
+                slot += 1
+            if end - curr_rec.height == batch_size - 1:
+                blocks = await self.blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
+                end = curr_rec.height
+            curr_rec = blocks[self.height_to_hash(uint32(curr_rec.height - 1))]
+        return curr_rec.height
 
     def _create_challenge_segment(
         self,
@@ -466,7 +482,7 @@ class WeightProofHandlerV2:
                     sub_slots_data.append(handle_finished_slots(sub_slot))
                 tmp_sub_slots_data = []
             tmp_sub_slots_data.append(handle_block_vdfs(executor, self.constants, curr, blocks))
-            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            curr = header_blocks[self.height_to_hash(uint32(curr.height + 1))]
 
         if len(tmp_sub_slots_data) > 0:
             sub_slots_data.extend(tmp_sub_slots_data)
@@ -489,7 +505,7 @@ class WeightProofHandlerV2:
         """
         # gets all vdfs first sub slot after challenge block to last sub slot
         log.debug(f"slot end vdf start height {start_height}")
-        curr = header_blocks[self.blockchain.height_to_hash(start_height)]
+        curr = header_blocks[self.height_to_hash(start_height)]
         sub_slots_data: List[SubSlotDataV2] = []
         tmp_sub_slots_data: List[SubSlotDataV2] = []
         while not blocks[curr.header_hash].is_challenge_block(self.constants):
@@ -502,7 +518,7 @@ class WeightProofHandlerV2:
             # if overflow block and challenge slot ended break
             # find input
             tmp_sub_slots_data.append(handle_block_vdfs(executor, self.constants, curr, blocks))
-            curr = header_blocks[self.blockchain.height_to_hash(uint32(curr.height + 1))]
+            curr = header_blocks[self.height_to_hash(uint32(curr.height + 1))]
             if blocks[curr.header_hash].deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 break
 
@@ -510,6 +526,11 @@ class WeightProofHandlerV2:
             sub_slots_data.extend(tmp_sub_slots_data)
         log.debug(f"slot end vdf end height {curr.height} ")
         return sub_slots_data, curr.height
+
+    def height_to_hash(self, height: uint32) -> bytes32:
+        hash: bytes32 = self.height_to_hash(height)
+        assert hash
+        return hash
 
 
 def _get_weights_for_sampling(
@@ -1563,7 +1584,7 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
             break
     log.info(f"start {min_height} end {tip_height}")
     headers = await blockchain.get_header_blocks_in_range(min_height, tip_height, tx_filter=False)
-    blocks = await blockchain.get_block_records_in_range(min_height, tip_height)
+    block_records = await blockchain.get_block_records_in_range(min_height, tip_height)
     ses_count = 0
     curr_height = tip_height
     blocks_n = 0
@@ -1571,19 +1592,21 @@ async def get_recent_chain(blockchain: BlockchainInterface, tip_height: uint32) 
         if curr_height == 0:
             break
         # add to needed reward chain recent blocks
-        header_block = headers[blockchain.height_to_hash(curr_height)]
-        block_rec = blocks[header_block.header_hash]
+        header_hash = blockchain.height_to_hash(curr_height)
+        assert header_hash
+        header_block = headers[header_hash]
         if header_block is None:
             log.error("creating recent chain failed")
             return None
         recent_chain.insert(0, header_block)
-        if block_rec.sub_epoch_summary_included:
+        if block_records[header_block.header_hash].sub_epoch_summary_included:
             ses_count += 1
         curr_height = uint32(curr_height - 1)
         blocks_n += 1
 
-    header_block = headers[blockchain.height_to_hash(curr_height)]
-    recent_chain.insert(0, header_block)
+    header_hash = blockchain.height_to_hash(curr_height)
+    assert header_hash
+    recent_chain.insert(0, headers[header_hash])
 
     log.info(
         f"recent chain, "
@@ -1780,23 +1803,6 @@ def bytes_to_vars(
         summaries.append(SubEpochSummary.from_bytes(summary))
     constants = dataclass_from_dict(ConsensusConstants, constants_dict)  # type: ignore
     return constants, summaries
-
-
-async def get_prev_two_slots_height(blockchain: BlockchainInterface, se_start: BlockRecord) -> uint32:
-    # find block height where the previous to last slot ended before the start of the sub epoch.
-    slot = 0
-    batch_size = 50
-    curr_rec = se_start
-    blocks = await blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
-    end = curr_rec.height
-    while slot < 2 and curr_rec.height > 0:
-        if curr_rec.first_in_sub_slot:
-            slot += 1
-        if end - curr_rec.height == batch_size - 1:
-            blocks = await blockchain.get_block_records_in_range(curr_rec.height - batch_size, curr_rec.height)
-            end = curr_rec.height
-        curr_rec = blocks[blockchain.height_to_hash(uint32(curr_rec.height - 1))]
-    return curr_rec.height
 
 
 async def validate_weight_proof_no_fork_point(

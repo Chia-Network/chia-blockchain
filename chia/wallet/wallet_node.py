@@ -1102,7 +1102,7 @@ class WalletNode:
         ses_response: Optional[RespondSubEpochSummary] = None
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        if peer.has_wp_capability():
+        if peer.has_wp_v2_capability():
             request = RequestSubEpochSummary(peak.weight)
             ses_response = await peer.request_sub_epoch_summary(request, timeout=10)
             if ses_response is None:
@@ -1132,7 +1132,7 @@ class WalletNode:
             valid, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
-            if peer.has_wp_capability():
+            if peer.has_wp_v2_capability():
                 assert ses_response
                 (
                     valid,
