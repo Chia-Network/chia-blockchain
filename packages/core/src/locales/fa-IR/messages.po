@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:12\n"
+"PO-Revision-Date: 2022-05-09 18:32\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -705,8 +705,7 @@ msgstr "حذف کلید {fingerprint}"
 
 #: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr ""
-"حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
+msgstr "حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
 " آیا مطمئنید که می‌خواهید ادامه دهید؟"
 
 #: src/components/app/AppPassPrompt.tsx:89
@@ -2345,7 +2344,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:73
 msgid "Something went wrong"
-msgstr "Something went wrong"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -3217,3 +3216,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
+
