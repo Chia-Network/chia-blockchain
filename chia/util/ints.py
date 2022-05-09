@@ -1,4 +1,6 @@
-from typing import Any, BinaryIO
+from __future__ import annotations
+
+from typing import Any, BinaryIO, final
 
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
@@ -43,7 +45,10 @@ class uint64(StructStream):
     pass
 
 
+@final
 class uint128(int):
+    SIZE = 16
+
     def __new__(cls: Any, value: int):
         value = int(value)
         if value > (2 ** 128) - 1 or value < 0:
@@ -52,18 +57,27 @@ class uint128(int):
 
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
-        read_bytes = f.read(16)
-        assert len(read_bytes) == 16
+        read_bytes = f.read(cls.SIZE)
+        assert len(read_bytes) == cls.SIZE
         n = int.from_bytes(read_bytes, "big", signed=False)
         assert n <= (2 ** 128) - 1 and n >= 0
         return cls(n)
 
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> uint128:
+        if len(blob) != cls.SIZE:
+            raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes, got: {len(blob)}")
+        return cls(int.from_bytes(blob, "big", signed=False))
+
     def stream(self, f):
         assert self <= (2 ** 128) - 1 and self >= 0
-        f.write(self.to_bytes(16, "big", signed=False))
+        f.write(self.to_bytes(self.SIZE, "big", signed=False))
 
 
 class int512(int):
+    # Uses 65 bytes to fit in the sign bit
+    SIZE = 65
+
     def __new__(cls: Any, value: int):
         value = int(value)
         # note that the boundaries for int512 is not what you might expect. We
@@ -73,15 +87,20 @@ class int512(int):
             raise ValueError(f"Value {value} of does not fit into in512")
         return int.__new__(cls, value)
 
-    # Uses 65 bytes to fit in the sign bit
     @classmethod
     def parse(cls, f: BinaryIO) -> Any:
-        read_bytes = f.read(65)
-        assert len(read_bytes) == 65
+        read_bytes = f.read(cls.SIZE)
+        assert len(read_bytes) == cls.SIZE
         n = int.from_bytes(read_bytes, "big", signed=True)
         assert n < (2 ** 512) and n > -(2 ** 512)
         return cls(n)
 
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> int512:
+        if len(blob) != cls.SIZE:
+            raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes, got: {len(blob)}")
+        return cls(int.from_bytes(blob, "big", signed=True))
+
     def stream(self, f):
         assert self < (2 ** 512) and self > -(2 ** 512)
-        f.write(self.to_bytes(65, "big", signed=True))
+        f.write(self.to_bytes(self.SIZE, "big", signed=True))
