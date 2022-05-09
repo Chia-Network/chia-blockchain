@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, BinaryIO, final
+from typing import Any, BinaryIO
+
+from typing_extensions import final
 
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
