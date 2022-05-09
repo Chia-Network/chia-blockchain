@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 12:59\n"
+"PO-Revision-Date: 2022-05-09 18:32\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -832,7 +832,7 @@ msgstr "Hiba"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:78
 msgid "Error:"
-msgstr ""
+msgstr "Hiba:"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -1256,7 +1256,7 @@ msgstr "Világos"
 
 #: src/screens/SelectKey/SelectKey.tsx:116
 msgid "Loading list of the keys"
-msgstr ""
+msgstr "A kulcsok listájának betöltése"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -2111,7 +2111,7 @@ msgstr "Nyilvános kulcsok"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:91
 msgid "Reload Application"
-msgstr ""
+msgstr "Alkalmazás újratöltése"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
@@ -2133,7 +2133,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:87
 msgid "Report an Issue"
-msgstr ""
+msgstr "Hibabejelentés"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2343,7 +2343,7 @@ msgstr "Jelszavas védelem kikapcsolása"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:73
 msgid "Something went wrong"
-msgstr "Something went wrong"
+msgstr "Valami rosszul sült el"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -2747,15 +2747,15 @@ msgstr "Az új jelszó és a megerősítése nem egyeznek meg"
 
 #: src/utils/getTransactionResult.ts:15
 msgid "Transaction has not been sent to node yet"
-msgstr ""
+msgstr "A tranzakciót még nem küldték el a nodenak"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
-msgstr ""
+msgstr "A tranzakciót egy teljesnodera küldték el, és a mempoolba való felvételre vár. {0}"
 
 #: src/utils/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
-msgstr ""
+msgstr "A tranzakciót sikeresen elküldték egy teljes nodera és felvették a mempoolba."
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -2958,11 +2958,11 @@ msgstr "Figyelem: Ezt a kulcsot egy olyan tárcához használják, amihez pozit�
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:99
 msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr ""
+msgstr "Figyelem: Ezt a kulcsot a farmolási jutalmak címére használják. Ha törlöd ezt a kulcsot, elveszítheted a hozzáférést a jövőbeni farming jutalmaidhoz"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:108
 msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr ""
+msgstr "Figyelem: Ezt a kulcsot a pool jutalmazási címéhez használják. Ha törli ezt a kulcsot, elveszítheti a hozzáférést a jövőbeni pool jutalmakhoz"
 
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
@@ -3026,7 +3026,7 @@ msgstr "Üdvözöljük a Chia-ban. Kérem jelentkezzen be egy létező kulccsal,
 #: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
-msgstr ""
+msgstr "Változtatásokat hajtott végre. El akarja vetni őket?"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
@@ -3094,7 +3094,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:20
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-msgstr ""
+msgstr "Kulcsai nem kerültek át egy új kulcstartóra. A migráció befejezéséig nem tud új kulcsokat létrehozni vagy meglévő kulcsokat törölni. Szeretné most áttelepíteni a kulcsait?"
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 #~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
@@ -3173,7 +3173,7 @@ msgstr ""
 
 #: src/components/Amount/Amount.tsx:96
 msgid "{0, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{0, plural, one {mojo} other {mojok}}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -3206,7 +3206,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:33
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-msgstr ""
+msgstr "{minPassphraseLength, plural, one {A jelszavaknak legalább # karakter hosszúságúnak kell lennie} other {A jelszavaknak legalább # karakter hosszúságúnak kell lennie}}"
 
 #: src/components/Amount/Amount.tsx:95
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
@@ -3215,3 +3215,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
+
