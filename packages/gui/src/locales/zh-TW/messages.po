@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_TW\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-20 18:13\n"
+"PO-Revision-Date: 2022-05-09 18:33\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Traditional\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -292,7 +292,7 @@ msgstr "瀏覽"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:74
 #~ msgid "But you are currently farming <0/>"
-#~ msgstr "但你目前耕種 <0/>"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
@@ -333,7 +333,7 @@ msgstr "取消"
 
 #: src/components/plot/PlotsNotFound.tsx:36
 #~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-#~ msgstr "警告，刪除這些農田區將會是永久刪除的。檢查儲存裝置是否正確連接。"
+#~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
@@ -912,7 +912,7 @@ msgstr ""
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
-#~ msgstr "開啟失敗（無效耕地）"
+#~ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:97
 #~ msgid "Failed to remove passphrase: {error}"
@@ -1092,7 +1092,7 @@ msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:172
 #~ msgid "Grid view"
-#~ msgstr "網格檢視"
+#~ msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:576
 #~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
@@ -1104,7 +1104,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 #~ msgid "Harvester Plots"
-#~ msgstr "耕地收割機"
+#~ msgstr ""
 
 #: src/components/plot/PlotHarvesters.tsx:39
 msgid "Harvesters"
@@ -1320,7 +1320,7 @@ msgstr "離開農會"
 
 #: src/components/pool/PoolOverview.tsx:172
 #~ msgid "List view"
-#~ msgstr "清單檢視"
+#~ msgstr ""
 
 #: src/components/pool/Pool.tsx:21
 #~ msgid "Loading Plot NFTs"
@@ -1535,7 +1535,7 @@ msgstr "節點 ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 #~ msgid "Node Id"
-#~ msgstr "節點 ID"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:91
 msgid "None"
@@ -1572,7 +1572,7 @@ msgstr "未連線"
 
 #: src/components/plot/PlotsNotFound.tsx:34
 #~ msgid "Not found Plots"
-#~ msgstr "沒找到的耕地"
+#~ msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:163
 #: src/components/farm/FarmManageFarmingRewards.tsx:174
@@ -1863,7 +1863,7 @@ msgstr "耕地金鑰"
 
 #: src/components/pool/PoolOverview.tsx:38
 #~ msgid "Plot NFT"
-#~ msgstr "農場"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
@@ -1921,7 +1921,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
 #~ msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-#~ msgstr "耕地是在你硬碟上劃出的空間，用於耕種來賺取 Chia 。 <0>了解更多</0>"
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia.<0>Learn more</0>"
@@ -2129,7 +2129,7 @@ msgstr "隊列名稱"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 #~ msgid "Queue name"
-#~ msgstr "隊列名稱"
+#~ msgstr "Queue Name"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:35
 msgid "Queued"
@@ -2812,7 +2812,7 @@ msgstr "總網路空間"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:146
 #~ msgid "Total Plot Size:"
-#~ msgstr "總耕地大小："
+#~ msgstr ""
 
 #: src/components/plot/card/PlotCardTotalPlots.tsx:11
 msgid "Total Plots"
@@ -2991,7 +2991,7 @@ msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:181
 #~ msgid "Wallet Status:"
-#~ msgstr "錢包狀態："
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1121
 #~ msgid "Wallet does not exists"
@@ -3043,7 +3043,7 @@ msgstr "想加入農會？建立一個農場"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 #~ msgid "Want to earn more Chia? Add more plots to your farm."
-#~ msgstr "想要獲得更多 Chia？增加更多耕地到你的農場。"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:87
 msgid "Want to have a delay before the next plot starts?"
@@ -3162,7 +3162,7 @@ msgstr "你需要 {currencyCode} 來加入農會。"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
 #~ msgid "You will recieve <0/> to {0}"
-#~ msgstr "你將會收到 <0/> 到 {0}"
+#~ msgstr "You will receive <0/> to {0}"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
@@ -3314,3 +3314,4 @@ msgstr "{0} 積分 {1} - {2} 小時前"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
 msgstr ""
+
