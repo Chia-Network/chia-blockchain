@@ -78,7 +78,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
         ]
     )
 
@@ -97,7 +97,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     metadata = Program.to(
         [
             ("u", ["https://www.test.net/logo.svg"]),
-            ("h", 0xD4584AD463139FA8C0D9F68F4B59F181),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F181"),
         ]
     )
 
@@ -195,7 +195,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         {
             "wallet_id": nft_wallet_0_id,
             "artist_address": ph,
-            "hash": 0xD4584AD463139FA8C0D9F68F4B59F185,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
         }
     )
@@ -212,7 +212,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         {
             "wallet_id": nft_wallet_0_id,
             "artist_address": ph,
-            "hash": 0xD4584AD463139FA8C0D9F68F4B59F184,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F184",
             "uris": ["https://chialisp.com/img/logo.svg"],
         }
     )
@@ -232,8 +232,11 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     coins = coins_response["nft_list"]
     assert len(coins) == 2
     uris = []
+    hashes = []
     for x in coins:
-        uris.append(x[1][0].as_python()[1])
+        uris.append(x.data_uris[0])
+        hashes.append(x.data_hash)
     print(uris)
     assert len(uris) == 2
-    assert b"https://chialisp.com/img/logo.svg" in uris
+    assert "https://chialisp.com/img/logo.svg" in uris
+    assert "D4584AD463139FA8C0D9F68F4B59F184" in hashes
