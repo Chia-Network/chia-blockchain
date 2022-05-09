@@ -1,8 +1,6 @@
-import asyncio
 import logging
 
 import pytest
-import pytest_asyncio
 from clvm.casts import int_to_bytes
 
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -13,9 +11,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
-from tests.setup_nodes import setup_two_nodes, test_constants
+from tests.setup_nodes import test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
+from tests.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -25,18 +23,7 @@ WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestBlockchainTransactions:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version, self_hostname):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
-            yield _
-
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes, bt):
         num_blocks = 10

@@ -26,7 +26,9 @@ def make_puzzle(amount: int) -> int:
     puzzle = f"(q . ((51 0x{ph1.hex()} {amount}) (51 0x{ph2.hex()} {amount})))"
     # print(puzzle)
 
-    puzzle_prog = Program.to(binutils.assemble(puzzle))
+    # TODO: properly type hint clvm_tools
+    assembled_puzzle = binutils.assemble(puzzle)  # type: ignore[no-untyped-call]
+    puzzle_prog = Program.to(assembled_puzzle)
     print("Program: ", puzzle_prog)
     puzzle_hash = puzzle_prog.get_tree_hash()
 

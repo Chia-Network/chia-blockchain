@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import traceback
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -17,6 +17,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -34,8 +35,8 @@ from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
@@ -55,9 +56,9 @@ def batch_pre_validate_blocks(
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
 ) -> List[bytes]:
-    blocks: Dict[bytes, BlockRecord] = {}
+    blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
-        blocks[k] = BlockRecord.from_bytes(v)
+        blocks[bytes32(k)] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
     constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
@@ -74,8 +75,8 @@ def batch_pre_validate_blocks(
                 if block.height in npc_results:
                     npc_result = NPCResult.from_bytes(npc_results[block.height])
                     assert npc_result is not None
-                    if npc_result.npc_list is not None:
-                        removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    if npc_result.conds is not None:
+                        removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
                         removals, tx_additions = [], []
 
@@ -92,18 +93,15 @@ def batch_pre_validate_blocks(
                         mempool_mode=False,
                         height=block.height,
                     )
-                    removals, tx_additions = tx_removals_and_additions(npc_result.npc_list)
+                    removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                 if npc_result is not None and npc_result.error is not None:
                     results.append(PreValidationResult(uint16(npc_result.error), None, npc_result, False))
                     continue
 
                 header_block = get_block_header(block, tx_additions, removals)
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
-                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),  # type: ignore[arg-type]
+                    BlockCache(blocks),
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -122,7 +120,8 @@ def batch_pre_validate_blocks(
                     # validate it later. receive_block will attempt to validate the signature later.
                     if validate_signatures:
                         if npc_result is not None and block.transactions_info is not None:
-                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.npc_list, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+                            assert npc_result.conds
+                            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
                             pks_objects: List[G1Element] = [G1Element.from_bytes(pk) for pk in pairs_pks]
                             if not AugSchemeMPL.aggregate_verify(
                                 pks_objects, pairs_msgs, block.transactions_info.aggregated_signature
@@ -143,12 +142,9 @@ def batch_pre_validate_blocks(
         for i in range(len(header_blocks_pickled)):
             try:
                 header_block = HeaderBlock.from_bytes(header_blocks_pickled[i])
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "BlockCache" has incompatible type "Dict[bytes, BlockRecord]"; expected
-                #       "Dict[bytes32, BlockRecord]"  [arg-type]
                 required_iters, error = validate_finished_header_block(
                     constants,
-                    BlockCache(blocks),  # type: ignore[arg-type]
+                    BlockCache(blocks),
                     header_block,
                     check_filter,
                     expected_difficulty[i],
@@ -169,11 +165,11 @@ async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
     constants_json: Dict,
     block_records: BlockchainInterface,
-    blocks: Sequence[Union[FullBlock, HeaderBlock]],
-    pool: ProcessPoolExecutor,
+    blocks: Sequence[FullBlock],
+    pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Optional[Callable],
+    get_block_generator: Callable[[BlockInfo, Optional[Dict[bytes32, FullBlock]]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
@@ -288,7 +284,7 @@ async def pre_validate_blocks_multiprocessing(
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
 
-    block_dict: Dict[bytes32, Union[FullBlock, HeaderBlock]] = {}
+    block_dict: Dict[bytes32, FullBlock] = {}
     for i, block in enumerate(blocks):
         block_dict[block.header_hash] = block
         if not block_record_was_present[i]:
@@ -314,8 +310,8 @@ async def pre_validate_blocks_multiprocessing(
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
             # generator references
-            prev_blocks_dict: Dict[uint32, Union[FullBlock, HeaderBlock]] = {}
-            curr_b: Union[FullBlock, HeaderBlock] = block
+            prev_blocks_dict: Dict[bytes32, FullBlock] = {}
+            curr_b: FullBlock = block
 
             while curr_b.prev_header_hash in block_dict:
                 curr_b = block_dict[curr_b.prev_header_hash]
@@ -392,6 +388,6 @@ def _run_generator(
         )
         return bytes(npc_result)
     except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), [], uint64(0)))
+        return bytes(NPCResult(uint16(e.code.value), None, uint64(0)))
     except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), [], uint64(0)))
+        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None, uint64(0)))

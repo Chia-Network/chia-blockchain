@@ -3,7 +3,10 @@ name: pre-commit
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -14,6 +17,6 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions/setup-python@v2
     - uses: pre-commit/action@v2.0.3

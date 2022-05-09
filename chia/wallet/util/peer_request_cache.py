@@ -80,7 +80,7 @@ class PeerRequestCache:
 
         new_states_validated = LRUCache(self._states_validated.capacity)
         for k, cs_height in self._states_validated.cache.items():
-            if cs_height is not None:
+            if cs_height is not None and cs_height <= height:
                 new_states_validated.put(k, cs_height)
         self._states_validated = new_states_validated
 

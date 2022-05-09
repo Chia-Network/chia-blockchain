@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64, uint32, uint8
+from chia.util.ints import uint64, uint32, uint8, uint128
 from chia.wallet.util.transaction_type import TransactionType
 
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -189,18 +189,18 @@ class DIDWallet:
     def id(self):
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list=None) -> uint64:
+    async def get_confirmed_balance(self, record_list=None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
-        amount: uint64 = uint64(0)
+        amount: uint128 = uint128(0)
         for record in record_list:
             parent = self.get_parent_for_coin(record.coin)
             if parent is not None:
-                amount = uint64(amount + record.coin.amount)
+                amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for did wallet is {amount}")
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
@@ -222,7 +222,7 @@ class DIDWallet:
 
         return uint64(addition_amount)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint64:
+    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         confirmed = await self.get_confirmed_balance(record_list)
         return await self.wallet_state_manager._get_unconfirmed_balance(self.id(), confirmed)
 
@@ -1015,7 +1015,7 @@ class DIDWallet:
     async def get_frozen_amount(self) -> uint64:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint64:
+    async def get_spendable_balance(self, unspent_records=None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )
