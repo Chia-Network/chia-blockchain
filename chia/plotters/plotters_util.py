@@ -121,3 +121,14 @@ def is_libsodium_available_on_redhat_like_os():
         return False
     result = subprocess.run(["sudo", "yum", "install", "-y", "libsodium-devel"])
     return result.returncode == 0
+
+
+def git_clean_checkout(commit: str, plotter_dir: str):
+    run_command(["git", "reset", "--hard"], "Failed to reset head", cwd=plotter_dir)
+    run_command(["git", "clean", "-fd"], "Failed to clean working tree", cwd=plotter_dir)
+    from datetime import datetime
+    now = datetime.now().strftime("%Y%m%d%H%M%S")
+    run_command(["git", "branch", "-m", now], f"Failed to rename branch to {now}", cwd=plotter_dir)
+    run_command(["git", "fetch", "origin", "--prune"], "Failed to fetch remote branches ", cwd=plotter_dir)
+    run_command(["git", "checkout", "-f", commit], f"Failed to checkout {commit}", cwd=plotter_dir)
+    run_command(["git", "branch", "-D", now], f"Failed to delete branch {now}", cwd=plotter_dir)

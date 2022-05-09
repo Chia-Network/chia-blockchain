@@ -15,6 +15,7 @@ from chia.plotters.plotters_util import (
     check_git_ref,
     reset_loop_policy_for_windows,
     get_linux_distro,
+    git_clean_checkout,
 )
 
 log = logging.getLogger(__name__)
@@ -75,31 +76,31 @@ def get_bladebit_exec_package_path() -> Path:
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    bladebit_exec_path = get_bladebit_exec_install_path(plotters_root_path)
-    if bladebit_exec_path.exists():
-        return bladebit_exec_path
+    bladebit_exec_install_path = get_bladebit_exec_install_path(plotters_root_path)
+    if bladebit_exec_install_path.exists():
+        return bladebit_exec_install_path
     return get_bladebit_exec_package_path()
 
 
 def get_bladebit_version(plotters_root_path: Path):
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
-    if bladebit_executable_path.exists():
-        try:
-            proc = run_command(
-                [os.fspath(bladebit_executable_path), "--version"],
-                "Failed to call bladebit with --version option",
-                capture_output=True,
-                text=True,
-            )
-            # (Found, versionStr)
-            version_str: str = proc.stdout.strip()
-            return True, version_str.split(".")
-        except Exception as e:
-            # (Unknown, Exception)
-            return None, e
-    else:
+    if not bladebit_executable_path.exists():
         # (NotFound, "")
         return False, ""
+
+    try:
+        proc = run_command(
+            [os.fspath(bladebit_executable_path), "--version"],
+            "Failed to call bladebit with --version option",
+            capture_output=True,
+            text=True,
+        )
+        # (Found, versionStr)
+        version_str: str = proc.stdout.strip()
+        return True, version_str.split(".")
+    except Exception as e:
+        # (Unknown, Exception)
+        return None, e
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
@@ -253,20 +254,13 @@ def install_bladebit(root_path: Path, override: bool = False, commit: Optional[s
         # 'brew' is a requirement for chia on macOS, so it should be available.
         run_command(["brew", "install", "cmake"], "Could not install dependencies")
 
-    bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
+    bladebit_path: str = os.fspath(root_path.joinpath(BLADEBIT_PLOTTER_DIR))
     bladebit_git_origin_url = "https://github.com/Chia-Network/bladebit.git"
     bladebit_git_repos_exist = check_git_repository(bladebit_path, bladebit_git_origin_url)
 
     if bladebit_git_repos_exist:
         if commit:
-            run_command(["git", "reset", "--hard"], "Failed to reset head", cwd=bladebit_path)
-            run_command(["git", "clean", "-fd"], "Failed to clean working tree", cwd=bladebit_path)
-            from datetime import datetime
-            now = datetime.now().strftime("%Y%m%d%H%M%S")
-            run_command(["git", "branch", "-m", now], f"Failed to rename branch to {now}", cwd=bladebit_path)
-            run_command(["git", "fetch", "origin", "--prune"], "Failed to fetch remote branches ", cwd=bladebit_path)
-            run_command(["git", "checkout", "-f", commit], f"Failed to checkout {commit}", cwd=bladebit_path)
-            run_command(["git", "branch", "-D", now], f"Failed to delete branch {now}", cwd=bladebit_path)
+            git_clean_checkout(commit, bladebit_path)
         elif override:
             run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
             run_command(
