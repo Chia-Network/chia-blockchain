@@ -607,7 +607,7 @@ class TestWeightProof:
             assert res is not None
 
     @pytest.mark.asyncio
-    async def test_weight_proof_recent_chain_validation_start_on_overflow(self, default_1000_blocks, bt):
+    async def test_weight_proof_recent_chain_validation_start_on_eos_overflow(self, default_1000_blocks, bt):
         blocks: List[FullBlock] = default_1000_blocks
 
         start_from = 0
