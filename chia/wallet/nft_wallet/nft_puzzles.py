@@ -1,8 +1,11 @@
 import logging
-from typing import List, Tuple
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 log = logging.getLogger(__name__)
@@ -49,13 +52,6 @@ def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Prog
     return full_puzzle
 
 
-def get_uri_list_from_puzzle(puzzle: Program) -> List[Tuple[bytes, bytes]]:
-    matched, singleton_args, curried_args = match_nft_puzzle(puzzle)
-    if matched:
-        return list(curried_args[1].as_iter())
-    raise ValueError("Not an NFT puzzle ")
-
-
 def create_full_puzzle(
     singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
 ) -> Program:
@@ -74,19 +70,32 @@ def create_full_puzzle(
     return full_puzzle
 
 
-def match_nft_puzzle(puzzle: Program) -> Tuple[bool, Program, List[Program]]:
+def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     """
-    Given a puzzle test if it's an NFT and, if it is, return the curried arguments
+    Extract NFT info from a full puzzle
+    :param puzzle: NFT full puzzle
+    :param nft_coin: NFT coin
+    :return: NFTInfo
     """
-    try:
-        mod, singleton_curried_args = puzzle.uncurry()
-        if mod == SINGLETON_TOP_LAYER_MOD:
-            mod, curried_args = singleton_curried_args.rest().first().uncurry()
-            log.debug("Got a singleton matched: %r", singleton_curried_args)
-            if mod == NFT_STATE_LAYER_MOD:
-                log.debug("Got a NFT MOD matched: %s", curried_args)
-                return True, singleton_curried_args, list(curried_args.as_iter())
-    except Exception:
-        log.exception("Error extracting NFT puzzle arguments")
-        return False, Program.to([]), []
-    return False, Program.to([]), []
+    # TODO Update this method after the NFT code finalized
+    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
+    data_uris = []
+    for uri in uncurried_nft.data_uris.as_python():
+        data_uris.append(str(uri, "utf-8"))
+
+    nft_info = NFTInfo(
+        uncurried_nft.singleton_launcher_id.as_python().hex().upper(),
+        nft_coin.name().hex().upper(),
+        uncurried_nft.owner_did.as_python().hex().upper(),
+        uint64(uncurried_nft.trade_price_percentage.as_int()),
+        data_uris,
+        uncurried_nft.data_hash.as_python().hex().upper(),
+        [],
+        "",
+        [],
+        "",
+        "NFT0",
+        uint64(1),
+        uint64(1),
+    )
+    return nft_info

@@ -44,4 +44,7 @@ class NFTInfo(Streamable):
     """Current NFT version"""
 
     edition_count: uint64
-    """Number of the NFT in a series"""
+    """How many NFTs in the current series"""
+
+    edition_number: uint64
+    """Number of the current NFT in the series"""

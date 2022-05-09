@@ -40,8 +40,8 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet.nft_puzzles import match_nft_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTWalletInfo
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
@@ -569,10 +569,13 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        nft_matched, _, nft_curried_args = match_nft_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-        self.log.debug("Matching NFT: %s", nft_matched)
-        if nft_matched:
-            return await self.handle_nft(coin_spend, iter(nft_curried_args))
+        try:
+            uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        except Exception:
+            # This is not a NFT coin, skip NFT handling
+            pass
+        else:
+            return await self.handle_nft(coin_spend, uncurried_nft)
 
         # Check if the coin is a DID
         did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
@@ -702,23 +705,25 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def handle_nft(
-        self, coin_spend: CoinSpend, curried_args: Iterator[Program]
+        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
         :param coin_spend: New coin spend
+        :param uncurried_nft: Uncurried NFT
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None
         wallet_type = None
 
-        (_, metadata, metadata_updater_puzzle_hash, inner_puzzle) = curried_args
         self.log.debug("Handling NFT: %s", coin_spend)
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.NFT:
                 nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
                 self.log.debug(
-                    "Checking NFT wallet %r and inner puzzle %s", wallet_info.name, inner_puzzle.get_tree_hash()
+                    "Checking NFT wallet %r and inner puzzle %s",
+                    wallet_info.name,
+                    uncurried_nft.inner_puzzle.get_tree_hash(),
                 )
                 if not nft_wallet_info.did_wallet_id:
                     # standard NFT wallet
