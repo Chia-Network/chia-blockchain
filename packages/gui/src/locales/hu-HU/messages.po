@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 12:59\n"
+"PO-Revision-Date: 2022-05-09 18:34\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -48,7 +48,7 @@ msgstr "+ Új Plot NFT Hozzáadása"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "+ Add a Plot"
-msgstr ""
+msgstr "+ Plot hozzáadása"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -153,7 +153,7 @@ msgstr "{currencyCode} hozzáadása a csapból"
 
 #: src/components/app/AppKeyringMigrator.tsx:198
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
-msgstr ""
+msgstr "Miután kulcsai sikeresen átkerültek az új kulcstartóra, úgy dönthet, hogy eltávolítja kulcsait a régi kulcstartóról."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
@@ -250,7 +250,7 @@ msgstr "Blokk"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
-msgstr ""
+msgstr "Blokk jutalmak"
 
 #: src/components/block/Block.jsx:138
 #~ msgid "Block Test"
@@ -292,7 +292,7 @@ msgstr "Tallózás"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:74
 #~ msgid "But you are currently farming <0/>"
-#~ msgstr "De te jelenleg farmolsz <0/>"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
@@ -333,7 +333,7 @@ msgstr "Mégsem"
 
 #: src/components/plot/PlotsNotFound.tsx:36
 #~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-#~ msgstr "Figyelem, ha törlöd ezeket a parcellákat, akkor örökre törlődnek. Ellenőrizd, hogy a tárolóeszközök megfelelően csatlakoztatva vannak-e."
+#~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
@@ -376,7 +376,7 @@ msgstr "Chia Blokklánc Wiki"
 
 #: src/components/app/AppSelectMode.tsx:158
 msgid "Choose Farming Mode"
-msgstr ""
+msgstr "Válassza ki a Farming módot"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
@@ -388,11 +388,11 @@ msgstr "Válassz parcella méretet"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
-msgstr ""
+msgstr "Plotter kiválasztása"
 
 #: src/components/app/AppSelectMode.tsx:107
 msgid "Choose Wallet Mode"
-msgstr ""
+msgstr "Pénztárca mód kiválasztása"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
 #: src/components/plotNFT/PlotNFTCard.tsx:380
@@ -410,7 +410,7 @@ msgstr "Bezárás"
 
 #: src/components/app/AppState.tsx:98
 msgid "Closing down services"
-msgstr ""
+msgstr "Szolgáltatások megszüntetése"
 
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing services"
@@ -461,13 +461,13 @@ msgstr "Megerősítés Lecsatlakozás"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
-msgstr ""
+msgstr "Új jelszó megerősítése"
 
 #: src/components/app/AppKeyringMigrator.tsx:149
 #: src/components/app/AppKeyringMigrator.tsx:150
 #: src/components/settings/SetPassphrasePrompt.tsx:160
 msgid "Confirm Passphrase"
-msgstr ""
+msgstr "Jelszó megerősítése"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:120
 msgid "Confirmation"
@@ -503,7 +503,7 @@ msgstr "Csatlakozva"
 #: src/components/app/AppState.tsx:144
 #: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
-msgstr ""
+msgstr "Csatlakozás a daemonhoz"
 
 #: src/components/app/AppRouter.tsx:61
 #~ msgid "Connecting to wallet"
@@ -553,7 +553,7 @@ msgstr "Létrehoz"
 
 #: src/components/app/AppSelectMode.tsx:140
 msgid "Create & Manage plots"
-msgstr ""
+msgstr "Parcellák létrehozása és kezelése"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:970
 #~ msgid "Create An Attestation Packet"
@@ -664,7 +664,7 @@ msgstr "Jelenlegi nehézség"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:160
 msgid "Current Passphrase"
-msgstr ""
+msgstr "Jelenlegi jelszó"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:155
 #: src/components/plotNFT/PlotNFTCard.tsx:194
@@ -705,7 +705,7 @@ msgstr "Törlés"
 
 #: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
-msgstr ""
+msgstr "Kulcs törlése"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
@@ -714,7 +714,7 @@ msgstr "Parcella törlése"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:311
 msgid "Delete Unconfirmed Transactions"
-msgstr ""
+msgstr "Meg nem erősített tranzakciók törlése"
 
 #: src/components/_selectKey_old/SelectKey.tsx:114
 #: src/components/_selectKey_old/SelectKey.tsx:273
@@ -735,7 +735,7 @@ msgstr ""
 
 #: src/components/app/AppPassPrompt.tsx:88
 msgid "Deleting key"
-msgstr ""
+msgstr "Kulcs törlése"
 
 #: src/components/selectKey/SelectKey.tsx:101
 #~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -743,7 +743,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
-msgstr ""
+msgstr "A rendszerkonfigurációtól függően előfordulhat, hogy egy alternatív plotter gyorsabb ábrákat készít, mint az alapértelmezett Chia Proof of Space plotter. Ha bizonytalan, használja az alapértelmezett Chia Proof of Space plottert."
 
 #: src/electron/main.tsx:389
 msgid "Developer"
@@ -764,7 +764,7 @@ msgstr "Bonyolultság"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
-msgstr ""
+msgstr "NUMA kikapcsolása"
 
 #: src/components/app/AppPassPrompt.tsx:77
 #~ msgid "Disable Passphrase Protection"
@@ -772,7 +772,7 @@ msgstr ""
 
 #: src/electron/main.tsx:401
 msgid "Disable Simulator"
-msgstr ""
+msgstr "Szimulátor kikapcsolása"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -826,11 +826,11 @@ msgstr "Húzza ide a mentett fájlt"
 
 #: src/components/plot/PlotHarvester.tsx:131
 msgid "Duplicate"
-msgstr ""
+msgstr "Másolat"
 
 #: src/components/plot/card/PlotCardPlotsDuplicate.tsx:11
 msgid "Duplicate Plots"
-msgstr ""
+msgstr "Plotok duplikálása"
 
 #: src/electron/main.tsx:348
 msgid "Edit"
@@ -844,7 +844,7 @@ msgstr "Kifizetési utasítások módosítása"
 
 #: src/electron/main.tsx:402
 msgid "Enable Simulator"
-msgstr ""
+msgstr "Szimulátor engedélyezése"
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:111
 #~ msgid "Enter Passphrase"
@@ -852,11 +852,11 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:128
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
-msgstr ""
+msgstr "Adjon meg egy erős jelszót, és kattintson a Kulcsok áttelepítése gombra a kulcsok biztosításához"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:139
 msgid "Enter a strong passphrase to secure your keys:"
-msgstr ""
+msgstr "Adjon meg egy erős jelszót a kulcsai védelméhez:"
 
 #: src/components/_wallet_old/WalletImport.tsx:146
 #~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -864,7 +864,7 @@ msgstr ""
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:102
 msgid "Enter your passphrase:"
-msgstr ""
+msgstr "Írja be a jelszót:"
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
@@ -882,7 +882,7 @@ msgstr "Hiba"
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:14
 msgid "Estimated Network Space"
-msgstr ""
+msgstr "Becsült hálózati hely"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:47
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:55
@@ -908,11 +908,11 @@ msgstr "A végleges könyvtár kizárása"
 
 #: src/components/plot/PlotHarvester.tsx:118
 msgid "Failed"
-msgstr ""
+msgstr "Sikertelen"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
-#~ msgstr "Nem sikerült megnyitni (érvénytelen parcella)"
+#~ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:97
 #~ msgid "Failed to remove passphrase: {error}"
@@ -920,7 +920,7 @@ msgstr ""
 
 #: src/components/settings/SetPassphrasePrompt.tsx:83
 msgid "Failed to set passphrase: {0}"
-msgstr ""
+msgstr "Nem sikerült beállítani a jelszót: {0}"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:92
 #~ msgid "Failed to set passphrase: {error}"
@@ -928,7 +928,7 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:111
 msgid "Failed to update passphrase: {0}"
-msgstr ""
+msgstr "Nem sikerült frissíteni a jelszót: {0}"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:120
 #~ msgid "Failed to update passphrase: {error}"
@@ -992,7 +992,7 @@ msgstr "Farmolás"
 
 #: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
-msgstr ""
+msgstr "Farming Mód"
 
 #: src/components/farm/card/FarmCardStatus.tsx:14
 #: src/components/farm/card/FarmCardStatus.tsx:25
@@ -1022,7 +1022,7 @@ msgstr "Díj"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
-msgstr ""
+msgstr "A költség kétszer kerül felhasználásra: egyszer a pool elhagyásakor és egyszer csatlakozáskor."
 
 #: src/components/block/Block.jsx:299
 msgid "Fees Amount"
@@ -1080,7 +1080,7 @@ msgstr "Teljes képernyő"
 
 #: src/components/settings/Settings.tsx:257
 msgid "General"
-msgstr ""
+msgstr "Általános"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
@@ -1104,11 +1104,11 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
 #~ msgid "Harvester Plots"
-#~ msgstr "Farmolható plot-ok"
+#~ msgstr ""
 
 #: src/components/plot/PlotHarvesters.tsx:39
 msgid "Harvesters"
-msgstr ""
+msgstr "Aratók"
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "Header Hash"
@@ -1143,7 +1143,7 @@ msgstr ""
 #: src/components/app/AppPassPrompt.tsx:127
 #: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
-msgstr ""
+msgstr "Tipp"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
@@ -1153,7 +1153,7 @@ msgstr ""
 #: src/components/plot/PlotHarvesterPlotsFailed.tsx:65
 #: src/components/plot/PlotHarvesterPlotsNotFound.tsx:65
 msgid "Hooray, no files here!"
-msgstr ""
+msgstr "Hurrá, nincsenek fájlok!"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:35
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:35
@@ -1224,7 +1224,7 @@ msgstr "Tartalomjegyzék"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:125
 msgid "Initializing..."
-msgstr ""
+msgstr "Inicializálás..."
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:218
 #~ msgid "Interval"
@@ -1232,15 +1232,15 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
-msgstr ""
+msgstr "Érvénytelen állapot"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:66
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
-msgstr ""
+msgstr "Ez egy egyszeri bejelentkezési link, amely a pool weboldalára való bejelentkezéshez használható. A parcella NFT-ről származó farmer kulcsot használó aláírást tartalmaz. Nem minden pool támogatja ezt a funkciót."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:402
 msgid "Join Pool"
-msgstr ""
+msgstr "Csatlakozás a Pool-hoz"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
@@ -1248,23 +1248,23 @@ msgstr ""
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
-msgstr ""
+msgstr "Csatlakozás a Pool-hoz"
 
 #: src/components/plot/add/PlotAddNFT.tsx:49
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
-msgstr ""
+msgstr "Csatlakozz egy poolhoz, és kapj következetes XCH-farming jutalmakat. Az átlagos hozam ugyanolyan, de sokkal kevésbé ingadozó."
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:63
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile. Assign plots to a plot NFT. You can easily switch pools without having to re-plot."
-msgstr ""
+msgstr "Csatlakozz egy poolhoz, és kapj következetes XCH-farming jutalmakat. Az átlagos hozam ugyanolyan, de sokkal kevésbé ingadozó. Rendelj hozzá parcellákat egy parcella NFT-hez. Könnyen válthatsz poolt anélkül, hogy újra kellene parcelláznod."
 
 #: src/components/plot/add/PlotAddNFT.tsx:138
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
-msgstr ""
+msgstr "Csatlakozz egy poolhoz, és kapj következetesebb XCH-farming jutalmakat. Hozzon létre egy parcellás NFT-t, és rendelje az új parcelláit egy csoporthoz."
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
-msgstr ""
+msgstr "Csatlakozás egy farming poolhoz"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:40
 #: src/components/plot/PlotPlotting.tsx:20
@@ -1273,7 +1273,7 @@ msgstr "K-méret"
 
 #: src/components/app/AppKeyringMigrator.tsx:93
 msgid "Keyring migration failed: {0}"
-msgstr ""
+msgstr "A kulcstartó migrációja sikertelen: {0}"
 
 #: src/components/app/AppKeyringMigrator.tsx:86
 #~ msgid "Keyring migration failed: {error}"
@@ -1298,7 +1298,7 @@ msgstr "Utolsó kitermelt blokk"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "Last Transaction Block Time"
-msgstr ""
+msgstr "Utolsó tranzakciós blokk ideje"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Latest Block Challenges"
@@ -1307,7 +1307,7 @@ msgstr "Legfrissebb blokk kihívások"
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:294
 #: src/components/plotNFT/PlotNFTCard.tsx:346
 msgid "Launcher Id"
-msgstr ""
+msgstr "Indító azonosító"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:76
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:118
@@ -1320,7 +1320,7 @@ msgstr "Pool elhagyása"
 
 #: src/components/pool/PoolOverview.tsx:172
 #~ msgid "List view"
-#~ msgstr "Lista nézet"
+#~ msgstr ""
 
 #: src/components/pool/Pool.tsx:21
 #~ msgid "Loading Plot NFTs"
@@ -1332,7 +1332,7 @@ msgstr "Konfiguráció betöltése"
 
 #: src/components/farm/Farm.tsx:24
 msgid "Loading farming data"
-msgstr ""
+msgstr "Farmolás adatok betöltése"
 
 #: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
@@ -1348,7 +1348,7 @@ msgstr "Betöltés…"
 
 #: src/components/plot/PlotHarvester.tsx:56
 msgid "Local"
-msgstr ""
+msgstr "Helyi"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
@@ -1400,7 +1400,7 @@ msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "CAT tokenek kezelése"
 
 #: src/components/farm/FarmHeader.tsx:41
 msgid "Manage Farming Rewards"
@@ -1426,20 +1426,20 @@ msgstr "MiB Feltöltés/Letöltés"
 #: src/components/settings/Settings.tsx:186
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
-msgstr ""
+msgstr "Kulcstartó áthelyezése"
 
 #: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
-msgstr ""
+msgstr "Kulcsok migrálása"
 
 #: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
-msgstr ""
+msgstr "Migráció szükséges"
 
 #: src/components/settings/Settings.tsx:127
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
-msgstr ""
+msgstr "A jelszavas védelem támogatásához szükséges áttérés"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
@@ -1451,7 +1451,7 @@ msgstr "Perc"
 
 #: src/components/plot/PlotHarvester.tsx:105
 msgid "Missing Keys"
-msgstr ""
+msgstr "Hiányzó Kulcsok"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 msgid "More memory slightly increases speed"
@@ -1516,7 +1516,7 @@ msgstr "Nincs kitermelt blokk"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:123
 msgid "No plots yet"
-msgstr ""
+msgstr "Nincsenek plotok"
 
 #: src/components/_wallet_old/WalletHistory.tsx:102
 #~ msgid "No previous transactions"
@@ -1535,7 +1535,7 @@ msgstr "Node azonosító"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
 #~ msgid "Node Id"
-#~ msgstr "Node azonosító"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:91
 msgid "None"
@@ -1572,12 +1572,12 @@ msgstr "Nincs csatlakozva"
 
 #: src/components/plot/PlotsNotFound.tsx:34
 #~ msgid "Not found Plots"
-#~ msgstr "Nem talált Parcellát"
+#~ msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:163
 #: src/components/farm/FarmManageFarmingRewards.tsx:174
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
-msgstr ""
+msgstr "Vegye figyelembe, hogy ez nem változtatja meg a pooling kifizetési címeket. Ez csak a régi formátumú telkeket és a pooling telkek 0,25XCH jutalmát érinti."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
 #: src/components/plotNFT/PlotNFTCard.tsx:158
@@ -1590,7 +1590,7 @@ msgstr "Vödrök száma"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
 msgid "Number of buckets for phase 3 & 4"
-msgstr ""
+msgstr "A vödrök száma a 3. és 4. fázisban"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
 msgid "Number of threads"
@@ -1641,7 +1641,7 @@ msgstr "Jelszó"
 #: src/components/settings/ChangePassphrasePrompt.tsx:191
 #: src/components/settings/SetPassphrasePrompt.tsx:173
 msgid "Passphrase Hint"
-msgstr ""
+msgstr "Jelszó tipp"
 
 #: src/components/app/AppKeyringMigrator.tsx:161
 #: src/components/settings/ChangePassphrasePrompt.tsx:190
@@ -1676,7 +1676,7 @@ msgstr "A jelszavas védelem engedélyezve van"
 #: src/components/settings/Settings.tsx:128
 #: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
-msgstr ""
+msgstr "A jelszavas támogatáshoz a kulcsok új kulcstartóra történő áttelepítése szükséges"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:357
 msgid "Payout Address"
@@ -1863,7 +1863,7 @@ msgstr "Parcella kulcs"
 
 #: src/components/pool/PoolOverview.tsx:38
 #~ msgid "Plot NFT"
-#~ msgstr "Plot NFT"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
@@ -1909,7 +1909,7 @@ msgstr "Parcellák"
 
 #: src/components/plot/card/PlotCardPlotsFailedToOpen.tsx:13
 msgid "Plots Failed To Open"
-msgstr ""
+msgstr "Plotok nem nyithatók meg"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:20
 msgid "Plots Passed Filter"
@@ -1917,15 +1917,15 @@ msgstr "Szűrőn átjutott parcellák"
 
 #: src/components/plot/card/PlotCardNotFound.tsx:11
 msgid "Plots With Missing Keys"
-msgstr ""
+msgstr "Plotok hiányzó kulccsal"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
 #~ msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-#~ msgstr "A cserepek a termesztéshez fenntartott helyek a merevlemezen, amikből Chia nyerhető. <0>Részletek</0>"
+#~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia.<0>Learn more</0>"
-msgstr ""
+msgstr "A plotok a farmoláshoz fenntartott helyek a merevlemezen, amikből Chia nyerhető. <0>Részletek</0>"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:103
 msgid "Plotter"
@@ -1938,7 +1938,7 @@ msgstr "Mûvelés"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "Plotting Manager"
-msgstr ""
+msgstr "Plot Menedzser"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -2129,7 +2129,7 @@ msgstr "Sor megnevezése"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
 #~ msgid "Queue name"
-#~ msgstr "Várósor egyedi azonosítóneve"
+#~ msgstr "Queue Name"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:35
 msgid "Queued"
@@ -2215,7 +2215,7 @@ msgstr "Kiadási megjegyzések"
 
 #: src/components/plot/PlotHarvester.tsx:56
 msgid "Remote"
-msgstr ""
+msgstr "Távoli"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:98
 #: src/components/settings/RemovePassphrasePrompt.tsx:143
@@ -2800,7 +2800,7 @@ msgstr ""
 
 #: src/components/plot/card/PlotCardTotalHarvesters.tsx:11
 msgid "Total Harvesters"
-msgstr ""
+msgstr "Összes betakarító"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -2812,15 +2812,15 @@ msgstr "Teljes hálózati tárhely kapacitás"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:146
 #~ msgid "Total Plot Size:"
-#~ msgstr "Teljes parcella adatbázis méret:"
+#~ msgstr ""
 
 #: src/components/plot/card/PlotCardTotalPlots.tsx:11
 msgid "Total Plots"
-msgstr ""
+msgstr "Összes plot"
 
 #: src/components/plot/card/PlotCardTotalPlotsSize.tsx:11
 msgid "Total Plots Size"
-msgstr ""
+msgstr "Teljes plot méret"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:11
 msgid "Total Size of Plots"
@@ -3043,7 +3043,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
 #~ msgid "Want to earn more Chia? Add more plots to your farm."
-#~ msgstr "Szeretne többet keresni Chia-val? Adjon hozzá több telket a gazdaságához (farmoláshoz)."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:87
 msgid "Want to have a delay before the next plot starts?"
@@ -3106,19 +3106,19 @@ msgstr ""
 
 #: src/hooks/useAbsorbRewards.tsx:35
 msgid "You are not self pooling"
-msgstr ""
+msgstr "Nem saját magadnak gyűjtöd össze a pénzed"
 
 #: src/components/app/AppSelectMode.tsx:167
 msgid "You can always change your mode later in the settings"
-msgstr ""
+msgstr "Az üzemmódot később bármikor megváltoztathatod a beállítások között"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:420
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
-msgstr ""
+msgstr "Továbbra is létrehozhat parcellákat ehhez az NFT-parcellához, de a szinkronizálás befejezéséig nem végezhet módosításokat."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Nem kell, hogy szinkronizálva legyen, vagy csatlakoztatva legyen a telekhez. A plotolási folyamat során ideiglenes fájlok jönnek létre, amelyek meghaladják a végleges plotfájlok méretét. Győződj meg róla, hogy elegendő hely áll rendelkezésre. <0>Tudj meg többet</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3150,7 +3150,7 @@ msgstr "Jelenleg {0}% tárhely kapacitással rendelkezel a hálózaton, amivel m
 
 #: src/components/pool/PoolJoin.tsx:36
 msgid "You need to claim your rewards first"
-msgstr ""
+msgstr "Először igényelned kell a jutalmakat"
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
@@ -3162,12 +3162,12 @@ msgstr "{currencyCode}-ra van szüksége, hogy a pool-ba be tudjon jelentkezni."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
 #~ msgid "You will recieve <0/> to {0}"
-#~ msgstr ""
+#~ msgstr "You will receive <0/> to {0}"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
 msgid "You will recieve <0/> to {address}"
-msgstr ""
+msgstr "<0/>-t fog kapni a {address}"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:328
 #~ msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
@@ -3187,15 +3187,15 @@ msgstr "Az arató hálózatod"
 
 #: src/components/pool/PoolOverview.tsx:42
 msgid "Your Pool Overview"
-msgstr ""
+msgstr "A pool áttekintése"
 
 #: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "A kulcstartó zárva van"
 
 #: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "Kulcsaid nem kerültek át egy új kulcstartóra. A migráció befejezéséig nem tudsz új kulcsokat létrehozni vagy meglévő kulcsokat törölni. Biztos, hogy kihagyod a kulcsok migrálását?"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
@@ -3203,27 +3203,27 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:105
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
-msgstr ""
+msgstr "A kulcsokat át kell helyezned egy új kulcstartóba, amelyet opcionálisan egy fő jelszóval kell védeni."
 
 #: src/components/app/AppKeyringMigrator.tsx:111
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
-msgstr ""
+msgstr "A kulcsokat át kell helyezned egy új kulcstartóba, amelyet egy fő jelszóval kell védeni."
 
 #: src/components/app/AppKeyringMigrator.tsx:180
 #: src/components/settings/ChangePassphrasePrompt.tsx:209
 #: src/components/settings/SetPassphrasePrompt.tsx:191
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
-msgstr ""
+msgstr "A jelszót a rendszer biztonságos hitelesítő adatok tárolójában tárolhatja. A Chia képes lesz hozzáférni a kulcsaihoz anélkül, hogy kérné a jelszót."
 
 #: src/components/settings/Settings.tsx:89
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
-msgstr ""
+msgstr "Az jelszava be lett állítva"
 
 #: src/components/settings/Settings.tsx:78
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
-msgstr ""
+msgstr "A jelszavad frissítve lett"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3249,7 +3249,7 @@ msgstr "[Error 22] A fájl nem található. Valószínűleg az egyik parcella k�
 
 #: src/components/plot/add/PlotAddForm.tsx:123
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2SingletonPuzzleHash nincs definiálva"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
@@ -3289,11 +3289,11 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
-msgstr ""
+msgstr "Az ajánlott vödrök száma {0}"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
-msgstr ""
+msgstr "{0} pont {1} - {2} órával ezelőtt"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 #~ msgid "{currencyCode} Block Rewards"
@@ -3313,4 +3313,5 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
-msgstr ""
+msgstr "{warning}"
+
