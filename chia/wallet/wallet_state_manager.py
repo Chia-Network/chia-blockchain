@@ -572,6 +572,7 @@ class WalletStateManager:
         try:
             uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
         except Exception:
+            # This is not a NFT coin, skip NFT handling
             pass
         else:
             return await self.handle_nft(coin_spend, uncurried_nft)
