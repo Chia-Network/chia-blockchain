@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-04-21 10:41\n"
+"PO-Revision-Date: 2022-05-09 18:34\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -36,7 +36,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:150
 msgid "+"
-msgstr ""
+msgstr "+"
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 #~ msgid "+ Add New Plot NFT"
@@ -52,7 +52,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:149
 msgid "-"
-msgstr ""
+msgstr "-"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -590,7 +590,7 @@ msgstr "Potvrzeno ve výšce"
 
 #: src/components/WalletStatusHeader.tsx:33
 msgid "Connected ({0})"
-msgstr ""
+msgstr "Připojeno ({0})"
 
 #: src/components/app/AppState.tsx:141
 #: src/components/app/AppState.tsx:145
@@ -1009,7 +1009,7 @@ msgstr "Zadejte 24 slov, které jste si poznamenali při zakládání vaší Chi
 
 #: src/components/cat/WalletCATSend.tsx:129
 msgid "Error the entered address appears to be for a different colour."
-msgstr ""
+msgstr "Chyba zadaná adresa se zdá být pro jinou barvu."
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -1239,11 +1239,11 @@ msgstr "Přejít na Offerpool"
 
 #: src/components/WalletReceiveAddress.tsx:39
 #~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-#~ msgstr "HD nebo Hierarchické Deterministické klíče jsou typy veřejného/soukromého klíče, kde jeden soukromý klíč může mít téměř nekonečný počet různých veřejných klíčů (a tedy i příchozích adres peněženky). Všechny adresy tedy končí v jedné a té samé peněžence."
+#~ msgstr ""
 
 #: src/components/WalletReceiveAddress.tsx:38
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "HD nebo Hierarchické Deterministické klíče jsou typy veřejného/soukromého klíče, kde jeden soukromý klíč může mít téměř nekonečný počet různých veřejných klíčů (a tedy i příchozích adres peněženky), které se váží k jedinému soukromému klíči a mohou tak být utráceny."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
@@ -1390,19 +1390,15 @@ msgid "Install Keybase"
 msgstr "Nainstalovat Keybase"
 
 #: src/components/offers/OfferViewer.tsx:358
-msgid ""
-"Insufficient funds available to accept offer. Ensure that your\n"
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Nedostatek dostupných finančních prostředků k přijetí nabídky. Ujistěte se, že Váš\n"
+msgstr "Nedostatek dostupných finančních prostředků k přijetí nabídky. Ujistěte se, že Váš\n"
 "disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/offers/OfferEditor.tsx:166
-msgid ""
-"Insufficient funds available to create offer. Ensure that your\n"
+msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Nedostatek dostupných finančních prostředků k vytvoření nabídky. Ujistěte se, že Váš\n"
+msgstr "Nedostatek dostupných finančních prostředků k vytvoření nabídky. Ujistěte se, že Váš\n"
 "disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/create/createRLAdmin.jsx:217
@@ -1648,7 +1644,7 @@ msgstr "MiB odesláno/přijato"
 
 #: src/constants/WalletName.ts:17
 msgid "Multi Sig Wallet"
-msgstr ""
+msgstr "Více podpisová peněženka"
 
 #: src/components/cat/WalletDID.tsx:536
 #: src/components/did/WalletDID.tsx:536
@@ -1752,7 +1748,7 @@ msgstr "Nedostupný"
 
 #: src/components/WalletStatusHeader.tsx:31
 msgid "Not Connected"
-msgstr ""
+msgstr "Nepřipojeno"
 
 #: src/components/WalletStatus.tsx:39
 msgid "Not Synced"
@@ -3510,7 +3506,7 @@ msgstr "Upozornění"
 
 #: src/components/offers/OfferSummary.tsx:97
 msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
-msgstr "Varování: Ověřte, že nabízená ID CAT aktiva odpovídají ID aktiva tokenů, které očekáváte, že obdržíte."
+msgstr "Varování: Ověřte, že ID nabízených CAT aktiv odpovídají ID aktiv tokenů, které očekáváte, že obdržíte."
 
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
@@ -3785,3 +3781,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
+
