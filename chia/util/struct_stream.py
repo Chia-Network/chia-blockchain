@@ -88,10 +88,13 @@ class StructStream(int):
         self,
         length: Optional[int] = None,
         byteorder: Literal["little", "big"] = "big",
+        signed: bool = None
     ) -> bytes:
         if length is None:
             length = self.SIZE
-        return super().to_bytes(length=length, byteorder=byteorder, signed=self.SIGNED)
+        if signed is None:
+            signed = self.SIGNED
+        return super().to_bytes(length=length, byteorder=byteorder, signed=signed)
 
     def __bytes__(self: Any) -> bytes:
         return self.to_bytes()
