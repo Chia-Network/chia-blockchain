@@ -13,6 +13,9 @@ from chia.plotters.plotters_util import (
     reset_loop_policy_for_windows,
     get_linux_distro,
     is_libsodium_available_on_redhat_like_os,
+    check_git_ref,
+    check_git_repository,
+    git_clean_checkout,
 )
 
 log = logging.getLogger(__name__)
@@ -33,16 +36,53 @@ def get_madmax_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "madmax"
 
 
-def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 32) -> Path:
+def get_madmax_exec_install_path(plotters_root_path: Path, ksize: int = 32) -> Path:
+    madmax_install_dir = get_madmax_install_path(plotters_root_path) / "build"
+    madmax_exec = "chia_plot"
+    if ksize > 32:
+        madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
+    if sys.platform in ["win32", "cygwin"]:
+        madmax_exec += ".exe"
+    return madmax_install_dir / madmax_exec
+
+
+def get_madmax_exec_package_path(ksize: int = 32) -> Path:
     madmax_dir: Path = get_madmax_package_path()
     madmax_exec: str = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
     if sys.platform in ["win32", "cygwin"]:
         madmax_exec += ".exe"
-    if not madmax_dir.exists():
-        madmax_dir = get_madmax_install_path(plotters_root_path) / "build"
     return madmax_dir / madmax_exec
+
+
+def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 32) -> Path:
+    madmax_exec_install_path = get_madmax_exec_install_path(plotters_root_path, ksize)
+    if madmax_exec_install_path.exists():
+        return madmax_exec_install_path
+    return get_madmax_exec_package_path(ksize)
+
+
+def get_madmax_version(plotters_root_path: Path):
+    madmax_executable_path = get_madmax_executable_path_for_ksize(plotters_root_path)
+    if not madmax_executable_path.exists():
+        # (NotFound, "")
+        return False, ""
+
+    try:
+        proc = run_command(
+            [os.fspath(madmax_executable_path), "--version"],
+            "Failed to call madmax with --version option",
+            capture_output=True,
+            text=True,
+        )
+        # (Found, versionStr)
+        version_str = proc.stdout.strip()
+        return True, version_str.split(".")
+    except Exception as e:
+        tb = traceback.format_exc()
+        # (Unknown, ErrMsg)
+        return None, f"Failed to determine madmax version: {e} {tb}"
 
 
 def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
@@ -50,19 +90,14 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     installed: bool = False
     supported: bool = is_madmax_supported()
 
-    if get_madmax_executable_path_for_ksize(plotters_root_path).exists():
-        version = None
-        try:
-            proc = run_command(
-                [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
-                "Failed to call madmax with --version option",
-                capture_output=True,
-                text=True,
-            )
-            version = proc.stdout.strip()
-        except Exception as e:
-            tb = traceback.format_exc()
-            log.error(f"Failed to determine madmax version: {e} {tb}")
+    madmax_executable_path = get_madmax_executable_path_for_ksize(plotters_root_path)
+    if madmax_executable_path.exists():
+        version: Optional[str] = None
+        found, result_msg = get_madmax_version(plotters_root_path)
+        if found:
+            version = ".".join(result_msg)
+        elif found is None:
+            print(result_msg)
 
         if version is not None:
             installed = True
@@ -77,15 +112,26 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     return info
 
 
-def install_madmax(plotters_root_path: Path):
-    if os.path.exists(plotters_root_path / "madmax-plotter/build/chia_plot"):
+def install_madmax(plotters_root_path: Path, override: bool = False, commit: Optional[str] = None):
+    if not override and os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path)):
         print("Madmax plotter already installed.")
+        print("You can override it with -o option")
         return
-
-    print("Installing madmax plotter.")
 
     if not is_madmax_supported():
         raise RuntimeError("Platform not supported yet for madmax plotter.")
+
+    if commit and not check_git_ref(commit):
+        raise RuntimeError("commit contains unusual string. Aborted.")
+
+    print("Installing madmax plotter.")
+
+    if sys.platform in ["win32", "cygwin"]:
+        print("Automatic install not supported on Windows")
+        print("GUI and 'chia plotters madmax' command recognize madmax exec installed at:")
+        print(f"  {get_madmax_exec_install_path(plotters_root_path)}")
+        print("If you have Windows madmax binary, put that binary to the directory above")
+        raise RuntimeError("Automatic install not supported on Windows")
 
     print("Installing dependencies.")
     if sys.platform.startswith("linux"):
@@ -156,22 +202,52 @@ def install_madmax(plotters_root_path: Path):
             ],
             "Could not install dependencies",
         )
-    run_command(["git", "--version"], "Error checking Git version.")
 
-    print("Cloning git repository.")
-    run_command(
-        [
-            "git",
-            "clone",
-            "https://github.com/Chia-Network/chia-plotter-madmax.git",
-            MADMAX_PLOTTER_DIR,
-        ],
-        "Could not clone madmax git repository",
-        cwd=os.fspath(plotters_root_path),
-    )
+    madmax_path: str = os.fspath(plotters_root_path.joinpath(MADMAX_PLOTTER_DIR))
+    madmax_git_origin_url = "https://github.com/Chia-Network/chia-plotter-madmax.git"
+    madmax_git_repos_exist = check_git_repository(madmax_path, madmax_git_origin_url)
 
+    if madmax_git_repos_exist:
+        print("Checking out git repository")
+        if commit:
+            git_clean_checkout(commit, madmax_path)
+        elif override:
+            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=madmax_path)
+            run_command(
+                ["git", "reset", "--hard", "origin/master"], "Failed to reset to origin/master", cwd=madmax_path
+            )
+        else:
+            # Rebuild with existing files
+            pass
+    else:
+        print("Cloning git repository.")
+        if commit:
+            run_command(
+                [
+                    "git",
+                    "clone",
+                    "--branch",
+                    commit,
+                    madmax_git_origin_url,
+                    MADMAX_PLOTTER_DIR,
+                ],
+                "Could not clone madmax repository",
+                cwd=os.fspath(plotters_root_path),
+            )
+        else:
+            run_command(
+                [
+                    "git",
+                    "clone",
+                    madmax_git_origin_url,
+                    MADMAX_PLOTTER_DIR,
+                ],
+                "Could not clone madmax repository",
+                cwd=os.fspath(plotters_root_path),
+            )
+
+    madmax_path = os.fspath(get_madmax_install_path(plotters_root_path))
     print("Installing git submodules.")
-    madmax_path: str = os.fspath(get_madmax_install_path(plotters_root_path))
     run_command(
         [
             "git",
