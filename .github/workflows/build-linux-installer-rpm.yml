@@ -1,10 +1,12 @@
-name: Linux .rpm installer on Python 3.9
+name: Build Installer - Linux RPM AMD64
 
 on:
   workflow_dispatch:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -18,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: Linux .rpm installer on Python 3.9
+    name: Linux amd64 RPM Installer
     runs-on: ubuntu-latest
     container:
       image: chianetwork/centos7-builder:latest
@@ -109,7 +111,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Build .rpm package
       env:
@@ -119,10 +121,10 @@ jobs:
         git -C ./chia-blockchain-gui status
         . ./activate
         cd ./build_scripts
-        sh build_linux_rpm.sh amd64
+        bash build_linux_rpm.sh amd64
 
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: chia-installers-linux-rpm-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
@@ -145,15 +147,17 @@ jobs:
           echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >>$GITHUB_ENV
           ls $GITHUB_WORKSPACE/build_scripts/final_installer/
           aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/dev/chia-blockchain-${CHIA_DEV_BUILD}-1.x86_64.rpm
+          aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/dev/chia-blockchain-cli-${CHIA_DEV_BUILD}-1.x86_64.rpm
 
     - name: Create Checksums
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
-         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
-         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
+        ls $GITHUB_WORKSPACE/build_scripts/final_installer/
+        sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
+        sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
+        ls $GITHUB_WORKSPACE/build_scripts/final_installer/
 
     - name: Install py3createtorrent
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
@@ -165,8 +169,9 @@ jobs:
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent --webseed https://download.chia.net/install/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
-          ls
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent --webseed https://download.chia.net/install/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent --webseed https://download.chia.net/install/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
+        ls
 
     - name: Upload Beta Installer
       if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
@@ -175,15 +180,20 @@ jobs:
       run: |
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/beta/chia-blockchain-1.x86_64_latest_beta.rpm
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/beta/chia-blockchain-1.x86_64_latest_beta.rpm.sha256
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/beta/chia-blockchain-cli-1.x86_64_latest_beta.rpm
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/beta/chia-blockchain-cli-1.x86_64_latest_beta.rpm.sha256
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-          aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/install/
-          aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/install/
-          aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent s3://download.chia.net/torrents/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/install/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/install/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent s3://download.chia.net/torrents/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/install/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/install/
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent s3://download.chia.net/torrents/
 
     - name: Get tag name
       if: startsWith(github.ref, 'refs/tags/')
