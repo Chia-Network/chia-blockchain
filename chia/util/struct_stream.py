@@ -1,4 +1,3 @@
-import struct
 from typing import Any, BinaryIO, Dict, SupportsInt, Tuple, Type, TypeVar, Union
 
 from typing_extensions import Protocol, SupportsIndex
@@ -74,15 +73,19 @@ class StructStream(int):
     def parse(cls: Any, f: BinaryIO) -> Any:
         bytes_to_read = cls.SIZE
         read_bytes = f.read(bytes_to_read)
-        assert read_bytes is not None and len(read_bytes) == bytes_to_read
-        return cls(*struct.unpack(cls.PACK, read_bytes))
+        return cls.from_bytes(read_bytes)
 
     def stream(self, f):
-        f.write(struct.pack(self.PACK, self))
+        f.write(self.to_bytes())
 
     @classmethod
-    def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore
-        return cls(*struct.unpack(cls.PACK, blob))
+    def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore[override]
+        if len(blob) != cls.SIZE:
+            raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
+        return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
+
+    def to_bytes(self) -> bytes:  # type: ignore[override]
+        return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
 
     def __bytes__(self: Any) -> bytes:
-        return struct.pack(self.PACK, self)
+        return self.to_bytes()

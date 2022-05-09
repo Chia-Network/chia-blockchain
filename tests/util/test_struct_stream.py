@@ -24,13 +24,13 @@ class TestStructStream:
         t = cls(0)
         assert t == 0
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             cls.parse(io.BytesIO(b"\0" * (length - 1)))
 
-        with pytest.raises((struct.error, ValueError)):
+        with pytest.raises(ValueError):
             cls.from_bytes(b"\0" * (length - 1))
 
-        with pytest.raises((struct.error, ValueError)):
+        with pytest.raises(ValueError):
             cls.from_bytes(b"\0" * (length + 1))
 
         if struct_format is not None:
