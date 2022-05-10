@@ -298,6 +298,7 @@ class NFTWallet:
         )
         await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()], in_transaction=in_transaction)
+        self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 
     async def remove_coin(self, coin: Coin, in_transaction: bool) -> None:
@@ -310,6 +311,7 @@ class NFTWallet:
             self.nft_wallet_info.did_wallet_id,
         )
         await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
+        self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
 
     def puzzle_for_pk(self, pk: G1Element) -> Program:
