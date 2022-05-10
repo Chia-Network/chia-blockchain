@@ -47,11 +47,3 @@ class SizedBytes(bytes):
 
     def __repr__(self):
         return "<%s: %s>" % (self.__class__.__name__, str(self))
-
-    if TYPE_CHECKING:
-        # TODO: This stub implements a fix already merged into typeshed but not yet
-        #       released in a new mypy version.  Once released this should be removed.
-        #       https://github.com/python/typeshed/pull/6201
-        @classmethod
-        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes:
-            ...
