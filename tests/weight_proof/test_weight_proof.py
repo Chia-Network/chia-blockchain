@@ -115,7 +115,6 @@ async def load_blocks_dont_validate(
 
 
 class TestWeightProof:
-
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_1000_blocks):
         blocks = default_1000_blocks
