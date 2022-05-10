@@ -43,7 +43,7 @@ def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bo
         sender._last_sync_id != previous_last_sync_id
         and sender._last_sync_id == receiver._last_sync.sync_id != 0
         and receiver.current_sync().state == State.idle
-        and not sender._lock.locked()
+        and not sender.sync_active()
     )
 
 
