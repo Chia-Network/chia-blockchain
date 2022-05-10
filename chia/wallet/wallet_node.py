@@ -1137,7 +1137,6 @@ class WalletNode:
         else:
             start_validation = time.time()
             if peer.has_wp_v2_capability():
-                assert ses_response
                 (
                     valid,
                     summaries,
