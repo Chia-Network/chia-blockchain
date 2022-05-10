@@ -1,5 +1,4 @@
 import logging
-
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -71,9 +70,11 @@ def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
 def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
     all_files: Dict[Path, List[Path]] = {}
-    for directory_name in get_plot_directories(root_path):
+    config = load_config(root_path, "config.yaml")
+    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", False)
+    for directory_name in get_plot_directories(root_path, config):
         directory = Path(directory_name).resolve()
-        all_files[directory] = get_filenames(directory)
+        all_files[directory] = get_filenames(directory, recursive_scan)
     return all_files
 
 
@@ -110,7 +111,7 @@ def remove_plot(path: Path):
         path.unlink()
 
 
-def get_filenames(directory: Path) -> List[Path]:
+def get_filenames(directory: Path, recursive: bool) -> List[Path]:
     try:
         if not directory.exists():
             log.warning(f"Directory: {directory} does not exist.")
@@ -120,13 +121,9 @@ def get_filenames(directory: Path) -> List[Path]:
         return []
     all_files: List[Path] = []
     try:
-        for child in directory.iterdir():
-            if not child.is_dir():
-                # If it is a file ending in .plot, add it - work around MacOS ._ files
-                if child.suffix == ".plot" and not child.name.startswith("._"):
-                    all_files.append(child)
-            else:
-                log.debug(f"Not checking subdirectory {child}, subdirectories not added by default")
+        glob_function = directory.rglob if recursive else directory.glob
+        all_files = [child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")]
+        log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")
     return all_files
