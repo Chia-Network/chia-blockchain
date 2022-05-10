@@ -1,4 +1,4 @@
-from typing import Any, BinaryIO, Optional, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, Optional, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Literal, Protocol, SupportsIndex
 
@@ -67,7 +67,7 @@ class StructStream(int):
         read_bytes = f.read(cls.SIZE)
         return cls.from_bytes(read_bytes)
 
-    def stream(self, f):
+    def stream(self, f: BinaryIO) -> None:
         f.write(self.to_bytes())
 
     @classmethod
@@ -77,7 +77,7 @@ class StructStream(int):
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
     def to_bytes(  # type: ignore[override]
-        self, length: Optional[int] = None, byteorder: Literal["little", "big"] = "big", signed: bool = None
+        self, length: Optional[int] = None, byteorder: Literal["little", "big"] = "big", signed: Optional[bool] = None
     ) -> bytes:
         if length is None:
             length = self.SIZE
@@ -85,5 +85,5 @@ class StructStream(int):
             signed = self.SIGNED
         return super().to_bytes(length=length, byteorder=byteorder, signed=signed)
 
-    def __bytes__(self: Any) -> bytes:
+    def __bytes__(self) -> bytes:
         return self.to_bytes()

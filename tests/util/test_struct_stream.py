@@ -4,12 +4,15 @@ from dataclasses import dataclass
 from decimal import Decimal
 import struct
 import io
-from typing import Iterable, Type
+from typing import Iterable, List, Optional, Type
 
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.mark.structures import ParameterSet
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 from typing_extensions import final
 
 from chia.util.ints import int8, uint8, int16, uint16, int32, uint32, int64, uint64, uint128, int512
@@ -20,7 +23,7 @@ def dataclass_parameter(instance: object) -> ParameterSet:
     return pytest.param(instance, id=repr(instance)[len(type(instance).__name__) + 1 : -1])
 
 
-def dataclass_parameters(instances: Iterable[object]) -> ParameterSet:
+def dataclass_parameters(instances: Iterable[object]) -> List[ParameterSet]:
     return [dataclass_parameter(instance) for instance in instances]
 
 
@@ -50,7 +53,7 @@ class Good:
         maximum_exclusive: int,
         minimum: int,
     ) -> Good:
-        raw_class = type(name, (StructStream,), {})
+        raw_class: Type[StructStream] = type(name, (StructStream,), {})
         parsed_cls = parse_metadata_from_name(raw_class)
         return cls(
             name=name,
@@ -91,12 +94,19 @@ good_classes = [
     name="good",
     params=dataclass_parameters(good_classes),
 )
-def good_fixture(request) -> Good:
-    return request.param
+def good_fixture(request: SubRequest) -> Good:
+    return request.param  # type: ignore[no-any-return]
 
 
 class TestStructStream:
-    def _test_impl(self, cls, upper_boundary, lower_boundary, length, struct_format):
+    def _test_impl(
+        self,
+        cls: Type[StructStream],
+        upper_boundary: int,
+        lower_boundary: int,
+        length: int,
+        struct_format: Optional[str],
+    ) -> None:
 
         with pytest.raises(ValueError):
             t = cls(upper_boundary + 1)
@@ -136,7 +146,7 @@ class TestStructStream:
             with pytest.raises(struct.error):
                 struct.pack(struct_format, upper_boundary + 1)
 
-    def test_int512(self):
+    def test_int512(self) -> None:
         # int512 is special. it uses 65 bytes to allow positive and negative
         # "uint512"
         self._test_impl(
@@ -147,35 +157,35 @@ class TestStructStream:
             struct_format=None,
         )
 
-    def test_uint128(self):
+    def test_uint128(self) -> None:
         self._test_impl(uint128, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0, length=16, struct_format=None)
 
-    def test_uint64(self):
+    def test_uint64(self) -> None:
         self._test_impl(uint64, 0xFFFFFFFFFFFFFFFF, 0, length=8, struct_format="!Q")
 
-    def test_int64(self):
+    def test_int64(self) -> None:
         self._test_impl(int64, 0x7FFFFFFFFFFFFFFF, -0x8000000000000000, length=8, struct_format="!q")
 
-    def test_uint32(self):
+    def test_uint32(self) -> None:
         self._test_impl(uint32, 0xFFFFFFFF, 0, length=4, struct_format="!L")
 
-    def test_int32(self):
+    def test_int32(self) -> None:
         self._test_impl(int32, 0x7FFFFFFF, -0x80000000, length=4, struct_format="!l")
 
-    def test_uint16(self):
+    def test_uint16(self) -> None:
         self._test_impl(uint16, 0xFFFF, 0, length=2, struct_format="!H")
 
-    def test_int16(self):
+    def test_int16(self) -> None:
         self._test_impl(int16, 0x7FFF, -0x8000, length=2, struct_format="!h")
 
-    def test_uint8(self):
+    def test_uint8(self) -> None:
         self._test_impl(uint8, 0xFF, 0, length=1, struct_format="!B")
 
-    def test_int8(self):
+    def test_int8(self) -> None:
         self._test_impl(int8, 0x7F, -0x80, length=1, struct_format="!b")
 
-    def test_roundtrip(self):
-        def roundtrip(v):
+    def test_roundtrip(self) -> None:
+        def roundtrip(v: StructStream) -> None:
             s = io.BytesIO()
             v.stream(s)
             s.seek(0)
@@ -262,17 +272,17 @@ class TestStructStream:
         with pytest.raises(ValueError, match=bad_name.error):
             parse_metadata_from_name(cls)
 
-    def test_parse_metadata_from_name_correct_size(self, good) -> None:
+    def test_parse_metadata_from_name_correct_size(self, good: Good) -> None:
         assert good.cls.SIZE == good.size
 
-    def test_parse_metadata_from_name_correct_bits(self, good) -> None:
+    def test_parse_metadata_from_name_correct_bits(self, good: Good) -> None:
         assert good.cls.BITS == good.bits
 
-    def test_parse_metadata_from_name_correct_signedness(self, good) -> None:
+    def test_parse_metadata_from_name_correct_signedness(self, good: Good) -> None:
         assert good.cls.SIGNED == good.signed
 
-    def test_parse_metadata_from_name_correct_maximum(self, good) -> None:
+    def test_parse_metadata_from_name_correct_maximum(self, good: Good) -> None:
         assert good.cls.MAXIMUM_EXCLUSIVE == good.maximum_exclusive
 
-    def test_parse_metadata_from_name_correct_minimum(self, good) -> None:
+    def test_parse_metadata_from_name_correct_minimum(self, good: Good) -> None:
         assert good.cls.MINIMUM == good.minimum
