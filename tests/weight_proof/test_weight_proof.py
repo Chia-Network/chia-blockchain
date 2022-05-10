@@ -123,38 +123,57 @@ async def load_blocks_dont_validate(
     return header_cache, height_to_hash, sub_blocks, sub_epoch_summaries
 
 
-async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, summaries):
-    curr = sub_blocks[blocks[-1].header_hash]
-    orig_summaries: Dict[int, SubEpochSummary] = {}
-    while curr.height > 0:
-        if curr.sub_epoch_summary_included is not None:
-            orig_summaries[curr.height] = curr.sub_epoch_summary_included
-        # next sub block
-        curr = sub_blocks[curr.prev_hash]
-
-    wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-
-    wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-    assert wp is not None
-    # sub epoch summaries validate hashes
-    summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
-        test_constants.SUB_EPOCH_BLOCKS,
-        test_constants.GENESIS_CHALLENGE,
-        wp.sub_epochs,
-        test_constants.DIFFICULTY_STARTING,
-    )
-    assert len(summaries) == len(orig_summaries)
 
 
 class TestWeightProof:
     async def test_weight_proof_map_summaries_1(self, default_1000_blocks):
+        blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_1000_blocks)
-        await _test_map_summaries(default_1000_blocks, header_cache, height_to_hash, sub_blocks, summaries)
+        curr = sub_blocks[blocks[-1].header_hash]
+        orig_summaries: Dict[int, SubEpochSummary] = {}
+        while curr.height > 0:
+            if curr.sub_epoch_summary_included is not None:
+                orig_summaries[curr.height] = curr.sub_epoch_summary_included
+            # next sub block
+            curr = sub_blocks[curr.prev_hash]
+
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        # sub epoch summaries validate hashes
+        summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
+            test_constants.SUB_EPOCH_BLOCKS,
+            test_constants.GENESIS_CHALLENGE,
+            wp.sub_epochs,
+            test_constants.DIFFICULTY_STARTING,
+        )
+        assert len(summaries) == len(orig_summaries)
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_2(self, default_10000_blocks):
+        blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(default_10000_blocks)
-        await _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, summaries)
+        curr = sub_blocks[blocks[-1].header_hash]
+        orig_summaries: Dict[int, SubEpochSummary] = {}
+        while curr.height > 0:
+            if curr.sub_epoch_summary_included is not None:
+                orig_summaries[curr.height] = curr.sub_epoch_summary_included
+            # next sub block
+            curr = sub_blocks[curr.prev_hash]
+
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
+        assert wp is not None
+        # sub epoch summaries validate hashes
+        summaries, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
+            test_constants.SUB_EPOCH_BLOCKS,
+            test_constants.GENESIS_CHALLENGE,
+            wp.sub_epochs,
+            test_constants.DIFFICULTY_STARTING,
+        )
+        assert len(summaries) == len(orig_summaries)
 
     @pytest.mark.asyncio
     async def test_weight_proof_summaries_1000_blocks(self, default_1000_blocks):
