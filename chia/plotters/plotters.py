@@ -402,7 +402,7 @@ def install_plotter(args: Namespace, root_path: Path):
         return
     elif plotter == "madmax":
         try:
-            install_madmax(root_path)
+            install_madmax(root_path, override, commit)
         except Exception as e:
             print(f"Exception while installing madmax plotter: {e}")
         return
