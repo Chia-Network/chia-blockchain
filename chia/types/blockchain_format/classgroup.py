@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes100, bytes33
+from chia.types.blockchain_format.sized_bytes import bytes33, bytes100
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 

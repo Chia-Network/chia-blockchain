@@ -6,8 +6,7 @@ import multiprocessing
 import os
 import sqlite3
 import sys
-from concurrent.futures import as_completed
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
@@ -26,7 +25,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2, _validate_recent_blocks, get_recent_chain
 from chia.server.start_full_node import SERVICE_NAME
-from chia.types.blockchain_format.classgroup import ClassgroupElement, B
+from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
@@ -40,7 +39,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
 from chia.util.path import path_from_root
 from chia.util.streamable import recurse_jsonify
-from tests.block_tools import test_constants, BlockTools
+from tests.block_tools import BlockTools, test_constants
 
 try:
     from reprlib import repr
@@ -49,11 +48,7 @@ except ImportError:
 
 
 from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.weight_proof import (
-    WeightProofHandler,
-    _map_sub_epoch_summaries,
-    _validate_summaries_weight,
-)
+from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32, uint64

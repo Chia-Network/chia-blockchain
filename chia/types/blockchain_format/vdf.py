@@ -1,20 +1,15 @@
 import logging
 import traceback
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional, Tuple
 from functools import lru_cache
+from typing import Optional, Tuple
 
-from chiavdf import (
-    create_discriminant,
-    verify_n_wesolowski,
-    verify_n_wesolowski_with_b,
-    get_b_from_n_wesolowski,
-)
+from chiavdf import create_discriminant, get_b_from_n_wesolowski, verify_n_wesolowski, verify_n_wesolowski_with_b
 
 from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.classgroup import ClassgroupElement, B
+from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
@@ -127,7 +122,7 @@ def compress_output(
     proof: VDFProof,
     number_of_iterations: uint64,
     executor: ProcessPoolExecutor,
-) -> Future[B]:
+) -> Future:
 
     future = executor.submit(
         compress_future,
