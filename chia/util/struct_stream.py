@@ -68,7 +68,7 @@ class StructStream(int):
         return cls.from_bytes(read_bytes)
 
     def stream(self, f: BinaryIO) -> None:
-        f.write(self.to_bytes())
+        f.write(bytes(self))
 
     @classmethod
     def from_bytes(cls: Type[_T_StructStream], blob: bytes) -> _T_StructStream:  # type: ignore[override]
@@ -76,14 +76,5 @@ class StructStream(int):
             raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
         return cls(int.from_bytes(blob, "big", signed=cls.SIGNED))
 
-    def to_bytes(  # type: ignore[override]
-        self, length: Optional[int] = None, byteorder: Literal["little", "big"] = "big", signed: Optional[bool] = None
-    ) -> bytes:
-        if length is None:
-            length = self.SIZE
-        if signed is None:
-            signed = self.SIGNED
-        return super().to_bytes(length=length, byteorder=byteorder, signed=signed)
-
     def __bytes__(self) -> bytes:
-        return self.to_bytes()
+        return super().to_bytes(length=self.SIZE, byteorder="big", signed=self.SIGNED)
