@@ -1,4 +1,6 @@
-from typing import BinaryIO, Iterable, Type, TypeVar, Union
+from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
+
+from typing_extensions import SupportsIndex
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
@@ -19,7 +21,9 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    def __init__(self, v: Union[Iterable[int]]) -> None:
+    # This is just a partial exposure of the underlying int constructor.  Liskov...
+    # https://github.com/python/typeshed/blob/f8547a3f3131de90aa47005358eb3394e79cfa13/stdlib/builtins.pyi#L483-L493
+    def __init__(self, v: Union[Iterable[SupportsIndex], SupportsBytes]) -> None:
         super().__init__()
         if len(self) != self._size:
             raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
