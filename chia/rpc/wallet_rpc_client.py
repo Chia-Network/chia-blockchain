@@ -569,3 +569,8 @@ class WalletRpcClient(RpcClient):
         }
         response = await self.fetch("create_new_wallet", request)
         return response
+
+    async def mint_nft(self, wallet_id, artist_address, hash, uris):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "artist_address": artist_address, "hash": hash, "uris": uris}
+        response = await self.fetch("nft_mint_nft", request)
+        return response
