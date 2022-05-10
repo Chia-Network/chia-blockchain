@@ -100,7 +100,6 @@ class DataLayer:
         if res is None:
             self.log.fatal("failed creating store")
         self.initialized = True
-        await self.subscribe(tree_id, [], [])
         return txs, tree_id
 
     async def batch_update(
@@ -290,7 +289,7 @@ class DataLayer:
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
                 except asyncio.CancelledError:
-                    break
+                    return
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
@@ -301,20 +300,36 @@ class DataLayer:
                 try:
                     await asyncio.sleep(0.1)
                 except asyncio.CancelledError:
-                    break
+                    return
 
         while not self._shut_down:
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
+
+            # Subscribe to all local tree_ids that we can find on chain.
+            local_tree_ids = await self.data_store.get_tree_ids()
+            subscription_tree_ids = set(subscription.tree_id for subscription in subscriptions)
+            for local_id in local_tree_ids:
+                if local_id not in subscription_tree_ids:
+                    try:
+                        await self.subscribe(local_id, [], [])
+                    except asyncio.CancelledError:
+                        return
+                    except Exception as e:
+                        self.log.info(
+                            f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                        )
+
+            async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
                         await self.fetch_and_validate(subscription)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
-                        break
+                        return
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
             try:
                 await asyncio.sleep(manage_data_interval)
             except asyncio.CancelledError:
-                pass
+                return
