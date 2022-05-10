@@ -1,4 +1,4 @@
-from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
+from typing import BinaryIO, Iterable, Type, TypeVar, Union
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
@@ -19,7 +19,7 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    def __init__(self, v) -> None:
+    def __init__(self, v: Union[Iterable[int]]) -> None:
         super().__init__()
         if len(self) != self._size:
             raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
@@ -29,7 +29,7 @@ class SizedBytes(bytes):
         b = f.read(cls._size)
         return cls(b)
 
-    def stream(self, f):
+    def stream(self, f: BinaryIO) -> None:
         f.write(self)
 
     @classmethod
@@ -42,8 +42,8 @@ class SizedBytes(bytes):
             return cls.fromhex(input_str[2:])
         return cls.fromhex(input_str)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.hex()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s>" % (self.__class__.__name__, str(self))
