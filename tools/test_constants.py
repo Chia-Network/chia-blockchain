@@ -8,7 +8,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 170,
         "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 450,
+        "WEIGHT_PROOF_BLOCK_MIN": 550, # Must be ar least 2 sub epochs
         "LAST_BLOCKS_FULL_VALIDATION": 100,
         "DIFFICULTY_CONSTANT_FACTOR": 33554432,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2

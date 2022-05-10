@@ -91,9 +91,7 @@ class TestWalletSync:
             all_blocks = bt.get_consecutive_blocks(1, block_list_input=all_blocks, pool_reward_puzzle_hash=ph)
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(all_blocks[-1]))
 
-        new_blocks = bt.get_consecutive_blocks(
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
-        )
+        new_blocks = bt.get_consecutive_blocks(test_constants.WEIGHT_PROOF_BLOCK_MIN + 10, block_list_input=all_blocks)
         for i in range(base_num_blocks + 20, len(new_blocks)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[i]))
 

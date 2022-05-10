@@ -78,7 +78,7 @@ class WeightProofHandler:
             log.error("unknown tip")
             return None
 
-        if tip_rec.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+        if tip_rec.height < self.constants.WEIGHT_PROOF_BLOCK_MIN:
             log.debug("chain to short for weight proof")
             return None
 

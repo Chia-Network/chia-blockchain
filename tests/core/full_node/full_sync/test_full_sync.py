@@ -35,10 +35,10 @@ class TestFullSync:
         server_5 = full_node_5.full_node.server
 
         # If this constant is changed, update the tests to use more blocks
-        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 1001
+        assert test_constants.WEIGHT_PROOF_BLOCK_MIN < 1001
 
         # Syncs up less than recent blocks
-        for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
+        for block in blocks[: test_constants.WEIGHT_PROOF_BLOCK_MIN - 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -47,12 +47,10 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one
         await time_out_assert(
-            150, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
+            150, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN - 5 - 1
         )
 
-        for block in blocks[
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 : test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
-        ]:
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN - 5 : test_constants.WEIGHT_PROOF_BLOCK_MIN + 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_3.start_client(
@@ -63,16 +61,16 @@ class TestFullSync:
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
 
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
-        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 :]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -367,7 +365,7 @@ class TestFullSync:
         server_3.capabilities = [(uint16(Capability.BASE.value), "1")]
         server_4.capabilities = [(uint16(Capability.BASE.value), "1")]
 
-        for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5]:
+        for block in blocks[: test_constants.WEIGHT_PROOF_BLOCK_MIN + 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -382,16 +380,16 @@ class TestFullSync:
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
 
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
-        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 :]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(

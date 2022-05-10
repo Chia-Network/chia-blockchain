@@ -71,7 +71,7 @@ class WeightProofHandlerV2:
             log.error("unknown tip")
             return None
 
-        if tip_rec.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+        if tip_rec.height < self.constants.WEIGHT_PROOF_BLOCK_MIN:
             log.debug("need at least 3 sub epochs for weight proof")
             return None
 

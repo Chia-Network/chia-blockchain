@@ -932,7 +932,7 @@ class WalletNode:
             # if we haven't synced fully to this peer sync again
             if (
                 peer.peer_node_id not in self.synced_peers or far_behind
-            ) and new_peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            ) and new_peak.height >= self.constants.WEIGHT_PROOF_BLOCK_MIN:
                 if await self.check_for_synced_trusted_peer(header_block, request_time):
                     self.wallet_state_manager.set_sync_mode(False)
                     self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
@@ -1024,7 +1024,7 @@ class WalletNode:
                         backtrack_fork_height = new_peak.height - 1
 
                     if peer.peer_node_id not in self.synced_peers:
-                        # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
+                        # Edge case, this happens when the peak < WEIGHT_PROOF_BLOCK_MIN
                         # we still want to subscribe for all phs and coins.
                         # (Hints are not in filter)
                         all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(uint32(0))

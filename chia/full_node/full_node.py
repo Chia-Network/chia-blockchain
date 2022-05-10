@@ -598,7 +598,7 @@ class FullNode:
                 ):
                     return None
 
-            if request.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            if request.height < self.constants.WEIGHT_PROOF_BLOCK_MIN:
                 # This is the case of syncing up more than a few blocks, at the start of the chain
                 self.log.debug("Doing batch sync, no backup")
                 await self.short_sync_batch(peer, uint32(0), request.height)
