@@ -71,9 +71,8 @@ class StructStream(int):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
     @classmethod
-    def parse(cls: Any, f: BinaryIO) -> Any:
-        bytes_to_read = cls.SIZE
-        read_bytes = f.read(bytes_to_read)
+    def parse(cls: Type[_T_StructStream], f: BinaryIO) -> _T_StructStream:
+        read_bytes = f.read(cls.SIZE)
         return cls.from_bytes(read_bytes)
 
     def stream(self, f):
