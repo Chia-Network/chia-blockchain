@@ -16,7 +16,6 @@ import type {
   WalletBalance,
   WalletConnections,
 } from '@chia/api';
-import { randomBytes } from 'crypto';
 import BigNumber from 'bignumber.js';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import normalizePoolState from '../utils/normalizePoolState';
@@ -1767,19 +1766,6 @@ export const walletApi = apiWithTag.injectEndpoints({
       { [walletId: number]: NFTInfo[] },
       { walletIds: number[] }
     >({
-      /*
-      query: ({ walletId } = {}) => ({
-        command: 'getNfts',
-        service: NFT,
-        args: [walletId],
-        // mockResponse: {
-        //   nfts: [...Array(11)].map(() => ({
-        //     walletId: walletId ?? Math.floor(Math.random() * 100), // TODO remove when mock is fixed
-        //     id: randomBytes(32).toString('hex'),
-        //   })),
-        // },
-      }),
-      */
       async queryFn(args, _queryApi, _extraOptions, fetchWithBQ) {
         try {
           const nftData: { [walletId: number]: NFTInfo[] }[] =
@@ -1815,7 +1801,6 @@ export const walletApi = apiWithTag.injectEndpoints({
           };
         }
       },
-      // transformResponse: (response: any) => response.nftList,
       providesTags: (nftsByWalletId, _error) =>
         nftsByWalletId
           ? [
@@ -1827,6 +1812,18 @@ export const walletApi = apiWithTag.injectEndpoints({
               { type: 'NFTInfo', id: 'LIST' },
             ]
           : [{ type: 'NFTInfo', id: 'LIST' }],
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [
+        {
+          command: 'onNFTCoinAdded',
+          service: NFT,
+          endpoint: () => walletApi.endpoints.getNFTs,
+        },
+        {
+          command: 'onNFTCoinRemoved',
+          service: NFT,
+          endpoint: () => walletApi.endpoints.getNFTs,
+        },
+      ]),
     }),
 
     transferNFT: build.mutation<
