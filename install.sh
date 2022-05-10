@@ -3,7 +3,7 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-d]
+Usage: $0 [-adh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
@@ -129,19 +129,22 @@ if [ "$(uname)" = "Linux" ]; then
     # Ubuntu
     echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
+    # distutils must be installed as well to avoid a complaint about ensurepip while
+    # creating the venv.  This may be related to a mis-check while using or
+    # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_20" = "1" ]; then
     echo "Installing on Ubuntu 20.*."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils openssl
+    sudo apt-get install -y python3.8-venv openssl
   elif [ "$UBUNTU_21" = "1" ]; then
     echo "Installing on Ubuntu 21.*."
     sudo apt-get update
-    sudo apt-get install -y python3.9-venv python3-distutils openssl
+    sudo apt-get install -y python3.9-venv openssl
   elif [ "$UBUNTU_22" = "1" ]; then
     echo "Installing on Ubuntu 22.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.10-venv python3-distutils openssl
+    sudo apt-get install -y python3.10-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update

@@ -53,11 +53,11 @@ class Coin(Streamable):
         assert False
 
 
-def hash_coin_list(coin_list: List[Coin]) -> bytes32:
-    coin_list.sort(key=lambda x: x.name_str, reverse=True)
+def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
+    coin_ids.sort(reverse=True)
     buffer = bytearray()
 
-    for coin in coin_list:
-        buffer.extend(coin.name())
+    for name in coin_ids:
+        buffer.extend(name)
 
     return std_hash(buffer)
