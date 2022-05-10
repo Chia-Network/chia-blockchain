@@ -752,6 +752,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Inaktivera bitfield-plottning"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "Spara inte"
@@ -1265,8 +1266,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1275,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Loggar in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
 msgid "Logout"
 msgstr ""
 
@@ -2785,6 +2786,7 @@ msgstr "Okänd"
 #~ msgid "Unlock Keyring"
 #~ msgstr ""
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr "Osparade ändringar"
@@ -2867,7 +2869,7 @@ msgstr "Värdet verkar högt"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Väntar på att transaktionen ska bekräftas"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3011,6 +3013,7 @@ msgstr "Välkommen till Chia. Logga in med en existerande nyckel, eller skapa en
 #~ "Du behöver inte ha synkat eller vara uppkopplad för att plotta. \n"
 #~ "Under plottningen skapas tillfälliga filer som är större än den färdiga plottfilen. Se till att du har tillräckligt med utrymme. <0>Läs mer</0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr "Du har gjort ändringar. Vill du kasta dem?"

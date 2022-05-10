@@ -53,6 +53,19 @@ export default class DIDWallet extends Wallet {
     });
   }
 
+  async getDidName(walletId: number) {
+    return this.command('did_get_wallet_name', {
+      walletId,
+    });
+  }
+
+  async setDIDName(walletId: number, name: string) {
+    return this.command('did_set_wallet_name', {
+      walletId,
+      name,
+    });
+  }
+
   async getRecoveryList(walletId: number) {
     return this.command('did_get_recovery_list', {
       walletId,

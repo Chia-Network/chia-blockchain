@@ -140,6 +140,8 @@ export const {
   useUpdateDIDRecoveryIdsQuery,
   useGetDIDPubKeyQuery,
   useGetDIDQuery,
+  useGetDIDNameQuery,
+  useSetDIDNameMutation,
   useGetDIDRecoveryListQuery,
   useGetDIDInformationNeededForRecoveryQuery,
   useGetDIDCurrentCoinInfoQuery,

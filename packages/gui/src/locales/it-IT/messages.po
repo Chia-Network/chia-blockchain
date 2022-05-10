@@ -30,7 +30,7 @@ msgstr ""
 msgid "(Optional)"
 msgstr "(Opzionale)"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:58
+#: src/components/farm/FarmLatestBlockChallenges.tsx:60
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Vuoi esplorare ulteriormente i blocchi della rete Chia? Dai uno sguardo a <0>Chia Explorer</0> creato da uno sviluppatore open source."
 
@@ -54,7 +54,19 @@ msgstr "+ Aggiungi Nuovo Plot NFT"
 #~ msgid "128 buckets is recommended"
 #~ msgstr "Sono consigliati 128 bucket"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+#: src/components/settings/ProfileAdd.tsx:87
+msgid "<0>Get some XCH</0>"
+msgstr ""
+
+#: src/components/settings/ProfileAdd.tsx:102
+msgid "<0>Use one (1) mojo to create a Profile.</0>"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:25
+msgid "<0>[*Wallet Name*]</0>"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:95
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Un harvester (letteralmente mietitrice) è un servizio eseguito sulla macchina in cui i plot sono conservati. Un farmer (agricoltore) e la sua harvester comunicano con un full node per vedere lo stato della blockchain. Guarda la tua rete di harvester connessi in basso Per saperne di più"
 
@@ -81,10 +93,10 @@ msgstr "Informazioni sulla Blockchain di Chia"
 msgid "Action"
 msgstr "Azione"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:68
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/farm/FarmFullNodeConnections.tsx:66
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:66
 #: src/components/fullNode/FullNodeConnections.tsx:81
-#: src/components/pool/PoolOverview.tsx:65
+#: src/components/nfts/NFTContextualActions.tsx:170
 msgid "Actions"
 msgstr "Azioni"
 
@@ -111,7 +123,7 @@ msgstr "Aggiungi uno o più Plot alla Coda"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/PlotHeader.tsx:60
-#: src/components/plot/add/PlotAddForm.tsx:176
+#: src/components/plot/add/PlotAddForm.tsx:173
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -199,6 +211,10 @@ msgstr ""
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Sei sicuro di voler usare k={plotSize}?"
 
+#: src/components/nfts/NFTTransferAction.tsx:259
+msgid "Asset ID:"
+msgstr ""
+
 #: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
@@ -226,8 +242,7 @@ msgstr "Il file di backup viene usato per ripristinare gli smart wallet."
 msgid "Base Farmer Reward Amount"
 msgstr "Ricompensa minima per il farmer"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:33
-#: src/components/farm/FarmLatestBlockChallenges.tsx:43
+#: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "Di seguito sono riportate le attuali sfide dei blocchi. Puoi avere o non avere una prova di spazio per queste sfide. Questi blocchi non contengono attualmente una prova di tempo."
 
@@ -271,7 +286,7 @@ msgstr "Blocco con hash {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Il blocco con hash {headerHash} non esiste."
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:121
 msgid "Blocks"
 msgstr "Blocchi"
 
@@ -279,13 +294,13 @@ msgstr "Blocchi"
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 #~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:73
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:92
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:123
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:124
 msgid "Browse"
 msgstr "Sfoglia"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:74
+#: src/components/farm/FarmLastAttemptedProof.tsx:72
 msgid "But you are currently farming <0/>"
 msgstr "Ma attualmente stai farmando <0/>"
 
@@ -313,6 +328,7 @@ msgstr "Ma attualmente stai farmando <0/>"
 #: src/components/block/FullNodeAddConnection.tsx:85
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
+#: src/components/nfts/NFTTransferAction.tsx:79
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:29
@@ -330,7 +346,7 @@ msgstr "Annulla"
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
 msgstr "Attenzione, eliminando questi plot, essi saranno eliminati per sempre. Controlla che i dispositivi di memorizzazione siano connessi correttamente."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:15
+#: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
 msgstr "Sfida"
 
@@ -343,14 +359,13 @@ msgid "Change"
 msgstr "Cambia"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:229
-#: src/components/settings/Settings.tsx:164
+#: src/components/settings/Settings.tsx:166
 #: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:405
 #: src/components/plotNFT/PlotNFTChangePool.tsx:121
-#: src/components/pool/PoolOverview.tsx:111
 msgid "Change Pool"
 msgstr "Cambia Pool"
 
@@ -390,11 +405,12 @@ msgstr ""
 msgid "Choose Wallet Mode"
 msgstr ""
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
 #: src/components/plotNFT/PlotNFTCard.tsx:381
-#: src/components/pool/PoolOverview.tsx:88
 msgid "Claim Rewards"
 msgstr "Reclama Ricompense"
 
+#: src/components/nfts/NFTTransferAction.tsx:309
 #: src/components/plot/PlotAddDirectoryDialog.tsx:130
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:81
 msgid "Close"
@@ -411,6 +427,10 @@ msgstr ""
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing services"
 #~ msgstr ""
+
+#: src/components/settings/ProfileView.tsx:30
+msgid "Coin ID"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
@@ -445,7 +465,7 @@ msgstr ""
 #~ msgid "Coloured Coin Options"
 #~ msgstr "Opzioni delle monete colorate"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:173
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
 #: src/electron/main.tsx:266
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
@@ -454,6 +474,10 @@ msgstr "Conferma"
 #: src/components/fullNode/FullNodeCloseConnection.tsx:19
 msgid "Confirm Disconnect"
 msgstr "Conferma la Disconnessione"
+
+#: src/components/nfts/NFTTransferAction.tsx:76
+msgid "Confirm NFT Transfer"
+msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
@@ -509,8 +533,8 @@ msgstr ""
 msgid "Connection Status"
 msgstr "Stato della Connessione"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:109
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:107
+#: src/components/farm/FarmFullNodeConnections.tsx:108
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:106
 msgid "Connection Status:"
 msgstr "Stato della Connessione:"
 
@@ -542,8 +566,9 @@ msgstr "Contribuisci su GitHub"
 #~ msgstr "Copia negli appunti"
 
 #: src/components/backup/BackupCreate.tsx:59
-#: src/components/plot/add/PlotAddForm.tsx:196
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:176
+#: src/components/plot/add/PlotAddForm.tsx:190
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
+#: src/components/settings/ProfileAdd.tsx:111
 msgid "Create"
 msgstr "Crea"
 
@@ -567,9 +592,10 @@ msgstr ""
 #~ msgid "Create New Wallet"
 #~ msgstr ""
 
-#: src/components/trading/TradeManager.tsx:45
-#~ msgid "Create Offer"
-#~ msgstr "Crea Offerta"
+#: src/components/nfts/NFTContextualActions.tsx:84
+#: src/components/nfts/NFTCreateOfferDemo.tsx:59
+msgid "Create Offer"
+msgstr "Crea Offerta"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -608,6 +634,10 @@ msgstr "Crea un Plot NFT"
 #: src/components/_selectKey_old/SelectKey.tsx:254
 #~ msgid "Create a new private key"
 #~ msgstr "Crea una nuova chiave privata"
+
+#: src/components/settings/ProfileAdd.tsx:83
+msgid "Create a new profile"
+msgstr ""
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:186
 #~ msgid "Create admin wallet"
@@ -649,7 +679,7 @@ msgstr "Creazione di Plot NFT e Unirsi alla Pool"
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Creazione di Plot NFT per l'auto-pooling"
 
-#: src/components/plot/add/PlotAddForm.tsx:107
+#: src/components/plot/add/PlotAddForm.tsx:105
 msgid "Currency code is not defined"
 msgstr "Codice valuta non definito"
 
@@ -679,11 +709,15 @@ msgstr "Saldo Punti Attuale"
 #~ msgid "DID Wallet"
 #~ msgstr "DID Wallet"
 
+#: src/components/settings/ProfileView.tsx:41
+msgid "DID1"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:30
 msgid "Date"
 msgstr "Data"
 
@@ -739,6 +773,14 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:109
+msgid "Destination"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:94
+msgid "Destination:"
 msgstr ""
 
 #: src/electron/main.tsx:389
@@ -967,7 +1009,7 @@ msgstr "Il farmer non è in esecuzione"
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "I coltivatori, guadagnano le ricompense del blocco e le tasse di transazione impegnando il proprio spazio di memoria inutilizzato all'interno della rete \"es. un hard disk che non ti occorre\", e ciò è fatto al fine di rendere sicure le transazioni. Qui è dove sarà visionabile la tua coltivazione una volta che avrai aggiunto un plot. <0>Scopri di più</0>"
 
-#: src/components/dashboard/DashboardSideBar.tsx:99
+#: src/components/dashboard/DashboardSideBar.tsx:96
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
@@ -986,7 +1028,8 @@ msgstr ""
 msgid "Farming Status"
 msgstr "Stato della Coltivazione"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:159
+#: src/components/nfts/NFTTransferAction.tsx:298
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:167
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
 msgid "Fee"
@@ -1031,8 +1074,8 @@ msgstr "Nome del file"
 msgid "Final folder location"
 msgstr "Seleziona la destinazione finale per la tua cartella plot"
 
-#: src/components/fullNode/FullNode.jsx:40
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:39
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Finito"
 
@@ -1044,8 +1087,8 @@ msgstr "Seguici su Twitter"
 msgid "Frequently Asked Questions"
 msgstr "Domande Frequenti"
 
-#: src/components/dashboard/DashboardSideBar.tsx:80
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/dashboard/DashboardSideBar.tsx:77
+#: src/components/fullNode/FullNode.jsx:132
 msgid "Full Node"
 msgstr "Full Node"
 
@@ -1061,7 +1104,7 @@ msgstr "Full Node"
 msgid "Full Screen"
 msgstr "Schermo Intero"
 
-#: src/components/settings/Settings.tsx:257
+#: src/components/settings/Settings.tsx:270
 msgid "General"
 msgstr ""
 
@@ -1074,8 +1117,8 @@ msgstr ""
 #~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:172
-msgid "Grid view"
-msgstr "Visualizza come griglia"
+#~ msgid "Grid view"
+#~ msgstr "Visualizza come griglia"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:576
 #~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
@@ -1089,7 +1132,7 @@ msgstr "Visualizza come griglia"
 msgid "Harvester Plots"
 msgstr "Plot Harvester Locale"
 
-#: src/components/fullNode/FullNode.jsx:58
+#: src/components/fullNode/FullNode.jsx:57
 msgid "Header Hash"
 msgstr "Hash Header"
 
@@ -1098,7 +1141,7 @@ msgid "Header hash"
 msgstr "Hash Header"
 
 #: src/components/block/Block.jsx:179
-#: src/components/fullNode/FullNode.jsx:76
+#: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Altezza"
@@ -1110,6 +1153,10 @@ msgstr "Aiuto"
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
 #~ msgid "Help translate"
 #~ msgstr "Aiuta a tradurre"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:51
+msgid "Here are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -1124,8 +1171,8 @@ msgstr ""
 #~ msgid "History"
 #~ msgstr "Storia"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:37
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+#: src/components/farm/FarmFullNodeConnections.tsx:35
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:35
 msgid "Host Name"
 msgstr "Nome Host"
 
@@ -1139,10 +1186,10 @@ msgid "IP address / host"
 msgstr "Indirizzo IP / host"
 
 #: src/components/settings/Settings.tsx:258
-msgid "Identities"
-msgstr ""
+#~ msgid "Identities"
+#~ msgstr ""
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:129
 msgid "If none selected, then it will default to the temporary directory."
 msgstr "Se non è selezionato nulla, allora sarà impostata di default la cartella temporanea."
 
@@ -1154,7 +1201,7 @@ msgstr "Se non è selezionato nulla, allora sarà impostata di default la cartel
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Importa dalle Mnemonic (24 parole)"
 
-#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
 msgstr "In Corso"
 
@@ -1204,12 +1251,13 @@ msgid "It is a one-time login link that can be used to log in to a pool's websit
 msgstr "Si tratta di un collegamento di accesso una tantum che può essere utilizzato per accedere al sito web di una pool. Contiene una firma che utilizza la chiave del farmer dal plot NFT. Non tutte le pool supportano questa funzione."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:403
-#: src/components/pool/PoolOverview.tsx:109
 msgid "Join Pool"
 msgstr "Unisciti alla Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:131
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Unisciti ad una Pool"
@@ -1246,12 +1294,12 @@ msgstr ""
 #~ msgid "Keys"
 #~ msgstr "Chiavi"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:65
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+#: src/components/farm/FarmFullNodeConnections.tsx:63
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:63
 msgid "KiB Up/Down"
 msgstr "KiB Up/Down"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:45
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "Last Attempted Proof"
 msgstr "Ultima tentativo effettuato"
 
@@ -1263,7 +1311,7 @@ msgstr "Dimensione dell'ultima farm"
 msgid "Last Transaction Block Time"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:30
+#: src/components/farm/FarmLatestBlockChallenges.tsx:32
 msgid "Latest Block Challenges"
 msgstr "L'ultimo blocco delle sfide farmato"
 
@@ -1282,8 +1330,8 @@ msgid "Leaving Pool"
 msgstr "Lascia Pool"
 
 #: src/components/pool/PoolOverview.tsx:172
-msgid "List view"
-msgstr "Visualizzazione elenco"
+#~ msgid "List view"
+#~ msgstr "Visualizzazione elenco"
 
 #: src/components/pool/Pool.tsx:21
 #~ msgid "Loading Plot NFTs"
@@ -1378,7 +1426,7 @@ msgstr "MiB Up/Down"
 #~ msgid "Migrate"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:186
+#: src/components/settings/Settings.tsx:188
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
 msgstr ""
@@ -1391,7 +1439,7 @@ msgstr ""
 msgid "Migration required"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:127
+#: src/components/settings/Settings.tsx:129
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
 msgstr ""
@@ -1415,6 +1463,38 @@ msgstr "Più memoria aumenta leggermente la velocità"
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:415
 #~ msgid "My Pubkey"
 #~ msgstr "La mia Pubkey"
+
+#: src/components/nfts/NFTTransferAction.tsx:274
+msgid "NFT Asset ID"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:60
+msgid "NFT Create Offer Demo"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:247
+msgid "NFT Name"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:232
+msgid "NFT Name:"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:35
+msgid "NFT Transfer Complete"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:115
+msgid "NFT Transfer Demo"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:45
+msgid "NFT Transfer Failed"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+msgid "NFTs"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 msgid "Network Name"
@@ -1474,8 +1554,8 @@ msgstr "Ancora nessun blocco coltivato"
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Nessuna chiave privata per uno o entrambi gli indirizzi. Sicuro solo se stai inviando ricompense ad un altro wallet."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:33
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/farm/FarmFullNodeConnections.tsx:31
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:31
 #: src/components/fullNode/FullNodeConnections.tsx:35
 msgid "Node ID"
 msgstr "ID nodo"
@@ -1488,7 +1568,7 @@ msgstr "Id nodo"
 msgid "None"
 msgstr "Nessuno"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:69
+#: src/components/farm/FarmLastAttemptedProof.tsx:67
 msgid "None of your plots have passed the plot filter yet."
 msgstr "Nessuno dei tuoi plot ha ancora passato il filtro per plot."
 
@@ -1551,7 +1631,7 @@ msgstr "OK"
 #~ msgid "Offer"
 #~ msgstr "Offerta"
 
-#: src/components/dashboard/DashboardSideBar.tsx:70
+#: src/components/dashboard/DashboardSideBar.tsx:65
 msgid "Offers"
 msgstr ""
 
@@ -1562,6 +1642,10 @@ msgstr ""
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
 #~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 #~ msgstr "Il tempo medio che passa tra un blocco di transazioni e l'altro è di un minuto. Pertanto, salvo casi di congestione, è possibile aspettarsi che una transazione appena effettuata sarà inclusa nel primo blocco utile, quindi validata, in meno di un minuto."
+
+#: src/components/nfts/NFTTransferAction.tsx:84
+msgid "Once you initiate this transfer, you will not be able to cancel the transaction. Are you sure you want to transfer the NFT?"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:34
 #~ msgid "Only one backup file is allowed."
@@ -1596,7 +1680,7 @@ msgstr ""
 msgid "Passphrase Hint (Optional)"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:217
+#: src/components/settings/Settings.tsx:219
 msgid "Passphrase Settings"
 msgstr ""
 
@@ -1605,22 +1689,22 @@ msgstr ""
 #~ msgid "Passphrase is incorrect"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:100
+#: src/components/settings/Settings.tsx:102
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:137
+#: src/components/settings/Settings.tsx:139
 #: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:134
+#: src/components/settings/Settings.tsx:136
 #: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:128
+#: src/components/settings/Settings.tsx:130
 #: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
 msgstr ""
@@ -1660,7 +1744,7 @@ msgstr "In attesa"
 #~ msgid "Pending Total Balance"
 #~ msgstr "Bilancio Totale in attesa"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:144
 #: src/hooks/useAbsorbRewards.tsx:43
 msgid "Please Confirm"
 msgstr "Conferma"
@@ -1809,10 +1893,10 @@ msgid "Plot Key"
 msgstr "Chiave Plot"
 
 #: src/components/pool/PoolOverview.tsx:38
-msgid "Plot NFT"
-msgstr "Plot NFT"
+#~ msgid "Plot NFT"
+#~ msgstr "Plot NFT"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:108
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
 msgstr "Il Plot NFT con p2_singleton_puzzle_hash {plotNFTId} non esiste"
@@ -1849,11 +1933,11 @@ msgstr "Il plot è un duplicato di {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "Il plot NFT sta transitando in (stato di destinazione). Questo può richiedere un po' di tempo. Si prega di non chiudere l'applicazione fino a quando non sarà finalizzato."
 
-#: src/components/dashboard/DashboardSideBar.tsx:86
+#: src/components/dashboard/DashboardSideBar.tsx:83
 msgid "Plots"
 msgstr "Plot"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:21
+#: src/components/farm/FarmLastAttemptedProof.tsx:20
 msgid "Plots Passed Filter"
 msgstr "Plot che hanno passato il filtro"
 
@@ -1975,26 +2059,26 @@ msgstr ""
 msgid "Pool:"
 msgstr "Pool:"
 
-#: src/components/dashboard/DashboardSideBar.tsx:104
+#: src/components/dashboard/DashboardSideBar.tsx:101
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
 msgstr "Pooling"
 
 #: src/components/block/FullNodeAddConnection.tsx:76
-#: src/components/farm/FarmFullNodeConnections.tsx:43
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/farm/FarmFullNodeConnections.tsx:41
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:41
 #: src/components/fullNode/FullNodeAddConnection.tsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:45
 msgid "Port"
 msgstr "Porta"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:93
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
 #: src/components/plotNFT/PlotNFTChangePool.tsx:85
 msgid "Preparing Plot NFT"
 msgstr "Preparazione Plot NFT"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:101
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:104
 msgid "Preparing standard wallet"
 msgstr "Preparazione wallet standard"
 
@@ -2026,11 +2110,17 @@ msgstr "Hash Header Precedente"
 #~ msgid "Private key:"
 #~ msgstr "Chiave privata:"
 
+#: src/components/settings/Settings.tsx:271
+#: src/components/settings/SettingsIdentity.tsx:18
+#: src/components/settings/SettingsProfiles.tsx:58
+msgid "Profiles"
+msgstr ""
+
 #: src/components/block/Block.jsx:229
 msgid "Proof of Space Size"
 msgstr "Dimensione Prova di Spazio"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:25
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "Proofs Found"
 msgstr "Prove Trovate"
 
@@ -2142,7 +2232,7 @@ msgstr "Note di Rilascio"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:98
 #: src/components/settings/RemovePassphrasePrompt.tsx:143
-#: src/components/settings/Settings.tsx:198
+#: src/components/settings/Settings.tsx:200
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
 msgstr ""
@@ -2208,7 +2298,7 @@ msgstr "Cerca blocco dal header hash"
 msgid "Second temporary folder location"
 msgstr "Posizione seconda cartella temporanea"
 
-#: src/components/settings/Settings.tsx:130
+#: src/components/settings/Settings.tsx:132
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
 msgstr ""
@@ -2269,9 +2359,9 @@ msgstr "Seleziona il tuo Plot NFT"
 msgid "Select your Plot NFT from the dropdown or create a new one."
 msgstr "Seleziona il tuo Plot NFT dal menu a discesa o creane uno nuovo."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:73
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:121
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:122
 msgid "Selected"
 msgstr "Selezionato"
 
@@ -2304,13 +2394,17 @@ msgstr "Self pool. Quando vinci un blocco, guadagnerai ricompense in XCH."
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 #~ msgstr "Invia questo pacchetto di informazioni al tuo utente Wallet a Velocità Limitata che deve usarlo per completare il setup del suo wallet:"
 
+#: src/components/nfts/NFTTransferAction.tsx:289
+msgid "Send to Address"
+msgstr ""
+
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:279
 #~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
 #~ msgstr "Invia la tua pubkey all'amministratore del tuo Wallet a Velocità Limitata:"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:135
 #: src/components/settings/SetPassphrasePrompt.tsx:211
-#: src/components/settings/Settings.tsx:209
+#: src/components/settings/Settings.tsx:211
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
 msgstr ""
@@ -2319,9 +2413,8 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:113
-#: src/components/dashboard/DashboardSideBar.tsx:121
-#: src/components/settings/Settings.tsx:248
+#: src/components/dashboard/DashboardSideBar.tsx:110
+#: src/components/settings/Settings.tsx:261
 msgid "Settings"
 msgstr ""
 
@@ -2415,7 +2508,7 @@ msgstr "Discorso"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Condizione"
 
@@ -2424,7 +2517,6 @@ msgstr "Condizione"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
 #: src/components/plotNFT/PlotNFTCard.tsx:142
-#: src/components/pool/PoolOverview.tsx:42
 msgid "Status"
 msgstr "Stato"
 
@@ -2522,11 +2614,19 @@ msgstr "Target Puzzle Hash"
 msgid "Temporary folder location"
 msgstr "Posizione cartella temporanea"
 
+#: src/components/nfts/NFTTransferDemo.tsx:46
+msgid "The NFT transfer failed: {error}"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:36
+msgid "The NFT transfer transaction has been successfully submitted to the blockchain."
+msgstr ""
+
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "The application will stop working at block height 193536."
 #~ msgstr "L'applicazione smetterà di funzionare al blocco con altezza 193536."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:95
+#: src/components/farm/FarmFullNodeConnections.tsx:94
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "Il full node a cui è connesso il tuo farmer è di seguito. <0>Per saperne di più</0>"
 
@@ -2672,7 +2772,7 @@ msgstr "Questo plot NFT è assegnato a una chiave diversa. Puoi ancora creare de
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:47
+#: src/components/farm/FarmLastAttemptedProof.tsx:46
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr "Questa tabella ti mostra l'ultima volta che la tua fattoria ha tentato di vincere una sfida di blocchi. <0>Per saperne di più</0>"
 
@@ -2692,7 +2792,7 @@ msgstr "Questa tabella ti mostra l'ultima volta che la tua fattoria ha tentato d
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Creato al Tempo"
 
@@ -2708,7 +2808,11 @@ msgstr "Marca temporale"
 #~ msgid "To"
 #~ msgstr "A"
 
-#: src/components/dashboard/DashboardSideBar.tsx:58
+#: src/components/settings/ProfileView.tsx:38
+msgid "Token Standard"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
 msgid "Tokens"
 msgstr ""
 
@@ -2786,6 +2890,21 @@ msgstr ""
 msgid "Transactions Filter Hash"
 msgstr "Filtro Hash Transazioni"
 
+#: src/components/nfts/NFTTransferAction.tsx:77
+#: src/components/nfts/NFTTransferAction.tsx:318
+msgid "Transfer"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:51
+msgid "Transfer Identity"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:139
+#: src/components/nfts/NFTTransferAction.tsx:366
+#: src/components/nfts/NFTTransferDemo.tsx:97
+msgid "Transfer NFT"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:25
 #~ msgid "Type"
 #~ msgstr "Tipo"
@@ -2795,11 +2914,10 @@ msgstr "Filtro Hash Transazioni"
 #~ msgstr "Impossibile creare plot NFT"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
-#: src/components/pool/PoolOverview.tsx:62
 msgid "Unclaimed Rewards"
 msgstr "Ricompense Non Reclamate"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Non completato"
 
@@ -2903,14 +3021,14 @@ msgid "Wallet Mode"
 msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:181
-msgid "Wallet Status:"
-msgstr "Stato Wallet:"
+#~ msgid "Wallet Status:"
+#~ msgstr "Stato Wallet:"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1121
 #~ msgid "Wallet does not exists"
 #~ msgstr ""
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:72
 msgid "Wallet is not defined"
 msgstr ""
 
@@ -3007,6 +3125,10 @@ msgstr "Finestra"
 msgid "Without fees"
 msgstr "Senza tasse"
 
+#: src/components/nfts/NFTTransferAction.tsx:373
+msgid "Would you like to transfer the specified NFT to a new owner? It is recommended that you include a fee to ensure that the transaction is completed in a timely manner."
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/electron/main.tsx:264
 msgid "Yes"
@@ -3074,9 +3196,10 @@ msgid "You need {currencyCode} to join a pool."
 msgstr "Hai bisogno di {currencyCode} per entrare in una pool."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
-msgid "You will recieve <0/> to {0}"
-msgstr "Riceverai <0/> in {0}"
+#~ msgid "You will recieve <0/> to {0}"
+#~ msgstr "Riceverai <0/> in {0}"
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
 msgid "You will recieve <0/> to {address}"
 msgstr "Riceverai <0/> su {address}"
@@ -3089,15 +3212,15 @@ msgstr "Riceverai <0/> su {address}"
 msgid "Your Farm Overview"
 msgstr "Panoramica della Tua Fattoria"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:93
+#: src/components/farm/FarmFullNodeConnections.tsx:92
 msgid "Your Full Node Connection"
 msgstr "La tua Connessione del Full Node"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:94
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:93
 msgid "Your Harvester Network"
 msgstr "La rete del tuo Harvester"
 
-#: src/components/pool/PoolOverview.tsx:156
+#: src/components/pool/PoolOverview.tsx:42
 msgid "Your Pool Overview"
 msgstr "Panoramica Della Tua Pool"
 
@@ -3127,14 +3250,18 @@ msgstr ""
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
 msgstr ""
 
-#: src/components/settings/Settings.tsx:89
+#: src/components/settings/Settings.tsx:91
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:78
+#: src/components/settings/Settings.tsx:80
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:33
+msgid "[*Coin ID*]"
 msgstr ""
 
 #: src/util/getDescriptiveError.ts:5
@@ -3159,7 +3286,7 @@ msgstr "[Errore 22] File non trovato. Molto probabilmente una delle cartelle di 
 #~ msgid "not synced"
 #~ msgstr "non sincronizzato"
 
-#: src/components/plot/add/PlotAddForm.tsx:125
+#: src/components/plot/add/PlotAddForm.tsx:123
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 
@@ -3189,6 +3316,10 @@ msgstr ""
 #: src/components/app/AppPassPrompt.tsx:48
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:128
+msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"

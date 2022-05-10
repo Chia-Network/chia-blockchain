@@ -752,6 +752,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Nonaktifkan mengeplot dengan bitfield"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "Buang"
@@ -1265,8 +1266,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1275,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Sedang masuk"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
 msgid "Logout"
 msgstr ""
 
@@ -2787,6 +2788,7 @@ msgstr "Diketahui"
 #~ msgid "Unlock Keyring"
 #~ msgstr ""
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr ""
@@ -2869,7 +2871,7 @@ msgstr "Nilai Kelihatan terlalu tinggi"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Menunggu transaksi untuk di konfirmasi"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3011,6 +3013,7 @@ msgstr "Selamat datang di Chia. Silahkan masuk dengan key eksisting atau dengan 
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "Anda tidak perlu tersinkronisasi atau terhubung untuk membuat plot. File semetara di buat pada saat membuat plot yang melebihi ukuran akhir plot. Pastikan anda mempunyai ruangan yang cukup. <0>Pelajari lebih lanjut</0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr "Ada perubahan yang belum disimpan. Apakah kamu ingin membuangnya?"

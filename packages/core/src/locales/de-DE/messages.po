@@ -758,6 +758,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Deaktiviere bitfield plotting"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "Verwerfen"
@@ -1271,8 +1272,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Log Out"
 msgstr ""
 
@@ -1280,8 +1281,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logge ein"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
 msgid "Logout"
 msgstr ""
 
@@ -2793,6 +2794,7 @@ msgstr "Unbekannt"
 #~ msgid "Unlock Keyring"
 #~ msgstr ""
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr "Ungesicherte Änderungen"
@@ -2875,7 +2877,7 @@ msgstr "Wert scheint hoch"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Warten auf Transaktionsbestätigung"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3017,6 +3019,7 @@ msgstr "Willkommen bei Chia. Melde dich mit einem bestehenden Schlüssel an oder
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "Um zu plotten musst du nicht synchronisiert oder verbunden sein. Während des Plotvorgangs werden temporäre Dateien erstellt, die die Größe der endgültigen Plotdateien überschreiten. Stelle sicher, dass genügend Platz vorhanden ist. <0> Erfahre mehr </ 0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr "Es gibt Änderungen. Möchtest du diese verwerfen?"

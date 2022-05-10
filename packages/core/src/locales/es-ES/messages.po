@@ -752,6 +752,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Des-habilitar sembrado de bitfield"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "Descartar"
@@ -1265,8 +1266,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1275,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Iniciando sesión"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
 msgid "Logout"
 msgstr ""
 
@@ -2785,6 +2786,7 @@ msgstr "Desconocido"
 #~ msgid "Unlock Keyring"
 #~ msgstr ""
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr "Cambios sin guardar"
@@ -2867,7 +2869,7 @@ msgstr "El valor parece alto"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Esperando que la transacción sea confirmada"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3009,6 +3011,7 @@ msgstr "Bienvenidos a Chia. Por favor inicie sesión con una llave existente o c
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "No necesita estar sincronizado o conectado para sembrar. Los archivos temporales son creados durante el proceso de sembrado los cuales sobrepasan los archivos de parcela finales. Asegúrese de tener suficiente espacio. <0>Aprenda más</0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr "Ha hecho cambios. ¿Desea descartarlos?"

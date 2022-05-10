@@ -30,7 +30,7 @@ msgstr ""
 msgid "(Optional)"
 msgstr "(Volitelné)"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:58
+#: src/components/farm/FarmLatestBlockChallenges.tsx:60
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "*Chcete se o Chia blocích dozvědět více? Podívej se na <0>Chia Explorer</0> vytvořený open source vývojářem."
 
@@ -54,7 +54,19 @@ msgstr "+ Přidat nové vykreslování NFT"
 #~ msgid "128 buckets is recommended"
 #~ msgstr "Doporučuje se 128"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
+#: src/components/settings/ProfileAdd.tsx:87
+msgid "<0>Get some XCH</0>"
+msgstr ""
+
+#: src/components/settings/ProfileAdd.tsx:102
+msgid "<0>Use one (1) mojo to create a Profile.</0>"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:25
+msgid "<0>[*Wallet Name*]</0>"
+msgstr ""
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:95
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "Tzv. harvester (sklízeč) je služba provozovaná na počítači, kde jsou uložená i samotná pole. Tzv. farmer (farmář) spolu s harvesterem komunikují s uzlem za účelem získání stavu blockchainu. Seznam připojených harvesterů vidíte níže"
 
@@ -81,10 +93,10 @@ msgstr "O Chia Blockchainu"
 msgid "Action"
 msgstr "Akce"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:68
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:67
+#: src/components/farm/FarmFullNodeConnections.tsx:66
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:66
 #: src/components/fullNode/FullNodeConnections.tsx:81
-#: src/components/pool/PoolOverview.tsx:65
+#: src/components/nfts/NFTContextualActions.tsx:170
 msgid "Actions"
 msgstr "Akce"
 
@@ -111,7 +123,7 @@ msgstr "Přidat pole do fronty"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:41
 #: src/components/plot/PlotHeader.tsx:60
-#: src/components/plot/add/PlotAddForm.tsx:176
+#: src/components/plot/add/PlotAddForm.tsx:173
 #: src/components/plot/overview/PlotOverviewHero.tsx:52
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:269
@@ -199,6 +211,10 @@ msgstr ""
 msgid "Are you sure you want to use k={plotSize}?"
 msgstr "Jste si jisti, že chcete použít k={plotSize}?"
 
+#: src/components/nfts/NFTTransferAction.tsx:259
+msgid "Asset ID:"
+msgstr ""
+
 #: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
 msgstr ""
@@ -226,8 +242,7 @@ msgstr "Záložní soubor se používá k obnovení chytrých peněženek."
 msgid "Base Farmer Reward Amount"
 msgstr "Výše základu odměny farmáře"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:33
-#: src/components/farm/FarmLatestBlockChallenges.tsx:43
+#: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "Níže najdete aktuální blokové výzvy (block challenges). Pro tyto výzvy se snažíte dodat důkaz místem (proof of space). Tyto bloky momentálně neobsahují důkaz času (proof of time)."
 
@@ -271,7 +286,7 @@ msgstr "Blok s hashem {headerHash}"
 msgid "Block with hash {headerHash} does not exist."
 msgstr "Blok s hashem {headerHash} neexistuje."
 
-#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:121
 msgid "Blocks"
 msgstr "Bloky"
 
@@ -279,13 +294,13 @@ msgstr "Bloky"
 #~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 #~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:73
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:92
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:123
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:124
 msgid "Browse"
 msgstr "Procházet"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:74
+#: src/components/farm/FarmLastAttemptedProof.tsx:72
 msgid "But you are currently farming <0/>"
 msgstr "V současné době farmaříte <0/>"
 
@@ -313,6 +328,7 @@ msgstr "V současné době farmaříte <0/>"
 #: src/components/block/FullNodeAddConnection.tsx:85
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
+#: src/components/nfts/NFTTransferAction.tsx:79
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:29
@@ -330,7 +346,7 @@ msgstr "Zrušit"
 msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
 msgstr "Pozor, smazání těchto polí je nevratné. Zkontrolujte, zda jsou paměťová zařízení správně připojena."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:15
+#: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
 msgstr "Výzva"
 
@@ -343,14 +359,13 @@ msgid "Change"
 msgstr "Změnit"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:229
-#: src/components/settings/Settings.tsx:164
+#: src/components/settings/Settings.tsx:166
 #: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:405
 #: src/components/plotNFT/PlotNFTChangePool.tsx:121
-#: src/components/pool/PoolOverview.tsx:111
 msgid "Change Pool"
 msgstr "Změnit Pool"
 
@@ -390,11 +405,12 @@ msgstr ""
 msgid "Choose Wallet Mode"
 msgstr ""
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
 #: src/components/plotNFT/PlotNFTCard.tsx:381
-#: src/components/pool/PoolOverview.tsx:88
 msgid "Claim Rewards"
 msgstr "Získat odměnu"
 
+#: src/components/nfts/NFTTransferAction.tsx:309
 #: src/components/plot/PlotAddDirectoryDialog.tsx:130
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:81
 msgid "Close"
@@ -411,6 +427,10 @@ msgstr ""
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing services"
 #~ msgstr ""
+
+#: src/components/settings/ProfileView.tsx:30
+msgid "Coin ID"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
@@ -445,7 +465,7 @@ msgstr ""
 #~ msgid "Coloured Coin Options"
 #~ msgstr "Nastavení Barevné Mince"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:173
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
 #: src/electron/main.tsx:266
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
@@ -454,6 +474,10 @@ msgstr "Potvrdit"
 #: src/components/fullNode/FullNodeCloseConnection.tsx:19
 msgid "Confirm Disconnect"
 msgstr "Potvrdit odpojení"
+
+#: src/components/nfts/NFTTransferAction.tsx:76
+msgid "Confirm NFT Transfer"
+msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
@@ -509,8 +533,8 @@ msgstr ""
 msgid "Connection Status"
 msgstr "Stav připojení"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:109
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:107
+#: src/components/farm/FarmFullNodeConnections.tsx:108
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:106
 msgid "Connection Status:"
 msgstr "Stav připojení:"
 
@@ -542,8 +566,9 @@ msgstr "Pomoci s vývojem na GitHubu"
 #~ msgstr "Zkopírovat do schránky"
 
 #: src/components/backup/BackupCreate.tsx:59
-#: src/components/plot/add/PlotAddForm.tsx:196
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:176
+#: src/components/plot/add/PlotAddForm.tsx:190
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
+#: src/components/settings/ProfileAdd.tsx:111
 msgid "Create"
 msgstr "Vytvořit"
 
@@ -567,9 +592,10 @@ msgstr ""
 #~ msgid "Create New Wallet"
 #~ msgstr "Vytvořit novou peněženku"
 
-#: src/components/trading/TradeManager.tsx:45
-#~ msgid "Create Offer"
-#~ msgstr "Vytvořit nabídku"
+#: src/components/nfts/NFTContextualActions.tsx:84
+#: src/components/nfts/NFTCreateOfferDemo.tsx:59
+msgid "Create Offer"
+msgstr "Vytvořit nabídku"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -608,6 +634,10 @@ msgstr "Vytvořit vykreslování NFT"
 #: src/components/_selectKey_old/SelectKey.tsx:254
 #~ msgid "Create a new private key"
 #~ msgstr "Vytvořit nový privátní klíč"
+
+#: src/components/settings/ProfileAdd.tsx:83
+msgid "Create a new profile"
+msgstr ""
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:186
 #~ msgid "Create admin wallet"
@@ -649,7 +679,7 @@ msgstr "Vytváření vykreslování NFT a připojení k Poolu"
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Vytváří se NFT pole pro vlastní poolování"
 
-#: src/components/plot/add/PlotAddForm.tsx:107
+#: src/components/plot/add/PlotAddForm.tsx:105
 msgid "Currency code is not defined"
 msgstr "Kód měny není definován"
 
@@ -679,11 +709,15 @@ msgstr "Aktuální počet bodů"
 #~ msgid "DID Wallet"
 #~ msgstr "DID Wallet"
 
+#: src/components/settings/ProfileView.tsx:41
+msgid "DID1"
+msgstr ""
+
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:31
+#: src/components/farm/FarmLastAttemptedProof.tsx:30
 msgid "Date"
 msgstr "Datum"
 
@@ -739,6 +773,14 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:109
+msgid "Destination"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:94
+msgid "Destination:"
 msgstr ""
 
 #: src/electron/main.tsx:389
@@ -967,7 +1009,7 @@ msgstr "Farmář není spuštěn"
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "Farmáři získávají odměny za bloky a transakční poplatky tím, že vloží svůj volný prostor do sítě a zabezpečí tím tak transakce. Farmu, kterou uvidíte zde, vytvoříte přidáním nějakých polí. <0>Více informací</0>"
 
-#: src/components/dashboard/DashboardSideBar.tsx:99
+#: src/components/dashboard/DashboardSideBar.tsx:96
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
@@ -986,7 +1028,8 @@ msgstr ""
 msgid "Farming Status"
 msgstr "Stav"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:159
+#: src/components/nfts/NFTTransferAction.tsx:298
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:167
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
 msgid "Fee"
@@ -1031,8 +1074,8 @@ msgstr "Název souboru"
 msgid "Final folder location"
 msgstr "Umístění konečné složky"
 
-#: src/components/fullNode/FullNode.jsx:40
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:39
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Finished"
 msgstr "Dokončeno"
 
@@ -1044,8 +1087,8 @@ msgstr "Sledovat na Twitteru"
 msgid "Frequently Asked Questions"
 msgstr "Často kladené otázky"
 
-#: src/components/dashboard/DashboardSideBar.tsx:80
-#: src/components/fullNode/FullNode.jsx:137
+#: src/components/dashboard/DashboardSideBar.tsx:77
+#: src/components/fullNode/FullNode.jsx:132
 msgid "Full Node"
 msgstr "Uzel"
 
@@ -1061,7 +1104,7 @@ msgstr "Uzel"
 msgid "Full Screen"
 msgstr "Celá obrazovka"
 
-#: src/components/settings/Settings.tsx:257
+#: src/components/settings/Settings.tsx:270
 msgid "General"
 msgstr ""
 
@@ -1074,8 +1117,8 @@ msgstr ""
 #~ msgstr "Get Pool Login Link"
 
 #: src/components/pool/PoolOverview.tsx:172
-msgid "Grid view"
-msgstr "Mřížkové zobrazení"
+#~ msgid "Grid view"
+#~ msgstr "Mřížkové zobrazení"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:576
 #~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
@@ -1089,7 +1132,7 @@ msgstr "Mřížkové zobrazení"
 msgid "Harvester Plots"
 msgstr "Sklízecí pole"
 
-#: src/components/fullNode/FullNode.jsx:58
+#: src/components/fullNode/FullNode.jsx:57
 msgid "Header Hash"
 msgstr "Hash hlavičky"
 
@@ -1098,7 +1141,7 @@ msgid "Header hash"
 msgstr "Hash hlavičky"
 
 #: src/components/block/Block.jsx:179
-#: src/components/fullNode/FullNode.jsx:76
+#: src/components/fullNode/FullNode.jsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:78
 msgid "Height"
 msgstr "Výška"
@@ -1110,6 +1153,10 @@ msgstr "Nápověda"
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
 #~ msgid "Help translate"
 #~ msgstr "Pomozte s překladem"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:51
+msgid "Here are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
+msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -1124,8 +1171,8 @@ msgstr ""
 #~ msgid "History"
 #~ msgstr "Historie"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:37
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:36
+#: src/components/farm/FarmFullNodeConnections.tsx:35
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:35
 msgid "Host Name"
 msgstr "Název hostitele"
 
@@ -1139,10 +1186,10 @@ msgid "IP address / host"
 msgstr "IP adresa / host"
 
 #: src/components/settings/Settings.tsx:258
-msgid "Identities"
-msgstr ""
+#~ msgid "Identities"
+#~ msgstr ""
 
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:128
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:129
 msgid "If none selected, then it will default to the temporary directory."
 msgstr "Pokud žádnou složku nezvolíte, bude použita výchozí složka s dočasnými soubory výše."
 
@@ -1154,7 +1201,7 @@ msgstr "Pokud žádnou složku nezvolíte, bude použita výchozí složka s do�
 #~ msgid "Import from Mnemonics (24 words)"
 #~ msgstr "Import pomocí 24 slov"
 
-#: src/components/fullNode/FullNode.jsx:42
+#: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
 msgstr "Probíhá"
 
@@ -1204,12 +1251,13 @@ msgid "It is a one-time login link that can be used to log in to a pool's websit
 msgstr "Je to jednorázový přihlašovací odkaz, který může být použit k přihlášení na webovou stránku poolu. Obsahuje podpis používající klíč farmáře z NFT pole. Ne všechny pooly podporují tuto funkci."
 
 #: src/components/plotNFT/PlotNFTCard.tsx:403
-#: src/components/pool/PoolOverview.tsx:109
 msgid "Join Pool"
 msgstr "Připojit se k Poolu"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:131
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Připojit se k Poolu"
@@ -1246,12 +1294,12 @@ msgstr ""
 #~ msgid "Keys"
 #~ msgstr "Klíče"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:65
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:64
+#: src/components/farm/FarmFullNodeConnections.tsx:63
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:63
 msgid "KiB Up/Down"
 msgstr "MiB odesláno/přijato"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:45
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "Last Attempted Proof"
 msgstr "Poslední provedené pokusy o důkaz"
 
@@ -1263,7 +1311,7 @@ msgstr "Poslední farmařená výška"
 msgid "Last Transaction Block Time"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:30
+#: src/components/farm/FarmLatestBlockChallenges.tsx:32
 msgid "Latest Block Challenges"
 msgstr "Poslední blokové výzvy"
 
@@ -1282,8 +1330,8 @@ msgid "Leaving Pool"
 msgstr "Opustit Pool"
 
 #: src/components/pool/PoolOverview.tsx:172
-msgid "List view"
-msgstr "Zobrazení jako seznam"
+#~ msgid "List view"
+#~ msgstr "Zobrazení jako seznam"
 
 #: src/components/pool/Pool.tsx:21
 #~ msgid "Loading Plot NFTs"
@@ -1378,7 +1426,7 @@ msgstr "MiB odesláno/přijato"
 #~ msgid "Migrate"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:186
+#: src/components/settings/Settings.tsx:188
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
 msgstr ""
@@ -1391,7 +1439,7 @@ msgstr ""
 msgid "Migration required"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:127
+#: src/components/settings/Settings.tsx:129
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
 msgstr ""
@@ -1415,6 +1463,38 @@ msgstr "Více paměti mírně zvyšuje rychlost"
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:415
 #~ msgid "My Pubkey"
 #~ msgstr "Můj Pubkey"
+
+#: src/components/nfts/NFTTransferAction.tsx:274
+msgid "NFT Asset ID"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:60
+msgid "NFT Create Offer Demo"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:247
+msgid "NFT Name"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:232
+msgid "NFT Name:"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:35
+msgid "NFT Transfer Complete"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:115
+msgid "NFT Transfer Demo"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:45
+msgid "NFT Transfer Failed"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+msgid "NFTs"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 msgid "Network Name"
@@ -1474,8 +1554,8 @@ msgstr "Zatím nic nevyfarmařeno"
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "Žádné soukromé klíče pro jednu nebo obě adresy. Bezpečné pouze v případě, že posíláte odměny do jiné peněženky."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:33
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+#: src/components/farm/FarmFullNodeConnections.tsx:31
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:31
 #: src/components/fullNode/FullNodeConnections.tsx:35
 msgid "Node ID"
 msgstr "ID uzlu"
@@ -1488,7 +1568,7 @@ msgstr "Id uzlu"
 msgid "None"
 msgstr "Žádný"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:69
+#: src/components/farm/FarmLastAttemptedProof.tsx:67
 msgid "None of your plots have passed the plot filter yet."
 msgstr "Žádné z vašich polí dosud neprošlo filtrem poli."
 
@@ -1551,7 +1631,7 @@ msgstr "OK"
 #~ msgid "Offer"
 #~ msgstr "Nabídka"
 
-#: src/components/dashboard/DashboardSideBar.tsx:70
+#: src/components/dashboard/DashboardSideBar.tsx:65
 msgid "Offers"
 msgstr ""
 
@@ -1562,6 +1642,10 @@ msgstr ""
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
 #~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 #~ msgstr "Mezi každým transakčním blokem je v průměru jedna minuta. Pokud nedojde ke zdržení z důvodu přetížení, zpracování vaší transakce proběhne zhruba do minuty."
+
+#: src/components/nfts/NFTTransferAction.tsx:84
+msgid "Once you initiate this transfer, you will not be able to cancel the transaction. Are you sure you want to transfer the NFT?"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:34
 #~ msgid "Only one backup file is allowed."
@@ -1596,7 +1680,7 @@ msgstr ""
 msgid "Passphrase Hint (Optional)"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:217
+#: src/components/settings/Settings.tsx:219
 msgid "Passphrase Settings"
 msgstr ""
 
@@ -1605,22 +1689,22 @@ msgstr ""
 #~ msgid "Passphrase is incorrect"
 #~ msgstr ""
 
-#: src/components/settings/Settings.tsx:100
+#: src/components/settings/Settings.tsx:102
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:137
+#: src/components/settings/Settings.tsx:139
 #: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:134
+#: src/components/settings/Settings.tsx:136
 #: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:128
+#: src/components/settings/Settings.tsx:130
 #: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
 msgstr ""
@@ -1660,7 +1744,7 @@ msgstr "Čeká na vyřízení"
 #~ msgid "Pending Total Balance"
 #~ msgstr "Nevyřízený celkový zůstatek"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:144
 #: src/hooks/useAbsorbRewards.tsx:43
 msgid "Please Confirm"
 msgstr "Prosím potvrďte"
@@ -1809,10 +1893,10 @@ msgid "Plot Key"
 msgstr "Klíč Pole"
 
 #: src/components/pool/PoolOverview.tsx:38
-msgid "Plot NFT"
-msgstr "NFT pole"
+#~ msgid "Plot NFT"
+#~ msgstr "NFT pole"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:108
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
 msgstr "NFT pole s p2_singleton_puzzle_hash {plotNFTId} neexistuje"
@@ -1849,11 +1933,11 @@ msgstr "Pole je duplikát {0}"
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "NFT pole se mění na (cílový stav). Může to chvíli trvat. Prosím nezavírejte aplikaci, dokud nebude tato akce dokončena."
 
-#: src/components/dashboard/DashboardSideBar.tsx:86
+#: src/components/dashboard/DashboardSideBar.tsx:83
 msgid "Plots"
 msgstr "Pole"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:21
+#: src/components/farm/FarmLastAttemptedProof.tsx:20
 msgid "Plots Passed Filter"
 msgstr "Pole vyhovující filtru"
 
@@ -1975,26 +2059,26 @@ msgstr ""
 msgid "Pool:"
 msgstr "Pool:"
 
-#: src/components/dashboard/DashboardSideBar.tsx:104
+#: src/components/dashboard/DashboardSideBar.tsx:101
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
 msgstr "Poolování"
 
 #: src/components/block/FullNodeAddConnection.tsx:76
-#: src/components/farm/FarmFullNodeConnections.tsx:43
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:42
+#: src/components/farm/FarmFullNodeConnections.tsx:41
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:41
 #: src/components/fullNode/FullNodeAddConnection.tsx:75
 #: src/components/fullNode/FullNodeConnections.tsx:45
 msgid "Port"
 msgstr "Port"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:93
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:96
 #: src/components/plotNFT/PlotNFTChangePool.tsx:85
 msgid "Preparing Plot NFT"
 msgstr "Připravuji NFT pole"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:101
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:104
 msgid "Preparing standard wallet"
 msgstr "Připravuji standardní peněženku"
 
@@ -2026,11 +2110,17 @@ msgstr "Hash předchozího záhlaví"
 #~ msgid "Private key:"
 #~ msgstr "Soukromý klíč:"
 
+#: src/components/settings/Settings.tsx:271
+#: src/components/settings/SettingsIdentity.tsx:18
+#: src/components/settings/SettingsProfiles.tsx:58
+msgid "Profiles"
+msgstr ""
+
 #: src/components/block/Block.jsx:229
 msgid "Proof of Space Size"
 msgstr "Velikost vloženého prostoru"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:25
+#: src/components/farm/FarmLastAttemptedProof.tsx:24
 msgid "Proofs Found"
 msgstr "Nalezeno důkazů"
 
@@ -2142,7 +2232,7 @@ msgstr "Poznámky k vydání"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:98
 #: src/components/settings/RemovePassphrasePrompt.tsx:143
-#: src/components/settings/Settings.tsx:198
+#: src/components/settings/Settings.tsx:200
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
 msgstr ""
@@ -2208,7 +2298,7 @@ msgstr "Vyhledat block podle hashe hlavičky"
 msgid "Second temporary folder location"
 msgstr "Druhé umístění dočasné složky"
 
-#: src/components/settings/Settings.tsx:130
+#: src/components/settings/Settings.tsx:132
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
 msgstr ""
@@ -2269,9 +2359,9 @@ msgstr "Vyberte své NFT pole"
 msgid "Select your Plot NFT from the dropdown or create a new one."
 msgstr "Vyberte své NFT pole z rozbalovacího seznamu nebo vytvořte nové."
 
-#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:73
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:121
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:122
 msgid "Selected"
 msgstr "Vybráno"
 
@@ -2304,13 +2394,17 @@ msgstr "Vlastní pool. Když vyhraješ blok, získáš XCH odměnu ty."
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 #~ msgstr "Poslat tento informační paket uživateli Rate Limited peněženky. Ten jej musí použít k dokončení nastavení své peněženky:"
 
+#: src/components/nfts/NFTTransferAction.tsx:289
+msgid "Send to Address"
+msgstr ""
+
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:279
 #~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
 #~ msgstr "Pošlete svůj veřejný klíč vašemu správci Rate Limited peněženky:"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:135
 #: src/components/settings/SetPassphrasePrompt.tsx:211
-#: src/components/settings/Settings.tsx:209
+#: src/components/settings/Settings.tsx:211
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
 msgstr ""
@@ -2319,9 +2413,8 @@ msgstr ""
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 #~ msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:113
-#: src/components/dashboard/DashboardSideBar.tsx:121
-#: src/components/settings/Settings.tsx:248
+#: src/components/dashboard/DashboardSideBar.tsx:110
+#: src/components/settings/Settings.tsx:261
 msgid "Settings"
 msgstr ""
 
@@ -2415,7 +2508,7 @@ msgstr "Řeč"
 msgid "Starting services"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:96
+#: src/components/fullNode/FullNode.jsx:95
 msgid "State"
 msgstr "Stav"
 
@@ -2424,7 +2517,6 @@ msgstr "Stav"
 #: src/components/plot/overview/PlotOverviewPlots.tsx:110
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
 #: src/components/plotNFT/PlotNFTCard.tsx:142
-#: src/components/pool/PoolOverview.tsx:42
 msgid "Status"
 msgstr "Stav"
 
@@ -2522,11 +2614,19 @@ msgstr ""
 msgid "Temporary folder location"
 msgstr "Umístění dočasné složky"
 
+#: src/components/nfts/NFTTransferDemo.tsx:46
+msgid "The NFT transfer failed: {error}"
+msgstr ""
+
+#: src/components/nfts/NFTTransferDemo.tsx:36
+msgid "The NFT transfer transaction has been successfully submitted to the blockchain."
+msgstr ""
+
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "The application will stop working at block height 193536."
 #~ msgstr "Aplikace přestane pracovat při výšce bloku 193536."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:95
+#: src/components/farm/FarmFullNodeConnections.tsx:94
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "Uzel ke kterému je váš farmer (farmář) připojen. <0>Zjistit více</0>"
 
@@ -2672,7 +2772,7 @@ msgstr "Toto NFT pole je přiřazeno k jinému klíči. Stále můžete vytvář
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:47
+#: src/components/farm/FarmLastAttemptedProof.tsx:46
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr "Seznam pokusů vaší farmy o vítězství blokové výzvy. <0>Dozvědět se více</0>"
 
@@ -2692,7 +2792,7 @@ msgstr "Seznam pokusů vaší farmy o vítězství blokové výzvy. <0>Dozvědě
 msgid "Thread Multiplier for Phase 2"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:88
+#: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
 msgstr "Vytvořeno"
 
@@ -2708,7 +2808,11 @@ msgstr "Časová značka"
 #~ msgid "To"
 #~ msgstr "Komu"
 
-#: src/components/dashboard/DashboardSideBar.tsx:58
+#: src/components/settings/ProfileView.tsx:38
+msgid "Token Standard"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
 msgid "Tokens"
 msgstr ""
 
@@ -2786,6 +2890,21 @@ msgstr ""
 msgid "Transactions Filter Hash"
 msgstr "Hash filtru transakcí"
 
+#: src/components/nfts/NFTTransferAction.tsx:77
+#: src/components/nfts/NFTTransferAction.tsx:318
+msgid "Transfer"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:51
+msgid "Transfer Identity"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:139
+#: src/components/nfts/NFTTransferAction.tsx:366
+#: src/components/nfts/NFTTransferDemo.tsx:97
+msgid "Transfer NFT"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:25
 #~ msgid "Type"
 #~ msgstr "Typ"
@@ -2795,11 +2914,10 @@ msgstr "Hash filtru transakcí"
 #~ msgstr "Nelze vytvořit NFT pole"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
-#: src/components/pool/PoolOverview.tsx:62
 msgid "Unclaimed Rewards"
 msgstr "Nevyzvednuté odměny"
 
-#: src/components/fullNode/FullNode.jsx:94
+#: src/components/fullNode/FullNode.jsx:93
 msgid "Unfinished"
 msgstr "Nedokončeno"
 
@@ -2903,14 +3021,14 @@ msgid "Wallet Mode"
 msgstr ""
 
 #: src/components/pool/PoolOverview.tsx:181
-msgid "Wallet Status:"
-msgstr "Stav peněženky:"
+#~ msgid "Wallet Status:"
+#~ msgstr "Stav peněženky:"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1121
 #~ msgid "Wallet does not exists"
 #~ msgstr "Peněženka neexistuje"
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:69
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:72
 msgid "Wallet is not defined"
 msgstr ""
 
@@ -3007,6 +3125,10 @@ msgstr "Okno"
 msgid "Without fees"
 msgstr "Bez poplatků"
 
+#: src/components/nfts/NFTTransferAction.tsx:373
+msgid "Would you like to transfer the specified NFT to a new owner? It is recommended that you include a fee to ensure that the transaction is completed in a timely manner."
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
 #: src/electron/main.tsx:264
 msgid "Yes"
@@ -3074,9 +3196,10 @@ msgid "You need {currencyCode} to join a pool."
 msgstr "Je potřeba {currencyCode}, aby se šlo připojit k poolu."
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
-msgid "You will recieve <0/> to {0}"
-msgstr "Dostanete <0/> do {0}"
+#~ msgid "You will recieve <0/> to {0}"
+#~ msgstr "Dostanete <0/> do {0}"
 
+#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
 msgid "You will recieve <0/> to {address}"
 msgstr "Obdržíte <0/> na {address}"
@@ -3089,15 +3212,15 @@ msgstr "Obdržíte <0/> na {address}"
 msgid "Your Farm Overview"
 msgstr "Přehled vaší farmy"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:93
+#: src/components/farm/FarmFullNodeConnections.tsx:92
 msgid "Your Full Node Connection"
 msgstr "Vaše spojení s uzlem"
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:94
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:93
 msgid "Your Harvester Network"
 msgstr "Vaše sklízecí síť"
 
-#: src/components/pool/PoolOverview.tsx:156
+#: src/components/pool/PoolOverview.tsx:42
 msgid "Your Pool Overview"
 msgstr "Přehled vašeho poolu"
 
@@ -3127,14 +3250,18 @@ msgstr ""
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
 msgstr ""
 
-#: src/components/settings/Settings.tsx:89
+#: src/components/settings/Settings.tsx:91
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:78
+#: src/components/settings/Settings.tsx:80
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:33
+msgid "[*Coin ID*]"
 msgstr ""
 
 #: src/util/getDescriptiveError.ts:5
@@ -3159,7 +3286,7 @@ msgstr "[Chyba 22] Soubor nenalezen. Jedna ze složek polí v konfiguraci má pr
 #~ msgid "not synced"
 #~ msgstr "nesynchronizováno"
 
-#: src/components/plot/add/PlotAddForm.tsx:125
+#: src/components/plot/add/PlotAddForm.tsx:123
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 
@@ -3189,6 +3316,10 @@ msgstr ""
 #: src/components/app/AppPassPrompt.tsx:48
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:128
+msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"

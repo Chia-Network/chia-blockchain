@@ -26,6 +26,7 @@ const apiWithTag = api.enhanceEndpoints({
     'Address',
     'DID',
     'DIDCoinInfo',
+    'DIDName',
     'DIDPubKey',
     'DIDRecoveryInfo',
     'DIDRecoveryList',
@@ -1686,6 +1687,34 @@ export const walletApi = apiWithTag.injectEndpoints({
       ],
     }),
 
+    getDIDName: build.query<any, { walletId: number }>({
+      query: ({ walletId }) => ({
+        command: 'getDidName',
+        service: DID,
+        args: [walletId],
+      }),
+      providesTags: (result, _error, { walletId }) =>
+        result ? [{ type: 'DIDName', id: walletId }] : [],
+    }),
+
+    setDIDName: build.mutation<
+      any,
+      {
+        walletId: number;
+        name: string;
+      }
+    >({
+      query: ({ walletId, name }) => ({
+        command: 'setDIDName',
+        service: DID,
+        args: [walletId, name],
+      }),
+      invalidatesTags: (_result, _error, { walletId }) => [
+        { type: 'Wallets', id: walletId },
+        { type: 'DIDName', id: walletId },
+      ],
+    }),
+
     updateDIDRecoveryIds: build.mutation<
       any,
       {
@@ -1933,6 +1962,8 @@ export const {
   useUpdateDIDRecoveryIdsQuery,
   useGetDIDPubKeyQuery,
   useGetDIDQuery,
+  useGetDIDNameQuery,
+  useSetDIDNameMutation,
   useGetDIDRecoveryListQuery,
   useGetDIDInformationNeededForRecoveryQuery,
   useGetDIDCurrentCoinInfoQuery,

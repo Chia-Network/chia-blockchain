@@ -752,6 +752,7 @@ msgstr ""
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Онемогући цртање битног поља"
 
+#: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr ""
@@ -1265,8 +1266,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:116
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:135
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Log Out"
 msgstr ""
 
@@ -1274,8 +1275,8 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Пријављивање"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:115
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:134
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
 msgid "Logout"
 msgstr ""
 
@@ -2785,6 +2786,7 @@ msgstr "Непознато"
 #~ msgid "Unlock Keyring"
 #~ msgstr ""
 
+#: src/components/Back/Back.tsx:39
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr ""
@@ -2867,7 +2869,7 @@ msgstr ""
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:91
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
@@ -3009,6 +3011,7 @@ msgstr "Добродошли у Chia. Пријави се помоћу пост�
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "Не мораш се синхронизовати или повезати да би се креирао плот. Привремене датотеке се креирају током процеса креирања плотова који премашују величину коначног плота. Провери да ли имаш довољно простора. <0> Сазнај више </0>"
 
+#: src/components/Back/Back.tsx:43
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr ""

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { makeStyles } from '@mui/styles';
+import { Routes, Route, useNavigate, useMatch } from 'react-router-dom';
 import {
   AlertDialog,
   Button,
@@ -29,6 +30,7 @@ import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
 import SettingsGeneral from './SettingsGeneral';
+import SettingsProfiles from './SettingsProfiles';
 
 const useStyles = makeStyles((theme) => ({
   passToggleBox: {
@@ -239,7 +241,18 @@ const SecurityCard = () => {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'IDENTITIES'>('GENERAL');
+  const navigate = useNavigate();
+  const isGeneral = !!useMatch({ path: '/dashboard/settings', end: true });
+
+  const activeTab = isGeneral ? 'GENERAL' : 'PROFILES';
+
+  function handleChangeTab(newTab: string) {
+    if (newTab === 'PROFILES') {
+      navigate('/dashboard/settings/profiles');
+    } else {
+      navigate('/dashboard/settings');
+    }
+  }
 
   return (
     <LayoutDashboardSub>
@@ -250,19 +263,18 @@ export default function Settings() {
         <Flex gap={3} flexDirection="column">
           <Tabs
             value={activeTab}
-            onChange={(_event, newValue) => setActiveTab(newValue)}
+            onChange={(_event, newValue) => handleChangeTab(newValue)}
             textColor="primary"
             indicatorColor="primary"
           >
-            <Tab value="GENERAL" label={<Trans>General</Trans>} />
-            {/*
-            <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
-            */}
+            <Tab value="GENERAL" label={<Trans>General</Trans>} style={{width:"175px"}}/>
+            <Tab value="PROFILES" label={<Trans>Profiles</Trans>} style={{width:"175px"}}/>
           </Tabs>
 
-          {activeTab === 'GENERAL' && (
-            <SettingsGeneral />
-          )}
+          <Routes>
+            <Route path="profiles/*" element={<SettingsProfiles />} />
+            <Route index element={<SettingsGeneral />} />
+          </Routes>
         </Flex>
       </Flex>
     </LayoutDashboardSub>
