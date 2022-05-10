@@ -327,11 +327,6 @@ class FullNodeAPI:
         return None
 
     @api_request
-    async def respond_sub_epoch_summary(self, request: full_node_protocol.RespondSubEpochSummary) -> Optional[Message]:
-        self.log.warning("Received proof of weight too late.")
-        return None
-
-    @api_request
     @reply_type([ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):

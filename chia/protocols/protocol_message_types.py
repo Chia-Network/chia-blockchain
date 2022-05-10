@@ -107,5 +107,3 @@ class ProtocolMessageTypes(Enum):
 
     request_proof_of_weight_v2 = 90
     respond_proof_of_weight_v2 = 91
-    request_sub_epoch_summary = 92
-    respond_sub_epoch_summary = 93
