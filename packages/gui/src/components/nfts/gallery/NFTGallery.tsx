@@ -24,6 +24,8 @@ export default function NFTGallery() {
     items: [],
   });
 
+  console.log('nfts', nfts);
+
   const filteredData = useMemo(() => {
     if (!nfts || !search) {
       return nfts;
@@ -52,9 +54,10 @@ export default function NFTGallery() {
   }
 
   return (
-    <LayoutDashboardSub sidebar={<NFTGallerySidebar />}>
-      <Flex flexDirection="column" gap={2}>
-        <Flex justifyContent="space-between" alignItems="Center">
+    <LayoutDashboardSub
+      sidebar={<NFTGallerySidebar />}
+      header={(
+        <Flex justifyContent="space-between" alignItems="center">
           <Search
             onChange={setSearch}
             value={search}
@@ -62,19 +65,19 @@ export default function NFTGallery() {
           />
           <NFTContextualActions selection={selection} />
         </Flex>
-
-        <Grid spacing={2} alignItems="stretch" container>
-          {filteredData?.map((nft: NFTInfo) => (
-            <Grid xs={12} md={6} lg={4} xl={3} key={nft.id} item>
-              <NFTCard
-                nft={nft}
-                onSelect={(selected) => handleSelect(nft, selected)}
-                selected={selection.items.some((item) => item.id === nft.id)}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Flex>
+      )}
+    >
+      <Grid spacing={2} alignItems="stretch" container>
+        {filteredData?.map((nft: NFTInfo) => (
+          <Grid xs={12} md={6} lg={4} xl={3} key={nft.id} item>
+            <NFTCard
+              nft={nft}
+              onSelect={(selected) => handleSelect(nft, selected)}
+              selected={selection.items.some((item) => item.id === nft.id)}
+            />
+          </Grid>
+        ))}
+      </Grid>
     </LayoutDashboardSub>
   );
 }

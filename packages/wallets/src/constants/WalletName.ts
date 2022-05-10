@@ -32,6 +32,9 @@ const WalletName = {
   [WalletType.POOLING_WALLET]: defineMessage({
     message: 'Pooling Wallet',
   }),
+  [WalletType.NFT]: defineMessage({
+    message: 'NFT Wallet',
+  }),
 }
 
 export default WalletName;

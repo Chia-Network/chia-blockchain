@@ -11,14 +11,29 @@ import {
   Typography,
   Radio,
 } from '@mui/material';
+import { Verified, Report } from '@mui/icons-material';
 import {
   CopyToClipboard,
   Flex,
   Loading,
+  Tooltip,
+  Truncate,
   mojoToChiaLocaleString,
   useCurrencyCode,
 } from '@chia/core';
-import type NFTInfo from '@chia/api';
+import styled from 'styled-components';
+import useNFTHash from '../../hooks/useNFTHash';
+import { type NFTInfo } from '@chia/api';
+
+const StyledCardPreview = styled(Box)`
+  height: 300px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+`;
 
 export type NFTCardProps = {
   nft: NFTInfo;
@@ -27,16 +42,26 @@ export type NFTCardProps = {
 };
 
 export default function NFTCard(props: NFTCardProps) {
-  const { nft, onSelect, selected } = props;
+  const {
+    nft,
+    onSelect,
+    selected,
+    nft: {
+      id,
+      dataUris,
+    }
+  } = props;
 
   const navigate = useNavigate();
   const currencyCode = useCurrencyCode();
   const { metadata: fakeMetadata, isLoading } = useNFTMetadata({
     id: nft.launcherId,
   });
-  const id = nft.id;
+
+  const { isValid, isLoading: isLoadingPreview } = useNFTHash(nft);
+
   const metadata = { ...fakeMetadata, ...nft };
-  const shortId = `${id.substr(0, 6)}...${id.substr(id.length - 6)}`;
+  const hasFile = dataUris?.length > 0;
 
   function handleClick() {
     navigate(`/dashboard/nfts/${nft.launcherId}`);
@@ -86,11 +111,42 @@ export default function NFTCard(props: NFTCardProps) {
             </Flex>
           </CardContent>
 
-          <CardMedia
-            src={metadata.dataUris?.[0]}
-            component="img"
-            height="300px"
-          />
+          {hasFile && (
+            <StyledCardPreview>
+              {isLoadingPreview ? (
+                <Loading center>
+                  <Trans>Loading preview...</Trans>
+                </Loading>
+              ) : (
+                <>
+                  <CardMedia
+                    src={dataUris?.[0]}
+                    component="img"
+                    height="300px"
+                  />
+                  <Tooltip title={isValid ? <Trans>File hash verified</Trans> : <Trans>File hash mismatch</Trans>}>
+                    <Box
+                      display="flex"
+                      position="absolute"
+                      top={'0.75rem'}
+                      right={'1rem'}
+                      backgroundColor="rgba(0,0,0,0.35)"
+                      borderRadius="50%"
+                      width={30}
+                      height={30}
+                      overflow="hidden"
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      {isValid
+                        ? <Verified fontSize="small" />
+                        : <Report color="warning" fontSize="small" />}
+                    </Box>
+                  </Tooltip>
+                </>
+              )}
+            </StyledCardPreview>
+          )}
 
           <CardContent>
             <Flex flexDirection="column" gap={2}>
@@ -114,9 +170,11 @@ export default function NFTCard(props: NFTCardProps) {
               </Flex>
 
               <Flex justifyContent="space-between" alignItems="center">
-                <Typography noWrap>
-                  <Trans>{shortId}</Trans>
-                </Typography>
+                <Tooltip title={id}>
+                  <Typography noWrap>
+                    <Truncate>{id}</Truncate>
+                  </Typography>
+                </Tooltip>
                 <CopyToClipboard value={id} />
               </Flex>
             </Flex>
