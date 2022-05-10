@@ -1215,8 +1215,7 @@ class FullNode:
                 )
                 await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
 
-        if peak is not None and self.weight_proof_handler is not None:
-            await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
+        if peak is not None:
             self._state_changed("block")
 
     def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]):

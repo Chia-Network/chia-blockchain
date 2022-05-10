@@ -63,7 +63,7 @@ class TestWalletSync:
             )
 
     @pytest.mark.asyncio
-    async def test_almost_recent(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_almost_recent(self, bt, two_wallet_nodes, default_1000_blocks, self_hostname):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -75,11 +75,11 @@ class TestWalletSync:
         # Untrusted node sync
         wallets[1][0].config["trusted_peers"] = {}
 
-        base_num_blocks = 400
-        for block in default_400_blocks:
+        base_num_blocks = 600
+        for block in default_1000_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        all_blocks = default_400_blocks
+        all_blocks = default_1000_blocks
         both_phs = []
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
