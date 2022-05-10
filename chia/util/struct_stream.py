@@ -58,6 +58,10 @@ class StructStream(int):
     # This is just a partial exposure of the underlying int constructor.  Liskov...
     # https://github.com/python/typeshed/blob/5d07ebc864577c04366fcc46b84479dbec033921/stdlib/builtins.pyi#L181-L185
     def __init__(self, value: Union[str, bytes, SupportsInt, SupportsIndex, SupportsTrunc]) -> None:
+        # v is unused here and that is ok since .__new__() seems to have already
+        # processed the parameter when creating the instance of the class.  We have no
+        # additional special action to take here beyond verifying that the newly
+        # created instance satisfies the bounds limitations of the particular subclass.
         super().__init__()
         if not (self.MINIMUM <= self < self.MAXIMUM_EXCLUSIVE):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")

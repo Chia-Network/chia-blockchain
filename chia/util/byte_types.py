@@ -24,6 +24,10 @@ class SizedBytes(bytes):
     # This is just a partial exposure of the underlying int constructor.  Liskov...
     # https://github.com/python/typeshed/blob/f8547a3f3131de90aa47005358eb3394e79cfa13/stdlib/builtins.pyi#L483-L493
     def __init__(self, v: Union[Iterable[SupportsIndex], SupportsBytes]) -> None:
+        # v is unused here and that is ok since .__new__() seems to have already
+        # processed the parameter when creating the instance of the class.  We have no
+        # additional special action to take here beyond verifying that the newly
+        # created instance satisfies the length limitation of the particular subclass.
         super().__init__()
         if len(self) != self._size:
             raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
