@@ -164,7 +164,7 @@ class NFTWallet:
         """This is the confirmed balance, which we set to 0 as the NFT wallet doesn't have one."""
         return uint128(0)
 
-    def get_nft_coin_by_id(self, nft_coin_id) -> NFTCoinInfo:
+    def get_nft_coin_by_id(self, nft_coin_id: bytes32) -> NFTCoinInfo:
         for nft_coin in self.nft_wallet_info.my_nft_coins:
             if nft_coin.coin.name() == nft_coin_id:
                 return nft_coin
@@ -462,15 +462,11 @@ class NFTWallet:
                 assert keys
                 _, private = keys
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                try:
-                    error, conditions, cost = conditions_dict_for_solution(
-                        spend.puzzle_reveal.to_program(),
-                        spend.solution.to_program(),
-                        self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                    )
-                except ValueError:
-                    # ignore invalid condition for updating metadata
-                    conditions = None
+                error, conditions, cost = conditions_dict_for_solution(
+                    spend.puzzle_reveal.to_program(),
+                    spend.solution.to_program(),
+                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                )
                 if conditions is not None:
                     synthetic_pk = synthetic_secret_key.get_g1()
                     for pk, msg in pkm_pairs_for_conditions_dict(
