@@ -1,4 +1,4 @@
-from typing import Any, BinaryIO, Dict, Optional, SupportsInt, Tuple, Type, TypeVar, Union
+from typing import Any, BinaryIO, Optional, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Literal, Protocol, SupportsIndex
 
@@ -9,19 +9,6 @@ _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 class SupportsTrunc(Protocol):
     def __trunc__(self) -> int:
         ...
-
-
-packing_strings: Dict[Tuple[int, bool], Optional[str]] = {
-    (1, False): "!B",
-    (1, True): "!b",
-    (2, False): "!H",
-    (2, True): "!h",
-    (4, False): "!L",
-    (4, True): "!l",
-    (8, False): "!Q",
-    (8, True): "!q",
-    (16, False): None,
-}
 
 
 def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream]:
@@ -39,8 +26,6 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
     if remainder != 0:
         raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
 
-    cls.PACK = packing_strings[(cls.SIZE, cls.SIGNED)]
-
     if cls.SIGNED:
         cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
         cls.MINIMUM = -(2 ** (cls.BITS - 1))
@@ -52,7 +37,6 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
 
 class StructStream(int):
-    PACK: Optional[str] = None
     SIZE = 0
     BITS = 0
     SIGNED = False
