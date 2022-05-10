@@ -1,6 +1,6 @@
-from typing import BinaryIO, Optional, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, SupportsInt, Type, TypeVar, Union
 
-from typing_extensions import Literal, Protocol, SupportsIndex
+from typing_extensions import Protocol, SupportsIndex
 
 _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 
