@@ -1,9 +1,98 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from decimal import Decimal
 import struct
-import pytest
 import io
+from typing import Iterable, Type
+
+import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.mark.structures import ParameterSet
+from typing_extensions import final
 
 from chia.util.ints import int8, uint8, int16, uint16, int32, uint32, int64, uint64, uint128, int512
+from chia.util.struct_stream import StructStream, parse_metadata_from_name
+
+
+def dataclass_parameter(instance: object) -> ParameterSet:
+    return pytest.param(instance, id=repr(instance)[len(type(instance).__name__) + 1 : -1])
+
+
+def dataclass_parameters(instances: Iterable[object]) -> ParameterSet:
+    return [dataclass_parameter(instance) for instance in instances]
+
+
+@dataclass(frozen=True)
+class BadName:
+    name: str
+    error: str
+
+
+@final
+@dataclass(frozen=True)
+class Good:
+    name: str
+    cls: Type[StructStream]
+    size: int
+    bits: int
+    signed: bool
+    maximum_exclusive: int
+    minimum: int
+
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        size: int,
+        signed: bool,
+        maximum_exclusive: int,
+        minimum: int,
+    ) -> Good:
+        raw_class = type(name, (StructStream,), {})
+        parsed_cls = parse_metadata_from_name(raw_class)
+        return cls(
+            name=name,
+            cls=parsed_cls,
+            size=size,
+            bits=size * 8,
+            signed=signed,
+            maximum_exclusive=maximum_exclusive,
+            minimum=minimum,
+        )
+
+
+good_classes = [
+    Good.create(name="uint8", size=1, signed=False, maximum_exclusive=0xFF + 1, minimum=0),
+    Good.create(name="int8", size=1, signed=True, maximum_exclusive=0x80, minimum=-0x80),
+    Good.create(name="uint16", size=2, signed=False, maximum_exclusive=0xFFFF + 1, minimum=0),
+    Good.create(name="int16", size=2, signed=True, maximum_exclusive=0x8000, minimum=-0x8000),
+    Good.create(name="uint24", size=3, signed=False, maximum_exclusive=0xFFFFFF + 1, minimum=0),
+    Good.create(name="int24", size=3, signed=True, maximum_exclusive=0x800000, minimum=-0x800000),
+    Good.create(
+        name="uint128",
+        size=16,
+        signed=False,
+        maximum_exclusive=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF + 1,
+        minimum=0,
+    ),
+    Good.create(
+        name="int128",
+        size=16,
+        signed=True,
+        maximum_exclusive=0x80000000000000000000000000000000,
+        minimum=-0x80000000000000000000000000000000,
+    ),
+]
+
+
+@pytest.fixture(
+    name="good",
+    params=dataclass_parameters(good_classes),
+)
+def good_fixture(request) -> Good:
+    return request.param
 
 
 class TestStructStream:
@@ -145,3 +234,45 @@ class TestStructStream:
 
     def test_uint32_from_bytes(self) -> None:
         assert uint32(b"273") == 273
+
+    def test_struct_stream_cannot_be_instantiated_directly(self) -> None:
+        with pytest.raises(ValueError, match="does not fit"):
+            StructStream(0)
+
+    @pytest.mark.parametrize(
+        argnames="bad_name",
+        argvalues=dataclass_parameters(
+            instances=[
+                BadName(name="uint", error="expected integer suffix but got: ''"),
+                BadName(name="blue", error="expected integer suffix but got"),
+                BadName(name="blue8", error="expected integer suffix but got: ''"),
+                BadName(name="sint8", error="expected class name"),
+                BadName(name="redint8", error="expected class name"),
+                BadName(name="int7", error="must be a multiple of 8"),
+                BadName(name="int9", error="must be a multiple of 8"),
+                BadName(name="int31", error="must be a multiple of 8"),
+                BadName(name="int0", error="bit size must greater than zero"),
+                # below could not happen in a hard coded class name, but testing for good measure
+                BadName(name="int-1", error="bit size must greater than zero"),
+            ],
+        ),
+    )
+    def test_parse_metadata_from_name_raises(self, bad_name: BadName) -> None:
+        cls = type(bad_name.name, (StructStream,), {})
+        with pytest.raises(ValueError, match=bad_name.error):
+            parse_metadata_from_name(cls)
+
+    def test_parse_metadata_from_name_correct_size(self, good) -> None:
+        assert good.cls.SIZE == good.size
+
+    def test_parse_metadata_from_name_correct_bits(self, good) -> None:
+        assert good.cls.BITS == good.bits
+
+    def test_parse_metadata_from_name_correct_signedness(self, good) -> None:
+        assert good.cls.SIGNED == good.signed
+
+    def test_parse_metadata_from_name_correct_maximum(self, good) -> None:
+        assert good.cls.MAXIMUM_EXCLUSIVE == good.maximum_exclusive
+
+    def test_parse_metadata_from_name_correct_minimum(self, good) -> None:
+        assert good.cls.MINIMUM == good.minimum

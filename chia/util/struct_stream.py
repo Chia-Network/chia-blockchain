@@ -16,7 +16,13 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
     name_signedness, _, name_bit_size = cls.__name__.partition("int")
     cls.SIGNED = False if name_signedness == "u" else True
-    cls.BITS = int(name_bit_size)
+    try:
+        cls.BITS = int(name_bit_size)
+    except ValueError as e:
+        raise ValueError(f"expected integer suffix but got: {name_bit_size!r}") from e
+
+    if cls.BITS <= 0:
+        raise ValueError(f"bit size must greater than zero but got: {cls.BITS}")
 
     expected_name = f"{'' if cls.SIGNED else 'u'}int{cls.BITS}"
     if cls.__name__ != expected_name:
@@ -24,6 +30,8 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
     cls.SIZE, remainder = divmod(cls.BITS, 8)
     if remainder != 0:
+        # There may be a good use case for removing this but until the details are
+        # thought through we should avoid such cases.
         raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
 
     if cls.SIGNED:
