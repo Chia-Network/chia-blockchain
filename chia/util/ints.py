@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from typing import Any, BinaryIO
-
-from typing_extensions import final
-
 from chia.util.struct_stream import StructStream, parse_metadata_from_name
 
 
@@ -47,64 +43,21 @@ class uint64(StructStream):
     pass
 
 
-@final
-class uint128(int):
-    SIZE = 16
-
-    def __new__(cls: Any, value: int):
-        value = int(value)
-        if value > (2 ** 128) - 1 or value < 0:
-            raise ValueError(f"Value {value} of does not fit into uint128")
-        return int.__new__(cls, value)
-
-    @classmethod
-    def parse(cls, f: BinaryIO) -> Any:
-        read_bytes = f.read(cls.SIZE)
-        if len(read_bytes) != cls.SIZE:
-            raise ValueError(f"{cls.__name__}.parse() requires {cls.SIZE} bytes but read: {len(read_bytes)}")
-        n = int.from_bytes(read_bytes, "big", signed=False)
-        assert n <= (2 ** 128) - 1 and n >= 0
-        return cls(n)
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> uint128:  # type: ignore[override]
-        if len(blob) != cls.SIZE:
-            raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
-        return cls(int.from_bytes(blob, "big", signed=True))
-
-    def stream(self, f):
-        assert self <= (2 ** 128) - 1 and self >= 0
-        f.write(self.to_bytes(self.SIZE, "big", signed=False))
+@parse_metadata_from_name
+class uint128(StructStream):
+    pass
 
 
-class int512(int):
+class int512(StructStream):
+    PACK = None
+
     # Uses 65 bytes to fit in the sign bit
     SIZE = 65
+    BITS = 512
+    SIGNED = True
 
-    def __new__(cls: Any, value: int):
-        value = int(value)
-        # note that the boundaries for int512 is not what you might expect. We
-        # encode these with one extra byte, but only allow a range of
-        # [-INT512_MAX, INT512_MAX]
-        if value >= (2 ** 512) or value <= -(2 ** 512):
-            raise ValueError(f"Value {value} of does not fit into in512")
-        return int.__new__(cls, value)
-
-    @classmethod
-    def parse(cls, f: BinaryIO) -> Any:
-        read_bytes = f.read(cls.SIZE)
-        if len(read_bytes) != cls.SIZE:
-            raise ValueError(f"{cls.__name__}.parse() requires {cls.SIZE} bytes but read: {len(read_bytes)}")
-        n = int.from_bytes(read_bytes, "big", signed=True)
-        assert n < (2 ** 512) and n > -(2 ** 512)
-        return cls(n)
-
-    @classmethod
-    def from_bytes(cls, blob: bytes) -> int512:  # type: ignore[override]
-        if len(blob) != cls.SIZE:
-            raise ValueError(f"{cls.__name__}.from_bytes() requires {cls.SIZE} bytes but got: {len(blob)}")
-        return cls(int.from_bytes(blob, "big", signed=True))
-
-    def stream(self, f):
-        assert self < (2 ** 512) and self > -(2 ** 512)
-        f.write(self.to_bytes(self.SIZE, "big", signed=True))
+    # note that the boundaries for int512 is not what you might expect. We
+    # encode these with one extra byte, but only allow a range of
+    # [-INT512_MAX, INT512_MAX]
+    MAXIMUM_EXCLUSIVE = 2 ** BITS
+    MINIMUM = -(2 ** BITS) + 1

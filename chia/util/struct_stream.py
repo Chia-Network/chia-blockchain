@@ -11,7 +11,7 @@ class SupportsTrunc(Protocol):
         ...
 
 
-packing_strings: Dict[Tuple[int, bool], str] = {
+packing_strings: Dict[Tuple[int, bool], Optional[str]] = {
     (1, False): "!B",
     (1, True): "!b",
     (2, False): "!H",
@@ -20,6 +20,7 @@ packing_strings: Dict[Tuple[int, bool], str] = {
     (4, True): "!l",
     (8, False): "!Q",
     (8, True): "!q",
+    (16, False): None,
 }
 
 
@@ -51,7 +52,7 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
 
 
 class StructStream(int):
-    PACK = ""
+    PACK: Optional[str] = None
     SIZE = 0
     BITS = 0
     SIGNED = False
