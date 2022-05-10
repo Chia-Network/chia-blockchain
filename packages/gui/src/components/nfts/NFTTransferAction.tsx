@@ -50,7 +50,7 @@ export type NFTTransferResult = {
   success: boolean;
   transferInfo?: {
     nftAssetId: string;
-    destinationDID: string;
+    destination: string;
     fee: string;
   };
   error?: string;
@@ -67,7 +67,7 @@ type NFTTransferConfirmationDialogProps = NFTTransferFormData & {
 function NFTTransferConfirmationDialog(
   props: NFTTransferConfirmationDialogProps,
 ) {
-  const { destinationDID, fee, ...rest } = props;
+  const { destination, fee, ...rest } = props;
   const feeInMojos = chiaToMojo(fee || 0);
   const currencyCode = useCurrencyCode();
 
@@ -101,7 +101,7 @@ function NFTTransferConfirmationDialog(
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {destinationDID}
+                {destination}
               </Typography>
               <TooltipIcon interactive>
                 <Flex flexDirection="column" gap={1}>
@@ -109,13 +109,13 @@ function NFTTransferConfirmationDialog(
                     <Trans>Destination</Trans>
                   </StyledTitle>
                   <StyledValue>
-                    <Typography variant="caption">{destinationDID}</Typography>
+                    <Typography variant="caption">{destination}</Typography>
                   </StyledValue>
                 </Flex>
               </TooltipIcon>
             </Flex>
           </Flex>
-          <Flex flexDirection="row" gap={1}>
+          {/* <Flex flexDirection="row" gap={1}>
             <Typography variant="body1">Fee:</Typography>
             <Typography variant="body1">
               {fee || '0'} {currencyCode}
@@ -134,7 +134,7 @@ function NFTTransferConfirmationDialog(
                 )
               </>
             )}
-          </Flex>
+          </Flex> */}
         </Flex>
       </Flex>
     </ConfirmDialog>
@@ -150,25 +150,25 @@ NFTTransferConfirmationDialog.defaultProps = {
 /* ========================================================================== */
 
 type NFTTransferFormData = {
-  destinationDID: string;
+  destination: string;
   fee: string;
 };
 
 type NFTTransferActionProps = {
   nft: NFTInfo;
-  destinationDID?: string;
+  destination?: string;
   onComplete?: (result?: NFTTransferResult) => void;
 };
 
 export default function NFTTransferAction(props: NFTTransferActionProps) {
-  const { nft, destinationDID, onComplete } = props;
+  const { nft, destination, onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferFormData>({
     shouldUnregister: false,
     defaultValues: {
-      destinationDID: destinationDID || '',
+      destination: destination || '',
       fee: '',
     },
   });
@@ -180,16 +180,13 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   }
 
   async function handleSubmit(formData: NFTTransferFormData) {
-    const { destinationDID, fee } = formData;
+    const { destination, fee } = formData;
     let isValid = true;
     let confirmation = false;
 
     if (isValid) {
       confirmation = await openDialog(
-        <NFTTransferConfirmationDialog
-          destinationDID={destinationDID}
-          fee={fee}
-        />,
+        <NFTTransferConfirmationDialog destination={destination} fee={fee} />,
       );
     }
 
@@ -198,10 +195,8 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
 
       const { error, data: response } = await transferNFT({
         walletId: nft.walletId,
-        nftCoinInfo: nft.nftCoinid,
-        newDid: destinationDID,
-        newDidInnerHash: '',
-        tradePrice: 0,
+        nftCoinId: nft.nftCoinId,
+        targetAddress: destination,
       });
       const success = response?.success ?? false;
       const errorMessage = error ?? undefined;
@@ -212,8 +207,8 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
         onComplete({
           success,
           transferInfo: {
-            nftAssetId: nft.launcherId,
-            destinationDID,
+            nftAssetId: nft.nftCoinId,
+            destination,
             fee,
           },
           error: errorMessage,
@@ -266,23 +261,39 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {nft.launcherId}
+                {nft.id}
               </Typography>
               <TooltipIcon interactive>
-                <Flex flexDirection="column" gap={1}>
-                  <StyledTitle>
-                    <Trans>NFT Asset ID</Trans>
-                  </StyledTitle>
-                  <StyledValue>
-                    <Typography variant="caption">{nft.launcherId}</Typography>
-                  </StyledValue>
+                <Flex flexDirection="column" gap={2}>
+                  <Flex flexDirection="column" gap={1}>
+                    <StyledTitle>
+                      <Trans>NFT ID</Trans>
+                    </StyledTitle>
+                    <StyledValue>
+                      <Typography variant="caption">{nft.id}</Typography>
+                    </StyledValue>
+                    <StyledTitle>
+                      <Trans>Launcher ID</Trans>
+                    </StyledTitle>
+                    <StyledValue>
+                      <Typography variant="caption">
+                        {nft.launcherId}
+                      </Typography>
+                    </StyledValue>
+                    <StyledTitle>
+                      <Trans>Coin ID</Trans>
+                    </StyledTitle>
+                    <StyledValue>
+                      <Typography variant="caption">{nft.nftCoinId}</Typography>
+                    </StyledValue>
+                  </Flex>
                 </Flex>
               </TooltipIcon>
             </Flex>
           </Flex>
         </Flex>
         <TextField
-          name="destinationDID"
+          name="destination"
           variant="filled"
           color="secondary"
           fullWidth
@@ -290,14 +301,14 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
           disabled={isLoading}
           required
         />
-        <Fee
+        {/* <Fee
           id="filled-secondary"
           variant="filled"
           name="fee"
           color="secondary"
           label={<Trans>Fee</Trans>}
           disabled={isLoading}
-        />
+        /> */}
         <DialogActions>
           <Flex flexDirection="row" gap={3}>
             <Button
@@ -333,11 +344,11 @@ type NFTTransferDialogProps = {
   onClose: (value: any) => void;
   onComplete?: (result?: NFTTransferResult) => void;
   nft: NFTInfo;
-  destinationDID?: string;
+  destination?: string;
 };
 
 export function NFTTransferDialog(props: NFTTransferDialogProps) {
-  const { open, onClose, onComplete, nft, destinationDID, ...rest } = props;
+  const { open, onClose, onComplete, nft, destination, ...rest } = props;
 
   function handleClose() {
     onClose(false);
@@ -370,15 +381,18 @@ export function NFTTransferDialog(props: NFTTransferDialogProps) {
       <DialogContent>
         <Flex flexDirection="column" gap={3}>
           <DialogContentText id="nft-transfer-dialog-description">
-            <Trans>
+            {/* <Trans>
               Would you like to transfer the specified NFT to a new owner? It is
               recommended that you include a fee to ensure that the transaction
               is completed in a timely manner.
+            </Trans> */}
+            <Trans>
+              Would you like to transfer the specified NFT to a new owner?
             </Trans>
           </DialogContentText>
           <NFTTransferAction
             nft={nft}
-            destinationDID={destinationDID}
+            destination={destination}
             onComplete={handleCompletion}
           />
         </Flex>

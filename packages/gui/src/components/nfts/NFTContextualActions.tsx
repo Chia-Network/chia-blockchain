@@ -1,24 +1,13 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
-import {
-  DropdownActions,
-  type DropdownActionsChildProps,
-  Flex,
-  useOpenDialog,
-} from '@chia/core';
+import { AlertDialog, DropdownActions, useOpenDialog } from '@chia/core';
+import type { DropdownActionsChildProps } from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  ListItemIcon,
-  MenuItem,
-  Typography,
-} from '@mui/material';
+import { ListItemIcon, MenuItem, Typography } from '@mui/material';
 import { ArrowForward as TransferIcon } from '@mui/icons-material';
 import NFTCreateOfferDemoDialog from './NFTCreateOfferDemo';
-import NFTTransferDemo from './NFTTransferDemo';
+import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
 
 /* ========================================================================== */
@@ -92,28 +81,31 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
 
-  function handleTransferNFT() {
-    const open = true;
+  function handleComplete(result?: NFTTransferResult) {
+    if (result) {
+      if (result.success) {
+        openDialog(
+          <AlertDialog title={<Trans>NFT Transfer Complete</Trans>}>
+            <Trans>
+              The NFT transfer transaction has been successfully submitted to
+              the blockchain.
+            </Trans>
+          </AlertDialog>,
+        );
+      } else {
+        const error = result.error || 'Unknown error';
+        openDialog(
+          <AlertDialog title={<Trans>NFT Transfer Failed</Trans>}>
+            <Trans>The NFT transfer failed: {error}</Trans>
+          </AlertDialog>,
+        );
+      }
+    }
+  }
 
+  function handleTransferNFT() {
     openDialog(
-      <Dialog
-        open={open}
-        aria-labelledby="nft-transfer-dialog-title"
-        aria-describedby="nft-transfer-dialog-description"
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle id="nft-transfer-dialog-title">
-          <Typography variant="h6">
-            <Trans>NFT Transfer Demo</Trans>
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Flex justifyContent="center">
-            <NFTTransferDemo nft={selectedNft} />
-          </Flex>
-        </DialogContent>
-      </Dialog>,
+      <NFTTransferDialog nft={selectedNft} onComplete={handleComplete} />,
     );
   }
 

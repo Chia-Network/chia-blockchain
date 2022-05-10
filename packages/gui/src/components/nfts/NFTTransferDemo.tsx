@@ -9,7 +9,7 @@ import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 type NFTTransferDemoFormData = {
   walletId: number;
   nftAssetId: string;
-  destinationDID?: string;
+  destination?: string;
 };
 
 type NFTTransferDemoProps = {
@@ -23,8 +23,8 @@ export default function NFTTransferDemo(props: NFTTransferDemoProps) {
     shouldUnregister: false,
     defaultValues: {
       walletId: nft?.walletId ?? 0,
-      nftAssetId: nft?.launcherId ?? '',
-      destinationDID: '',
+      nftAssetId: nft?.nftCoinId ?? '',
+      destination: '',
     },
   });
 
@@ -51,19 +51,15 @@ export default function NFTTransferDemo(props: NFTTransferDemoProps) {
   }
 
   async function handleInitiateTransfer(formData: NFTTransferDemoFormData) {
-    const { walletId, nftAssetId, destinationDID } = formData;
+    const { walletId, nftAssetId, destination } = formData;
     const nftToTransfer = {
       ...(nft ?? { walletId: 0, launcherId: '', name: '', description: '' }),
       walletId,
-      id: nftAssetId,
+      nftCoinId: nftAssetId,
     };
 
     await openDialog(
-      <NFTTransferDialog
-        nft={nftToTransfer}
-        destinationDID={destinationDID}
-        onComplete={handleComplete}
-      />,
+      <NFTTransferDialog nft={nftToTransfer} onComplete={handleComplete} />,
     );
   }
 
@@ -82,14 +78,14 @@ export default function NFTTransferDemo(props: NFTTransferDemoProps) {
             <TextField
               name="nftAssetId"
               variant="outlined"
-              label="NFT Coin Info"
+              label="NFT Coin ID"
               required
               fullWidth
             />
             <TextField
-              name="destinationDID"
+              name="destination"
               variant="outlined"
-              label="Destination DID Address (optional)"
+              label="Destination Address (optional)"
               fullWidth
             />
             <Flex justifyContent="flex-end">

@@ -1833,22 +1833,14 @@ export const walletApi = apiWithTag.injectEndpoints({
       any,
       {
         walletId: number;
-        nftCoinInfo: any;
-        newDid: string;
-        newDidInnerHash: string;
-        tradePrice: number;
+        nftCoinId: string;
+        targetAddress: string;
       }
     >({
-      query: ({
-        walletId,
-        nftCoinInfo,
-        newDid,
-        newDidInnerHash,
-        tradePrice,
-      }) => ({
+      query: ({ walletId, nftCoinId, targetAddress }) => ({
         command: 'transferNft',
         service: NFT,
-        args: [walletId, nftCoinInfo, newDid, newDidInnerHash, tradePrice],
+        args: [walletId, nftCoinId, targetAddress],
       }),
       invalidatesTags: (result, _error, { walletId }) =>
         result ? [{ type: 'NFTInfo', id: walletId }] : [],
