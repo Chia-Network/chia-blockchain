@@ -81,7 +81,6 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
@@ -95,6 +94,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia_rs import compute_merkle_set_root
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -1790,12 +1790,7 @@ def create_test_foliage(
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in tx_removals:
-            removal_merkle_set.add_already_hashed(coin_name)
+        additions_merkle_items: List[bytes32] = []
 
         # Create addition Merkle set
         puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
@@ -1808,11 +1803,11 @@ def create_test_foliage(
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle, coin_ids in puzzlehash_coin_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_ids(coin_ids))
+            additions_merkle_items.append(puzzle)
+            additions_merkle_items.append(hash_coin_ids(coin_ids))
 
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
+        removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
         generator_hash = bytes32([0] * 32)
         if block_generator is not None:
