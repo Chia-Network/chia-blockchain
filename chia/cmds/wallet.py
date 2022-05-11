@@ -549,11 +549,13 @@ def nft_add_uri_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
 @click.option("-aa", "--artist-address", help="Target artist's wallet address", type=str, required=True)
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
+    id: int,
     nft_coin_id: str,
     artist_address: str,
 ) -> None:
