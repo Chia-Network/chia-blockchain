@@ -34,6 +34,7 @@ export { default as FormatConnectionStatus } from './FormatConnectionStatus';
 export { default as FormatLargeNumber } from './FormatLargeNumber';
 export { default as GuestRoute } from './GuestRoute';
 export { default as IconButton } from './IconButton';
+export { default as IconMessage } from './IconMessage';
 export { default as Indicator } from './Indicator';
 export { default as InputBase } from './InputBase';
 export { default as LayoutDashboard, LayoutDashboardSub } from './LayoutDashboard';

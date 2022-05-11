@@ -12,9 +12,11 @@ import {
   CardKeyValue,
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
-import { useGetNFTsQuery, useNFTMetadata } from '@chia/api-react';
-import { Box, CardMedia, Grid, Typography } from '@mui/material';
+import { useGetNFTWallets, useNFTMetadata } from '@chia/api-react';
+import { Box, Grid, Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
+import NFTPreview from '../NFTPreview';
+import useFetchNFTs from '../../../hooks/useFetchNFTs';
 
 const cols = [
   {
@@ -46,17 +48,21 @@ const cols = [
 
 export default function NFTDetail() {
   const { nftId: launcherId } = useParams();
-  const { data } = useGetNFTsQuery({ walletId: 5 });
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
   const { metadata: fakeMetadata, isLoading } = useNFTMetadata({
     id: launcherId,
   });
 
   const nft = useMemo(() => {
-    if (!data) {
-      return data;
+    if (!nfts) {
+      return;
     }
-    return data.find((nft: NFTInfo) => nft.launcherId === launcherId);
-  }, [data]);
+    return nfts.find((nft: NFTInfo) => nft.launcherId === launcherId);
+  }, [nfts]);
 
   const metadata = { ...fakeMetadata, ...nft };
 
@@ -96,25 +102,32 @@ export default function NFTDetail() {
     <LayoutDashboardSub>
       <Flex flexDirection="column" gap={2}>
         <Back variant="h5">{metadata.name}</Back>
-        <Grid spacing={2} alignItems="stretch" container>
-          <Grid xs={12} md={6} item>
-            <Box
-              border={1}
-              borderColor="grey.300"
-              borderRadius={4}
-              height="100%"
-              overflow="hidden"
-              display="flex"
-              alignItems="center"
-            >
-              <CardMedia
-                src={metadata.dataUris?.[0]}
-                component="img"
-                height="500px"
-              />
-            </Box>
-          </Grid>
-          <Grid xs={12} md={6} item>
+        <Box
+          border={1}
+          borderColor="grey.300"
+          borderRadius={4}
+          overflow="hidden"
+          alignItems="center"
+          justifyContent="center"
+          display={{ sm: 'flex', md: 'none' }}
+        >
+          {nft && <NFTPreview nft={nft} height="auto" />}
+        </Box>
+        <Flex gap={2} alignItems="stretch">
+          <Box
+            flexGrow={1}
+            border={1}
+            borderColor="grey.300"
+            borderRadius={4}
+            height="100%"
+            overflow="hidden"
+            alignItems="center"
+            justifyContent="center"
+            display={{ sm: 'none', md: 'flex' }}
+          >
+            {nft && <NFTPreview nft={nft} height="auto" />}
+          </Box>
+          <Box maxWidth={{ md: '500px', lg: '600px' }}>
             <Flex flexDirection="column" gap={3}>
               <Flex flexDirection="column" gap={1}>
                 <Typography variant="h6">
@@ -131,8 +144,8 @@ export default function NFTDetail() {
                 <CardKeyValue rows={details} hideDivider />
               </Flex>
             </Flex>
-          </Grid>
-        </Grid>
+          </Box>
+        </Flex>
         <Flex flexDirection="column" gap={1}>
           <Typography variant="h6">
             <Trans>Item Activity</Trans>

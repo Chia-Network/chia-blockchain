@@ -10,13 +10,12 @@ export default function getRemoteFileContent(url: string): Promise<string> {
         file.onloadend = () => {
           resolve(file.result);
         };
-      }
-      else {
-        reject(new Error(`Request failed: ${request.status}`));
+      } else {
+        reject(new Error(`Request failed`));
       }
     }
     request.onerror = () => {
-      reject(new Error(`Request failed: ${request.status}`));
+      reject(new Error(`Request failed`));
     }
     request.send();
   });

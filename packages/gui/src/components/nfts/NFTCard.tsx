@@ -6,12 +6,10 @@ import {
   Box,
   Card,
   CardActionArea,
-  CardMedia,
   CardContent,
   Typography,
   Radio,
 } from '@mui/material';
-import { Verified, Report } from '@mui/icons-material';
 import {
   CopyToClipboard,
   Flex,
@@ -21,19 +19,8 @@ import {
   mojoToChiaLocaleString,
   useCurrencyCode,
 } from '@chia/core';
-import styled from 'styled-components';
-import useNFTHash from '../../hooks/useNFTHash';
+import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
-
-const StyledCardPreview = styled(Box)`
-  height: 300px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-`;
 
 export type NFTCardProps = {
   nft: NFTInfo;
@@ -48,7 +35,6 @@ export default function NFTCard(props: NFTCardProps) {
     selected,
     nft: {
       id,
-      dataUris,
     }
   } = props;
 
@@ -58,10 +44,7 @@ export default function NFTCard(props: NFTCardProps) {
     id: nft.launcherId,
   });
 
-  const { isValid, isLoading: isLoadingPreview } = useNFTHash(nft);
-
   const metadata = { ...fakeMetadata, ...nft };
-  const hasFile = dataUris?.length > 0;
 
   function handleClick() {
     navigate(`/dashboard/nfts/${nft.launcherId}`);
@@ -111,42 +94,7 @@ export default function NFTCard(props: NFTCardProps) {
             </Flex>
           </CardContent>
 
-          {hasFile && (
-            <StyledCardPreview>
-              {isLoadingPreview ? (
-                <Loading center>
-                  <Trans>Loading preview...</Trans>
-                </Loading>
-              ) : (
-                <>
-                  <CardMedia
-                    src={dataUris?.[0]}
-                    component="img"
-                    height="300px"
-                  />
-                  <Tooltip title={isValid ? <Trans>File hash verified</Trans> : <Trans>File hash mismatch</Trans>}>
-                    <Box
-                      display="flex"
-                      position="absolute"
-                      top={'0.75rem'}
-                      right={'1rem'}
-                      backgroundColor="rgba(0,0,0,0.35)"
-                      borderRadius="50%"
-                      width={30}
-                      height={30}
-                      overflow="hidden"
-                      justifyContent="center"
-                      alignItems="center"
-                    >
-                      {isValid
-                        ? <Verified fontSize="small" />
-                        : <Report color="warning" fontSize="small" />}
-                    </Box>
-                  </Tooltip>
-                </>
-              )}
-            </StyledCardPreview>
-          )}
+          <NFTPreview nft={nft} />
 
           <CardContent>
             <Flex flexDirection="column" gap={2}>
