@@ -67,6 +67,8 @@ class WeightProofHandler:
         self.proof: Optional[WeightProof] = None
         self.constants = constants
         self.blockchain = blockchain
+        self.latest_sample_seed: Optional[bytes32] = None
+        self.latest_sampled_segments: List[SubEpochChallengeSegment] = []  # latest sampled sub epoch list
         self.lock = asyncio.Lock()
         self._num_processes = 4
         self.multiprocessing_context = multiprocessing_context
@@ -108,7 +110,6 @@ class WeightProofHandler:
         Creates a weight proof object
         """
         assert self.blockchain is not None
-        sub_epoch_segments: List[SubEpochChallengeSegment] = []
         tip_rec = self.blockchain.try_block_record(tip)
         if tip_rec is None:
             log.error("failed not tip in cache")
@@ -127,6 +128,12 @@ class WeightProofHandler:
         sub_epoch_data = self.get_sub_epoch_data(tip_rec.height, summary_heights)
         # use second to last ses as seed
         seed = self.get_seed_for_proof(summary_heights, tip_rec.height)
+
+        if seed == self.latest_sample_seed:
+            # same as latest seed, get samples from cache
+            return WeightProof(sub_epoch_data, self.latest_sampled_segments, recent_chain)
+
+        sub_epoch_segments: List[SubEpochChallengeSegment] = []
         rng = random.Random(seed)
         weight_to_check = _get_weights_for_sampling(rng, tip_rec.weight, recent_chain)
         sample_n = 0
@@ -163,6 +170,10 @@ class WeightProofHandler:
                 sub_epoch_segments.extend(segments)
             prev_ses_block = ses_block
         log.debug(f"sub_epochs: {len(sub_epoch_data)}")
+
+        self.latest_sample_seed = seed
+        self.latest_sampled_segments = sub_epoch_segments
+
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     def get_seed_for_proof(self, summary_heights: List[uint32], tip_height) -> bytes32:
@@ -684,9 +695,7 @@ class WeightProofHandler:
                     validated = await vdf_task
                     if not validated:
                         return False, uint32(0), []
-
-                valid_recent_blocks_task = recent_blocks_validation_task
-                valid_recent_blocks = await valid_recent_blocks_task
+                valid_recent_blocks = await recent_blocks_validation_task
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
             return False, uint32(0), []
