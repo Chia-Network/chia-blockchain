@@ -684,7 +684,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
         artist_address = args["artist_address"]
         hash = args["hash"]
         uris = args["uris"]
-        response = await wallet_client.mint_nft(wallet_id, artist_address, hash, uris)
+        fee = args["fee"]
+        response = await wallet_client.mint_nft(wallet_id, artist_address, hash, uris, fee)
         spend_bundle = response["spend_bundle"]
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
     except Exception as e:
@@ -696,7 +697,8 @@ async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         uri = args["uri"]
-        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri)
+        fee = args["fee"]
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri, fee)
         spend_bundle = response["spend_bundle"]
         print(f"URI added successfully with spend bundle: {spend_bundle}")
     except Exception as e:
@@ -708,7 +710,8 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         artist_address = args["artist_address"]
-        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, artist_address)
+        fee = args["fee"]
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, artist_address, fee)
         spend_bundle = response["spend_bundle"]
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
     except Exception as e:
