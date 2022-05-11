@@ -19,8 +19,13 @@ import {
   mojoToChiaLocaleString,
   useCurrencyCode,
 } from '@chia/core';
+import styled from 'styled-components';
 import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
+
+const StyledCardFooter = styled(CardContent)`
+  background-color: ${({ theme }) => theme.palette.action.hover};
+`;
 
 export type NFTCardProps = {
   nft: NFTInfo;
@@ -116,8 +121,10 @@ export default function NFTCard(props: NFTCardProps) {
                   </Typography>
                 )}
               </Flex>
-
-              <Flex justifyContent="space-between" alignItems="center">
+            </Flex>
+          </CardContent>
+          <StyledCardFooter>
+            <Flex justifyContent="space-between" alignItems="center">
                 <Tooltip title={id}>
                   <Typography noWrap>
                     <Truncate>{id}</Truncate>
@@ -125,8 +132,7 @@ export default function NFTCard(props: NFTCardProps) {
                 </Tooltip>
                 <CopyToClipboard value={id} />
               </Flex>
-            </Flex>
-          </CardContent>
+          </StyledCardFooter>
         </CardActionArea>
       )}
     </Card>
