@@ -508,3 +508,31 @@ def nft_mint_cmd(
         "uris": [u.strip() for u in uris.split(",")],
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
+
+
+@nft_cmd.command("add_uri", short_help="Add an URI to an NFT")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
+@click.option("-u", "--uri", help="URI to add to the NFT", type=str, required=True)
+def nft_transfer_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    nft_coin_id: str,
+    uri: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, add_uri_to_nft
+
+    extra_params = {
+        "wallet_id": id,
+        "nft_coin_id": nft_coin_id,
+        "uri": uri,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))

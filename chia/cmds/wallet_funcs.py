@@ -689,3 +689,15 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
     except Exception as e:
         print(f"Failed to mint NFT: {e}")
+
+
+async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        uri = args["uri"]
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri)
+        spend_bundle = response["spend_bundle"]
+        print(f"URI added successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to add URI to NFT: {e}")
