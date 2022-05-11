@@ -1371,7 +1371,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri)
+            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri, request.get("fee", uint64(0)))
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")

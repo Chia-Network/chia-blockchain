@@ -535,7 +535,9 @@ class NFTWallet:
         )
         return nft_record
 
-    async def update_metadata(self, nft_coin_info: NFTCoinInfo, uri: str) -> Optional[SpendBundle]:
+    async def update_metadata(
+        self, nft_coin_info: NFTCoinInfo, uri: str, fee: uint64 = uint64(0)
+    ) -> Optional[SpendBundle]:
         coin = nft_coin_info.coin
         # we're not changing it
 
@@ -547,7 +549,7 @@ class NFTWallet:
 
         self.log.info("Attempting to add a url to NFT coin %s in the metadata: %s", nft_coin_info, uri)
         inner_solution = solution_for_conditions(condition_list)
-        nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution)
+        nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
         return nft_tx_record.spend_bundle
 
