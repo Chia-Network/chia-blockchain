@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
