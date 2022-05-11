@@ -15,18 +15,20 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 - Added Support for Python 3.10
-- Added mempool rules making the op_div mempool rule stricter to match the forthcoming soft-fork
-- Added the ability to sort transactions via the CLI
 - Performance improvements in harvesters during plot refresh. Large farmers likely no longer need to specify a very high plot refresh interval in config.yaml
 - Added CLI only `.rpm` and `.deb` packages to official release channels
-- Fix for issue 11036 - Farming rewards dialog incorrectly claims there is no private key for address
 - Fixed an issue where some coins would be missing after a full sync
-- Updated the warning users receive when `CHIA_ROOT` is set during `chia init`
 - Enabled paginated plot loading and improved plot state reporting
-- Mozilla CA cert updates from Tue Apr 26 03:12:05 2022 GMT
 - Updated the farming GUI tab to fix several bugs
+- Fix infinite loop with timelord closing
+- Simplified install.sh ubuntu version tracking
+- Fixed memory leak on the farm page
+- Fixed list of plot files "in progress"
+- Various farmer rpc improvements
+- Improvements to the harvester `get_plots` RPC
 
 ### Known Issues
+
 There is a known issue where harvesters will not reconnect to the farmer automatically unless you restart the harvester. This bug was introduced in 1.3.4 and we plan to patch it in a coming release.
 
 ## 1.3.4 Chia blockchain 2022-4-19
