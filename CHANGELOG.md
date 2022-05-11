@@ -16,8 +16,6 @@ for setuptools_scm/PEP 440 reasons.
 
 - Added Support for Python 3.10
 - Added mempool rules making the op_div mempool rule stricter to match the forthcoming soft-fork
-- Fixed CAT lineage store when creating new CAT wallets
-- Added a retry interval for pool info updates
 - Added the ability to sort transactions via the CLI
 - Performance improvements in harvesters during plot refresh. Large farmers likely no longer need to specify a very high plot refresh interval in config.yaml
 - Added CLI only `.rpm` and `.deb` packages to official release channels
