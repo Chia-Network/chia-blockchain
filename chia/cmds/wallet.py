@@ -475,3 +475,36 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
 
     extra_params: Dict[str, Any] = {}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
+
+
+@nft_cmd.command("mint", short_help="Mint an NFT")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+@click.option("-aa", "--artist-address", help="Artist's backpayment address", type=str, required=True)
+@click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
+@click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
+def nft_mint_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    artist_address: str,
+    hash: str,
+    uris: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, mint_nft
+
+    extra_params = {
+        "wallet_id": id,
+        "artist_address": artist_address,
+        "hash": hash,
+        "uris": [u.strip() for u in uris.split(",")],
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))

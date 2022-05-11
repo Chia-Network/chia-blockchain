@@ -676,3 +676,16 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
         print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
         print(f"Failed to create NFT wallet: {e}")
+
+
+async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        artist_address = args["artist_address"]
+        hash = args["hash"]
+        uris = args["uris"]
+        response = await wallet_client.mint_nft(wallet_id, artist_address, hash, uris)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to mint NFT: {e}")
