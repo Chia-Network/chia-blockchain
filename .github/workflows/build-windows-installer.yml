@@ -3,6 +3,7 @@ name: Build Installer - Windows 10
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
       - 'release/**'
     tags:
@@ -21,6 +22,10 @@ jobs:
     name: Windows 10 Installer
     runs-on: [windows-2019]
     timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]
 
     steps:
     - name: Checkout Code
@@ -59,11 +64,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-#  We can't upgrade to Python 3.8 until we have a miniupnpc binary
     - uses: actions/setup-python@v2
-      name: Install Python 3.9
+      name: Install Python ${{ matrix.python-version }}
       with:
-        python-version: "3.9"
+        python-version: ${{ matrix.python-version }}
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
@@ -144,6 +148,12 @@ jobs:
         Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
         rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
 
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: |
+        .\Install.ps1 -d
+
     - name: Build Windows installer with build_scripts\build_windows.ps1
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
@@ -153,18 +163,20 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         git -C .\chia-blockchain-gui status
-        .\build_scripts\build_windows.ps1
+        .\venv\Scripts\Activate.ps1
+        cd .\build_scripts
+        .\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: chia-installers-windows-exe-intel
+        name: Windows-Exe
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: Windows-Installers
+        name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
 
     - name: Install AWS CLI

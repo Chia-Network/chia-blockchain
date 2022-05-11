@@ -6,7 +6,9 @@ name: MacOS wallet-did_wallet Test
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:

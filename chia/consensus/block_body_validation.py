@@ -340,6 +340,9 @@ async def validate_block_body(
             assert curr is not None
 
     removal_coin_records: Dict[bytes32, CoinRecord] = {}
+    # the removed coins we need to look up from the DB
+    # i.e. all non-ephemeral coins
+    removals_from_db: List[bytes32] = []
     for rem in removals:
         if rem in additions_dic:
             # Ephemeral coin
@@ -353,35 +356,53 @@ async def validate_block_body(
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
-            unspent = await coin_store.get_coin_record(rem)
-            if unspent is not None and unspent.confirmed_block_index <= fork_h:
-                # Spending something in the current chain, confirmed before fork
-                # (We ignore all coins confirmed after fork)
-                if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
-                    # Check for coins spent in an ancestor block
-                    return Err.DOUBLE_SPEND, None
-                removal_coin_records[unspent.name] = unspent
-            else:
-                # This coin is not in the current heaviest chain, so it must be in the fork
-                if rem not in additions_since_fork:
-                    # Check for spending a coin that does not exist in this fork
-                    log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
-                    return Err.UNKNOWN_UNSPENT, None
-                new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
-                new_coin_record: CoinRecord = CoinRecord(
-                    new_coin,
-                    confirmed_height,
-                    uint32(0),
-                    False,
-                    confirmed_timestamp,
-                )
-                removal_coin_records[new_coin_record.name] = new_coin_record
-
             # This check applies to both coins created before fork (pulled from coin_store),
             # and coins created after fork (additions_since_fork)
             if rem in removals_since_fork:
                 # This coin was spent in the fork
                 return Err.DOUBLE_SPEND_IN_FORK, None
+            removals_from_db.append(rem)
+
+    unspent_records = await coin_store.get_coin_records(removals_from_db)
+
+    # some coin spends we need to ensure exist in the fork branch. Both coins we
+    # can't find in the DB, but also coins that were spent after the fork point
+    look_in_fork: List[bytes32] = []
+    for unspent in unspent_records:
+        if unspent.confirmed_block_index <= fork_h:
+            # Spending something in the current chain, confirmed before fork
+            # (We ignore all coins confirmed after fork)
+            if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+                # Check for coins spent in an ancestor block
+                return Err.DOUBLE_SPEND, None
+            removal_coin_records[unspent.name] = unspent
+        else:
+            look_in_fork.append(unspent.name)
+
+    if len(unspent_records) != len(removals_from_db):
+        # some coins could not be found in the DB. We need to find out which
+        # ones and look for them in additions_since_fork
+        found: Set[bytes32] = set([u.name for u in unspent_records])
+        for rem in removals_from_db:
+            if rem in found:
+                continue
+            look_in_fork.append(rem)
+
+    for rem in look_in_fork:
+        # This coin is not in the current heaviest chain, so it must be in the fork
+        if rem not in additions_since_fork:
+            # Check for spending a coin that does not exist in this fork
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            return Err.UNKNOWN_UNSPENT, None
+        new_coin, confirmed_height, confirmed_timestamp = additions_since_fork[rem]
+        new_coin_record: CoinRecord = CoinRecord(
+            new_coin,
+            confirmed_height,
+            uint32(0),
+            False,
+            confirmed_timestamp,
+        )
+        removal_coin_records[new_coin_record.name] = new_coin_record
 
     removed = 0
     for unspent in removal_coin_records.values():
