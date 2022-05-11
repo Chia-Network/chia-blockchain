@@ -143,3 +143,32 @@ def test_update_metadata_updater() -> None:
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
     assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination).get_tree_hash()
+
+
+def test_innerpuz_enforcement_layer() -> None:
+    pubkey = int_to_public_key(1)
+    innerpuz = puzzle_for_pk(pubkey)
+    my_amount = 1
+    destination = int_to_public_key(2)
+    new_did = Program.to("test").get_tree_hash()
+    # P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
+    # NFT_V1_MOD_HASH
+    # PUBKEY
+    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    # inner_solution
+    condition_list = [new_did, 200, destination, [1], ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
+    solution = Program.to([
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
+        NFT_INNER_INNERPUZ.get_tree_hash(),
+        pubkey,
+        STANDARD_PUZZLE_MOD.curry(pubkey),
+        solution_for_conditions(condition_list),
+    ])
+    cost, res = NFT_INNER_INNERPUZ.run_with_cost(INFINITE_COST, solution)
+    assert res.first().first().as_int() == 51
+    assert res.first().rest().first().as_atom() == NFT_INNER_INNERPUZ.curry(
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
+        NFT_INNER_INNERPUZ.get_tree_hash(),
+        destination,
+        STANDARD_PUZZLE_MOD.curry(destination)
+    ).get_tree_hash()

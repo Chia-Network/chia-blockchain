@@ -12,6 +12,7 @@
 
    (defconstant NEW_OWNER_CONDITION -10)
    (defconstant RECURRY_TRANSFER_PROGRAM -22)
+   (defconstant METADATA_REVEAL_NUMBER -24)
 
    (defun sha256tree1
           (TREE)
@@ -66,7 +67,7 @@
             (process_transfer_program (merge_list (merge_list (a (f (r (f conditions))) (list CURRENT_OWNER TRANSFER_PROGRAM_CURRY_PARAMS (f (r (r (f conditions)))))) (r conditions)) processed_conditions) 0 0 0)
             (x)
           )
-          (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions TRANSFER_PROGRAM_HASH (r conditions) full_conditions (c (f conditions) processed_conditions))
+          (loop_through_conditions_looking_for_transfer_program_reveal_and_solution_and_add_its_conditions TRANSFER_PROGRAM_HASH (r conditions) (c (f conditions) processed_conditions))
         )
         (x)
       )

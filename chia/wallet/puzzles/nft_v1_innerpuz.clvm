@@ -1,9 +1,10 @@
 (mod
   (
+    P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     NFT_V1_MOD_HASH
     PUBKEY
-    delegated_puzzle  ; returns (new_owner, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution] Conditions)
-    delegated_solution
+    INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    inner_solution
   )
 
   (include condition_codes.clvm)
@@ -24,19 +25,53 @@
           )
    )
 
-   (defun-inline recurry_self (NFT_V1_MOD_HASH PUBKEY)
+   (defun-inline recurry_self (P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH PUBKEY_tree_hash)
       (list CREATE_COIN (puzzle-hash-of-curried-function NFT_V1_MOD_HASH
-                                       (sha256 ONE inner_puzzle_hash)
+                                       (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH PUBKEY_tree_hash)
+                                       PUBKEY_tree_hash
                                        (sha256 ONE NFT_V1_MOD_HASH)
+                                       (sha256 ONE P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH)
+
       ) ONE)
     )
 
-    (defun process_results (NFT_V1_MOD_HASH conditions)  ; conditions are (new_owner, new_pk, new_price)
-      (list (recurry_self (f (r conditions))) (list NEW_OWNER_CONDITION (f conditions)) (list AGG_SIG_ME (f (r conditions)) (f (r (r conditions)))))
+    (defun process_results (P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH (new_owner new_price new_pk transfer_program_reveal transfer_program_solution metadata_updater_reveal metadata_updater_solution conditions))  ; conditions are (new_owner, new_pk, new_price)
+      (c
+        (recurry_self P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH (sha256 ONE new_pk))
+        (c (list NEW_OWNER_CONDITION new_owner)
+          (c (list AGG_SIG_ME new_pk new_price)
+            (c (list NEW_OWNER_CONDITION transfer_program_reveal (c new_owner (c new_price transfer_program_solution)))
+              (if metadata_updater_reveal
+                (c (list METADATA_REVEAL_NUMBER metadata_updater_reveal metadata_updater_solution) conditions)
+                conditions
+              )
+      ))))
     )
 
-    (c
-      (list AGG_SIG_ME PUBKEY (sha256tree1 delegated_puzzle))
-      (process_results NFT_V1_MOD_HASH (a delegated_puzzle delegated_solution))
+    (defun stager (P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH results)
+      (if (l (f results))  ; check if the standard puzzle has added an aggsig, and if so move it to the conditions section
+        (process_results
+          P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
+          NFT_V1_MOD_HASH
+          (c (f (r results))
+            (c (f (r (r results)))
+              (c (f (r (r (r results))))
+                (c (f (r (r (r (r results)))))
+                  (c (f (r (r (r (r (r results))))))
+                    (c (f (r (r (r (r (r (r results)))))))
+                      (c (f (r (r (r (r (r (r (r results))))))))
+                        (list (c (f results) (f (r (r (r (r (r (r (r (r results)))))))))))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (process_results P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH results)
+      )
     )
+
+    (stager P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH (a INNER_PUZZLE inner_solution))
 )
