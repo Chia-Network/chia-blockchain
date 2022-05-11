@@ -18,24 +18,33 @@ export default function NFTGallery() {
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
   const isLoading = isLoadingWallets || isLoadingNFTs;
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState<string>('');
+  const [walletId, setWalletId] = useState<number | undefined>();
   const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
   });
 
-  console.log('nfts', nfts);
-
   const filteredData = useMemo(() => {
-    if (!nfts || !search) {
+    if (!nfts) {
       return nfts;
     }
 
-    return nfts.filter(({ metadata = {} }) => {
+    return nfts.filter((nft) => {
+      const { metadata = {} } = nft;
+
+      if (walletId !== undefined && nft.walletId !== walletId) {
+        return false;
+      }
+
       const { name = 'Test' } = metadata;
-      return name.toLowerCase().includes(search.toLowerCase());
+      if (search) {
+        return name.toLowerCase().includes(search.toLowerCase());
+      }
+
+      return true;
     });
-  }, [search, nfts]);
+  }, [search, walletId, nfts]);
 
   function handleSelect(nft: NFTInfo, selected: boolean) {
     setSelection((currentSelection) => {
@@ -55,7 +64,7 @@ export default function NFTGallery() {
 
   return (
     <LayoutDashboardSub
-      sidebar={<NFTGallerySidebar />}
+      sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
       header={(
         <Flex justifyContent="space-between" alignItems="center">
           <Search
