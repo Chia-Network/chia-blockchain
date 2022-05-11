@@ -335,7 +335,7 @@ class NFTWallet:
         )
         return provenance_puzzle
 
-    async def generate_new_nft(self, metadata: Program, target_puzzle_hash: bytes32 = None) -> Optional[SpendBundle]:
+    async def generate_new_nft(self, metadata: Program, target_puzzle_hash: bytes32 = None, fee: uint64 = uint64(0)) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
         """
@@ -366,7 +366,7 @@ class NFTWallet:
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(amount),
             genesis_launcher_puz.get_tree_hash(),
-            uint64(0),
+            fee,
             origin.name(),
             coins,
             None,
@@ -412,7 +412,7 @@ class NFTWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=eve_fullpuz.get_tree_hash(),
             amount=uint64(amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=full_spend,
@@ -486,7 +486,7 @@ class NFTWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def _make_nft_transaction(self, nft_coin_info: NFTCoinInfo, inner_solution) -> TransactionRecord:
+    async def _make_nft_transaction(self, nft_coin_info: NFTCoinInfo, inner_solution: Program, fee: uint64 = uint64(0)) -> TransactionRecord:
 
         coin = nft_coin_info.coin
         amount = coin.amount
@@ -516,7 +516,7 @@ class NFTWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=full_puzzle.get_tree_hash(),
             amount=uint64(amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=full_spend,
@@ -552,6 +552,7 @@ class NFTWallet:
         nft_coin_info: NFTCoinInfo,
         puzzle_hash: bytes32,
         did_hash=None,
+        fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         self.log.debug("Attempt to transfer a new NFT")
         coin = nft_coin_info.coin
@@ -561,7 +562,7 @@ class NFTWallet:
         condition_list = [make_create_coin_condition(puzzle_hash, amount, [bytes32(puzzle_hash)])]
         self.log.debug("Condition for new coin: %r", condition_list)
         inner_solution = solution_for_conditions(condition_list)
-        nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution)
+        nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
         return nft_tx_record.spend_bundle
 
