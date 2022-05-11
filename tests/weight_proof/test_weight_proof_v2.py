@@ -1,43 +1,29 @@
 # flake8: noqa: F811, F401
-import asyncio
 import dataclasses
-import logging
-import multiprocessing
 import os
-import sqlite3
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from datetime import datetime
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
-
-import aiosqlite
 import pytest
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
-from chia.full_node.weight_proof_v2 import WeightProofHandlerV2, _validate_recent_blocks, get_recent_chain
-from chia.server.start_full_node import SERVICE_NAME
+from chia.full_node.weight_proof_v2 import (
+    WeightProofHandlerV2,
+    _validate_recent_blocks,
+    get_recent_chain,
+    _validate_segment,
+)
 from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
 from chia.types.weight_proof import RecentChainData
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, process_config_start_method
-from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version, set_db_version_async
-from chia.util.db_wrapper import DBWrapper2
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
-from chia.util.path import path_from_root
 from chia.util.streamable import recurse_jsonify
 from tests.block_tools import BlockTools, test_constants
 
@@ -102,6 +88,32 @@ async def load_blocks_dont_validate(
             sub_epoch_summaries[block.height] = sub_block.sub_epoch_summary_included
         prev_block = block
     return header_cache, height_to_hash, sub_blocks, sub_epoch_summaries
+
+
+async def validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n):
+    header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+    blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+    wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+    segments = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(
+        prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+    )
+    prev_ses = blockchain.get_ses(heights[sub_epoch_n - 1])
+    prev_prev_block_rec = blockchain.block_record(height_to_hash[ses_sub_block.height - 1])
+    curr_ssi = prev_prev_block_rec.sub_slot_iters
+    curr_difficulty = uint64(ses_sub_block.weight - prev_prev_block_rec.weight)
+    idx = 0
+    res = _validate_segment(
+        test_constants,
+        segments[idx],
+        curr_ssi,
+        curr_difficulty,
+        prev_ses if idx == 0 else None,
+        True,
+        segments[0].cc_slot_end_info.challenge,
+        segments[0].icc_sub_slot_hash,
+        uint64(0),
+    )
+    return res
 
 
 async def _test_map_summaries(
@@ -554,11 +566,6 @@ class TestWeightProof:
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-        summary_heights: List[uint32] = blockchain.get_ses_heights()
-        summaries_list: List[SubEpochSummary] = []
-        for sub_epoch_n, ses_height in enumerate(summary_heights):
-            summaries_list.append(blockchain.get_ses(ses_height))
-
         constants_dict = recurse_jsonify(dataclasses.asdict(test_constants))
         summary_bytes = []
         for height in blockchain.get_ses_heights():
@@ -600,11 +607,6 @@ class TestWeightProof:
         blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=b"asdfghjkl")
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-        summary_heights: List[uint32] = blockchain.get_ses_heights()
-        summaries_list: List[SubEpochSummary] = []
-        for sub_epoch_n, ses_height in enumerate(summary_heights):
-            summaries_list.append(blockchain.get_ses(ses_height))
-
         constants_dict = recurse_jsonify(dataclasses.asdict(test_constants))
         headers = await blockchain.get_header_blocks_in_range(start_from, len(blocks) - 1, False)
         recent_chain = []
@@ -618,6 +620,53 @@ class TestWeightProof:
 
         valid = _validate_recent_blocks(constants_dict, bytes(RecentChainData(recent_chain)), summary_bytes)
         assert valid
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_empty_slots_ses_start(
+        self, default_1000_blocks: List[FullBlock], bt: BlockTools
+    ) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks[: prev_ses_sub_block.height - 1],
+            seed=b"asdfghjkl",
+            force_overflow=True,
+            skip_slots=2,
+        )
+
+        blocks = bt.get_consecutive_blocks(
+            300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks[: prev_ses_sub_block.height - 1],
+            seed=b"asdfghjkl",
+            force_overflow=False,
+            skip_slots=2,
+        )
+
+        blocks = bt.get_consecutive_blocks(
+            300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+        )
+
+        await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
 
     # @pytest.mark.skip("used for debugging")
     # @pytest.mark.asyncio

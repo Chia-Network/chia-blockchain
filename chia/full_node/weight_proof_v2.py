@@ -301,7 +301,6 @@ class WeightProofHandlerV2:
         count = len(heights) - 2
         ses_sub_block = self.blockchain.height_to_block_record(heights[-2])
         prev_ses_sub_block = self.blockchain.height_to_block_record(heights[-3])
-        assert prev_ses_sub_block.sub_epoch_summary_included is not None
         segments = await self.__create_sub_epoch_segments(ses_sub_block, prev_ses_sub_block, uint32(count))
         assert segments is not None
         await self.blockchain.persist_sub_epoch_challenge_segments_v2(
@@ -1289,7 +1288,7 @@ def _validate_sub_slot_data(
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = sub_slots[sub_slot_idx - 1]
     # find next end of slot
-    assert sub_slot_data.signage_point_index
+    assert sub_slot_data.signage_point_index is not None
     sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
     if sp_iters != 0:
         assert sub_slot_data.cc_signage_point is not None
