@@ -20,10 +20,9 @@ const StyledTableCell= styled(({ hideDivider, ...rest }) => (
       padding-right: 0 !important;
     `
       : ''}
-
 `;
 
-type Props = {
+export type CardKeyValueProps = {
   rows: {
     key: string;
     label: ReactNode;
@@ -34,7 +33,7 @@ type Props = {
   size?: 'small' | 'normal' | 'large';
 };
 
-export default function CardKeyValue(props: Props) {
+export default function CardKeyValue(props: CardKeyValueProps) {
   const { rows, label, hideDivider, size } = props;
 
   return (
@@ -47,11 +46,13 @@ export default function CardKeyValue(props: Props) {
                 {row.label}
               </Typography>
             </StyledTableCell>
-            <StyledTableCell align="right" hideDivider={hideDivider}>
-              <Box maxWidth="100%">
-                <Typography component='div' variant="body2" noWrap>
-                  {row.value}
-                </Typography>
+            <StyledTableCell hideDivider={hideDivider} width="100%">
+              <Box ml={2} position="relative">
+                <Box position="absolute" left="0" top="0" bottom="0" right="0" display="flex" alignItems="center" justifyContent="flex-end">
+                  <Typography component='div' variant="body2" noWrap>
+                    {row.value}
+                  </Typography>
+                </Box>
               </Box>
             </StyledTableCell>
           </TableRow>

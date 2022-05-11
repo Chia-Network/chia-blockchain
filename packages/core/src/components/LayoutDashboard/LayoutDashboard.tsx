@@ -119,7 +119,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                       &nbsp;
                       */}
                       <Tooltip title={<Trans>Logout</Trans>}>
-                        <IconButton onClick={handleLogout} title={t`Log Out`}>
+                        <IconButton onClick={handleLogout}>
                           <ExitToAppIcon />
                         </IconButton>
                       </Tooltip>

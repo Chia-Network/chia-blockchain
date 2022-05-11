@@ -8,7 +8,7 @@ function parseValue(props) {
     leftLength = 4,
     rightLength = 4,
     splitSeparator = ':',
-    prefixes = ['nft1', 'nft0', 'xch', 'txch'],
+    prefixes = ['nft1', 'nft0', 'txch', 'xch', '0x'],
   } = props;
 
   if (!children) {
