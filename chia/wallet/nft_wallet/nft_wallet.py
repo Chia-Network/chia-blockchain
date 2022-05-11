@@ -98,7 +98,10 @@ class NFTWallet:
         self.nft_wallet_info = NFTWalletInfo([], did_wallet_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
         wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "NFT Wallet" if not name else name, uint32(WalletType.NFT.value), info_as_string, in_transaction=in_transaction
+            "NFT Wallet" if not name else name,
+            uint32(WalletType.NFT.value),
+            info_as_string,
+            in_transaction=in_transaction,
         )
 
         if wallet_info is None:

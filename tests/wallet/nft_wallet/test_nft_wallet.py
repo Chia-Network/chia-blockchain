@@ -24,6 +24,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
         return False
     return True
 
+
 @pytest.mark.parametrize(
     "trusted",
     [True],
