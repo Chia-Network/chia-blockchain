@@ -132,6 +132,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_transfer_nft": self.nft_transfer_nft,
+            "/nft_add_uri": self.nft_add_uri,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1324,8 +1325,8 @@ class WalletRpcApi:
                 ("h", hexstr_to_bytes(request["hash"])),
             ]
         )
-        nft_record = await nft_wallet.generate_new_nft(metadata, puzzle_hash)
-        return {"wallet_id": wallet_id, "success": True, "nft": nft_record}
+        spend_bundle = await nft_wallet.generate_new_nft(metadata, puzzle_hash)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
         wallet_id = uint32(request["wallet_id"])
@@ -1339,7 +1340,7 @@ class WalletRpcApi:
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         address = request["target_address"]
         if isinstance(address, str):
             puzzle_hash = decode_puzzle_hash(address)
@@ -1347,14 +1348,25 @@ class WalletRpcApi:
             return dict(success=False, error="target_address parameter missing")
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
-            sb = await nft_wallet.transfer_nft(bytes32.from_hexstr(request["nft_coin_id"]), puzzle_hash)
-            return {"wallet_id": wallet_id, "success": True, "spend_bundle": sb}
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_add_url(self, request):
-        raise NotImplementedError
+    async def nft_add_uri(self, request) -> Dict:
+        assert self.service.wallet_state_manager is not None
+        wallet_id = uint32(request["wallet_id"])
+        uri = request["uri"]
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        except Exception as e:
+            log.exception(f"Failed to update NFT metadata: {e}")
+            return {"success": False, "error": str(e)}
 
     ##########################################################################################
     # Rate Limited Wallet
