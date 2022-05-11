@@ -568,6 +568,15 @@ class WalletRpcApi:
             else:  # undefined did_type
                 pass
         elif request["wallet_type"] == "nft_wallet":
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT:
+                    # TODO Modify this for NFT1
+                    log.info("NFT wallet already existed, skipping.")
+                    return {
+                        "success": True,
+                        "type": wallet.type(),
+                        "wallet_id": wallet.id(),
+                    }
             async with self.service.wallet_state_manager.lock:
                 nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
                     wallet_state_manager,
@@ -1325,7 +1334,7 @@ class WalletRpcApi:
                 ("h", hexstr_to_bytes(request["hash"])),
             ]
         )
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, puzzle_hash)
+        spend_bundle = await nft_wallet.generate_new_nft(metadata, puzzle_hash, request.get("fee", uint64(0)))
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
@@ -1349,7 +1358,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash)
+            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash, fee=request.get("fee", uint64(0)))
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
@@ -1362,7 +1371,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri)
+            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri, request.get("fee", uint64(0)))
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")
