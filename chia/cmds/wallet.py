@@ -490,6 +490,15 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
 @click.option("-aa", "--artist-address", help="Artist's backpayment address", type=str, required=True)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -497,6 +506,7 @@ def nft_mint_cmd(
     artist_address: str,
     hash: str,
     uris: str,
+    fee: str,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, mint_nft
@@ -506,6 +516,7 @@ def nft_mint_cmd(
         "artist_address": artist_address,
         "hash": hash,
         "uris": [u.strip() for u in uris.split(",")],
+        "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
 
@@ -522,12 +533,22 @@ def nft_mint_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
 @click.option("-u", "--uri", help="URI to add to the NFT", type=str, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
 def nft_add_uri_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     nft_coin_id: str,
     uri: str,
+    fee: str,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, add_uri_to_nft
@@ -536,6 +557,7 @@ def nft_add_uri_cmd(
         "wallet_id": id,
         "nft_coin_id": nft_coin_id,
         "uri": uri,
+        "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))
 
@@ -552,12 +574,22 @@ def nft_add_uri_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
 @click.option("-aa", "--artist-address", help="Target artist's wallet address", type=str, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     nft_coin_id: str,
     artist_address: str,
+    fee: str,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, transfer_nft
@@ -566,6 +598,7 @@ def nft_transfer_cmd(
         "wallet_id": id,
         "nft_coin_id": nft_coin_id,
         "artist_address": artist_address,
+        "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))
 
