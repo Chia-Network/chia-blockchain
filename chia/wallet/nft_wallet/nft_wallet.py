@@ -335,7 +335,9 @@ class NFTWallet:
         )
         return provenance_puzzle
 
-    async def generate_new_nft(self, metadata: Program, target_puzzle_hash: bytes32 = None, fee: uint64 = uint64(0)) -> Optional[SpendBundle]:
+    async def generate_new_nft(
+        self, metadata: Program, target_puzzle_hash: bytes32 = None, fee: uint64 = uint64(0)
+    ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
         """
@@ -486,7 +488,9 @@ class NFTWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def _make_nft_transaction(self, nft_coin_info: NFTCoinInfo, inner_solution: Program, fee: uint64 = uint64(0)) -> TransactionRecord:
+    async def _make_nft_transaction(
+        self, nft_coin_info: NFTCoinInfo, inner_solution: Program, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
 
         coin = nft_coin_info.coin
         amount = coin.amount
