@@ -3,6 +3,7 @@ name: MacOS M1 installer on Python 3.9
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
     tags:
       - '**'

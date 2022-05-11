@@ -3,6 +3,7 @@ name: Linux ARM64 installer on Python 3.8
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
     tags:
         - '**'
