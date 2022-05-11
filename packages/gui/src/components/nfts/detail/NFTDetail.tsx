@@ -10,6 +10,7 @@ import {
   mojoToChia,
   FormatLargeNumber,
   CardKeyValue,
+  Truncate,
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets, useNFTMetadata } from '@chia/api-react';
@@ -74,12 +75,12 @@ export default function NFTDetail() {
     {
       key: 'id',
       label: <Trans>Launcher ID</Trans>,
-      value: launcherId,
+      value: <Truncate tooltip copyToClipboard>{launcherId}</Truncate>,
     },
     {
       key: 'contract',
       label: <Trans>Contract Address</Trans>,
-      value: metadata.contractAddress,
+      value: <Truncate tooltip copyToClipboard>{metadata.contractAddress}</Truncate>,
     },
     {
       key: 'tokenStandard',
@@ -94,7 +95,7 @@ export default function NFTDetail() {
     {
       key: 'dataHash',
       label: <Trans>Data Hash</Trans>,
-      value: metadata.hash,
+      value: <Truncate tooltip copyToClipboard>{metadata.hash}</Truncate>,
     },
   ];
 

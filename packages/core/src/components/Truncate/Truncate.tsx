@@ -1,13 +1,7 @@
-export type TruncateProps = {
-  children: string;
-  separator?: string;
-  leftLength?: number;
-  rightLength?: number;
-  splitSeparator?: string;
-  prefixes?: string[];
-};
+import { Typography } from '@mui/material';
+import Tooltip from '../Tooltip';
 
-export default function Truncate(props: TruncateProps) {
+function parseValue(props) {
   const {
     children,
     separator = '...',
@@ -49,4 +43,32 @@ export default function Truncate(props: TruncateProps) {
   return rest
     ? `${rest}${splitSeparator}${selectedPrefix}${truncatedSubValue}`
     : `${selectedPrefix}${truncatedSubValue}`;
+}
+
+export type TruncateProps = {
+  children: string;
+  separator?: string;
+  leftLength?: number;
+  rightLength?: number;
+  splitSeparator?: string;
+  prefixes?: string[];
+  tooltip?: boolean;
+  copyToClipboard?: boolean;
+};
+
+export default function Truncate(props: TruncateProps) {
+  const { tooltip, children, copyToClipboard = false } = props;
+  const value = parseValue(props);
+
+  if (tooltip) {
+    return (
+      <Tooltip title={children} copyToClipboard={copyToClipboard}>
+        <Typography>
+          {value}
+        </Typography>
+      </Tooltip>
+    );
+  }
+
+  return value;
 }
