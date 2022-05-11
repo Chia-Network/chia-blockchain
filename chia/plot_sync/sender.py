@@ -293,9 +293,10 @@ class Sender:
         log.debug(f"_finalize_sync {self}")
         assert self._sync_id != 0
         self._last_sync_id = self._sync_id
-        self._sync_id = uint64(0)
         self._next_message_id = uint64(0)
         self._messages.clear()
+        # Do this at the end since `_sync_id` is used as sync active indicator.
+        self._sync_id = uint64(0)
 
     def sync_active(self) -> bool:
         return self._sync_id != 0
