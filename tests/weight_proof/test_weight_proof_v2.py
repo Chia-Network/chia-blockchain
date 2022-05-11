@@ -9,6 +9,7 @@ import pytest
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.full_node.weight_proof_v2 import (
@@ -21,7 +22,7 @@ from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
-from chia.types.weight_proof import RecentChainData
+from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2
 from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
 from chia.util.streamable import recurse_jsonify
@@ -37,7 +38,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint8
 
 
 async def load_blocks_dont_validate(
@@ -90,27 +91,29 @@ async def load_blocks_dont_validate(
     return header_cache, height_to_hash, sub_blocks, sub_epoch_summaries
 
 
-async def validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n):
-    header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-    blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-    wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-    segments = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(
-        prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
-    )
+async def validate_segment_util(
+    segment: SubEpochChallengeSegmentV2,
+    blockchain: BlockchainInterface,
+    heights: List[uint32],
+    ses_block: BlockRecord,
+    sub_epoch_n: int,
+) -> Tuple[uint64, uint64, int, bytes32, bytes32, bool]:
     prev_ses = blockchain.get_ses(heights[sub_epoch_n - 1])
-    prev_prev_block_rec = blockchain.block_record(height_to_hash[ses_sub_block.height - 1])
+    hash = blockchain.height_to_hash(uint32(ses_block.height - 1))
+    assert hash is not None
+    assert segment.cc_slot_end_info is not None
+    prev_prev_block_rec = blockchain.block_record(hash)
     curr_ssi = prev_prev_block_rec.sub_slot_iters
-    curr_difficulty = uint64(ses_sub_block.weight - prev_prev_block_rec.weight)
-    idx = 0
+    curr_difficulty = uint64(ses_block.weight - prev_prev_block_rec.weight)
     res = _validate_segment(
         test_constants,
-        segments[idx],
+        segment,
         curr_ssi,
         curr_difficulty,
-        prev_ses if idx == 0 else None,
+        prev_ses,
         True,
-        segments[0].cc_slot_end_info.challenge,
-        segments[0].icc_sub_slot_hash,
+        segment.cc_slot_end_info.challenge,
+        segment.icc_sub_slot_hash,
         uint64(0),
     )
     return res
@@ -645,7 +648,14 @@ class TestWeightProof:
             300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
         )
 
-        await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+
+        await validate_segment_util(segments[0], blockchain, heights, ses_sub_block, 3)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
@@ -666,87 +676,185 @@ class TestWeightProof:
             300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
         )
 
-        await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
 
-    # @pytest.mark.skip("used for debugging")
+        await validate_segment_util(segments[0], blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_bad_cc_sp(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if sub_slot.is_challenge():
+                assert sub_slot.signage_point_index is not None
+                if sub_slot.signage_point_index > 0:
+                    new_sp_idx = sub_slot.signage_point_index - 1
+                else:
+                    new_sp_idx = sub_slot.signage_point_index + 1
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, signage_point_index=uint8(new_sp_idx)))
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(AssertionError):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_bad_cc_ip(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if sub_slot.is_challenge():
+                modified_sub_slot_data.append(
+                    dataclasses.replace(sub_slot, cc_ip_vdf_output=segment.sub_slot_data[idx + 1].cc_ip_vdf_output)
+                )
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
     # @pytest.mark.asyncio
-    # async def test_weight_proof_from_database(self) -> None:
+    # async def test_weight_proof_segment_validation_bad_icc_ip(self, default_1000_blocks: List[FullBlock]) -> None:
+    #     blocks: List[FullBlock] = default_1000_blocks
+    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+    #     heights = blockchain.get_ses_heights()
+    #     sub_epoch_n = 3
+    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
     #
-    #     log = logging.getLogger()
-    #     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    #     overrides = config["network_overrides"]["constants"]["mainnet"]
-    #     print(overrides["GENESIS_CHALLENGE"])
-    #     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    # @pytest.mark.asyncio
+    # async def test_weight_proof_segment_validation_bad_cc_challenge(self, default_1000_blocks: List[FullBlock]) -> None:
+    #     blocks: List[FullBlock] = default_1000_blocks
+    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+    #     heights = blockchain.get_ses_heights()
+    #     sub_epoch_n = 3
+    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
     #
-    #     db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-    #     db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
-    #
-    #     db_connection = await aiosqlite.connect(db_path)
-    #     db_version: int = await lookup_db_version(db_connection)
-    #
-    #     if config.get("log_sqlite_cmds", False):
-    #         sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
-    #
-    #         def sql_trace_callback(req: str):
-    #             timestamp = datetime.now().strftime("%H:%M:%S.%f")
-    #             log = open(sql_log_path, "a")
-    #             log.write(timestamp + " " + req + "\n")
-    #             log.close()
-    #
-    #         await db_connection.set_trace_callback(sql_trace_callback)
-    #
-    #     db_wrapper = DBWrapper2(db_connection, db_version=db_version)
-    #
-    #     # add reader threads for the DB
-    #     for i in range(config.get("db_readers", 4)):
-    #         c = await aiosqlite.connect(db_path)
-    #         await db_wrapper.add_connection(c)
-    #
-    #     await (await db_connection.execute("pragma journal_mode=wal")).close()
-    #     db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
-    #     await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
-    #
-    #     if db_version != 2:
-    #         async with db_wrapper.read_db() as conn:
-    #             async with conn.execute(
-    #                 "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-    #             ) as cur:
-    #                 if len(await cur.fetchall()) == 0:
-    #                     try:
-    #                         # this is a new DB file. Make it v2
-    #                         async with db_wrapper.write_db() as w_conn:
-    #                             await set_db_version_async(w_conn, 2)
-    #                             db_wrapper.db_version = 2
-    #                     except sqlite3.OperationalError:
-    #                         # it could be a database created with "chia init", which is
-    #                         # empty except it has the database_version table
-    #                         pass
-    #
-    #     block_store = await BlockStore.create(db_wrapper)
-    #     hint_store = await HintStore.create(db_wrapper)
-    #     coin_store = await CoinStore.create(db_wrapper)
-    #     reserved_cores = config.get("reserved_cores", 0)
-    #     single_threaded = config.get("single_threaded", False)
-    #     multiprocessing_start_method = process_config_start_method(config=config, log=log)
-    #     multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-    #     blockchain = await Blockchain.create(
-    #         coin_store=coin_store,
-    #         block_store=block_store,
-    #         consensus_constants=updated_constants,
-    #         hint_store=hint_store,
-    #         blockchain_dir=db_path.parent,
-    #         reserved_cores=reserved_cores,
-    #         multiprocessing_context=multiprocessing_context,
-    #         single_threaded=single_threaded,
-    #     )
-    #     peak = blockchain.get_peak()
-    #     wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
-    #     wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
-    #     assert wp2
-    #     wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
-    #     valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
-    #     assert valid
-    #     await db_connection.close()
+    # @pytest.mark.asyncio
+    # async def test_weight_proof_segment_validation_bad_icc_challenge(
+    #     self, default_1000_blocks: List[FullBlock]
+    # ) -> None:
+    #     blocks: List[FullBlock] = default_1000_blocks
+    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+    #     heights = blockchain.get_ses_heights()
+    #     sub_epoch_n = 3
+    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
+
+
+# @pytest.mark.skip("used for debugging")
+# @pytest.mark.asyncio
+# async def test_weight_proof_from_database(self) -> None:
+#
+#     log = logging.getLogger()
+#     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+#     overrides = config["network_overrides"]["constants"]["mainnet"]
+#     print(overrides["GENESIS_CHALLENGE"])
+#     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+#
+#     db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+#     db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
+#
+#     db_connection = await aiosqlite.connect(db_path)
+#     db_version: int = await lookup_db_version(db_connection)
+#
+#     if config.get("log_sqlite_cmds", False):
+#         sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
+#
+#         def sql_trace_callback(req: str):
+#             timestamp = datetime.now().strftime("%H:%M:%S.%f")
+#             log = open(sql_log_path, "a")
+#             log.write(timestamp + " " + req + "\n")
+#             log.close()
+#
+#         await db_connection.set_trace_callback(sql_trace_callback)
+#
+#     db_wrapper = DBWrapper2(db_connection, db_version=db_version)
+#
+#     # add reader threads for the DB
+#     for i in range(config.get("db_readers", 4)):
+#         c = await aiosqlite.connect(db_path)
+#         await db_wrapper.add_connection(c)
+#
+#     await (await db_connection.execute("pragma journal_mode=wal")).close()
+#     db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
+#     await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
+#
+#     if db_version != 2:
+#         async with db_wrapper.read_db() as conn:
+#             async with conn.execute(
+#                 "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+#             ) as cur:
+#                 if len(await cur.fetchall()) == 0:
+#                     try:
+#                         # this is a new DB file. Make it v2
+#                         async with db_wrapper.write_db() as w_conn:
+#                             await set_db_version_async(w_conn, 2)
+#                             db_wrapper.db_version = 2
+#                     except sqlite3.OperationalError:
+#                         # it could be a database created with "chia init", which is
+#                         # empty except it has the database_version table
+#                         pass
+#
+#     block_store = await BlockStore.create(db_wrapper)
+#     hint_store = await HintStore.create(db_wrapper)
+#     coin_store = await CoinStore.create(db_wrapper)
+#     reserved_cores = config.get("reserved_cores", 0)
+#     single_threaded = config.get("single_threaded", False)
+#     multiprocessing_start_method = process_config_start_method(config=config, log=log)
+#     multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+#     blockchain = await Blockchain.create(
+#         coin_store=coin_store,
+#         block_store=block_store,
+#         consensus_constants=updated_constants,
+#         hint_store=hint_store,
+#         blockchain_dir=db_path.parent,
+#         reserved_cores=reserved_cores,
+#         multiprocessing_context=multiprocessing_context,
+#         single_threaded=single_threaded,
+#     )
+#     peak = blockchain.get_peak()
+#     wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
+#     wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
+#     assert wp2
+#     wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
+#     valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
+#     assert valid
+#     await db_connection.close()
 
 
 def get_size(obj, seen=None) -> int:  # type: ignore

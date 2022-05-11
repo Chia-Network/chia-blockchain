@@ -862,7 +862,7 @@ def validate_sub_epoch(
     else:
         prev_ses = summaries[sub_epoch_n - 1]
         rc_sub_slot_hash, start_idx = __get_rc_sub_slot_hash(constants, segments[0], summaries, curr_ssi)
-        assert segments[0].cc_slot_end_info
+        assert segments[0].cc_slot_end_info is not None
         cc_sub_slot_hash = segments[0].cc_slot_end_info.challenge
         icc_sub_slot_hash = segments[0].icc_sub_slot_hash
     if not summaries[sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
@@ -966,7 +966,7 @@ def _validate_segment(
         elif sampled and after_challenge_block:
             # all vdfs from challenge block to end of segment
             # only if this is a sampled segment
-            assert icc_challenge
+            assert icc_challenge is not None
             if ssd.is_end_of_slot():
                 validate_eos(cc_challenge, icc_challenge, constants, sub_slot_data, idx, curr_ssi, output_cache)
             else:
@@ -983,7 +983,7 @@ def _validate_segment(
         elif not after_challenge_block and not ssd.is_end_of_slot():
             # overflow blocks before challenge block
             # we always validate this so we can also validate the challenge block (we need the uncompressed inputs)
-            assert icc_challenge
+            assert icc_challenge is not None
             validate_overflow(cc_challenge, icc_challenge, constants, first_block, idx, output_cache, sub_slot_data)
         if ssd.is_end_of_slot():
             # calculate the end of slot challenges
@@ -1009,7 +1009,7 @@ def _validate_segment(
 
         else:
             first_block = False
-    assert icc_challenge
+    assert icc_challenge is not None
     if not challenge_included:
         raise Exception("no challenge was found in segment")
     return prev_challenge_ip_iters, slot_iters, slots, cc_challenge, icc_challenge, slot_after_challenge_block
@@ -1047,7 +1047,7 @@ def get_end_of_slot_hashes(
                     break
         if icc_challenge is not None:
             icc_hash = VDFInfo(icc_challenge, icc_iters, ssd.icc_slot_end_output).get_hash()
-    assert ssd.cc_slot_end_output
+    assert ssd.cc_slot_end_output is not None
     cc_sub_slot = ChallengeChainSubSlot(
         VDFInfo(challenge, curr_ssi, ssd.cc_slot_end_output),
         icc_hash if prev_deficit == 0 else None,
@@ -1079,7 +1079,7 @@ def validate_overflow(
     cc_sp_iterations = ssd.ip_iters
     ip_input = ClassgroupElement.get_default_element()
     if not first_block:
-        assert ssd.cc_ip_vdf_output
+        assert ssd.cc_ip_vdf_output is not None
         prev_ssd = sub_slots_data[idx - 1]
         if not ssd.cc_infusion_point.normalized_to_identity and not prev_ssd.is_end_of_slot():
             assert ssd.total_iters is not None
@@ -1104,7 +1104,7 @@ def validate_overflow(
             if prev_ssd.icc_ip_vdf_output not in long_outputs:
                 raise Exception("missing uncompressed output for vdf")
             icc_ip_input = long_outputs[prev_ssd.icc_ip_vdf_output]
-        assert ssd.icc_ip_vdf_output
+        assert ssd.icc_ip_vdf_output is not None
         valid, output = verify_compressed_vdf(
             constants,
             icc_sub_slot_hash,
@@ -1144,9 +1144,9 @@ def validate_eos(
             assert prev_ssd.ip_iters
             cc_input = long_outputs[prev_ssd.cc_ip_vdf_output]
             cc_eos_iters = uint64(ssi - prev_ssd.ip_iters)
-    assert ssd.cc_slot_end_output
+    assert ssd.cc_slot_end_output is not None
     cc_slot_end_info = VDFInfo(cc_sub_slot_hash, cc_eos_iters, ssd.cc_slot_end_output)
-    assert ssd.cc_slot_end
+    assert ssd.cc_slot_end is not None
     if not ssd.cc_slot_end.is_valid(constants, cc_input, cc_slot_end_info):
         raise Exception(f"failed cc slot end validation  {cc_slot_end_info} \n input {cc_input}")
     icc_ip_input = ClassgroupElement.get_default_element()
@@ -1155,7 +1155,7 @@ def validate_eos(
         if not ssd.cc_slot_end.normalized_to_identity:
             if prev_ssd.icc_ip_vdf_output is not None:
                 icc_ip_input = long_outputs[prev_ssd.icc_ip_vdf_output]
-            assert prev_ssd.ip_iters
+            assert prev_ssd.ip_iters is not None
             icc_eos_iters = uint64(ssi - prev_ssd.ip_iters)
         else:
             for sub_slot in reversed(sub_slots_data[:idx]):
@@ -1198,13 +1198,13 @@ def _validate_challenge_sub_slot_data(
     sp_info = None
     sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)
     if sp_iters != 0:
-        assert sub_slot_data.cc_signage_point
+        assert sub_slot_data.cc_signage_point is not None
         is_overflow = is_overflow_block(constants, sub_slot_data.signage_point_index)
         sp_challenge = challenge
-        assert sub_slot_data.cc_sp_vdf_output
+        assert sub_slot_data.cc_sp_vdf_output is not None
         cc_sp_input = ClassgroupElement.get_default_element()
         if is_overflow:
-            assert prev_challenge
+            assert prev_challenge is not None
             sp_challenge = prev_challenge
         if ssd_idx > 0 and not sub_slot_data.cc_signage_point.normalized_to_identity:
             tmp_input, sp_iters = sub_slot_data_vdf_info(ssd_idx, sub_slots, is_overflow, ssi, sp_iters)
@@ -1228,22 +1228,22 @@ def _validate_challenge_sub_slot_data(
             ssi,
             sub_slot_data.signage_point_index,
         )
-        assert sp_challenge
+        assert sp_challenge is not None
         sp_info = VDFInfo(sp_challenge, sp_iters, sp_output)
 
     cc_ip_input = ClassgroupElement.get_default_element()
     ip_vdf_iters = sub_slot_data.ip_iters
-    assert sub_slot_data.cc_infusion_point
+    assert sub_slot_data.cc_infusion_point is not None
     if not sub_slot_data.cc_infusion_point.normalized_to_identity:
         if prev_ssd is not None and not prev_ssd.is_end_of_slot():
             assert prev_ssd.cc_ip_vdf_output
             cc_ip_input = long_outputs[prev_ssd.cc_ip_vdf_output]
-            assert sub_slot_data
-            assert sub_slot_data.total_iters
-            assert prev_ssd.total_iters
+            assert sub_slot_data is not None
+            assert sub_slot_data.total_iters is not None
+            assert prev_ssd.total_iters is not None
             ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
-    assert ip_vdf_iters
-    assert sub_slot_data.cc_ip_vdf_output
+    assert ip_vdf_iters is not None
+    assert sub_slot_data.cc_ip_vdf_output is not None
     ip_valid, ip_output = verify_compressed_vdf(
         constants,
         challenge,
@@ -1260,7 +1260,7 @@ def _validate_challenge_sub_slot_data(
     assert sub_slot_data.signage_point_index is not None
     if sampled:
         if is_overflow_block(constants, sub_slot_data.signage_point_index):
-            assert prev_challenge
+            assert prev_challenge is not None
             pospace_challenge = prev_challenge
         __validate_pospace(constants, sub_slot_data, curr_difficulty, pospace_challenge, ssi, long_outputs)
     cbi = ChallengeBlockInfo(
