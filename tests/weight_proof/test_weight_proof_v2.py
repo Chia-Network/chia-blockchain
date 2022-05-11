@@ -740,40 +740,94 @@ class TestWeightProof:
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
 
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_validation_bad_icc_ip(self, default_1000_blocks: List[FullBlock]) -> None:
-    #     blocks: List[FullBlock] = default_1000_blocks
-    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-    #     heights = blockchain.get_ses_heights()
-    #     sub_epoch_n = 3
-    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
-    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
-    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
-    #
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_validation_bad_cc_challenge(self, default_1000_blocks: List[FullBlock]) -> None:
-    #     blocks: List[FullBlock] = default_1000_blocks
-    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-    #     heights = blockchain.get_ses_heights()
-    #     sub_epoch_n = 3
-    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
-    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
-    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
-    #
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_validation_bad_icc_challenge(
-    #     self, default_1000_blocks: List[FullBlock]
-    # ) -> None:
-    #     blocks: List[FullBlock] = default_1000_blocks
-    #     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-    #     blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
-    #     heights = blockchain.get_ses_heights()
-    #     sub_epoch_n = 3
-    #     ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
-    #     prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
-    #     await validate_segment_util(blocks, heights, prev_ses_sub_block, ses_sub_block, sub_epoch_n)
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_bad_icc_ip(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
+                modified_sub_slot_data.append(
+                    dataclasses.replace(sub_slot, icc_ip_vdf_output=segment.sub_slot_data[idx + 1].cc_ip_vdf_output)
+                )
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_bad_cc_info(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block,
+            ses_sub_block,
+            uint32(sub_epoch_n),
+        )
+        segment = segments[0]
+        segment = dataclasses.replace(
+            segment, cc_slot_end_info=dataclasses.replace(segment.cc_slot_end_info, challenge=bytes32(token_bytes(32)))
+        )
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+        assert segment.cc_slot_end_info is not None
+        segment = dataclasses.replace(
+            segment,
+            cc_slot_end_info=dataclasses.replace(
+                segment.cc_slot_end_info, number_of_iterations=segment.cc_slot_end_info.number_of_iterations + 2
+            ),
+        )
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+        segment = dataclasses.replace(
+            segment,
+            cc_slot_end_info=dataclasses.replace(
+                segment.cc_slot_end_info, output=ClassgroupElement.from_bytes(b"\x09")
+            ),
+        )
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_validation_bad_icc_challenge(
+        self, default_1000_blocks: List[FullBlock]
+    ) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block,
+            ses_sub_block,
+            uint32(sub_epoch_n),
+        )
+        segment = segments[0]
+        segment = dataclasses.replace(segment, icc_sub_slot_hash=bytes32(token_bytes(32)))
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
 
 
 # @pytest.mark.skip("used for debugging")
