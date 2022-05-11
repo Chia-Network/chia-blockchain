@@ -713,3 +713,30 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
     except Exception as e:
         print(f"Failed to transfer NFT: {e}")
+
+
+async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    try:
+        response = await wallet_client.list_nfts(wallet_id)
+        nft_list = response["nft_list"]
+        if len(nft_list) > 0:
+            from chia.wallet.nft_wallet.nft_info import NFTInfo
+
+            indent: str = "   "
+
+            for n in nft_list:
+                nft = NFTInfo.from_json_dict(n)
+                print()
+                print(f"{'Launcher coin ID:'.ljust(23)} {nft.launcher_id}")
+                print(f"{'Current NFT coin ID:'.ljust(23)} {nft.nft_coin_id}")
+                print(f"{'NFT content hash:'.ljust(23)} {nft.data_hash}")
+                print(f"{'Current NFT version:'.ljust(23)} {nft.version}")
+                print()
+                print("URIs:")
+                for uri in nft.data_uris:
+                    print(f"{indent}{uri}")
+        else:
+            print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")

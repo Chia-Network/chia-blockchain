@@ -564,3 +564,21 @@ def nft_transfer_cmd(
         "artist_address": artist_address,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))
+
+
+@nft_cmd.command("list", short_help="List the current NFTs")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, list_nfts
+
+    extra_params = {"wallet_id": id}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_nfts))
