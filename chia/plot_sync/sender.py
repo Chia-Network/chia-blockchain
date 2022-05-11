@@ -255,8 +255,7 @@ class Sender:
             if self._stop_requested:
                 log.debug("sync_start aborted")
                 return
-            log.debug(f"sync_start wait for sync {self._sync_id}")
-            time.sleep(1)
+            time.sleep(0.1)
         sync_id = int(time.time())
         # Make sure we have unique sync-id's even if we restart refreshing within a second (i.e. in tests)
         if sync_id == self._last_sync_id:
