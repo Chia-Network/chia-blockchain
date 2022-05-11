@@ -17,7 +17,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
-from chia.data_layer.download_data import insert_from_delta_file, maybe_write_files_for_root
+from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.data_layer_server import DataLayerServer
 
 
@@ -240,7 +240,7 @@ class DataLayer:
         publish_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
-        while publish_generation > 0 and maybe_write_files_for_root(
+        while publish_generation > 0 and write_files_for_root(
             self.data_store,
             tree_id,
             root,
@@ -248,6 +248,17 @@ class DataLayer:
         ):
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
+
+    async def add_missing_files(self, store_id: bytes32, override: bool) -> None:
+        root = await self.data_store.get_tree_root(tree_id=store_id)
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
+        if singleton_record is None:
+            self.log.error(f"No singletor record found for {store_id}.")
+            return
+        max_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
+        for generation in range(1, max_generation + 1):
+            root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
+            await write_files_for_root(self.data_store, store_id, root, self.server_files_location, override)
 
     async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> None:
         subscription = Subscription(store_id, ip, port)

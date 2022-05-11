@@ -41,11 +41,12 @@ async def insert_into_data_store(
     await data_store.insert_batch_root(tree_id, root_hash, Status.COMMITTED)
 
 
-async def maybe_write_files_for_root(
+async def write_files_for_root(
     data_store: DataStore,
     tree_id: bytes32,
     root: Root,
     foldername: Path,
+    override: bool = False,
 ) -> bool:
     if root.node_hash is not None:
         node_hash = root.node_hash
@@ -54,9 +55,13 @@ async def maybe_write_files_for_root(
     filename_full_tree = os.path.join(foldername, get_full_tree_filename(tree_id, node_hash, root.generation))
     filename_diff_tree = os.path.join(foldername, get_delta_filename(tree_id, node_hash, root.generation))
     written = False
+    if override and os.path.exists(filename_full_tree):
+        os.remove(filename_full_tree)
     if not os.path.exists(filename_full_tree):
         await data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
         written = True
+    if override and os.path.exists(filename_diff_tree):
+        os.remove(filename_diff_tree)
     if not os.path.exists(filename_diff_tree):
         await data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
         written = True

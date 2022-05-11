@@ -56,6 +56,15 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("unsubscribe", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
 
+    async def add_missing_files(self, store_ids: Optional[List[bytes32]], override: Optional[bool]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {}
+        if store_ids is not None:
+            request["ids"] = store_ids
+        if override is not None:
+            request["override"] = override
+        response = await self.fetch("add_missing_files", request)
+        return response  # type: ignore[no-any-return]
+
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Dict[str, Any]:
         response = await self.fetch(
             "get_kv_diff", {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}

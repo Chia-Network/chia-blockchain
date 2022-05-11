@@ -235,3 +235,13 @@ def get_root_history(
     from chia.cmds.data_funcs import get_root_history_cmd
 
     run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.command("add_missing_files", short_help="")
+@click.option("-ids", "--ids", help="", type=str, required=False)
+@click.option("-o", "--override", is_flag=True, type=bool, default=False)
+@create_rpc_port_option()
+def add_missing_files(ids: Optional[str], override: bool, data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import add_missing_files_cmd
+
+    run(add_missing_files_cmd(rpc_port=data_rpc_port, ids=None if ids is None else json.loads(ids), override=override))

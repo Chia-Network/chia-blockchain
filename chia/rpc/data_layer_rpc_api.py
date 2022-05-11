@@ -2,7 +2,7 @@ import dataclasses
 from typing import Any, Callable, Dict, List
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side
+from chia.data_layer.data_layer_types import Side, Subscription
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -66,6 +66,7 @@ class DataLayerRpcApi:
             "/unsubscribe": self.unsubscribe,
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
+            "/add_missing_files": self.add_missing_files,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -218,6 +219,21 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.unsubscribe(store_id_bytes)
+        return {}
+
+    async def add_missing_files(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        complete the data server files.
+        """
+        if "ids" in request:
+            store_ids = request["ids"]
+            ids_bytes = [bytes32.from_hexstr(id) for id in store_ids]
+        else:
+            subscriptions: List[Subscription] = await self.service.get_subscriptions()
+            ids_bytes = [subscription.tree_id for subscription in subscriptions]
+        override = request.get("override", False)
+        for tree_id in ids_bytes:
+            await self.service.add_missing_files(tree_id, override)
         return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:

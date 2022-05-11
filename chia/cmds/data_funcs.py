@@ -189,3 +189,15 @@ async def get_root_history_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def add_missing_files_cmd(rpc_port: Optional[int], ids: Optional[List[str]], override: bool) -> None:
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.add_missing_files(
+                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]), override=override
+            )
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

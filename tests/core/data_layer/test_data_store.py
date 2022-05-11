@@ -8,7 +8,7 @@ import aiosqlite
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
 from chia.data_layer.download_data import (
     insert_into_data_store,
-    maybe_write_files_for_root,
+    write_files_for_root,
     get_full_tree_filename,
     get_delta_filename,
 )
@@ -1133,7 +1133,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                     counter += 1
                 await data_store_server.insert_batch(tree_id, changelist)
                 root = await data_store_server.get_tree_root(tree_id)
-                await maybe_write_files_for_root(data_store_server, tree_id, root, Path(foldername))
+                await write_files_for_root(data_store_server, tree_id, root, Path(foldername))
                 roots.append(root)
             await connection.close()
 
