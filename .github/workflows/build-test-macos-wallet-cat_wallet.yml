@@ -1,12 +1,14 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-cat_wallet Tests
+name: MacOS wallet-cat_wallet Test
 
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -93,7 +95,7 @@ jobs:
     - name: Test wallet-cat_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/cat_wallet/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/cat_wallet/test_cat_lifecycle.py tests/wallet/cat_wallet/test_cat_wallet.py tests/wallet/cat_wallet/test_offer_lifecycle.py tests/wallet/cat_wallet/test_trades.py
 
     - name: Process coverage data
       run: |

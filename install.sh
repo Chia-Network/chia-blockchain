@@ -3,7 +3,7 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-d]
+Usage: $0 [-adh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
@@ -56,10 +56,10 @@ fi
 # Get submodules
 git submodule update --init mozilla-ca
 
-UBUNTU_PRE_2004=0
-UBUNTU_2000=0
-UBUNTU_2100=0
-UBUNTU_2200=0
+UBUNTU_PRE_20=0
+UBUNTU_20=0
+UBUNTU_21=0
+UBUNTU_22=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -69,13 +69,13 @@ if $UBUNTU; then
   fi
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
   if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
-    UBUNTU_PRE_2004=1
+    UBUNTU_PRE_20=1
   elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
-    UBUNTU_2000=1
+    UBUNTU_20=1
   elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
-    UBUNTU_2100=1
+    UBUNTU_21=1
   else
-    UBUNTU_2200=1
+    UBUNTU_22=1
   fi
 fi
 
@@ -125,23 +125,26 @@ install_python3_and_sqlite3_from_source_with_yum() {
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if [ "$UBUNTU_PRE_2004" = "1" ]; then
+  if [ "$UBUNTU_PRE_20" = "1" ]; then
     # Ubuntu
-    echo "Installing on Ubuntu pre 20.04 LTS."
+    echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
+    # distutils must be installed as well to avoid a complaint about ensurepip while
+    # creating the venv.  This may be related to a mis-check while using or
+    # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-  elif [ "$UBUNTU_2000" = "1" ]; then
-    echo "Installing on Ubuntu 20.04 LTS."
+  elif [ "$UBUNTU_20" = "1" ]; then
+    echo "Installing on Ubuntu 20.*."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils openssl
-  elif [ "$UBUNTU_2100" = "1" ]; then
-    echo "Installing on Ubuntu 21.04."
+    sudo apt-get install -y python3.8-venv openssl
+  elif [ "$UBUNTU_21" = "1" ]; then
+    echo "Installing on Ubuntu 21.*."
     sudo apt-get update
-    sudo apt-get install -y python3.9-venv python3-distutils openssl
-  elif [ "$UBUNTU_2200" = "1" ]; then
-    echo "Installing on Ubuntu 22.04 LTS or newer."
+    sudo apt-get install -y python3.9-venv openssl
+  elif [ "$UBUNTU_22" = "1" ]; then
+    echo "Installing on Ubuntu 22.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.10-venv python3-distutils openssl
+    sudo apt-get install -y python3.10-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update

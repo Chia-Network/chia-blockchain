@@ -75,7 +75,11 @@ async def _validate_and_add_block(
         await check_block_store_invariant(blockchain)
         return None
 
-    result, err, _, _ = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
+    (
+        result,
+        err,
+        _,
+    ) = await blockchain.receive_block(block, results, fork_point_with_peak=fork_point_with_peak)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != ReceiveBlockResult.INVALID_BLOCK:

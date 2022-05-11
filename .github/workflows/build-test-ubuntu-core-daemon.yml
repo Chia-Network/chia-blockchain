@@ -6,7 +6,9 @@ name: Ubuntu core-daemon Test
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -96,7 +98,7 @@ jobs:
     - name: Test core-daemon code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py --durations=10  -n 0 -m "not benchmark" -p no:monitor
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/core/daemon/test_daemon.py
 
     - name: Process coverage data
       run: |

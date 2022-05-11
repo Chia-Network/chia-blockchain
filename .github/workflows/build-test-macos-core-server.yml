@@ -1,12 +1,14 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-server Tests
+name: MacOS core-server Test
 
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -93,7 +95,7 @@ jobs:
     - name: Test core-server code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/server/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/core/server/test_dos.py tests/core/server/test_rate_limits.py
 
     - name: Process coverage data
       run: |
