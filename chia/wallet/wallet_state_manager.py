@@ -736,7 +736,6 @@ class WalletStateManager:
             nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
                 self, self.main_wallet, name="NFT Wallet", in_transaction=True
             )
-            self.log.error("Create NFT wallet")
             wallet_id = uint32(nft_wallet.wallet_id)
             wallet_type = WalletType.NFT
 
