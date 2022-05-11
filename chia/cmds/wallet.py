@@ -453,3 +453,25 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
 
     extra_params = {"wallet_id": id, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_set_wallet_name))
+
+
+@wallet_cmd.group("nft", short_help="NFT related actions")
+def nft_cmd():
+    pass
+
+
+@nft_cmd.command("create", short_help="Create an NFT wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, create_nft_wallet
+
+    extra_params: Dict[str, Any] = {}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
