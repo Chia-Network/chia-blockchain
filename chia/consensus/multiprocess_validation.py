@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -169,7 +169,7 @@ async def pre_validate_blocks_multiprocessing(
     pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Coroutine[Any, Any, Optional[BlockGenerator]]],
+    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
