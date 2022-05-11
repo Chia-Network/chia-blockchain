@@ -730,6 +730,15 @@ class WalletStateManager:
                     wallet_id = wallet_info.id
                     wallet_type = WalletType.NFT
                     break
+        if wallet_id is None:
+            # TODO Modify this for NFT1
+            self.log.info("Cannot find a NFT wallet, creating a new one.")
+            nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
+                self, self.main_wallet, name="NFT Wallet", in_transaction=True
+            )
+            wallet_id = uint32(nft_wallet.wallet_id)
+            wallet_type = WalletType.NFT
+
         return wallet_id, wallet_type
 
     async def new_coin_state(
