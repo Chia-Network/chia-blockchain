@@ -86,6 +86,7 @@ class NFTWallet:
         wallet: Wallet,
         did_wallet_id: uint32 = None,
         name: str = "",
+        in_transaction: bool = False,
     ) -> _T_NFTWallet:
         """
         This must be called under the wallet state manager lock
@@ -96,9 +97,11 @@ class NFTWallet:
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo([], did_wallet_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
-
         wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "NFT Wallet" if not name else name, uint32(WalletType.NFT.value), info_as_string
+            "NFT Wallet" if not name else name,
+            uint32(WalletType.NFT.value),
+            info_as_string,
+            in_transaction=in_transaction,
         )
 
         if wallet_info is None:
@@ -106,12 +109,12 @@ class NFTWallet:
         self.wallet_info = wallet_info
         self.wallet_id = self.wallet_info.id
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
         if not did_wallet_id:
             # default profile wallet
             self.log.debug("Standard NFT wallet created")
-
         else:
             # TODO: handle DID wallet puzhash
             raise NotImplementedError()

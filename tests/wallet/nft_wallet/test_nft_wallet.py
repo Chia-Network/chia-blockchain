@@ -14,6 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -22,6 +23,96 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
     if tx is None:
         return False
     return True
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True],
+)
+@pytest.mark.asyncio
+async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 5
+    full_nodes, wallets = two_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+    ph = await wallet_0.get_new_puzzlehash()
+    ph1 = await wallet_1.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
+    nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
+        wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
+    )
+    metadata = Program.to(
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+        ]
+    )
+
+    tr = await nft_wallet_0.generate_new_nft(metadata)
+    assert tr
+    assert tr.spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tr.spend_bundle.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
+    await asyncio.sleep(5)
+    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+    assert len(coins) == 1, "nft not generated"
+
+    sb = await nft_wallet_0.transfer_nft(coins[0], ph1)
+
+    assert sb is not None
+    await asyncio.sleep(3)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+    await asyncio.sleep(5)
+
+    assert len(wallet_node_1.wallet_state_manager.wallets) == 2
+    # Get the new NFT wallet
+    nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
+    assert len(nft_wallets) == 1
+    nft_wallet_1: NFTWallet = wallet_node_1.wallet_state_manager.wallets[nft_wallets[0].id]
+    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+    assert len(coins) == 0
+    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
+    assert len(coins) == 1
 
 
 @pytest.mark.parametrize(
