@@ -250,6 +250,7 @@ class WalletRpcApi:
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
         passphrase = ""
+        # TODO: create_error_response
         try:
             sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
         except KeyError as e:
@@ -259,6 +260,7 @@ class WalletRpcApi:
                 "word": e.args[0],
             }
         except Exception as e:
+            # TODO: create_error_response
             return {"success": False, "error": str(e)}
 
         fingerprint = sk.get_g1().get_fingerprint()
@@ -278,6 +280,7 @@ class WalletRpcApi:
     async def delete_key(self, request):
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
+        # TODO: create_error_response
         try:
             await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
         except Exception as e:
@@ -356,6 +359,7 @@ class WalletRpcApi:
 
     async def delete_all_keys(self, request: Dict):
         await self._stop_wallet()
+        # TODO: create_error_response
         try:
             assert self.service.keychain_proxy is not None  # An offering to the mypy gods
             await self.service.keychain_proxy.delete_all_keys()
@@ -1169,6 +1173,7 @@ class WalletRpcApi:
             did_wallet.create_backup(request["filename"])
             return {"wallet_id": wallet_id, "success": True}
         except Exception:
+            # TODO: create_error_response
             return {"wallet_id": wallet_id, "success": False}
 
     ##########################################################################################
