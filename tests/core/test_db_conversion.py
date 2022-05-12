@@ -98,8 +98,6 @@ class TestDbUpgrade:
                 coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
-                else:
-                    hint_store1 = None
 
                 block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2, uint32(0))

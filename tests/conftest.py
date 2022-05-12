@@ -9,7 +9,7 @@ import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, List, Tuple
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
