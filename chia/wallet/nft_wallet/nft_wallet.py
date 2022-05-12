@@ -389,7 +389,7 @@ class NFTWallet:
 
         if not target_puzzle_hash:
             target_puzzle_hash = inner_puzzle.get_tree_hash()
-        condition_list = [make_create_coin_condition(target_puzzle_hash, amount, [])]
+        condition_list = [make_create_coin_condition(target_puzzle_hash, amount, [target_puzzle_hash])]
         innersol = solution_for_conditions(condition_list)
         # EVE SPEND BELOW
         fullsol = Program.to(
@@ -409,6 +409,7 @@ class NFTWallet:
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         eve_spend_bundle = await self.sign(eve_spend_bundle)
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend_bundle, launcher_sb])
+
         nft_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -425,34 +426,10 @@ class NFTWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
-            memos=[],
+            memos=list(compute_memos(full_spend).items()),
         )
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
-
-    async def generate_eve_spend(self, coin: Coin, full_puzzle: Program, innerpuz: Program, origin_coin: Coin):
-        # innerpuz solution is (mode p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [innerpuz.get_tree_hash()],
-                }
-            ]
-        )
-        innersol = Program.to([1, p2_solution])
-        # full solution is (lineage_proof my_amount inner_solution)
-        fullsol = Program.to(
-            [
-                [origin_coin.parent_coin_info, origin_coin.amount],
-                coin.amount,
-                innersol,
-            ]
-        )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
 
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []

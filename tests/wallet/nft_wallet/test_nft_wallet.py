@@ -8,12 +8,14 @@ import pytest
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
@@ -95,11 +97,9 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     assert len(coins) == 1, "nft not generated"
 
     sb = await nft_wallet_0.transfer_nft(coins[0], ph1)
-
     assert sb is not None
     await asyncio.sleep(3)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     await asyncio.sleep(5)
 
@@ -122,7 +122,7 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
 async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
-    full_node_api = full_nodes[0]
+    full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
     wallet_node_1, server_1 = wallets[1]
@@ -174,6 +174,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
+    # ensure hints are generated
+    assert compute_memos(sb)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
@@ -192,6 +194,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
+    # ensure hints are generated
+    assert compute_memos(sb)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
@@ -207,6 +211,9 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     sb = await nft_wallet_0.transfer_nft(coins[1], ph1)
 
     assert sb is not None
+    # ensure hints are generated
+    assert compute_memos(sb)
+
     await asyncio.sleep(3)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -223,6 +230,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     nsb = await nft_wallet_1.transfer_nft(coins[0], ph)
     assert nsb is not None
 
+    # ensure hints are generated
+    assert compute_memos(nsb)
     await asyncio.sleep(5)
 
     for i in range(1, num_blocks):
