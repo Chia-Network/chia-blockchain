@@ -9,7 +9,7 @@ import aiosqlite
 from aiohttp import web  # lgtm [py/import and import from]
 
 from chia.data_layer.data_layer_types import InsertionData, TerminalNode
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, create_db_wrapper
 from chia.server.upnp import UPnP
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper2
@@ -23,9 +23,7 @@ class DataLayerServer:
 
     async def start(self) -> None:
         self.log.info("Starting Data Layer Server.")
-        self.connection = await aiosqlite.connect(self.db_path)
-        self.connection.row_factory = aiosqlite.Row
-        self.db_wrapper = DBWrapper2(self.connection)
+        self.db_wrapper = await create_db_wrapper(self.db_path)
         self.data_store = await DataStore.create(db_wrapper=self.db_wrapper)
         self.port = self.config["host_port"]
 

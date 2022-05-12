@@ -7,7 +7,7 @@ import traceback
 import asyncio
 import aiohttp
 from chia.data_layer.data_layer_types import InternalNode, TerminalNode, DownloadMode, Subscription, Root, DiffData
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, create_db_wrapper
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -65,9 +65,7 @@ class DataLayer:
         self.server = server
 
     async def _start(self) -> bool:
-        self.connection = await aiosqlite.connect(self.db_path)
-        self.connection.row_factory = aiosqlite.Row
-        self.db_wrapper = DBWrapper2(self.connection)
+        self.db_wrapper = await create_db_wrapper(self.db_path)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()

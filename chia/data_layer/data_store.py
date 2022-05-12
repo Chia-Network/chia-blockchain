@@ -1,7 +1,10 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+
+import aiosqlite
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -41,6 +44,33 @@ log = logging.getLogger(__name__)
 # TODO: pick exception types other than Exception
 
 
+async def create_connection(db_uri: Union[Path, str]) -> aiosqlite.Connection:
+    connection = await aiosqlite.connect(db_uri, uri=True)
+    connection.row_factory = aiosqlite.Row
+
+    await connection.execute("pragma journal_mode=wal")
+    # Setting to FULL despite other locations being configurable.  If there are
+    # performance issues we can consider other the implications of other options.
+    await connection.execute("pragma synchronous=FULL")
+    # If foreign key checking gets turned off, please add corresponding check
+    # methods.
+    await connection.execute("PRAGMA foreign_keys=ON")
+
+    return connection
+
+
+async def create_db_wrapper(db_uri: Union[Path, str]) -> DBWrapper2:
+    write_connection = await create_connection(db_uri=db_uri)
+    db_wrapper = DBWrapper2(connection=write_connection)
+
+    # add reader threads for the DB
+    for i in range(4):
+        connection = await create_connection(db_uri=db_uri)
+        await db_wrapper.add_connection(connection)
+
+    return db_wrapper
+
+
 @dataclass
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
@@ -52,14 +82,6 @@ class DataStore:
         self = cls(db_wrapper=db_wrapper)
 
         async with self.db_wrapper.write_db() as write_connection:
-            await write_connection.execute("pragma journal_mode=wal")
-            # Setting to FULL despite other locations being configurable.  If there are
-            # performance issues we can consider other the implications of other options.
-            await write_connection.execute("pragma synchronous=FULL")
-            # If foreign key checking gets turned off, please add corresponding check
-            # methods.
-            await write_connection.execute("PRAGMA foreign_keys=ON")
-
             await write_connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS node(

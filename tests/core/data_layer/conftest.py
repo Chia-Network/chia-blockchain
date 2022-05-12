@@ -1,6 +1,7 @@
 import contextlib
 import os
 import pathlib
+import string
 import subprocess
 import sys
 import sysconfig
@@ -14,7 +15,7 @@ from _pytest.fixtures import SubRequest
 import pytest
 import pytest_asyncio
 
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, create_db_wrapper
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper2
 
@@ -82,17 +83,12 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest_asyncio.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
-        await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
-
-
-@pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper2:
-    return DBWrapper2(db_connection)
+@pytest_asyncio.fixture(name="db_wrapper", scope="function")
+async def db_wrapper_fixture(request: SubRequest) -> DBWrapper2:
+    name = "".join(character for character in request.node.name if character in string.ascii_letters + string.digits)
+    db_wrapper = await create_db_wrapper(f"file:memory_datalayer_test_fixture_{name}?mode=memory&cache=shared")
+    yield db_wrapper
+    await db_wrapper.close()
 
 
 @pytest.fixture(name="tree_id", scope="function")

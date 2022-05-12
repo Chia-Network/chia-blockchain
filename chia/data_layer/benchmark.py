@@ -7,7 +7,7 @@ import os
 from typing import Optional, Dict
 from pathlib import Path
 from chia.util.db_wrapper import DBWrapper2
-from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_store import DataStore, create_db_wrapper
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import Side, TerminalNode
 from chia.types.blockchain_format.program import Program
@@ -22,9 +22,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
         if os.path.exists(db_path):
             os.remove(db_path)
 
-        connection = await aiosqlite.connect(db_path)
-        connection.row_factory = aiosqlite.Row
-        db_wrapper = DBWrapper2(connection)
+        db_wrapper = await create_db_wrapper(db_path)
         data_store = await DataStore.create(db_wrapper=db_wrapper)
         hint_keys_values: Dict[bytes, bytes] = {}
 
@@ -109,7 +107,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
         print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
         root = await data_store.get_tree_root(tree_id=tree_id)
         print(f"Root hash: {root.node_hash}")
-        await connection.close()
+        await db_wrapper.close()
 
 
 if __name__ == "__main__":
