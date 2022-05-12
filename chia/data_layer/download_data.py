@@ -63,7 +63,13 @@ async def write_files_for_root(
     if override and os.path.exists(filename_diff_tree):
         os.remove(filename_diff_tree)
     if not os.path.exists(filename_diff_tree):
-        await data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
+        last_seen_generation = await data_store.get_last_tree_root_by_hash(
+            tree_id, root.node_hash, max_generation=root.generation
+        )
+        if last_seen_generation is None:
+            await data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
+        else:
+            open(filename_diff_tree, "ab").close()
         written = True
     return written
 
