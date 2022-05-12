@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-12 16:42\n"
+"PO-Revision-Date: 2022-05-12 17:41\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -2239,7 +2239,7 @@ msgstr "Selectionner Clé"
 
 #: src/components/Dropdown/Dropdown.tsx:85
 msgid "Select..."
-msgstr "Sélectionner..."
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
