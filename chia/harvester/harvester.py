@@ -104,8 +104,9 @@ class Harvester:
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection")
-        self.plot_manager.stop_refreshing()
         self.plot_sync_sender.stop()
+        asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
+        self.plot_manager.stop_refreshing()
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
