@@ -59,7 +59,7 @@ class DataLayerRpcClient(RpcClient):
     async def add_missing_files(self, store_ids: Optional[List[bytes32]], override: Optional[bool]) -> Dict[str, Any]:
         request: Dict[str, Any] = {}
         if store_ids is not None:
-            request["ids"] = store_ids
+            request["ids"] = [store_id.hex() for store_id in store_ids]
         if override is not None:
             request["override"] = override
         response = await self.fetch("add_missing_files", request)
