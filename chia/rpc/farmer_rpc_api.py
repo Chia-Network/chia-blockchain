@@ -1,9 +1,67 @@
+import dataclasses
+import operator
 from typing import Any, Callable, Dict, List, Optional
 
+from typing_extensions import Protocol
+
 from chia.farmer.farmer import Farmer
+from chia.plot_sync.receiver import Receiver
+from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.paginator import Paginator
+from chia.util.streamable import dataclass_from_dict
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+class PaginatedRequestData(Protocol):
+    node_id: bytes32
+    page: int
+    page_size: int
+
+
+@dataclasses.dataclass
+class FilterItem:
+    key: str
+    value: Optional[str]
+
+
+@dataclasses.dataclass
+class PlotInfoRequestData:
+    node_id: bytes32
+    page: int
+    page_size: int
+    filter: List[FilterItem] = dataclasses.field(default_factory=list)
+    sort_key: str = "filename"
+    reverse: bool = False
+
+
+@dataclasses.dataclass
+class PlotPathRequestData:
+    node_id: bytes32
+    page: int
+    page_size: int
+    filter: List[str] = dataclasses.field(default_factory=list)
+    reverse: bool = False
+
+
+def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
+    paginator: Paginator = Paginator(source, request.page_size)
+    return {
+        "node_id": request.node_id.hex(),
+        "page": request.page,
+        "page_count": paginator.page_count(),
+        "total_count": len(source),
+        "plots": paginator.get_page(request.page),
+    }
+
+
+def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
+    plot_attribute = getattr(plot, filter_item.key)
+    if filter_item.value is None:
+        return plot_attribute is None
+    else:
+        return filter_item.value in str(plot_attribute)
 
 
 class FarmerRpcApi:
@@ -20,6 +78,11 @@ class FarmerRpcApi:
             "/get_pool_state": self.get_pool_state,
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_harvesters": self.get_harvesters,
+            "/get_harvesters_summary": self.get_harvesters_summary,
+            "/get_harvester_plots_valid": self.get_harvester_plots_valid,
+            "/get_harvester_plots_invalid": self.get_harvester_plots_invalid,
+            "/get_harvester_plots_keys_missing": self.get_harvester_plots_keys_missing,
+            "/get_harvester_plots_duplicates": self.get_harvester_plots_duplicates,
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
@@ -44,10 +107,19 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             ]
-        elif change == "new_plots":
+        elif change == "harvester_update":
             return [
                 create_payload_dict(
-                    "get_harvesters",
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            ]
+        elif change == "harvester_removed":
+            return [
+                create_payload_dict(
+                    "harvester_removed",
                     change_data,
                     self.service_name,
                     "wallet_ui",
@@ -109,11 +181,20 @@ class FarmerRpcApi:
         self.service.set_reward_targets(farmer_target, pool_target)
         return {}
 
+    def get_pool_contract_puzzle_hash_plot_count(self, pool_contract_puzzle_hash: bytes32) -> int:
+        plot_count: int = 0
+        for receiver in self.service.plot_sync_receivers.values():
+            plot_count += sum(
+                plot.pool_contract_puzzle_hash == pool_contract_puzzle_hash for plot in receiver.plots().values()
+            )
+        return plot_count
+
     async def get_pool_state(self, _: Dict) -> Dict:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
             pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
@@ -123,7 +204,48 @@ class FarmerRpcApi:
         return {}
 
     async def get_harvesters(self, _: Dict):
-        return await self.service.get_harvesters()
+        return await self.service.get_harvesters(False)
+
+    async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
+        return await self.service.get_harvesters(True)
+
+    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
+        request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+        plot_list = list(self.service.get_receiver(request.node_id).plots().values())
+        # Apply filter
+        plot_list = [
+            plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
+        ]
+        restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
+        # Apply sort_key and reverse if sort_key is not restricted
+        if request.sort_key in restricted_sort_keys:
+            raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
+        # Sort by plot_id also by default since its unique
+        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+        return paginated_plot_request(plot_list, request)
+
+    def paginated_plot_path_request(
+        self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
+    ) -> Dict[str, object]:
+        request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+        receiver = self.service.get_receiver(request.node_id)
+        source = source_func(receiver)
+        request = dataclass_from_dict(PlotPathRequestData, request_dict)
+        # Apply filter
+        source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
+        # Apply reverse
+        source = sorted(source, reverse=request.reverse)
+        return paginated_plot_request(source, request)
+
+    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.invalid, request_dict)
+
+    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.keys_missing, request_dict)
+
+    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))

@@ -1,10 +1,11 @@
-name: Windows Installer on Windows 10 and Python 3.9
+name: Build Installer - Windows 10
 
 on:
   push:
     branches:
       - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -18,9 +19,9 @@ concurrency:
 
 jobs:
   build:
-    name: Windows Installer on Windows 10 and Python 3.9
+    name: Windows 10 Installer
     runs-on: [windows-2019]
-    timeout-minutes: 40
+    timeout-minutes: 50
 
     steps:
     - name: Checkout Code
@@ -63,7 +64,7 @@ jobs:
     - uses: actions/setup-python@v2
       name: Install Python 3.9
       with:
-        python-version: "3.9.11"
+        python-version: "3.9"
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
@@ -156,13 +157,13 @@ jobs:
         .\build_scripts\build_windows.ps1
 
     - name: Upload Windows exe's to artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v3
       with:
         name: chia-installers-windows-exe-intel
         path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
 
     - name: Upload Installer to artifacts
-      uses: actions/upload-artifact@v2.2.2
+      uses: actions/upload-artifact@v3
       with:
         name: Windows-Installers
         path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\

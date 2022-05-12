@@ -232,9 +232,9 @@ class PlotManager:
 
                 plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
                 plot_directories: Set[Path] = set(plot_filenames.keys())
-                plot_paths: List[Path] = []
+                plot_paths: Set[Path] = set()
                 for paths in plot_filenames.values():
-                    plot_paths += paths
+                    plot_paths.update(paths)
 
                 total_result: PlotRefreshResult = PlotRefreshResult()
                 total_size = len(plot_paths)
@@ -274,7 +274,7 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(plot_paths, self.refresh_parameter.batch_size):
+                for remaining, batch in list_to_batches(list(plot_paths), self.refresh_parameter.batch_size):
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")

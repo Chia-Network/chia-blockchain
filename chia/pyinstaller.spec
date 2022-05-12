@@ -2,6 +2,7 @@
 import importlib
 import pathlib
 import platform
+import sysconfig
 
 from pkg_resources import get_distribution
 
@@ -99,7 +100,7 @@ if THIS_IS_WINDOWS:
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
-    dll_paths = ROOT / "*.dll"
+    dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
 
     binaries = [
         (
