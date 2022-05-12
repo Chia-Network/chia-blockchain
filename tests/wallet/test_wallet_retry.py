@@ -44,13 +44,13 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 @pytest.mark.asyncio
 async def test_wallet_tx_retry(
     bt: BlockTools,
-    setup_node_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
+    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
     wallet_a: WalletTool,
     self_hostname: str,
 ) -> None:
     wait_secs = 1000
     reward_ph = wallet_a.get_new_puzzlehash()
-    nodes, wallets = setup_node_and_wallet_fast_retry
+    nodes, wallets = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
 
     full_node_1: FullNodeSimulator = nodes[0]
