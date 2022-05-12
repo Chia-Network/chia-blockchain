@@ -94,9 +94,10 @@ def generate_replacements(conf, dir):
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
-    if not conf["check_resource_usage"]:
-        replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
+    if conf["check_resource_usage"]:
         replacements["ENABLE_PYTEST_MONITOR"] = "-p monitor"
+    else:
+        replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
     return replacements
