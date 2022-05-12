@@ -18,7 +18,7 @@ from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.server.start_service import Service
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import create_default_chia_config
+from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint64
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
@@ -293,6 +293,10 @@ async def environment(
     farmer: Farmer = farmer_service._node
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
+        # Remove default plot directory for this tests
+        with lock_and_load_config(harvester.root_path, "config.yaml") as config:
+            config["harvester"]["plot_directories"] = []
+            save_config(harvester.root_path, "config.yaml", config)
         harvester.plot_manager.set_public_keys(
             bt.plot_manager.farmer_public_keys.copy(), bt.plot_manager.pool_public_keys.copy()
         )

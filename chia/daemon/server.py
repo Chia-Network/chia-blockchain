@@ -142,6 +142,7 @@ class WebSocketServer:
         self.plots_queue: List[Dict] = []
         self.connections: Dict[str, List[WebSocketResponse]] = dict()  # service_name : [WebSocket]
         self.remote_address_map: Dict[WebSocketResponse, str] = dict()  # socket: service_name
+        self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
@@ -205,6 +206,7 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
+        self.cancel_task_safe(self.ping_job)
         jobs = []
         for service_name in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, service_name))
@@ -269,6 +271,28 @@ class WebSocketServer:
                 else:
                     after_removal.append(connection)
             self.connections[service_name] = after_removal
+
+    async def ping_task(self) -> None:
+        restart = True
+        await asyncio.sleep(30)
+        for remote_address, service_name in self.remote_address_map.items():
+            if service_name in self.connections:
+                sockets = self.connections[service_name]
+                for socket in sockets:
+                    try:
+                        self.log.debug(f"About to ping: {service_name}")
+                        await socket.ping()
+                    except asyncio.CancelledError:
+                        self.log.warning("Ping task received Cancel")
+                        restart = False
+                        break
+                    except Exception:
+                        self.log.exception("Ping error")
+                        self.log.error("Ping failed, connection closed.")
+                        self.remove_connection(socket)
+                        await socket.close()
+        if restart is True:
+            self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
@@ -1147,6 +1171,8 @@ class WebSocketServer:
             }
         else:
             self.remote_address_map[websocket] = service
+            if self.ping_job is None:
+                self.ping_job = asyncio.create_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response

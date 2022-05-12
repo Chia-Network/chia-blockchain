@@ -6,7 +6,9 @@ name: Ubuntu core-full_node Test
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -92,7 +94,7 @@ jobs:
     - name: Test core-full_node code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_height_map.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_peer_store_resolver.py tests/core/full_node/test_performance.py tests/core/full_node/test_transactions.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/core/full_node/test_address_manager.py tests/core/full_node/test_block_height_map.py tests/core/full_node/test_conditions.py tests/core/full_node/test_full_node.py tests/core/full_node/test_generator_tools.py tests/core/full_node/test_hint_management.py tests/core/full_node/test_mempool.py tests/core/full_node/test_mempool_performance.py tests/core/full_node/test_node_load.py tests/core/full_node/test_peer_store_resolver.py tests/core/full_node/test_performance.py tests/core/full_node/test_transactions.py
 
     - name: Process coverage data
       run: |

@@ -61,10 +61,12 @@ class Receiver:
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
-    _update_callback: Callable[[bytes32, Delta], Coroutine[Any, Any, None]]
+    _update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]]
 
     def __init__(
-        self, connection: WSChiaConnection, update_callback: Callable[[bytes32, Delta], Coroutine[Any, Any, None]]
+        self,
+        connection: WSChiaConnection,
+        update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]],
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
@@ -75,6 +77,12 @@ class Receiver:
         self._duplicates = []
         self._total_plot_size = 0
         self._update_callback = update_callback  # type: ignore[assignment, misc]
+
+    async def trigger_callback(self, update: Optional[Delta] = None) -> None:
+        try:
+            await self._update_callback(self._connection.peer_node_id, update)  # type: ignore[misc,call-arg]
+        except Exception as e:
+            log.error(f"_update_callback raised: {e}")
 
     def reset(self) -> None:
         self._current_sync = Sync()
@@ -176,6 +184,9 @@ class Receiver:
             self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
             self._current_sync.bump_plots_processed()
 
+        # Let the callback receiver know about the sync progress updates
+        await self.trigger_callback()
+
         if plot_infos.final:
             self._current_sync.state = State.removed
 
@@ -204,6 +215,9 @@ class Receiver:
             delta.append(path)
             if not is_removal:
                 self._current_sync.bump_plots_processed()
+
+        # Let the callback receiver know about the sync progress updates
+        await self.trigger_callback()
 
         if paths.final:
             self._current_sync.state = next_state
@@ -293,10 +307,7 @@ class Receiver:
         self._last_sync = self._current_sync
         self._current_sync = Sync()
         # Let the callback receiver know if this sync cycle caused any update
-        try:
-            await self._update_callback(self._connection.peer_node_id, update)  # type: ignore[misc,call-arg]
-        except Exception as e:
-            log.error(f"_update_callback raised: {e}")
+        await self.trigger_callback(update)
 
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
