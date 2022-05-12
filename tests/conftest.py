@@ -7,7 +7,6 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from chia.full_node.full_node_api import FullNodeAPI
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Tuple, AsyncGenerator
