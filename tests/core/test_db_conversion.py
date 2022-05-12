@@ -77,7 +77,7 @@ class TestDbUpgrade:
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
                     results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _, _ = await bc.receive_block(block, results)
+                    result, err, _ = await bc.receive_block(block, results)
                     assert err is None
             finally:
                 await db_wrapper1.close()
@@ -98,8 +98,6 @@ class TestDbUpgrade:
                 coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
-                else:
-                    hint_store1 = None
 
                 block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2, uint32(0))

@@ -1,6 +1,7 @@
+import contextlib
 import os
 import time
-from typing import Callable, Optional, TextIO, TypeVar
+from typing import Iterator, Optional, TextIO, TypeVar
 
 T = TypeVar("T")
 
@@ -22,15 +23,13 @@ def create_exclusive_lock(lockfile: str) -> Optional[TextIO]:
     return f
 
 
-def with_lock(lock_filename: str, run: Callable[[], T]) -> T:
+@contextlib.contextmanager
+def lock_by_path(lock_filename: str) -> Iterator[None]:
     """
     Ensure that this process and this thread is the only one operating on the
     resource associated with lock_filename systemwide.
-
-    Pass through the result of run after exiting the lock.
     """
 
-    lock_file = None
     while True:
         lock_file = create_exclusive_lock(lock_filename)
         if lock_file is not None:
@@ -39,7 +38,7 @@ def with_lock(lock_filename: str, run: Callable[[], T]) -> T:
         time.sleep(0.1)
 
     try:
-        return run()
+        yield
     finally:
         lock_file.close()
         os.remove(lock_filename)

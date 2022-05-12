@@ -46,8 +46,8 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer(bt):
-    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
+async def harvester_farmer(bt, tmp_path):
+    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
         yield _
 
 
