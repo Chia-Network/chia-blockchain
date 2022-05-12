@@ -65,7 +65,7 @@ jobs:
 
     - uses: Chia-Network/actions/setup-python@main
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ format('{0}.0-alpha - {0}.X', matrix.python-version) }}
 
     - name: Check Wheel Availability
       run: python build_scripts/check_dependency_artifacts.py

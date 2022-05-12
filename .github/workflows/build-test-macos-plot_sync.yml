@@ -42,7 +42,7 @@ jobs:
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ format('{0}.0-alpha - {0}.X', matrix.python-version) }}
 
     - name: Create keychain for CI use
       run: |
