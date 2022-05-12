@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-09 18:33\n"
+"PO-Revision-Date: 2022-05-12 17:41\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -20,11 +20,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:74
 msgid "(Not Installed)"
-msgstr ""
+msgstr "(Non installé)"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:71
 msgid "(Not Supported)"
-msgstr ""
+msgstr "(Non supporté)"
 
 #: src/components/plot/add/PlotAddNFT.tsx:67
 msgid "(Optional)"
@@ -64,7 +64,7 @@ msgstr "Le moissonneur est un service qui tourne sur une machine qui stocke des 
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:155
 msgid "A value of {0} is recommended"
-msgstr ""
+msgstr "Une valeur de {0} est recommandée"
 
 #: src/electron/main.tsx:513
 #: src/electron/main.tsx:600
@@ -85,13 +85,13 @@ msgstr "À propos de la blockchain Chia"
 #: src/components/plot/PlotHarvesterPlotsNotFound.tsx:18
 #: src/components/plot/PlotPlotting.tsx:29
 msgid "Action"
-msgstr ""
+msgstr "Action"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:66
 #: src/components/fullNode/FullNodeConnections.tsx:81
 msgid "Actions"
-msgstr ""
+msgstr "Actions"
 
 #: src/components/trading/CreateOffer.jsx:202
 #~ msgid "Add"
@@ -689,7 +689,7 @@ msgstr "Solde de points actuel"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:30
 msgid "Date"
-msgstr ""
+msgstr "Date"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:93
 msgid "Delay"
@@ -705,7 +705,7 @@ msgstr "Supprimer"
 
 #: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
-msgstr ""
+msgstr "Supprimer la clé"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
@@ -735,7 +735,7 @@ msgstr "Supprimer les transactions non confirmées"
 
 #: src/components/app/AppPassPrompt.tsx:88
 msgid "Deleting key"
-msgstr ""
+msgstr "Suppression de la clé"
 
 #: src/components/selectKey/SelectKey.tsx:101
 #~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -826,7 +826,7 @@ msgstr "Glisser-déposer votre fichier de sauvegarde"
 
 #: src/components/plot/PlotHarvester.tsx:131
 msgid "Duplicate"
-msgstr ""
+msgstr "Dupliquer"
 
 #: src/components/plot/card/PlotCardPlotsDuplicate.tsx:11
 msgid "Duplicate Plots"
@@ -908,7 +908,7 @@ msgstr "Exclure le répertoire final"
 
 #: src/components/plot/PlotHarvester.tsx:118
 msgid "Failed"
-msgstr ""
+msgstr "Échec"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -920,7 +920,7 @@ msgstr ""
 
 #: src/components/settings/SetPassphrasePrompt.tsx:83
 msgid "Failed to set passphrase: {0}"
-msgstr ""
+msgstr "Impossible de définir la phrase secrète : {0}"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:92
 #~ msgid "Failed to set passphrase: {error}"
@@ -928,7 +928,7 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:111
 msgid "Failed to update passphrase: {0}"
-msgstr ""
+msgstr "Impossible de mettre à jour la phrase secrète : {0}"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:120
 #~ msgid "Failed to update passphrase: {error}"
@@ -992,7 +992,7 @@ msgstr "Culture"
 
 #: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
-msgstr ""
+msgstr "Mode Farming"
 
 #: src/components/farm/card/FarmCardStatus.tsx:14
 #: src/components/farm/card/FarmCardStatus.tsx:25
@@ -1080,7 +1080,7 @@ msgstr "Plein écran"
 
 #: src/components/settings/Settings.tsx:257
 msgid "General"
-msgstr ""
+msgstr "Général"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
@@ -1224,7 +1224,7 @@ msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:125
 msgid "Initializing..."
-msgstr ""
+msgstr "Initialisation..."
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:218
 #~ msgid "Interval"
