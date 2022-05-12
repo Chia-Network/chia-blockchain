@@ -240,7 +240,7 @@ class DataLayer:
         publish_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
-        while publish_generation > 0 and write_files_for_root(
+        while publish_generation > 0 and await write_files_for_root(
             self.data_store,
             tree_id,
             root,
