@@ -4,7 +4,6 @@ import logging
 import random
 import time
 import traceback
-from asyncio import CancelledError
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
@@ -406,7 +405,7 @@ class WalletNode:
                     await self.new_peak_wallet(request, peer)
                 else:
                     assert False
-            except CancelledError:
+            except asyncio.CancelledError:
                 self.log.info("Queue task cancelled, exiting.")
                 raise
             except Exception as e:
@@ -490,7 +489,7 @@ class WalletNode:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
                 removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True, in_rollback=True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
                 else:
@@ -718,9 +717,11 @@ class WalletNode:
         for states in chunks(items, chunk_size):
             if self.server is None:
                 self.log.error("No server")
+                await asyncio.gather(*all_tasks)
                 return False
             if peer.peer_node_id not in self.server.all_connections:
                 self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
+                await asyncio.gather(*all_tasks)
                 return False
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.lock:
@@ -748,6 +749,7 @@ class WalletNode:
                     await asyncio.sleep(0.1)
                     if self._shut_down:
                         self.log.info("Terminating receipt and validation due to shut down request")
+                        await asyncio.gather(*all_tasks)
                         return False
                 concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
                 all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))

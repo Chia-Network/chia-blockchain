@@ -1,9 +1,11 @@
-name: Linux ARM64 installer on Python 3.8
+name: Build Installer - Linux DEB ARM64
 
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: Linux ARM64 installer on Python 3.8
+    name: Linux arm64 DEB Installer
     runs-on: [Linux, ARM64]
     container: chianetwork/ubuntu-18.04-builder:latest
     timeout-minutes: 120
@@ -29,6 +31,9 @@ jobs:
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Add safe git directory
+      uses: Chia-Network/actions/git-mark-workspace-safe@main
 
     - name: Checkout Code
       uses: actions/checkout@v3

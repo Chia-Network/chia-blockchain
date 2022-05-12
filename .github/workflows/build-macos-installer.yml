@@ -1,9 +1,11 @@
-name: MacOS Intel installer on Python 3.9
+name: Build Installer - MacOS Intel
 
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -17,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: MacOS Intel Installer on Python 3.9
+    name: MacOS Intel Installer
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
