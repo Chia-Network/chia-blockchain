@@ -96,7 +96,7 @@ class DataLayerRpcApi:
         res = await self.service.get_keys_values(store_id, root_hash)
         json_nodes = []
         for node in res:
-            json = recurse_jsonify(dataclasses.asdict(node))  # type: ignore[no-untyped-call]
+            json = recurse_jsonify(dataclasses.asdict(node))
             json_nodes.append(json)
         return {"keys_values": json_nodes}
 
