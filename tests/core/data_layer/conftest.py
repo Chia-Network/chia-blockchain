@@ -8,8 +8,6 @@ import sysconfig
 import time
 from typing import AsyncIterable, Awaitable, Callable, Iterator, List
 
-import aiosqlite
-
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 import pytest
@@ -84,7 +82,7 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
 
 
 @pytest_asyncio.fixture(name="db_wrapper", scope="function")
-async def db_wrapper_fixture(request: SubRequest) -> DBWrapper2:
+async def db_wrapper_fixture(request: SubRequest) -> AsyncIterable[DBWrapper2]:
     name = "".join(character for character in request.node.name if character in string.ascii_letters + string.digits)
     db_wrapper = await create_db_wrapper(f"file:memory_datalayer_test_fixture_{name}?mode=memory&cache=shared")
     yield db_wrapper

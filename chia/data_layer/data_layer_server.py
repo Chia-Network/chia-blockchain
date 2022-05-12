@@ -5,14 +5,12 @@ from pathlib import Path
 from typing import Any, Dict
 
 import aiohttp
-import aiosqlite
 from aiohttp import web  # lgtm [py/import and import from]
 
 from chia.data_layer.data_layer_types import InsertionData, TerminalNode
 from chia.data_layer.data_store import DataStore, create_db_wrapper
 from chia.server.upnp import UPnP
 from chia.types.blockchain_format.tree_hash import bytes32
-from chia.util.db_wrapper import DBWrapper2
 
 
 @dataclass
