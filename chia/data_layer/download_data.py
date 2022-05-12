@@ -8,9 +8,7 @@ from chia.types.blockchain_format.program import Program
 from chia.util.byte_types import hexstr_to_bytes
 
 
-async def download_data_latest(
-    data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
-) -> bool:
+async def download_data_latest(data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str) -> bool:
     insert_batch: List[Tuple[NodeType, str, str]] = []
 
     async with aiohttp.ClientSession() as session:
@@ -78,16 +76,15 @@ async def download_data_latest(
             await ws.send_str(json.dumps({"type": "close"}))
 
     await data_store.insert_batch_for_generation(
-        insert_batch, tree_id, bytes32.from_hexstr(root_json["node_hash"]), int(root_json["generation"]), lock=lock
+        insert_batch, tree_id, bytes32.from_hexstr(root_json["node_hash"]), int(root_json["generation"])
     )
     return True
 
 
-async def download_data_history(
-    data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
-) -> bool:
+async def download_data_history(data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str) -> bool:
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
+            # TODO: should this all be in a db wrapper context manager?
             request = {
                 "type": "request_root",
                 "tree_id": tree_id.hex(),
@@ -97,10 +94,10 @@ async def download_data_history(
             msg = await ws.receive()
             root_json = json.loads(msg.data)
             generation = root_json["generation"]
-            root = await data_store.get_tree_root(tree_id=tree_id, lock=lock)
+            root = await data_store.get_tree_root(tree_id=tree_id)
             # We've downloaded too much, rollback.
             if root.generation > generation:
-                await data_store.rollback_to_generation(tree_id=tree_id, target_generation=generation, lock=lock)
+                await data_store.rollback_to_generation(tree_id=tree_id, target_generation=generation)
                 return True
             existing_generation = root.generation + 1
             while existing_generation <= generation:
@@ -125,16 +122,10 @@ async def download_data_history(
                             else (bytes32.from_hexstr(row["reference_node_hash"])),
                             None if row["side"] == "None" else Side(row["side"]),
                             status=Status(row["root_status"]),
-                            lock=lock,
                         )
                     else:
-                        await data_store.delete(
-                            bytes.fromhex(row["key"]),
-                            tree_id,
-                            status=Status(row["root_status"]),
-                            lock=lock,
-                        )
-                    current_root = await data_store.get_tree_root(tree_id, lock=lock)
+                        await data_store.delete(bytes.fromhex(row["key"]), tree_id, status=Status(row["root_status"]))
+                    current_root = await data_store.get_tree_root(tree_id)
                     if current_root.node_hash is None:
                         if row["hash"] != "None":
                             return False
@@ -148,19 +139,18 @@ async def download_data_history(
     return True
 
 
-async def download_data(
-    data_store: DataStore, subscription: Subscription, target_hash: bytes32, *, lock: bool = True
-) -> bool:
+async def download_data(data_store: DataStore, subscription: Subscription, target_hash: bytes32) -> bool:
     tree_id = subscription.tree_id
     ip = subscription.ip
     port = int(subscription.port)
+    # TODO: should this all be in a db wrapper context manager?
     exists = await data_store.tree_id_exists(tree_id)
     if not exists:
         await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
     URL = f"http://{ip}:{port}/ws"
 
     if subscription.mode is DownloadMode.LATEST:
-        return await download_data_latest(data_store, tree_id, target_hash, URL, lock=lock)
+        return await download_data_latest(data_store, tree_id, target_hash, URL)
     elif subscription.mode is DownloadMode.HISTORY:
-        return await download_data_history(data_store, tree_id, target_hash, URL, lock=lock)
+        return await download_data_history(data_store, tree_id, target_hash, URL)
     return False

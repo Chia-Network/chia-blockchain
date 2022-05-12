@@ -6,7 +6,7 @@ import time
 import os
 from typing import Optional, Dict
 from pathlib import Path
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import Side, TerminalNode
@@ -23,7 +23,8 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             os.remove(db_path)
 
         connection = await aiosqlite.connect(db_path)
-        db_wrapper = DBWrapper(connection)
+        connection.row_factory = aiosqlite.Row
+        db_wrapper = DBWrapper2(connection)
         data_store = await DataStore.create(db_wrapper=db_wrapper)
         hint_keys_values: Dict[bytes, bytes] = {}
 

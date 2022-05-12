@@ -16,7 +16,7 @@ import pytest_asyncio
 
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 
 from tests.core.data_layer.util import add_0123_example, add_01234567_example, ChiaRoot, Example
 
@@ -91,8 +91,8 @@ async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
 
 
 @pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
-    return DBWrapper(db_connection)
+def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper2:
+    return DBWrapper2(db_connection)
 
 
 @pytest.fixture(name="tree_id", scope="function")
@@ -103,7 +103,7 @@ def tree_id_fixture() -> bytes32:
 
 
 @pytest_asyncio.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
+async def raw_data_store_fixture(db_wrapper: DBWrapper2) -> DataStore:
     return await DataStore.create(db_wrapper=db_wrapper)
 
 

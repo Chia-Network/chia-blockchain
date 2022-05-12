@@ -12,7 +12,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
@@ -24,7 +24,7 @@ from chia.data_layer.data_layer_server import DataLayerServer
 class DataLayer:
     data_store: DataStore
     data_layer_server: DataLayerServer
-    db_wrapper: DBWrapper
+    db_wrapper: DBWrapper2
     db_path: Path
     connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
@@ -66,7 +66,8 @@ class DataLayer:
 
     async def _start(self) -> bool:
         self.connection = await aiosqlite.connect(self.db_path)
-        self.db_wrapper = DBWrapper(self.connection)
+        self.connection.row_factory = aiosqlite.Row
+        self.db_wrapper = DBWrapper2(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
