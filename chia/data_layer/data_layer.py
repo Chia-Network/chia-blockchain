@@ -24,9 +24,8 @@ from chia.data_layer.data_layer_server import DataLayerServer
 class DataLayer:
     data_store: DataStore
     data_layer_server: DataLayerServer
-    db_wrapper: DBWrapper2
+    db_wrapper: Optional[DBWrapper2]
     db_path: Path
-    connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
@@ -48,7 +47,6 @@ class DataLayer:
         config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
-        self.connection = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
         self._shut_down: bool = False
@@ -57,6 +55,7 @@ class DataLayer:
         mkdir(self.db_path.parent)
         self.data_layer_server = DataLayerServer(self.config, self.db_path, self.log)
         self.none_bytes = bytes32([0] * 32)
+        self.db_wrapper = None
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -79,6 +78,8 @@ class DataLayer:
         self._shut_down = True
 
     async def _await_closed(self) -> None:
+        if self.db_wrapper is not None:
+            await self.db_wrapper.close()
         if self.connection is not None:
             await self.connection.close()
         if self.config.get("run_server", False):
