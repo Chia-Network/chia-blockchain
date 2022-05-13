@@ -46,6 +46,7 @@ class DataLayer:
         config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
+        self.db_wrapper = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
         self._shut_down: bool = False
@@ -54,7 +55,6 @@ class DataLayer:
         mkdir(self.db_path.parent)
         self.data_layer_server = DataLayerServer(self.config, self.db_path, self.log)
         self.none_bytes = bytes32([0] * 32)
-        self.db_wrapper = None
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
