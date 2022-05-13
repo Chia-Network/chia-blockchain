@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-consensus Tests
+name: MacOS core-consensus Test
 
 on:
   push:
@@ -81,7 +81,7 @@ jobs:
     - name: Test core-consensus code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/consensus/test_*.py --durations=10  -n 4 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" tests/core/consensus/test_pot_iterations.py
 
     - name: Process coverage data
       run: |

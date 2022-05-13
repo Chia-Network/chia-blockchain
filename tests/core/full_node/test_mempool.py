@@ -503,7 +503,6 @@ class TestMempoolManager:
 
         coins = iter(blocks[-1].get_included_reward_coins())
         coin1 = next(coins)
-        coins = iter(blocks[-2].get_included_reward_coins())
 
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
@@ -616,7 +615,6 @@ class TestMempoolManager:
     async def test_block_index_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -642,14 +640,15 @@ class TestMempoolManager:
     async def test_block_index_garbage(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        # garbage at the end of the argument list is ignored
+        # garbage at the end of the argument list is ignored in consensus mode,
+        # but not in mempool-mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(1), b"garbage"])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_negative_block_index(self, bt, one_node_one_block, wallet_a):
@@ -708,7 +707,8 @@ class TestMempoolManager:
     async def test_block_age_garbage(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        # garbage at the end of the argument list is ignored
+        # garbage at the end of the argument list is ignored in consensus mode,
+        # but not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, [int_to_bytes(1), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
@@ -716,9 +716,9 @@ class TestMempoolManager:
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_negative_block_age(self, bt, one_node_one_block, wallet_a):
@@ -762,7 +762,8 @@ class TestMempoolManager:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
-        # garbage at the end of the argument list is ignored
+        # garbage at the end of the argument list is ignored in consensus mode,
+        # but not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [coin.name(), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
@@ -770,9 +771,9 @@ class TestMempoolManager:
         )
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, bt, one_node_one_block, wallet_a):
@@ -798,7 +799,6 @@ class TestMempoolManager:
     async def test_my_id_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -885,14 +885,15 @@ class TestMempoolManager:
         full_node_1, server_1 = one_node_one_block
         time_now = full_node_1.full_node.blockchain.get_peak().timestamp + 5
 
-        # garbage at the end of the argument list is ignored
+        # garbage at the end of the argument list is ignored in consensus mode,
+        # but not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, [int_to_bytes(time_now), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_exceeds(self, bt, one_node_one_block, wallet_a):
@@ -927,15 +928,16 @@ class TestMempoolManager:
         full_node_1, server_1 = one_node_one_block
         time_relative = 0
 
-        # garbage at the end of the arguments is ignored
+        # garbage at the end of the arguments is ignored in consensus mode, but
+        # not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_SECONDS_RELATIVE, [int_to_bytes(time_relative), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_assert_time_relative_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -990,17 +992,34 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     # ensure one spend can assert a coin announcement from another spend, even
-    # though the conditions have garbage (ignored) at the end
+    # though the conditions have garbage at the end
     @pytest.mark.asyncio
-    async def test_coin_announcement_garbage(self, bt, one_node_one_block, wallet_a):
+    @pytest.mark.parametrize(
+        "assert_garbage,announce_garbage,expected,expected_included",
+        [
+            (True, False, Err.INVALID_CONDITION, MempoolInclusionStatus.FAILED),
+            (False, True, Err.INVALID_CONDITION, MempoolInclusionStatus.FAILED),
+            (False, False, None, MempoolInclusionStatus.SUCCESS),
+        ],
+    )
+    async def test_coin_announcement_garbage(
+        self, assert_garbage, announce_garbage, expected, expected_included, bt, one_node_one_block, wallet_a
+    ):
         def test_fun(coin_1: Coin, coin_2: Coin) -> SpendBundle:
             announce = Announcement(coin_2.name(), b"test")
-            # garbage at the end is ignored
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [announce.name(), b"garbage"])
+            # garbage at the end is ignored in consensus mode, but not in
+            # mempool mode
+            cvp = ConditionWithArgs(
+                ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT,
+                [bytes(announce.name())] + ([b"garbage"] if announce_garbage else []),
+            )
             dic = {cvp.opcode: [cvp]}
 
-            # garbage at the end is ignored
-            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test", b"garbage"])
+            # garbage at the end is ignored in consensus mode, but not in
+            # mempool mode
+            cvp2 = ConditionWithArgs(
+                ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [b"test"] + ([b"garbage"] if assert_garbage else [])
+            )
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1009,11 +1028,12 @@ class TestMempoolManager:
 
         full_node_1, server_1 = one_node_one_block
         blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
-        assert err is None
-        assert mempool_bundle is bundle
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is expected
+        assert status == expected_included
+        if status == MempoolInclusionStatus.SUCCESS:
+            mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+            assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -1175,17 +1195,34 @@ class TestMempoolManager:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_puzzle_announcement_garbage(self, bt, one_node_one_block, wallet_a):
+    @pytest.mark.parametrize(
+        "assert_garbage,announce_garbage,expected,expected_included",
+        [
+            (True, False, Err.INVALID_CONDITION, MempoolInclusionStatus.FAILED),
+            (False, True, Err.INVALID_CONDITION, MempoolInclusionStatus.FAILED),
+            (False, False, None, MempoolInclusionStatus.SUCCESS),
+        ],
+    )
+    async def test_puzzle_announcement_garbage(
+        self, assert_garbage, announce_garbage, expected, expected_included, bt, one_node_one_block, wallet_a
+    ):
         full_node_1, server_1 = one_node_one_block
 
         def test_fun(coin_1: Coin, coin_2: Coin):
             announce = Announcement(coin_2.puzzle_hash, bytes(0x80))
 
-            # garbage at the end is ignored
-            cvp = ConditionWithArgs(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, [announce.name(), b"garbage"])
+            # garbage at the end is ignored in consensus mode, but not in
+            # mempool mode
+            cvp = ConditionWithArgs(
+                ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT,
+                [bytes(announce.name())] + ([b"garbage"] if assert_garbage else []),
+            )
             dic = {cvp.opcode: [cvp]}
-            # garbage at the end is ignored
-            cvp2 = ConditionWithArgs(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [bytes(0x80), b"garbage"])
+            # garbage at the end is ignored in consensus mode, but not in
+            # mempool mode
+            cvp2 = ConditionWithArgs(
+                ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [bytes(0x80)] + ([b"garbage"] if announce_garbage else [])
+            )
             dic2 = {cvp.opcode: [cvp2]}
             spend_bundle1 = generate_test_spend_bundle(wallet_a, coin_1, dic)
             spend_bundle2 = generate_test_spend_bundle(wallet_a, coin_2, dic2)
@@ -1193,11 +1230,12 @@ class TestMempoolManager:
             return SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
         blocks, bundle, status, err = await self.condition_tester2(bt, one_node_one_block, wallet_a, test_fun)
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
-        assert err is None
-        assert mempool_bundle is bundle
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is expected
+        assert status == expected_included
+        if status == MempoolInclusionStatus.SUCCESS:
+            mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+            assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -1330,7 +1368,8 @@ class TestMempoolManager:
     async def test_assert_fee_condition_garbage(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        # garbage at the end of the arguments is ignored
+        # garbage at the end of the arguments is ignored in consensus mode, but
+        # not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(10), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
@@ -1338,9 +1377,9 @@ class TestMempoolManager:
         )
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
-        assert err is None
-        assert mempool_bundle is not None
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert mempool_bundle is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -1350,7 +1389,10 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
             bt, one_node_one_block, wallet_a, dic, fee=10
         )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
         assert err == Err.INVALID_CONDITION
+        assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
@@ -1474,7 +1516,6 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -1583,7 +1624,8 @@ class TestMempoolManager:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
-        # garbage at the end of the arguments list is allowed but stripped
+        # garbage at the end of the arguments list is allowed in consensus mode,
+        # but not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [coin.parent_coin_info, b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
@@ -1592,15 +1634,14 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_my_parent_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1669,15 +1710,14 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_my_puzhash_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1736,7 +1776,8 @@ class TestMempoolManager:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
         coin = await next_block(full_node_1, wallet_a, bt)
-        # garbage at the end of the arguments list is allowed but stripped
+        # garbage at the end of the arguments list is allowed in consensus mode,
+        # but not in mempool mode
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(coin.amount), b"garbage"])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
@@ -1745,15 +1786,14 @@ class TestMempoolManager:
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
-        assert err is None
-        assert sb1 is spend_bundle1
-        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is Err.INVALID_CONDITION
+        assert sb1 is None
+        assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_my_amount_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1768,7 +1808,6 @@ class TestMempoolManager:
     async def test_invalid_my_amount(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1783,7 +1822,6 @@ class TestMempoolManager:
     async def test_negative_my_amount(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1798,7 +1836,6 @@ class TestMempoolManager:
     async def test_my_amount_too_large(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)

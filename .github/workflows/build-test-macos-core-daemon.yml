@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS core-daemon Tests
+name: MacOS core-daemon Test
 
 on:
   push:
@@ -99,7 +99,7 @@ jobs:
     - name: Test core-daemon code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/core/daemon/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/core/daemon/test_daemon.py
 
     - name: Process coverage data
       run: |
