@@ -38,7 +38,6 @@ from chia.util.streamable import dataclass_from_dict
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
-from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
 
@@ -54,14 +53,9 @@ async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) 
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt, tmp_path):
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment(bt, harvester_farmer_simulation, self_hostname):
-    harvester_service, farmer_service = harvester_farmer_simulation
+async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
+    harvesters, farmer_service = farmer_one_harvester
+    harvester_service = harvesters[0]
 
     def stop_node_cb():
         pass
