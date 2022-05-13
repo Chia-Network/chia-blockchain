@@ -1,15 +1,16 @@
 # flake8: noqa: E501
 from pathlib import Path
+from tempfile import gettempdir
 
 from blspy import AugSchemeMPL, PrivateKey
 
 from chia.pools.pool_config import PoolWalletConfig
-from chia.util.config import load_config, lock_config, save_config, create_default_chia_config
+from chia.util.config import create_default_chia_config, load_config, lock_config, save_config
 
 
 def test_pool_config():
-    test_root = Path("/tmp")
-    test_path = Path("/tmp/config")
+    test_root = Path(gettempdir())
+    test_path = test_root / "config"
     eg_config = test_path / "config.yaml"
     to_config = test_path / "test_pool_config.yaml"
 
