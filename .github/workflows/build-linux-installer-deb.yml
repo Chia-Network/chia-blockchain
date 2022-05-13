@@ -46,7 +46,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
 
     - name: Setup Python environment
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
 
