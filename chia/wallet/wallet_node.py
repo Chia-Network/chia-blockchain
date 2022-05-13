@@ -4,7 +4,6 @@ import logging
 import random
 import time
 import traceback
-from asyncio import CancelledError
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
@@ -395,7 +394,7 @@ class WalletNode:
                     await self.new_peak_wallet(request, peer)
                 else:
                     assert False
-            except CancelledError:
+            except asyncio.CancelledError:
                 self.log.info("Queue task cancelled, exiting.")
                 raise
             except Exception as e:
@@ -479,7 +478,7 @@ class WalletNode:
             try:
                 await self.wallet_state_manager.db_wrapper.begin_transaction()
                 removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True, in_rollback=True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
                 else:

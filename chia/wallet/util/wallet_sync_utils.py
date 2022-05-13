@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 from typing import List, Optional, Tuple, Union, Dict
+from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
@@ -20,7 +21,7 @@ from chia.protocols.wallet_protocol import (
     RequestHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import hash_coin_list, Coin
+from chia.types.blockchain_format.coin import hash_coin_ids, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -86,14 +87,14 @@ def validate_additions(
 ):
     if proofs is None:
         # Verify root
-        additions_merkle_set = MerkleSet()
+        additions_merkle_items: List[bytes32] = []
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle_hash, coins_l in coins:
-            additions_merkle_set.add_already_hashed(puzzle_hash)
-            additions_merkle_set.add_already_hashed(hash_coin_list(coins_l))
+            additions_merkle_items.append(puzzle_hash)
+            additions_merkle_items.append(hash_coin_ids([c.name() for c in coins_l]))
 
-        additions_root = additions_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
         if root != additions_root:
             return False
     else:
@@ -118,7 +119,7 @@ def validate_additions(
                     assert coin_list_proof is not None
                     included = confirm_included_already_hashed(
                         root,
-                        hash_coin_list(coin_list_1),
+                        hash_coin_ids([c.name() for c in coin_list_1]),
                         coin_list_proof,
                     )
                     if included is False:

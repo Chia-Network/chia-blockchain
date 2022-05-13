@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -45,7 +45,7 @@ class PreValidationResult(Streamable):
 
 
 def batch_pre_validate_blocks(
-    constants_dict: Dict,
+    constants_dict: Dict[str, Any],
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
@@ -163,13 +163,13 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    constants_json: Dict,
+    constants_json: Dict[str, Any],
     block_records: BlockchainInterface,
     blocks: Sequence[FullBlock],
     pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Callable[[BlockInfo, Optional[Dict[bytes32, FullBlock]]], Awaitable[Optional[BlockGenerator]]],
+    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
