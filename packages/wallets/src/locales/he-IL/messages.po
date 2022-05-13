@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-09 18:34\n"
+"PO-Revision-Date: 2022-05-13 14:04\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -83,7 +83,7 @@ msgstr ""
 #: src/components/offers/OfferViewer.tsx:289
 #: src/components/offers/OfferViewer.tsx:290
 msgid "Accept Offer"
-msgstr ""
+msgstr "קבל הצעה"
 
 #: src/components/trading/TradingOverview.jsx:227
 #~ msgid "Accepted at time:"
@@ -91,7 +91,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:194
 msgid "Accepted on Date"
-msgstr ""
+msgstr "התקבלה בתאריך"
 
 #: src/components/plot/PlotsFailed.tsx:18
 #: src/components/plot/PlotsNotFound.tsx:18
@@ -115,11 +115,11 @@ msgstr "הוספ/י מזהה גיבוי"
 
 #: src/components/offers/OfferAssetSelector.tsx:127
 msgid "Add CAT wallets to have more options"
-msgstr ""
+msgstr "הוסף ארנקי CAT לעוד אפשרויות"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
-msgstr ""
+msgstr "הוסף מטבע מותאם אישית"
 
 #: src/components/plot/PlotHeader.tsx:89
 #~ msgid "Add Plot Directory"
@@ -136,7 +136,7 @@ msgstr ""
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr ""
+msgstr "הוסף מטבע"
 
 #: src/components/wallet/Wallets.tsx:88
 #~ msgid "Add Wallet"
@@ -169,7 +169,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:94
 msgid "Adding {0} token"
-msgstr ""
+msgstr "הוסף {0} מטבע"
 
 #: src/components/WalletReceiveAddress.tsx:60
 msgid "Address"
@@ -212,7 +212,7 @@ msgstr "סכום למטבע ראשוני"
 
 #: src/components/offers/OfferEditor.tsx:115
 msgid "Amount exceeds spendable balance"
-msgstr ""
+msgstr "כמות עברה את הכמות המטבעות הניתנים לבזבוז"
 
 #: src/components/did/WalletDIDCreate.tsx:61
 msgid "Amount must be an even amount."
@@ -220,7 +220,7 @@ msgstr "סכום צריך להיות סכום שווה."
 
 #: src/components/offers/OfferManager.tsx:100
 msgid "Are you sure you want to cancel your offer?"
-msgstr ""
+msgstr "האם אתה בטוח שאתה רוצה לבטל את ההצעה?"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -251,15 +251,15 @@ msgstr "האם אתה בטוח שברצונך למחוק עסקאות לא מא�
 #: src/components/cat/WalletCATTAILDialog.tsx:43
 #: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
-msgstr ""
+msgstr "מזהה נכס"
 
 #: src/components/offers/OfferAssetSelector.tsx:117
 msgid "Asset Type"
-msgstr ""
+msgstr "סוג נכס"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
-msgstr ""
+msgstr "ארנק החלפה אטומית"
 
 #: src/components/app/AppState.tsx:148
 #~ msgid "Attempt {attempt}"
