@@ -10,8 +10,8 @@ from chia.util.errors import Err
 def validate_block_merkle_roots(
     block_additions_root: bytes32,
     block_removals_root: bytes32,
-    tx_additions: List[Coin] = None,
-    tx_removals: List[bytes32] = None,
+    tx_additions: Optional[List[Coin]] = None,
+    tx_removals: Optional[List[bytes32]] = None,
 ) -> Optional[Err]:
     if tx_removals is None:
         tx_removals = []

@@ -44,7 +44,7 @@ async def validate_block_body(
     fork_point_with_peak: Optional[uint32],
     get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     *,
-    validate_signature=True,
+    validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
     """
     This assumes the header block has been completely validated.
@@ -152,7 +152,7 @@ async def validate_block_body(
     removals_puzzle_dic: Dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
-    # In header validation we check that timestamp is not more that 5 minutes into the future
+    # In header validation we check that timestamp is not more than 5 minutes into the future
     # 6. No transactions before INITIAL_TRANSACTION_FREEZE timestamp
     # (this test has been removed)
 
