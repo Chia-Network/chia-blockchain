@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
-import aiosqlite
 import time
 import traceback
 import asyncio
@@ -80,8 +79,6 @@ class DataLayer:
     async def _await_closed(self) -> None:
         if self.db_wrapper is not None:
             await self.db_wrapper.close()
-        if self.connection is not None:
-            await self.connection.close()
         if self.config.get("run_server", False):
             await self.data_layer_server.stop()
         self.periodically_fetch_data_task.cancel()
