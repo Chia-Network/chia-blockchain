@@ -6,7 +6,6 @@ from typing import Any, Dict
 
 import aiohttp
 import aiosqlite
-from aiohttp import web  # lgtm [py/import and import from]
 
 from chia.data_layer.data_layer_types import InsertionData, TerminalNode
 from chia.data_layer.data_store import DataStore
@@ -32,11 +31,11 @@ class DataLayerServer:
         self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
         self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
 
-        app = web.Application()
+        app = aiohttp.web.Application()
         app.router.add_route("GET", "/ws", self.websocket_handler)
-        self.runner = web.AppRunner(app)
+        self.runner = aiohttp.web.AppRunner(app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, self.config["host_ip"], port=self.port)
+        self.site = aiohttp.web.TCPSite(self.runner, self.config["host_ip"], port=self.port)
         await self.site.start()
         self.log.info("Started Data Layer Server.")
 
@@ -131,7 +130,7 @@ class DataLayerServer:
 
         return json.dumps(answer)
 
-    async def websocket_handler(self, request: web.Request) -> web.WebSocketResponse:
+    async def websocket_handler(self, request: aiohttp.web.Request) -> aiohttp.web.WebSocketResponse:
         ws = aiohttp.web.WebSocketResponse(max_msg_size=0)
         await ws.prepare(request)
 
