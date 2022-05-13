@@ -8,7 +8,7 @@ msgstr ""
 "Language: he_IL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-13 14:04\n"
+"PO-Revision-Date: 2022-05-13 15:11\n"
 "Last-Translator: \n"
 "Language-Team: Hebrew\n"
 "Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
@@ -398,7 +398,7 @@ msgstr "בטל"
 #: src/components/offers/OfferManager.tsx:166
 #: src/components/offers/OfferManager.tsx:423
 msgid "Cancel Offer"
-msgstr ""
+msgstr "בטל הצעה"
 
 #: src/components/trading/TradingOverview.jsx:388
 #~ msgid "Cancel and Spend"
@@ -406,12 +406,12 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:121
 msgid "Cancel on blockchain"
-msgstr ""
+msgstr "בטל בבלוקצ'יין"
 
 #: src/components/WalletSend.tsx:101
 #: src/components/cat/WalletCATSend.tsx:119
 msgid "Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "לא ניתן לשלוח Chia לכתובת הצבעונית. אנא הקש כתובת Chia."
 
 #: src/components/plot/PlotsNotFound.tsx:36
 #~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
