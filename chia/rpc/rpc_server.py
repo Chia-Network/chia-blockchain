@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
+from typing_extensions import Protocol
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
@@ -18,6 +19,11 @@ from chia.util.ws_message import create_payload, create_payload_dict, format_res
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
+
+
+class RpcApiProtocol(Protocol):
+    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
+        pass
 
 
 class RpcServer:
