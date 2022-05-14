@@ -31,6 +31,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -650,6 +651,39 @@ class TestWalletRpc:
             assert did_wallet_2.get_my_DID() == did_id_0
             metadata = json.loads(did_wallet_2.did_info.metadata)
             assert metadata["Twitter"] == "Https://test"
+
+            # NFT
+            res = await client.create_new_nft_wallet(None)
+            nft_wallet_id = res["wallet_id"]
+            ph = await wallet.get_new_puzzlehash()
+            res = await client.mint_nft(
+                nft_wallet_id,
+                None,
+                "0xD4584AD463139FA8C0D9F68F4B59F185",
+                ["https://www.chia.net/img/branding/chia-logo.svg"],
+                0,
+            )
+            assert res["success"]
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client.farm_block(encode_puzzle_hash(ph, "txch"))
+                await asyncio.sleep(0.5)
+
+            nft_wallet: NFTWallet = wallet_node.wallet_state_manager.wallets[nft_wallet_id]
+            nft_id = nft_wallet.get_current_nfts()[0].coin.name()
+            nft_info = (await full_node_rpc_api.get_nft_info({"coin_id": nft_id.hex()}))["nft_info"]
+            assert nft_info.nft_coin_id == nft_wallet.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
+
+            res = await client.transfer_nft(nft_wallet_id, nft_id.hex(), addr, 0)
+            assert res["success"]
+
+            await asyncio.sleep(1)
+            for i in range(0, 5):
+                await client_2.farm_block(encode_puzzle_hash(ph_2, "txch"))
+                await asyncio.sleep(0.5)
+
+            nft_info_1 = (await full_node_rpc_api.get_nft_info({"coin_id": nft_id.hex(), "latest": False}))["nft_info"]
+            assert nft_info_1 == nft_info
 
             # Keys and addresses
 

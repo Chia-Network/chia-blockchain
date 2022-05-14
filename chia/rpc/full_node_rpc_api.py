@@ -17,6 +17,8 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_puzzles import get_nft_info_from_puzzle
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
@@ -57,6 +59,7 @@ class FullNodeRpcApi:
             "/get_coin_records_by_hint": self.get_coin_records_by_hint,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
+            "/get_nft_info": self.get_nft_info,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -666,6 +669,37 @@ class FullNodeRpcApi:
         puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
         return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
+
+    async def get_nft_info(self, request: Dict) -> Optional[Dict]:
+        # coin_id should be the latest ID of the unspent NFT coin
+        if "coin_id" not in request:
+            raise ValueError("Coin ID is required.")
+        coin_id = bytes32.from_hexstr(request["coin_id"])
+        # Get coin state
+        coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(coin_id)
+        if coin_record is None:
+            raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
+        if request.get("latest", True) and coin_record.spent:
+            raise ValueError(f"Coin 0x{coin_id.hex()} is spent. Please input an unspent coin ID.")
+        # Get parent coin
+        parent_coin_record: Optional[CoinRecord] = await self.service.blockchain.coin_store.get_coin_record(
+            coin_record.coin.parent_coin_info
+        )
+        assert parent_coin_record is not None
+        res = await self.get_puzzle_and_solution(
+            {"coin_id": parent_coin_record.name.hex(), "height": parent_coin_record.spent_block_index}
+        )
+        assert res is not None
+        coin_spend: CoinSpend = res["coin_solution"]
+        # convert to NFTInfo
+        try:
+            nft_info: NFTInfo = get_nft_info_from_puzzle(
+                Program.from_bytes(bytes(coin_spend.puzzle_reveal)), parent_coin_record.coin
+            )
+        except Exception as e:
+            raise ValueError(f"The coin is not a NFT. {e}")
+        else:
+            return {"nft_info": nft_info}
 
     async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
         if "header_hash" not in request:
