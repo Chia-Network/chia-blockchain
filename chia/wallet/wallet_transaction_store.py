@@ -1,3 +1,4 @@
+import dataclasses
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -13,6 +14,15 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
 
 
+def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
+    """Remove SUCCESS and PENDING status records from a TransactionRecord sent_to field"""
+    new_sent_to = []
+    for peer, status, err in sent_to:
+        if status == MempoolInclusionStatus.FAILED.value:
+            new_sent_to.append((peer, status, err))
+    return new_sent_to
+
+
 class WalletTransactionStore:
     """
     WalletTransactionStore stores transaction history for the wallet.
@@ -23,6 +33,7 @@ class WalletTransactionStore:
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
+    last_wallet_tx_resend_time: int  # Epoch time in seconds
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper):
@@ -79,6 +90,7 @@ class WalletTransactionStore:
         self.tx_record_cache = {}
         self.tx_submitted = {}
         self.unconfirmed_for_wallet = {}
+        self.last_wallet_tx_resend_time = int(time.time())
         await self.rebuild_tx_cache()
         return self
 
@@ -277,9 +289,9 @@ class WalletTransactionStore:
             return record
         return None
 
-    async def get_not_sent(self) -> List[TransactionRecord]:
+    async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
-        Returns the list of transaction that have not been received by full node yet.
+        Returns the list of transactions that have not been received by full node yet.
         """
         current_time = int(time.time())
         cursor = await self.db_connection.execute(
@@ -289,9 +301,16 @@ class WalletTransactionStore:
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
+
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
-            if record.name in self.tx_submitted:
+            if include_accepted_txs:
+                # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
+                record = dataclasses.replace(record, sent=1, sent_to=filter_ok_mempool_status(record.sent_to))
+                await self.add_transaction_record(record, False)
+                self.tx_submitted[record.name] = current_time, 1
+                records.append(record)
+            elif record.name in self.tx_submitted:
                 time_submitted, count = self.tx_submitted[record.name]
                 if time_submitted < current_time - (60 * 10):
                     records.append(record)

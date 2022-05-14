@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from secrets import token_bytes
-from typing import AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, Dict, List, Tuple, Optional
 from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
@@ -232,6 +232,7 @@ async def setup_simulators_and_wallets(
     key_seed=None,
     initial_num_public_keys=5,
     db_version=1,
+    config_overrides: Optional[Dict] = None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -244,7 +245,7 @@ async def setup_simulators_and_wallets(
             rpc_port = find_available_listen_port(f"node{index} rpc")
             db_name = f"blockchain_test_{port}.db"
             bt_tools = await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain1
+                consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
             )  # block tools modifies constants
             sim = setup_full_node(
                 bt_tools.constants,
@@ -267,7 +268,7 @@ async def setup_simulators_and_wallets(
             port = find_available_listen_port(f"wallet{index}")
             rpc_port = find_available_listen_port(f"wallet{index} rpc")
             bt_tools = await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain2
+                consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
             )  # block tools modifies constants
             wlt = setup_wallet_node(
                 bt_tools.config["self_hostname"],
