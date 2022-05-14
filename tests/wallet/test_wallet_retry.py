@@ -48,7 +48,7 @@ async def test_wallet_tx_retry(
     wallet_a: WalletTool,
     self_hostname: str,
 ) -> None:
-    wait_secs = 1000
+    wait_secs = 15
     reward_ph = wallet_a.get_new_puzzlehash()
     nodes, wallets = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
