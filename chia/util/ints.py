@@ -60,4 +60,4 @@ class int512(StructStream):
     # encode these with one extra byte, but only allow a range of
     # [-INT512_MAX, INT512_MAX]
     MAXIMUM_EXCLUSIVE = 2**BITS
-    MINIMUM = - (2**BITS) + 1
+    MINIMUM = -(2**BITS) + 1
