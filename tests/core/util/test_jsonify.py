@@ -21,42 +21,7 @@ def test_primitives() -> None:
         None,
         "foobar",
         b"\0\1\0\1",
-        bytes32(
-            [
-                0,
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                12,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                26,
-                27,
-                28,
-                29,
-                30,
-                31,
-            ]
-        ),
+        bytes32(range(32)),
     )
 
     assert t.to_json_dict() == {
@@ -90,7 +55,7 @@ def test_tuple() -> None:
     assert t.to_json_dict() == {"d": ["foo", 123, "bar"]}
 
 
-def test_nested() -> None:
+def test_nested_with_tuple() -> None:
     @streamable
     @dataclass(frozen=True)
     class Inner(Streamable):
@@ -105,6 +70,40 @@ def test_nested() -> None:
     t = NestedTest((Inner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])), uint32(321), "baz"))
 
     assert t.to_json_dict() == {"a": [{"a": ["foo", 123, "bar"], "b": "0x1337"}, 321, "baz"]}
+
+
+def test_nested_with_list() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class Inner(Streamable):
+        a: uint32
+        b: bytes
+
+    @streamable
+    @dataclass(frozen=True)
+    class NestedTest(Streamable):
+        a: List[Inner]
+
+    t = NestedTest([Inner(uint32(123), bytes([0x13, 0x37]))])
+
+    assert t.to_json_dict() == {"a": [{"a": 123, "b": "0x1337"}]}
+
+
+def test_nested() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class Inner(Streamable):
+        a: Tuple[str, uint32, str]
+        b: bytes
+
+    @streamable
+    @dataclass(frozen=True)
+    class NestedTest(Streamable):
+        a: Inner
+
+    t = NestedTest(Inner(("foo", uint32(123), "bar"), bytes([0x13, 0x37])))
+
+    assert t.to_json_dict() == {"a": {"a": ["foo", 123, "bar"], "b": "0x1337"}}
 
 
 def test_recurse_jsonify() -> None:
