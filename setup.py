@@ -19,7 +19,7 @@ dependencies = [
     "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
     "fasteners==0.16.3",  # For interprocess file locking, expected to be replaced by filelock
     "filelock==3.4.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-    "keyring==23.0.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==23.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
