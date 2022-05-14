@@ -140,6 +140,8 @@ class WalletNode:
         self.validation_semaphore = None
         self.local_node_synced = False
         self.LONG_SYNC_THRESHOLD = 200
+        self.last_wallet_tx_resend_time: int = 0
+        self.wallet_tx_resend_timeout_secs: int = 1800  # Duration in seconds
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -229,6 +231,8 @@ class WalletNode:
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
+        self.last_wallet_tx_resend_time = int(time.time())
+        self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
@@ -331,7 +335,14 @@ class WalletNode:
             return []
         messages: List[Tuple[Message, Set[bytes32]]] = []
 
-        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
+        current_time = int(time.time())
+        retry_accepted_txs = False
+        if self.last_wallet_tx_resend_time < current_time - self.wallet_tx_resend_timeout_secs:
+            self.last_wallet_tx_resend_time = current_time
+            retry_accepted_txs = True
+        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent(
+            include_accepted_txs=retry_accepted_txs
+        )
 
         for record in records:
             if record.spend_bundle is None:
@@ -1046,7 +1057,9 @@ class WalletNode:
 
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
-        await self.wallet_state_manager.new_peak(new_peak)
+
+        async with self.wallet_state_manager.lock:
+            await self.wallet_state_manager.new_peak(new_peak)
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int:
         assert self.wallet_state_manager is not None

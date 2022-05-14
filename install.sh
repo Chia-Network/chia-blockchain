@@ -211,11 +211,11 @@ find_python() {
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
           if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
-            echo "Chia requires Python version < 3.11.0"
-            echo "Current Python version = $PY3_VERSION"
+            echo "Chia requires Python version < 3.11.0" >&2
+            echo "Current Python version = $PY3_VERSION" >&2
             # If Arch, direct to Arch Wiki
             if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support."
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
             fi
             exit 1
           fi

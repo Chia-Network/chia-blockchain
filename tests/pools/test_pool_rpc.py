@@ -82,12 +82,11 @@ class TemporaryPoolPlot:
         self._tmpdir.__exit__(None, None, None)
 
 
-async def wallet_is_synced(wallet_node: WalletNode, full_node_api):
+async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
     assert wallet_node.wallet_state_manager is not None
-    return (
-        await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        == full_node_api.full_node.blockchain.get_peak_height()
-    )
+    wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+    full_node_height = full_node_api.full_node.blockchain.get_peak_height()
+    return wallet_height == full_node_height
 
 
 PREFARMED_BLOCKS = 4
