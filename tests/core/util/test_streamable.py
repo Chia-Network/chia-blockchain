@@ -303,7 +303,7 @@ def test_ambiguous_deserialization_int() -> None:
         a: uint32
 
     # Does not have the required uint size
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassUint.from_bytes(b"\x00\x00")
 
 
@@ -314,7 +314,7 @@ def test_ambiguous_deserialization_list() -> None:
         a: List[uint8]
 
     # Does not have the required elements
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassList.from_bytes(bytes([0, 0, 100, 24]))
 
 
