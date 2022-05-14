@@ -5,7 +5,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.util.generator_tools import additions_for_npc
+from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.ints import uint32
 
 
@@ -27,10 +27,11 @@ def run_and_get_removals_and_additions(
             mempool_mode=mempool_mode,
             height=height,
         )
+        assert npc_result.error is None
+        rem, add = tx_removals_and_additions(npc_result.conds)
         # build removals list
-        for npc in npc_result.npc_list:
-            removals.append(npc.coin_name)
-        additions.extend(additions_for_npc(npc_result.npc_list))
+        removals.extend(rem)
+        additions.extend(add)
 
     rewards = block.get_included_reward_coins()
     additions.extend(rewards)

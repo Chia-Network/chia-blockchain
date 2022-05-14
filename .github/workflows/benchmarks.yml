@@ -51,11 +51,13 @@ jobs:
           ${{ runner.os }}-pip-
 
     - name: Install ubuntu dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo apt-get install software-properties-common
+        sudo apt-get install -y software-properties-common
         sudo add-apt-repository ppa:deadsnakes/ppa
         sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
+        sudo apt-get install -y python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git
 
     - name: Run install script
       env:

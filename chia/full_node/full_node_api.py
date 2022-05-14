@@ -1250,8 +1250,9 @@ class FullNodeAPI:
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
-        for i in range(450):
-            await asyncio.sleep(0.1)
+        sleep_time = 0.01
+        for i in range(int(45 / sleep_time)):
+            await asyncio.sleep(sleep_time)
             for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
                 if spend_name == potential_name:
                     status = potential_status
