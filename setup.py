@@ -2,7 +2,7 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.9",  # Signature library
+    "blspy==1.0.13",  # Signature library
     "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
@@ -18,7 +18,7 @@ dependencies = [
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
     "fasteners==0.16.3",  # For interprocess file locking, expected to be replaced by filelock
-    "filelock==3.4.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.7.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.0.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
