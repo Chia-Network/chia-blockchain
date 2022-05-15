@@ -105,6 +105,8 @@ async def test_wallet_tx_retry(
     )
 
     await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
+    # NOTE: as early as here, it helps
+    # await asyncio.sleep(10)
 
     async def sb_in_mempool() -> bool:
         return full_node_1.full_node.mempool_manager.get_spendbundle(sb1.name()) == sb1
@@ -117,7 +119,6 @@ async def test_wallet_tx_retry(
 
     # Wait for wallet to catch up
     await time_out_assert(wait_secs, wallet_synced)
-    await asyncio.sleep(10)
 
     # Evict SpendBundle from peer
     evict_from_pool(full_node_1, sb1)
@@ -126,6 +127,8 @@ async def test_wallet_tx_retry(
     print(f"mempool spends: {full_node_1.full_node.mempool_manager.mempool.spends}")
 
     our_ph = await wallet_1.get_new_puzzlehash()
+    # NOTE: and it helps as late as here
+    await asyncio.sleep(10)
     current_height += await farm_blocks(full_node_1, our_ph, 3)
     await time_out_assert(wait_secs, wallet_synced)
 
