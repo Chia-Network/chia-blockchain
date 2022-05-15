@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Any, List, Tuple
 
@@ -56,6 +57,7 @@ async def test_wallet_tx_retry(
     full_node_1: FullNodeSimulator = nodes[0]
 
     wallet_node_1: WalletNode = wallets[0][0]
+    # TODO: this doesn't seem to do anything, being set elsewhere
     wallet_node_1.config["tx_resend_timeout_secs"] = 5
     wallet_server_1 = wallets[0][1]
     assert wallet_node_1.wallet_state_manager is not None
@@ -115,6 +117,7 @@ async def test_wallet_tx_retry(
 
     # Wait for wallet to catch up
     await time_out_assert(wait_secs, wallet_synced)
+    await asyncio.sleep(10)
 
     # Evict SpendBundle from peer
     evict_from_pool(full_node_1, sb1)
