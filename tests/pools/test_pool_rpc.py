@@ -887,7 +887,7 @@ class TestPoolWalletRpc:
                 fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
                 return fetched is not None and fetched.is_in_mempool()
 
-            await time_out_assert(10, tx_is_in_mempool, True, wallet_id, join_pool_tx)
+            await time_out_assert(20, tx_is_in_mempool, True, wallet_id, join_pool_tx)
             await time_out_assert(10, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
