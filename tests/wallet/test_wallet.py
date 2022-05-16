@@ -8,7 +8,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -549,7 +549,6 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
-        ph = await wallet.get_new_puzzlehash()
         ph2 = await wallet_2.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
