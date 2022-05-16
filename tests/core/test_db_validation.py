@@ -17,7 +17,7 @@ from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
 
@@ -139,7 +139,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
             await conn.execute("INSERT INTO database_version VALUES (2)")
 
         block_store = await BlockStore.create(db_wrapper)
-        coin_store = await CoinStore.create(db_wrapper, uint32(0))
+        coin_store = await CoinStore.create(db_wrapper)
         hint_store = await HintStore.create(db_wrapper)
 
         bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, Path("."), reserved_cores=0)
