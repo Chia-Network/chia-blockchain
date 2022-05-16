@@ -229,11 +229,14 @@ class NFTWallet:
             if condition_code == -24:
                 # metadata update
                 # (-24 (meta updater puzzle) url)
-                metadata_dict = dict(metadata.as_python())
-                new_metadata = [
-                    (b"u", ([condition.rest().rest().first().atom] + [metadata_dict[b"u"]])),
-                    (b"h", metadata_dict[b"h"]),
-                ]
+                metadata_list = list(metadata.as_python())
+                new_metadata = []
+                for metadata_entry in metadata_list:
+                    key = metadata_entry[0]
+                    if key == b"u":
+                        new_metadata.append((b"u", [condition.rest().rest().first().atom] + list(metadata_entry[1:])))
+                    else:
+                        new_metadata.append((b"h", metadata_entry[1]))
                 metadata = Program.to(new_metadata)
             elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
                 puzhash = bytes32(condition.rest().first().atom)
