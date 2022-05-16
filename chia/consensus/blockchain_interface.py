@@ -86,7 +86,7 @@ class BlockchainInterface:
         ses_block_hash: bytes32,
         segments: bytes,
         num_of_segmetns: int,
-    ):
+    ) -> None:
         pass
 
     async def get_sub_epoch_challenge_segments_v2(

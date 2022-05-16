@@ -1,8 +1,15 @@
 # flake8: noqa: F811, F401
+import time
+
+import aiosqlite
 import dataclasses
+import logging
+import multiprocessing
 import os
+import sqlite3
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from datetime import datetime
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
 
@@ -10,22 +17,35 @@ import pytest
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import Blockchain
 from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.full_node.block_store import BlockStore
+from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.weight_proof_v2 import (
     WeightProofHandlerV2,
     _validate_recent_blocks,
     _validate_segment,
     get_recent_chain,
+    validate_sub_epoch,
 )
+from chia.server.start_full_node import SERVICE_NAME
 from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
-from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2
+from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2, SubEpochSegments, SubEpochSegmentsV2
 from chia.util.block_cache import BlockCache
+from chia.util.config import load_config, process_config_start_method
+from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version, set_db_version_async
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.generator_tools import get_block_header
+from chia.util.path import path_from_root
 from chia.util.streamable import recurse_jsonify
 from tests.block_tools import BlockTools, test_constants
 
@@ -331,10 +351,26 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="broken")
+    # @pytest.mark.skip(reason="broken")
     async def test_weight_proof10000(self, default_10000_blocks: List[FullBlock]) -> None:
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        block = sub_blocks[height_to_hash[uint32(0)]]
+        # block_cache = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        # sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        #     test_constants, len(header_cache[block.header_hash].finished_sub_slots) > 0, None, block_cache
+        # )
+        # required_iters, error = validate_finished_header_block(
+        #     test_constants,
+        #     block_cache,
+        #     header_cache[block.header_hash],
+        #     False,
+        #     difficulty,
+        #     sub_slot_iters,
+        # )
+
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash, seed)
 
@@ -889,86 +925,221 @@ class TestWeightProof:
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
 
+    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.asyncio
+    async def test_sub_epoch_segment_from_database(self) -> None:
 
-# @pytest.mark.skip("used for debugging")
-# @pytest.mark.asyncio
-# async def test_weight_proof_from_database(self) -> None:
-#
-#     log = logging.getLogger()
-#     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-#     overrides = config["network_overrides"]["constants"]["mainnet"]
-#     print(overrides["GENESIS_CHALLENGE"])
-#     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-#
-#     db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-#     db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
-#
-#     db_connection = await aiosqlite.connect(db_path)
-#     db_version: int = await lookup_db_version(db_connection)
-#
-#     if config.get("log_sqlite_cmds", False):
-#         sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
-#
-#         def sql_trace_callback(req: str):
-#             timestamp = datetime.now().strftime("%H:%M:%S.%f")
-#             log = open(sql_log_path, "a")
-#             log.write(timestamp + " " + req + "\n")
-#             log.close()
-#
-#         await db_connection.set_trace_callback(sql_trace_callback)
-#
-#     db_wrapper = DBWrapper2(db_connection, db_version=db_version)
-#
-#     # add reader threads for the DB
-#     for i in range(config.get("db_readers", 4)):
-#         c = await aiosqlite.connect(db_path)
-#         await db_wrapper.add_connection(c)
-#
-#     await (await db_connection.execute("pragma journal_mode=wal")).close()
-#     db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
-#     await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
-#
-#     if db_version != 2:
-#         async with db_wrapper.read_db() as conn:
-#             async with conn.execute(
-#                 "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
-#             ) as cur:
-#                 if len(await cur.fetchall()) == 0:
-#                     try:
-#                         # this is a new DB file. Make it v2
-#                         async with db_wrapper.write_db() as w_conn:
-#                             await set_db_version_async(w_conn, 2)
-#                             db_wrapper.db_version = 2
-#                     except sqlite3.OperationalError:
-#                         # it could be a database created with "chia init", which is
-#                         # empty except it has the database_version table
-#                         pass
-#
-#     block_store = await BlockStore.create(db_wrapper)
-#     hint_store = await HintStore.create(db_wrapper)
-#     coin_store = await CoinStore.create(db_wrapper)
-#     reserved_cores = config.get("reserved_cores", 0)
-#     single_threaded = config.get("single_threaded", False)
-#     multiprocessing_start_method = process_config_start_method(config=config, log=log)
-#     multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-#     blockchain = await Blockchain.create(
-#         coin_store=coin_store,
-#         block_store=block_store,
-#         consensus_constants=updated_constants,
-#         hint_store=hint_store,
-#         blockchain_dir=db_path.parent,
-#         reserved_cores=reserved_cores,
-#         multiprocessing_context=multiprocessing_context,
-#         single_threaded=single_threaded,
-#     )
-#     peak = blockchain.get_peak()
-#     wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
-#     wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
-#     assert wp2
-#     wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
-#     valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
-#     assert valid
-#     await db_connection.close()
+        log = logging.getLogger()
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        overrides = config["network_overrides"]["constants"]["mainnet"]
+        print(overrides["GENESIS_CHALLENGE"])
+        updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
+
+        db_connection = await aiosqlite.connect(db_path)
+        db_version: int = await lookup_db_version(db_connection)
+
+        if config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
+
+            def sql_trace_callback(req: str):
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")
+                log = open(sql_log_path, "a")
+                log.write(timestamp + " " + req + "\n")
+                log.close()
+
+            await db_connection.set_trace_callback(sql_trace_callback)
+
+        db_wrapper = DBWrapper2(db_connection, db_version=db_version)
+
+        # add reader threads for the DB
+        for i in range(config.get("db_readers", 4)):
+            c = await aiosqlite.connect(db_path)
+            await db_wrapper.add_connection(c)
+
+        await (await db_connection.execute("pragma journal_mode=wal")).close()
+        db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
+        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
+
+        if db_version != 2:
+            async with db_wrapper.read_db() as conn:
+                async with conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+                ) as cur:
+                    if len(await cur.fetchall()) == 0:
+                        try:
+                            # this is a new DB file. Make it v2
+                            async with db_wrapper.write_db() as w_conn:
+                                await set_db_version_async(w_conn, 2)
+                                db_wrapper.db_version = 2
+                        except sqlite3.OperationalError:
+                            # it could be a database created with "chia init", which is
+                            # empty except it has the database_version table
+                            pass
+
+        block_store = await BlockStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
+        coin_store = await CoinStore.create(db_wrapper)
+        reserved_cores = config.get("reserved_cores", 0)
+        single_threaded = config.get("single_threaded", False)
+        multiprocessing_start_method = process_config_start_method(config=config, log=log)
+        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        blockchain = await Blockchain.create(
+            coin_store=coin_store,
+            block_store=block_store,
+            consensus_constants=updated_constants,
+            hint_store=hint_store,
+            blockchain_dir=db_path.parent,
+            reserved_cores=reserved_cores,
+            multiprocessing_context=multiprocessing_context,
+            single_threaded=single_threaded,
+        )
+        summary_heights = blockchain.get_ses_heights()
+        prev_ses_block = await blockchain.get_block_record_from_db(blockchain.height_to_hash(uint32(0)))
+        if prev_ses_block is None:
+            return None
+
+        ses_blocks = await blockchain.get_block_records_at(summary_heights)
+        if ses_blocks is None:
+            return None
+
+        sub_epoch_n = 3008
+
+        ses_block = ses_blocks[sub_epoch_n]
+        prev_ses_block = ses_blocks[sub_epoch_n - 1]
+        log.info(f"check db for sub epoch {sub_epoch_n}")
+        if ses_block is None or ses_block.sub_epoch_summary_included is None:
+            log.error("error while building proof")
+            return None
+
+        summaries_bytes = []
+        for height in blockchain.get_ses_heights():
+            summaries_bytes.append(bytes(blockchain.get_ses(height)))
+
+        # block_records = await block_store.get_block_records_in_range(header_block.height-1000,header_block.height)
+        # for block in block_records.values():
+        #     blockchain.add_block_record(block)
+        #
+        #
+        # required_iters, error = validate_finished_header_block(
+        #     updated_constants,
+        #     blockchain,
+        #     header_block,
+        #     False,
+        #     difficulty,
+        #     sub_slot_iters,
+        # )
+
+        wpf = WeightProofHandlerV2(updated_constants, blockchain)
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(
+            # type: ignore
+            ses_block,
+            prev_ses_block,
+            uint32(sub_epoch_n),
+        )
+
+        wpf = WeightProofHandlerV2(updated_constants, blockchain)
+        # sesbytes3, _ = await wpf._WeightProofHandlerV2__create_persist_sub_epoch(  # type: ignore
+        #     prev_ses_block,
+        #     ses_block,
+        #     uint32(sub_epoch_n)
+        # )
+
+        sesbytes = bytes(SubEpochSegmentsV2(segments))
+        await blockchain.persist_sub_epoch_challenge_segments_v2(ses_block.header_hash, sesbytes, len(segments))
+
+        res = await blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
+        sesbytes2 = res[0]
+
+        constants_dict = recurse_jsonify(dataclasses.asdict(updated_constants))
+
+        same2 = sesbytes2 == sesbytes
+        validate_sub_epoch(constants_dict, 0, sesbytes2, summaries_bytes)
+        await db_connection.close()
+
+    # @pytest.mark.skip("used for debugging")
+    @pytest.mark.asyncio
+    async def test_weight_proof_from_database(self) -> None:
+
+        log = logging.getLogger()
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        overrides = config["network_overrides"]["constants"]["mainnet"]
+        print(overrides["GENESIS_CHALLENGE"])
+        updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+        db_path = path_from_root(DEFAULT_ROOT_PATH, db_path_replaced)
+
+        db_connection = await aiosqlite.connect(db_path)
+        db_version: int = await lookup_db_version(db_connection)
+
+        if config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(DEFAULT_ROOT_PATH, "log/sql.log")
+
+            def sql_trace_callback(req: str):
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")
+                log = open(sql_log_path, "a")
+                log.write(timestamp + " " + req + "\n")
+                log.close()
+
+            await db_connection.set_trace_callback(sql_trace_callback)
+
+        db_wrapper = DBWrapper2(db_connection, db_version=db_version)
+
+        # add reader threads for the DB
+        for i in range(config.get("db_readers", 4)):
+            c = await aiosqlite.connect(db_path)
+            await db_wrapper.add_connection(c)
+
+        await (await db_connection.execute("pragma journal_mode=wal")).close()
+        db_sync = db_synchronous_on(config.get("db_sync", "auto"), db_path)
+        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
+
+        if db_version != 2:
+            async with db_wrapper.read_db() as conn:
+                async with conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
+                ) as cur:
+                    if len(await cur.fetchall()) == 0:
+                        try:
+                            # this is a new DB file. Make it v2
+                            async with db_wrapper.write_db() as w_conn:
+                                await set_db_version_async(w_conn, 2)
+                                db_wrapper.db_version = 2
+                        except sqlite3.OperationalError:
+                            # it could be a database created with "chia init", which is
+                            # empty except it has the database_version table
+                            pass
+
+        block_store = await BlockStore.create(db_wrapper)
+        hint_store = await HintStore.create(db_wrapper)
+        coin_store = await CoinStore.create(db_wrapper)
+        reserved_cores = config.get("reserved_cores", 0)
+        single_threaded = config.get("single_threaded", False)
+        multiprocessing_start_method = process_config_start_method(config=config, log=log)
+        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        blockchain = await Blockchain.create(
+            coin_store=coin_store,
+            block_store=block_store,
+            consensus_constants=updated_constants,
+            hint_store=hint_store,
+            blockchain_dir=db_path.parent,
+            reserved_cores=reserved_cores,
+            multiprocessing_context=multiprocessing_context,
+            single_threaded=single_threaded,
+        )
+        peak = blockchain.get_peak()
+        wpf2 = WeightProofHandlerV2(updated_constants, blockchain)
+        wp2 = await wpf2.get_proof_of_weight(blockchain.height_to_hash(peak.height), b"asdfghjkl")
+        assert wp2
+        wpf_not_synced = WeightProofHandlerV2(updated_constants, BlockCache({}))
+        start = time.time()
+        valid, fork_point, _, _ = await wpf_not_synced.validate_weight_proof(wp2, b"asdfghjkl")
+        print(f"validation tool {time.time() - start} sec")
+        assert valid
+        await db_connection.close()
 
 
 def get_size(obj, seen=None) -> int:  # type: ignore
