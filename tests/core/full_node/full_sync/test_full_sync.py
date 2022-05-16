@@ -58,7 +58,7 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
         )
 
-        timeout_seconds = 150
+        timeout_seconds = 250
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
