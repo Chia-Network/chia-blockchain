@@ -6,7 +6,9 @@ name: MacOS core-ssl Tests
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -27,7 +29,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: ['3.9', '3.10']
         os: [macOS-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -105,7 +107,7 @@ jobs:
         venv/bin/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage_reports/*
