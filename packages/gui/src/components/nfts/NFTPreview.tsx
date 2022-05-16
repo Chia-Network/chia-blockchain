@@ -26,6 +26,7 @@ const StyledCardPreview = styled(Box)`
 `;
 
 const StyledIframe = styled('iframe')`
+  position: relative;
   pointer-events: none;
   width: 100%;
   height: 100%;
@@ -142,7 +143,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           )}
           <StyledIframe
             srcDoc={srcDoc}
-            sandbox="allow-same-origin"
+            sandbox=""
             height={height}
             frameBorder="0"
             onLoad={handleLoad}
