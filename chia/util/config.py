@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import copy
 import logging
 import os
 import shutil
@@ -8,11 +9,11 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Union
 
 import pkg_resources
 import yaml
-from filelock import BaseFileLock, FileLock
+from filelock import FileLock
 from typing_extensions import Literal
 
 from chia.util.path import mkdir
@@ -48,10 +49,22 @@ def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Pat
     return root_path / "config" / filename
 
 
-def get_config_lock(root_path: Path, filename: Union[str, Path]) -> BaseFileLock:
+@contextlib.contextmanager
+def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
+    # TODO: This is presently used in some tests to lock the saving of the
+    #       configuration file without having loaded it right there.  This usage
+    #       should probably be removed and this function made private.
     config_path = config_path_for_filename(root_path, filename)
     lock_path: Path = config_path.with_name(config_path.name + ".lock")
-    return FileLock(lock_path)
+    with FileLock(lock_path):
+        yield
+
+
+@contextlib.contextmanager
+def lock_and_load_config(root_path: Path, filename: Union[str, Path]) -> Iterator[Dict[str, Any]]:
+    with lock_config(root_path=root_path, filename=filename):
+        config = _load_config_maybe_locked(root_path=root_path, filename=filename, acquire_lock=False)
+        yield config
 
 
 def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
@@ -68,6 +81,21 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
 
 
 def load_config(
+    root_path: Path,
+    filename: Union[str, Path],
+    sub_config: Optional[str] = None,
+    exit_on_error: bool = True,
+) -> Dict:
+    return _load_config_maybe_locked(
+        root_path=root_path,
+        filename=filename,
+        sub_config=sub_config,
+        exit_on_error=exit_on_error,
+        acquire_lock=True,
+    )
+
+
+def _load_config_maybe_locked(
     root_path: Path,
     filename: Union[str, Path],
     sub_config: Optional[str] = None,
@@ -90,7 +118,7 @@ def load_config(
         try:
             with contextlib.ExitStack() as exit_stack:
                 if acquire_lock:
-                    exit_stack.enter_context(get_config_lock(root_path, filename))
+                    exit_stack.enter_context(lock_config(root_path, filename))
                 with open(path, "r") as opened_config_file:
                     r = yaml.safe_load(opened_config_file)
             if r is None:
@@ -235,3 +263,12 @@ def process_config_start_method(
     log.info(f"Selected multiprocessing start method: {choice}")
 
     return processed_method
+
+
+def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str, Any]]):
+    new_config = copy.deepcopy(config)
+    if config_overrides is None:
+        return new_config
+    for k, v in config_overrides.items():
+        add_property(new_config, k, v)
+    return new_config

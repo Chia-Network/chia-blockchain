@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, List, Optional, Tuple, Dict
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -18,11 +18,29 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+
+CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
+
+
+transaction_type_descriptions = {
+    TransactionType.INCOMING_TX: "received",
+    TransactionType.OUTGOING_TX: "sent",
+    TransactionType.COINBASE_REWARD: "rewarded",
+    TransactionType.FEE_REWARD: "rewarded",
+    TransactionType.INCOMING_TRADE: "received in trade",
+    TransactionType.OUTGOING_TRADE: "sent in trade",
+}
+
+
+def transaction_description_from_type(tx: TransactionRecord) -> str:
+    return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -33,7 +51,8 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        description = transaction_description_from_type(tx)
+        print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -113,9 +132,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     offset = args["offset"]
     limit = args["limit"]
+    sort_key = args["sort_key"]
+    reverse = args["reverse"]
+
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, start=offset, end=(offset + limit), reverse=True
+        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse
     )
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
@@ -206,8 +229,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await asyncio.sleep(0.1)
         tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
-            print(f"Transaction submitted to nodes: {tx.sent_to}")
-            print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+            print(transaction_submitted_msg(tx))
+            print(transaction_status_msg(fingerprint, tx_id))
             return None
 
     print("Transaction not yet submitted to nodes")
@@ -216,7 +239,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
-    res = await wallet_client.get_next_address(wallet_id, False)
+    new_address: bool = args.get("new_address", False)
+    res = await wallet_client.get_next_address(wallet_id, new_address)
     print(res)
 
 
@@ -307,21 +331,37 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(wallet_client: WalletRpcClient, sum_dict: dict):
+async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False):
     for asset_id, amount in sum_dict.items():
-        if asset_id == "xch":
-            wid: str = "1"
-            name: str = "XCH"
-            unit: int = units["chia"]
-        else:
-            result = await wallet_client.cat_asset_id_to_name(bytes32.from_hexstr(asset_id))
-            wid = "Unknown"
+        description: str = ""
+        unit: int = units["chia"]
+        wid: str = "1" if asset_id == "xch" else ""
+        mojo_amount: int = int(Decimal(amount))
+        name: str = "XCH"
+        if asset_id != "xch":
             name = asset_id
-            unit = units["cat"]
-            if result is not None:
-                wid = str(result[0])
-                name = result[1]
-        print(f"    - {name} (Wallet ID: {wid}): {Decimal(int(amount)) / unit} ({int(Decimal(amount))} mojos)")
+            if asset_id == "unknown":
+                name = "Unknown"
+                unit = units["mojo"]
+                if has_fee:
+                    description = " [Typically represents change returned from the included fee]"
+            else:
+                unit = units["cat"]
+                result = await cat_name_resolver(bytes32.from_hexstr(asset_id))
+                if result is not None:
+                    wid = str(result[0])
+                    name = result[1]
+        output: str = f"    - {name}"
+        mojo_str: str = f"{mojo_amount} {'mojo' if mojo_amount == 1 else 'mojos'}"
+        if len(wid) > 0:
+            output += f" (Wallet ID: {wid})"
+        if unit == units["mojo"]:
+            output += f": {mojo_str}"
+        else:
+            output += f": {mojo_amount / unit} ({mojo_str})"
+        if len(description) > 0:
+            output += f" {description}"
+        print(output)
 
 
 async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
@@ -336,13 +376,16 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
         offered, requested = offer.summary()
+        outbound_balances: Dict[str, int] = offer.get_pending_amounts()
+        fees: Decimal = Decimal(offer.bundle.fees())
+        cat_name_resolver = wallet_client.cat_asset_id_to_name
         print("  OFFERED:")
-        await print_offer_summary(wallet_client, offered)
+        await print_offer_summary(cat_name_resolver, offered)
         print("  REQUESTED:")
-        await print_offer_summary(wallet_client, requested)
-        print("Pending Balances:")
-        await print_offer_summary(wallet_client, offer.get_pending_amounts())
-        print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+        await print_offer_summary(cat_name_resolver, requested)
+        print("Pending Outbound Balances:")
+        await print_offer_summary(cat_name_resolver, outbound_balances, has_fee=(fees > 0))
+        print(f"Included Fees: {fees / units['chia']}")
     print("---------------")
 
 
@@ -410,12 +453,13 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         return
 
     offered, requested = offer.summary()
+    cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
-    await print_offer_summary(wallet_client, offered)
+    await print_offer_summary(cat_name_resolver, offered)
     print("  REQUESTED:")
-    await print_offer_summary(wallet_client, requested)
-    print(f"Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
+    await print_offer_summary(cat_name_resolver, requested)
+    print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
 
     if not examine_only:
         confirmation = input("Would you like to take this offer? (y/n): ")
@@ -482,17 +526,28 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         else:
             print(f"Balances, fingerprint: {fingerprint}")
         for summary in summaries_response:
+            indent: str = "   "
+            # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
+            # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
+            asset_id = summary["data"][:64]
             wallet_id = summary["id"]
             balances = await wallet_client.get_wallet_balance(wallet_id)
             typ = WalletType(int(summary["type"]))
             address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-            print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']}")
-            print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-            print(
-                f"   -Pending Total Balance: "
-                f"{print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
+            total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+            unconfirmed_wallet_balance: str = print_balance(
+                balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
-            print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
+            spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            print()
+            print(f"{summary['name']}:")
+            print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
+            print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
+            print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
+            print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
+            if len(asset_id) > 0:
+                print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
+            print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
@@ -512,19 +567,40 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
     if fingerprint is not None:
         log_in_response = await wallet_client.log_in(fingerprint)
     else:
-        print("Choose wallet key:")
+        logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+        spacing: str = "  " if logged_in_fingerprint is not None else ""
+        current_sync_status: str = ""
+        if logged_in_fingerprint is not None:
+            if await wallet_client.get_synced():
+                current_sync_status = "Synced"
+            elif await wallet_client.get_sync_status():
+                current_sync_status = "Syncing"
+            else:
+                current_sync_status = "Not Synced"
+        print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            row: str = f"{i+1}) "
+            row += "* " if fp == logged_in_fingerprint else spacing
+            row += f"{fp}"
+            if fp == logged_in_fingerprint and len(current_sync_status) > 0:
+                row += f" ({current_sync_status})"
+            print(row)
         val = None
+        prompt: str = (
+            f"Choose a wallet key [1-{len(fingerprints)}] ('q' to quit, or Enter to use {logged_in_fingerprint}): "
+        )
         while val is None:
-            val = input("Enter a number to pick or q to quit: ")
+            val = input(prompt)
             if val == "q":
                 return None
-            if not val.isdigit():
+            elif val == "" and logged_in_fingerprint is not None:
+                fingerprint = logged_in_fingerprint
+                break
+            elif not val.isdigit():
                 val = None
             else:
                 index = int(val) - 1
-                if index >= len(fingerprints):
+                if index < 0 or index >= len(fingerprints):
                     print("Invalid value")
                     val = None
                     continue

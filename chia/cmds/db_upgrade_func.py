@@ -7,7 +7,7 @@ from time import time
 import textwrap
 import os
 
-from chia.util.config import load_config, save_config, get_config_lock
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.path import mkdir, path_from_root
 from chia.util.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -70,8 +70,7 @@ def db_upgrade_func(
 
         if update_config:
             print("updating config.yaml")
-            with get_config_lock(root_path, "config.yaml"):
-                config = load_config(root_path, "config.yaml", acquire_lock=False)
+            with lock_and_load_config(root_path, "config.yaml") as config:
                 new_db_path = db_pattern.replace("_v1_", "_v2_")
                 config["full_node"]["database_path"] = new_db_path
                 print(f"database_path: {new_db_path}")
