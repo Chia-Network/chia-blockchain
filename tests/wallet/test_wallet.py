@@ -274,7 +274,7 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(15, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds)
 
         assert await wallet_0.get_confirmed_balance() == funds
@@ -673,8 +673,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
-        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(15, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(15, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         for i in range(0, num_blocks):
