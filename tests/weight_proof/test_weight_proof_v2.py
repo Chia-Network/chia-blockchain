@@ -150,6 +150,8 @@ async def _test_map_summaries(
 
 
 seed = bytes32.from_bytes(os.urandom(32))
+bad_b = B.from_bytes(b"\x00" * 33)
+bad_element = ClassgroupElement.from_bytes(b"\x00")
 
 
 class TestWeightProof:
@@ -191,127 +193,54 @@ class TestWeightProof:
     async def test_weight_proof_edge_cases(self, default_1000_blocks: List[FullBlock], bt: BlockTools) -> None:
         blocks: List[FullBlock] = default_1000_blocks
 
-        blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
-        )
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=1)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True)
 
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=1
+            1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=4, normalized_to_identity_cc_eos=True
         )
 
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
+        blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=seed, force_overflow=True)
 
         blocks = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-            skip_slots=4,
-            normalized_to_identity_cc_eos=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            10,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
-
-        blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
+            seed=seed,
             force_overflow=True,
             skip_slots=4,
             normalized_to_identity_icc_eos=True,
         )
 
-        blocks = bt.get_consecutive_blocks(
-            10,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
+        blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=seed, force_overflow=True)
 
         blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-            skip_slots=4,
-            normalized_to_identity_cc_ip=True,
+            1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=4, normalized_to_identity_cc_ip=True
         )
 
-        blocks = bt.get_consecutive_blocks(
-            10,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
+        blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=seed, force_overflow=True)
 
         blocks = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-            skip_slots=4,
-            normalized_to_identity_cc_sp=True,
+            1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=4, normalized_to_identity_cc_sp=True
         )
 
-        blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=4
-        )
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=4)
 
-        blocks = bt.get_consecutive_blocks(
-            10,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=True,
-        )
+        blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=seed, force_overflow=True)
 
-        blocks = bt.get_consecutive_blocks(
-            300,
-            block_list_input=blocks,
-            seed=b"asdfghjkl",
-            force_overflow=False,
-        )
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed, force_overflow=False)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
@@ -385,7 +314,7 @@ class TestWeightProof:
         blocks: List[FullBlock] = bt.get_consecutive_blocks(
             100,
             block_list_input=default_10000_blocks_compact,
-            seed=b"asdfghjkl",
+            seed=seed,
             normalized_to_identity_cc_ip=True,
             normalized_to_identity_cc_eos=True,
             normalized_to_identity_icc_eos=True,
@@ -483,7 +412,6 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip(reason="broken")
     @pytest.mark.asyncio
     async def test_weight_proof_extend_multiple_ses(self, default_10000_blocks: List[FullBlock]) -> None:
         blocks = default_10000_blocks
@@ -564,9 +492,7 @@ class TestWeightProof:
         blocks: List[FullBlock] = default_1000_blocks
 
         # need to add no more then 2 sub epochs here
-        blocks = bt.get_consecutive_blocks(
-            360, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=False, skip_slots=4
-        )
+        blocks = bt.get_consecutive_blocks(360, block_list_input=blocks, seed=seed, force_overflow=False, skip_slots=4)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
@@ -605,10 +531,10 @@ class TestWeightProof:
             if start_from > 0:
                 break
         blocks = bt.get_consecutive_blocks(
-            1, block_list_input=blocks[:start_from], seed=b"asdfghjkl", force_overflow=True, skip_slots=2
+            1, block_list_input=blocks[:start_from], seed=seed, force_overflow=True, skip_slots=2
         )
         # need to add no more then 2 sub epochs here
-        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=b"asdfghjkl")
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed)
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
         constants_dict = recurse_jsonify(dataclasses.asdict(test_constants))
@@ -634,24 +560,23 @@ class TestWeightProof:
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
         heights = blockchain.get_ses_heights()
         sub_epoch_n = 3
-        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
         prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
-
         blocks = bt.get_consecutive_blocks(
             1,
-            block_list_input=blocks[: prev_ses_sub_block.height - 1],
-            seed=b"asdfghjkl",
+            block_list_input=blocks[: prev_ses_sub_block.height],
+            seed=seed,
             force_overflow=True,
             skip_slots=2,
         )
 
-        blocks = bt.get_consecutive_blocks(
-            300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
-        )
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
         wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
         segments = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
             prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
         )
@@ -667,15 +592,13 @@ class TestWeightProof:
 
         blocks = bt.get_consecutive_blocks(
             1,
-            block_list_input=blocks[: prev_ses_sub_block.height - 1],
-            seed=b"asdfghjkl",
+            block_list_input=blocks[: prev_ses_sub_block.height],
+            seed=seed,
             force_overflow=False,
             skip_slots=2,
         )
 
-        blocks = bt.get_consecutive_blocks(
-            300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=True, skip_slots=2
-        )
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
@@ -732,9 +655,7 @@ class TestWeightProof:
         modified_sub_slot_data = []
         for idx, sub_slot in enumerate(segment.sub_slot_data):
             if sub_slot.is_challenge():
-                modified_sub_slot_data.append(
-                    dataclasses.replace(sub_slot, cc_ip_vdf_output=segment.sub_slot_data[idx + 1].cc_ip_vdf_output)
-                )
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_ip_vdf_output=bad_b))
             else:
                 modified_sub_slot_data.append(sub_slot)
         segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
@@ -758,9 +679,7 @@ class TestWeightProof:
         modified_sub_slot_data = []
         for idx, sub_slot in enumerate(segment.sub_slot_data):
             if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
-                modified_sub_slot_data.append(
-                    dataclasses.replace(sub_slot, icc_ip_vdf_output=segment.sub_slot_data[idx + 1].cc_ip_vdf_output)
-                )
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, icc_ip_vdf_output=bad_b))
             else:
                 modified_sub_slot_data.append(sub_slot)
         segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
@@ -801,9 +720,7 @@ class TestWeightProof:
 
         segment = dataclasses.replace(
             segment,
-            cc_slot_end_info=dataclasses.replace(
-                segment.cc_slot_end_info, output=ClassgroupElement.from_bytes(b"\x09")
-            ),
+            cc_slot_end_info=dataclasses.replace(segment.cc_slot_end_info, output=bad_element),
         )
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
@@ -889,14 +806,88 @@ class TestWeightProof:
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
 
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_overflow_Challenge_block(self, default_1000_blocks: List[FullBlock]) -> None:
-    #
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_block_bad_ip_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
-    #
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_segment_block_bad_sp_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_overflow_Challenge_block(
+        self, default_1000_blocks: List[FullBlock], bt: BlockTools
+    ) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks[: prev_ses_sub_block.height],
+            seed=seed,
+            force_overflow=True,
+            skip_slots=2,
+        )
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        assert prev_ses_sub_block.is_challenge_block(test_constants) is True
+        assert prev_ses_sub_block.overflow is True
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block,
+            ses_sub_block,
+            uint32(sub_epoch_n),
+        )
+        segment = segments[0]
+        await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_block_bad_ip_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_ip_vdf_output=bad_b))
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_block_bad_sp_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_sp_vdf_output=bad_b))
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
 
 
 # @pytest.mark.skip("used for debugging")
