@@ -456,3 +456,59 @@ class TestCoinSelection:
                 for coin in result:
                     assert not coin.amount < min_coin_amount
                 assert len(result) <= 500
+
+    @pytest.mark.asyncio
+    async def test_coin_selection_with_excluded_coins(self) -> None:
+        a_hash = std_hash(b"a")
+        b_hash = std_hash(b"b")
+        c_hash = std_hash(b"c")
+        spendable_coins = [
+            Coin(a_hash, a_hash, uint64(3)),
+            Coin(b_hash, b_hash, uint64(6)),
+            Coin(c_hash, c_hash, uint64(9)),
+        ]
+        spendable_wallet_coin_records = [
+            WalletCoinRecord(spendable_coin, uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for spendable_coin in spendable_coins
+        ]
+        spendable_amount = uint128(18)
+
+        async def it_selects_a_coin_from_non_excluded_coins() -> None:
+            excluded_coins = [
+                Coin(a_hash, a_hash, uint64(3)),
+                Coin(c_hash, c_hash, uint64(9)),
+            ]
+            target_amount = uint128(2)
+
+            selected_coins: Set[Coin] = await select_coins(
+                spendable_amount,
+                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                spendable_wallet_coin_records,
+                {},
+                logging.getLogger("test"),
+                amount=target_amount,
+                exclude=excluded_coins,
+            )
+
+            assert selected_coins is not None
+            assert sum([coin.amount for coin in selected_coins]) >= target_amount
+            assert len(selected_coins) == 1
+            assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
+
+        async def it_throws_an_error_when_all_spendable_coins_are_excluded() -> None:
+            excluded_coins = spendable_coins
+            target_amount = uint128(2)
+
+            with pytest.raises(ValueError):
+                await select_coins(
+                    spendable_amount,
+                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                    spendable_wallet_coin_records,
+                    {},
+                    logging.getLogger("test"),
+                    amount=target_amount,
+                    exclude=excluded_coins,
+                )
+
+        await it_selects_a_coin_from_non_excluded_coins()
+        await it_throws_an_error_when_all_spendable_coins_are_excluded()
