@@ -540,10 +540,10 @@ class Streamable:
         return bytes(f.getvalue())
 
     def __str__(self: Any) -> str:
-        return pp.pformat(self.to_json_dict())
+        return pp.pformat(recurse_jsonify(self))
 
     def __repr__(self: Any) -> str:
-        return pp.pformat(self.to_json_dict())
+        return pp.pformat(recurse_jsonify(self))
 
     def to_json_dict(self) -> Dict[str, Any]:
         ret: Dict[str, Any] = recurse_jsonify(self)
