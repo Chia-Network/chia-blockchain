@@ -1,22 +1,19 @@
-export default function getRemoteFileContent(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open('GET', url, true);
-    request.responseType = 'blob';
-    request.onload = () => {
-      if (request.status === 200) {
-        const file = new FileReader();
-        file.readAsBinaryString(request.response);
-        file.onloadend = () => {
-          resolve(file.result);
-        };
-      } else {
-        reject(new Error(`Request failed`));
-      }
-    }
-    request.onerror = () => {
-      reject(new Error(`Request failed`));
-    }
-    request.send();
-  });
+export default async function getRemoteFileContent(url: string, maxSize?: number): Promise<string> {
+  const ipcRenderer = (window as any).ipcRenderer;
+  const requestOptions = {
+    url,
+    maxSize,
+  };
+
+  const { data, statusCode, error } = await ipcRenderer?.invoke('fetchBinaryContent', requestOptions);
+
+  if (error) {
+    throw error;
+  }
+
+  if (statusCode !== 200) {
+    throw new Error(error.message || `Failed to fetch content from ${url}`);
+  }
+
+  return data;
 }

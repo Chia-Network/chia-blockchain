@@ -110,42 +110,27 @@ export default function NFTDetail() {
           overflow="hidden"
           alignItems="center"
           justifyContent="center"
-          display={{ sm: 'flex', md: 'none' }}
+          maxWidth="800px"
+          alignSelf="center"
+          width="100%"
         >
-          {nft && <NFTPreview nft={nft} height="auto" />}
+          {nft && <NFTPreview nft={nft} width="100%" height="400px" fit="contain" />}
         </Box>
-        <Flex gap={2} alignItems="stretch">
-          <Box
-            flexGrow={1}
-            border={1}
-            borderColor="grey.300"
-            borderRadius={4}
-            height="100%"
-            overflow="hidden"
-            alignItems="center"
-            justifyContent="center"
-            display={{ sm: 'none', md: 'flex' }}
-          >
-            {nft && <NFTPreview nft={nft} height="auto" />}
-          </Box>
-          <Box maxWidth={{ md: '500px', lg: '600px' }}>
-            <Flex flexDirection="column" gap={3}>
-              <Flex flexDirection="column" gap={1}>
-                <Typography variant="h6">
-                  <Trans>Description</Trans>
-                </Typography>
+        <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={1}>
+            <Typography variant="h6">
+              <Trans>Description</Trans>
+            </Typography>
 
-                <Typography>{metadata.description}</Typography>
-              </Flex>
-              <Flex flexDirection="column" gap={1}>
-                <Typography variant="h6">
-                  <Trans>Details</Trans>
-                </Typography>
+            <Typography>{metadata.description}</Typography>
+          </Flex>
+          <Flex flexDirection="column" gap={1}>
+            <Typography variant="h6">
+              <Trans>Details</Trans>
+            </Typography>
 
-                <CardKeyValue rows={details} hideDivider />
-              </Flex>
-            </Flex>
-          </Box>
+            <CardKeyValue rows={details} hideDivider />
+          </Flex>
         </Flex>
         <Flex flexDirection="column" gap={1}>
           <Typography variant="h6">

@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { renderToString } from 'react-dom/server';
 import { Trans } from '@lingui/macro';
 import {
   Box,
-  CardMedia,
 } from '@mui/material';
-import { Error, NotInterested, ImageNotSupported } from '@mui/icons-material';
+import { Error, NotInterested } from '@mui/icons-material';
 import {
   IconMessage,
   Loading,
+  Flex,
 } from '@chia/core';
 import styled from 'styled-components';
 import useNFTHash from '../../hooks/useNFTHash';
 import { type NFTInfo } from '@chia/api';
+import isURL from 'validator/lib/isURL';
 
 const StyledCardPreview = styled(Box)`
   height: ${({ height }) => height};
@@ -23,9 +25,18 @@ const StyledCardPreview = styled(Box)`
   overflow: hidden;
 `;
 
+const StyledIframe = styled('iframe')`
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  opacity: ${({ isVisible }) => isVisible ? 1 : 0};
+`;
+
 export type NFTPreviewProps = {
   nft: NFTInfo;
   height?: number | string;
+  width?: number | string;
+  fit?: 'cover' | 'contain' | 'fill';
 };
 
 export default function NFTPreview(props: NFTPreviewProps) {
@@ -35,6 +46,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
       dataUris,
     },
     height = '300px',
+    width = '100%',
+    fit = 'cover',
   } = props;
 
   /*
@@ -44,24 +57,67 @@ export default function NFTPreview(props: NFTPreviewProps) {
   };
   */
 
+  const [loaded, setLoaded] = useState(false);
   const { isValid, isLoading, error } = useNFTHash(nft);
-  const [mediaError, setMediaError] = useState();
   const hasFile = dataUris?.length > 0;
+  const file = dataUris?.[0];
 
   useEffect(() => {
-    setMediaError(undefined);
+    setLoaded(false);
   }, [nft]);
 
+  const isUrlValid = useMemo(() => {
+    if (!file) {
+      return false;
+    }
 
-  function handleMediaError(newMediaError) {
-    setMediaError(newMediaError);
+    return isURL(file);
+  }, [file]);
+
+  const srcDoc = useMemo(() => {
+    if (!file) {
+      return;
+    }
+
+    const style = `
+      html, body {
+        border: 0px;
+        margin: 0px;
+        padding: 0px;
+        height: 100%;
+        width: 100%;
+      }
+
+      img {
+        object-fit: ${fit};
+      }
+    `;
+
+    return renderToString((
+      <html>
+        <head>
+          <style dangerouslySetInnerHTML={{ __html: style }} />
+        </head>
+        <body>
+          <img src={file} alt="Preview" width="100%" height="100%" />
+        </body>
+      </html>
+    ));
+  }, [file]);
+
+  function handleLoad() {
+    setLoaded(true);
   }
 
   return (
-    <StyledCardPreview height={height}>
+    <StyledCardPreview height={height} width={width}>
       {!hasFile ? (
         <IconMessage icon={<NotInterested fontSize="large" />}>
           <Trans>No file available</Trans>
+        </IconMessage>
+      ) : !isUrlValid ? (
+        <IconMessage icon={<Error fontSize="large" />}>
+          <Trans>Preview URL is not valid</Trans>
         </IconMessage>
       ) : isLoading ? (
         <Loading center>
@@ -75,17 +131,24 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <IconMessage icon={<Error fontSize="large" />}>
           <Trans>File hash mismatch</Trans>
         </IconMessage>
-      ) : mediaError ? (
-        <IconMessage icon={<ImageNotSupported fontSize="large" />}>
-          <Trans>No preview available</Trans>
-        </IconMessage>
       ) : (
-        <CardMedia
-          src={dataUris?.[0]}
-          component="img"
-          height={height}
-          onError={handleMediaError}
-        />
+        <>
+          {!loaded && (
+            <Flex position="absolute" left="0" top="0" bottom="0" right="0" justifyContent="center" alignItems="center">
+              <Loading center>
+                <Trans>Loading preview...</Trans>
+              </Loading>
+            </Flex>
+          )}
+          <StyledIframe
+            srcDoc={srcDoc}
+            sandbox="allow-same-origin"
+            height={height}
+            frameBorder="0"
+            onLoad={handleLoad}
+            isVisible={loaded}
+          />
+        </>
       )}
     </StyledCardPreview>
   );

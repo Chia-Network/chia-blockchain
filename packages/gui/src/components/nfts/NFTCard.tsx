@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNFTMetadata } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,7 @@ import {
 import styled from 'styled-components';
 import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
+import useIntersectionObserver from '../../hooks/useIntersectionObserver';
 
 const StyledCardFooter = styled(CardContent)`
   background-color: ${({ theme }) => theme.palette.action.hover};
@@ -45,9 +46,16 @@ export default function NFTCard(props: NFTCardProps) {
 
   const navigate = useNavigate();
   const currencyCode = useCurrencyCode();
+  const cardRef = useRef();
+  const entry = useIntersectionObserver(cardRef, {
+    freezeOnceVisible: true,
+  });
   const { metadata: fakeMetadata, isLoading } = useNFTMetadata({
     id: nft.launcherId,
   });
+
+  const isVisible = !!entry?.isIntersecting;
+
 
   const metadata = { ...fakeMetadata, ...nft };
 
@@ -70,7 +78,7 @@ export default function NFTCard(props: NFTCardProps) {
   }
 
   return (
-    <Card>
+    <Card ref={cardRef}>
       {isLoading ? (
         <CardContent>
           <Loading center />
@@ -98,9 +106,11 @@ export default function NFTCard(props: NFTCardProps) {
               </Box>
             </Flex>
           </CardContent>
-
-          <NFTPreview nft={nft} />
-
+          {isVisible ? (
+            <NFTPreview nft={nft} />
+          ) : (
+            <Box height="300px" />
+          )}
           <CardContent>
             <Flex flexDirection="column" gap={2}>
               <Flex flexDirection="column" gap={1}>
