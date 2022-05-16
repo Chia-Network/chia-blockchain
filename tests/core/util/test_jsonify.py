@@ -110,3 +110,12 @@ def test_recurse_jsonify() -> None:
 
     d = {"a": "foo", "b": bytes([0x13, 0x37]), "c": [uint32(1), uint32(2)], "d": {"bar": None}}
     assert recurse_jsonify(d) == {"a": "foo", "b": "0x1337", "c": [1, 2], "d": {"bar": None}}
+
+
+def test_recurse_jsonify_non_string_keys() -> None:
+
+    d1 = {bytes([0x13, 0x37]): "foobar"}
+    assert recurse_jsonify(d1) == {"b'\\x137'": "foobar"}
+
+    d2 = {42: "foobar"}
+    assert recurse_jsonify(d2) == {"42": "foobar"}
