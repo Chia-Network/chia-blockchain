@@ -94,7 +94,7 @@ jobs:
     - name: Test core-util code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/util/test_cached_bls.py tests/core/util/test_config.py tests/core/util/test_db_wrapper.py tests/core/util/test_file_keyring_synchronization.py tests/core/util/test_files.py tests/core/util/test_keychain.py tests/core/util/test_keyring_wrapper.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/util/test_cached_bls.py tests/core/util/test_config.py tests/core/util/test_db_wrapper.py tests/core/util/test_file_keyring_synchronization.py tests/core/util/test_files.py tests/core/util/test_jsonify.py tests/core/util/test_keychain.py tests/core/util/test_keyring_wrapper.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py
 
     - name: Process coverage data
       run: |

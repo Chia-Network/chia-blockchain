@@ -172,13 +172,11 @@ async def run_sync_test(
                         f"\rheight {height} {time_per_block:0.2f} s/block   ",
                         end="",
                     )
-                    batch_start_time = time.monotonic()
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")
 
                     if counter >= 100000:
-                        batch_start_time = time.monotonic()
                         counter = 0
                         print()
                 end_time = time.monotonic()

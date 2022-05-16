@@ -9,7 +9,7 @@ import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Tuple
+from typing import AsyncIterator, List, Tuple
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
@@ -306,7 +306,15 @@ async def three_sim_two_wallets():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):  # xxx
+    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def setup_two_nodes_and_wallet_fast_retry():
+    async for _ in setup_simulators_and_wallets(
+        1, 1, {}, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
+    ):
         yield _
 
 

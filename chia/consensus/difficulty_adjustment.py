@@ -199,7 +199,7 @@ def _get_next_sub_slot_iters(
     block_at_height_included_ses: bool,
     new_slot: bool,
     signage_point_total_iters: uint128,
-    skip_epoch_check=False,
+    skip_epoch_check: bool = False,
 ) -> uint64:
     """
     Returns the slot iterations required for the next block after the one at height, where new_slot is true
@@ -278,7 +278,7 @@ def _get_next_difficulty(
     block_at_height_included_ses: bool,
     new_slot: bool,
     signage_point_total_iters: uint128,
-    skip_epoch_check=False,
+    skip_epoch_check: bool = False,
 ) -> uint64:
     """
     Returns the difficulty of the next block that extends onto block.

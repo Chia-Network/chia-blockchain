@@ -34,16 +34,16 @@ class BlockchainInterface:
     def contains_block(self, header_hash: bytes32) -> bool:
         pass
 
-    def remove_block_record(self, header_hash: bytes32):
+    def remove_block_record(self, header_hash: bytes32) -> None:
         pass
 
-    def add_block_record(self, block_record: BlockRecord):
+    def add_block_record(self, block_record: BlockRecord) -> None:
         pass
 
     def contains_height(self, height: uint32) -> bool:
         pass
 
-    async def warmup(self, fork_point: uint32):
+    async def warmup(self, fork_point: uint32) -> None:
         pass
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
@@ -72,7 +72,7 @@ class BlockchainInterface:
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_height: bytes32, segments: List[SubEpochChallengeSegment]
-    ):
+    ) -> None:
         pass
 
     async def get_sub_epoch_challenge_segments(
