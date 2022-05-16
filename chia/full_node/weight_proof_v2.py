@@ -818,7 +818,8 @@ def _validate_sub_epoch_segments(
     """
     ses_validation_futures = []
     for segments in sub_epoch_segments:
-        sampled_seg_index = rng.choice(range(len(segments)))
+        length = len(SubEpochSegmentsV2.from_bytes(segments).challenge_segments)
+        sampled_seg_index = rng.choice(range(length))
         ses_validation_futures.append(
             executor.submit(
                 validate_sub_epoch,
