@@ -128,7 +128,11 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(hexstr_to_bytes(d))
     elif klass.__name__ in unhashable_types:
         # Type is unhashable (bls type), so cast from hex string
-        return klass.from_bytes(hexstr_to_bytes(d))
+        if hasattr(klass, "from_bytes_unchecked"):
+            from_bytes_method: Callable[[bytes], Any] = klass.from_bytes_unchecked
+        else:
+            from_bytes_method = klass.from_bytes
+        return from_bytes_method(hexstr_to_bytes(d))
     else:
         # Type is a primitive, cast with correct class
         return klass(d)
@@ -239,10 +243,13 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int) -> Any:
+def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    return f_type.from_bytes(bytes_read)
+    if unchecked:
+        return f_type.from_bytes_unchecked(bytes_read)
+    else:
+        return f_type.from_bytes(bytes_read)
 
 
 def parse_str(f: BinaryIO) -> str:
@@ -425,10 +432,14 @@ class Streamable:
             try:
                 item = f_type(item)
             except (TypeError, AttributeError, ValueError):
+                if hasattr(f_type, "from_bytes_unchecked"):
+                    from_bytes_method: Callable[[bytes], Any] = f_type.from_bytes_unchecked
+                else:
+                    from_bytes_method = f_type.from_bytes
                 try:
-                    item = f_type.from_bytes(item)
+                    item = from_bytes_method(item)
                 except Exception:
-                    item = f_type.from_bytes(bytes(item))
+                    item = from_bytes_method(bytes(item))
         if not isinstance(item, f_type):
             raise ValueError(f"Wrong type for {f_name}")
         return item
@@ -475,9 +486,12 @@ class Streamable:
             inner_types = get_args(f_type)
             list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
             return lambda f: parse_tuple(f, list_parse_inner_type_f)
+        if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
+            bytes_to_read = size_hints[f_type.__name__]
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
         if f_type is str:
             return parse_str
         raise NotImplementedError(f"Type {f_type} does not have parse")
