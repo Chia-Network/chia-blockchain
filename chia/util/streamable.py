@@ -128,7 +128,10 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(hexstr_to_bytes(d))
     elif klass.__name__ in unhashable_types:
         # Type is unhashable (bls type), so cast from hex string
-        return klass.from_bytes(hexstr_to_bytes(d))
+        if hasattr(klass, "from_bytes_unchecked"):
+            return klass.from_bytes_unchecked(hexstr_to_bytes(d))
+        else:
+            return klass.from_bytes(hexstr_to_bytes(d))
     else:
         # Type is a primitive, cast with correct class
         return klass(d)
@@ -428,10 +431,14 @@ class Streamable:
             try:
                 item = f_type(item)
             except (TypeError, AttributeError, ValueError):
+                if hasattr(f_type, "from_bytes_unchecked"):
+                    from_bytes_method: Callable = f_type.from_bytes_unchecked
+                else:
+                    from_bytes_method = f_type.from_bytes
                 try:
-                    item = f_type.from_bytes(item)
+                    item = from_bytes_method(item)
                 except Exception:
-                    item = f_type.from_bytes(bytes(item))
+                    item = from_bytes_method(bytes(item))
         if not isinstance(item, f_type):
             raise ValueError(f"Wrong type for {f_name}")
         return item
