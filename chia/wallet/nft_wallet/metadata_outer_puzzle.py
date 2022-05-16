@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, Iterator
 
 from clvm_tools.binutils import disassemble
 
@@ -7,29 +7,26 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-
-# from chia.wallet.nft_wallet.nft_puzzles import (
-#     match_metadata_layer_puzzle,
-#     puzzle_for_metadata_layer,
-#     solution_for_metadata_layer,
-# )
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.load_clvm import load_clvm
 
-
-# TODO: This driver won't work until the following functions exist and are imported above
-from typing import Tuple, Iterator
-
+NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
+NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
 def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
-    pass
+    mod, meta_args = puzzle.uncurry()
+    if mod == NFT_STATE_LAYER_MOD:
+        return True, list(meta_args.as_iter())
+    return False, Program.to([])
 
 
 def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_puzzle: Program) -> Program:
-    pass
+    metadata_puzzle = NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)
+    return metadata_puzzle
 
 
 def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Program:
-    pass
+    return Program.to([inner_solution, amount])
 
 
 @dataclass(frozen=True)
@@ -40,20 +37,20 @@ class MetadataOuterPuzzle:
     _solve: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
-        # matched, curried_args = match_metadata_layer_puzzle(puzzle)
-        # if matched:
-        #     _, metadata, updater_hash, inner_puzzle = curried_args
-        #     constructor_dict = {
-        #         "type": "metadata",
-        #         "metadata": disassemble(metadata),  # type: ignore
-        #         "updater_hash": "0x" + updater_hash.as_python().hex(),
-        #     }
-        #     next_constructor = self._match(inner_puzzle)
-        #     if next_constructor is not None:
-        #         constructor_dict["also"] = next_constructor.info
-        #     return PuzzleInfo(constructor_dict)
-        # else:
-        #     return None
+        matched, curried_args = match_metadata_layer_puzzle(puzzle)
+        if matched:
+            _, metadata, updater_hash, inner_puzzle = curried_args
+            constructor_dict = {
+                "type": "metadata",
+                "metadata": disassemble(metadata),  # type: ignore
+                "updater_hash": "0x" + updater_hash.as_python().hex(),
+            }
+            next_constructor = self._match(inner_puzzle)
+            if next_constructor is not None:
+                constructor_dict["also"] = next_constructor.info
+            return PuzzleInfo(constructor_dict)
+        else:
+            return None
         return None  # Uncomment above when match_metadata_layer_puzzle works
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:

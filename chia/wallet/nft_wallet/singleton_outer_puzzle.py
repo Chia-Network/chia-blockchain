@@ -29,8 +29,8 @@ class SingletonOuterPuzzle:
             singleton_struct, inner_puzzle = curried_args
             constructor_dict = {
                 "type": "singleton",
-                "launcher_id": "0x" + singleton_struct.as_python()[1][0].hex(),
-                "launcher_ph": "0x" + singleton_struct.as_python()[1][1].hex(),
+                "launcher_id": "0x" + singleton_struct.as_python()[1].hex(),
+                "launcher_ph": "0x" + singleton_struct.as_python()[2].hex(),
             }
             next_constructor = self._match(inner_puzzle)
             if next_constructor is not None:

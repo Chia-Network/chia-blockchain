@@ -340,7 +340,7 @@ class TradeManager:
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
                     requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
@@ -357,7 +357,7 @@ class TradeManager:
                             )
                     else:
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         wallet_id = wallet.id()
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
@@ -397,6 +397,19 @@ class TradeManager:
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
+                elif wallet.type() == WalletType.NFT:
+                    # This is to generate the tx for specific nft assets, i.e. not using
+                    # wallet_id as the selector which would select any coins from nft_wallet
+                    amounts = [coin.amount for coin in selected_coins]
+                    txs = await wallet.generate_signed_transaction(
+                        # [abs(offer_dict[id])],
+                        amounts,
+                        [Offer.ph()],
+                        fee=fee_left_to_pay,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
+                    )
+                    all_transactions.extend(txs)
                 else:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
@@ -541,7 +554,7 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                elif wallet is None:
+                elif wallet is None or wallet.type() == WalletType.NFT:
                     key = asset_id
                 else:
                     key = int(wallet.id())

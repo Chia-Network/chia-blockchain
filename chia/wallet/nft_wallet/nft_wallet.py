@@ -3,7 +3,7 @@ import logging
 import time
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Type, TypeVar
+from typing import Any, Dict, List, Optional, Set, Type, TypeVar, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -35,6 +35,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.outer_puzzles import AssetType, match_puzzle
+from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.singleton_top_layer import match_singleton_puzzle
@@ -572,7 +573,7 @@ class NFTWallet:
             matched, curried_args = match_singleton_puzzle(coin.full_puzzle)
             if matched:
                 singleton_struct, inner_puzzle = curried_args
-                launcher: bytes32 = singleton_struct.as_python()[1][0]
+                launcher: bytes32 = singleton_struct.as_python()[1]
                 if launcher == launcher_id:
                     return coin
         return None
@@ -623,3 +624,173 @@ class NFTWallet:
             name,
             in_transaction,
         )
+
+    async def create_tandem_xch_tx(
+        self,
+        fee: uint64,
+        announcement_to_assert: Optional[Announcement] = None
+    ) -> TransactionRecord:
+        chia_coins = await self.standard_wallet.select_coins(fee)
+        origin_id = list(chia_coins)[0].name()
+        chia_tx = await self.standard_wallet.generate_signed_transaction(
+            fee,
+            (await self.standard_wallet.get_new_puzzlehash()),
+            coins=chia_coins,
+            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,)
+        assert chia_tx.spend_bundle is not None
+        return chia_tx
+
+    async def generate_signed_transaction(
+        self,
+        amounts: List[uint64],
+        puzzle_hashes: List[bytes32],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        memos: Optional[List[List[bytes]]] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+    ) -> List[TransactionRecord]:
+        if memos is None:
+            memos = [[] for _ in range(len(puzzle_hashes))]
+
+        if not (len(memos) == len(puzzle_hashes) == len(amounts)):
+            raise ValueError("Memos, puzzle_hashes, and amounts must have the same length")
+
+        payments = []
+        for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
+            memos_with_hint: List[bytes] = [puzhash]
+            memos_with_hint.extend(memo_list)
+            payments.append(Payment(puzhash, amount, memos_with_hint))
+
+        payment_sum = sum([p.amount for p in payments])
+
+        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
+            payments,
+            fee,
+            coins=coins,
+            coin_announcements_to_consume=coin_announcements_to_consume,
+            puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+        )
+        spend_bundle = await self.sign(unsigned_spend_bundle)
+
+        tx_list = [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=puzzle_hashes[0],
+                amount=uint64(payment_sum),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
+            )
+        ]
+
+        if chia_tx is not None:
+            tx_list.append(
+                TransactionRecord(
+                    confirmed_at_height=chia_tx.confirmed_at_height,
+                    created_at_time=chia_tx.created_at_time,
+                    to_puzzle_hash=chia_tx.to_puzzle_hash,
+                    amount=chia_tx.amount,
+                    fee_amount=chia_tx.fee_amount,
+                    confirmed=chia_tx.confirmed,
+                    sent=chia_tx.sent,
+                    spend_bundle=None,
+                    additions=chia_tx.additions,
+                    removals=chia_tx.removals,
+                    wallet_id=chia_tx.wallet_id,
+                    sent_to=chia_tx.sent_to,
+                    trade_id=chia_tx.trade_id,
+                    type=chia_tx.type,
+                    name=chia_tx.name,
+                    memos=[],
+                )
+            )
+
+        return tx_list
+
+
+    async def generate_unsigned_spendbundle(
+        self,
+        payments: List[Payment],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+    ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
+        if coins is None:
+            # Make sure the user is specifying which specific NFT coin to use
+            raise ValueError("NFT spends require a selected coin")
+        else:
+            nft_coins = [c for c in self.nft_wallet_info.my_nft_coins if c.coin in coins]
+
+        if coin_announcements_to_consume is not None:
+            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
+        else:
+            coin_announcements_bytes = None
+
+        if puzzle_announcements_to_consume is not None:
+            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
+        else:
+            puzzle_announcements_bytes = None
+
+        payment_amount: int = sum([p.amount for p in payments])
+        primaries: List[AmountWithPuzzleHash] = []
+        for payment in payments:
+            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
+
+        chia_tx = None
+        coin_spends = []
+        first = True
+        for coin_info in nft_coins:
+            if first:
+                first = False
+                if fee > 0:
+                    chia_tx = await self.create_tandem_xch_tx(fee)
+                    innersol = self.standard_wallet.make_solution(
+                        primaries=primaries,
+                        coin_announcements_to_assert=coin_announcements_bytes,
+                        puzzle_announcements_to_assert=puzzle_announcements_bytes
+                    )
+                else:
+                    innersol = self.standard_wallet.make_solution(
+                        primaries=primaries,
+                        coin_announcements_to_assert=coin_announcements_bytes,
+                        puzzle_announcements_to_assert=puzzle_announcements_bytes
+                    )
+            else:
+                # What announcements do we need?
+                innersol = self.standard_wallet.make_solution(
+                    primaries=[],
+                )
+
+
+            nft_layer_solution = Program.to([innersol, coin_info.coin.amount])
+
+            singleton_solution = Program.to(
+                [
+                 coin_info.lineage_proof.to_program(),
+                 coin_info.coin.amount,
+                 nft_layer_solution
+                ]
+            )
+            coin_spend = CoinSpend(coin_info.coin, coin_info.full_puzzle, singleton_solution)
+            coin_spends.append(coin_spend)
+
+        nft_spend_bundle = SpendBundle(coin_spends, G2Element())
+        chia_spend_bundle = SpendBundle([], G2Element())
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            chia_spend_bundle = chia_tx.spend_bundle
+
+        unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
+
+        return (unsigned_spend_bundle, chia_tx)

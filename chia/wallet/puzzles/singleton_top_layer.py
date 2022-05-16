@@ -10,7 +10,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
