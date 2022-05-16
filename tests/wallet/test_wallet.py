@@ -885,7 +885,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         AMOUNT_TO_SEND = 4000000000000
-        coins = await wallet.select_coins(AMOUNT_TO_SEND)
+        coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND))
         coin_list = list(coins)
 
         tx = await wallet.generate_signed_transaction(
