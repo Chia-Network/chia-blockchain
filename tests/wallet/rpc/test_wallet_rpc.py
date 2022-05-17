@@ -69,11 +69,13 @@ class WalletRpcTestEnvironment:
 
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
-    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
 
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
-    await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name())
+    await time_out_assert(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
+    )
     await farm_transaction_block(full_node_api, wallet_node)
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 

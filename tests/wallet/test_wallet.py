@@ -655,9 +655,9 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
-        await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
+        await time_out_assert(10, wallet_2.get_confirmed_balance, 1000)
 
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(10, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
         peak_height = full_node_api.full_node.blockchain.get_peak().height
         print(peak_height)
 

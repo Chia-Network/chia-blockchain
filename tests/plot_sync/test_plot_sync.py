@@ -578,7 +578,7 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
     await time_out_assert(10, receiver_available)
     receiver = farmer.plot_sync_receivers[harvester.server.node_id]
     # And wait until the first sync from the harvester to the farmer is done
-    await time_out_assert(10, receiver.initial_sync, False)
+    await time_out_assert(20, receiver.initial_sync, False)
     # Replace the `Receiver._process` with `disconnecting_process` which triggers a plot manager refresh and disconnects
     # the farmer from the harvester during an active sync.
     original_process = receiver._process

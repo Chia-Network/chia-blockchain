@@ -186,7 +186,7 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
