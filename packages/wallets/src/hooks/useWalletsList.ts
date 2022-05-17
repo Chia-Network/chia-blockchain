@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { WalletType, type Wallet } from '@chia/api';
+import { WalletType } from '@chia/api';
+import type { Wallet } from '@chia/api';
 import { useShowError} from '@chia/core';
 import { orderBy } from 'lodash';
 import { useGetWalletsQuery, useGetStrayCatsQuery, useGetCatListQuery, useAddCATTokenMutation } from '@chia/api-react';

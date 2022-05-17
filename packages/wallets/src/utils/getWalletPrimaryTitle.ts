@@ -1,4 +1,5 @@
-import { WalletType, type Wallet } from '@chia/api';
+import { WalletType } from '@chia/api';
+import type { Wallet } from '@chia/api';
 
 export default function getWalletPrimaryTitle(wallet: Wallet): string {
   switch (wallet.type) {

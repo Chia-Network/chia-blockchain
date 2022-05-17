@@ -1,5 +1,5 @@
 import { WalletType } from '@chia/api';
-import { type ChipProps } from '@mui/material';
+import type { ChipProps } from '@mui/material';
 import type { OfferSummaryRecord } from '@chia/api';
 import {
   mojoToChiaLocaleString,
