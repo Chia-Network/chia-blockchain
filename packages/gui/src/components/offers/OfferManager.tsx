@@ -75,6 +75,7 @@ import { CreateOfferEditor } from './OfferEditor';
 import { CreateNFTOfferEditor } from './NFTOfferEditor';
 import { OfferImport } from './OfferImport';
 import { OfferViewer } from './OfferViewer';
+import NFTOfferViewer from './NFTOfferViewer';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
@@ -93,7 +94,7 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
     },
   });
   const [cancelWithTransaction, setCancelWithTransaction] = useState<boolean>(
-    canCancelWithTransaction
+    canCancelWithTransaction,
   );
 
   function handleCancel() {
@@ -143,7 +144,7 @@ function ConfirmOfferCancellation(props: ConfirmOfferCancellationProps) {
                             <Checkbox
                               name="cancelWithTransaction"
                               checked={cancelWithTransaction}
-                              onChange={event =>
+                              onChange={(event) =>
                                 setCancelWithTransaction(event.target.checked)
                               }
                             />
@@ -242,7 +243,7 @@ function OfferList(props: OfferListProps) {
     includeMyOffers,
     includeTakenOffers,
     'RELEVANCE',
-    false
+    false,
   );
 
   async function handleShowOfferData(offerData: string) {
@@ -260,7 +261,7 @@ function OfferList(props: OfferListProps) {
       const dialogOptions = {
         defaultPath: suggestedFilenameForOffer(
           tradeRecord.summary,
-          lookupByAssetId
+          lookupByAssetId,
         ),
       };
       const remote: Remote = (window as any).remote;
@@ -279,12 +280,12 @@ function OfferList(props: OfferListProps) {
 
   async function handleCancelOffer(
     tradeId: string,
-    canCancelWithTransaction: boolean
+    canCancelWithTransaction: boolean,
   ) {
     const [cancelConfirmed, cancellationOptions] = await openDialog(
       <ConfirmOfferCancellation
         canCancelWithTransaction={canCancelWithTransaction}
-      />
+      />,
     );
 
     if (cancelConfirmed === true) {
@@ -308,7 +309,7 @@ function OfferList(props: OfferListProps) {
 
   async function handleShare(event: any, row: OfferTradeRecord) {
     await openDialog(
-      <OfferShareDialog offerRecord={row} offerData={row._offerData} />
+      <OfferShareDialog offerRecord={row} offerData={row._offerData} />,
     );
   }
 
@@ -319,7 +320,7 @@ function OfferList(props: OfferListProps) {
           const { status } = row;
 
           return (
-            <Box onClick={event => handleRowClick(event, row)}>
+            <Box onClick={(event) => handleRowClick(event, row)}>
               <Chip
                 label={displayStringForOfferState(status)}
                 variant="outlined"
@@ -340,7 +341,7 @@ function OfferList(props: OfferListProps) {
               const displayAmount = assetIdInfo
                 ? formatAmountForWalletType(
                     amount as number,
-                    assetIdInfo.walletType
+                    assetIdInfo.walletType,
                   )
                 : mojoToCATLocaleString(amount);
               const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
@@ -348,7 +349,7 @@ function OfferList(props: OfferListProps) {
                 displayAmount,
                 displayName,
               };
-            }
+            },
           );
           return resolvedOfferInfo.map((info, index) => (
             <Flex
@@ -374,7 +375,7 @@ function OfferList(props: OfferListProps) {
               const displayAmount = assetIdInfo
                 ? formatAmountForWalletType(
                     amount as number,
-                    assetIdInfo.walletType
+                    assetIdInfo.walletType,
                   )
                 : mojoToCATLocaleString(amount);
               const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
@@ -382,7 +383,7 @@ function OfferList(props: OfferListProps) {
                 displayAmount,
                 displayName,
               };
-            }
+            },
           );
           return resolvedOfferInfo.map((info, index) => (
             <Flex
@@ -405,7 +406,7 @@ function OfferList(props: OfferListProps) {
           const { createdAtTime } = row;
 
           return (
-            <Box onClick={event => handleRowClick(event, row)}>
+            <Box onClick={(event) => handleRowClick(event, row)}>
               <Typography color="textSecondary" variant="body2">
                 {moment(createdAtTime * 1000).format('LLL')}
               </Typography>
@@ -496,7 +497,7 @@ function OfferList(props: OfferListProps) {
                             onClose();
                             handleCancelOffer(
                               tradeId,
-                              canCancelWithTransaction
+                              canCancelWithTransaction,
                             );
                           }}
                         >
@@ -678,7 +679,7 @@ export function CreateOffer() {
         offerRecord={offerRecord}
         offerData={offerData as string}
         showSuppressionCheckbox={true}
-      />
+      />,
     );
   }
 
@@ -701,6 +702,19 @@ export function CreateOffer() {
         />
         <Route path="import" element={<OfferImport />} />
 
+        <Route
+          path="view-nft"
+          element={
+            <NFTOfferViewer
+              tradeRecord={location?.state?.tradeRecord}
+              offerData={location?.state?.offerData}
+              offerSummary={location?.state?.offerSummary}
+              offerFilePath={location?.state?.offerFilePath}
+              imported={location?.state?.imported}
+              demo={location?.state?.demo} // TODO: Remove this
+            />
+          }
+        />
         <Route
           path="view"
           element={

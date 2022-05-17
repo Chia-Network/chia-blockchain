@@ -19,19 +19,11 @@ import {
   useOpenDialog,
   useShowError,
 } from '@chia/core';
-import {
-  Box,
-  Divider,
-  Grid,
-  // Skeleton,
-  Tabs,
-  Tab,
-  Typography,
-} from '@mui/material';
+import { Divider, Grid, Tabs, Tab, Typography } from '@mui/material';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
-import { isValidNFTId, launcherIdFromNFTId } from './utils';
-import NFTCard from '../nfts/NFTCard';
+import { isValidNFTId, launcherIdFromNFTId } from '../../util/nfts';
+import NFTOfferPreview from './NFTOfferPreview';
 
 /* ========================================================================== */
 /*              Temporary home for the NFT-specific Offer Editor              */
@@ -208,128 +200,6 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
 NFTOfferConditionalsPanel.defaultProps = {
   isProcessing: false,
 };
-
-/* ========================================================================== */
-
-type NFTOfferPreviewProps = {
-  nft: NFTInfo;
-};
-
-function NFTOfferPreview(props: NFTOfferPreviewProps) {
-  const { nft } = props;
-  const methods = useFormContext();
-  const nftId = methods.watch('nftId');
-
-  const isValidNFT = useMemo(() => {
-    if (nftId === undefined) {
-      return false;
-    }
-    return isValidNFTId(nftId);
-  }, [nftId]);
-
-  const borderStyle = isValidNFT ? '2px solid #E0E0E0' : '2px dashed #E0E0E0';
-
-  return (
-    <Flex
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      style={{
-        width: '328px',
-        height: '576px',
-        borderLeft: '1px solid #E0E0E0',
-      }}
-      gap={1}
-    >
-      <Flex
-        flexDirection="column"
-        flexGrow={1}
-        gap={1}
-        style={{
-          padding: '1.5rem',
-        }}
-      >
-        <Typography variant="subtitle1">Preview</Typography>
-        <Box
-          sx={{
-            width: '264px',
-            height: '456px',
-            boxSizing: 'border-box',
-            border: `${borderStyle}`,
-            borderRadius: '24px',
-            display: 'flex',
-            overflow: 'hidden',
-          }}
-        >
-          {isValidNFT ? (
-            <NFTCard nft={nft} />
-          ) : (
-            // // TODO: The following is a placeholder for the NFT preview component
-            // <Flex flexDirection="column" flexGrow={1} gap={0}>
-            //   <Flex
-            //     flexDirection="column"
-            //     alignItems="center"
-            //     style={{
-            //       width: '100%',
-            //       padding: '0.5rem 0.5rem 5px 0.5rem',
-            //     }}
-            //   >
-            //     <Skeleton
-            //       variant="rectangular"
-            //       width="100%"
-            //       height="59px"
-            //       style={{ borderRadius: '18px 18px 0px 0px' }}
-            //     />
-            //   </Flex>
-            //   <Flex
-            //     flexDirection="column"
-            //     alignItems="center"
-            //     style={{ width: '100%', padding: '0 0.5rem 0 0.5rem' }}
-            //   >
-            //     <Skeleton variant="rectangular" width="100%" height="264px" />
-            //   </Flex>
-            //   <Flex
-            //     flexDirection="column"
-            //     alignItems="center"
-            //     style={{ width: '100%', padding: '5px 0.5rem 0px 0.5rem' }}
-            //   >
-            //     <Skeleton variant="rectangular" width="100%" height="67px" />
-            //   </Flex>
-            //   <Flex
-            //     flexDirection="column"
-            //     style={{
-            //       width: '100%',
-            //       padding: '5px 0.5rem 0.5rem 0.5rem',
-            //     }}
-            //   >
-            //     <Skeleton
-            //       variant="rectangular"
-            //       width="100%"
-            //       height="31px"
-            //       style={{ borderRadius: '0px 0px 18px 18px' }}
-            //     />
-            //   </Flex>
-            // </Flex>
-            <Flex
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              flexGrow={1}
-              gap={1}
-              style={{
-                wordBreak: 'break-all',
-              }}
-            >
-              <Typography variant="h6">
-                <Trans>NFT not specified</Trans>
-              </Typography>
-            </Flex>
-          )}
-        </Box>
-      </Flex>
-    </Flex>
-  );
-}
 
 /* ========================================================================== */
 /*                              NFT Offer Editor                              */

@@ -1,12 +1,13 @@
 import { WalletType } from '@chia/api';
 import type { ChipProps } from '@mui/material';
-import type { OfferSummaryRecord } from '@chia/api';
-import {
-  fromBech32m,
-  mojoToChiaLocaleString,
-  mojoToCATLocaleString,
-} from '@chia/core';
+import type {
+  OfferSummaryAssetInfo,
+  OfferSummaryInfos,
+  OfferSummaryRecord,
+} from '@chia/api';
+import { mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
 import OfferState from './OfferState';
+import OfferAsset from './OfferAsset';
 import { AssetIdMapEntry } from '../../hooks/useAssetIdName';
 
 let filenameCounter = 0;
@@ -16,8 +17,8 @@ export function summaryStringsForOffer(
   lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
   builder: (
     filename: string,
-    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
-  ) => string
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string],
+  ) => string,
 ): [makerString: string, takerString: string] {
   const makerEntries: [string, string][] = Object.entries(summary.offered);
   const takerEntries: [string, string][] = Object.entries(summary.requested);
@@ -34,7 +35,7 @@ export function summaryStringsForOffer(
 
 export function suggestedFilenameForOffer(
   summary: OfferSummaryRecord,
-  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
 ): string {
   if (!summary) {
     const filename =
@@ -47,7 +48,7 @@ export function suggestedFilenameForOffer(
 
   function filenameBuilder(
     filename: string,
-    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string],
   ): string {
     const [assetInfo, amount] = args;
 
@@ -67,7 +68,7 @@ export function suggestedFilenameForOffer(
   const [makerString, takerString] = summaryStringsForOffer(
     summary,
     lookupByAssetId,
-    filenameBuilder
+    filenameBuilder,
   );
 
   return `${makerString}_x_${takerString}.offer`;
@@ -75,7 +76,7 @@ export function suggestedFilenameForOffer(
 
 export function shortSummaryForOffer(
   summary: OfferSummaryRecord,
-  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
 ): string {
   if (!summary) {
     return '';
@@ -83,7 +84,7 @@ export function shortSummaryForOffer(
 
   function summaryBuilder(
     shortSummary: string,
-    args: [assetInfo: AssetIdMapEntry | undefined, amount: string]
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string],
   ): string {
     const [assetInfo, amount] = args;
 
@@ -104,7 +105,7 @@ export function shortSummaryForOffer(
   const [makerString, takerString] = summaryStringsForOffer(
     summary,
     lookupByAssetId,
-    summaryBuilder
+    summaryBuilder,
   );
 
   return `Offering: [${makerString}], Requesting: [${takerString}]`;
@@ -151,7 +152,7 @@ export function colorForOfferState(state: OfferState): ChipProps['color'] {
 export function formatAmountForWalletType(
   amount: string | number,
   walletType: WalletType,
-  locale?: string
+  locale?: string,
 ): string {
   if (walletType === WalletType.STANDARD_WALLET) {
     return mojoToChiaLocaleString(amount, locale);
@@ -162,30 +163,22 @@ export function formatAmountForWalletType(
   return amount.toString();
 }
 
-export function isValidNFTId(nftId: string): boolean {
-  if (nftId.length !== 62) {
-    return false;
-  }
-  try {
-    fromBech32m(nftId);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
+export function offerContainsAssetOfType(
+  offerSummary: OfferSummaryRecord,
+  assetType: OfferAsset,
+): boolean {
+  const infos: OfferSummaryInfos = offerSummary.infos;
+  const matchingAssetId: string | undefined = Object.keys(infos).find(
+    (assetId) => {
+      const info: OfferSummaryAssetInfo = infos[assetId];
+      return info.type === assetType;
+    },
+  );
 
-export function launcherIdFromNFTId(nftId: string): string | undefined {
-  if (nftId.length !== 62) {
-    return undefined;
-  }
-
-  let decoded: string | undefined = undefined;
-
-  try {
-    decoded = fromBech32m(nftId);
-  } catch (e) {
-    return undefined;
-  }
-
-  return decoded;
+  return (
+    matchingAssetId &&
+    // Sanity check that the assetId is actually being offered/requested
+    (offerSummary.offered.hasOwnProperty(matchingAssetId) ||
+      offerSummary.requested.hasOwnProperty(matchingAssetId))
+  );
 }

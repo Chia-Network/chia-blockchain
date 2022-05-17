@@ -1,11 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
-import { Back, Card, Dropzone, Flex, useOpenDialog, useShowError } from '@chia/core';
+import {
+  Back,
+  Card,
+  Dropzone,
+  Flex,
+  useOpenDialog,
+  useShowError,
+} from '@chia/core';
 import { Button, Grid, Typography } from '@mui/material';
 import { useGetOfferSummaryMutation } from '@chia/api-react';
 import { type OfferSummaryRecord } from '@chia/api';
+import OfferAsset from './OfferAsset';
 import OfferDataEntryDialog from './OfferDataEntryDialog';
+import { offerContainsAssetOfType } from './utils';
 import fs, { Stats } from 'fs';
 
 function SelectOfferFile() {
@@ -15,14 +24,30 @@ function SelectOfferFile() {
   const errorDialog = useShowError();
   const [isParsing, setIsParsing] = React.useState<boolean>(false);
 
-  function parseOfferData(data: string): [offerData: string | undefined, leadingText: string | undefined, trailingText: string | undefined] {
+  function parseOfferData(
+    data: string,
+  ): [
+    offerData: string | undefined,
+    leadingText: string | undefined,
+    trailingText: string | undefined,
+  ] {
     // Parse raw offer data looking for the bech32-encoded offer data and any surrounding text.
-    const matches = data.match(/(?<leading>.*)(?<offer>offer1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(?<trailing>.*)/s)
-    return [matches?.groups?.offer, matches?.groups?.leading, matches?.groups?.trailing];
+    const matches = data.match(
+      /(?<leading>.*)(?<offer>offer1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)(?<trailing>.*)/s,
+    );
+    return [
+      matches?.groups?.offer,
+      matches?.groups?.leading,
+      matches?.groups?.trailing,
+    ];
   }
 
-  async function parseOfferSummary(rawOfferData: string, offerFilePath: string | undefined) {
-    const [offerData /*, leadingText, trailingText*/] = parseOfferData(rawOfferData);
+  async function parseOfferSummary(
+    rawOfferData: string,
+    offerFilePath: string | undefined,
+  ) {
+    const [offerData /*, leadingText, trailingText*/] =
+      parseOfferData(rawOfferData);
     let offerSummary: OfferSummaryRecord | undefined;
 
     if (offerData) {
@@ -32,18 +57,23 @@ function SelectOfferFile() {
       if (success) {
         offerSummary = summary;
       }
-    }
-    else {
-      console.warn("Unable to parse offer data");
+    } else {
+      console.warn('Unable to parse offer data');
     }
 
     if (offerSummary) {
-      navigate('/dashboard/offers/view', {
+      const navigationPath = offerContainsAssetOfType(
+        offerSummary,
+        OfferAsset.NFT,
+      )
+        ? '/dashboard/offers/view-nft'
+        : '/dashboard/offers/view';
+
+      navigate(navigationPath, {
         state: { offerData, offerSummary, offerFilePath, imported: true },
       });
-    }
-    else {
-      errorDialog(new Error("Could not parse offer data"));
+    } else {
+      errorDialog(new Error('Could not parse offer data'));
     }
   }
 
@@ -51,18 +81,15 @@ function SelectOfferFile() {
     async function continueOpen(stats: Stats) {
       try {
         if (stats.size > 1024 * 1024) {
-          errorDialog(new Error("Offer file is too large (> 1MB)"));
-        }
-        else {
+          errorDialog(new Error('Offer file is too large (> 1MB)'));
+        } else {
           const offerData = fs.readFileSync(offerFilePath, 'utf8');
 
           await parseOfferSummary(offerData, offerFilePath);
         }
-      }
-      catch (e) {
+      } catch (e) {
         errorDialog(e);
-      }
-      finally {
+      } finally {
         setIsParsing(false);
       }
     }
@@ -80,37 +107,37 @@ function SelectOfferFile() {
 
   async function handleDrop(acceptedFiles: [File]) {
     if (acceptedFiles.length !== 1) {
-      errorDialog(new Error("Please drop one offer file at a time"));
-    }
-    else {
+      errorDialog(new Error('Please drop one offer file at a time'));
+    } else {
       handleOpen(acceptedFiles[0].path);
     }
   }
 
   async function handlePasteOfferData() {
-    const offerData = await openDialog((
-      <OfferDataEntryDialog />
-    ));
+    const offerData = await openDialog(<OfferDataEntryDialog />);
 
     if (offerData) {
       setIsParsing(true);
 
       try {
         await parseOfferSummary(offerData, undefined);
-      }
-      catch (e) {
+      } catch (e) {
         errorDialog(e);
-      }
-      finally {
+      } finally {
         setIsParsing(false);
       }
     }
   }
 
   async function handleSelectOfferFile() {
-    const dialogOptions = { filters: [{ name: 'Offer Files', extensions: ['offer'] }] } as Electron.OpenDialogOptions;
+    const dialogOptions = {
+      filters: [{ name: 'Offer Files', extensions: ['offer'] }],
+    } as Electron.OpenDialogOptions;
     const ipcRenderer = (window as any).ipcRenderer;
-    const { canceled, filePaths } = await ipcRenderer?.invoke('showOpenDialog', dialogOptions);
+    const { canceled, filePaths } = await ipcRenderer?.invoke(
+      'showOpenDialog',
+      dialogOptions,
+    );
     if (!canceled && filePaths?.length) {
       handleOpen(filePaths[0]);
     }
@@ -119,7 +146,9 @@ function SelectOfferFile() {
   return (
     <Card>
       <Flex justifyContent="space-between">
-        <Typography variant="subtitle1"><Trans>Drag & drop an offer file below to view its details</Trans></Typography>
+        <Typography variant="subtitle1">
+          <Trans>Drag & drop an offer file below to view its details</Trans>
+        </Typography>
         <Flex flexDirection="row" gap={3}>
           <Button
             variant="outlined"
@@ -142,7 +171,7 @@ function SelectOfferFile() {
       </Dropzone>
     </Card>
   );
-};
+}
 
 export function OfferImport() {
   return (

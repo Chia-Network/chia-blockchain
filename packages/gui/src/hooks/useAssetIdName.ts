@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useGetCatListQuery, useGetWalletsQuery } from '@chia/api-react';
-import { CATToken, Wallet } from '@chia/core';
+import { CATToken, Wallet, useCurrencyCode } from '@chia/core';
 import { WalletType } from '@chia/api';
 
 export type AssetIdMapEntry = {
@@ -14,7 +14,9 @@ export type AssetIdMapEntry = {
 
 export default function useAssetIdName() {
   const { data: wallets, isLoading } = useGetWalletsQuery();
-  const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
+  const { data: catList = [], isLoading: isCatListLoading } =
+    useGetCatListQuery();
+  const currencyCode = useCurrencyCode();
 
   const { assetIdNameMapping, walletIdNameMapping } = useMemo(() => {
     const assetIdNameMapping = new Map<string, AssetIdMapEntry>();
@@ -37,13 +39,14 @@ export default function useAssetIdName() {
         name = 'Chia';
         symbol = 'XCH';
         isVerified = true;
-      }
-      else if (walletType === WalletType.CAT) {
+      } else if (walletType === WalletType.CAT) {
         const lowercaseTail = wallet.meta.assetId.toLowerCase();
-        const cat = catList.find((cat: CATToken) => cat.assetId.toLowerCase() === lowercaseTail);
+        const cat = catList.find(
+          (cat: CATToken) => cat.assetId.toLowerCase() === lowercaseTail,
+        );
 
         assetId = lowercaseTail;
-        name = wallet.name
+        name = wallet.name;
 
         if (cat) {
           symbol = cat.symbol;
@@ -53,7 +56,14 @@ export default function useAssetIdName() {
 
       if (assetId && name) {
         const displayName = symbol ? symbol : name;
-        const entry: AssetIdMapEntry = { walletId, walletType, name, symbol, displayName, isVerified };
+        const entry: AssetIdMapEntry = {
+          walletId,
+          walletType,
+          name,
+          symbol,
+          displayName,
+          isVerified,
+        };
         assetIdNameMapping.set(assetId, entry);
         walletIdNameMapping.set(walletId, entry);
       }
@@ -68,18 +78,44 @@ export default function useAssetIdName() {
       const name = cat.name;
       const symbol = cat.symbol;
       const displayName = symbol ? symbol : name;
-      const entry: AssetIdMapEntry = { walletId: 0, walletType: WalletType.CAT, name, symbol, displayName, isVerified: true };
+      const entry: AssetIdMapEntry = {
+        walletId: 0,
+        walletType: WalletType.CAT,
+        name,
+        symbol,
+        displayName,
+        isVerified: true,
+      };
       assetIdNameMapping.set(assetId, entry);
     });
 
-    return { assetIdNameMapping, walletIdNameMapping } ;
+    // If using testnet, add a TXCH assetId entry
+    if (currencyCode === 'TXCH') {
+      const assetId = 'txch';
+      const name = 'Chia (Testnet)';
+      const symbol = 'TXCH';
+      const displayName = symbol ? symbol : name;
+      const entry: AssetIdMapEntry = {
+        walletId: 1,
+        walletType: WalletType.STANDARD_WALLET,
+        name,
+        symbol,
+        displayName,
+        isVerified: true,
+      };
+      assetIdNameMapping.set(assetId, entry);
+    }
+
+    return { assetIdNameMapping, walletIdNameMapping };
   }, [catList, wallets, isCatListLoading, isLoading]);
 
   function lookupByAssetId(assetId: string): AssetIdMapEntry | undefined {
     return assetIdNameMapping.get(assetId.toLowerCase());
   }
 
-  function lookupByWalletId(walletId: number | string): AssetIdMapEntry | undefined {
+  function lookupByWalletId(
+    walletId: number | string,
+  ): AssetIdMapEntry | undefined {
     return walletIdNameMapping.get(Number(walletId));
   }
 
