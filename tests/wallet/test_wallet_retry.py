@@ -1,3 +1,5 @@
+import os
+import sys
 import time
 from typing import Any, List, Tuple
 
@@ -42,6 +44,10 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"win32"}),
+    reason="testing stuff",
+)
 async def test_wallet_tx_retry(
     bt: BlockTools,
     setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
