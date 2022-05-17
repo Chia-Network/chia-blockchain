@@ -269,7 +269,8 @@ class WeightProofHandlerV2:
                 log.error("error while building proof")
                 return None
             log.debug(f"create segments for sub epoch {sub_epoch_n}")
-            await self.__create_persist_sub_epoch(ses_blocks[sub_epoch_n - 1], ses_block, uint32(sub_epoch_n))
+            await self.__create_persist_sub_epoch(prev_ses_block, ses_block, uint32(sub_epoch_n))
+            prev_ses_block = ses_block
         log.debug("done checking segments")
         return None
 
@@ -883,7 +884,7 @@ def validate_sub_epoch(
             cc_sub_slot_hash,
             icc_sub_slot_hash,
             uint64(0) if slot_after_challenge else prev_challenge_ip_iters,
-            start_idx,
+            start_idx if idx == 0 else 0,
         )
         prev_challenge_ip_iters, slot_iters, slots, cc_sub_slot_hash, icc_sub_slot_hash, slot_after_challenge = res
         log.debug(f"cc sub slot hash {cc_sub_slot_hash}")
@@ -924,7 +925,7 @@ def _validate_segment(
 
     start_from is used for an edge case where this is the first segment
     of the sub epoch and there are multiple empty slots
-    in that case we already have have the end of slot challenges so we can skip those first slots
+    in that case we already have the end of slot challenges so we can skip those first slots
 
     when we validate vdfs with compressed values we get the uncompressed value as a result
     output_cache is used to store all these converted B objects to use as inputs for later vdfs
@@ -932,14 +933,15 @@ def _validate_segment(
 
     slot_iters, slots = uint64(0), 0
     output_cache: Dict[B, ClassgroupElement] = {}
-    sub_slot_data = segment.sub_slot_data[start_from:]
     first_block = True
     prev_cc_challenge = None
     after_challenge_block = False
     slot_after_challenge_block = False
     deficit = 0
     challenge_included = False
-    for idx, ssd in enumerate(sub_slot_data):
+    for idx, ssd in enumerate(segment.sub_slot_data):
+        if idx < start_from:
+            continue
         if ssd.is_challenge():
             challenge_included = True
             assert ssd.ip_iters
@@ -956,7 +958,7 @@ def _validate_segment(
             icc_challenge = _validate_challenge_sub_slot_data(
                 constants,
                 idx,
-                sub_slot_data,
+                segment.sub_slot_data,
                 curr_difficulty,
                 curr_ssi,
                 cc_challenge,
@@ -970,12 +972,12 @@ def _validate_segment(
             # only if this is a sampled segment
             assert icc_challenge is not None
             if ssd.is_end_of_slot():
-                validate_eos(cc_challenge, icc_challenge, constants, sub_slot_data, idx, curr_ssi, output_cache)
+                validate_eos(cc_challenge, icc_challenge, constants, segment.sub_slot_data, idx, curr_ssi, output_cache)
             else:
                 _validate_sub_slot_data(
                     constants,
                     idx,
-                    sub_slot_data,
+                    segment.sub_slot_data,
                     curr_ssi,
                     cc_challenge,
                     prev_cc_challenge,
@@ -986,7 +988,9 @@ def _validate_segment(
             # overflow blocks before challenge block
             # we always validate this so we can also validate the challenge block (we need the uncompressed inputs)
             assert icc_challenge is not None
-            validate_overflow(cc_challenge, icc_challenge, constants, first_block, idx, output_cache, sub_slot_data)
+            validate_overflow(
+                cc_challenge, icc_challenge, constants, first_block, idx, output_cache, segment.sub_slot_data
+            )
         if ssd.is_end_of_slot():
             # calculate the end of slot challenges
             if after_challenge_block:
@@ -1464,27 +1468,22 @@ def __get_rc_sub_slot_hash(
     slots = segment.sub_slot_data
     ses = summaries[uint32(segment.sub_epoch_n - 1)]
     # find first block sub epoch
-    first_idx = None
-    first = None
+    last_slot_idx = None
+    first_block_in_se = None
     for idx, curr in enumerate(segment.sub_slot_data):
         if not curr.is_end_of_slot():
-            first_idx = idx
-            first = curr
+            last_slot_idx = idx - 1
+            first_block_in_se = curr
             break
 
-    if first_idx is None or first is None:
+    if last_slot_idx is None or first_block_in_se is None:
         raise Exception("could not find first block in sub epoch")
 
-    assert first.signage_point_index is not None
+    challenge_slot = slots[last_slot_idx]
+    new_diff = ses.new_difficulty if last_slot_idx == 0 else None
+    new_ssi = ses.new_sub_slot_iters if last_slot_idx == 0 else None
+    ses_hash = ses.get_hash() if last_slot_idx == 0 else None
 
-    idx = first_idx - 1
-    challenge_slot = slots[idx]
-
-    new_diff = ses.new_difficulty if idx == 0 else None
-    new_ssi = ses.new_sub_slot_iters if idx == 0 else None
-    ses_hash = ses.get_hash() if idx == 0 else None
-
-    assert challenge_slot is not None
     assert segment.cc_slot_end_info is not None
     assert segment.rc_slot_end_info is not None
 
@@ -1507,7 +1506,7 @@ def __get_rc_sub_slot_hash(
 
     log.debug(f"sub epoch start, cc sub slot {cc_sub_slot}")
     log.debug(f"sub epoch start, rc sub slot {rc_sub_slot}")
-    return rc_sub_slot.get_hash(), idx
+    return rc_sub_slot.get_hash(), last_slot_idx
 
 
 def _get_curr_diff_ssi(

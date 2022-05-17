@@ -17,12 +17,13 @@ from chia.full_node.weight_proof_v2 import (
     _validate_recent_blocks,
     _validate_segment,
     get_recent_chain,
+    validate_sub_epoch,
 )
 from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
-from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2
+from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2, SubEpochSegmentsV2
 from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
 from chia.util.streamable import recurse_jsonify
@@ -149,7 +150,7 @@ async def _test_map_summaries(
 
 
 seed = bytes32.from_bytes(os.urandom(32))
-bad_b = B.from_bytes(b"\x00" * 33)
+bad_b = B.from_bytes(b"\x08" * 33)
 bad_element = ClassgroupElement.from_bytes(b"\x00")
 
 
@@ -178,7 +179,6 @@ class TestWeightProof:
             wpf.constants.DIFFICULTY_STARTING,
         )
         assert _validate_summaries_weight(test_constants, sub_epoch_data_weight, summaries_from_proof, wp)
-        # assert res is not None
 
     @pytest.mark.asyncio
     async def test_weight_proof_bad_peak_hash(self, default_1000_blocks: List[FullBlock]) -> None:
@@ -330,22 +330,46 @@ class TestWeightProof:
         assert fork_point == 0
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="broken")
-    async def test_weight_proof10000(self, default_10000_blocks: List[FullBlock]) -> None:
+    async def test_weight_proof_multiple_slots_epoch_start(self, default_10000_blocks: List[FullBlock]) -> None:
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        block = sub_blocks[height_to_hash[uint32(0)]]
-        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp = await wpf.get_proof_of_weight(blocks[-1].header_hash, seed)
 
-        assert wp is not None
-        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
-        valid, fork_point, _, _ = await wpf.validate_weight_proof(wp, seed)
+        block_cache = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
 
-        assert valid
-        assert fork_point == 0
+        summary_heights = block_cache.get_ses_heights()
+        ses_height = summary_heights[0]
+        hash = block_cache.height_to_hash(ses_height)
+        assert hash is not None
+        brec = block_cache.block_record(hash)
+
+        assert brec.is_challenge_block(test_constants) is True
+        assert brec.finished_challenge_slot_hashes is not None
+        assert len(brec.finished_challenge_slot_hashes) > 0
+
+        genesis = block_cache.height_to_hash(uint32(0))
+        assert genesis
+        prev_ses_block = await block_cache.get_block_record_from_db(genesis)
+        assert prev_ses_block is not None
+
+        ses_blocks = await block_cache.get_block_records_at(summary_heights)
+        assert ses_blocks is not None
+
+        sub_epoch_n = 0
+        summaries_bytes = []
+        for height in block_cache.get_ses_heights():
+            summaries_bytes.append(bytes(block_cache.get_ses(height)))
+
+        wpf = WeightProofHandlerV2(test_constants, block_cache)
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            ses_blocks[sub_epoch_n],
+            prev_ses_block,
+            uint32(sub_epoch_n),
+        )
+
+        validate_sub_epoch(
+            recurse_jsonify(dataclasses.asdict(test_constants)), 0, bytes(SubEpochSegmentsV2(segments)), summaries_bytes
+        )
 
     @pytest.mark.asyncio
     async def test_check_num_of_samples(self, default_10000_blocks: List[FullBlock]) -> None:
