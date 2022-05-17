@@ -64,8 +64,9 @@ export default function WalletImport() {
   const submitMnemonicPaste = (mnemonicList: string) => {
     closeMnemonicPaste();
     let mList = mnemonicList.match(/\b(\w+)\b/g);
+    const intersection = mList?.filter(element => options.includes(element));
 
-    if (mList == null) {
+    if (!intersection || intersection.length !== 24) {
       openDialog(
         <AlertDialog>
           <Trans>
@@ -76,20 +77,8 @@ export default function WalletImport() {
       return;
     }
 
-    const intersection = mList.filter(element => options.includes(element));
-
-    if (intersection.length != 24) {
-      openDialog(
-        <AlertDialog>
-          <Trans>
-            Your pasted list does not include 24 valid mnemonic words.
-          </Trans>
-        </AlertDialog>
-      );
-    } else {
-      const mnemonic = intersection.map((word) => ({ word }));
-      replace(mnemonic);
-    }
+    const mnemonic = intersection.map((word) => ({ word }));
+    replace(mnemonic);
   };
 
   function closeMnemonicPaste() {
