@@ -62,7 +62,6 @@ export default function WalletImport() {
   });
 
   const submitMnemonicPaste = (mnemonicList: string) => {
-    closeMnemonicPaste();
     let mList = mnemonicList.match(/\b(\w+)\b/g);
     const intersection = mList?.filter(element => options.includes(element));
 
@@ -79,6 +78,7 @@ export default function WalletImport() {
 
     const mnemonic = intersection.map((word) => ({ word }));
     replace(mnemonic);
+    closeMnemonicPaste();
   };
 
   function closeMnemonicPaste() {
