@@ -152,10 +152,7 @@ class ChiaServer:
         self.on_connect: Optional[Callable] = None
         self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
-        self.capabilities: List[Tuple[uint16, str]] = [
-            (uint16(Capability.BASE.value), "1"),
-            (uint16(Capability.WP.value), "v2"),
-        ]
+        self.capabilities: List[Tuple[uint16, str]] = [(uint16(Capability.BASE.value), "1")]
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
@@ -205,6 +202,12 @@ class ChiaServer:
 
     def set_capabilities(self, capabilities: List[Tuple[uint16, str]]):
         self.capabilities = capabilities
+
+    def get_capabilities(self) -> List[Tuple[uint16, str]]:
+        return self.capabilities
+
+    def add_capabilities(self, capabilities: List[Tuple[uint16, str]]):
+        self.capabilities.extend(capabilities)
 
     async def garbage_collect_connections_task(self) -> None:
         """

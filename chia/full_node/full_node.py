@@ -46,6 +46,7 @@ from chia.protocols.full_node_protocol import (
     RespondSignagePoint,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -73,7 +74,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_m
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128, uint16
 from chia.util.path import mkdir, path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -353,6 +354,7 @@ class FullNode:
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler_v2.create_sub_epoch_segments()
+        self.server.add_capabilities([(uint16(Capability.WP.value), "v2")])
 
     def set_server(self, server: ChiaServer):
         self.server = server

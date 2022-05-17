@@ -361,10 +361,6 @@ class TestFullSync:
         server_4 = full_node_4.full_node.server
         server_5 = full_node_5.full_node.server
 
-        # no capabilities
-        server_3.capabilities = [(uint16(Capability.BASE.value), "1")]
-        server_4.capabilities = [(uint16(Capability.BASE.value), "1")]
-
         for block in blocks[: test_constants.WEIGHT_PROOF_BLOCK_MIN + 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
@@ -375,6 +371,10 @@ class TestFullSync:
         await server_3.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
         )
+
+        # no capabilities
+        server_3.set_capabilities([(uint16(Capability.BASE.value), "1")])
+        server_4.set_capabilities([(uint16(Capability.BASE.value), "1")])
 
         timeout_seconds = 150
 
@@ -395,9 +395,6 @@ class TestFullSync:
         await server_2.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
-        await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
-        )
         await server_4.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_4.full_node.on_connect
         )
@@ -410,6 +407,15 @@ class TestFullSync:
         await server_4.start_client(
             PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_4.full_node.on_connect
         )
+        capabilties = full_node_1.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "v2") in capabilties
+        capabilties = full_node_2.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "v2") in capabilties
+
+        capabilties = full_node_3.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "v2") not in capabilties
+        capabilties = full_node_4.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "v2") not in capabilties
 
         # All four nodes are synced
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, num_blocks - 1)
