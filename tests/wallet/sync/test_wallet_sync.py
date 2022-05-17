@@ -139,7 +139,7 @@ class TestWalletSync:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
         for wallet_node, wallet_server in wallets:
-            await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
+            await time_out_assert(200, wallet_height_at_least, True, wallet_node, 199)
 
     @pytest.mark.asyncio
     async def test_long_sync_wallet(self, bt, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
