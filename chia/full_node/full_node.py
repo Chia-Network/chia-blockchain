@@ -1011,6 +1011,8 @@ class FullNode:
                     await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
                 await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
+                async with self.db_wrapper.write_db() as conn:
+                    await (await conn.execute("pragma wal_checkpoint(truncate)")).close()
 
         batch_queue: asyncio.Queue[Tuple[ws.WSChiaConnection, List[FullBlock]]] = asyncio.Queue(maxsize=buffer_size)
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue, peers_with_peak))
@@ -1315,6 +1317,8 @@ class FullNode:
 
         if not self.sync_store.get_sync_mode():
             self.blockchain.clean_block_records()
+            async with self.db_wrapper.write_db() as conn:
+                await (await conn.execute("pragma wal_checkpoint(truncate)")).close()
 
         fork_block: Optional[BlockRecord] = None
         if state_change_summary.fork_height != block.height - 1 and block.height != 0:
