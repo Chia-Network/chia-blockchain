@@ -8,12 +8,12 @@
     Current_Owner
     (
       new_owner
-      trade_prices_list
-      (trade_prices_list new_did_inner_hash)  ; this is the opaque transfer_program_solution
+      trade_prices_list  ; list of (amount type) pairs
+      (new_did_inner_hash)  ; this is the opaque transfer_program_solution
     )
   )
 
-  ; This is a metadata updater - which must return ; (new_owner, Optional[new_transfer_program], conditions)
+  ; This is a metadata updater - which must return (new_owner, Optional[new_transfer_program], conditions)
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -68,7 +68,7 @@
                   (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH) (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))))))
                   (list CREATE_COIN ROYALTY_ADDRESS (round_down_to_even (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))
               )
-              (parse_trade_prices_list (list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH) (r trade_prices_list) my_nft_id)
+              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
           )
           ()
       )

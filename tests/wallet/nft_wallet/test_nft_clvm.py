@@ -35,6 +35,7 @@ STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
@@ -154,7 +155,7 @@ def test_innerpuz_enforcement_layer() -> None:
     # P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     # NFT_V1_MOD_HASH
     # PUBKEY
-    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     # inner_solution
     condition_list = [new_did, 200, destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
     solution = Program.to([
@@ -174,18 +175,77 @@ def test_innerpuz_enforcement_layer() -> None:
     ).get_tree_hash()
 
 
+def test_transfer_program() -> None:
+    pubkey = int_to_public_key(1)
+    innerpuz = puzzle_for_pk(pubkey)
+    current_owner = Program.to("current_owner").get_tree_hash()
+    new_owner = Program.to("new_owner").get_tree_hash()
+    new_inner = Program.to("new_owner_inner").get_tree_hash()
+    nft_id = Program.to("nft").get_tree_hash()
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
+    curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
+        SINGLETON_STRUCT,
+        innerpuz.get_tree_hash(),
+        2000,  # percentage with 2 decimal points 0 - 10000
+        OFFER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+    )
+#     Current_Owner
+    # (
+    #   new_owner
+    #   trade_prices_list
+    #   (new_did_inner_hash)  ; this is the opaque transfer_program_solution
+    # )
+
+    trade_prices_list = [[200]]
+    solution = Program.to([
+        current_owner,
+        [
+            new_owner,
+            trade_prices_list,
+            [new_inner]
+        ]
+    ])
+    cost, res = curried_tp.run_with_cost(INFINITE_COST, solution)
+    assert res.first().as_atom() == new_owner
+    assert res.rest().first().as_int() == 0
+    conditions = res.rest().rest().first()
+    assert conditions.first().first().as_int() == 63
+    assert conditions.rest().first().first().as_int() == 51
+    assert conditions.rest().first().rest().rest().first().as_int() == 40
+
+
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     my_amount = 1
     destination = int_to_public_key(2)
     new_did = Program.to("test").get_tree_hash()
-    # P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
-    # NFT_V1_MOD_HASH
-    # PUBKEY
-    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_reveal, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    new_did_inner_hash = Program.to("fake").get_tree_hash()
+    old_did = Program.to("test_2").get_tree_hash()
+    trade_prices_list = [[1000]]
+    condition_list = [new_did, trade_prices_list, destination, [new_did_inner_hash], 0, 0, [[51, 0xcafef00d, 200]]]
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (new_did, LAUNCHER_PUZZLE_HASH)))
+    curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
+        SINGLETON_STRUCT,
+        innerpuz.get_tree_hash(),
+        20,
+        OFFER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+    )
+    curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        old_did,
+        curried_tp,
+        NFT_INNER_INNERPUZ.curry(STANDARD_PUZZLE_MOD.get_tree_hash(),
+            NFT_INNER_INNERPUZ.get_tree_hash(),
+            pubkey,
+            STANDARD_PUZZLE_MOD.curry(pubkey),
+        ),
+    )
+    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     # inner_solution
     condition_list = [new_did, 200, destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
-    curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry()
-    curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry()
-    # breakpoint()
+    solution = Program.to([solution_for_conditions(condition_list)])
+    cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
+    breakpoint()
