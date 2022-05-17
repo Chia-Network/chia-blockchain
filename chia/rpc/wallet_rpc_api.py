@@ -1377,7 +1377,8 @@ class WalletRpcApi:
             raise ValueError("Coin ID is required.")
         coin_id = bytes32.from_hexstr(request["coin_id"])
         peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
-
+        if peer is None:
+            raise ValueError("Cannot find a full node peer.")
         # Get coin state
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
