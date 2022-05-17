@@ -74,9 +74,9 @@ class TestWalletSimulator:
             farm_rewards = 0
 
             for tx in all_txs:
-                if tx.type == TransactionType.COINBASE_REWARD.value:
+                if TransactionType(tx.type) == TransactionType.COINBASE_REWARD:
                     pool_rewards += 1
-                elif tx.type == TransactionType.FEE_REWARD.value:
+                elif TransactionType(tx.type) == TransactionType.FEE_REWARD:
                     farm_rewards += 1
 
             if pool_rewards != expected_count / 2:
