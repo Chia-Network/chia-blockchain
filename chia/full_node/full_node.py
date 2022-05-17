@@ -344,7 +344,7 @@ class FullNode:
         except asyncio.CancelledError:
             raise
 
-    async def initialize_weight_proof(self):
+    async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
             constants=self.constants,
             blockchain=self.blockchain,
@@ -352,8 +352,12 @@ class FullNode:
         )
         self.weight_proof_handler_v2 = WeightProofHandlerV2(self.constants, self.blockchain)
         peak = self.blockchain.get_peak()
+
+        # only add capability to nodes that sync from 0
+        # or nodes that already have the sub_epoch segments ready
         if peak is not None:
-            await self.weight_proof_handler_v2.create_sub_epoch_segments()
+            if not self.weight_proof_handler_v2.check_prev_sub_epoch_segments():
+                return
         self.server.add_capabilities([(uint16(Capability.WP.value), "v2")])
 
     def set_server(self, server: ChiaServer):
@@ -1183,7 +1187,8 @@ class FullNode:
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
-                if self.weight_proof_handler_v2 is not None:
+                # only create segments if this node has v2 capability (nodes synced fresh after v2 was introduced)
+                if self.weight_proof_handler_v2 is not None and self.server.has_wp_v2_capability():
                     await self.weight_proof_handler_v2.create_prev_sub_epoch_segments()
         if agg_state_change_summary is not None:
             self._state_changed("new_peak")

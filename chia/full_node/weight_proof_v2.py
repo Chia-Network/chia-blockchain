@@ -310,6 +310,18 @@ class WeightProofHandlerV2:
         log.debug("sub_epoch_segments done")
         return
 
+    async def check_prev_sub_epoch_segments(self) -> bool:
+        """
+        checks if db contains sub epoch segments
+        """
+        log.debug("create prev sub_epoch_segments")
+        heights = self.blockchain.get_ses_heights()
+        if len(heights) < 2:
+            return True
+        ses_block = self.blockchain.height_to_block_record(heights[-2])
+        segment = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
+        return segment is not None
+
     async def __create_sub_epoch_segments(
         self, ses_block: BlockRecord, se_start: BlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegmentV2]]:

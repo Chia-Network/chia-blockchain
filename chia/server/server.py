@@ -209,6 +209,16 @@ class ChiaServer:
     def add_capabilities(self, capabilities: List[Tuple[uint16, str]]):
         self.capabilities.extend(capabilities)
 
+    def has_capability(self, c: Capability, value: str) -> bool:
+        capabilities = self.capabilities
+        if capabilities is not None and (c.value, value) in capabilities:
+            self.log.debug("has new weight proof format capability")
+            return True
+        return False
+
+    def has_wp_v2_capability(self) -> bool:
+        return self.has_capability(Capability.WP, "v2")
+
     async def garbage_collect_connections_task(self) -> None:
         """
         Periodically checks for connections with no activity (have not sent us any data), and removes them,
