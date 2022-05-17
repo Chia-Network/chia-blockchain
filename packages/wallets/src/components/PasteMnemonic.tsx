@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
-} from '@material-ui/core';
+} from '@mui/material';
 import { Trans } from '@lingui/macro';
 
 type Props = {
