@@ -139,7 +139,7 @@ class WalletPuzzleStore:
             return DerivationRecord(
                 uint32(row[0]),
                 bytes32.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
+                G1Element.from_bytes_unchecked(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),
                 bool(row[5]),
@@ -162,7 +162,7 @@ class WalletPuzzleStore:
             return DerivationRecord(
                 uint32(row[0]),
                 bytes32.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
+                G1Element.from_bytes_unchecked(bytes.fromhex(row[1])),
                 WalletType(row[3]),
                 uint32(row[4]),
                 bool(row[6]),
@@ -218,7 +218,7 @@ class WalletPuzzleStore:
         return DerivationRecord(
             uint32(row[0]),
             bytes32.fromhex(row[2]),
-            G1Element.from_bytes(bytes.fromhex(row[1])),
+            G1Element.from_bytes_unchecked(bytes.fromhex(row[1])),
             WalletType(row[3]),
             uint32(row[4]),
             bool(row[6]),

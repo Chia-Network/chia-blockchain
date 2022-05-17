@@ -178,8 +178,8 @@ def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool):
 
 def verify(message: str, public_key: str, signature: str):
     messageBytes = bytes(message, "utf-8")
-    public_key = G1Element.from_bytes(bytes.fromhex(public_key))
-    signature = G2Element.from_bytes(bytes.fromhex(signature))
+    public_key = G1Element.from_bytes_unchecked(bytes.fromhex(public_key))
+    signature = G2Element.from_bytes_unchecked(bytes.fromhex(signature))
     print(AugSchemeMPL.verify(public_key, messageBytes, signature))
 
 

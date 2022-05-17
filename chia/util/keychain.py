@@ -264,7 +264,7 @@ class Keychain:
             return None
         str_bytes = bytes.fromhex(read_str)
         return (
-            G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
+            G1Element.from_bytes_unchecked(str_bytes[: G1Element.SIZE]),
             str_bytes[G1Element.SIZE :],  # flake8: noqa
         )
 
