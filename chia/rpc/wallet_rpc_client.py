@@ -586,6 +586,11 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_add_uri", request)
         return response
 
+    async def get_nft_info(self, coin_id: bytes32, latest: bool = False):
+        request: Dict[str, Any] = {"coin_id": coin_id.hex(), "latest": latest}
+        response = await self.fetch("nft_get_info", request)
+        return response
+
     async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,

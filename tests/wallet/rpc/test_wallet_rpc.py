@@ -671,8 +671,11 @@ class TestWalletRpc:
 
             nft_wallet: NFTWallet = wallet_node.wallet_state_manager.wallets[nft_wallet_id]
             nft_id = nft_wallet.get_current_nfts()[0].coin.name()
-            nft_info = (await full_node_rpc_api.get_nft_info({"coin_id": nft_id.hex()}))["nft_info"]
-            assert nft_info.nft_coin_id == nft_wallet.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
+            if trusted:
+                # It is intended to use different client to get NFT info
+                # This only supports trusted
+                nft_info = (await client_2.get_nft_info(nft_id, True))["nft_info"]
+                assert nft_info["nft_coin_id"] == nft_wallet.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
 
             res = await client.transfer_nft(nft_wallet_id, nft_id.hex(), addr, 0)
             assert res["success"]
@@ -681,9 +684,9 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await client_2.farm_block(encode_puzzle_hash(ph_2, "txch"))
                 await asyncio.sleep(0.5)
-
-            nft_info_1 = (await full_node_rpc_api.get_nft_info({"coin_id": nft_id.hex(), "latest": False}))["nft_info"]
-            assert nft_info_1 == nft_info
+            if trusted:
+                nft_info_1 = (await client.get_nft_info(nft_id))["nft_info"]
+                assert nft_info_1 == nft_info
 
             # Keys and addresses
 

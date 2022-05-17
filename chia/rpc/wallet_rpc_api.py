@@ -11,12 +11,14 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -35,6 +37,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_nft_info_from_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -131,6 +134,7 @@ class WalletRpcApi:
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
+            "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             # RL wallet
@@ -1365,6 +1369,46 @@ class WalletRpcApi:
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
+
+    async def nft_get_info(self, request: Dict) -> Optional[Dict]:
+        assert self.service.wallet_state_manager is not None
+        # coin_id should be the latest ID of the unspent NFT coin
+        if "coin_id" not in request:
+            raise ValueError("Coin ID is required.")
+        coin_id = bytes32.from_hexstr(request["coin_id"])
+        peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
+
+        # Get coin state
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_id], peer=peer
+        )
+        if coin_state_list is None or len(coin_state_list) < 1:
+            raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
+        coin_state: CoinState = coin_state_list[0]
+        if request.get("latest", False) and coin_state.spent_height is not None:
+            raise ValueError(f"Coin 0x{coin_id.hex()} is spent. Please input an unspent coin ID.")
+        # Get parent coin
+        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_state.coin.parent_coin_info], peer=peer
+        )
+        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
+            raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
+        parent_coin_state: CoinState = parent_coin_state_list[0]
+
+        if peer is None:
+            raise ValueError("Cannot find a valid full node connection.")
+        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            peer, parent_coin_state.spent_height, parent_coin_state.coin
+        )
+        # convert to NFTInfo
+        try:
+            nft_info: NFTInfo = get_nft_info_from_puzzle(
+                Program.from_bytes(bytes(coin_spend.puzzle_reveal)), parent_coin_state.coin
+            )
+        except Exception as e:
+            raise ValueError(f"The coin is not a NFT. {e}")
+        else:
+            return {"nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None

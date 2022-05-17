@@ -1,4 +1,3 @@
-from clvm_tools.binutils import assemble
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
 from typing import List, Optional, Tuple, Iterator, Dict
@@ -205,7 +204,7 @@ def metadata_to_program(metadata: Dict) -> Program:
     """
     kv_list = []
     for key, value in metadata.items():
-        kv_list.append((assemble(key), assemble(value)))
+        kv_list.append((key, value))
     return Program.to(kv_list)
 
 
