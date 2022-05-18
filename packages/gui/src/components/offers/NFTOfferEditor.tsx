@@ -274,6 +274,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     shouldUnregister: false,
     defaultValues,
   });
+  const nftId = methods.watch('nftId');
 
   function validateFormData(
     unvalidatedFormData: NFTOfferEditorFormData,
@@ -382,7 +383,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
             defaultValues={defaultValues}
             isProcessing={isProcessing}
           />
-          <NFTOfferPreview nft={nft} />
+          <NFTOfferPreview nftId={nftId} />
         </Flex>
       </Flex>
     </Form>

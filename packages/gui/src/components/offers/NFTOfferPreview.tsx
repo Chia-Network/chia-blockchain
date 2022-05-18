@@ -4,16 +4,23 @@ import type { NFTInfo } from '@chia/api';
 import { Flex } from '@chia/core';
 import { Box, Typography } from '@mui/material';
 import NFTCard from '../nfts/NFTCard';
+import { isValidNFTId, launcherIdFromNFTId } from '../../util/nfts';
 
 /* ========================================================================== */
 
 type NFTOfferPreviewProps = {
+  nftId?: string;
   nft?: NFTInfo;
 };
 
 export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
-  const { nft } = props;
-  const borderStyle = nft ? '2px solid #E0E0E0' : '2px dashed #E0E0E0';
+  const { nft, nftId } = props;
+  const borderStyle = isValidNFTId(nftId ?? '')
+    ? 'none' //'2px solid #E0E0E0'
+    : '2px dashed #E0E0E0';
+  // TODO: Load NFT info
+  // const launcherId = launcherIdFromNFTId(nftId ?? "");
+  // const { nft, isLoading, error } = useGetNFTInfoQuery({ launcherId });
 
   return (
     <Flex
@@ -22,7 +29,7 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
       justifyContent="center"
       style={{
         width: '328px',
-        height: '576px',
+        minHeight: '576px',
         borderLeft: '1px solid #E0E0E0',
       }}
       gap={1}
@@ -39,10 +46,10 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
         <Box
           sx={{
             width: '264px',
-            height: '456px',
+            minHeight: '456px',
             boxSizing: 'border-box',
             border: `${borderStyle}`,
-            borderRadius: '24px',
+            borderRadius: '4px',
             display: 'flex',
             overflow: 'hidden',
           }}

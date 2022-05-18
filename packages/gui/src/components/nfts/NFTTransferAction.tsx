@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Plural, Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import type { NFTInfo } from '@chia/api';
@@ -6,6 +6,7 @@ import {
   Button,
   ButtonLoading,
   ConfirmDialog,
+  CopyToClipboard,
   Fee,
   Form,
   FormatLargeNumber,
@@ -27,7 +28,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { useTransferNFTMutation } from '@chia/api-react';
+import { useNFTMetadata, useTransferNFTMutation } from '@chia/api-react';
 
 /* ========================================================================== */
 /*                                   Styles                                   */
@@ -115,7 +116,7 @@ function NFTTransferConfirmationDialog(
               </TooltipIcon>
             </Flex>
           </Flex>
-          {/* <Flex flexDirection="row" gap={1}>
+          <Flex flexDirection="row" gap={1}>
             <Typography variant="body1">Fee:</Typography>
             <Typography variant="body1">
               {fee || '0'} {currencyCode}
@@ -134,7 +135,7 @@ function NFTTransferConfirmationDialog(
                 )
               </>
             )}
-          </Flex> */}
+          </Flex>
         </Flex>
       </Flex>
     </ConfirmDialog>
@@ -164,6 +165,9 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   const { nft, destination, onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
+  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata({
+    id: nft.id,
+  });
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferFormData>({
     shouldUnregister: false,
@@ -221,37 +225,29 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Flex flexDirection="column" gap={1}>
+          {!isLoadingMetadata && (
+            <Flex flexDirection="row" gap={1}>
+              <Flex flexShrink={0}>
+                <Typography variant="body1">
+                  <Trans>Name:</Trans>
+                </Typography>
+              </Flex>
+              <Flex
+                flexDirection="row"
+                alignItems="center"
+                gap={1}
+                sx={{ overflow: 'hidden' }}
+              >
+                <Typography noWrap variant="body1">
+                  {metadata.name}
+                </Typography>
+              </Flex>
+            </Flex>
+          )}
           <Flex flexDirection="row" gap={1}>
             <Flex flexShrink={0}>
               <Typography variant="body1">
-                <Trans>NFT Name:</Trans>
-              </Typography>
-            </Flex>
-            <Flex
-              flexDirection="row"
-              alignItems="center"
-              gap={1}
-              sx={{ overflow: 'hidden' }}
-            >
-              <Typography noWrap variant="body1">
-                {nft.name}
-              </Typography>
-              <TooltipIcon interactive>
-                <Flex flexDirection="column" gap={1}>
-                  <StyledTitle>
-                    <Trans>NFT Name</Trans>
-                  </StyledTitle>
-                  <StyledValue>
-                    <Typography variant="caption">{nft.name}</Typography>
-                  </StyledValue>
-                </Flex>
-              </TooltipIcon>
-            </Flex>
-          </Flex>
-          <Flex flexDirection="row" gap={1}>
-            <Flex flexShrink={0}>
-              <Typography variant="body1">
-                <Trans>Asset ID:</Trans>
+                <Trans>ID:</Trans>
               </Typography>
             </Flex>
             <Flex
@@ -269,23 +265,37 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
                     <StyledTitle>
                       <Trans>NFT ID</Trans>
                     </StyledTitle>
-                    <StyledValue>
-                      <Typography variant="caption">{nft.id}</Typography>
-                    </StyledValue>
+                    <Flex alignItems="center" gap={1}>
+                      <StyledValue>
+                        <Typography variant="caption">{nft.id}</Typography>
+                      </StyledValue>
+                      <CopyToClipboard value={nft.id} fontSize="small" />
+                    </Flex>
                     <StyledTitle>
                       <Trans>Launcher ID</Trans>
                     </StyledTitle>
-                    <StyledValue>
-                      <Typography variant="caption">
-                        {nft.launcherId}
-                      </Typography>
-                    </StyledValue>
+                    <Flex alignItems="center" gap={1}>
+                      <StyledValue>
+                        <Typography variant="caption">
+                          {nft.launcherId}
+                        </Typography>
+                      </StyledValue>
+                      <CopyToClipboard
+                        value={nft.launcherId}
+                        fontSize="small"
+                      />
+                    </Flex>
                     <StyledTitle>
                       <Trans>Coin ID</Trans>
                     </StyledTitle>
-                    <StyledValue>
-                      <Typography variant="caption">{nft.nftCoinId}</Typography>
-                    </StyledValue>
+                    <Flex alignItems="center" gap={1}>
+                      <StyledValue>
+                        <Typography variant="caption">
+                          {nft.nftCoinId}
+                        </Typography>
+                      </StyledValue>
+                      <CopyToClipboard value={nft.nftCoinId} fontSize="small" />
+                    </Flex>
                   </Flex>
                 </Flex>
               </TooltipIcon>
@@ -301,14 +311,14 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
           disabled={isLoading}
           required
         />
-        {/* <Fee
+        <Fee
           id="filled-secondary"
           variant="filled"
           name="fee"
           color="secondary"
           label={<Trans>Fee</Trans>}
           disabled={isLoading}
-        /> */}
+        />
         <DialogActions>
           <Flex flexDirection="row" gap={3}>
             <Button
@@ -381,11 +391,6 @@ export function NFTTransferDialog(props: NFTTransferDialogProps) {
       <DialogContent>
         <Flex flexDirection="column" gap={3}>
           <DialogContentText id="nft-transfer-dialog-description">
-            {/* <Trans>
-              Would you like to transfer the specified NFT to a new owner? It is
-              recommended that you include a fee to ensure that the transaction
-              is completed in a timely manner.
-            </Trans> */}
             <Trans>
               Would you like to transfer the specified NFT to a new owner?
             </Trans>
