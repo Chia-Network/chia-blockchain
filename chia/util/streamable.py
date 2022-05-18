@@ -22,7 +22,7 @@ from typing import (
 )
 
 from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import Literal
+from typing_extensions import Literal, Protocol
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -69,6 +69,11 @@ unhashable_types = [
 ]
 # JSON does not support big ints, so these types must be serialized differently in JSON
 big_ints = [uint64, int64, uint128, int512]
+
+
+class Dataclass(Protocol):
+    __dataclass_fields__: Dict[str, dataclasses.Field[object]]
+
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
@@ -134,11 +139,6 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(d)
 
 
-from typing_extensions import Protocol
-class Dataclass(Protocol):
-    __dataclass_fields__: Dict[str, dataclasses.Field[object]]
-
-
 @overload
 def recurse_jsonify(d: Dataclass) -> Dict[str, Any]:
     ...
@@ -179,7 +179,9 @@ def recurse_jsonify(d: None) -> None:
     ...
 
 
-def recurse_jsonify(d: Union[Dataclass, List[Any], Tuple[Any, ...], Dict[str, Any], bytes, Enum, int, str, None]) -> Union[List[Any], Dict[str, Any], str, int, None]:
+def recurse_jsonify(
+    d: Union[Dataclass, List[Any], Tuple[Any, ...], Dict[str, Any], bytes, Enum, int, str, None]
+) -> Union[List[Any], Dict[str, Any], str, int, None]:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
