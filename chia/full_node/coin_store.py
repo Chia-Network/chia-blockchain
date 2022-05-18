@@ -14,7 +14,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-MAX_SQLITE_PARAMETERS = 900
+MAX_SQLITE_PARAMETERS = 32700
 
 
 class CoinStore:
