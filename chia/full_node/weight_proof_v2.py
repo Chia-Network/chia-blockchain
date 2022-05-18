@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 
 class WeightProofHandlerV2:
     """
-    "https://eprint.iacr.org/2019/226.pdf  fly client paper "
+    " https://eprint.iacr.org/2019/226.pdf  fly client paper "
     """
 
     LAMBDA_L = 100
@@ -194,7 +194,7 @@ class WeightProofHandlerV2:
             if _sample_sub_epoch(prev_ses_block.weight, ses_block.weight, weight_to_check):
                 sample_n += 1
                 sub_epoch_segments_tasks.append(
-                    asyncio.create_task(self.__create_persist_sub_epoch(prev_ses_block, ses_block, uint32(sub_epoch_n)))
+                    asyncio.create_task(self.create_persist_sub_epoch(prev_ses_block, ses_block, uint32(sub_epoch_n)))
                 )
             prev_ses_block = ses_block
         sub_epoch_segments = await asyncio.gather(*sub_epoch_segments_tasks)
@@ -241,40 +241,7 @@ class WeightProofHandlerV2:
                 return last_ses_block, prev_prev_ses_block
         return None, None
 
-    async def create_sub_epoch_segments(self) -> None:
-        """
-        iterates through all sub epochs creates the corresponding segments
-        and persists to the db segment table
-        """
-        log.debug("check segments in db")
-        peak_height = self.blockchain.get_peak_height()
-        if peak_height is None:
-            log.error("no peak yet")
-            return None
-
-        summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.height_to_hash(uint32(0)))
-        if prev_ses_block is None:
-            return None
-
-        ses_blocks = await self.blockchain.get_block_records_at(summary_heights)
-        if ses_blocks is None:
-            return None
-
-        for sub_epoch_n, ses_block in enumerate(ses_blocks):
-            log.info(f"check db for sub epoch {sub_epoch_n}")
-            if ses_block.height > peak_height:
-                break
-            if ses_block is None or ses_block.sub_epoch_summary_included is None:
-                log.error("error while building proof")
-                return None
-            log.debug(f"create segments for sub epoch {sub_epoch_n}")
-            await self.__create_persist_sub_epoch(prev_ses_block, ses_block, uint32(sub_epoch_n))
-            prev_ses_block = ses_block
-        log.debug("done checking segments")
-        return None
-
-    async def __create_persist_sub_epoch(
+    async def create_persist_sub_epoch(
         self, prev_ses_block: BlockRecord, ses_block: BlockRecord, sub_epoch_n: uint32
     ) -> Optional[Tuple[bytes, int]]:
         res = await self.blockchain.get_sub_epoch_challenge_segments_v2(ses_block.header_hash)
