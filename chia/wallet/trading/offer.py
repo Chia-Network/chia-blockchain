@@ -263,6 +263,7 @@ class Offer:
             raise ValueError("Offer is currently incomplete")
 
         completion_spends: List[CoinSpend] = []
+        spendable_cats: List[SpendableCAT] = []
         for tail_hash, payments in self.requested_payments.items():
             offered_coins: List[Coin] = self.get_offered_coins()[tail_hash]
 
@@ -291,31 +292,30 @@ class Offer:
                     matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
                     assert matched
                     _, _, inner_puzzle = curried_args
-                    spendable_cat = SpendableCAT(
-                        coin,
-                        tail_hash,
-                        OFFER_MOD,
-                        Program.to(inner_solutions),
-                        lineage_proof=LineageProof(
-                            parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
-                        ),
-                    )
-                    solution: Program = (
-                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat])
-                        .coin_spends[0]
-                        .solution.to_program()
+                    spendable_cats.append(
+                        SpendableCAT(
+                            coin,
+                            tail_hash,
+                            OFFER_MOD,
+                            Program.to(inner_solutions),
+                            lineage_proof=LineageProof(
+                                parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount
+                            ),
+                        )
                     )
                 else:
                     solution = Program.to(inner_solutions)
-
-                completion_spends.append(
-                    CoinSpend(
-                        coin,
-                        construct_cat_puzzle(CAT_MOD, tail_hash, OFFER_MOD) if tail_hash else OFFER_MOD,
-                        solution,
+                    completion_spends.append(
+                        CoinSpend(
+                            coin,
+                            OFFER_MOD,
+                            solution,
+                        )
                     )
-                )
 
+        if spendable_cats:
+            completion_spends += unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats).coin_spends
+                
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self.bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
