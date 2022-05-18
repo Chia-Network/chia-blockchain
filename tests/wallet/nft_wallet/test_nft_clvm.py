@@ -155,13 +155,12 @@ def test_innerpuz_enforcement_layer() -> None:
     # P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     # NFT_V1_MOD_HASH
     # PUBKEY
-    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    # INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     # inner_solution
-    condition_list = [new_did, 200, destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
+    condition_list = [new_did, [[200]], destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
     solution = Program.to([
         STANDARD_PUZZLE_MOD.get_tree_hash(),
         NFT_INNER_INNERPUZ.get_tree_hash(),
-        pubkey,
         STANDARD_PUZZLE_MOD.curry(pubkey),
         solution_for_conditions(condition_list),
     ])
@@ -229,23 +228,25 @@ def test_ownership_layer() -> None:
     curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
         SINGLETON_STRUCT,
         innerpuz.get_tree_hash(),
-        20,
+        2000,
         OFFER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
+    )
+    curried_inner = NFT_INNER_INNERPUZ.curry(
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
+        NFT_INNER_INNERPUZ.get_tree_hash(),
+        STANDARD_PUZZLE_MOD.curry(pubkey),
     )
     curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
         old_did,
         curried_tp,
-        NFT_INNER_INNERPUZ.curry(STANDARD_PUZZLE_MOD.get_tree_hash(),
-            NFT_INNER_INNERPUZ.get_tree_hash(),
-            pubkey,
-            STANDARD_PUZZLE_MOD.curry(pubkey),
-        ),
+        curried_inner,
     )
-    # INNER_PUZZLE  ; returns (new_owner, new_price, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    # INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     # inner_solution
-    condition_list = [new_did, 200, destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
-    solution = Program.to([solution_for_conditions(condition_list)])
+    # new_owner trade_prices_list new_pk transfer_program_solution metadata_updater_reveal metadata_updater_solution conditions
+    condition_list = [new_did, [[200]], destination, [new_did_inner_hash], 0, 0, [[51, 0xcafef00d, 201]]]
+    solution = Program.to([[solution_for_conditions(condition_list)]])
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
-    breakpoint()
+    

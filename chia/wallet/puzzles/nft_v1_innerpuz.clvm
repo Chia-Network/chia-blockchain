@@ -2,7 +2,6 @@
   (
     P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     NFT_V1_MOD_HASH
-    PUBKEY
     INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     inner_solution
   )
@@ -40,10 +39,11 @@
         (recurry_self P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH NFT_V1_MOD_HASH (sha256 ONE new_pk))
         (c (list NEW_OWNER_CONDITION new_owner trade_prices_list transfer_program_solution)
           (c (list AGG_SIG_ME new_pk (sha256tree1 trade_prices_list))
-              (if metadata_updater_reveal
-                (c (list METADATA_REVEAL_NUMBER metadata_updater_reveal metadata_updater_solution) conditions)
-                conditions
-              )
+
+            (if metadata_updater_reveal
+              (c (list METADATA_REVEAL_NUMBER metadata_updater_reveal metadata_updater_solution) conditions)
+              conditions
+            )
       )))
     )
 

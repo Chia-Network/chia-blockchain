@@ -34,10 +34,10 @@
      (if conditions
        (if (= (f (f conditions)) CREATE_COIN)
          (if (= (logand (f (r (r (f conditions))))) ONE)
-           (c (list CREATE_COIN (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM (f (r (f conditions)))) (f (r (r (f conditions))))) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM ))
-           (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM))
+           (c (c CREATE_COIN (c (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM (f (r (f conditions)))) (r (r (f conditions))))) (r conditions))  ; we can cancel after one because if there's more than one odd coin singleton layer will filter it
+           (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (r conditions) TRANSFER_PROGRAM))
          )
-         (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH (c new_owner (r conditions)) TRANSFER_PROGRAM ))
+         (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (r conditions) TRANSFER_PROGRAM ))
        )
        ()
      )
@@ -70,14 +70,11 @@
     (process_transfer_program NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER conditions) conditions)
    )
 
-   ; main
-   (wrap_odd_create_coins
-      NFT_OWNERSHIP_LAYER_MOD_HASH
-      (loop_through_conditions_looking_for_transfer_solution
-        TRANSFER_PROGRAM
-        CURRENT_OWNER
-        (a INNER_PUZZLE inner_solution)
-      )
-      TRANSFER_PROGRAM
-   )
+  ; main
+  (transfer_program_loader
+    NFT_OWNERSHIP_LAYER_MOD_HASH
+    TRANSFER_PROGRAM
+    CURRENT_OWNER
+    (a INNER_PUZZLE inner_solution)
+  )
 )
