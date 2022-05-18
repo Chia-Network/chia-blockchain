@@ -1401,9 +1401,6 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-
-        if peer is None:
-            raise ValueError("Cannot find a valid full node connection.")
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
             peer, parent_coin_state.spent_height, parent_coin_state.coin
         )
