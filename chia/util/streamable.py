@@ -5,7 +5,21 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+    overload,
+)
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -120,7 +134,52 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(d)
 
 
-def recurse_jsonify(d: Any) -> Any:
+from typing_extensions import Protocol
+class Dataclass(Protocol):
+    __dataclass_fields__: Dict[str, dataclasses.Field[object]]
+
+
+@overload
+def recurse_jsonify(d: Dataclass) -> Dict[str, Any]:
+    ...
+
+
+@overload
+def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...]]) -> List[Any]:
+    ...
+
+
+@overload
+def recurse_jsonify(d: Dict[str, Any]) -> Dict[str, Any]:
+    ...
+
+
+@overload
+def recurse_jsonify(d: bytes) -> str:
+    ...
+
+
+@overload
+def recurse_jsonify(d: Enum) -> str:
+    ...
+
+
+@overload
+def recurse_jsonify(d: int) -> int:
+    ...
+
+
+@overload
+def recurse_jsonify(d: str) -> str:
+    ...
+
+
+@overload
+def recurse_jsonify(d: None) -> None:
+    ...
+
+
+def recurse_jsonify(d: Union[Dataclass, List[Any], Tuple[Any, ...], Dict[str, Any], bytes, Enum, int, str, None]) -> Union[List[Any], Dict[str, Any], str, int, None]:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
@@ -130,28 +189,31 @@ def recurse_jsonify(d: Any) -> Any:
         for field in dataclasses.fields(d):
             new_dict[field.name] = recurse_jsonify(getattr(d, field.name))
         return new_dict
-
     elif isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
             new_list.append(recurse_jsonify(item))
         return new_list
-
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
             new_dict[str(name)] = recurse_jsonify(val)
         return new_dict
-
-    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
-        return f"0x{bytes(d).hex()}"
+    elif type(d).__name__ in unhashable_types:
+        # This is just a pretty special case in a big pile of type hinting so we'll
+        # let it go.
+        return f"0x{bytes(d).hex()}"  # type: ignore[arg-type]
+    elif isinstance(d, bytes):
+        return f"0x{d.hex()}"
     elif isinstance(d, Enum):
         return d.name
     elif isinstance(d, int):
         return int(d)
-    elif d is None or type(d) == str:
+    elif isinstance(d, str):
         return d
-    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
+    elif d is None:
+        return d
+    raise ValueError(f"failed to jsonify {d!r} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -363,6 +425,9 @@ class Streamable:
 
     Make sure to use the streamable decorator when inheriting from the Streamable class to prepare the streaming caches.
     """
+
+    # TODO: type hinting hack to explore without thinking
+    __dataclass_fields__: Dict[str, dataclasses.Field[object]]
 
     def post_init_parse(self, item: Any, f_name: str, f_type: Type[Any]) -> Any:
         if is_type_List(f_type):
