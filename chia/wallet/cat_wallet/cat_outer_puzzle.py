@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -49,23 +49,44 @@ class CATOuterPuzzle:
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
-        coin_bytes: bytes = solver["coin"]
-        coin: Coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
-        parent_spend: CoinSpend = CoinSpend.from_bytes(solver["parent_spend"])
-        parent_coin: Coin = parent_spend.coin
-        if constructor.also() is not None:
-            inner_puzzle = self._construct(constructor.also(), inner_puzzle)
-            inner_solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
-        matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
-        assert matched
-        _, _, parent_inner_puzzle = curried_args
-        spendable_cat = SpendableCAT(
-            coin,
-            tail_hash,
-            inner_puzzle,
-            inner_solution,
-            lineage_proof=LineageProof(
-                parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent_coin.amount
+        spendable_cats: List[SpendableCAT] = []
+        target_coin: Coin
+        for coin_prog, spend_prog, puzzle, solution in [
+            *zip(
+                solver["siblings"].as_iter(),
+                solver["sibling_spends"].as_iter(),
+                solver["sibling_puzzles"].as_iter(),
+                solver["sibling_solutions"].as_iter(),
             ),
-        )
-        return unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [spendable_cat]).coin_spends[0].solution.to_program()
+            (
+                Program.to(solver["coin"]),
+                Program.to(solver["parent_spend"]),
+                inner_puzzle,
+                inner_solution,
+            ),
+        ]:
+            coin_bytes: bytes = coin_prog.as_python()
+            coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
+            if coin_bytes == solver["coin"]:
+                target_coin = coin
+            parent_spend: CoinSpend = CoinSpend.from_bytes(spend_prog.as_python())
+            parent_coin: Coin = parent_spend.coin
+            if constructor.also() is not None:
+                puzzle = self._construct(constructor.also(), puzzle)
+                solution = self._solve(constructor.also(), solver, puzzle, solution)
+            matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
+            assert matched
+            _, _, parent_inner_puzzle = curried_args
+            spendable_cats.append(
+                SpendableCAT(
+                    coin,
+                    tail_hash,
+                    puzzle,
+                    solution,
+                    lineage_proof=LineageProof(
+                        parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent_coin.amount
+                    ),
+                )
+            )
+        bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
+        return next(cs.solution.to_program() for cs in bundle.coin_spends if cs.coin == target_coin)
