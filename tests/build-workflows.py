@@ -150,6 +150,9 @@ for os in testconfig.oses:
             # TODO: enable timelord for windows
             continue
         replacements = generate_replacements(conf, dir)
+        if os == "windows":
+            # TODO: force windows to sequential only
+            replacements["PYTEST_PARALLEL_ARGS"] = " -n 0"
         txt = transform_template(template_text, replacements)
         # remove trailing whitespace from lines and assure a single EOF at EOL
         txt = "\n".join(line.rstrip() for line in txt.rstrip().splitlines()) + "\n"
