@@ -1125,8 +1125,8 @@ class WalletNode:
 
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
+        seed = std_hash(self.salt + bytes(peak.header_hash))
         if peer.has_wp_v2_capability():
-            seed = std_hash(self.salt + bytes(peak.header_hash))
             self.log.info(f"wp salt is {self.salt}, salted seed is {seed}")
             wp_request = RequestProofOfWeightV2(peak.weight, peak.header_hash, seed)
             weight_proof_response = await peer.request_proof_of_weight_v2(wp_request, timeout=wp_timeout)
@@ -1153,7 +1153,7 @@ class WalletNode:
                     valid,
                     summaries,
                     block_records,
-                ) = await validate_weight_proof_no_fork_point(self.constants, weight_proof, self.salt)
+                ) = await validate_weight_proof_no_fork_point(self.constants, weight_proof, seed)
             else:
                 (
                     valid,

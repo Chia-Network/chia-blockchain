@@ -12,6 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import WeightProof, WeightProofV2
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
@@ -71,7 +72,7 @@ class WalletBlockchain(BlockchainInterface):
     async def new_weight_proof(
         self,
         weight_proof: Union[WeightProof, WeightProofV2],
-        salt: Optional[bytes32] = None,
+        salt: Optional[bytes32] = None,  # only needed for V2 weight proofs
         records: Optional[List[BlockRecord]] = None,
     ) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
@@ -86,9 +87,13 @@ class WalletBlockchain(BlockchainInterface):
 
         if records is None:
             if isinstance(weight_proof, WeightProofV2):
-                assert salt
+                assert salt is not None
+                seed = std_hash(salt + bytes(weight_proof.recent_chain_data[-1].header_hash))
                 success, _, records = await validate_weight_proof_no_fork_point(
-                    self.constants, weight_proof, salt, True
+                    self.constants,
+                    weight_proof,
+                    seed,
+                    True,
                 )
             else:
                 success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
