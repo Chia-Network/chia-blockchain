@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, List, Optional, Dict, Set, Tuple
 from blspy import G2Element
+from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
@@ -289,19 +290,46 @@ class Offer:
                 assert arbitrage_ph is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
 
+            # Some assets need to know about siblings so we need to collect all spends first to be able to use them
+            coin_to_spend_dict: Dict[Coin, CoinSpend] = {}
+            coin_to_solution_dict: Dict[Coin, Program] = {}
             for coin in offered_coins:
+                parent_spend: CoinSpend = list(
+                    filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
+                )[0]
+                coin_to_spend_dict[coin] = parent_spend
+
                 inner_solutions = []
                 if coin == offered_coins[0]:
                     nonces: List[bytes32] = [p.nonce for p in all_payments]
                     for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
                         nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
                         inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
+                coin_to_solution_dict[coin] = Program.to(inner_solutions)
 
+            for coin in offered_coins:
                 if asset_id:
-                    # CATs have a special way to be solved so we have to do some calculation before getting the solution
-                    parent_spend: CoinSpend = list(
-                        filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
-                    )[0]
+                    siblings: str = "("
+                    sibling_spends: str = "("
+                    sibling_puzzles: str = "("
+                    sibling_solutions: str = "("
+                    disassembled_offer_mod: str = disassemble(OFFER_MOD)
+                    for sibling_coin in offered_coins:
+                        if sibling_coin != coin:
+                            siblings += (
+                                "0x"
+                                + sibling_coin.parent_coin_info.hex()
+                                + sibling_coin.puzzle_hash.hex()
+                                + bytes(sibling_coin.amount).hex()
+                            )
+                            sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + ")"
+                            sibling_puzzles += disassembled_offer_mod
+                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin])
+                    siblings += ")"
+                    sibling_spends += ")"
+                    sibling_puzzles += ")"
+                    sibling_solutions += ")"
+
                     solution: Program = solve_puzzle(
                         self.driver_dict[asset_id],
                         Solver(
@@ -310,14 +338,18 @@ class Offer:
                                 + coin.parent_coin_info.hex()
                                 + coin.puzzle_hash.hex()
                                 + bytes(coin.amount).hex(),
-                                "parent_spend": "0x" + bytes(parent_spend).hex(),
+                                "parent_spend": "0x" + bytes(coin_to_spend_dict[coin]).hex(),
+                                "siblings": siblings,
+                                "sibling_spends": sibling_spends,
+                                "sibling_puzzles": sibling_puzzles,
+                                "sibling_solutions": sibling_solutions,
                             }
                         ),
                         OFFER_MOD,
-                        Program.to(inner_solutions),
+                        Program.to(coin_to_solution_dict[coin]),
                     )
                 else:
-                    solution = Program.to(inner_solutions)
+                    solution = Program.to(coin_to_solution_dict[coin])
 
                 completion_spends.append(
                     CoinSpend(

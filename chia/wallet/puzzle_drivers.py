@@ -58,6 +58,8 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]
     else:
+        if value == "()":  # special case
+            return Program.to([])
         expression: SExp = assemble(value)  # type: ignore
         if expression.atom is None:
             return Program(expression)
