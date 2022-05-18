@@ -144,7 +144,7 @@ class Blockchain(BlockchainInterface):
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
-        self.constants_json = recurse_jsonify(dataclasses.asdict(self.constants))
+        self.constants_json = recurse_jsonify(self.constants)
         self._shut_down = False
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()

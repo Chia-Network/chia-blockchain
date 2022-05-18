@@ -94,7 +94,7 @@ jobs:
     - name: Test farmer_harvester code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/farmer_harvester/test_farmer_harvester.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/farmer_harvester/test_farmer_harvester.py
 
     - name: Process coverage data
       run: |
