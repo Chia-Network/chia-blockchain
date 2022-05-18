@@ -86,13 +86,13 @@ async def create_sub_epoch_segments(wph: WeightProofHandlerV2) -> None:
     """
     peak_height = wph.blockchain.get_peak_height()
     if peak_height is None:
-        print(f"FAILED: empty blockchain")
+        print("FAILED: empty blockchain")
         return None
 
     summary_heights = wph.blockchain.get_ses_heights()
     prev_ses_block = await wph.blockchain.get_block_record_from_db(wph.height_to_hash(uint32(0)))
     if prev_ses_block is None:
-        print(f"FAILED: genesis block is missing")
+        print("FAILED: genesis block is missing")
         return None
 
     ses_blocks = await wph.blockchain.get_block_records_at(summary_heights)

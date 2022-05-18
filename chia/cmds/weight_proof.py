@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from pathlib import Path
 import click
 from chia.cmds.weight_proof_funcs import check_weight_proof_v2_database, build_weight_proof_v2_database
