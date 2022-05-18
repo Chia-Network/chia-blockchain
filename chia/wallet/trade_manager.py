@@ -40,6 +40,10 @@ class TradeManager:
                 {
                     "coin": bytes
                     "parent_spend": bytes
+                    "siblings": List[bytes]  # other coins of the same type being offered
+                    "sibling_spends": List[bytes]  # The parent spends for the siblings
+                    "sibling_puzzles": List[Program]  # The inner puzzles of the siblings (always OFFER_MOD)
+                    "sibling_solutions": List[Program]  # The inner solution of the siblings
                 }
             )
 
