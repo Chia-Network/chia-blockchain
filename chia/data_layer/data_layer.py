@@ -181,29 +181,30 @@ class DataLayer:
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
 
+        if not await self.data_store.tree_id_exists(tree_id=tree_id):
+            await self.data_store.create_tree(tree_id=tree_id)
         for ip, port in zip(subscription.ip, subscription.port):
             root = await self.data_store.get_tree_root(tree_id=tree_id)
-            wallet_current_generation = 0 if root is None else root.generation
-            if wallet_current_generation > int(singleton_record.generation):
+            if root.generation > int(singleton_record.generation):
                 self.log.info(
                     f"Fetch data: local DL store is ahead of chain generation for {tree_id}. "
                     "Most likely waiting for our batch update to be confirmed on chain."
                 )
                 break
-            if wallet_current_generation == int(singleton_record.generation):
+            if root.generation == int(singleton_record.generation):
                 self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
                 break
 
             self.log.info(
                 f"Downloading files {subscription.tree_id}. "
-                f"Current wallet generation: {int(wallet_current_generation)}. "
+                f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
                 f"Server used: {ip}:{port}."
             )
 
             to_download = await self.wallet_rpc.dl_history(
                 launcher_id=tree_id,
-                min_generation=uint32(wallet_current_generation + 1),
+                min_generation=uint32(root.generation + 1),
                 max_generation=singleton_record.generation,
             )
 
@@ -211,8 +212,8 @@ class DataLayer:
                 success = await insert_from_delta_file(
                     self.data_store,
                     subscription.tree_id,
-                    wallet_current_generation,
-                    [record.root for record in to_download],
+                    root.generation,
+                    [record.root for record in reversed(to_download)],
                     ip,
                     port,
                     self.server_files_location,

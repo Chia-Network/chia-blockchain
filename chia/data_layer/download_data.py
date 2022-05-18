@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import os
 import logging
 from pathlib import Path
@@ -99,6 +100,8 @@ async def insert_from_delta_file(
                     with open(target_filename, "wb") as writer:
                         text = await resp.read()
                         writer.write(text)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             if await data_store.get_last_tree_root_by_hash(tree_id, root_hash) is not None:
                 # If we don't have the delta file, but we have the tree in the past, create an empty delta file.
@@ -112,7 +115,10 @@ async def insert_from_delta_file(
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
             await insert_into_data_store(
-                data_store, tree_id, None if root_hash == bytes32([0] * 32) else root_hash, filename
+                data_store,
+                tree_id,
+                None if root_hash == bytes32([0] * 32) else root_hash,
+                os.path.join(client_foldername, filename),
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
@@ -123,6 +129,8 @@ async def insert_from_delta_file(
             root = await data_store.get_tree_root(tree_id=tree_id)
             await data_store.write_tree_to_file(root, root_hash, tree_id, False, filename_full_tree)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
+        except asyncio.CancelledError:
+            raise
         except Exception:
             os.remove(filename)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
