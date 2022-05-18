@@ -141,7 +141,8 @@ class CoinStore:
             additions.append(reward_coin_r)
 
         await self._add_coin_records(additions)
-        await self._set_spent(tx_removals, height)
+        if len(tx_removals) > 0:
+            await self._set_spent(tx_removals, height)
 
         end = time.monotonic()
         log.log(
