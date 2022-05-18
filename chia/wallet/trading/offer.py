@@ -315,7 +315,7 @@ class Offer:
 
         if spendable_cats:
             completion_spends += unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats).coin_spends
-                
+
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self.bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
