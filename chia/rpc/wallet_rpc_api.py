@@ -1372,7 +1372,6 @@ class WalletRpcApi:
 
     async def nft_get_info(self, request: Dict) -> Optional[Dict]:
         assert self.service.wallet_state_manager is not None
-        # coin_id should be the latest ID of the unspent NFT coin
         if "coin_id" not in request:
             raise ValueError("Coin ID is required.")
         coin_id = bytes32.from_hexstr(request["coin_id"])
@@ -1386,8 +1385,15 @@ class WalletRpcApi:
         if coin_state_list is None or len(coin_state_list) < 1:
             raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
         coin_state: CoinState = coin_state_list[0]
-        if request.get("latest", False) and coin_state.spent_height is not None:
-            raise ValueError(f"Coin 0x{coin_id.hex()} is spent. Please input an unspent coin ID.")
+        if request.get("latest", True):
+            # Find the unspent coin
+            while coin_state.spent_height is not None:
+                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
+                    peer, coin_state.coin.name()
+                )
+                if len(coin_state_list) != 1:
+                    raise ValueError("This is not a singleton, multiple children coins found.")
+                coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer

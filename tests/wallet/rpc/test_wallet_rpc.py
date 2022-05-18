@@ -668,22 +668,26 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await client.farm_block(encode_puzzle_hash(ph, "txch"))
                 await asyncio.sleep(0.5)
-
+            await asyncio.sleep(5)
             nft_wallet: NFTWallet = wallet_node.wallet_state_manager.wallets[nft_wallet_id]
             nft_id = nft_wallet.get_current_nfts()[0].coin.name()
-            nft_info = (await client.get_nft_info(nft_id, True))["nft_info"]
+            nft_info = (await client.get_nft_info(nft_id))["nft_info"]
             assert nft_info["nft_coin_id"] == nft_wallet.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
 
             res = await client.transfer_nft(nft_wallet_id, nft_id.hex(), addr, 0)
             assert res["success"]
+            await asyncio.sleep(3)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+            await asyncio.sleep(5)
 
-            await asyncio.sleep(1)
-            for i in range(0, 5):
-                await client_2.farm_block(encode_puzzle_hash(ph_2, "txch"))
-                await asyncio.sleep(0.5)
-
-            nft_info_1 = (await client.get_nft_info(nft_id))["nft_info"]
+            nft_wallet_id_1 = (
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
+            )[0].id
+            nft_wallet_1: NFTWallet = wallet_node_2.wallet_state_manager.wallets[nft_wallet_id_1]
+            nft_info_1 = (await client.get_nft_info(nft_id, False))["nft_info"]
             assert nft_info_1 == nft_info
+            nft_info_1 = (await client.get_nft_info(nft_id))["nft_info"]
+            assert nft_info_1["nft_coin_id"] == nft_wallet_1.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
 
             # Keys and addresses
 

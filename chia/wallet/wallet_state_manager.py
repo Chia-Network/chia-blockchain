@@ -326,7 +326,7 @@ class WalletStateManager:
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
-    async def update_wallet_puzzle_hashes(self, wallet_id):
+    async def update_wallet_puzzle_hashes(self, wallet_id, in_transaction=False):
         derivation_paths: List[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
@@ -353,7 +353,7 @@ class WalletStateManager:
                     False,
                 )
             )
-        await self.puzzle_store.add_derivation_paths(derivation_paths)
+        await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction=in_transaction)
 
     async def get_unused_derivation_record(
         self, wallet_id: uint32, in_transaction=False, hardened=False
