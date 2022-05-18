@@ -80,7 +80,7 @@ jobs:
     - name: Test core-cmds code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/cmds/test_keys.py tests/core/cmds/test_wallet.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/core/cmds/test_keys.py tests/core/cmds/test_wallet.py
 
     - name: Process coverage data
       run: |
