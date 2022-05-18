@@ -279,7 +279,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
+    await asyncio.sleep(5)
     api_0 = WalletRpcApi(wallet_node_0)
     nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)

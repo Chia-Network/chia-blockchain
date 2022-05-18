@@ -688,6 +688,9 @@ class TestWalletRpc:
             assert nft_info_1 == nft_info
             nft_info_1 = (await client.get_nft_info(nft_id))["nft_info"]
             assert nft_info_1["nft_coin_id"] == nft_wallet_1.get_current_nfts()[0].coin.parent_coin_info.hex().upper()
+            # Cross-check NFT
+            nft_info_2 = (await client_2.list_nfts(nft_wallet_id_1))["nft_list"][0]
+            assert nft_info_1 == nft_info_2
 
             # Keys and addresses
 

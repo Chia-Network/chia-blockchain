@@ -1391,8 +1391,12 @@ class WalletRpcApi:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
                     peer, coin_state.coin.name()
                 )
-                if len(coin_state_list) != 1:
-                    raise ValueError("This is not a singleton, multiple children coins found.")
+                odd_coin = 0
+                for coin in coin_state_list:
+                    if coin.coin.amount % 2 == 1:
+                        odd_coin += 1
+                    if odd_coin > 1:
+                        raise ValueError("This is not a singleton, multiple children coins found.")
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
