@@ -1,7 +1,8 @@
 import asyncio
 from secrets import token_bytes
+
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
-from typing import Any
+from typing import Any, Dict, Optional
 
 import pytest
 
@@ -14,13 +15,12 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.outer_puzzles import match_puzzle, construct_puzzle, solve_puzzle, create_asset_id
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -477,17 +477,6 @@ async def test_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
-
-    async with wallet_node_0.wallet_state_manager.lock:
-        cat_wallet_0: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
-        )
-
-    async with wallet_node_1.wallet_state_manager.lock:
-        cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_1.wallet_state_manager, wallet_1, {"identifier": "genesis_by_id"}, uint64(100)
-        )
-
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
@@ -495,7 +484,6 @@ async def test_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
-
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
@@ -562,81 +550,76 @@ async def test_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins_taker) == 1
 
     nft_coin_info = coins_maker[0]
-    nft_info: PuzzleInfo = match_puzzle(nft_coin_info.full_puzzle)
-    nft_asset_id: bytes32 = create_asset_id(nft_info)
-    driver_dict: Dict[bytes32, PuzzleInfo] = {nft_asset_id: nft_info}
+    nft_info_1: Optional[PuzzleInfo] = match_puzzle(nft_coin_info.full_puzzle)
+    nft_asset_id_1: bytes32 = create_asset_id(nft_info_1)  # type: ignore
+    driver_dict_1: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id_1: nft_info_1}
 
-    offer_nft_for_xch = {
-        wallet_0.id(): 100,
-        nft_asset_id: -1}
+    offer_nft_for_xch = {wallet_0.id(): 100, nft_asset_id_1: -1}
 
     trade_manager_maker = wallet_0.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_1.wallet_state_manager.trade_manager
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_xch, driver_dict
-    )
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(offer_nft_for_xch, driver_dict_1)
     await asyncio.sleep(1)
     assert success is True
     assert error is None
     assert trade_make is not None
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer)
-    )
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
 
     await asyncio.sleep(1)
     assert success
     assert error is None
     assert trade_take is not None
 
-    async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
+    async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ignore
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
         return TradeStatus(trade_rec.status)
-
-    for i in range(0, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await asyncio.sleep(5)
-
-    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
-    # await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await asyncio.sleep(5)
 
-    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins    
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
+
+    coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
+    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
+    assert len(coins_maker) == 0
+    assert len(coins_taker) == 2
+
     nft_coin_info = coins_taker[0]
-    nft_info: PuzzleInfo = match_puzzle(nft_coin_info.full_puzzle)
-    nft_asset_id: bytes32 = create_asset_id(nft_info)
-    driver_dict: Dict[bytes32, PuzzleInfo] = {nft_asset_id: nft_info}
+    nft_info_2: Optional[PuzzleInfo] = match_puzzle(nft_coin_info.full_puzzle)
+    nft_asset_id_2: bytes32 = create_asset_id(nft_info_2)  # type: ignore
+    driver_dict_2: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id_2: nft_info_2}
 
-    offer_xch_for_nft = {
-        wallet_0.id(): -100,
-        nft_asset_id: 1
-    }
+    offer_xch_for_nft = {wallet_0.id(): -100, nft_asset_id_2: 1}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_xch_for_nft, driver_dict
-    )
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(offer_xch_for_nft, driver_dict_2)
     await asyncio.sleep(1)
     assert success is True
     assert error is None
     assert trade_make is not None
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer)
-    )
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
 
     await asyncio.sleep(1)
     assert success
     assert error is None
     assert trade_take is not None
-    
-    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
-    coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
 
-    
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(5)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
+
+    coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
+    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
+    assert len(coins_maker) == 1
+    assert len(coins_taker) == 1
+
 
 @pytest.mark.parametrize(
     "trusted",
@@ -663,7 +646,7 @@ async def test_nft_cat_offer(wallets_prefarm: Any, trusted: Any) -> None:
         await asyncio.sleep(1)
 
     for i in range(1, buffer_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes())))
     await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
     await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
     await time_out_assert(15, new_cat_wallet_taker.get_confirmed_balance, 100)
@@ -682,10 +665,10 @@ async def test_nft_cat_offer(wallets_prefarm: Any, trusted: Any) -> None:
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
     )
 
-    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET 2"
-    )
-    
+    # nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
+    #     wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET 2"
+    # )
+
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
@@ -694,7 +677,7 @@ async def test_nft_cat_offer(wallets_prefarm: Any, trusted: Any) -> None:
     )
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
+    # ph_taker = await wallet_taker.get_new_puzzlehash()
 
     sb = await nft_wallet_maker.generate_new_nft(metadata)
     assert sb
@@ -710,32 +693,35 @@ async def test_nft_cat_offer(wallets_prefarm: Any, trusted: Any) -> None:
     assert len(coins) == 1, "nft not generated"
 
     nft_coin_info = coins[0]
-    nft_info: PuzzleInfo = match_puzzle(nft_coin_info.full_puzzle)
-    nft_asset_id: bytes32 = create_asset_id(nft_info)
-    driver_dict: Dict[bytes32, PuzzleInfo] = {nft_asset_id: nft_info}
+    nft_info: Optional[PuzzleInfo] = match_puzzle(nft_coin_info.full_puzzle)
+    nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
+    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
-    nft_for_cat = {
-        nft_asset_id: -1,
-        new_cat_wallet_maker.id(): 10
-    }
+    nft_for_cat = {nft_asset_id: -1, new_cat_wallet_maker.id(): 10}
 
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        nft_for_cat, driver_dict
-    )
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(nft_for_cat, driver_dict)
     await asyncio.sleep(1)
     assert success is True
     assert error is None
     assert trade_make is not None
 
-    success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer)
-    )
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
 
     await asyncio.sleep(1)
     assert success
     assert error is None
     assert trade_take is not None
-    
+
+    async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ignore
+        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+        return TradeStatus(trade_rec.status)
+
+    for i in range(1, buffer_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    await asyncio.sleep(5)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)

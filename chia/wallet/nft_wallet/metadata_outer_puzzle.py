@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Iterator
+from typing import Any, List, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
@@ -13,7 +13,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
-def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+
+def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Union[List[Any], Program]]:
     mod, meta_args = puzzle.uncurry()
     if mod == NFT_STATE_LAYER_MOD:
         return True, list(meta_args.as_iter())
@@ -21,12 +22,11 @@ def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program
 
 
 def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_puzzle: Program) -> Program:
-    metadata_puzzle = NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)
-    return metadata_puzzle
+    return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)  # type: ignore
 
 
 def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Program:
-    return Program.to([inner_solution, amount])
+    return Program.to([inner_solution, amount])  # type: ignore
 
 
 @dataclass(frozen=True)

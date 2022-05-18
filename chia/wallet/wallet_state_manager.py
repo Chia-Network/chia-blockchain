@@ -1301,7 +1301,7 @@ class WalletStateManager:
             elif wallet.type() == WalletType.NFT:
                 for nft_coin in wallet.nft_wallet_info.my_nft_coins:
                     nft_info = match_puzzle(nft_coin.full_puzzle)
-                    if nft_info.info["launcher_id"] == "0x" + asset_id:
+                    if nft_info.info["launcher_id"] == "0x" + asset_id:  # type: ignore
                         return wallet
         return None
 
