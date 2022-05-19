@@ -451,7 +451,6 @@ class CATWallet:
             exclude,
             min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
         assert sum(c.amount for c in coins) >= amount
         return coins
 
