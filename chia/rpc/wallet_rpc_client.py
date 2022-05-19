@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -421,7 +421,7 @@ class WalletRpcClient(RpcClient):
     # Offers
     async def create_offer_for_ids(
         self,
-        offer_dict: Dict[uint32, int],
+        offer_dict: Dict[Union[uint32, str], int],
         driver_dict: Dict[str, Any] = None,
         fee=uint64(0),
         validate_only: bool = False,
