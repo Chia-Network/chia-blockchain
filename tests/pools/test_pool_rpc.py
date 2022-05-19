@@ -181,12 +181,12 @@ class TestPoolWalletRpc:
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
@@ -200,7 +200,7 @@ class TestPoolWalletRpc:
         await farm_blocks(full_node_api, our_ph, 6)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
         assert len(summaries_response) == 1
         wallet_id: int = summaries_response[0]["id"]
@@ -251,11 +251,11 @@ class TestPoolWalletRpc:
             PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
@@ -273,7 +273,7 @@ class TestPoolWalletRpc:
         await farm_blocks(full_node_api, our_ph, 6)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-        await time_out_assert(5, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
         assert len(summaries_response) == 1
         wallet_id: int = summaries_response[0]["id"]
@@ -324,9 +324,9 @@ class TestPoolWalletRpc:
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
         our_ph_1 = await wallet_0.get_new_puzzlehash()
         our_ph_2 = await wallet_0.get_new_puzzlehash()
@@ -402,7 +402,7 @@ class TestPoolWalletRpc:
         # run this code more than once, since it's slow.
         if not trusted:
             for i in range(22):
-                await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+                await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
                 creation_tx_3: TransactionRecord = await client.create_new_pool_wallet(
                     our_ph_1, self_hostname, 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
                 )
@@ -451,13 +451,13 @@ class TestPoolWalletRpc:
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
@@ -545,7 +545,7 @@ class TestPoolWalletRpc:
 
             tx1 = await client.get_transactions(1)
             assert (250000000000 + fee) in [tx.amount for tx in tx1]
-            # await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
+            # await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT * 2)])
@@ -564,13 +564,13 @@ class TestPoolWalletRpc:
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
@@ -591,7 +591,7 @@ class TestPoolWalletRpc:
             except ValueError:
                 return False
 
-        await time_out_assert(10, pool_wallet_created)
+        await time_out_assert(20, pool_wallet_created)
 
         status: PoolWalletInfo = (await client.pw_status(2))[0]
         async with TemporaryPoolPlot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
@@ -653,10 +653,10 @@ class TestPoolWalletRpc:
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
-        await time_out_assert(10, wallet_0.get_confirmed_balance, total_block_rewards)
-        await time_out_assert(10, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
+        await time_out_assert(20, wallet_node_0.wallet_state_manager.blockchain.get_peak_height, PREFARMED_BLOCKS)
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
         # Balance stars at 6 XCH
@@ -813,10 +813,10 @@ class TestPoolWalletRpc:
             total_blocks += await farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await get_total_block_rewards(total_blocks)
 
-            await time_out_assert(10, wallets[0].get_unconfirmed_balance, total_block_rewards)
-            await time_out_assert(10, wallets[0].get_confirmed_balance, total_block_rewards)
-            await time_out_assert(10, wallets[0].get_spendable_balance, total_block_rewards)
-            await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+            await time_out_assert(20, wallets[0].get_unconfirmed_balance, total_block_rewards)
+            await time_out_assert(20, wallets[0].get_confirmed_balance, total_block_rewards)
+            await time_out_assert(20, wallets[0].get_spendable_balance, total_block_rewards)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             assert total_block_rewards > 0
 
             assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
@@ -843,7 +843,7 @@ class TestPoolWalletRpc:
 
             await farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
-            await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
             assert len(summaries_response) == 2
@@ -886,8 +886,8 @@ class TestPoolWalletRpc:
                 fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
                 return fetched is not None and fetched.is_in_mempool()
 
-            await time_out_assert(10, tx_is_in_mempool, True, wallet_id, join_pool_tx)
-            await time_out_assert(10, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
+            await time_out_assert(20, tx_is_in_mempool, True, wallet_id, join_pool_tx)
+            await time_out_assert(20, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is not None
@@ -942,7 +942,7 @@ class TestPoolWalletRpc:
                 return (await wallets[0].get_confirmed_balance()) > 0
 
             await time_out_assert(timeout=MAX_WAIT_SECS, function=have_chia)
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
@@ -958,7 +958,7 @@ class TestPoolWalletRpc:
             await farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
             assert len(summaries_response) == 1
@@ -1000,7 +1000,7 @@ class TestPoolWalletRpc:
 
             await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_farming_to_pool)
 
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
@@ -1061,7 +1061,7 @@ class TestPoolWalletRpc:
                 return (await wallets[0].get_confirmed_balance()) > 0
 
             await time_out_assert(timeout=WAIT_SECS, function=have_chia)
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
@@ -1077,7 +1077,7 @@ class TestPoolWalletRpc:
             await farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
             assert len(summaries_response) == 1
@@ -1160,7 +1160,7 @@ class TestPoolWalletRpc:
                 return (await wallets[0].get_confirmed_balance()) > 0
 
             await time_out_assert(timeout=WAIT_SECS, function=have_chia)
-            await time_out_assert(10, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 pool_a_ph, "https://pool-a.org", 5, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
@@ -1176,7 +1176,7 @@ class TestPoolWalletRpc:
             await farm_blocks(full_node_api, our_ph, 6)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-            await time_out_assert(5, wallet_is_synced, True, wallet_nodes[0], full_node_api)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
             assert len(summaries_response) == 1
