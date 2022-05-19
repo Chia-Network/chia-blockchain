@@ -20,7 +20,7 @@ from chia.wallet.wallet import Wallet
 
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
     """Wait until all of the specified coins are simultaneously reported as spendable
-    in by the wallet.
+    by the wallet.
 
     Arguments:
         coins: The coins expected to be received.
