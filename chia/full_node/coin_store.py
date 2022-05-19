@@ -141,8 +141,7 @@ class CoinStore:
             additions.append(reward_coin_r)
 
         await self._add_coin_records(additions)
-        if len(tx_removals) > 0:
-            await self._set_spent(tx_removals, height)
+        await self._set_spent(tx_removals, height)
 
         end = time.monotonic()
         log.log(
@@ -520,6 +519,10 @@ class CoinStore:
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
         assert len(coin_names) == 0 or index > 0
+
+        if len(coin_names) == 0:
+            return
+
         updates = []
         for coin_name in coin_names:
             updates.append((index, self.maybe_to_hex(coin_name)))
