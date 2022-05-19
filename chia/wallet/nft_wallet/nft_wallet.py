@@ -217,6 +217,7 @@ class NFTWallet:
         singleton_id = bytes32(uncurried_nft.singleton_launcher_id.atom)
         metadata = uncurried_nft.metadata
         new_inner_puzzle = None
+        update_condition = None
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
         self.log.debug("Before spend metadata: %s %s \n%s", metadata, singleton_id, disassemble(solution))
         for condition in solution.rest().first().rest().as_iter():
@@ -228,16 +229,7 @@ class NFTWallet:
             self.log.debug("Checking condition code: %r", condition_code)
             if condition_code == -24:
                 # metadata update
-                # (-24 (meta updater puzzle) url)
-                metadata_list = list(metadata.as_python())
-                new_metadata = []
-                for metadata_entry in metadata_list:
-                    key = metadata_entry[0]
-                    if key == b"u":
-                        new_metadata.append((b"u", [condition.rest().rest().first().atom] + list(metadata_entry[1:])))
-                    else:
-                        new_metadata.append((b"h", metadata_entry[1]))
-                metadata = Program.to(new_metadata)
+                update_condition = condition
             elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
                 puzhash = bytes32(condition.rest().first().atom)
                 self.log.debug("Got back puzhash from solution: %s", puzhash)
@@ -254,6 +246,8 @@ class NFTWallet:
                 raise ValueError("Invalid condition")
         if new_inner_puzzle is None:
             raise ValueError("Invalid puzzle")
+        if update_condition is not None:
+            metadata = nft_puzzles.update_metadata(metadata, update_condition)
         parent_coin = None
         coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
         if coin_record is None:
