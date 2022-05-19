@@ -503,7 +503,6 @@ class TestMempoolManager:
 
         coins = iter(blocks[-1].get_included_reward_coins())
         coin1 = next(coins)
-        coins = iter(blocks[-2].get_included_reward_coins())
 
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
@@ -616,7 +615,6 @@ class TestMempoolManager:
     async def test_block_index_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [])
         dic = {ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -801,7 +799,6 @@ class TestMempoolManager:
     async def test_my_id_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1034,6 +1031,9 @@ class TestMempoolManager:
 
         assert err is expected
         assert status == expected_included
+        if status == MempoolInclusionStatus.SUCCESS:
+            mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+            assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
     async def test_coin_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -1233,6 +1233,9 @@ class TestMempoolManager:
 
         assert err is expected
         assert status == expected_included
+        if status == MempoolInclusionStatus.SUCCESS:
+            mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
+            assert mempool_bundle is bundle
 
     @pytest.mark.asyncio
     async def test_puzzle_announcement_missing_arg(self, bt, one_node_one_block, wallet_a):
@@ -1386,7 +1389,10 @@ class TestMempoolManager:
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
             bt, one_node_one_block, wallet_a, dic, fee=10
         )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+
         assert err == Err.INVALID_CONDITION
+        assert mempool_bundle is None
         assert status == MempoolInclusionStatus.FAILED
 
     @pytest.mark.asyncio
@@ -1510,7 +1516,6 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2, bt.config["self_hostname"])
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -1637,7 +1642,6 @@ class TestMempoolManager:
     async def test_my_parent_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PARENT_ID, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1714,7 +1718,6 @@ class TestMempoolManager:
     async def test_my_puzhash_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_PUZZLEHASH, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1791,7 +1794,6 @@ class TestMempoolManager:
     async def test_my_amount_missing_arg(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1806,7 +1808,6 @@ class TestMempoolManager:
     async def test_invalid_my_amount(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(1000)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1821,7 +1822,6 @@ class TestMempoolManager:
     async def test_negative_my_amount(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(-1)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)
@@ -1836,7 +1836,6 @@ class TestMempoolManager:
     async def test_my_amount_too_large(self, bt, one_node_one_block, wallet_a):
 
         full_node_1, server_1 = one_node_one_block
-        blocks = await full_node_1.get_all_full_blocks()
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(bt, one_node_one_block, wallet_a, dic)

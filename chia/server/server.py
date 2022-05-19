@@ -304,14 +304,13 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 close_event,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
 
-            assert handshake is True
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
@@ -458,13 +457,12 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 session=session,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
-            assert handshake is True
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

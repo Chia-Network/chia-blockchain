@@ -5,21 +5,7 @@ import io
 import pprint
 import sys
 from enum import Enum
-from typing import (
-    Any,
-    BinaryIO,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    get_type_hints,
-    overload,
-)
+from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal
@@ -128,60 +114,48 @@ def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
         return klass(hexstr_to_bytes(d))
     elif klass.__name__ in unhashable_types:
         # Type is unhashable (bls type), so cast from hex string
-        return klass.from_bytes(hexstr_to_bytes(d))
+        if hasattr(klass, "from_bytes_unchecked"):
+            from_bytes_method: Callable[[bytes], Any] = klass.from_bytes_unchecked
+        else:
+            from_bytes_method = klass.from_bytes
+        return from_bytes_method(hexstr_to_bytes(d))
     else:
         # Type is a primitive, cast with correct class
         return klass(d)
 
 
-@overload
-def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...]]) -> List[Any]:
-    ...
-
-
-@overload
-def recurse_jsonify(d: Dict[str, Any]) -> Dict[str, Any]:
-    ...
-
-
-def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...], Dict[str, Any]]) -> Union[List[Any], Dict[str, Any]]:
+def recurse_jsonify(d: Any) -> Any:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
     """
-    if isinstance(d, list) or isinstance(d, tuple):
+    if dataclasses.is_dataclass(d):
+        new_dict = {}
+        for field in dataclasses.fields(d):
+            new_dict[field.name] = recurse_jsonify(getattr(d, field.name))
+        return new_dict
+
+    elif isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
-            if type(item).__name__ in unhashable_types or issubclass(type(item), bytes):
-                item = f"0x{bytes(item).hex()}"
-            if isinstance(item, dict):
-                item = recurse_jsonify(item)
-            if isinstance(item, list):
-                item = recurse_jsonify(item)
-            if isinstance(item, tuple):
-                item = recurse_jsonify(item)
-            if isinstance(item, Enum):
-                item = item.name
-            if isinstance(item, int) and type(item) in big_ints:
-                item = int(item)
-            new_list.append(item)
-        d = new_list
+            new_list.append(recurse_jsonify(item))
+        return new_list
 
-    else:
-        for key, value in d.items():
-            if type(value).__name__ in unhashable_types or issubclass(type(value), bytes):
-                d[key] = f"0x{bytes(value).hex()}"
-            if isinstance(value, dict):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, list):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, tuple):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, Enum):
-                d[key] = value.name
-            if isinstance(value, int) and type(value) in big_ints:
-                d[key] = int(value)
-    return d
+    elif isinstance(d, dict):
+        new_dict = {}
+        for name, val in d.items():
+            new_dict[name] = recurse_jsonify(val)
+        return new_dict
+
+    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
+        return f"0x{bytes(d).hex()}"
+    elif isinstance(d, Enum):
+        return d.name
+    elif isinstance(d, int):
+        return int(d)
+    elif d is None or type(d) == str:
+        return d
+    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -239,10 +213,13 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int) -> Any:
+def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    return f_type.from_bytes(bytes_read)
+    if unchecked:
+        return f_type.from_bytes_unchecked(bytes_read)
+    else:
+        return f_type.from_bytes(bytes_read)
 
 
 def parse_str(f: BinaryIO) -> str:
@@ -425,10 +402,14 @@ class Streamable:
             try:
                 item = f_type(item)
             except (TypeError, AttributeError, ValueError):
+                if hasattr(f_type, "from_bytes_unchecked"):
+                    from_bytes_method: Callable[[bytes], Any] = f_type.from_bytes_unchecked
+                else:
+                    from_bytes_method = f_type.from_bytes
                 try:
-                    item = f_type.from_bytes(item)
+                    item = from_bytes_method(item)
                 except Exception:
-                    item = f_type.from_bytes(bytes(item))
+                    item = from_bytes_method(bytes(item))
         if not isinstance(item, f_type):
             raise ValueError(f"Wrong type for {f_name}")
         return item
@@ -475,9 +456,12 @@ class Streamable:
             inner_types = get_args(f_type)
             list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
             return lambda f: parse_tuple(f, list_parse_inner_type_f)
+        if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
+            bytes_to_read = size_hints[f_type.__name__]
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
         if f_type is str:
             return parse_str
         raise NotImplementedError(f"Type {f_type} does not have parse")
@@ -556,13 +540,14 @@ class Streamable:
         return bytes(f.getvalue())
 
     def __str__(self: Any) -> str:
-        return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
+        return pp.pformat(recurse_jsonify(self))
 
     def __repr__(self: Any) -> str:
-        return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
+        return pp.pformat(recurse_jsonify(self))
 
     def to_json_dict(self) -> Dict[str, Any]:
-        return recurse_jsonify(dataclasses.asdict(self))
+        ret: Dict[str, Any] = recurse_jsonify(self)
+        return ret
 
     @classmethod
     def from_json_dict(cls: Any, json_dict: Dict[str, Any]) -> Any:

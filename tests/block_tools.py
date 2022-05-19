@@ -76,12 +76,11 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, save_config
+from chia.util.config import load_config, lock_config, save_config, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
-from chia.util.merkle_set import MerkleSet
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
@@ -95,6 +94,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from chia_rs import compute_merkle_set_root
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -142,6 +142,7 @@ class BlockTools:
         root_path: Optional[Path] = None,
         const_dict=None,
         keychain: Optional[Keychain] = None,
+        config_overrides: Optional[Dict] = None,
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -171,6 +172,7 @@ class BlockTools:
 
         # some tests start the daemon, make sure it's on a free port
         self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+        self._config = override_config(self._config, config_overrides)
 
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
@@ -1790,12 +1792,7 @@ def create_test_foliage(
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in tx_removals:
-            removal_merkle_set.add_already_hashed(coin_name)
+        additions_merkle_items: List[bytes32] = []
 
         # Create addition Merkle set
         puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
@@ -1808,11 +1805,11 @@ def create_test_foliage(
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle, coin_ids in puzzlehash_coin_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_ids(coin_ids))
+            additions_merkle_items.append(puzzle)
+            additions_merkle_items.append(hash_coin_ids(coin_ids))
 
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
+        removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
         generator_hash = bytes32([0] * 32)
         if block_generator is not None:
@@ -2036,16 +2033,12 @@ async def create_block_tools_async(
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
+    config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(
-        constants,
-        root_path,
-        const_dict,
-        keychain,
-    )
+    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2057,11 +2050,12 @@ def create_block_tools(
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
+    config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain)
+    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())

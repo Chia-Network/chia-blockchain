@@ -94,7 +94,7 @@ jobs:
     - name: Test core-ssl code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/ssl/test_ssl.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/core/ssl/test_ssl.py
 
     - name: Process coverage data
       run: |

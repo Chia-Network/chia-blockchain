@@ -54,6 +54,7 @@ class Service:
         connect_to_daemon=True,
         running_new_process=True,
         service_name_prefix="",
+        max_request_body_size: Optional[int] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -67,6 +68,7 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self.max_request_body_size = max_request_body_size
         self._running_new_process = running_new_process
 
         # when we start this service as a component of an existing process,
@@ -179,6 +181,7 @@ class Service:
                     self.root_path,
                     self.config,
                     self._connect_to_daemon,
+                    max_request_body_size=self.max_request_body_size,
                 )
             )
 
