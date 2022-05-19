@@ -317,7 +317,7 @@ class TestWalletSimulator:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        await time_out_assert(20, wallet_is_synced, wallet_node_0, full_node_api_0)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api_0)
         await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(20, wallet_0.get_unconfirmed_balance, funds)
 
