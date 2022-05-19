@@ -3,6 +3,7 @@ import logging
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from secrets import token_bytes
 from shutil import rmtree
 from typing import Any, Optional, List, Dict, Tuple, AsyncGenerator
 
@@ -782,7 +783,7 @@ class TestPoolWalletRpc:
             assert (250000000000 + fee) in [tx.amount for tx in tx1]
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("trusted_and_fee", [(True, 0), (False, 0)])
+    @pytest.mark.parametrize("trusted_and_fee", [(False, 0)])
     async def test_self_pooling_to_pooling(self, setup, trusted_and_fee, self_hostname):
         """
         This tests self-pooling -> pooling
@@ -824,15 +825,14 @@ class TestPoolWalletRpc:
             creation_tx: TransactionRecord = await client.create_new_pool_wallet(
                 our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
             )
-            creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
-                our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
-            )
-
             await time_out_assert(
                 10,
                 full_node_api.full_node.mempool_manager.get_spendbundle,
                 creation_tx.spend_bundle,
                 creation_tx.name,
+            )
+            creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
+                our_ph, "", 0, f"{self_hostname}:5001", "new", "SELF_POOLING", fee
             )
             await time_out_assert(
                 10,
@@ -841,7 +841,10 @@ class TestPoolWalletRpc:
                 creation_tx_2.name,
             )
 
-            await farm_blocks(full_node_api, our_ph, 6)
+            for r in creation_tx.removals:
+                assert r not in creation_tx_2.removals
+
+            await farm_blocks(full_node_api, our_ph, 1)
             assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
@@ -849,7 +852,6 @@ class TestPoolWalletRpc:
             assert len(summaries_response) == 2
             wallet_id: int = summaries_response[0]["id"]
             wallet_id_2: int = summaries_response[1]["id"]
-            await asyncio.sleep(1)
             status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
             status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
@@ -858,36 +860,32 @@ class TestPoolWalletRpc:
             assert status.target is None
             assert status_2.target is None
 
-            join_pool_tx: TransactionRecord = (
-                await client.pw_join_pool(
-                    wallet_id,
-                    pool_ph,
-                    "https://pool.example.com",
-                    10,
-                    fee,
-                )
-            )["transaction"]
-            join_pool_tx_2: TransactionRecord = (
-                await client.pw_join_pool(
-                    wallet_id_2,
-                    pool_ph,
-                    "https://pool.example.com",
-                    10,
-                    fee,
-                )
-            )["transaction"]
-            assert join_pool_tx is not None
-            assert join_pool_tx_2 is not None
-
-            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
-            status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
-
             async def tx_is_in_mempool(wid, tx: TransactionRecord):
                 fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
                 return fetched is not None and fetched.is_in_mempool()
 
-            await time_out_assert(20, tx_is_in_mempool, True, wallet_id, join_pool_tx)
-            await time_out_assert(20, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
+            join_pool: Dict = await client.pw_join_pool(
+                wallet_id,
+                pool_ph,
+                "https://pool.example.com",
+                10,
+                fee,
+            )
+            assert join_pool["success"]
+            join_pool_tx: TransactionRecord = join_pool["transaction"]
+            assert join_pool_tx is not None
+            await time_out_assert(5, tx_is_in_mempool, True, wallet_id, join_pool_tx)
+
+            join_pool_2: Dict = await client.pw_join_pool(wallet_id_2, pool_ph, "https://pool.example.com", 10, fee)
+            assert join_pool_2["success"]
+            join_pool_tx_2: TransactionRecord = join_pool_2["transaction"]
+            for r in join_pool_tx.removals:
+                assert r not in join_pool_tx_2.removals
+            assert join_pool_tx_2 is not None
+            await time_out_assert(5, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
+
+            status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
+            status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
             assert status.target is not None
@@ -896,9 +894,7 @@ class TestPoolWalletRpc:
             assert status_2.target is not None
             assert status_2.target.state == PoolSingletonState.FARMING_TO_POOL.value
 
-            await farm_blocks(full_node_api, our_ph, 6)
-
-            total_blocks += await farm_blocks(full_node_api, our_ph, num_blocks)
+            await farm_blocks(full_node_api, our_ph, 1)
 
             async def status_is_farming_to_pool(w_id: int):
                 pw_status: PoolWalletInfo = (await client.pw_status(w_id))[0]
