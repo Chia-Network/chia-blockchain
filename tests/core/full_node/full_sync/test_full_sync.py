@@ -44,7 +44,7 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
 
-        timeout_seconds = 500
+        timeout_seconds = 250
 
         # The second node should eventually catch up to the first one
         await time_out_assert(
@@ -157,13 +157,13 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1
-        await time_out_assert(360, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
-        await time_out_assert(360, node_height_exactly, True, full_node_3, num_blocks_initial - 1)
+        await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
+        await time_out_assert(180, node_height_exactly, True, full_node_3, num_blocks_initial - 1)
 
         def fn3_is_not_syncing():
             return not full_node_3.full_node.sync_store.get_sync_mode()
 
-        await time_out_assert(360, fn3_is_not_syncing)
+        await time_out_assert(180, fn3_is_not_syncing)
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()

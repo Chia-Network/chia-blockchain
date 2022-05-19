@@ -73,9 +73,7 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
 
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
-    await time_out_assert(
-        10, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
-    )
+    await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name())
     await farm_transaction_block(full_node_api, wallet_node)
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 

@@ -186,7 +186,7 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet_0.get_new_puzzlehash()
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
-        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
@@ -813,7 +813,7 @@ class TestPoolWalletRpc:
             total_blocks += await farm_blocks(full_node_api, our_ph, num_blocks)
             total_block_rewards = await get_total_block_rewards(total_blocks)
 
-            await time_out_assert(20, wallets[0].get_unconfirmed_balance, total_block_rewards)
+            await time_out_assert(10, wallets[0].get_unconfirmed_balance, total_block_rewards)
             await time_out_assert(10, wallets[0].get_confirmed_balance, total_block_rewards)
             await time_out_assert(10, wallets[0].get_spendable_balance, total_block_rewards)
             await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
@@ -886,7 +886,7 @@ class TestPoolWalletRpc:
                 fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
                 return fetched is not None and fetched.is_in_mempool()
 
-            await time_out_assert(80, tx_is_in_mempool, True, wallet_id, join_pool_tx)
+            await time_out_assert(10, tx_is_in_mempool, True, wallet_id, join_pool_tx)
             await time_out_assert(10, tx_is_in_mempool, True, wallet_id_2, join_pool_tx_2)
 
             assert status.current.state == PoolSingletonState.SELF_POOLING.value
