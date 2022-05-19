@@ -15,7 +15,6 @@ import {
   catToMojo,
   useIsSimulator,
   useCurrencyCode,
-  toBech32m,
   getTransactionResult,
   TooltipIcon,
 } from '@chia/core';
@@ -23,7 +22,7 @@ import {
   useSpendCATMutation,
   useFarmBlockMutation,
 } from '@chia/api-react';
-import { SyncingStatus } from '@chia/api';
+import { SyncingStatus, toBech32m } from '@chia/api';
 import isNumeric from 'validator/es/lib/isNumeric';
 import { useForm, useWatch } from 'react-hook-form';
 import { Grid, Typography } from '@mui/material';

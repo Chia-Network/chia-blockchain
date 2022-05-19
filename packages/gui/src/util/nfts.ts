@@ -1,4 +1,4 @@
-import { toBech32m, fromBech32m } from '@chia/core';
+import { toBech32m, fromBech32m } from '@chia/api';
 
 export function isValidNFTId(nftId: string): boolean {
   return launcherIdFromNFTId(nftId) !== undefined;

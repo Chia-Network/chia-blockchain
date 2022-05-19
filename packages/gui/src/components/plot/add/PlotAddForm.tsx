@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { t, Trans } from '@lingui/macro';
-import { defaultPlotter } from '@chia/api';
+import { defaultPlotter, toBech32m } from '@chia/api';
 import { useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { Back, useShowError, ButtonLoading, Flex, Form, toBech32m } from '@chia/core';
+import { Back, useShowError, ButtonLoading, Flex, Form } from '@chia/core';
 import PlotAddChoosePlotter from './PlotAddChoosePlotter';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';

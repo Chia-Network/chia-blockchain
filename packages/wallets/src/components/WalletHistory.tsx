@@ -4,11 +4,11 @@ import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { Box, IconButton, Table as TableBase, TableBody, TableCell, TableRow, Tooltip, Typography, Chip } from '@mui/material';
 import { CallReceived as CallReceivedIcon, CallMade as CallMadeIcon, ExpandLess as ExpandLessIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled, toBech32m, useCurrencyCode, mojoToChia, mojoToCAT, FormatLargeNumber } from '@chia/core';
+import { Card, CardKeyValue, CopyToClipboard, Flex, Loading, StateColor, TableControlled, useCurrencyCode, mojoToChia, mojoToCAT, FormatLargeNumber } from '@chia/core';
 import { useGetOfferRecordMutation, useGetSyncStatusQuery } from '@chia/api-react';
 import styled from 'styled-components';
 import type { Row } from '@chia/core';
-import { WalletType, TransactionType } from '@chia/api';
+import { WalletType, TransactionType, toBech32m } from '@chia/api';
 import useWallet from '../hooks/useWallet';
 import useWalletTransactions from '../hooks/useWalletTransactions';
 
