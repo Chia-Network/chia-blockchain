@@ -783,7 +783,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(False, 0)])
-    async def test_self_pooling_to_pooling(self, setup, trusted_and_fee, self_hostname, force_many_runs):
+    async def test_self_pooling_to_pooling(self, setup, trusted_and_fee, self_hostname):
         """
         This tests self-pooling -> pooling
         TODO: Fix this test for a positive fee value
