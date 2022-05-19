@@ -86,7 +86,8 @@ async def test_wallet_tx_retry(
         assert sb is not None
         full_node_1.full_node.log.warning(f"confirmed? {txn.confirmed}")
         full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(sb.name())
-        assert full_node_sb is not None
+        if full_node_sb is None:
+            return False
         full_node_1.full_node.log.warning(f"in mempoo?: {full_node_sb.name() == sb.name()}")
         in_mempool: bool = full_node_sb.name() == sb.name()
         return txn.confirmed or in_mempool
