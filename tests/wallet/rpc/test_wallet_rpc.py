@@ -676,6 +676,8 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
+    col = await client.get_cat_asset_id(cat_0_id)
+
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, col.hex(): 1}, validate_only=True)
     all_offers = await client.get_all_offers()
@@ -690,8 +692,6 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         fee=uint64(1),
     )
     assert offer is not None
-
-    col = await client.get_cat_asset_id(cat_0_id)
 
     summary = await client.get_offer_summary(offer)
     assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "infos": driver_dict, "fees": 1}
