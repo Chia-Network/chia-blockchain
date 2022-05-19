@@ -408,7 +408,7 @@ class DIDWallet:
         future_parent = LineageProof(
             coin.parent_coin_info,
             inner_puzzle.get_tree_hash(),
-            coin.amount,
+            uint64(coin.amount),
         )
 
         await self.add_parent(coin.name(), future_parent, True)
@@ -430,7 +430,7 @@ class DIDWallet:
             parent_info = LineageProof(
                 parent_state.coin.parent_coin_info,
                 parent_innerpuz.get_tree_hash(),
-                parent_state.coin.amount,
+                uint64(parent_state.coin.amount),
             )
             await self.add_parent(coin.parent_coin_info, parent_info, False)
 
@@ -441,8 +441,8 @@ class DIDWallet:
         """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        output_str = f"{self.did_info.origin_coin.parent_coin_info}:"
-        output_str += f"{self.did_info.origin_coin.puzzle_hash}:"
+        output_str = f"{self.did_info.origin_coin.parent_coin_info.hex()}:"
+        output_str += f"{self.did_info.origin_coin.puzzle_hash.hex()}:"
         output_str += f"{self.did_info.origin_coin.amount}:"
         if len(self.did_info.backup_ids) > 0:
             for did in self.did_info.backup_ids:
@@ -483,7 +483,7 @@ class DIDWallet:
             future_parent = LineageProof(
                 coin.parent_coin_info,
                 did_info.current_inner.get_tree_hash(),
-                coin.amount,
+                uint64(coin.amount),
             )
             await self.add_parent(coin.name(), future_parent, True)
             if children_state.spent_height != children_state.created_height:
@@ -516,7 +516,7 @@ class DIDWallet:
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
                     parent_innerpuz.get_tree_hash(),
-                    parent_state.coin.amount,
+                    uint64(parent_state.coin.amount),
                 )
                 await self.add_parent(coin.parent_coin_info, parent_info, True)
         assert parent_info is not None
@@ -884,7 +884,7 @@ class DIDWallet:
             coin = coins.pop()
             parent = coin.parent_coin_info
             innerpuzhash = self.did_info.current_inner.get_tree_hash()
-            amount = coin.amount
+            amount = uint64(coin.amount)
             return (parent, innerpuzhash, amount)
         return None
 
@@ -1150,12 +1150,12 @@ class DIDWallet:
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
             did_inner_hash,
-            eve_coin.amount,
+            uint64(eve_coin.amount),
         )
         eve_parent = LineageProof(
             launcher_coin.parent_coin_info,
             launcher_coin.puzzle_hash,
-            launcher_coin.amount,
+            uint64(launcher_coin.amount),
         )
         await self.add_parent(eve_coin.parent_coin_info, eve_parent, False)
         await self.add_parent(eve_coin.name(), future_parent, False)
@@ -1319,7 +1319,7 @@ class DIDWallet:
         :return: DIDInfo
         """
         details = backup_data.split(":")
-        origin = Coin(bytes32(bytes.fromhex(details[0])), bytes32(bytes.fromhex(details[1])), uint64(int(details[2])))
+        origin = Coin(bytes32.fromhex(details[0]), bytes32.fromhex(details[1]), uint64(int(details[2])))
         backup_ids = []
         if len(details[3]) > 0:
             for d in details[3].split(","):
