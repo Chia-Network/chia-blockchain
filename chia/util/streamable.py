@@ -142,6 +142,10 @@ def convert_primitive(f_type: Type[Any], item: Any) -> Any:
 
 
 def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
+    """
+    Converts a dictionary based on a dataclass, into an instance of that dataclass.
+    Recursively goes through lists, optionals, and dictionaries.
+    """
     if type(item) == klass:
         return item
     obj = object.__new__(klass)
@@ -167,10 +171,6 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
 
 
 def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
-    """
-    Converts a dictionary based on a dataclass, into an instance of that dataclass.
-    Recursively goes through lists, optionals, and dictionaries.
-    """
     if is_type_SpecificOptional(f_type):
         convert_inner_func = function_to_convert_one_item(get_args(f_type)[0])
         return lambda item: convert_optional(convert_inner_func, item)
