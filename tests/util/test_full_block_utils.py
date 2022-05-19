@@ -1,4 +1,5 @@
 import random
+from typing import Iterator
 
 import pytest
 
@@ -196,7 +197,7 @@ def get_finished_sub_slots():
     yield [s for s in get_end_of_sub_slot()]
 
 
-def get_full_blocks():
+def get_full_blocks() -> Iterator[FullBlock]:
 
     random.seed(123456789)
 

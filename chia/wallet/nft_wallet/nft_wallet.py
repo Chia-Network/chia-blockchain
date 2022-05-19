@@ -344,7 +344,7 @@ class NFTWallet:
         """
         This must be called under the wallet state manager lock
         """
-        amount = 1
+        amount = uint64(1)
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
             return None
