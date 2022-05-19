@@ -24,7 +24,7 @@ from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeBlockInfo, ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo, compress_output, verify_compressed_vdf
+from chia.types.blockchain_format.vdf import VDFInfo, get_b, verify_vdf_with_B
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import (
@@ -558,7 +558,7 @@ def handle_block_vdfs(
                 block_rec.sp_total_iters(constants),
                 block_rec.sp_iters(constants),
             )
-        compressed_sp_output = compress_output(
+        compressed_sp_output = get_b(
             constants.DISCRIMINANT_SIZE_BITS,
             header_block.reward_chain_block.challenge_chain_sp_vdf.challenge,
             sp_input,
@@ -575,7 +575,7 @@ def handle_block_vdfs(
         if not header_block.challenge_chain_ip_proof.normalized_to_identity:
             cc_ip_input = prev_block.challenge_vdf_output
             cc_ip_iters = uint64(header_block.total_iters - prev_block.total_iters)
-    compressed_cc_ip_output = compress_output(
+    compressed_cc_ip_output = get_b(
         constants.DISCRIMINANT_SIZE_BITS,
         header_block.reward_chain_block.challenge_chain_ip_vdf.challenge,
         cc_ip_input,
@@ -595,7 +595,7 @@ def handle_block_vdfs(
                 assert prev_block.infused_challenge_vdf_output is not None
                 icc_ip_input = prev_block.infused_challenge_vdf_output
         assert header_block.reward_chain_block.infused_challenge_chain_ip_vdf
-        compressed_icc_ip_output = compress_output(
+        compressed_icc_ip_output = get_b(
             constants.DISCRIMINANT_SIZE_BITS,
             header_block.reward_chain_block.infused_challenge_chain_ip_vdf.challenge,
             icc_ip_input,
@@ -1072,7 +1072,7 @@ def validate_overflow(
             assert prev_ssd.cc_ip_vdf_output is not None
             cc_sp_iterations = uint64(ssd.total_iters - prev_ssd.total_iters)
             ip_input = long_outputs[prev_ssd.cc_ip_vdf_output]
-    valid, output = verify_compressed_vdf(
+    valid, output = verify_vdf_with_B(
         constants, cc_sub_slot_hash, ip_input, ssd.cc_ip_vdf_output, ssd.cc_infusion_point, cc_sp_iterations
     )
     if not valid:
@@ -1090,7 +1090,7 @@ def validate_overflow(
                 raise Exception("missing uncompressed output for vdf")
             icc_ip_input = long_outputs[prev_ssd.icc_ip_vdf_output]
         assert ssd.icc_ip_vdf_output is not None
-        valid, output = verify_compressed_vdf(
+        valid, output = verify_vdf_with_B(
             constants,
             icc_sub_slot_hash,
             icc_ip_input,
@@ -1197,7 +1197,7 @@ def _validate_challenge_sub_slot_data(
                 cc_sp_input = long_outputs[tmp_input]
             elif isinstance(tmp_input, ClassgroupElement):
                 cc_sp_input = tmp_input
-        sp_valid, sp_output = verify_compressed_vdf(
+        sp_valid, sp_output = verify_vdf_with_B(
             constants,
             sp_challenge,
             cc_sp_input,
@@ -1229,7 +1229,7 @@ def _validate_challenge_sub_slot_data(
             ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
     assert ip_vdf_iters is not None
     assert sub_slot_data.cc_ip_vdf_output is not None
-    ip_valid, ip_output = verify_compressed_vdf(
+    ip_valid, ip_output = verify_vdf_with_B(
         constants,
         challenge,
         cc_ip_input,
@@ -1292,7 +1292,7 @@ def _validate_sub_slot_data(
                 cc_sp_input = long_outputs[tmp_input]
             elif isinstance(tmp_input, ClassgroupElement):
                 cc_sp_input = tmp_input
-        sp_valid, sp_output = verify_compressed_vdf(
+        sp_valid, sp_output = verify_vdf_with_B(
             constants,
             challenge,
             cc_sp_input,
@@ -1315,7 +1315,7 @@ def _validate_sub_slot_data(
         cc_ip_input = long_outputs[prev_ssd.cc_ip_vdf_output]
         ip_vdf_iters = uint64(sub_slot_data.total_iters - prev_ssd.total_iters)
     assert sub_slot_data.cc_ip_vdf_output is not None
-    ip_valid, ip_output = verify_compressed_vdf(
+    ip_valid, ip_output = verify_vdf_with_B(
         constants,
         cc_challenge,
         cc_ip_input,
@@ -1340,7 +1340,7 @@ def _validate_sub_slot_data(
                 icc_ip_input = long_outputs[prev_ssd.icc_ip_vdf_output]
         assert sub_slot_data.icc_ip_vdf_output is not None
         assert icc_challenge is not None
-        icc_ip_valid, icc_ip_output = verify_compressed_vdf(
+        icc_ip_valid, icc_ip_output = verify_vdf_with_B(
             constants,
             icc_challenge,
             icc_ip_input,

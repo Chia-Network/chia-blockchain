@@ -97,7 +97,7 @@ class CompressibleVDFField(IntEnum):
     CC_IP_VDF = 4
 
 
-def compress_future(
+def get_b_future(
     disc: str,
     output: bytes,
     input: bytes,
@@ -114,7 +114,7 @@ def compress_future(
     )
 
 
-def compress_output(
+def get_b(
     disc_size: int,
     challenge: bytes32,
     input: ClassgroupElement,
@@ -125,7 +125,7 @@ def compress_output(
 ) -> Future:
 
     future = executor.submit(
-        compress_future,
+        get_b_future,
         str(get_discriminant(challenge, disc_size)),
         bytes(output.data),
         bytes(input.data),
@@ -137,7 +137,7 @@ def compress_output(
     return future
 
 
-def verify_compressed_vdf(
+def verify_vdf_with_B(
     constants: ConsensusConstants,
     challenge: bytes32,
     vdf_input: ClassgroupElement,

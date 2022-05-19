@@ -356,7 +356,8 @@ class FullNode:
         # only add capability to nodes that sync from 0
         # or nodes that already have the sub_epoch segments ready
         if peak is not None:
-            if not self.weight_proof_handler_v2.check_prev_sub_epoch_segments():
+            lasst_segment_exists = await self.weight_proof_handler_v2.check_prev_sub_epoch_segments()
+            if not lasst_segment_exists:
                 return
         self.server.add_capabilities([(uint16(Capability.WP.value), "v2")])
 

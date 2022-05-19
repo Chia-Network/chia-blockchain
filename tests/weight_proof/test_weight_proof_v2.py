@@ -22,7 +22,7 @@ from chia.full_node.weight_proof_v2 import (
 from chia.types.blockchain_format.classgroup import B, ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import compress_output, verify_compressed_vdf
+from chia.types.blockchain_format.vdf import get_b, verify_vdf_with_B
 from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegmentV2, SubEpochSegmentsV2
 from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
@@ -472,7 +472,7 @@ class TestWeightProof:
         block1 = header_cache[height_to_hash[uint32(0)]]
         cc_ip_iters = block_rec.ip_iters(test_constants)
         with ProcessPoolExecutor() as executor:
-            compressed_output = compress_output(
+            compressed_output = get_b(
                 test_constants.DISCRIMINANT_SIZE_BITS,
                 block.reward_chain_block.challenge_chain_ip_vdf.challenge,
                 ClassgroupElement.get_default_element(),
@@ -482,7 +482,7 @@ class TestWeightProof:
                 executor,
             )
 
-            compressed_output_invalid = compress_output(
+            compressed_output_invalid = get_b(
                 test_constants.DISCRIMINANT_SIZE_BITS,
                 block1.reward_chain_block.challenge_chain_ip_vdf.challenge,
                 block.reward_chain_block.challenge_chain_ip_vdf.output,
@@ -492,7 +492,7 @@ class TestWeightProof:
                 executor,
             )
 
-        invalid_res, invalid_output = verify_compressed_vdf(
+        invalid_res, invalid_output = verify_vdf_with_B(
             test_constants,
             block.reward_chain_block.challenge_chain_ip_vdf.challenge,
             ClassgroupElement.get_default_element(),
@@ -501,7 +501,7 @@ class TestWeightProof:
             cc_ip_iters,
         )
         assert not invalid_res
-        valid, output = verify_compressed_vdf(
+        valid, output = verify_vdf_with_B(
             test_constants,
             block.reward_chain_block.challenge_chain_ip_vdf.challenge,
             ClassgroupElement.get_default_element(),
@@ -828,6 +828,89 @@ class TestWeightProof:
             else:
                 modified_sub_slot_data.append(sub_slot)
 
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_overflow_Challenge_block(
+        self, default_1000_blocks: List[FullBlock], bt: BlockTools
+    ) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks[: prev_ses_sub_block.height],
+            seed=seed,
+            force_overflow=True,
+            skip_slots=2,
+        )
+        blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=seed, force_overflow=True, skip_slots=2)
+
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        assert prev_ses_sub_block.is_challenge_block(test_constants) is True
+        assert prev_ses_sub_block.overflow is True
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block,
+            ses_sub_block,
+            uint32(sub_epoch_n),
+        )
+        segment = segments[0]
+        await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_block_bad_ip_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_ip_vdf_output=bad_b))
+            else:
+                modified_sub_slot_data.append(sub_slot)
+        segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
+        with pytest.raises(Exception):
+            await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_segment_block_bad_sp_vdf(self, default_1000_blocks: List[FullBlock]) -> None:
+        blocks: List[FullBlock] = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        heights = blockchain.get_ses_heights()
+        sub_epoch_n = 3
+        ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n - 1])
+        prev_ses_sub_block = blockchain.height_to_block_record(heights[sub_epoch_n])
+        wpf = WeightProofHandlerV2(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        segments: List[SubEpochChallengeSegmentV2] = await wpf._WeightProofHandlerV2__create_sub_epoch_segments(  # type: ignore
+            prev_ses_sub_block, ses_sub_block, uint32(sub_epoch_n)
+        )
+        segment = segments[0]
+        modified_sub_slot_data = []
+        for idx, sub_slot in enumerate(segment.sub_slot_data):
+            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
+                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_sp_vdf_output=bad_b))
+            else:
+                modified_sub_slot_data.append(sub_slot)
         segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
