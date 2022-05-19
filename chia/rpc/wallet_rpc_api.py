@@ -433,7 +433,7 @@ class WalletRpcApi:
             name = request.get("name", None)
             if request["mode"] == "new":
                 async with self.service.wallet_state_manager.lock:
-                    cat_wallet, creation_tx = await CATWallet.create_new_cat_wallet(
+                    cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
                         wallet_state_manager,
                         main_wallet,
                         {"identifier": "genesis_by_id"},
@@ -442,12 +442,7 @@ class WalletRpcApi:
                     )
                     asset_id = cat_wallet.get_asset_id()
                 self.service.wallet_state_manager.state_changed("wallet_created")
-                return {
-                    "type": cat_wallet.type(),
-                    "asset_id": asset_id,
-                    "wallet_id": cat_wallet.id(),
-                    "creation_tx": creation_tx,
-                }
+                return {"type": cat_wallet.type(), "asset_id": asset_id, "wallet_id": cat_wallet.id()}
 
             elif request["mode"] == "existing":
                 async with self.service.wallet_state_manager.lock:

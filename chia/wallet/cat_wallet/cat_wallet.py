@@ -70,7 +70,7 @@ class CATWallet:
     @staticmethod
     async def create_new_cat_wallet(
         wallet_state_manager: Any, wallet: Wallet, cat_tail_info: Dict[str, Any], amount: uint64, name=None
-    ) -> Tuple[CATWallet, TransactionRecord]:
+    ):
         self = CATWallet()
         self.cost_of_single_tx = None
         self.standard_wallet = wallet
@@ -159,7 +159,7 @@ class CATWallet:
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cat_record)
-        return self, chia_tx
+        return self
 
     @staticmethod
     async def create_wallet_for_cat(
