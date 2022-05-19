@@ -45,7 +45,7 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"win32"}),
+    condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"doodad"}),
     reason="testing stuff",
 )
 async def test_wallet_tx_retry(
