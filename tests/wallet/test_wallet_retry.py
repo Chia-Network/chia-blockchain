@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pytest
 
@@ -55,7 +55,8 @@ async def test_wallet_tx_retry(
     await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
 
     transaction: TransactionRecord = await wallet_1.generate_signed_transaction(uint64(100), reward_ph)
-    sb1 = transaction.spend_bundle
+    sb1: Optional[SpendBundle] = transaction.spend_bundle
+    assert sb1 is not None
     await wallet_1.push_transaction(transaction)
 
     async def sb_in_mempool() -> bool:
