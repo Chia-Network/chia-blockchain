@@ -14,7 +14,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
 
-
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
 
