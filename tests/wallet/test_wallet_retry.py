@@ -7,7 +7,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
@@ -31,12 +31,10 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("run_many_times", [i for i in range(50)])
 async def test_wallet_tx_retry(
     bt: BlockTools,
     setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
     self_hostname: str,
-    run_many_times: int,
 ) -> None:
     wait_secs = 20
     nodes, wallets = setup_two_nodes_and_wallet_fast_retry
@@ -84,11 +82,9 @@ async def test_wallet_tx_retry(
         assert txn is not None
         sb = txn.spend_bundle
         assert sb is not None
-        full_node_1.full_node.log.warning(f"confirmed? {txn.confirmed}")
         full_node_sb = full_node_1.full_node.mempool_manager.get_spendbundle(sb.name())
         if full_node_sb is None:
             return False
-        full_node_1.full_node.log.warning(f"in mempoo?: {full_node_sb.name() == sb.name()}")
         in_mempool: bool = full_node_sb.name() == sb.name()
         return txn.confirmed or in_mempool
 
