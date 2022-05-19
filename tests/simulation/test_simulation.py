@@ -224,7 +224,7 @@ class TestSimulation:
         # The expected number of coins were received.
         # TODO: pick a better way to check coin count
         spendable_amount = await wallet.get_spendable_balance()
-        all_coins = await wallet.select_coins(amount=spendable_amount)
+        all_coins = await wallet.select_coins(amount=uint64(spendable_amount))
         assert len(all_coins) == coin_count
 
     @pytest.mark.asyncio

@@ -4,7 +4,6 @@ from typing import List, Tuple
 
 import pytest
 
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -20,7 +19,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.time_out_assert import time_out_assert
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
@@ -62,9 +61,9 @@ class TestWalletSimulator:
         farm_rewards = 0
 
         for tx in all_txs:
-            if tx.type == TransactionType.COINBASE_REWARD:
+            if TransactionType(tx.type) == TransactionType.COINBASE_REWARD:
                 pool_rewards += 1
-            elif tx.type == TransactionType.FEE_REWARD:
+            elif TransactionType(tx.type) == TransactionType.FEE_REWARD:
                 farm_rewards += 1
 
         assert pool_rewards == expected_count / 2
@@ -203,7 +202,7 @@ class TestWalletSimulator:
         # wallet0 <-> sever0
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
-        funds = await full_node_api_0.farm_blocks(count=num_blocks, wallet=wallet_0.wallet_state_manager.main_wallet)
+        await full_node_api_0.farm_blocks(count=num_blocks, wallet=wallet_0.wallet_state_manager.main_wallet)
 
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
@@ -772,7 +771,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         AMOUNT_TO_SEND = 4000000000000
-        coins = await wallet.select_coins(AMOUNT_TO_SEND)
+        coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND))
         coin_list = list(coins)
 
         tx = await wallet.generate_signed_transaction(

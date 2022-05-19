@@ -534,15 +534,15 @@ class FailFromBytes:
 
 
 def test_parse_size_hints() -> None:
-    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4).b == b"1337"
+    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4, False).b == b"1337"
 
     # EOF
     with pytest.raises(AssertionError):
-        parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4)
+        parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4, False)
 
     # error in underlying type
     with pytest.raises(ValueError):
-        parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4)
+        parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4, False)
 
 
 def test_parse_str() -> None:
