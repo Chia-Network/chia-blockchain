@@ -42,6 +42,7 @@ class DBWrapper2:
     _in_use: Dict[asyncio.Task, aiosqlite.Connection]
     _current_writer: Optional[asyncio.Task]
     _savepoint_name: int
+    SQLITE_MAX_VARIABLE_NUMBER: int
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -59,6 +60,11 @@ class DBWrapper2:
         self._in_use = {}
         self._current_writer = None
         self._savepoint_name = 0
+        if aiosqlite.sqlite_version_info < (3, 32, 0):
+            self.SQLITE_MAX_VARIABLE_NUMBER = 999
+        else:
+            self.SQLITE_MAX_VARIABLE_NUMBER = 32766
+
 
     async def close(self) -> None:
         while self._num_read_connections > 0:

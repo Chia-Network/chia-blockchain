@@ -14,8 +14,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-MAX_SQLITE_PARAMETERS = 32700
-
 
 class CoinStore:
     """
@@ -178,7 +176,7 @@ class CoinStore:
 
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
-            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+            for names_chunk in chunks(names, self.db_wrapper.SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
@@ -346,7 +344,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for puzzles in chunks(puzzle_hashes, MAX_SQLITE_PARAMETERS):
+            for puzzles in chunks(puzzle_hashes, self.db_wrapper.SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     puzzle_hashes_db = tuple(puzzles)
@@ -378,7 +376,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(parent_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(parent_ids, self.db_wrapper.SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     parent_ids_db = tuple(ids)
@@ -409,7 +407,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(coin_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(coin_ids, self.db_wrapper.SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     coin_ids_db = tuple(ids)
