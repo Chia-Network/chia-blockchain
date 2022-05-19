@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
-import sys
 from enum import Enum
 from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
 
