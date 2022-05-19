@@ -94,7 +94,7 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/blockchain/test_blockchain.py tests/blockchain/test_blockchain_transactions.py
 
     - name: Process coverage data
       run: |

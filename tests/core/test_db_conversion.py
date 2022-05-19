@@ -8,7 +8,7 @@ from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
 from chia.util.db_wrapper import DBWrapper2
 from chia.full_node.block_store import BlockStore
@@ -62,7 +62,7 @@ class TestDbUpgrade:
             await db_wrapper1.add_connection(await aiosqlite.connect(in_file))
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
-                coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
+                coin_store1 = await CoinStore.create(db_wrapper1)
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
                     for h in hints:
@@ -95,14 +95,12 @@ class TestDbUpgrade:
 
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
-                coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
+                coin_store1 = await CoinStore.create(db_wrapper1)
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
-                else:
-                    hint_store1 = None
 
                 block_store2 = await BlockStore.create(db_wrapper2)
-                coin_store2 = await CoinStore.create(db_wrapper2, uint32(0))
+                coin_store2 = await CoinStore.create(db_wrapper2)
                 hint_store2 = await HintStore.create(db_wrapper2)
 
                 if with_hints:

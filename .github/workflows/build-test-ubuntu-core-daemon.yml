@@ -98,7 +98,7 @@ jobs:
     - name: Test core-daemon code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/core/daemon/test_daemon.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/core/daemon/test_daemon.py
 
     - name: Process coverage data
       run: |
