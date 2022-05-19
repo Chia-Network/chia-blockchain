@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Any, List, Tuple
 
@@ -42,13 +43,15 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("run_many_times", [i for i in range(50)])
 async def test_wallet_tx_retry(
     bt: BlockTools,
     setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
     wallet_a: WalletTool,
     self_hostname: str,
+    run_many_times,
 ) -> None:
-    wait_secs = 1000
+    wait_secs = 10
     reward_ph = wallet_a.get_new_puzzlehash()
     nodes, wallets = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
@@ -120,7 +123,8 @@ async def test_wallet_tx_retry(
     evict_from_pool(full_node_1, sb1)
     assert_sb_not_in_pool(full_node_1, sb1)
 
-    print(f"mempool spends: {full_node_1.full_node.mempool_manager.mempool.spends}")
+    # Wait some time so wallet will retry
+    await asyncio.sleep(3)
 
     our_ph = await wallet_1.get_new_puzzlehash()
     current_height += await farm_blocks(full_node_1, our_ph, 3)
