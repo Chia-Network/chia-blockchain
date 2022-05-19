@@ -81,7 +81,7 @@ ConvertFunctionType = Callable[[object], object]
 FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Dict[str, Type[object]]] = {}
 STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[StreamFunctionType]] = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]] = {}
-CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[Any], List[ConvertFunctionType]] = {}
+CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionType]] = {}
 
 
 def is_type_List(f_type: object) -> bool:
