@@ -160,7 +160,7 @@ class Service:
 
             self.upnp.remap(port)
 
-        await self._server.start_server(self.self_hostname, self._on_connect_callback)
+        await self._server.start_server(self._on_connect_callback)
         self._advertised_port = self._server.get_port()
 
         self._reconnect_tasks = [

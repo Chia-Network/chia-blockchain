@@ -51,7 +51,7 @@ async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optiona
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
             resolved = get_host_addr(host, prefer_ipv6)
-            log.warning(f"Spawning a process to communicate to: {basename} {resolved} {port}")
+            log.info(f"Spawning a process to communicate to: {basename} {resolved} {port}")
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,

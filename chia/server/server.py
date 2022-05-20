@@ -232,7 +232,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(self, self_hostname: str, on_connect: Callable = None):
+    async def start_server(self, on_connect: Callable = None):
         if self.incoming_task is None:
             self.incoming_task = asyncio.create_task(self.incoming_api_task())
         if self.gc_task is None:
