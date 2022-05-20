@@ -573,7 +573,7 @@ async def introducer(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for _ in setup_timelord(0, 0, 0, 0, False, test_constants, bt):
+    async for _ in setup_timelord(0, 0, 0, False, test_constants, bt):
         yield _
 
 
