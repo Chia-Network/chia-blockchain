@@ -128,8 +128,8 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 consensus_constants,
                 "blockchain_test.db",
                 self_hostname,
-                find_available_listen_port("node1"),
-                find_available_listen_port("node1 rpc"),
+                uint16(0),
+                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keychain1),
                 simulator=False,
                 db_version=db_version,
@@ -138,8 +138,8 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 consensus_constants,
                 "blockchain_test_2.db",
                 self_hostname,
-                find_available_listen_port("node2"),
-                find_available_listen_port("node2 rpc"),
+                uint16(0),
+                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keychain2),
                 simulator=False,
                 db_version=db_version,
@@ -168,8 +168,8 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 self_hostname,
-                find_available_listen_port(f"node{i}"),
-                find_available_listen_port(f"node{i} rpc"),
+                uint16(0),
+                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
                 simulator=False,
                 db_version=db_version,
@@ -197,16 +197,16 @@ async def setup_node_and_wallet(
                 consensus_constants,
                 "blockchain_test.db",
                 self_hostname,
-                find_available_listen_port("node1"),
-                find_available_listen_port("node1 rpc"),
+                0,
+                0,
                 btools,
                 simulator=False,
                 db_version=db_version,
             ),
             setup_wallet_node(
                 btools.config["self_hostname"],
-                find_available_listen_port("node2"),
-                find_available_listen_port("node2 rpc"),
+                0,
+                0,
                 consensus_constants,
                 btools,
                 None,
@@ -241,9 +241,7 @@ async def setup_simulators_and_wallets(
 
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
-            port = find_available_listen_port(f"node{index}")
-            rpc_port = find_available_listen_port(f"node{index} rpc")
-            db_name = f"blockchain_test_{port}.db"
+            db_name = f"blockchain_test_{index}_sim_and_wallets.db"
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
             )  # block tools modifies constants
@@ -251,8 +249,8 @@ async def setup_simulators_and_wallets(
                 bt_tools.constants,
                 bt_tools.config["self_hostname"],
                 db_name,
-                port,
-                rpc_port,
+                uint16(0),
+                uint16(0),
                 bt_tools,
                 simulator=True,
                 db_version=db_version,
@@ -265,15 +263,13 @@ async def setup_simulators_and_wallets(
                 seed = std_hash(uint32(index))
             else:
                 seed = key_seed
-            port = find_available_listen_port(f"wallet{index}")
-            rpc_port = find_available_listen_port(f"wallet{index} rpc")
             bt_tools = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
             )  # block tools modifies constants
             wlt = setup_wallet_node(
                 bt_tools.config["self_hostname"],
-                port,
-                rpc_port,
+                uint16(0),
+                uint16(0),
                 bt_tools.constants,
                 bt_tools,
                 None,
@@ -292,34 +288,40 @@ async def setup_simulators_and_wallets(
 async def setup_harvester_farmer(
     bt: BlockTools, tmp_path: Path, consensus_constants: ConsensusConstants, *, start_services: bool
 ):
-    farmer_port = find_available_listen_port("farmer")
-    farmer_rpc_port = find_available_listen_port("farmer rpc")
-    harvester_port = find_available_listen_port("harvester")
-    harvester_rpc_port = find_available_listen_port("harvester rpc")
+    if start_services:
+        farmer_port = uint16(0)
+    else:
+        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
+        farmer_port = find_available_listen_port("farmer_server")
+
+    farmer_setup_iter = setup_farmer(
+        bt,
+        tmp_path / "farmer",
+        bt.config["self_hostname"],
+        farmer_port,
+        uint16(0),
+        consensus_constants,
+        uint16(0),
+        start_service=start_services,
+    )
+
+    farmer_service = await farmer_setup_iter.__anext__()
+    farmer_port = farmer_service._server._port
     node_iters = [
         setup_harvester(
             bt,
             tmp_path / "harvester",
             bt.config["self_hostname"],
-            harvester_port,
-            harvester_rpc_port,
+            uint16(0),
+            uint16(0),
             farmer_port,
             consensus_constants,
             start_services,
         ),
-        setup_farmer(
-            bt,
-            tmp_path / "farmer",
-            bt.config["self_hostname"],
-            farmer_port,
-            farmer_rpc_port,
-            consensus_constants,
-            start_service=start_services,
-        ),
+        farmer_setup_iter,
     ]
 
     harvester_service = await node_iters[0].__anext__()
-    farmer_service = await node_iters[1].__anext__()
 
     yield harvester_service, farmer_service
 
@@ -332,38 +334,35 @@ async def setup_farmer_multi_harvester(
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    farmer_port = find_available_listen_port("farmer")
-    farmer_rpc_port = find_available_listen_port("farmer rpc")
 
     node_iterators = [
         setup_farmer(
             block_tools,
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
-            farmer_port,
-            farmer_rpc_port,
+            uint16(0),
+            uint16(0),
             consensus_constants,
         )
     ]
+    farmer_service = await node_iterators[0].__anext__()
+    farmer_port = farmer_service._server._port
 
     for i in range(0, harvester_count):
         root_path: Path = temp_dir / f"harvester_{i}"
-        harvester_port = find_available_listen_port("harvester")
-        harvester_rpc_port = find_available_listen_port("harvester rpc")
         node_iterators.append(
             setup_harvester(
                 block_tools,
                 root_path,
                 block_tools.config["self_hostname"],
-                harvester_port,
-                harvester_rpc_port,
+                uint16(0),
+                uint16(0),
                 farmer_port,
                 consensus_constants,
                 False,
             )
         )
 
-    farmer_service = await node_iterators[0].__anext__()
     harvester_services = []
     for node in node_iterators[1:]:
         harvester_service = await node.__anext__()
@@ -395,54 +394,36 @@ async def setup_full_system(
         if b_tools_1 is None:
             b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
 
-        introducer_port = find_available_listen_port("introducer")
-        farmer_port = find_available_listen_port("farmer")
-        farmer_rpc_port = find_available_listen_port("farmer rpc")
-        node1_port = find_available_listen_port("node1")
-        rpc1_port = find_available_listen_port("node1 rpc")
-        node2_port = find_available_listen_port("node2")
-        rpc2_port = find_available_listen_port("node2 rpc")
-        timelord1_port = find_available_listen_port("timelord1")
-        timelord1_rpc_port = find_available_listen_port("timelord1 rpc")
-        timelord2_port = find_available_listen_port("timelord2")
-        timelord2_rpc_port = find_available_listen_port("timelord2 rpc")
-        vdf1_port = find_available_listen_port("vdf1")
-        vdf2_port = find_available_listen_port("vdf2")
-        harvester_port = find_available_listen_port("harvester")
-        harvester_rpc_port = find_available_listen_port("harvester rpc")
-
         node_iters = [
-            setup_introducer(shared_b_tools, introducer_port),
+            setup_introducer(shared_b_tools, uint16(0)),
             setup_harvester(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
                 shared_b_tools.config["self_hostname"],
-                harvester_port,
-                harvester_rpc_port,
-                farmer_port,
+                uint16(0),
+                uint16(0),
+                uint16(0),
                 consensus_constants,
             ),
             setup_farmer(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
                 shared_b_tools.config["self_hostname"],
-                farmer_port,
-                farmer_rpc_port,
+                uint16(0),
+                uint16(0),
                 consensus_constants,
-                uint16(node1_port),
+                uint16(0),
             ),
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
-            setup_timelord(
-                timelord2_port, node1_port, timelord2_rpc_port, vdf1_port, False, consensus_constants, b_tools
-            ),
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
+            setup_timelord(uint16(0), uint16(0), uint16(0), uint16(0), False, consensus_constants, b_tools),
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",
                 shared_b_tools.config["self_hostname"],
-                node1_port,
-                rpc1_port,
+                uint16(0),
+                uint16(0),
                 b_tools,
-                introducer_port,
+                uint16(0),
                 False,
                 10,
                 True,
@@ -453,17 +434,17 @@ async def setup_full_system(
                 consensus_constants,
                 "blockchain_test_2.db",
                 shared_b_tools.config["self_hostname"],
-                node2_port,
-                rpc2_port,
+                uint16(0),
+                uint16(0),
                 b_tools_1,
-                introducer_port=introducer_port,
+                introducer_port=uint16(0),
                 simulator=False,
                 send_uncompact_interval=10,
                 sanitize_weight_proof_only=True,
                 db_version=db_version,
             ),
-            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
-            setup_timelord(timelord1_port, 1000, timelord1_rpc_port, vdf2_port, True, consensus_constants, b_tools_1),
+            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
+            setup_timelord(uint16(0), 1000, uint16(0), uint16(0), True, consensus_constants, b_tools_1),
         ]
 
         if connect_to_daemon:

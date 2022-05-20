@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Coroutine
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 
@@ -15,6 +15,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
+from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -309,7 +310,8 @@ async def start_rpc_server(
     net_config,
     connect_to_daemon=True,
     max_request_body_size=None,
-):
+    name: str = "rpc_server",
+) -> Tuple[Callable[[], Coroutine[Any, Any, None]], uint16]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -324,8 +326,18 @@ async def start_rpc_server(
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
-    await site.start()
+
+    while True:
+        port_to_use = rpc_port
+        if port_to_use == uint16(0):
+            port_to_use = find_available_listen_port(name)
+        try:
+            site = web.TCPSite(runner, self_hostname, int(port_to_use), ssl_context=rpc_server.ssl_context)
+            await site.start()
+            rpc_port = port_to_use
+            break
+        except OSError:
+            log.warning(f"Error using port: {port_to_use}, retrying.")
 
     async def cleanup():
         await rpc_server.stop()
@@ -333,4 +345,4 @@ async def start_rpc_server(
         if connect_to_daemon:
             await daemon_connection
 
-    return cleanup
+    return cleanup, rpc_port
