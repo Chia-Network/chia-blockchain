@@ -56,55 +56,55 @@ class TestSimulation:
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
 
-        node1_port = node1.full_node.config["port"]
-        node2_port = node2.full_node.config["port"]
+        node1_port = node1.full_node.server._port
+        node2_port = node2.full_node.server._port
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(60, node_height_at_least, True, node2, 7)
-        # await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        #
-        # async def has_compact(node1, node2):
-        #     peak_height_1 = node1.full_node.blockchain.get_peak_height()
-        #     headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
-        #     peak_height_2 = node2.full_node.blockchain.get_peak_height()
-        #     headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
-        #     # Commented to speed up.
-        #     # cc_eos = [False, False]
-        #     # icc_eos = [False, False]
-        #     # cc_sp = [False, False]
-        #     # cc_ip = [False, False]
-        #     has_compact = [False, False]
-        #     for index, headers in enumerate([headers_1, headers_2]):
-        #         for header in headers.values():
-        #             for sub_slot in header.finished_sub_slots:
-        #                 if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
-        #                     # cc_eos[index] = True
-        #                     has_compact[index] = True
-        #                 if (
-        #                     sub_slot.proofs.infused_challenge_chain_slot_proof is not None
-        #                     and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
-        #                 ):
-        #                     # icc_eos[index] = True
-        #                     has_compact[index] = True
-        #             if (
-        #                 header.challenge_chain_sp_proof is not None
-        #                 and header.challenge_chain_sp_proof.normalized_to_identity
-        #             ):
-        #                 # cc_sp[index] = True
-        #                 has_compact[index] = True
-        #             if header.challenge_chain_ip_proof.normalized_to_identity:
-        #                 # cc_ip[index] = True
-        #                 has_compact[index] = True
-        #
-        #     # return (
-        #     #     cc_eos == [True, True] and icc_eos == [True, True] and cc_sp == [True, True] and cc_ip == [True, True]
-        #     # )
-        #     return has_compact == [True, True]
-        #
-        # await time_out_assert(600, has_compact, True, node1, node2)
-        # node3 = extra_node
-        # server3 = node3.full_node.server
-        # peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
-        # await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
-        # await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        # await time_out_assert(600, node_height_at_least, True, node3, peak_height)
+        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+
+        async def has_compact(node1, node2):
+            peak_height_1 = node1.full_node.blockchain.get_peak_height()
+            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
+            peak_height_2 = node2.full_node.blockchain.get_peak_height()
+            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
+            # Commented to speed up.
+            # cc_eos = [False, False]
+            # icc_eos = [False, False]
+            # cc_sp = [False, False]
+            # cc_ip = [False, False]
+            has_compact = [False, False]
+            for index, headers in enumerate([headers_1, headers_2]):
+                for header in headers.values():
+                    for sub_slot in header.finished_sub_slots:
+                        if sub_slot.proofs.challenge_chain_slot_proof.normalized_to_identity:
+                            # cc_eos[index] = True
+                            has_compact[index] = True
+                        if (
+                            sub_slot.proofs.infused_challenge_chain_slot_proof is not None
+                            and sub_slot.proofs.infused_challenge_chain_slot_proof.normalized_to_identity
+                        ):
+                            # icc_eos[index] = True
+                            has_compact[index] = True
+                    if (
+                        header.challenge_chain_sp_proof is not None
+                        and header.challenge_chain_sp_proof.normalized_to_identity
+                    ):
+                        # cc_sp[index] = True
+                        has_compact[index] = True
+                    if header.challenge_chain_ip_proof.normalized_to_identity:
+                        # cc_ip[index] = True
+                        has_compact[index] = True
+
+            # return (
+            #     cc_eos == [True, True] and icc_eos == [True, True] and cc_sp == [True, True] and cc_ip == [True, True]
+            # )
+            return has_compact == [True, True]
+
+        await time_out_assert(600, has_compact, True, node1, node2)
+        node3 = extra_node
+        server3 = node3.full_node.server
+        peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
+        await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
+        await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
