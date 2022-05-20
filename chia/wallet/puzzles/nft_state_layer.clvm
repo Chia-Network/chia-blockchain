@@ -3,7 +3,7 @@
     METADATA
     METADATA_UPDATER_PUZZLE_HASH
     INNER_PUZZLE
-    solution  ; either to inner puzzle or metadata updater
+    solution
     my_amount
   )
 
