@@ -394,68 +394,96 @@ async def setup_full_system(
         if b_tools_1 is None:
             b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
 
-        node_iters = [
-            setup_introducer(shared_b_tools, uint16(0)),
-            setup_harvester(
-                shared_b_tools,
-                shared_b_tools.root_path / "harvester",
-                shared_b_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
-                uint16(0),
-                consensus_constants,
-            ),
-            setup_farmer(
-                shared_b_tools,
-                shared_b_tools.root_path / "harvester",
-                shared_b_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
-                consensus_constants,
-                uint16(0),
-            ),
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
-            setup_timelord(uint16(0), uint16(0), uint16(0), uint16(0), False, consensus_constants, b_tools),
-            setup_full_node(
-                consensus_constants,
-                "blockchain_test.db",
-                shared_b_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
-                b_tools,
-                uint16(0),
-                False,
-                10,
-                True,
-                connect_to_daemon=connect_to_daemon,
-                db_version=db_version,
-            ),
-            setup_full_node(
-                consensus_constants,
-                "blockchain_test_2.db",
-                shared_b_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
-                b_tools_1,
-                introducer_port=uint16(0),
-                simulator=False,
-                send_uncompact_interval=10,
-                sanitize_weight_proof_only=True,
-                db_version=db_version,
-            ),
-            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
-            setup_timelord(uint16(0), 1000, uint16(0), uint16(0), True, consensus_constants, b_tools_1),
-        ]
+        timelord1_port = find_available_listen_port("timelord1")
+        timelord2_port = find_available_listen_port("timelord2")
+        vdf1_port = find_available_listen_port("vdf1")
+        vdf2_port = find_available_listen_port("vdf2")
 
         if connect_to_daemon:
-            node_iters.append(setup_daemon(btools=b_tools))
-            daemon_ws = await node_iters[9].__anext__()
+            daemon_iter = setup_daemon(btools=b_tools)
+            daemon_ws = await daemon_iter.__anext__()
 
-        introducer, introducer_server = await node_iters[0].__anext__()
+        # Start the introducer first so we can find out the port, and use that for the nodes
+        introducer_iter = setup_introducer(shared_b_tools, uint16(0))
+        introducer, introducer_server = await introducer_iter.__anext__()
+        introducer_port = introducer_server._port
+
+        # Then start the full node so we can use the port for the farmer and timelord
+        full_node_1_iter = setup_full_node(
+            consensus_constants,
+            "blockchain_test.db",
+            shared_b_tools.config["self_hostname"],
+            uint16(0),
+            uint16(0),
+            b_tools,
+            introducer_port,
+            False,
+            10,
+            True,
+            connect_to_daemon=connect_to_daemon,
+            db_version=db_version,
+        )
+        full_node_2_iter = setup_full_node(
+            consensus_constants,
+            "blockchain_test_2.db",
+            shared_b_tools.config["self_hostname"],
+            uint16(0),
+            uint16(0),
+            b_tools_1,
+            introducer_port=introducer_port,
+            simulator=False,
+            send_uncompact_interval=10,
+            sanitize_weight_proof_only=True,
+            db_version=db_version,
+        )
+
+        node_api_1 = await full_node_1_iter.__anext__()
+        node_api_2 = await full_node_2_iter.__anext__()
+        full_node_port = node_api_2.full_node.server._port
+
+        farmer_iter = setup_farmer(
+            shared_b_tools,
+            shared_b_tools.root_path / "harvester",
+            shared_b_tools.config["self_hostname"],
+            uint16(0),
+            uint16(0),
+            consensus_constants,
+            full_node_port,
+        )
+        farmer_service = await farmer_iter.__anext__()
+        farmer = farmer_service._node
+        farmer_port = farmer_service._server._port
+
+        harvester_iter = setup_harvester(
+            shared_b_tools,
+            shared_b_tools.root_path / "harvester",
+            shared_b_tools.config["self_hostname"],
+            uint16(0),
+            uint16(0),
+            farmer_port,
+            consensus_constants,
+        )
+        timelord_iter = setup_timelord(
+            timelord1_port, full_node_port, uint16(0), vdf1_port, False, consensus_constants, b_tools
+        )
+        timelord, timelord_server = await timelord_iter.__anext__()
+
+        node_iters = [
+            introducer_iter,
+            harvester_iter,
+            farmer_iter,
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], timelord_server._port),
+            timelord_iter,
+            full_node_1_iter,
+            full_node_2_iter,
+            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
+            setup_timelord(timelord2_port, 1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1),
+        ]
+        if connect_to_daemon:
+            node_iters.append(daemon_iter)
+
         harvester_service = await node_iters[1].__anext__()
         harvester = harvester_service._node
-        farmer_service = await node_iters[2].__anext__()
-        farmer = farmer_service._node
 
         async def num_connections():
             count = len(harvester.server.all_connections.items())
@@ -464,9 +492,7 @@ async def setup_full_system(
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         vdf_clients = await node_iters[3].__anext__()
-        timelord, timelord_server = await node_iters[4].__anext__()
-        node_api_1 = await node_iters[5].__anext__()
-        node_api_2 = await node_iters[6].__anext__()
+
         vdf_sanitizer = await node_iters[7].__anext__()
         sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
