@@ -439,7 +439,6 @@ async def setup_full_system(
         node_api_1 = await full_node_1_iter.__anext__()
         node_api_2 = await full_node_2_iter.__anext__()
         full_node_1_port = node_api_1.full_node.server._port
-        full_node_2_port = node_api_2.full_node.server._port
 
         farmer_iter = setup_farmer(
             shared_b_tools,
