@@ -232,7 +232,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(self, on_connect: Callable = None):
+    async def start_server(self, self_hostname: str, on_connect: Callable = None):
         if self.incoming_task is None:
             self.incoming_task = asyncio.create_task(self.incoming_api_task())
         if self.gc_task is None:
@@ -266,12 +266,13 @@ class ChiaServer:
 
         self.site = web.TCPSite(
             self.runner,
-            host="0.0.0.0",
+            host=self_hostname,
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
+        assert self.site._server is not None
         self._port = self.site._server.sockets[0].getsockname()[1]
         self.log.warning(f"Used port: {self._port}")
 

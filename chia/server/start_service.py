@@ -160,7 +160,7 @@ class Service:
 
             self.upnp.remap(port)
 
-        await self._server.start_server(self._on_connect_callback)
+        await self._server.start_server(self.self_hostname, self._on_connect_callback)
 
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
