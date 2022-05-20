@@ -128,7 +128,7 @@ class Timelord:
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
             self.config["vdf_server"]["host"],
-            self.config["vdf_server"]["port"],
+            int(self.config["vdf_server"]["port"]),
         )
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
