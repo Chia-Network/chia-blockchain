@@ -1,288 +1,455 @@
 name: test
-
-on:
-  push:
-    branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
-    tags:
-      - '**'
+true:
   pull_request:
     branches:
-      - '**'
-  workflow_dispatch:
-
-
+    - '**'
+  push:
+    branches:
+    - long_lived/**
+    - main
+    - release/**
+    tags:
+    - '**'
+  workflow_dispatch: null
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
   cancel-in-progress: true
-
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref
+    == 'refs/heads/main' && github.sha || '' }}
 jobs:
   configure:
     name: Configure test matrix
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Python environment
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-
-      - name: Find test paths
-        id: configure
-        run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
-          cat matrix.json
-          echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=steps::$(cat some.json)
-
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
-
-  more_jobs:
-    name: more jobs
-    needs: configure
     runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Setup Python environment
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - id: configure
+      name: Find test paths
+      run: 'python tests/build-job-matrix.py --per directory --verbose > matrix.json
+
+        cat matrix.json
+
+        echo ::set-output name=configuration::$(cat matrix.json)
+
+        echo ::set-output name=steps::$(cat some.json)
+
+        '
+  coverage:
+    name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
+    needs:
+    - test
+    runs-on: ${{ matrix.os.runs-on }}
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Download Coverage
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage
+        path: coverage_reports
+    - name: Set up ${{ matrix.python.name }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python.action }}
+    - name: Install dependencies
+      run: 'python -m pip install --upgrade pip setuptools wheel
+
+        pip install coverage diff-cover
+
+        '
+    - if: always()
+      name: Coverage Processing
+      run: 'coverage combine coverage_reports/
+
+        coverage xml -o coverage.xml
+
+        mkdir all_coverage_report
+
+        cp .coverage "all_coverage_report/.coverage.all"
+
+        cp coverage.xml "all_coverage_report/coverage.all.xml"
+
+        '
+    - name: Coverage report
+      run: 'coverage report --rcfile=.coveragerc --fail-under=35 --ignore-errors --show-missing
+
+        diff-cover --compare-branch=${{ fromJSON(format(''[{0}, {1}]'', toJSON(github.event.before),
+        toJSON(format(''origin/{0}'', github.base_ref))))[github.base_ref != '''']
+        }} coverage.xml
+
+        '
+    - if: always()
+      name: Upload Coverage
+      uses: actions/upload-artifact@v3
+      with:
+        if-no-files-found: error
+        name: coverage
+        path: all_coverage_report/*
     strategy:
       fail-fast: false
       matrix:
-        steps: ${{ fromJson(needs.configure.outputs.steps) }}
-        ten: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        five: [0, 1, 2, 3, 4]
-        four: [0, 1, 2, 3]
-
-#    steps: ${{ fromJson(needs.configure.outputs.steps) }}
-    steps: ${{ matrix.steps) }}
-
-  test:
-    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+        os:
+        - emoji: "\U0001F427"
+          matrix: ubuntu
+          name: Ubuntu
+          runs-on: ubuntu-latest
+        python:
+        - action: '3.8'
+          apt: '3.8'
+          install_sh: '3.8'
+          matrix: '3.8'
+          name: '3.8'
+  test_macos:
+    env:
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{
+        matrix.configuration.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name
+      }}
     needs: configure
     runs-on: ${{ matrix.os.runs-on }}
-    timeout-minutes: ${{ matrix.configuration.job_timeout }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Setup Python environment
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python.action }}
+    - if: matrix.os.matrix == 'macos'
+      name: Create keychain for CI use
+      run: 'security create-keychain -p foo chiachain
+
+        security default-keychain -s chiachain
+
+        security unlock-keychain -p foo chiachain
+
+        security set-keychain-settings -t 7200 -u chiachain
+
+        '
+    - if: matrix.os.matrix == 'ubuntu'
+      name: Cache npm
+      uses: actions/cache@v2.1.6
+      with:
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        path: ~/.npm
+        restore-keys: '${{ runner.os }}-node-
+
+          '
+    - id: pip-cache
+      name: Get pip cache dir
+      run: 'echo "::set-output name=dir::$(pip cache dir)"
+
+        '
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        path: ${{ steps.pip-cache.outputs.dir }}
+        restore-keys: '${{ runner.os }}-pip-
+
+          '
+    - id: test-blocks-plots
+      if: matrix.configuration.checkout_blocks_and_plots
+      name: Cache test blocks and plots
+      uses: actions/cache@v2
+      with:
+        key: 0.29.0
+        path: '${{ github.workspace }}/.chia/blocks
+
+          ${{ github.workspace }}/.chia/test-plots
+
+          '
+    - if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit
+        != 'true'
+      name: Checkout test blocks and plots
+      run: 'wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz
+        | tar xzf -
+
+        mkdir ${{ github.workspace }}/.chia
+
+        mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
+
+        '
+    - env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      if: matrix.os.matrix == 'macos'
+      name: Run install script (macOS)
+      run: 'brew install boost
+
+        sh install.sh -d
+
+        '
+    - env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      if: matrix.os.matrix == 'ubuntu'
+      name: Run install script (Ubuntu)
+      run: 'sh install.sh -d
+
+        '
+    - if: matrix.configuration.install_timelord
+      name: Install timelord
+      run: '. ./activate
+
+        sh install-timelord.sh -n
+
+        ./vdf_bench square_asm 400000
+
+        '
+    - name: Test blockchain code with pytest
+      run: '. ./activate
+
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10
+        -m "not benchmark" ${{ matrix.configuration.enable_pytest_monitor }} ${{ matrix.configuration.test_files
+        }}
+
+        '
+    - name: Process coverage data
+      run: 'venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+
+        mkdir coverage_reports
+
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+        '
+    - name: Publish coverage
+      uses: actions/upload-artifact@v3
+      with:
+        if-no-files-found: error
+        name: coverage
+        path: coverage_reports/*
+    - if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
+      name: Check resource usage
+      run: 'sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage
+        from TEST_METRICS order by mem_usage desc;" >metrics.out
+
+        ./tests/check_pytest_monitor_output.py <metrics.out
+
+        '
     strategy:
       fail-fast: false
       matrix:
         configuration: ${{ fromJson(needs.configure.outputs.configuration) }}
-        os:
-          - emoji: 🍎
-            matrix: macos
-            name: macOS
-            runs-on: macos-latest
-          - emoji: 🐧
-            matrix: ubuntu
-            name: Ubuntu
-            runs-on: ubuntu-latest
-#          - emoji: 🪟
-#            matrix: windows
-#            name: Windows
-#            runs-on: windows-latest
-        python:
-          - name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-          - name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
-            matrix: '3.8'
-          - name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
-          - name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.7'
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.8'
-
+        - os:
+            matrix: macos
+          python:
+            matrix: '3.7'
+        - os:
+            matrix: macos
+          python:
+            matrix: '3.8'
+        os:
+        - emoji: "\U0001F34E"
+          matrix: macos
+          name: macOS
+          runs-on: macos-latest
+        python:
+        - action: '3.7'
+          apt: '3.7'
+          install_sh: '3.7'
+          matrix: '3.7'
+          name: '3.7'
+        - action: '3.8'
+          apt: '3.8'
+          install_sh: '3.8'
+          matrix: '3.8'
+          name: '3.8'
+        - action: '3.9'
+          apt: '3.9'
+          install_sh: '3.9'
+          matrix: '3.9'
+          name: '3.9'
+        - action: '3.10'
+          apt: '3.10'
+          install_sh: '3.10'
+          matrix: '3.10'
+          name: '3.10'
+    timeout-minutes: ${{ matrix.configuration.job_timeout }}
+  test_ubuntu:
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{ matrix.configuration.name }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python environment
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python.action }}
-
-      - name: Create keychain for CI use
-        if: matrix.os.matrix == 'macos'
-        run: |
-          security create-keychain -p foo chiachain
-          security default-keychain -s chiachain
-          security unlock-keychain -p foo chiachain
-          security set-keychain-settings -t 7200 -u chiachain
-
-      - name: Cache npm
-        if: matrix.os.matrix == 'ubuntu'
-        uses: actions/cache@v2.1.6
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-
-      - name: Cache pip
-        uses: actions/cache@v2.1.6
-        with:
-          # Note that new runners may break this https://github.com/actions/cache/issues/292
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Cache test blocks and plots
-        if: matrix.configuration.checkout_blocks_and_plots
-        uses: actions/cache@v2
-        id: test-blocks-plots
-        with:
-          path: |
-            ${{ github.workspace }}/.chia/blocks
-            ${{ github.workspace }}/.chia/test-plots
-          key: 0.29.0
-
-      - name: Checkout test blocks and plots
-        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
-        run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
-
-      - name: Run install script (macOS)
-        if: matrix.os.matrix == 'macos'
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
-        run: |
-          brew install boost
-          sh install.sh -d
-
-      - name: Run install script (Ubuntu)
-        if: matrix.os.matrix == 'ubuntu'
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
-        run: |
-          sh install.sh -d
-
-      - name: Install timelord
-        if: matrix.configuration.install_timelord
-        run: |
-          . ./activate
-          sh install-timelord.sh -n
-          ./vdf_bench square_asm 400000
-
-      - name: Test blockchain code with pytest
-        run: |
-          . ./activate
-          venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 -m "not benchmark" ${{ matrix.configuration.enable_pytest_monitor }} ${{ matrix.configuration.test_files }}
-
-      - name: Process coverage data
-        run: |
-          venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
-          venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
-          mkdir coverage_reports
-          cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
-          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
-          venv/bin/coverage report --rcfile=.coveragerc --show-missing
-
-      - name: Publish coverage
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage
-          path: coverage_reports/*
-          if-no-files-found: error
-
-      - name: Check resource usage
-        if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
-        run: |
-          sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
-          ./tests/check_pytest_monitor_output.py <metrics.out
-
-  coverage:
-    name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{
+        matrix.configuration.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name
+      }}
+    needs: configure
     runs-on: ${{ matrix.os.runs-on }}
-    needs:
-      - test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Setup Python environment
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python.action }}
+    - if: matrix.os.matrix == 'macos'
+      name: Create keychain for CI use
+      run: 'security create-keychain -p foo chiachain
+
+        security default-keychain -s chiachain
+
+        security unlock-keychain -p foo chiachain
+
+        security set-keychain-settings -t 7200 -u chiachain
+
+        '
+    - if: matrix.os.matrix == 'ubuntu'
+      name: Cache npm
+      uses: actions/cache@v2.1.6
+      with:
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        path: ~/.npm
+        restore-keys: '${{ runner.os }}-node-
+
+          '
+    - id: pip-cache
+      name: Get pip cache dir
+      run: 'echo "::set-output name=dir::$(pip cache dir)"
+
+        '
+    - name: Cache pip
+      uses: actions/cache@v2.1.6
+      with:
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        path: ${{ steps.pip-cache.outputs.dir }}
+        restore-keys: '${{ runner.os }}-pip-
+
+          '
+    - id: test-blocks-plots
+      if: matrix.configuration.checkout_blocks_and_plots
+      name: Cache test blocks and plots
+      uses: actions/cache@v2
+      with:
+        key: 0.29.0
+        path: '${{ github.workspace }}/.chia/blocks
+
+          ${{ github.workspace }}/.chia/test-plots
+
+          '
+    - if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit
+        != 'true'
+      name: Checkout test blocks and plots
+      run: 'wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz
+        | tar xzf -
+
+        mkdir ${{ github.workspace }}/.chia
+
+        mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
+
+        '
+    - env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      if: matrix.os.matrix == 'macos'
+      name: Run install script (macOS)
+      run: 'brew install boost
+
+        sh install.sh -d
+
+        '
+    - env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      if: matrix.os.matrix == 'ubuntu'
+      name: Run install script (Ubuntu)
+      run: 'sh install.sh -d
+
+        '
+    - if: matrix.configuration.install_timelord
+      name: Install timelord
+      run: '. ./activate
+
+        sh install-timelord.sh -n
+
+        ./vdf_bench square_asm 400000
+
+        '
+    - name: Test blockchain code with pytest
+      run: '. ./activate
+
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10
+        -m "not benchmark" ${{ matrix.configuration.enable_pytest_monitor }} ${{ matrix.configuration.test_files
+        }}
+
+        '
+    - name: Process coverage data
+      run: 'venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
+
+        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+
+        mkdir coverage_reports
+
+        cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
+
+        cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+
+        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+
+        '
+    - name: Publish coverage
+      uses: actions/upload-artifact@v3
+      with:
+        if-no-files-found: error
+        name: coverage
+        path: coverage_reports/*
+    - if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
+      name: Check resource usage
+      run: 'sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage
+        from TEST_METRICS order by mem_usage desc;" >metrics.out
+
+        ./tests/check_pytest_monitor_output.py <metrics.out
+
+        '
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - emoji: 🐧
-            matrix: ubuntu
-            name: Ubuntu
-            runs-on: ubuntu-latest
-        python:
-          - name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
+        configuration: ${{ fromJson(needs.configure.outputs.configuration) }}
+        exclude:
+        - os:
+            matrix: macos
+          python:
+            matrix: '3.7'
+        - os:
+            matrix: macos
+          python:
             matrix: '3.8'
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Download Coverage
-        uses: actions/download-artifact@v3
-        with:
-          name: coverage
-          path: coverage_reports
-
-      - name: Set up ${{ matrix.python.name }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python.action }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install coverage diff-cover
-
-      - name: Coverage Processing
-        if: always()
-        run: |
-          coverage combine coverage_reports/
-          coverage xml -o coverage.xml
-          mkdir all_coverage_report
-          cp .coverage "all_coverage_report/.coverage.all"
-          cp coverage.xml "all_coverage_report/coverage.all.xml"
-
-      - name: Coverage report
-        run: |
-          coverage report --rcfile=.coveragerc --fail-under=35 --ignore-errors --show-missing
-          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
-
-      - name: Upload Coverage
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage
-          path: all_coverage_report/*
-          if-no-files-found: error
+        os:
+        - emoji: "\U0001F427"
+          matrix: ubuntu
+          name: Ubuntu
+          runs-on: ubuntu-latest
+        python:
+        - action: '3.7'
+          apt: '3.7'
+          install_sh: '3.7'
+          matrix: '3.7'
+          name: '3.7'
+        - action: '3.8'
+          apt: '3.8'
+          install_sh: '3.8'
+          matrix: '3.8'
+          name: '3.8'
+        - action: '3.9'
+          apt: '3.9'
+          install_sh: '3.9'
+          matrix: '3.9'
+          name: '3.9'
+        - action: '3.10'
+          apt: '3.10'
+          install_sh: '3.10'
+          matrix: '3.10'
+          name: '3.10'
+    timeout-minutes: ${{ matrix.configuration.job_timeout }}
