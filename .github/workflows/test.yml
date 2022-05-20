@@ -39,7 +39,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=steps::'{"steps": [{"name": "nothing to see here"}, "run": "echo yo!\necho new stuff that is generated!!!\n"]}'
+          echo ::set-output name=steps::'{"steps": [{"name": "nothing to see here", "run": "echo yo!\\necho new stuff that is generated!!!\\n"}]}'
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
