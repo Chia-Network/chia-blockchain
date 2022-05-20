@@ -182,9 +182,11 @@ jobs:
           ./vdf_bench square_asm 400000
 
       - name: Test blockchain code with pytest
+        env:
+          ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage || "" }}
         run: |
           . ./activate
-          venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 -m "not benchmark" ${{ matrix.configuration.enable_pytest_monitor }} ${{ matrix.configuration.test_files }}
+          venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Process coverage data
         run: |
