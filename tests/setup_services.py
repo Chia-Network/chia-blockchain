@@ -319,9 +319,9 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
-    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, bt.config.get("prefer_ipv6")))
-    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, bt.config.get("prefer_ipv6")))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, False))
+    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, False))
+    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, False))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -341,6 +341,7 @@ async def setup_timelord(
     config["full_node_peer"]["port"] = full_node_port
     config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False
+    config["vdf_server"]["host"] = "0.0.0.0"
     config["vdf_server"]["port"] = vdf_port
     config["start_rpc_server"] = True
     config["rpc_port"] = rpc_port
