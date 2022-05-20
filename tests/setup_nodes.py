@@ -496,11 +496,11 @@ async def setup_full_system(
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
-        vdf_clients = await node_iters[3].__anext__()
         timelord, _ = await timelord_iter.__anext__()
+        vdf_clients = await node_iters[3].__anext__()
 
-        vdf_bluebox_clients = await node_iters[7].__anext__()
         timelord_bluebox, timelord_bluebox_server = await timelord_bluebox_iter.__anext__()
+        vdf_bluebox_clients = await node_iters[7].__anext__()
 
         ret = (
             node_api_1,
