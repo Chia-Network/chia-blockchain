@@ -135,8 +135,6 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     :return: Updated metadata
     """
     new_metadata = program_to_metadata(metadata)
-    print(f"Before Updated metadata {new_metadata}")
     # TODO Modify this for supporting other fields
     new_metadata[b"u"].insert(0, update_condition.rest().rest().first().atom)
-    print(f"Updated metadata {new_metadata}")
     return metadata_to_program(new_metadata)
