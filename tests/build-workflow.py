@@ -78,12 +78,20 @@ def main():
     output = copy.deepcopy(source)
     del output["jobs"]["test"]
 
+    coverage = output["jobs"].pop("coverage")
+
     os_matrix = source["jobs"]["test"]["strategy"]["matrix"]["os"]
+
+    coverage["needs"] = []
 
     for os_entry in os_matrix:
         d = copy.deepcopy(source["jobs"]["test"])
         d["strategy"]["matrix"]["os"] = [os_entry]
-        output["jobs"][f"test_{os_entry['matrix']}"] = d
+        name = f"test_{os_entry['matrix']}"
+        output["jobs"][name] = d
+        coverage["needs"].append(name)
+
+    output["jobs"]["coverage"] = coverage
 
     with output_path.open("w") as file:
         yaml.dump(
