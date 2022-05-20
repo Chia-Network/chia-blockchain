@@ -328,6 +328,7 @@ async def start_rpc_server(
 
     site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
+    assert site._server is not None
     rpc_port = site._server.sockets[0].getsockname()[1]
 
     async def cleanup():
