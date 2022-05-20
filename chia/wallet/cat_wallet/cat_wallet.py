@@ -432,7 +432,7 @@ class CATWallet:
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
-        spendable_amount: uint64 = uint64(await self.get_spendable_balance())
+        spendable_amount: uint128 = await self.get_spendable_balance()
         spendable_coins: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
 
         # Try to use coins from the store, if there isn't enough of "unused"
@@ -442,7 +442,7 @@ class CATWallet:
         )
 
         coins = await select_coins(
-            uint128(spendable_amount),
+            spendable_amount,
             self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
             spendable_coins,
             unconfirmed_removals,
