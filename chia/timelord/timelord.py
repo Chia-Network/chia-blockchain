@@ -151,6 +151,11 @@ class Timelord:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info("Started timelord.")
 
+    def get_vdf_server_port(self) -> Optional[uint16]:
+        if self.vdf_server is not None:
+            return self.vdf_server.sockets[0].getsockname()[1]
+        return None
+
     def _close(self):
         self._shut_down = True
         for task in self.process_communication_tasks:
