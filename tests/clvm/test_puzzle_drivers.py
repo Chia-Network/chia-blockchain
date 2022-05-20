@@ -1,10 +1,13 @@
 import pytest
 
+from typing import Any, Dict, Union
+
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
-def test_puzzle_info():
-    test_driver = {
+
+def test_puzzle_info() -> None:
+    test_driver: Dict[str, Any] = {
         "string": "hello",
         "bytes": "0xcafef00d",
         "int": "123",
@@ -12,10 +15,7 @@ def test_puzzle_info():
         "zero": "0",
         "nil": "()",
     }
-    test_also = {
-        "type": "TEST",
-        "string": "hello"
-    }
+    test_also: Dict[str, Any] = {"type": "TEST", "string": "hello"}
     test_driver["also"] = test_also
 
     with pytest.raises(ValueError, match="A type is required"):
@@ -27,7 +27,8 @@ def test_puzzle_info():
 
     assert puzzle_info.also() == PuzzleInfo(test_also)
 
-    for obj in (puzzle_info, solver):
+    obj: Union[PuzzleInfo, Solver]
+    for obj in (puzzle_info, solver):  # type: ignore
         assert obj["string"] == "hello"
         assert obj["bytes"] == bytes.fromhex("cafef00d")
         assert obj["int"] == 123

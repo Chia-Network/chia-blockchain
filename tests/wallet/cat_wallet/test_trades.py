@@ -1,6 +1,6 @@
 import asyncio
 from secrets import token_bytes
-from typing import List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -8,6 +8,8 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -100,6 +102,16 @@ class TestCATTrades:
             cat_wallet_maker.id(): -14,
             new_cat_wallet_maker.id(): 15,
         }
+
+        driver_dict: Dict[str, Dict[str, Any]] = {}
+        for wallet in (cat_wallet_maker, new_cat_wallet_maker):
+            asset_id: str = wallet.get_asset_id()
+            driver_dict[bytes.fromhex(asset_id)] = PuzzleInfo(
+                {
+                    "type": AssetType.CAT.name,
+                    "tail": "0x" + asset_id,
+                }
+            )
 
         trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
         trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
@@ -196,7 +208,9 @@ class TestCATTrades:
         await time_out_assert(15, assert_trade_tx_number, True, wallet_node_taker, trade_take.trade_id, 2)
 
         # cat_for_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+            cat_for_cat, driver_dict=driver_dict
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -230,7 +244,9 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
         # chia_for_multiple_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_multiple_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+            chia_for_multiple_cat, driver_dict=driver_dict
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -266,7 +282,9 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
         # multiple_cat_for_chia
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(multiple_cat_for_chia)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+            multiple_cat_for_chia, driver_dict=driver_dict
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -302,7 +320,9 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
         # chia_and_cat_for_cat
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+            chia_and_cat_for_cat, driver_dict=driver_dict
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
