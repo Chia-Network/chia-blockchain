@@ -4,20 +4,20 @@ import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
     add_plot_directory,
     get_plot_directories,
-    remove_plot_directory,
     remove_plot,
-    PlotsRefreshParameter,
-    PlotRefreshResult,
-    PlotRefreshEvents,
+    remove_plot_directory,
 )
 from chia.util.streamable import dataclass_from_dict
 
@@ -58,7 +58,6 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager)
         self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
-        self.state_changed_callback = None
         self.server = None
         self.constants = constants
         self.cached_challenges = []
@@ -82,9 +81,9 @@ class Harvester:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
-    def _state_changed(self, change: str):
+    def state_changed(self, change: str, change_data: Dict[str, Any] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     def _plot_refresh_callback(self, event: PlotRefreshEvents, update_result: PlotRefreshResult):
         log_function = self.log.debug if event != PlotRefreshEvents.done else self.log.info
@@ -104,9 +103,10 @@ class Harvester:
 
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
-        self._state_changed("close_connection")
-        self.plot_manager.stop_refreshing()
+        self.state_changed("close_connection")
         self.plot_sync_sender.stop()
+        asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
+        self.plot_manager.stop_refreshing()
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
@@ -140,7 +140,7 @@ class Harvester:
     def delete_plot(self, str_path: str):
         remove_plot(Path(str_path))
         self.plot_manager.trigger_refresh()
-        self._state_changed("plots")
+        self.state_changed("plots")
         return True
 
     async def add_plot_directory(self, str_path: str) -> bool:

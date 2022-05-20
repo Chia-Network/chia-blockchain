@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-rpc Tests
+name: MacOS wallet-rpc Test
 
 on:
   push:
@@ -95,7 +95,7 @@ jobs:
     - name: Test wallet-rpc code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc ./venv/bin/py.test tests/wallet/rpc/test_*.py --durations=10  -n 0 -m "not benchmark"
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/rpc/test_dl_wallet_rpc.py tests/wallet/rpc/test_wallet_rpc.py
 
     - name: Process coverage data
       run: |
