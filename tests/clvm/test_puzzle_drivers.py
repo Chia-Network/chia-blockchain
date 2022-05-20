@@ -1,6 +1,6 @@
-import pytest
-
 from typing import Any, Dict, Union
+
+import pytest
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
