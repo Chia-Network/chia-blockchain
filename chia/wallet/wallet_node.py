@@ -337,15 +337,9 @@ class WalletNode:
 
         current_time = int(time.time())
         retry_accepted_txs = False
-        self.log.warning(f"LAst send: {self.last_wallet_tx_resend_time}")
-        self.log.warning(f"current time: {current_time}")
-        self.log.warning(f"resend after: {self.wallet_tx_resend_timeout_secs}")
         if self.last_wallet_tx_resend_time < current_time - self.wallet_tx_resend_timeout_secs:
-            self.log.warning(f"Will retry {2}")
             self.last_wallet_tx_resend_time = current_time
             retry_accepted_txs = True
-        else:
-            self.log.warning(f"Will not retry{1}")
         records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent(
             include_accepted_txs=retry_accepted_txs
         )
@@ -360,7 +354,6 @@ class WalletNode:
             already_sent = set()
             for peer, status, _ in record.sent_to:
                 if status == MempoolInclusionStatus.SUCCESS.value:
-                    self.log.warning("Already sent TX!!!")
                     already_sent.add(bytes32.from_hexstr(peer))
             messages.append((msg, already_sent))
 
