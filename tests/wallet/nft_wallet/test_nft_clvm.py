@@ -251,6 +251,18 @@ def test_ownership_layer() -> None:
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
     assert res.first().first().as_int() == 51
     assert res.first().rest().rest().first().as_int() == 1
+    curried_inner = NFT_INNER_INNERPUZ.curry(
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
+        NFT_INNER_INNERPUZ.get_tree_hash(),
+        STANDARD_PUZZLE_MOD.curry(destination),
+    )
+    curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        new_did,
+        curried_tp,
+        curried_inner,
+    )
+    assert res.first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
     assert res.first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
     assert res.rest().first().first().as_int() == -10
     assert res.rest().first().rest().rest().first() == Program.to(trade_prices_list)
@@ -305,4 +317,24 @@ def test_full_stack() -> None:
         my_amount,
     ])
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
-    
+    assert res.rest().first().first().as_int() == 51
+    assert res.rest().first().rest().rest().first().as_int() == 1
+    curried_inner = NFT_INNER_INNERPUZ.curry(
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
+        NFT_INNER_INNERPUZ.get_tree_hash(),
+        STANDARD_PUZZLE_MOD.curry(destination),
+    )
+    curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        new_did,
+        curried_tp,
+        curried_inner,
+    )
+    curried_state_layer = NFT_STATE_LAYER_MOD.curry(
+        NFT_STATE_LAYER_MOD_HASH,
+        metadata,
+        NFT_METADATA_UPDATER_UPDATEABLE.get_tree_hash(),
+        curried_ownership_layer,
+    )
+    assert res.rest().first().rest().first().as_atom() == curried_state_layer.get_tree_hash()
+    assert res.rest().first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
