@@ -328,7 +328,6 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_timelord(
-    port,
     full_node_port,
     rpc_port,
     vdf_port,
@@ -337,7 +336,6 @@ async def setup_timelord(
     b_tools: BlockTools,
 ):
     config = b_tools.config["timelord"]
-    config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False

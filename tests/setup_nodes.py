@@ -402,8 +402,6 @@ async def setup_full_system(
         introducer_iter = setup_introducer(shared_b_tools, uint16(0))
         introducer, introducer_server = await introducer_iter.__anext__()
 
-        timelord1_port = find_available_listen_port("timelord1")
-        timelord2_port = find_available_listen_port("timelord2")
         vdf1_port = find_available_listen_port("vdf1")
         vdf2_port = find_available_listen_port("vdf2")
 
@@ -462,14 +460,10 @@ async def setup_full_system(
             farmer_port,
             consensus_constants,
         )
-        timelord_iter = setup_timelord(
-            timelord2_port, full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools
-        )
+        timelord_iter = setup_timelord(full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools)
         # timelord_port = timelord.timelord.get_vdf_server_port()
 
-        timelord_bluebox_iter = setup_timelord(
-            timelord1_port, 1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1
-        )
+        timelord_bluebox_iter = setup_timelord(1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1)
         # timelord_bluebox_port = timelord_bluebox.timelord.get_vdf_server_port()
 
         node_iters = [
