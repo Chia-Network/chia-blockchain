@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Coroutine
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 
@@ -328,13 +328,13 @@ async def start_rpc_server(
     await runner.setup()
 
     while True:
-        port_to_use = rpc_port
-        if port_to_use == uint16(0):
+        port_to_use = int(rpc_port)
+        if port_to_use == 0:
             port_to_use = find_available_listen_port(name)
         try:
-            site = web.TCPSite(runner, self_hostname, int(port_to_use), ssl_context=rpc_server.ssl_context)
+            site = web.TCPSite(runner, self_hostname, port_to_use, ssl_context=rpc_server.ssl_context)
             await site.start()
-            rpc_port = port_to_use
+            rpc_port = uint16(port_to_use)
             break
         except OSError:
             log.warning(f"Error using port: {port_to_use}, retrying.")
