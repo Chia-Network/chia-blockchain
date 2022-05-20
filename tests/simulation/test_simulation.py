@@ -60,7 +60,7 @@ class TestSimulation:
         node2_port = node2.full_node.server._port
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(60, node_height_at_least, True, node2, 7)
+        await time_out_assert(600, node_height_at_least, True, node2, 7)
         await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
         async def has_compact(node1, node2):
