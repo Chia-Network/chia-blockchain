@@ -182,6 +182,7 @@ class Service:
                     self.config,
                     self._connect_to_daemon,
                     max_request_body_size=self.max_request_body_size,
+                    name=self._service_name + "_rpc",
                 )
             )
 
@@ -249,7 +250,7 @@ class Service:
 
                 async def close_rpc_server() -> None:
                     if self._rpc_task:
-                        await (await self._rpc_task)()
+                        await (await self._rpc_task)[0]()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 

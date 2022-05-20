@@ -32,6 +32,7 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
+from tests.util.socket import find_available_listen_port
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -142,7 +143,8 @@ class ChiaServer:
         # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
 
-        self.log = logging.getLogger(name if name else __name__)
+        self._name = name if name else __name__
+        self.log = logging.getLogger(self._name)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.api = api
@@ -262,14 +264,24 @@ class ChiaServer:
             ssl_context = ssl_context_for_server(
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
+        while True:
+            port_to_use = self._port
+            if port_to_use == uint16(0):
+                port_to_use = find_available_listen_port(self._name)
+            try:
+                self.site = web.TCPSite(
+                    self.runner,
+                    port=int(port_to_use),
+                    shutdown_timeout=3,
+                    ssl_context=ssl_context,
+                )
+                await self.site.start()
+                self._port = self.site._port
+                self.log.warning(f"Used port: {self._port}")
+                break
+            except OSError:
+                self.log.warning(f"Error using port: {port_to_use}, retrying.")
 
-        self.site = web.TCPSite(
-            self.runner,
-            port=self._port,
-            shutdown_timeout=3,
-            ssl_context=ssl_context,
-        )
-        await self.site.start()
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):

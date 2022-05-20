@@ -568,18 +568,13 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
 
 @pytest_asyncio.fixture(scope="function")
 async def introducer(bt):
-    introducer_port = find_available_listen_port("introducer")
-    async for _ in setup_introducer(bt, introducer_port):
+    async for _ in setup_introducer(bt, 0):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    timelord_port = find_available_listen_port("timelord")
-    node_port = find_available_listen_port("node")
-    rpc_port = find_available_listen_port("rpc")
-    vdf_port = find_available_listen_port("vdf")
-    async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
+    async for _ in setup_timelord(0, 0, 0, 0, False, test_constants, bt):
         yield _
 
 

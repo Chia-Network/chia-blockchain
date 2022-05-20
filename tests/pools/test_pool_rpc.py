@@ -106,13 +106,12 @@ async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[Wal
         api_user = WalletRpcApi(wallet_node_0)
         config = bt.config
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(find_available_listen_port("rpc_port"))
 
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup, test_rpc_port = await start_rpc_server(
             api_user,
             self_hostname,
             daemon_port,
-            test_rpc_port,
+            uint16(0),
             lambda x: None,
             bt.root_path,
             config,
@@ -140,13 +139,12 @@ async def setup(two_wallet_nodes, bt, self_hostname):
     api_user = WalletRpcApi(wallet_node_0)
     config = bt.config
     daemon_port = config["daemon_port"]
-    test_rpc_port = find_available_listen_port("rpc_port")
 
-    rpc_cleanup = await start_rpc_server(
+    rpc_cleanup, test_rpc_port = await start_rpc_server(
         api_user,
         self_hostname,
         daemon_port,
-        test_rpc_port,
+        uint16(0),
         lambda x: None,
         bt.root_path,
         config,
