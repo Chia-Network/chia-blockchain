@@ -41,7 +41,6 @@ from tests.plot_sync.test_delta import dummy_plot
 from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 

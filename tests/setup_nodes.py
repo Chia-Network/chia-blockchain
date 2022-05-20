@@ -292,7 +292,7 @@ async def setup_harvester_farmer(
         farmer_port = uint16(0)
     else:
         # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = find_available_listen_port("farmer_server")
+        farmer_port = uint16(find_available_listen_port("farmer_server"))
 
     farmer_setup_iter = setup_farmer(
         bt,
@@ -439,7 +439,8 @@ async def setup_full_system(
 
         node_api_1 = await full_node_1_iter.__anext__()
         node_api_2 = await full_node_2_iter.__anext__()
-        full_node_port = node_api_2.full_node.server._port
+        full_node_1_port = node_api_1.full_node.server._port
+        full_node_2_port = node_api_2.full_node.server._port
 
         farmer_iter = setup_farmer(
             shared_b_tools,
@@ -448,7 +449,7 @@ async def setup_full_system(
             uint16(0),
             uint16(0),
             consensus_constants,
-            full_node_port,
+            full_node_1_port,
         )
         farmer_service = await farmer_iter.__anext__()
         farmer = farmer_service._node
@@ -464,7 +465,7 @@ async def setup_full_system(
             consensus_constants,
         )
         timelord_iter = setup_timelord(
-            timelord1_port, full_node_port, uint16(0), vdf1_port, False, consensus_constants, b_tools
+            timelord1_port, full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools
         )
         timelord, timelord_server = await timelord_iter.__anext__()
 
@@ -472,12 +473,14 @@ async def setup_full_system(
             introducer_iter,
             harvester_iter,
             farmer_iter,
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], timelord_server._port),
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
             timelord_iter,
             full_node_1_iter,
             full_node_2_iter,
-            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], uint16(0)),
-            setup_timelord(timelord2_port, 1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1),
+            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
+            setup_timelord(
+                timelord2_port, full_node_2_port, uint16(0), vdf2_port, True, consensus_constants, b_tools_1
+            ),
         ]
         if connect_to_daemon:
             node_iters.append(daemon_iter)

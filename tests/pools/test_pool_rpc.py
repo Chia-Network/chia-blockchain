@@ -33,7 +33,6 @@ from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools, get_plot_dir
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
