@@ -283,4 +283,4 @@ jobs:
         five: [0, 1, 2, 3, 4]
         four: [0, 1, 2, 3]
 
-    steps: ${{ steps.configure.outputs.steps }}
+    steps: ${{ fromJson(steps.configure.outputs.steps) }}
