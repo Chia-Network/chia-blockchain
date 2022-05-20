@@ -189,7 +189,7 @@ class TestOfferLifecycle:
                 ),
             }
 
-            driver_dict_as_infos: Dict[bytes32, Any] = {}
+            driver_dict_as_infos: Dict[str, Any] = {}
             for key, value in driver_dict.items():
                 driver_dict_as_infos[key.hex()] = value.info
 

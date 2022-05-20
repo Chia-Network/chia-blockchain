@@ -926,19 +926,21 @@ class WalletRpcApi:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key in offer:
-                if len(key) == 64:
+                try:
                     driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
                         {"type": AssetType.CAT.value, "tail": "0x" + key}
                     )
+                except ValueError:
+                    pass
         else:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            if len(key) == 64:
+            try:
                 modified_offer[bytes32.from_hexstr(key)] = offer[key]
-            else:
+            except ValueError:
                 modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:

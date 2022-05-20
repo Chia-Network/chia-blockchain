@@ -285,10 +285,12 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
-        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+        if driver_dict is None:
+            driver_dict = {}
         success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
@@ -316,12 +318,14 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
-        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
+        if driver_dict is None:
+            driver_dict = {}
         try:
             coins_to_offer: Dict[uint32, List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -374,7 +378,7 @@ class TradeManager:
                     puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
                     if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
                         raise ValueError(
-                            f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
+                            f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
                         )
                     else:
                         driver_dict[asset_id] = puzzle_driver
