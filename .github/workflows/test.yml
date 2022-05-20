@@ -39,7 +39,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=steps::'[{"name": "nothing to see here", "run": "echo yo!\\necho new stuff that is generated!!!\\n"}]'
+          echo ::set-output name=steps::$(cat some.json)
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
@@ -279,7 +279,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        steps: ${{ fromJson(needs.configure.outputs.steps) }}
+#        steps: ${{ fromJson(needs.configure.outputs.steps) }}
         ten: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         five: [0, 1, 2, 3, 4]
         four: [0, 1, 2, 3]
