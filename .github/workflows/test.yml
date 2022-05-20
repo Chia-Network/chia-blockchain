@@ -284,4 +284,4 @@ jobs:
         five: [0, 1, 2, 3, 4]
         four: [0, 1, 2, 3]
 
-    steps: ${{ matrix.steps }}
+    steps: ${{ fromJson(needs.configure.outputs.steps) }}
