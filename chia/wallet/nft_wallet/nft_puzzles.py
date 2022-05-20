@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -99,3 +100,41 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         uint64(1),
     )
     return nft_info
+
+
+def metadata_to_program(metadata: Dict[bytes, Any]) -> Program:
+    """
+    Convert the metadata dict to a Chialisp program
+    :param metadata: User defined metadata
+    :return: Chialisp program
+    """
+    kv_list = []
+    for key, value in metadata.items():
+        kv_list.append((key, value))
+    program: Program = Program.to(kv_list)
+    return program
+
+
+def program_to_metadata(program: Program) -> Dict[bytes, Any]:
+    """
+    Convert a program to a metadata dict
+    :param program: Chialisp program contains the metadata
+    :return: Metadata dict
+    """
+    metadata = {}
+    for kv_pair in program.as_iter():
+        metadata[kv_pair.first().as_atom()] = kv_pair.rest().as_python()
+    return metadata
+
+
+def update_metadata(metadata: Program, update_condition: Program) -> Program:
+    """
+    Apply conditions of metadata updater to the previous metadata
+    :param metadata: Previous metadata
+    :param update_condition: Update metadata conditions
+    :return: Updated metadata
+    """
+    new_metadata = program_to_metadata(metadata)
+    # TODO Modify this for supporting other fields
+    new_metadata[b"u"].insert(0, update_condition.rest().rest().first().atom)
+    return metadata_to_program(new_metadata)

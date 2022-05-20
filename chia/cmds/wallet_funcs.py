@@ -709,9 +709,9 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     try:
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
-        artist_address = args["artist_address"]
+        target_address = args["target_address"]
         fee = args["fee"]
-        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, artist_address, fee)
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
     except Exception as e:
