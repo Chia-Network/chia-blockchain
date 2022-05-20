@@ -264,6 +264,8 @@ class ChiaServer:
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
+        # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
+        # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
             host="0.0.0.0",
@@ -272,12 +274,7 @@ class ChiaServer:
             ssl_context=ssl_context,
         )
         await self.site.start()
-        assert self.site._server is not None
-        socket_names = [socket.getsockname() for socket in self.site._server.sockets]
-        logging.warning(f"Socket names: {socket_names}")
-        self._port = self.site._server.sockets[0].getsockname()[1]
-        self.log.warning(f"Used port: {self._port}")
-
+        self._port = self.runner.addresses[0][1]
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -789,6 +786,9 @@ class ChiaServer:
         if not peer.is_valid():
             return None
         return peer
+
+    def get_port(self) -> uint16:
+        return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
