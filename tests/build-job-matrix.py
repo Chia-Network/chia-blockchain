@@ -97,7 +97,7 @@ for path in test_paths:
 
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
-        "disable_pytest_monitor": "" if conf["check_resource_usage"] else "-p no:monitor",
+        "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
         "job_timeout": conf["job_timeout"],
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],

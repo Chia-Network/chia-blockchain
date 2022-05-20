@@ -60,6 +60,8 @@ def main(pid: int, output: str, threads: bool) -> None:
 
             time.sleep(0.05)
             step += 1
+    except psutil.NoSuchProcess:
+        pass
     except KeyboardInterrupt:
         pass
 

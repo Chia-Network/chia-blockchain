@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple
 
 import pytest
 from clvm_tools import binutils
-from pytest import raises
 from typing_extensions import Literal
 
 from chia.protocols.wallet_protocol import RespondRemovals
@@ -37,7 +36,7 @@ from tests.setup_nodes import test_constants
 
 
 def test_int_not_supported() -> None:
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -46,7 +45,7 @@ def test_int_not_supported() -> None:
 
 
 def test_float_not_supported() -> None:
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -55,7 +54,7 @@ def test_float_not_supported() -> None:
 
 
 def test_dict_not_suppported() -> None:
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -70,7 +69,7 @@ class DataclassOnly:
 
 def test_pure_dataclass_not_supported() -> None:
 
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -84,7 +83,7 @@ class PlainClass:
 
 def test_plain_class_not_supported() -> None:
 
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -143,7 +142,7 @@ def test_StrictDataClassBad() -> None:
     assert TestClass2(25)  # type: ignore[arg-type]
 
     # we want to test invalid here, hence the ignore.
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         TestClass2(1, 2)  # type: ignore[call-arg,arg-type] # pylint: disable=too-many-function-args
 
 
@@ -158,11 +157,11 @@ def test_StrictDataClassLists() -> None:
     assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])  # type: ignore[list-item]
 
     # we want to test invalid here, hence the ignore.
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         TestClass({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]])  # type: ignore[arg-type]
 
     # we want to test invalid here, hence the ignore.
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         TestClass([1, 2, 3], [uint8(200), uint8(25)])  # type: ignore[list-item]
 
 
@@ -210,7 +209,7 @@ def test_variable_size() -> None:
     a = TestClass2(uint32(1), uint32(2), b"3")
     bytes(a)
 
-    with raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):
 
         @streamable
         @dataclass(frozen=True)
@@ -281,7 +280,7 @@ def test_recursive_types() -> None:
 
 
 def test_ambiguous_deserialization_optionals() -> None:
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         SubEpochChallengeSegment.from_bytes(b"\x00\x00\x00\x03\xff\xff\xff\xff")
 
     @streamable
@@ -290,7 +289,7 @@ def test_ambiguous_deserialization_optionals() -> None:
         a: Optional[uint8]
 
     # Does not have the required elements
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassOptional.from_bytes(bytes([]))
 
     TestClassOptional.from_bytes(bytes([0]))
@@ -304,7 +303,7 @@ def test_ambiguous_deserialization_int() -> None:
         a: uint32
 
     # Does not have the required uint size
-    with raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassUint.from_bytes(b"\x00\x00")
 
 
@@ -315,7 +314,7 @@ def test_ambiguous_deserialization_list() -> None:
         a: List[uint8]
 
     # Does not have the required elements
-    with raises(AssertionError):
+    with pytest.raises(ValueError):
         TestClassList.from_bytes(bytes([0, 0, 100, 24]))
 
 
@@ -326,7 +325,7 @@ def test_ambiguous_deserialization_tuple() -> None:
         a: Tuple[uint8, str]
 
     # Does not have the required elements
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassTuple.from_bytes(bytes([0, 0, 100, 24]))
 
 
@@ -337,7 +336,7 @@ def test_ambiguous_deserialization_str() -> None:
         a: str
 
     # Does not have the required str size
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassStr.from_bytes(bytes([0, 0, 100, 24, 52]))
 
 
@@ -348,10 +347,10 @@ def test_ambiguous_deserialization_bytes() -> None:
         a: bytes
 
     # Does not have the required str size
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassBytes.from_bytes(bytes([0, 0, 100, 24, 52]))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassBytes.from_bytes(bytes([0, 0, 0, 1]))
 
     TestClassBytes.from_bytes(bytes([0, 0, 0, 1, 52]))
@@ -365,7 +364,7 @@ def test_ambiguous_deserialization_bool() -> None:
         a: bool
 
     # Does not have the required str size
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassBool.from_bytes(bytes([]))
 
     TestClassBool.from_bytes(bytes([0]))
@@ -382,7 +381,7 @@ def test_ambiguous_deserialization_program() -> None:
 
     TestClassProgram.from_bytes(bytes(program))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         TestClassProgram.from_bytes(bytes(program) + b"9")
 
 
@@ -400,13 +399,13 @@ def test_parse_bool() -> None:
     assert parse_bool(io.BytesIO(b"\x01"))
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_bool(io.BytesIO(b""))
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_bool(io.BytesIO(b"\xff"))
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_bool(io.BytesIO(b"\x02"))
 
 
@@ -429,13 +428,13 @@ def test_uint32() -> None:
     test_write(4294967295, "big")
     test_write(4294967295, "little")
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_uint32(io.BytesIO(b""))
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_uint32(io.BytesIO(b"\x00"))
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_uint32(io.BytesIO(b"\x00\x00"))
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_uint32(io.BytesIO(b"\x00\x00\x00"))
 
 
@@ -445,14 +444,14 @@ def test_parse_optional() -> None:
     assert not parse_optional(io.BytesIO(b"\x01\x00"), parse_bool)
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_optional(io.BytesIO(b"\x01"), parse_bool)
 
     # optional must be 0 or 1
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_optional(io.BytesIO(b"\x02\x00"), parse_bool)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_optional(io.BytesIO(b"\xff\x00"), parse_bool)
 
 
@@ -468,17 +467,17 @@ def test_parse_bytes() -> None:
     assert parse_bytes(io.BytesIO(b"\x00\x00\x00\xff" + b"b" * 255)) == b"b" * 255
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_bytes(io.BytesIO(b"\x00\x00\x00\xff\x01\x02\x03"))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_bytes(io.BytesIO(b"\xff\xff\xff\xff"))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_bytes(io.BytesIO(b"\xff\xff\xff\xff" + b"a" * 512))
 
     # EOF off by one
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_bytes(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
 
 
@@ -489,17 +488,17 @@ def test_parse_list() -> None:
     assert parse_list(io.BytesIO(b"\x00\x00\x00\x03\x01\x00\x01"), parse_bool) == [True, False, True]
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_list(io.BytesIO(b"\x00\x00\x00\x01"), parse_bool)
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_list(io.BytesIO(b"\x00\x00\x00\xff\x00\x00"), parse_bool)
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_list(io.BytesIO(b"\xff\xff\xff\xff\x00\x00"), parse_bool)
 
     # failure to parser internal type
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_list(io.BytesIO(b"\x00\x00\x00\x01\x02"), parse_bool)
 
 
@@ -510,11 +509,11 @@ def test_parse_tuple() -> None:
     assert parse_tuple(io.BytesIO(b"\x00\x01"), [parse_bool, parse_bool]) == (False, True)
 
     # error in parsing internal type
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         parse_tuple(io.BytesIO(b"\x00\x02"), [parse_bool, parse_bool])
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_tuple(io.BytesIO(b"\x00"), [parse_bool, parse_bool])
 
 
@@ -535,15 +534,15 @@ class FailFromBytes:
 
 
 def test_parse_size_hints() -> None:
-    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4).b == b"1337"
+    assert parse_size_hints(io.BytesIO(b"1337"), TestFromBytes, 4, False).b == b"1337"
 
     # EOF
-    with raises(AssertionError):
-        parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4)
+    with pytest.raises(AssertionError):
+        parse_size_hints(io.BytesIO(b"133"), TestFromBytes, 4, False)
 
     # error in underlying type
-    with raises(ValueError):
-        parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4)
+    with pytest.raises(ValueError):
+        parse_size_hints(io.BytesIO(b"1337"), FailFromBytes, 4, False)
 
 
 def test_parse_str() -> None:
@@ -558,23 +557,23 @@ def test_parse_str() -> None:
     assert parse_str(io.BytesIO(b"\x00\x00\x00\xff" + b"b" * 255)) == "b" * 255
 
     # EOF
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_str(io.BytesIO(b"\x00\x00\x00\xff\x01\x02\x03"))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_str(io.BytesIO(b"\xff\xff\xff\xff"))
 
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_str(io.BytesIO(b"\xff\xff\xff\xff" + b"a" * 512))
 
     # EOF off by one
-    with raises(AssertionError):
+    with pytest.raises(AssertionError):
         parse_str(io.BytesIO(b"\x00\x00\x02\x01" + b"a" * 512))
 
 
 def test_wrong_decorator_order() -> None:
 
-    with raises(DefinitionError):
+    with pytest.raises(DefinitionError):
 
         @dataclass(frozen=True)
         @streamable
@@ -584,7 +583,7 @@ def test_wrong_decorator_order() -> None:
 
 def test_dataclass_not_frozen() -> None:
 
-    with raises(DefinitionError):
+    with pytest.raises(DefinitionError):
 
         @streamable
         @dataclass(frozen=False)
@@ -594,7 +593,7 @@ def test_dataclass_not_frozen() -> None:
 
 def test_dataclass_missing() -> None:
 
-    with raises(DefinitionError):
+    with pytest.raises(DefinitionError):
 
         @streamable
         class DataclassMissing(Streamable):
@@ -603,7 +602,7 @@ def test_dataclass_missing() -> None:
 
 def test_streamable_inheritance_missing() -> None:
 
-    with raises(DefinitionError):
+    with pytest.raises(DefinitionError):
         # we want to test invalid here, hence the ignore.
         @streamable
         @dataclass(frozen=True)

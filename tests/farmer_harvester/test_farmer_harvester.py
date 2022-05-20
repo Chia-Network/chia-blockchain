@@ -14,8 +14,8 @@ def farmer_is_started(farmer):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment_no_start(bt):
-    async for _ in setup_harvester_farmer(bt, test_constants, start_services=False):
+async def harvester_farmer_environment_no_start(bt, tmp_path):
+    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=False):
         yield _
 
 
