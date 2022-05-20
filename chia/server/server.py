@@ -264,23 +264,17 @@ class ChiaServer:
             ssl_context = ssl_context_for_server(
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
-        while True:
-            port_to_use = self._port
-            if port_to_use == uint16(0):
-                port_to_use = find_available_listen_port(self._name)
-            try:
-                self.site = web.TCPSite(
-                    self.runner,
-                    port=int(port_to_use),
-                    shutdown_timeout=3,
-                    ssl_context=ssl_context,
-                )
-                await self.site.start()
-                self._port = self.site._port
-                self.log.warning(f"Used port: {self._port}")
-                break
-            except OSError:
-                self.log.warning(f"Error using port: {port_to_use}, retrying.")
+
+        self.site = web.TCPSite(
+            self.runner,
+            host="0.0.0.0",
+            port=int(self._port),
+            shutdown_timeout=3,
+            ssl_context=ssl_context,
+        )
+        await self.site.start()
+        self._port = self.site._server.sockets[0].getsockname()[1]
+        self.log.warning(f"Used port: {self._port}")
 
         self.log.info(f"Started listening on port: {self._port}")
 

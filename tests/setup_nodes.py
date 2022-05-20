@@ -401,7 +401,6 @@ async def setup_full_system(
         # Start the introducer first so we can find out the port, and use that for the nodes
         introducer_iter = setup_introducer(shared_b_tools, uint16(0))
         introducer, introducer_server = await introducer_iter.__anext__()
-        introducer_port = introducer_server._port
 
         # Then start the full node so we can use the port for the farmer and timelord
         full_node_1_iter = setup_full_node(
@@ -411,7 +410,7 @@ async def setup_full_system(
             uint16(0),
             uint16(0),
             b_tools,
-            introducer_port,
+            introducer_server._port,
             False,
             10,
             True,
@@ -425,7 +424,7 @@ async def setup_full_system(
             uint16(0),
             uint16(0),
             b_tools_1,
-            introducer_port=introducer_port,
+            introducer_port=introducer_server._port,
             simulator=False,
             send_uncompact_interval=10,
             sanitize_weight_proof_only=True,
