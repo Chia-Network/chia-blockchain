@@ -32,7 +32,6 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
-from tests.util.socket import find_available_listen_port
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 

@@ -15,7 +15,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
