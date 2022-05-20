@@ -266,13 +266,15 @@ class ChiaServer:
 
         self.site = web.TCPSite(
             self.runner,
-            host=self_hostname,
+            host="0.0.0.0",
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
         assert self.site._server is not None
+        socket_names = [socket.getsockname() for socket in self.site._server.sockets]
+        logging.warning(f"Socket names: {socket_names}")
         self._port = self.site._server.sockets[0].getsockname()[1]
         self.log.warning(f"Used port: {self._port}")
 
