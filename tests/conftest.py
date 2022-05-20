@@ -306,7 +306,15 @@ async def three_sim_two_wallets():
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):  # xxx
+    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def setup_two_nodes_and_wallet_fast_retry():
+    async for _ in setup_simulators_and_wallets(
+        1, 1, {}, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
+    ):
         yield _
 
 

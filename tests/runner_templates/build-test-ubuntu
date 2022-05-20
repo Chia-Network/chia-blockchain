@@ -80,7 +80,7 @@ INSTALL_TIMELORD
     - name: Test TEST_NAME code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 PYTEST_PARALLEL_ARGS -m "not benchmark" DISABLE_PYTEST_MONITOR TEST_FILES
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 PYTEST_PARALLEL_ARGS -m "not benchmark" ENABLE_PYTEST_MONITOR TEST_FILES
 
     - name: Process coverage data
       run: |

@@ -98,7 +98,7 @@ jobs:
     - name: Test simulation code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" -p no:monitor tests/simulation/test_simulation.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/simulation/test_simulation.py
 
     - name: Process coverage data
       run: |

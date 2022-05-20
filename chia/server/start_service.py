@@ -54,7 +54,7 @@ class Service:
         connect_to_daemon=True,
         running_new_process=True,
         service_name_prefix="",
-        max_request_body_size=None,
+        max_request_body_size: Optional[int] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
