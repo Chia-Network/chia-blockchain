@@ -270,3 +270,18 @@ jobs:
           name: coverage
           path: all_coverage_report/*
           if-no-files-found: error
+
+  more_jobs:
+    name: more jobs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ten: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        five: [0, 1, 2, 3, 4]
+        four: [0, 1, 2, 3]
+
+    steps:
+      - name: nothing to see here
+        run: |
+          echo yo!
