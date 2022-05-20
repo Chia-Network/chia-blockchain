@@ -170,7 +170,7 @@ def test_innerpuz_enforcement_layer() -> None:
         NFT_INNER_INNERPUZ.get_tree_hash(),
         STANDARD_PUZZLE_MOD.curry(destination)
     ).get_tree_hash()
-    assert res.first().rest().rest().rest().first() == Program.to([destination])
+    assert res.first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
 
 
 def test_transfer_program() -> None:
@@ -251,7 +251,7 @@ def test_ownership_layer() -> None:
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
     assert res.first().first().as_int() == 51
     assert res.first().rest().rest().first().as_int() == 1
-    assert res.first().rest().rest().rest().first() == Program.to([destination])
+    assert res.first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
     assert res.rest().first().first().as_int() == -10
     assert res.rest().first().rest().rest().first() == Program.to(trade_prices_list)
     assert res.rest().rest().rest().rest().rest().rest().first().first().as_int() == 51
@@ -305,4 +305,3 @@ def test_full_stack() -> None:
         my_amount,
     ])
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
-    
