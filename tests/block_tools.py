@@ -2057,8 +2057,8 @@ def create_block_tools(
     print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
 
-    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
-    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
+    asyncio.run(bt.setup_keys())
+    asyncio.run(bt.setup_plots())
 
     return bt
 
