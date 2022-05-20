@@ -44,6 +44,21 @@ jobs:
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
+  more_jobs:
+    name: more jobs
+    needs: configure
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        steps: ${{ fromJson(needs.configure.outputs.steps) }}
+        ten: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        five: [0, 1, 2, 3, 4]
+        four: [0, 1, 2, 3]
+
+#    steps: ${{ fromJson(needs.configure.outputs.steps) }}
+    steps: ${{ matrix.steps) }}
+
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     needs: configure
@@ -271,17 +286,3 @@ jobs:
           name: coverage
           path: all_coverage_report/*
           if-no-files-found: error
-
-  more_jobs:
-    name: more jobs
-    needs: configure
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-#        steps: ${{ fromJson(needs.configure.outputs.steps) }}
-        ten: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        five: [0, 1, 2, 3, 4]
-        four: [0, 1, 2, 3]
-
-    steps: ${{ fromJson(needs.configure.outputs.steps) }}
