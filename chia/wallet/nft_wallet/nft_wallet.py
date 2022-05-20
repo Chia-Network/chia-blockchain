@@ -510,18 +510,21 @@ class NFTWallet:
         return nft_record
 
     async def update_metadata(
-        self, nft_coin_info: NFTCoinInfo, uri: str, fee: uint64 = uint64(0)
+        self, nft_coin_info: NFTCoinInfo, uris: Dict[str, Optional[str]], fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:
         coin = nft_coin_info.coin
-        # we're not changing it
+        additional_uris = []
+        for key, uri in uris.items():
+            if uri is not None:
+                additional_uris.append((key, uri))
 
         uncurried_nft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
 
         puzzle_hash = uncurried_nft.inner_puzzle.get_tree_hash()
         condition_list = [make_create_coin_condition(puzzle_hash, coin.amount, [puzzle_hash])]
-        condition_list.append([int_to_bytes(-24), NFT_METADATA_UPDATER, uri.encode("utf-8")])
+        condition_list.append([int_to_bytes(-24), NFT_METADATA_UPDATER, additional_uris])
 
-        self.log.info("Attempting to add a url to NFT coin %s in the metadata: %s", nft_coin_info, uri)
+        self.log.info("Attempting to add urls to NFT coin %s in the metadata: %s", nft_coin_info, additional_uris)
         inner_solution = solution_for_conditions(condition_list)
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, fee)
         await self.standard_wallet.push_transaction(nft_tx_record)

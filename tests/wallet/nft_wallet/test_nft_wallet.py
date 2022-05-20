@@ -403,7 +403,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         {
             "wallet_id": nft_wallet_0_id,
             "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
+            "meta_uri": "http://metadata",
             "uri": "https://www.chia.net/img/branding/chia-logo-white.svg",
         }
     )
@@ -426,6 +426,9 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     uris = coin["data_uris"]
     assert len(uris) == 2
     assert "https://www.chia.net/img/branding/chia-logo-white.svg" in uris
+    assert len(coin["metadata_uris"]) == 1
+    assert "http://metadata" == coin["metadata_uris"][0]
+    assert len(coin["license_uris"]) == 0
 
     # add yet another URI
     nft_coin_id = coin["nft_coin_id"]
@@ -433,8 +436,9 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         {
             "wallet_id": nft_wallet_0_id,
             "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uri": "https://www.chia.net/img/branding/chia-logo-more-white.svg",
+            "uri": "http://data",
+            "license_uri": "https://license",
+            "meta_uri": "http://metadata2",
         }
     )
 
@@ -455,4 +459,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     coin = coins[0].to_json_dict()
     uris = coin["data_uris"]
     assert len(uris) == 3
-    assert "https://www.chia.net/img/branding/chia-logo-more-white.svg" in uris
+    assert len(coin["metadata_uris"]) == 2
+    assert "http://metadata2" == coin["metadata_uris"][0]
+    assert len(coin["license_uris"]) == 1
+    assert "https://license" == coin["license_uris"][0]

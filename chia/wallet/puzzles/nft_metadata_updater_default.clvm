@@ -4,18 +4,65 @@
 
   ; This program returns ((new_metadata new_metadata_updater_puzhash) conditions)
 
-  ; once we find 'u' we don't need to continue looping
-  (defun add_url (METADATA new_url)
-    (if METADATA
-      (if (= (f (f METADATA)) 'u')
-        (c (c 'u' (c new_url (r (f METADATA)))) (r METADATA))
-        (c (f METADATA) (add_url (r METADATA) new_url))
+  ; NOTE: Currently, only support add one uri for a field in one spend
+  ; Given a key, get the value from the solution
+  (defun get_value (key solution)
+    (if solution
+      (if (= key (f (f solution)))
+        (r (f solution))
+        (get_value key (r solution))
       )
       ()
+    )
+  )
+  ; Prepend a new value to a list
+  (defun prepend_list (key old_list new_value)
+    (if new_value
+      (c key (c new_value old_list))
+      (c key old_list)
+    )
+  )
+
+  ; Prepend URI to a specific field in the metadata
+  (defun add_url (METADATA key uri)
+    (if uri
+      (if METADATA
+        (if (= (f (f METADATA)) key)
+          (c
+            (prepend_list key (r (f METADATA)) uri)
+            (r METADATA)
+          )
+          (c (f METADATA) (add_url (r METADATA) key uri))
+        )
+        ()
+      )
+      METADATA
     )
   )
 
   ; main
   ; returns ((new_metadata new_metadata_updater_puzhash) conditions)
-  (list (list (if solution (add_url CURRENT_METADATA solution) CURRENT_METADATA) METADATA_UPDATER_PUZZLE_HASH) 0)
+  ; Supported fields
+  ; data-uri - 'u'
+  ; metadata-uri -'mu'
+  ; license-uri - 'lu'
+  (list
+    (list
+      (if solution
+        ; Update data-uri
+        (add_url
+          ; Update metadata-uri
+          (add_url
+            ; Update license-uri
+            (add_url CURRENT_METADATA 'lu' (get_value 'lu' solution))
+            'mu' (get_value 'mu' solution)
+          )
+          'u' (get_value 'u' solution)
+        )
+        CURRENT_METADATA
+      )
+      METADATA_UPDATER_PUZZLE_HASH
+    )
+    0
+  )
 )

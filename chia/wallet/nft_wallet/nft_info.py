@@ -40,11 +40,17 @@ class NFTInfo(Streamable):
     license_hash: str
     """Hash of the license"""
 
-    version: str
-    """Current NFT version"""
-
-    edition_count: uint64
+    series_total: uint64
     """How many NFTs in the current series"""
 
-    edition_number: uint64
+    series_number: uint64
     """Number of the current NFT in the series"""
+
+    launcher_puzhash: str
+    """Puzzle hash of the singleton launcher in hex"""
+
+    updater_puzhash: str
+    """Puzzle hash of the metadata updater in hex"""
+
+    chain_info: str
+    """Information saved on the chain in hex"""

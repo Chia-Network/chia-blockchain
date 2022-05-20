@@ -1337,6 +1337,12 @@ class WalletRpcApi:
             [
                 ("u", request["uris"]),
                 ("h", hexstr_to_bytes(request["hash"])),
+                ("mu", request.get("meta_uris", [])),
+                ("mh", hexstr_to_bytes(request.get("meta_hash", "00"))),
+                ("lu", request.get("license_uris", [])),
+                ("lh", hexstr_to_bytes(request.get("license_hash", "00"))),
+                ("sn", uint64(request.get("series_number", 1))),
+                ("st", uint64(request.get("series_total", 1))),
             ]
         )
         fee = uint64(request.get("fee", 0))
@@ -1441,12 +1447,17 @@ class WalletRpcApi:
     async def nft_add_uri(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
-        uri = request["uri"]
+        # Note metadata updater can only add one uri for one field at once
+        uris = {
+            "u": request.get("uri", None),
+            "mu": request.get("meta_uri", None),
+            "lu": request.get("license_uri", None),
+        }
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
             fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uri, fee=fee)
+            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uris, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")

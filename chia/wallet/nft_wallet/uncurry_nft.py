@@ -61,6 +61,12 @@ class UncurriedNFT:
     """
     data_uris: Program
     data_hash: Program
+    meta_uris: Program
+    meta_hash: Program
+    license_uris: Program
+    license_hash: Program
+    series_number: Program
+    series_total: Program
 
     inner_puzzle: Program
     """NFT state layer inner puzzle"""
@@ -90,13 +96,32 @@ class UncurriedNFT:
         try:
             # Set nft parameters
             (nft_mod_hash, metadata, metdata_updater_hash, inner_puzzle) = curried_args.as_iter()
-
+            data_uris = Program.to([])
+            data_hash = Program.to(0)
+            meta_uris = Program.to([])
+            meta_hash = Program.to(0)
+            license_uris = Program.to([])
+            license_hash = Program.to(0)
+            series_number = Program.to(1)
+            series_total = Program.to(1)
             # Set metadata
             for kv_pair in metadata.as_iter():
                 if kv_pair.first().as_atom() == b"u":
                     data_uris = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"h":
                     data_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"mu":
+                    meta_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"mh":
+                    meta_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lu":
+                    license_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lh":
+                    license_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"sn":
+                    series_number = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"st":
+                    series_total = kv_pair.rest()
         except Exception as e:
             raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
         return cls(
@@ -109,6 +134,12 @@ class UncurriedNFT:
             metadata=metadata,
             data_uris=data_uris,
             data_hash=data_hash,
+            meta_uris=meta_uris,
+            meta_hash=meta_hash,
+            license_uris=license_uris,
+            license_hash=license_hash,
+            series_number=series_number,
+            series_total=series_total,
             metdata_updater_hash=metdata_updater_hash,
             inner_puzzle=inner_puzzle,
             # TODO Set/Remove following fields after NFT1 implemented
