@@ -301,7 +301,8 @@ def test_full_stack() -> None:
     )
 
     solution = Program.to([
-        [[[solution_for_conditions(condition_list)]]],
+        [[solution_for_conditions(condition_list)]],
         my_amount,
     ])
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
+    
