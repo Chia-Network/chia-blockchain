@@ -41,7 +41,6 @@ from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 

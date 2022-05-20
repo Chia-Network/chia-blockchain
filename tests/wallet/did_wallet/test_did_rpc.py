@@ -11,7 +11,6 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
