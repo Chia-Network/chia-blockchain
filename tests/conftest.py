@@ -33,7 +33,6 @@ from tests.setup_nodes import (
 )
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
 multiprocessing.set_start_method("spawn")
@@ -574,7 +573,7 @@ async def introducer(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for _ in setup_timelord(0, 0, 0, False, test_constants, bt):
+    async for _ in setup_timelord(0, 0, 0, 0, False, test_constants, bt):
         yield _
 
 

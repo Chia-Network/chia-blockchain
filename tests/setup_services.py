@@ -47,13 +47,6 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
     await ws_server.stop()
 
 
-async def retry_start_service_with_port(**kwargs):
-    service = Service(**kwargs, running_new_process=False)
-
-    await service.start()
-    pass
-
-
 async def setup_full_node(
     consensus_constants: ConsensusConstants,
     db_name,

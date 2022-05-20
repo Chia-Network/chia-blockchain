@@ -22,7 +22,6 @@ from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
 
