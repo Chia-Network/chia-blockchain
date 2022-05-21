@@ -470,16 +470,18 @@ async def setup_full_system(
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
         timelord_iter = setup_timelord(full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools)
-        # timelord_port = timelord.get_vdf_server_port()
 
         timelord_bluebox_iter = setup_timelord(1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1)
         # timelord_bluebox_port = timelord.get_vdf_server_port()
+
+        timelord, _ = await timelord_iter.__anext__()
+        timelord_port = timelord.get_vdf_server_port()
 
         node_iters = [
             introducer_iter,
             harvester_iter,
             farmer_iter,
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], timelord_port),
             timelord_iter,
             full_node_1_iter,
             full_node_2_iter,
@@ -489,7 +491,6 @@ async def setup_full_system(
         if connect_to_daemon:
             node_iters.append(daemon_iter)
 
-        timelord, _ = await timelord_iter.__anext__()
         vdf_clients = await node_iters[3].__anext__()
 
         timelord_bluebox, timelord_bluebox_server = await timelord_bluebox_iter.__anext__()
