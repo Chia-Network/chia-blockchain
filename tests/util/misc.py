@@ -7,6 +7,11 @@ from types import TracebackType
 from typing import Callable, Optional, Type
 
 
+def caller_file_and_line(distance: int = 2) -> str:
+    caller = getframeinfo(stack()[distance][0])
+    return f"{caller.filename}:{caller.lineno}"
+
+
 @dataclass(frozen=True)
 class AssertMaximumDurationResults:
     start: float
@@ -42,11 +47,6 @@ class AssertMaximumDurationResults:
         return f"{self.percent():.0f} %"
 
 
-def debuginfo(distance: int = 2) -> str:
-    caller = getframeinfo(stack()[distance][0])
-    return f"{caller.filename}:{caller.lineno}"
-
-
 @dataclass
 class AssertMaximumDuration:
     seconds: float
@@ -56,7 +56,7 @@ class AssertMaximumDuration:
     results: Optional[AssertMaximumDurationResults] = None
 
     def __enter__(self) -> None:
-        self.entry_line = debuginfo()
+        self.entry_line = caller_file_and_line()
         gc.collect()
         self.start = self.clock()
 
