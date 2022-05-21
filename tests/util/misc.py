@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from inspect import getframeinfo, stack
 from textwrap import dedent
 from time import perf_counter
-from typing import Callable, Optional
+from types import TracebackType
+from typing import Callable, Optional, Type
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,7 @@ class AssertMaximumDurationResults:
         return f"{self.percent():.0f} %"
 
 
-def debuginfo(distance=2):
+def debuginfo(distance: int = 2) -> str:
     caller = getframeinfo(stack()[distance][0])
     return f"{caller.filename}:{caller.lineno}"
 
@@ -59,8 +60,17 @@ class AssertMaximumDuration:
         gc.collect()
         self.start = self.clock()
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         end = self.clock()
+
+        if self.start is None or self.entry_line is None:
+            raise Exception("Context manager must be entered before exiting")
+
         duration = end - self.start
         ratio = duration / self.seconds
 
