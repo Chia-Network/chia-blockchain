@@ -1,41 +1,12 @@
-from datetime import datetime
-from decimal import Decimal
 from typing import Any, Callable, Dict, Optional, Union
 
 import click
 
-from chia.cmds.units import units
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
 from chia.util.network import is_trusted_inner
-
-
-def print_coin_record(
-    verbose: bool,
-    name: str,
-    address_prefix: str,
-    mojo_per_unit: int,
-    coin_record: CoinRecord,
-) -> None:
-    if verbose:
-        print(coin_record.to_json_dict())
-    else:
-        chia_amount = Decimal(int(coin_record.coin.amount)) / mojo_per_unit
-        coin_address = encode_puzzle_hash(coin_record.coin.puzzle_hash, address_prefix)
-        confirmed_block = coin_record.confirmed_block_index
-        print(f"Coin 0x{coin_record.name.hex()}")
-        print(f"Wallet Address: {coin_address}")
-        print(
-            "Status: "
-            f"{f'Confirmed at block: {confirmed_block}' if coin_record.confirmed_block_index != 0 else 'Not Found'}"
-        )
-        print(f"Spent: {f'at Block {coin_record.spent_block_index}' if not coin_record.spent else 'No'}")
-        print(f"Amount {'sent'}: {chia_amount} {name}")
-        print(f"Parent Coin ID: 0x{coin_record.coin.parent_coin_info.hex()}")
-        print("Created at:", datetime.fromtimestamp(float(coin_record.timestamp)).strftime("%Y-%m-%d %H:%M:%S"))
-        print("")
 
 
 async def print_connections(node_client, time, NodeType, trusted_peers: Dict):
@@ -94,7 +65,6 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
     import aiohttp
 
-    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
@@ -122,7 +92,7 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
 
 async def show_async(
-    node_client,
+    node_client: FullNodeRpcClient,
     config: Dict,
     state: bool,
     show_connections: bool,
@@ -131,11 +101,6 @@ async def show_async(
     remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
-    coins_by_address: str,
-    coin_by_coin_id: str,
-    verbose: bool,
-    offset: int,
-    paginate: bool,
 ) -> None:
     import time
     from typing import List, Optional
@@ -334,61 +299,6 @@ async def show_async(
             )
         else:
             print("Block with header hash", block_header_hash_by_height, "not found")
-    if coins_by_address != "" or coin_by_coin_id != "":
-        coin_records: List[CoinRecord] = []
-        import sys
-
-        if coins_by_address != "":
-            try:
-                from chia.util.bech32m import decode_puzzle_hash
-
-                ph: bytes32 = decode_puzzle_hash(coins_by_address)
-            except ValueError:
-                print("Invalid address")
-            else:
-                coin_records = await node_client.get_coin_records_by_puzzle_hash(ph)
-                if len(coin_records) == 0:
-                    print("There are no transactions to this address")
-        else:
-            try:
-                from chia.util.byte_types import hexstr_to_bytes
-
-                coin_id: bytes32 = bytes32(hexstr_to_bytes(coin_by_coin_id))
-            except ValueError:
-                print("Invalid coin id")
-            else:
-                coin_record = await node_client.get_coin_record_by_name(coin_id)
-                if coin_record is None:
-                    print("Invalid CoinID: This coin does not exist.")
-                else:
-                    coin_records = [coin_record]
-        if len(coin_records) != 0:
-            if paginate is None:
-                paginate = sys.stdout.isatty()
-            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-            name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
-            mojo_per_unit = units["chia"]
-            num_per_screen = 5 if paginate else len(coin_records)
-
-            for i in range(offset, len(coin_records), num_per_screen):
-                for j in range(0, num_per_screen):
-                    if i + j >= len(coin_records):
-                        break
-                    print_coin_record(
-                        coin_record=coin_records[i + j],
-                        verbose=(verbose > 0),
-                        name=name,
-                        address_prefix=address_prefix,
-                        mojo_per_unit=mojo_per_unit,
-                    )
-                if i + num_per_screen <= len(coin_records):
-                    print("Press q to quit, or c to continue")
-                    while True:
-                        entered_key = sys.stdin.read(1)
-                        if entered_key == "q":
-                            return None
-                        elif entered_key == "c":
-                            break
 
 
 @click.command("show", short_help="Show node information")
@@ -422,25 +332,6 @@ async def show_async(
     "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
-@click.option("-address", "--coins-by-address", help="Look up coins by an address.", type=str, default="")
-@click.option("-coin", "--coin-by-coin-id", help="Find a coin with its coin id.", type=str, default="")
-@click.option(
-    "-v",
-    "--verbose",
-    help="Show more information (only used in --coins-by-address & --coin-by-coin-id)",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--offset", help="Offset for pagination (only used in --coins-by-address & --coin-by-coin-id)", type=int, default=0
-)
-@click.option(
-    "--paginate",
-    help="Paginate output (only used in --coins-by-address & --coin-by-coin-id)",
-    is_flag=True,
-    type=bool,
-    default=None,
-)
 def show_cmd(
     rpc_port: Optional[int],
     wallet_rpc_port: Optional[int],
@@ -451,11 +342,6 @@ def show_cmd(
     remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
-    coins_by_address: str,
-    coin_by_coin_id: str,
-    verbose: bool,
-    offset: int,
-    paginate: bool,
 ) -> None:
     import asyncio
 
@@ -470,10 +356,5 @@ def show_cmd(
             remove_connection,
             block_header_hash_by_height,
             block_by_header_hash,
-            coins_by_address,
-            coin_by_coin_id,
-            verbose,
-            offset,
-            paginate,
         )
     )
