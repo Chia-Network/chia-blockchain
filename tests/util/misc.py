@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import gc
+from dataclasses import dataclass
 from inspect import getframeinfo, stack
 from textwrap import dedent
 from time import perf_counter
@@ -18,13 +18,15 @@ class AssertMaximumDurationResults:
     def block(self) -> str:
         # The entry line is reported starting at the beginning of the line to trigger
         # PyCharm to highlight as a link to the source.
-        return dedent(f"""\
+        return dedent(
+            f"""\
             Asserting maximum duration:
             {self.entry_line}
                 run time: {self.duration}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
-            """)
+            """
+        )
 
     def message(self) -> str:
         return f"{self.duration} seconds not less than {self.limit} seconds ( {self.percent_str()} )"
