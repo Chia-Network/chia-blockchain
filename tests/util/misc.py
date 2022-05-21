@@ -1,10 +1,42 @@
+import contextlib
+import enum
 import gc
 from dataclasses import dataclass
 from inspect import getframeinfo, stack
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Optional, Type
+from typing import Callable, Iterator, Optional, Type
+
+
+class GcMode(enum.Enum):
+    nothing = enum.auto
+    precollect = enum.auto
+    disable = enum.auto
+    enable = enum.auto
+
+
+@contextlib.contextmanager
+def gc_mode(mode: GcMode) -> Iterator[None]:
+    if mode == GcMode.precollect:
+        gc.collect()
+        yield
+    elif mode == GcMode.disable:
+        was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            yield
+        finally:
+            if was_enabled:
+                gc.enable()
+    elif mode == GcMode.enable:
+        was_enabled = gc.isenabled()
+        gc.enable()
+        try:
+            yield
+        finally:
+            if not was_enabled:
+                gc.disable()
 
 
 def caller_file_and_line(distance: int = 2) -> str:
@@ -49,15 +81,29 @@ class AssertMaximumDurationResults:
 
 @dataclass
 class AssertMaximumDuration:
+    """Prepare for, measure, and assert about the time taken by code in the context.
+
+    Defaults are set for single-threaded CPU usage timing without garbage collection.
+
+    In general, there is no generally correct setup for benchmarking.  Only measuring
+    a single thread's time using the CPU is not very useful for multithreaded or
+    multiprocessed code.  Disabling garbage collection, or forcing it ahead of time,
+    makes the benchmark not identify any issues the code may introduce in terms of
+    actually causing relevant gc slowdowns.  And so on...
+    """
+
     seconds: float
     clock: Callable[[], float]
+    gc_mode: GcMode
     start: Optional[float] = None
     entry_line: Optional[str] = None
     results: Optional[AssertMaximumDurationResults] = None
+    gc_manager: Optional[contextlib.AbstractContextManager[None]] = None
 
     def __enter__(self) -> None:
         self.entry_line = caller_file_and_line()
-        gc.collect()
+        self.gc_manager = gc_mode(mode=self.gc_mode)
+        self.gc_manager.__enter__()
         self.start = self.clock()
 
     def __exit__(
@@ -68,8 +114,10 @@ class AssertMaximumDuration:
     ) -> None:
         end = self.clock()
 
-        if self.start is None or self.entry_line is None:
+        if self.start is None or self.entry_line is None or self.gc_manager is None:
             raise Exception("Context manager must be entered before exiting")
+
+        self.gc_manager.__exit__(exc_type, exc, traceback)
 
         duration = end - self.start
         ratio = duration / self.seconds
@@ -90,5 +138,7 @@ class AssertMaximumDuration:
             assert self.results.passed(), self.results.message()
 
 
-def assert_maximum_duration(seconds: float, clock: Callable[[], float] = thread_time) -> AssertMaximumDuration:
-    return AssertMaximumDuration(seconds=seconds, clock=clock)
+def assert_maximum_duration(
+    seconds: float, clock: Callable[[], float] = thread_time, gc_mode: GcMode = GcMode.disable
+) -> AssertMaximumDuration:
+    return AssertMaximumDuration(seconds=seconds, clock=clock, gc_mode=gc_mode)
