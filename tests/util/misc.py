@@ -2,7 +2,7 @@ import gc
 from dataclasses import dataclass
 from inspect import getframeinfo, stack
 from textwrap import dedent
-from time import perf_counter
+from time import thread_time
 from types import TracebackType
 from typing import Callable, Optional, Type
 
@@ -90,5 +90,5 @@ class AssertMaximumDuration:
             assert self.results.passed(), self.results.message()
 
 
-def assert_maximum_duration(seconds: float, clock: Callable[[], float] = perf_counter) -> AssertMaximumDuration:
+def assert_maximum_duration(seconds: float, clock: Callable[[], float] = thread_time) -> AssertMaximumDuration:
     return AssertMaximumDuration(seconds=seconds, clock=clock)
