@@ -492,7 +492,6 @@ async def setup_full_system(
             node_iters.append(daemon_iter)
 
         vdf_clients = await node_iters[3].__anext__()
-        await asyncio.sleep(3)  # Give some time to avoid issues with bluebox clients interfering
 
         vdf_bluebox_clients = await node_iters[7].__anext__()
 
