@@ -21,6 +21,7 @@ from tests.setup_services import (
     setup_timelord,
     setup_vdf_client,
     setup_vdf_clients,
+    setup_wallet_node,
 )
 from tests.time_out_assert import time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
@@ -47,76 +48,6 @@ async def _teardown_nodes(node_aiters: List) -> None:
             pass
 
 
-async def setup_wallet_node(
-    self_hostname: str,
-    port,
-    rpc_port,
-    consensus_constants: ConsensusConstants,
-    local_bt: BlockTools,
-    full_node_port=None,
-    introducer_port=None,
-    key_seed=None,
-    starting_height=None,
-    initial_num_public_keys=5,
-):
-    with TempKeyring(populate=True) as keychain:
-        config = local_bt.config["wallet"]
-        config["port"] = port
-        config["rpc_port"] = rpc_port
-        if starting_height is not None:
-            config["starting_height"] = starting_height
-        config["initial_num_public_keys"] = initial_num_public_keys
-
-        entropy = token_bytes(32)
-        if key_seed is None:
-            key_seed = entropy
-        keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
-        first_pk = keychain.get_first_public_key()
-        assert first_pk is not None
-        db_path_key_suffix = str(first_pk.get_fingerprint())
-        db_name = f"test-wallet-db-{port}-KEY.sqlite"
-        db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
-        db_path = local_bt.root_path / db_path_replaced
-
-        if db_path.exists():
-            db_path.unlink()
-        config["database_path"] = str(db_name)
-        config["testing"] = True
-
-        config["introducer_peer"]["host"] = self_hostname
-        if introducer_port is not None:
-            config["introducer_peer"]["port"] = introducer_port
-            config["peer_connect_interval"] = 10
-        else:
-            config["introducer_peer"] = None
-
-        if full_node_port is not None:
-            config["full_node_peer"] = {}
-            config["full_node_peer"]["host"] = self_hostname
-            config["full_node_peer"]["port"] = full_node_port
-        else:
-            del config["full_node_peer"]
-
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
-        kwargs.update(
-            parse_cli_args=False,
-            connect_to_daemon=False,
-            service_name_prefix="test_",
-        )
-
-        service = Service(**kwargs, running_new_process=False)
-
-        await service.start()
-
-        yield service._node, service._node.server
-
-        service.stop()
-        await service.wait_closed()
-        if db_path.exists():
-            db_path.unlink()
-        keychain.delete_all_keys()
-
-
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
@@ -128,8 +59,6 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 consensus_constants,
                 "blockchain_test.db",
                 self_hostname,
-                uint16(0),
-                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keychain1),
                 simulator=False,
                 db_version=db_version,
@@ -138,8 +67,6 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
                 consensus_constants,
                 "blockchain_test_2.db",
                 self_hostname,
-                uint16(0),
-                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keychain2),
                 simulator=False,
                 db_version=db_version,
@@ -168,8 +95,6 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 self_hostname,
-                uint16(0),
-                uint16(0),
                 await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
                 simulator=False,
                 db_version=db_version,
@@ -197,16 +122,12 @@ async def setup_node_and_wallet(
                 consensus_constants,
                 "blockchain_test.db",
                 self_hostname,
-                uint16(0),
-                uint16(0),
                 btools,
                 simulator=False,
                 db_version=db_version,
             ),
             setup_wallet_node(
                 btools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
                 consensus_constants,
                 btools,
                 None,
@@ -249,8 +170,6 @@ async def setup_simulators_and_wallets(
                 bt_tools.constants,
                 bt_tools.config["self_hostname"],
                 db_name,
-                uint16(0),
-                uint16(0),
                 bt_tools,
                 simulator=True,
                 db_version=db_version,
@@ -268,8 +187,6 @@ async def setup_simulators_and_wallets(
             )  # block tools modifies constants
             wlt = setup_wallet_node(
                 bt_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
                 bt_tools.constants,
                 bt_tools,
                 None,
@@ -298,11 +215,10 @@ async def setup_harvester_farmer(
         bt,
         tmp_path / "farmer",
         bt.config["self_hostname"],
-        farmer_port,
-        uint16(0),
         consensus_constants,
         uint16(0),
         start_service=start_services,
+        port=farmer_port,
     )
 
     farmer_service = await farmer_setup_iter.__anext__()
@@ -312,8 +228,6 @@ async def setup_harvester_farmer(
             bt,
             tmp_path / "harvester",
             bt.config["self_hostname"],
-            uint16(0),
-            uint16(0),
             farmer_port,
             consensus_constants,
             start_services,
@@ -340,9 +254,8 @@ async def setup_farmer_multi_harvester(
             block_tools,
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
-            uint16(0),
-            uint16(0),
             consensus_constants,
+            uint16(0),
         )
     ]
     farmer_service = await node_iterators[0].__anext__()
@@ -355,8 +268,6 @@ async def setup_farmer_multi_harvester(
                 block_tools,
                 root_path,
                 block_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
                 farmer_port,
                 consensus_constants,
                 False,
@@ -408,8 +319,6 @@ async def setup_full_system(
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 shared_b_tools.config["self_hostname"],
-                uint16(0),
-                uint16(0),
                 b_tools,
                 introducer_server._port,
                 False,
@@ -417,7 +326,9 @@ async def setup_full_system(
                 True,
                 connect_to_daemon=connect_to_daemon,
                 db_version=db_version,
-            ) for i in range(2)]
+            )
+            for i in range(2)
+        ]
 
         node_apis = [await fni.__anext__() for fni in full_node_iters]
         full_node_0_port = node_apis[0].full_node.server.get_port()
@@ -426,10 +337,8 @@ async def setup_full_system(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
             shared_b_tools.config["self_hostname"],
-            uint16(0),
-            uint16(0),
             consensus_constants,
-            full_node_0_port
+            full_node_0_port,
         )
         farmer_service = await farmer_iter.__anext__()
 
@@ -437,16 +346,14 @@ async def setup_full_system(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
             shared_b_tools.config["self_hostname"],
-            uint16(0),
-            uint16(0),
             farmer_service._server.get_port(),
             consensus_constants,
         )
 
-        vdf1_port = find_available_listen_port("vdf1")
-        vdf2_port = find_available_listen_port("vdf2")
-        timelord_iter = setup_timelord(full_node_0_port, uint16(0), vdf1_port, False, consensus_constants, b_tools)
-        timelord_bluebox_iter = setup_timelord(1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1)
+        vdf1_port = uint16(find_available_listen_port("vdf1"))
+        vdf2_port = uint16(find_available_listen_port("vdf2"))
+        timelord_iter = setup_timelord(full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
+        timelord_bluebox_iter = setup_timelord(1000, True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
 
         harvester_service = await harvester_iter.__anext__()
         harvester = harvester_service._node

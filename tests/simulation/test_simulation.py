@@ -37,8 +37,6 @@ async def extra_node(self_hostname):
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
-            uint16(0),
-            uint16(0),
             b_tools,
             db_version=1,
         ):

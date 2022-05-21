@@ -49,10 +49,8 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
 
 async def setup_full_node(
     consensus_constants: ConsensusConstants,
-    db_name,
+    db_name: str,
     self_hostname: str,
-    port,
-    rpc_port,
     local_bt: BlockTools,
     introducer_port=None,
     simulator=False,
@@ -60,6 +58,8 @@ async def setup_full_node(
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
     db_version=1,
+    port: uint16 = uint16(0),
+    rpc_port: uint16 = uint16(0),
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -117,8 +117,6 @@ async def setup_full_node(
 # keeping these usable independently?
 async def setup_wallet_node(
     self_hostname: str,
-    port,
-    rpc_port,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
     full_node_port=None,
@@ -126,6 +124,8 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
     initial_num_public_keys=5,
+    port: uint16 = uint16(0),
+    rpc_port: uint16 = uint16(0),
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config["wallet"]
@@ -189,11 +189,11 @@ async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
     self_hostname: str,
-    port,
-    rpc_port,
-    farmer_port,
+    farmer_port: uint16,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
+    port: uint16 = uint16(0),
+    rpc_port: uint16 = uint16(0),
 ):
     log.warning(f"Port: {port} {rpc_port}")
     init(None, root_path)
@@ -230,11 +230,11 @@ async def setup_farmer(
     b_tools: BlockTools,
     root_path: Path,
     self_hostname: str,
-    port,
-    rpc_port,
     consensus_constants: ConsensusConstants,
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
+    port: uint16 = uint16(0),
+    rpc_port: uint16 = uint16(0),
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
@@ -329,11 +329,11 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 async def setup_timelord(
     full_node_port,
-    rpc_port,
-    vdf_port,
     sanitizer,
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
+    vdf_port: uint16 = uint16(0),
+    rpc_port: uint16 = uint16(0),
 ):
     config = b_tools.config["timelord"]
     config["full_node_peer"]["port"] = full_node_port
