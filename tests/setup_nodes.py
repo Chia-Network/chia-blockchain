@@ -402,7 +402,7 @@ async def setup_full_system(
         introducer_iter = setup_introducer(shared_b_tools, uint16(0))
         introducer, introducer_server = await introducer_iter.__anext__()
 
-        vdf1_port = uint16(0)
+        vdf1_port = find_available_listen_port("vdf1")
         vdf2_port = find_available_listen_port("vdf2")
 
         # Then start the full node so we can use the port for the farmer and timelord
