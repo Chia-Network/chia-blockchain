@@ -460,15 +460,6 @@ async def setup_full_system(
             farmer_port,
             consensus_constants,
         )
-
-        harvester_service = await harvester_iter.__anext__()
-        harvester = harvester_service._node
-
-        async def num_connections():
-            count = len(harvester.server.all_connections.items())
-            return count
-
-        await time_out_assert_custom_interval(10, 3, num_connections, 1)
         timelord_iter = setup_timelord(full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools)
         timelord, _ = await timelord_iter.__anext__()
         # timelord_port = timelord.get_vdf_server_port()
@@ -490,6 +481,15 @@ async def setup_full_system(
         ]
         if connect_to_daemon:
             node_iters.append(daemon_iter)
+
+        harvester_service = await node_iters[1].__anext__()
+        harvester = harvester_service._node
+
+        async def num_connections():
+            count = len(harvester.server.all_connections.items())
+            return count
+
+        await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         vdf_clients = await node_iters[3].__anext__()
 
