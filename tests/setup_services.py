@@ -58,8 +58,6 @@ async def setup_full_node(
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
     db_version=1,
-    port: uint16 = uint16(0),
-    rpc_port: uint16 = uint16(0),
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -86,8 +84,8 @@ async def setup_full_node(
     else:
         config["introducer_peer"] = None
     config["dns_servers"] = []
-    config["port"] = port
-    config["rpc_port"] = rpc_port
+    config["port"] = 0
+    config["rpc_port"] = 0
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
@@ -124,13 +122,11 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
     initial_num_public_keys=5,
-    port: uint16 = uint16(0),
-    rpc_port: uint16 = uint16(0),
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config["wallet"]
-        config["port"] = port
-        config["rpc_port"] = rpc_port
+        config["port"] = 0
+        config["rpc_port"] = 0
         if starting_height is not None:
             config["starting_height"] = starting_height
         config["initial_num_public_keys"] = initial_num_public_keys
@@ -142,7 +138,7 @@ async def setup_wallet_node(
         first_pk = keychain.get_first_public_key()
         assert first_pk is not None
         db_path_key_suffix = str(first_pk.get_fingerprint())
-        db_name = f"test-wallet-db-{port}-KEY.sqlite"
+        db_name = f"test-wallet-db-{full_node_port}-KEY.sqlite"
         db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
         db_path = local_bt.root_path / db_path_replaced
 
@@ -192,8 +188,6 @@ async def setup_harvester(
     farmer_port: uint16,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
-    port: uint16 = uint16(0),
-    rpc_port: uint16 = uint16(0),
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
@@ -201,8 +195,8 @@ async def setup_harvester(
         config["logging"]["log_stdout"] = True
         config["selected_network"] = "testnet0"
         config["harvester"]["selected_network"] = "testnet0"
-        config["harvester"]["port"] = int(port)
-        config["harvester"]["rpc_port"] = int(rpc_port)
+        config["harvester"]["port"] = 0
+        config["harvester"]["rpc_port"] = 0
         config["harvester"]["farmer_peer"]["host"] = self_hostname
         config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
@@ -233,7 +227,6 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
-    rpc_port: uint16 = uint16(0),
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
@@ -248,7 +241,7 @@ async def setup_farmer(
     config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
     config["port"] = port
-    config["rpc_port"] = rpc_port
+    config["rpc_port"] = uint16(0)
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
@@ -332,7 +325,6 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
-    rpc_port: uint16 = uint16(0),
 ):
     config = b_tools.config["timelord"]
     config["full_node_peer"]["port"] = full_node_port
@@ -340,7 +332,7 @@ async def setup_timelord(
     config["fast_algorithm"] = False
     config["vdf_server"]["port"] = vdf_port
     config["start_rpc_server"] = True
-    config["rpc_port"] = rpc_port
+    config["rpc_port"] = uint16(0)
 
     kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(
