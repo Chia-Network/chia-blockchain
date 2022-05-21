@@ -314,7 +314,10 @@ async def show_async(
 @click.option(
     "-p",
     "--rpc-port",
-    help="Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml",
+    help=(
+        "Set the port where the Full Node is hosting the RPC interface. "
+        "See the rpc_port under full_node in config.yaml"
+    ),
     type=int,
     default=None,
 )
