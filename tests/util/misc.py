@@ -1,12 +1,14 @@
 import contextlib
+import dataclasses
 import enum
 import gc
-from dataclasses import dataclass
+import math
 from inspect import getframeinfo, stack
+from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, Optional, Type
+from typing import Callable, Iterator, List, Optional, Type
 
 
 class GcMode(enum.Enum):
@@ -44,7 +46,7 @@ def caller_file_and_line(distance: int = 2) -> str:
     return f"{caller.filename}:{caller.lineno}"
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class AssertMaximumDurationResults:
     start: float
     end: float
@@ -79,7 +81,7 @@ class AssertMaximumDurationResults:
         return f"{self.percent():.0f} %"
 
 
-@dataclass
+@dataclasses.dataclass
 class AssertMaximumDuration:
     """Prepare for, measure, and assert about the time taken by code in the context.
 
@@ -95,13 +97,31 @@ class AssertMaximumDuration:
     seconds: float
     clock: Callable[[], float]
     gc_mode: GcMode
+    calibrate: bool
+    print: bool = True
+    compensation: float = 0
     start: Optional[float] = None
     entry_line: Optional[str] = None
     results: Optional[AssertMaximumDurationResults] = None
     gc_manager: Optional[contextlib.AbstractContextManager[None]] = None
 
+    def calibrate_compensation(self) -> float:
+        times: List[float] = []
+        for _ in range(10):
+            manager = dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
+            with manager:
+                pass
+            if manager.results is None:
+                raise Exception("manager failed to provide results")
+            times.append(manager.results.duration)
+        compensation = mean(times)
+
+        return compensation
+
     def __enter__(self) -> None:
         self.entry_line = caller_file_and_line()
+        if self.calibrate:
+            self.compensation = self.calibrate_compensation()
         self.gc_manager = gc_mode(mode=self.gc_mode)
         self.gc_manager.__enter__()
         self.start = self.clock()
@@ -120,6 +140,7 @@ class AssertMaximumDuration:
         self.gc_manager.__exit__(exc_type, exc, traceback)
 
         duration = end - self.start
+        duration -= self.compensation
         ratio = duration / self.seconds
 
         self.results = AssertMaximumDurationResults(
@@ -131,7 +152,8 @@ class AssertMaximumDuration:
             entry_line=self.entry_line,
         )
 
-        print(self.results.block())
+        if self.print:
+            print(self.results.block())
 
         if exc_type is None:
             __tracebackhide__ = True
@@ -139,6 +161,9 @@ class AssertMaximumDuration:
 
 
 def assert_maximum_duration(
-    seconds: float, clock: Callable[[], float] = thread_time, gc_mode: GcMode = GcMode.disable
+    seconds: float,
+    clock: Callable[[], float] = thread_time,
+    gc_mode: GcMode = GcMode.disable,
+    calibrate: bool = True,
 ) -> AssertMaximumDuration:
-    return AssertMaximumDuration(seconds=seconds, clock=clock, gc_mode=gc_mode)
+    return AssertMaximumDuration(seconds=seconds, clock=clock, gc_mode=gc_mode, calibrate=calibrate)
