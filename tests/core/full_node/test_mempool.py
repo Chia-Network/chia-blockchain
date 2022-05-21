@@ -1,6 +1,5 @@
 import dataclasses
 import logging
-from time import time
 
 from typing import Dict, List, Optional, Tuple, Callable
 
@@ -47,6 +46,7 @@ from chia.types.generator_types import BlockGenerator
 from blspy import G1Element
 from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
 
+from tests.util.misc import assert_maximum_duration
 from tests.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
@@ -2240,9 +2240,10 @@ class TestMaliciousGenerators:
     @pytest.mark.benchmark
     def test_duplicate_large_integer_ladder(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=0.7):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         if softfork_height >= 2300000:
             assert npc_result.error == error_for_condition(opcode)
         else:
@@ -2257,9 +2258,6 @@ class TestMaliciousGenerators:
             elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 assert npc_result.conds.spends[0].seconds_relative == 28
 
-        print(f"run time:{run_time}")
-        assert run_time < 0.7
-
     @pytest.mark.parametrize(
         "opcode",
         [
@@ -2272,9 +2270,10 @@ class TestMaliciousGenerators:
     @pytest.mark.benchmark
     def test_duplicate_large_integer(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=1.1):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         if softfork_height >= 2300000:
             assert npc_result.error == error_for_condition(opcode)
         else:
@@ -2289,9 +2288,6 @@ class TestMaliciousGenerators:
                 assert npc_result.conds.seconds_absolute == 100
             elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 assert npc_result.conds.spends[0].seconds_relative == 100
-
-        print(f"run time:{run_time}")
-        assert run_time < 1.1
 
     @pytest.mark.parametrize(
         "opcode",
@@ -2305,9 +2301,10 @@ class TestMaliciousGenerators:
     @pytest.mark.benchmark
     def test_duplicate_large_integer_substr(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=1.1):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         if softfork_height >= 2300000:
             assert npc_result.error == error_for_condition(opcode)
         else:
@@ -2322,9 +2319,6 @@ class TestMaliciousGenerators:
                 assert npc_result.conds.seconds_absolute == 100
             elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 assert npc_result.conds.spends[0].seconds_relative == 100
-
-        print(f"run time:{run_time}")
-        assert run_time < 1.1
 
     @pytest.mark.parametrize(
         "opcode",
@@ -2340,9 +2334,10 @@ class TestMaliciousGenerators:
         condition = SINGLE_ARG_INT_SUBSTR_TAIL_COND.format(
             opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
         )
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=0.3):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         if softfork_height >= 2300000:
             assert npc_result.error == error_for_condition(opcode)
         else:
@@ -2358,9 +2353,6 @@ class TestMaliciousGenerators:
             elif opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE:
                 assert npc_result.conds.spends[0].seconds_relative == 0xFFFFFFFF
 
-        print(f"run time:{run_time}")
-        assert run_time < 0.3
-
     @pytest.mark.parametrize(
         "opcode",
         [
@@ -2373,21 +2365,21 @@ class TestMaliciousGenerators:
     @pytest.mark.benchmark
     def test_duplicate_large_integer_negative(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=1):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
-        print(f"run time:{run_time}")
-        assert run_time < 1
 
     @pytest.mark.benchmark
     def test_duplicate_reserve_fee(self, softfork_height):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=1):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         if softfork_height >= 2300000:
             assert npc_result.error == error_for_condition(opcode)
         else:
@@ -2395,22 +2387,18 @@ class TestMaliciousGenerators:
             assert len(npc_result.conds.spends) == 1
             assert npc_result.conds.reserve_fee == 100 * 280000
 
-        print(f"run time:{run_time}")
-        assert run_time < 1
-
     @pytest.mark.benchmark
     def test_duplicate_reserve_fee_negative(self, softfork_height):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=0.8):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         # RESERVE_FEE conditions fail unconditionally if they have a negative
         # amount
         assert npc_result.error == Err.RESERVE_FEE_CONDITION_FAILED.value
         assert npc_result.conds is None
-        print(f"run time:{run_time}")
-        assert run_time < 0.8
 
     @pytest.mark.parametrize(
         "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
@@ -2418,15 +2406,14 @@ class TestMaliciousGenerators:
     @pytest.mark.benchmark
     def test_duplicate_coin_announces(self, opcode, softfork_height):
         condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=7):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
         # coin announcements are not propagated to python, but validated in rust
         # TODO: optimize clvm to make this run in < 1 second
-        print(f"run time:{run_time}")
-        assert run_time < 7
 
     @pytest.mark.benchmark
     def test_create_coin_duplicates(self, softfork_height):
@@ -2435,13 +2422,12 @@ class TestMaliciousGenerators:
         # we'll just end up looking at two of them, and fail at the first
         # duplicate
         condition = CREATE_COIN.format(num=600000)
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=0.8):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
         assert npc_result.conds is None
-        print(f"run time:{run_time}")
-        assert run_time < 0.8
 
     @pytest.mark.benchmark
     def test_many_create_coin(self, softfork_height):
@@ -2450,15 +2436,14 @@ class TestMaliciousGenerators:
         # amounts.
         # the number 6095 was chosen carefully to not exceed the maximum cost
         condition = CREATE_UNIQUE_COINS.format(num=6094)
-        start_time = time()
-        npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
-        run_time = time() - start_time
+
+        with assert_maximum_duration(seconds=0.2):
+            npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
+
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
         spend = npc_result.conds.spends[0]
         assert len(spend.create_coin) == 6094
-        print(f"run time:{run_time}")
-        assert run_time < 0.2
 
     @pytest.mark.asyncio
     async def test_invalid_coin_spend_coin(self, bt, one_node_one_block, wallet_a):

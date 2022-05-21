@@ -1,6 +1,5 @@
 import logging
 import pathlib
-import time
 
 import pytest
 from clvm_tools import binutils
@@ -13,6 +12,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import test_constants
+from tests.util.misc import assert_maximum_duration
 
 from .make_block_generator import make_block_generator
 
@@ -196,22 +196,18 @@ class TestCostCalculation:
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
-        start_time = time.time()
-        generator = BlockGenerator(program, [], [])
-        npc_result = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
-        )
-        end_time = time.time()
-        duration = end_time - start_time
+        with assert_maximum_duration(seconds=0.5):
+            generator = BlockGenerator(program, [], [])
+            npc_result = get_name_puzzle_conditions(
+                generator,
+                test_constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=test_constants.COST_PER_BYTE,
+                mempool_mode=False,
+                height=softfork_height,
+            )
+
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
-        log.info(f"Time spent: {duration}")
-
-        assert duration < 0.5
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
@@ -265,14 +261,8 @@ class TestCostCalculation:
             p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         )
 
-        time_start = time.time()
-        total_cost = 0
-        for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
-            total_cost += cost
-
-        time_end = time.time()
-        duration = time_end - time_start
-
-        log.info(f"Time spent: {duration}")
-        assert duration < 0.1
+        with assert_maximum_duration(seconds=0.1):
+            total_cost = 0
+            for i in range(0, 1000):
+                cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+                total_cost += cost

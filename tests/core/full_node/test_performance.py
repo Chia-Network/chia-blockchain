@@ -3,7 +3,6 @@ import cProfile
 import dataclasses
 import logging
 import random
-import time
 from typing import Dict
 
 import pytest
@@ -116,23 +115,21 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        num_tx: int = 0
-        for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
-            num_tx += 1
-            respond_transaction = fnp.RespondTransaction(spend_bundle)
+        with assert_maximum_duration(seconds=0.001):
+            num_tx: int = 0
+            for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
+                num_tx += 1
+                respond_transaction = fnp.RespondTransaction(spend_bundle)
 
-            await full_node_1.respond_transaction(respond_transaction, fake_peer)
+                await full_node_1.respond_transaction(respond_transaction, fake_peer)
 
-            request = fnp.RequestTransaction(spend_bundle_id)
-            req = await full_node_1.request_transaction(request)
+                request = fnp.RequestTransaction(spend_bundle_id)
+                req = await full_node_1.request_transaction(request)
 
-            if req is None:
-                break
-        end = time.time()
+                if req is None:
+                    break
+
         log.warning(f"Num Tx: {num_tx}")
-        log.warning(f"Time for mempool: {end - start:f}")
-        assert end - start < 0.001
         pr.create_stats()
         pr.dump_stats("./mempool-benchmark.pstats")
 
@@ -175,12 +172,10 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
-        end = time.time()
+        with assert_maximum_duration(seconds=0.1):
+            res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
+
         log.warning(f"Res: {res}")
-        log.warning(f"Time for unfinished: {end - start:f}")
-        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./unfinished-benchmark.pstats")
@@ -188,14 +183,12 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        # No transactions generator, the full node already cached it from the unfinished block
-        block_small = dataclasses.replace(block, transactions_generator=None)
-        res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
-        end = time.time()
+        with assert_maximum_duration(seconds=0.001):
+            # No transactions generator, the full node already cached it from the unfinished block
+            block_small = dataclasses.replace(block, transactions_generator=None)
+            res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
+
         log.warning(f"Res: {res}")
-        log.warning(f"Time for full block: {end - start:f}")
-        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./full-block-benchmark.pstats")

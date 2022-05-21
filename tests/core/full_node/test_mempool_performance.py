@@ -70,11 +70,10 @@ class TestMempoolPerformance:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
         for idx, block in enumerate(blocks):
-            start_t_2 = time.time()
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-            end_t_2 = time.time()
-            duration = end_t_2 - start_t_2
             if idx >= len(blocks) - 3:
-                assert duration < 0.1
+                duration = 0.1
             else:
-                assert duration < 0.001
+                duration = 0.001
+
+            with assert_maximum_duration(seconds=duration):
+                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
