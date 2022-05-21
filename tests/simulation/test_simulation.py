@@ -54,7 +54,8 @@ async def simulation(bt):
 class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
+        node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
+        server1 = node1.server
 
         node1_port = node1.full_node.server.get_port()
         node2_port = node2.full_node.server.get_port()
