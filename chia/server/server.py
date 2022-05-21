@@ -142,8 +142,7 @@ class ChiaServer:
         # Task list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
 
-        self._name = name if name else __name__
-        self.log = logging.getLogger(self._name)
+        self.log = logging.getLogger(name if name else __name__)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.api = api
