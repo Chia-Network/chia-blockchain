@@ -474,13 +474,13 @@ async def setup_full_system(
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         timelord, _ = await timelord_iter.__anext__()
-        timelord_port = timelord.timelord.get_vdf_server_port()
+        # timelord_port = timelord.timelord.get_vdf_server_port()
 
         node_iters = [
             introducer_iter,
             harvester_iter,
             farmer_iter,
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], timelord_port),
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
             timelord_iter,
             full_node_1_iter,
             full_node_2_iter,
