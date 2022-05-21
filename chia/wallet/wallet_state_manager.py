@@ -207,16 +207,6 @@ class WalletStateManager:
 
         return self
 
-    def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
-        for i in range(0, max_depth):
-            derived = self.get_public_key(uint32(i))
-            if derived == pubkey:
-                return i
-            derived = self.get_public_key_unhardened(uint32(i))
-            if derived == pubkey:
-                return i
-        return -1
-
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
@@ -1088,7 +1078,7 @@ class WalletStateManager:
         wallet = self.wallets[wallet_id]
         return wallet
 
-    async def reorg_rollback(self, height: int):
+    async def reorg_rollback(self, height: int) -> List[uint32]:
         """
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
@@ -1114,7 +1104,8 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
-            self.wallets.pop(wallet_id)
+
+        return remove_ids
 
     async def _await_closed(self) -> None:
         await self.db_connection.close()
@@ -1221,6 +1212,10 @@ class WalletStateManager:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == uint8(WalletType.POOLING_WALLET):
                 await wallet.new_peak(peak.height)
+        current_time = int(time.time())
+
+        if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
+            self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(
         self, puzzle_hashes: List[bytes32], wallet_ids: List[int], in_transaction: bool = False

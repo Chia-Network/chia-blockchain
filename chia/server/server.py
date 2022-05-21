@@ -48,7 +48,7 @@ def ssl_context_for_server(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(
@@ -304,14 +304,13 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 close_event,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
 
-            assert handshake is True
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
@@ -458,13 +457,12 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 session=session,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
-            assert handshake is True
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

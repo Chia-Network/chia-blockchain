@@ -99,7 +99,7 @@ class WeightProofHandler:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height} ses {ses}")
+            log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
@@ -1573,7 +1573,7 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
 
 
 def vars_to_bytes(constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProof):
-    constants_dict = recurse_jsonify(dataclasses.asdict(constants))
+    constants_dict = recurse_jsonify(constants)
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
     summary_bytes = []

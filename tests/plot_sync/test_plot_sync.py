@@ -1,7 +1,9 @@
+import asyncio
+import functools
 from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import copy
-from typing import List, Optional, Tuple
+from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -12,27 +14,36 @@ from chia.harvester.harvester_api import Harvester
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
-from chia.plot_sync.util import State
+from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.server.start_service import Service
+from chia.server.ws_connection import ProtocolMessageTypes
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import create_default_chia_config
+from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint64
+from chia.util.streamable import _T_Streamable
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import MockPlotInfo, TestDirectory
 from tests.plotting.util import get_test_plots
+from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert
+
+
+@pytest_asyncio.fixture(scope="function")
+async def harvester_farmer_simulation(bt: BlockTools, tmp_path: Path) -> AsyncIterator[Service]:
+    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
+        yield _
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
     return (
         sender._last_sync_id != previous_last_sync_id
-        and sender._last_sync_id == receiver._last_sync_id != 0
-        and receiver.state() == State.idle
-        and not sender._lock.locked()
+        and sender._last_sync_id == receiver._last_sync.sync_id != 0
+        and receiver.current_sync().state == State.idle
+        and not sender.sync_active()
     )
 
 
@@ -211,7 +222,7 @@ class Environment:
             # Make sure to reset the passed flag always before a new run
             self.expected[self.harvesters.index(harvester)].callback_passed = False
             receiver._update_callback = self.plot_sync_callback
-            assert harvester.plot_sync_sender._last_sync_id == receiver._last_sync_id
+            assert harvester.plot_sync_sender._last_sync_id == receiver._last_sync.sync_id
             last_sync_ids.append(harvester.plot_sync_sender._last_sync_id)
             plot_manager.start_refreshing()
             plot_manager.trigger_refresh()
@@ -293,6 +304,10 @@ async def environment(
     farmer: Farmer = farmer_service._node
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
+        # Remove default plot directory for this tests
+        with lock_and_load_config(harvester.root_path, "config.yaml") as config:
+            config["harvester"]["plot_directories"] = []
+            save_config(harvester.root_path, "config.yaml", config)
         harvester.plot_manager.set_public_keys(
             bt.plot_manager.farmer_public_keys.copy(), bt.plot_manager.pool_public_keys.copy()
         )
@@ -535,3 +550,52 @@ async def test_farmer_restart(environment: Environment) -> None:
         assert len(plot_manager.failed_to_open_filenames) == len(receiver.invalid()) == expected.invalid_count
         assert len(plot_manager.no_key_filenames) == len(receiver.keys_missing()) == expected.keys_missing_count
         assert len(plot_manager.get_duplicates()) == len(receiver.duplicates()) == expected.duplicates_count
+
+
+@pytest.mark.asyncio
+async def test_sync_start_and_disconnect_while_sync_is_active(
+    harvester_farmer_simulation: Tuple[Service, Service]
+) -> None:
+    harvester_service, farmer_service = harvester_farmer_simulation
+    harvester = harvester_service._node
+    farmer: Farmer = farmer_service._node
+    Constants.message_timeout = 3
+
+    async def receiver_available() -> bool:
+        return harvester.server.node_id in farmer.plot_sync_receivers
+
+    async def disconnecting_process(
+        self: Receiver, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
+    ) -> None:
+        if self.current_sync().state == State.loaded:
+            harvester.plot_manager.trigger_refresh()
+            await asyncio.sleep(2)
+            await self.connection().close()
+            return
+        await original_process(method, message_type, message)
+
+    # Wait for the receiver to show up
+    await time_out_assert(10, receiver_available)
+    receiver = farmer.plot_sync_receivers[harvester.server.node_id]
+    # And wait until the first sync from the harvester to the farmer is done
+    await time_out_assert(10, receiver.initial_sync, False)
+    # Replace the `Receiver._process` with `disconnecting_process` which triggers a plot manager refresh and disconnects
+    # the farmer from the harvester during an active sync.
+    original_process = receiver._process
+    receiver._process = functools.partial(disconnecting_process, receiver)  # type: ignore[assignment]
+    # Trigger the refresh which leads to a new sync_start being triggered during the active sync.
+    harvester.plot_manager.trigger_refresh()
+    await time_out_assert(10, harvester.plot_sync_sender.sync_active)
+    # Now wait until the receiver disappears from the farmer's plot_sync_receivers which means its disconnected.
+    await time_out_assert(10, receiver_available, False)
+    # Wait until the sync was aborted
+    await time_out_assert(10, harvester.plot_sync_sender.sync_active, False)
+    # And then wait for the harvester to reconnect and the receiver to re-appear.
+    await time_out_assert(10, receiver_available, True)
+    # Make sure the receiver object has been changed because of the disconnect
+    assert farmer.plot_sync_receivers[harvester.server.node_id] is not receiver
+    receiver = farmer.plot_sync_receivers[harvester.server.node_id]
+    current_last_sync_id = receiver.last_sync().sync_id
+    # Now start another sync and wait for it to be done to make sure everything still works fine
+    harvester.plot_manager.trigger_refresh()
+    await time_out_assert(10, synced, True, harvester.plot_sync_sender, receiver, current_last_sync_id)
