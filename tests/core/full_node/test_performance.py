@@ -20,6 +20,7 @@ from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
 from tests.time_out_assert import time_out_assert
+from tests.util.misc import assert_maximum_duration
 
 log = logging.getLogger(__name__)
 

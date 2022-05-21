@@ -1,7 +1,6 @@
 # flake8: noqa: F811, F401
 
 import logging
-import time
 
 import pytest
 
@@ -12,6 +11,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.time_out_assert import time_out_assert
+from tests.util.misc import assert_maximum_duration
 
 
 def wallet_height_at_least(wallet_node, h):
