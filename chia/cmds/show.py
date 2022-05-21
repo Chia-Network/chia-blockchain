@@ -1,11 +1,11 @@
-from typing import Any, Callable, Dict, Optional, Union, List
 import time
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.consensus.block_record import BlockRecord
 from chia.server.outbound_message import NodeType
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
 async def print_connections(node_client, trusted_peers: Dict):
@@ -63,8 +63,8 @@ async def print_connections(node_client, trusted_peers: Dict):
 
 async def print_blockchain_state(node_client, config: Dict):
     # node_client is FullNodeRpcClient
-    from chia.util.misc import format_bytes
     from chia.util.ints import uint64
+    from chia.util.misc import format_bytes
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
@@ -244,8 +244,8 @@ async def show_async(
             print("Block height", block_header_hash_by_height, "not found")
     if block_by_header_hash != "":
         from chia.types.full_block import FullBlock
-        from chia.util.byte_types import hexstr_to_bytes
         from chia.util.bech32m import encode_puzzle_hash
+        from chia.util.byte_types import hexstr_to_bytes
 
         block: Optional[BlockRecord] = await node_client.get_block_record(hexstr_to_bytes(block_by_header_hash))
         full_block: Optional[FullBlock] = await node_client.get_block(hexstr_to_bytes(block_by_header_hash))

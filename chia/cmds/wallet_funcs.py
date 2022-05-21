@@ -551,7 +551,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
-    await print_connections(wallet_client, time, NodeType, trusted_peers)
+    await print_connections(wallet_client, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
