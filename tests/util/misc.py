@@ -10,7 +10,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, List, Optional, Type
+from typing import Callable, Iterator, List, Optional, Type, final
 
 
 class GcMode(enum.Enum):
@@ -86,6 +86,7 @@ class AssertMaximumDurationResults:
         return f"{self.percent():.0f} %"
 
 
+@final
 @dataclasses.dataclass
 class AssertMaximumDuration:
     """Prepare for, measure, and assert about the time taken by code in the context.
@@ -136,13 +137,15 @@ class AssertMaximumDuration:
 
         return compensation
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> AssertMaximumDuration:
         self.entry_line = caller_file_and_line()
         if self.calibrate:
             self.compensation = self.calibrate_compensation()
         self.gc_manager = gc_mode(mode=self.gc_mode)
         self.gc_manager.__enter__()
         self.start = self.clock()
+
+        return self
 
     def __exit__(
         self,
