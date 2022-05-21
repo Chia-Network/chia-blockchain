@@ -65,7 +65,6 @@ class DBWrapper2:
         self._current_writer = None
         self._savepoint_name = 0
 
-
     async def close(self) -> None:
         while self._num_read_connections > 0:
             await (await self._read_connections.get()).close()
