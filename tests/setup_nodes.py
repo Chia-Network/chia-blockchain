@@ -402,7 +402,7 @@ async def setup_full_system(
         introducer_iter = setup_introducer(shared_b_tools, uint16(0))
         introducer, introducer_server = await introducer_iter.__anext__()
 
-        vdf1_port = find_available_listen_port("vdf1")
+        vdf1_port = uint16(0)
         vdf2_port = find_available_listen_port("vdf2")
 
         # Then start the full node so we can use the port for the farmer and timelord
@@ -461,26 +461,10 @@ async def setup_full_system(
             consensus_constants,
         )
         timelord_iter = setup_timelord(full_node_1_port, uint16(0), vdf1_port, False, consensus_constants, b_tools)
-        # timelord_port = timelord.timelord.get_vdf_server_port()
 
         timelord_bluebox_iter = setup_timelord(1000, uint16(0), vdf2_port, True, consensus_constants, b_tools_1)
         # timelord_bluebox_port = timelord_bluebox.timelord.get_vdf_server_port()
-
-        node_iters = [
-            introducer_iter,
-            harvester_iter,
-            farmer_iter,
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port),
-            timelord_iter,
-            full_node_1_iter,
-            full_node_2_iter,
-            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
-            timelord_bluebox_iter,
-        ]
-        if connect_to_daemon:
-            node_iters.append(daemon_iter)
-
-        harvester_service = await node_iters[1].__anext__()
+        harvester_service = await harvester_iter.__anext__()
         harvester = harvester_service._node
 
         async def num_connections():
@@ -490,6 +474,22 @@ async def setup_full_system(
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         timelord, _ = await timelord_iter.__anext__()
+        timelord_port = timelord.timelord.get_vdf_server_port()
+
+        node_iters = [
+            introducer_iter,
+            harvester_iter,
+            farmer_iter,
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], timelord_port),
+            timelord_iter,
+            full_node_1_iter,
+            full_node_2_iter,
+            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port),
+            timelord_bluebox_iter,
+        ]
+        if connect_to_daemon:
+            node_iters.append(daemon_iter)
+
         vdf_clients = await node_iters[3].__anext__()
 
         timelord_bluebox, timelord_bluebox_server = await timelord_bluebox_iter.__anext__()
