@@ -10,7 +10,9 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, List, Optional, Type, final
+from typing import Callable, Iterator, List, Optional, Type
+
+from typing_extensions import final
 
 
 class GcMode(enum.Enum):
