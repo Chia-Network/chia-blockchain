@@ -129,8 +129,7 @@ async def print_blockchain_state(node_client, config: Dict):
         print(f"Current difficulty: {difficulty}")
         print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
         print("Total iterations since the start of the blockchain:", total_iters)
-        print("")
-        print("  Height: |   Hash:")
+        print("\n  Height: |   Hash:")
 
         added_blocks: List[BlockRecord] = []
         curr = await node_client.get_block_record(peak.header_hash)
@@ -142,6 +141,71 @@ async def print_blockchain_state(node_client, config: Dict):
             print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
+
+
+async def print_block_from_hash(node_client, config: Dict, block_by_header_hash: str):
+    from chia.types.full_block import FullBlock
+    from chia.util.bech32m import encode_puzzle_hash
+    from chia.util.byte_types import hexstr_to_bytes
+
+    block: Optional[BlockRecord] = await node_client.get_block_record(hexstr_to_bytes(block_by_header_hash))
+    full_block: Optional[FullBlock] = await node_client.get_block(hexstr_to_bytes(block_by_header_hash))
+    # Would like to have a verbose flag for this
+    if block is not None:
+        assert full_block is not None
+        prev_b = await node_client.get_block_record(block.prev_hash)
+        if prev_b is not None:
+            difficulty = block.weight - prev_b.weight
+        else:
+            difficulty = block.weight
+        if block.is_transaction_block:
+            assert full_block.transactions_info is not None
+            block_time = time.struct_time(
+                time.localtime(
+                    full_block.foliage_transaction_block.timestamp if full_block.foliage_transaction_block else None
+                )
+            )
+            block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+            cost = str(full_block.transactions_info.cost)
+            tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
+            if full_block.foliage_transaction_block:
+                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+            fees: Any = block.fees
+        else:
+            block_time_string = "Not a transaction block"
+            cost = "Not a transaction block"
+            tx_filter_hash = "Not a transaction block"
+            fees = "Not a transaction block"
+        address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+        farmer_address = encode_puzzle_hash(block.farmer_puzzle_hash, address_prefix)
+        pool_address = encode_puzzle_hash(block.pool_puzzle_hash, address_prefix)
+        pool_pk = (
+            full_block.reward_chain_block.proof_of_space.pool_public_key
+            if full_block.reward_chain_block.proof_of_space.pool_public_key is not None
+            else "Pay to pool puzzle hash"
+        )
+        print(
+            f"Block Height           {block.height}\n"
+            f"Header Hash            0x{block.header_hash.hex()}\n"
+            f"Timestamp              {block_time_string}\n"
+            f"Weight                 {block.weight}\n"
+            f"Previous Block         0x{block.prev_hash.hex()}\n"
+            f"Difficulty             {difficulty}\n"
+            f"Sub-slot iters         {block.sub_slot_iters}\n"
+            f"Cost                   {cost}\n"
+            f"Total VDF Iterations   {block.total_iters}\n"
+            f"Is a Transaction Block?{block.is_transaction_block}\n"
+            f"Deficit                {block.deficit}\n"
+            f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
+            f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
+            f"Pool Public Key        {pool_pk}\n"
+            f"Tx Filter Hash         {tx_filter_hash}\n"
+            f"Farmer Address         {farmer_address}\n"
+            f"Pool Address           {pool_address}\n"
+            f"Fees Amount            {fees}\n"
+        )
+    else:
+        print("Block with header hash", block_by_header_hash, "not found")
 
 
 async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
@@ -243,78 +307,14 @@ async def show_async(
         else:
             print("Block height", block_header_hash_by_height, "not found")
     if block_by_header_hash != "":
-        from chia.types.full_block import FullBlock
-        from chia.util.bech32m import encode_puzzle_hash
-        from chia.util.byte_types import hexstr_to_bytes
-
-        block: Optional[BlockRecord] = await node_client.get_block_record(hexstr_to_bytes(block_by_header_hash))
-        full_block: Optional[FullBlock] = await node_client.get_block(hexstr_to_bytes(block_by_header_hash))
-        # Would like to have a verbose flag for this
-        if block is not None:
-            assert full_block is not None
-            prev_b = await node_client.get_block_record(block.prev_hash)
-            if prev_b is not None:
-                difficulty = block.weight - prev_b.weight
-            else:
-                difficulty = block.weight
-            if block.is_transaction_block:
-                assert full_block.transactions_info is not None
-                block_time = time.struct_time(
-                    time.localtime(
-                        full_block.foliage_transaction_block.timestamp if full_block.foliage_transaction_block else None
-                    )
-                )
-                block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                cost = str(full_block.transactions_info.cost)
-                tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
-                if full_block.foliage_transaction_block:
-                    tx_filter_hash = full_block.foliage_transaction_block.filter_hash
-                fees: Any = block.fees
-            else:
-                block_time_string = "Not a transaction block"
-                cost = "Not a transaction block"
-                tx_filter_hash = "Not a transaction block"
-                fees = "Not a transaction block"
-            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-            farmer_address = encode_puzzle_hash(block.farmer_puzzle_hash, address_prefix)
-            pool_address = encode_puzzle_hash(block.pool_puzzle_hash, address_prefix)
-            pool_pk = (
-                full_block.reward_chain_block.proof_of_space.pool_public_key
-                if full_block.reward_chain_block.proof_of_space.pool_public_key is not None
-                else "Pay to pool puzzle hash"
-            )
-            print(
-                f"Block Height           {block.height}\n"
-                f"Header Hash            0x{block.header_hash.hex()}\n"
-                f"Timestamp              {block_time_string}\n"
-                f"Weight                 {block.weight}\n"
-                f"Previous Block         0x{block.prev_hash.hex()}\n"
-                f"Difficulty             {difficulty}\n"
-                f"Sub-slot iters         {block.sub_slot_iters}\n"
-                f"Cost                   {cost}\n"
-                f"Total VDF Iterations   {block.total_iters}\n"
-                f"Is a Transaction Block?{block.is_transaction_block}\n"
-                f"Deficit                {block.deficit}\n"
-                f"PoSpace 'k' Size       {full_block.reward_chain_block.proof_of_space.size}\n"
-                f"Plot Public Key        0x{full_block.reward_chain_block.proof_of_space.plot_public_key}\n"
-                f"Pool Public Key        {pool_pk}\n"
-                f"Tx Filter Hash         {tx_filter_hash}\n"
-                f"Farmer Address         {farmer_address}\n"
-                f"Pool Address           {pool_address}\n"
-                f"Fees Amount            {fees}\n"
-            )
-        else:
-            print("Block with header hash", block_header_hash_by_height, "not found")
+        await print_block_from_hash(node_client, config, block_by_header_hash)
 
 
 @click.command("show", short_help="Show node information")
 @click.option(
     "-p",
     "--rpc-port",
-    help=(
-        "Set the port where the Full Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
-    ),
+    help="Set the port where the Full Node is hosting the RPC interface. See the rpc_port under full_node in config.yaml",
     type=int,
     default=None,
 )
