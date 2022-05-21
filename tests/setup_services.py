@@ -195,7 +195,6 @@ async def setup_harvester(
     port: uint16 = uint16(0),
     rpc_port: uint16 = uint16(0),
 ):
-    log.warning(f"Port: {port} {rpc_port}")
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
     with lock_and_load_config(root_path, "config.yaml") as config:

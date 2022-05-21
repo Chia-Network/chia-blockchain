@@ -316,7 +316,7 @@ async def setup_full_system(
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 shared_b_tools.config["self_hostname"],
-                b_tools,
+                b_tools if i == 0 else b_tools_1,
                 introducer_server._port,
                 False,
                 10,
