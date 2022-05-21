@@ -69,7 +69,7 @@ async def print_blockchain_state(node_client, config: Dict):
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
         print("There is no blockchain found yet. Try again shortly")
-        return None
+        return True
     peak: Optional[BlockRecord] = blockchain_state["peak"]
     node_id = blockchain_state["node_id"]
     difficulty = blockchain_state["difficulty"]
@@ -189,8 +189,8 @@ async def show_async(
 
     # Check State
     if state:
-        if await print_blockchain_state(node_client, config) is None:
-            return None
+        if await print_blockchain_state(node_client, config) is True:
+            return None  # if no blockchain is found
         # if called together with show_connections, leave a blank line
         if show_connections:
             print("")
