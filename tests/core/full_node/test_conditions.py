@@ -3,20 +3,17 @@ These are quick-to-run test that check spends can be added to the blockchain whe
 or that they're failing for the right reason when they're invalid.
 """
 
-import atexit
 import logging
 import time
 
 from typing import List, Optional, Tuple
 
 import pytest
-import pytest_asyncio
 
 from blspy import G2Element
 
 from clvm_tools.binutils import assemble
 
-from chia.consensus.constants import ConsensusConstants
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_record import CoinRecord
@@ -26,7 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint32
-from tests.block_tools import create_block_tools, test_constants, BlockTools
+from tests.block_tools import BlockTools
 from tests.util.keyring import TempKeyring
 
 from .ram_db import create_ram_blockchain
