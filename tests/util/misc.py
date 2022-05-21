@@ -55,12 +55,15 @@ class AssertMaximumDurationResults:
     ratio: float
     entry_line: str
 
-    def block(self) -> str:
+    def block(self, message: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
         # PyCharm to highlight as a link to the source.
+
+        heading = " ".join(["Asserting maximum duration:", message])
+
         return dedent(
             f"""\
-            Asserting maximum duration:
+            {heading}
             {self.entry_line}
                 run time: {self.duration}
                  allowed: {self.limit}
@@ -92,9 +95,18 @@ class AssertMaximumDuration:
     multiprocessed code.  Disabling garbage collection, or forcing it ahead of time,
     makes the benchmark not identify any issues the code may introduce in terms of
     actually causing relevant gc slowdowns.  And so on...
+
+    Produces output of the following form.
+
+        Asserting maximum duration: full block
+        /home/altendky/repos/chia-blockchain/tests/core/full_node/test_performance.py:187
+            run time: 0.027789528900002837
+            allowed: 0.1
+            percent: 28 %
     """
 
     seconds: float
+    message: str
     clock: Callable[[], float]
     gc_mode: GcMode
     calibrate: bool
@@ -159,7 +171,7 @@ class AssertMaximumDuration:
         self._results = results
 
         if self.print:
-            print(results.block())
+            print(results.block(message=self.message))
 
         if exc_type is None:
             __tracebackhide__ = True
@@ -168,8 +180,9 @@ class AssertMaximumDuration:
 
 def assert_maximum_duration(
     seconds: float,
+    message: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
     calibrate: bool = True,
 ) -> AssertMaximumDuration:
-    return AssertMaximumDuration(seconds=seconds, clock=clock, gc_mode=gc_mode, calibrate=calibrate)
+    return AssertMaximumDuration(seconds=seconds, message=message, clock=clock, gc_mode=gc_mode, calibrate=calibrate)
