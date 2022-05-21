@@ -102,8 +102,14 @@ class AssertMaximumDuration:
     compensation: float = 0
     start: Optional[float] = None
     entry_line: Optional[str] = None
-    results: Optional[AssertMaximumDurationResults] = None
+    _results: Optional[AssertMaximumDurationResults] = None
     gc_manager: Optional[contextlib.AbstractContextManager[None]] = None
+
+    def results(self) -> AssertMaximumDurationResults:
+        if self._results is None:
+            raise Exception("runtime results not yet available")
+
+        return self._results
 
     def calibrate_compensation(self) -> float:
         times: List[float] = []
@@ -111,9 +117,7 @@ class AssertMaximumDuration:
             manager = dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
             with manager:
                 pass
-            if manager.results is None:
-                raise Exception("manager failed to provide results")
-            times.append(manager.results.duration)
+            times.append(manager.results().duration)
         compensation = mean(times)
 
         return compensation
@@ -143,7 +147,7 @@ class AssertMaximumDuration:
         duration -= self.compensation
         ratio = duration / self.seconds
 
-        self.results = AssertMaximumDurationResults(
+        results = AssertMaximumDurationResults(
             start=self.start,
             end=end,
             duration=duration,
@@ -152,12 +156,14 @@ class AssertMaximumDuration:
             entry_line=self.entry_line,
         )
 
+        self._results = results
+
         if self.print:
-            print(self.results.block())
+            print(results.block())
 
         if exc_type is None:
             __tracebackhide__ = True
-            assert self.results.passed(), self.results.message()
+            assert results.passed(), results.message()
 
 
 def assert_maximum_duration(
