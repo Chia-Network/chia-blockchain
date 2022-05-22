@@ -15,7 +15,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-
 class CoinStore:
     """
     This object handles CoinRecords in DB.
