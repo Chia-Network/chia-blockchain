@@ -1,14 +1,12 @@
-import time
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
 
-from chia.consensus.block_record import BlockRecord
-from chia.server.outbound_message import NodeType
-from chia.types.blockchain_format.sized_bytes import bytes32
-
 
 async def print_connections(node_client, trusted_peers: Dict):
+    import time
+
+    from chia.server.outbound_message import NodeType
     from chia.util.network import is_trusted_inner
 
     connections = await node_client.get_connections()
@@ -63,6 +61,9 @@ async def print_connections(node_client, trusted_peers: Dict):
 
 async def print_blockchain_state(node_client, config: Dict):
     # node_client is FullNodeRpcClient
+    import time
+
+    from chia.consensus.block_record import BlockRecord
     from chia.util.ints import uint64
     from chia.util.misc import format_bytes
 
@@ -144,6 +145,10 @@ async def print_blockchain_state(node_client, config: Dict):
 
 
 async def print_block_from_hash(node_client, config: Dict, block_by_header_hash: str):
+    import time
+
+    from chia.consensus.block_record import BlockRecord
+    from chia.types.blockchain_format.sized_bytes import bytes32
     from chia.types.full_block import FullBlock
     from chia.util.bech32m import encode_puzzle_hash
     from chia.util.byte_types import hexstr_to_bytes
@@ -208,6 +213,44 @@ async def print_block_from_hash(node_client, config: Dict, block_by_header_hash:
         print("Block with header hash", block_by_header_hash, "not found")
 
 
+async def add_node_connection(node_client, add_connection: str):
+    if ":" not in add_connection:
+        print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
+    else:
+        ip, port = (
+            ":".join(add_connection.split(":")[:-1]),
+            add_connection.split(":")[-1],
+        )
+        print(f"Connecting to {ip}, {port}")
+        try:
+            await node_client.open_connection(ip, int(port))
+        except Exception:
+            print(f"Failed to connect to {ip}:{port}")
+
+
+async def remove_node_connection(node_client, remove_connection: str):
+    from chia.server.outbound_message import NodeType
+
+    result_txt = ""
+    if len(remove_connection) != 8:
+        result_txt = "Invalid NodeID. Do not include '.'"
+    else:
+        connections = await node_client.get_connections()
+        for con in connections:
+            if remove_connection == con["node_id"].hex()[:8]:
+                print("Attempting to disconnect", "NodeID", remove_connection)
+                try:
+                    await node_client.close_connection(con["node_id"])
+                except Exception:
+                    result_txt = f"Failed to disconnect NodeID {remove_connection}"
+                else:
+                    result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
+                    f"{con['peer_host']} disconnected"
+            elif result_txt == "":
+                result_txt = f"NodeID {remove_connection}... not found"
+    print(result_txt)
+
+
 async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
     import traceback
 
@@ -267,39 +310,11 @@ async def show_async(
         if state:
             print("")
     if add_connection:
-        if ":" not in add_connection:
-            print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
-        else:
-            ip, port = (
-                ":".join(add_connection.split(":")[:-1]),
-                add_connection.split(":")[-1],
-            )
-            print(f"Connecting to {ip}, {port}")
-            try:
-                await node_client.open_connection(ip, int(port))
-            except Exception:
-                print(f"Failed to connect to {ip}:{port}")
+        await add_node_connection(node_client, add_connection)
     if remove_connection:
-        result_txt = ""
-        if len(remove_connection) != 8:
-            result_txt = "Invalid NodeID. Do not include '.'"
-        else:
-            connections = await node_client.get_connections()
-            for con in connections:
-                if remove_connection == con["node_id"].hex()[:8]:
-                    print("Attempting to disconnect", "NodeID", remove_connection)
-                    try:
-                        await node_client.close_connection(con["node_id"])
-                    except Exception:
-                        result_txt = f"Failed to disconnect NodeID {remove_connection}"
-                    else:
-                        result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
-                        f"{con['peer_host']} disconnected"
-                elif result_txt == "":
-                    result_txt = f"NodeID {remove_connection}... not found"
-        print(result_txt)
+        await remove_node_connection(node_client, remove_connection)
 
-        # Get Block Information
+    # Get Block Information
     if block_header_hash_by_height != "":
         block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
         if block_header is not None:
