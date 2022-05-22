@@ -32,10 +32,6 @@ test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32
 log = logging.getLogger(__name__)
 
 
-def cleanup_keyring(keyring: TempKeyring):
-    keyring.cleanup()
-
-
 @pytest_asyncio.fixture(scope="function")
 async def custom_block_tools():
     with TempKeyring() as keychain:
