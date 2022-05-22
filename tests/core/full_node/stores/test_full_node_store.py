@@ -1,4 +1,3 @@
-import atexit
 import logging
 from secrets import token_bytes
 from typing import List, Optional
@@ -19,7 +18,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from tests.block_tools import get_signage_point, BlockTools, create_block_tools_async
+from tests.block_tools import get_signage_point, create_block_tools_async
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_no_error,
@@ -38,11 +37,9 @@ def cleanup_keyring(keyring: TempKeyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def custom_block_tools() -> BlockTools:
+async def custom_block_tools():
     with TempKeyring() as keychain:
         yield await create_block_tools_async(constants=test_constants, keychain=keychain)
-
-    return await create_block_tools_async(constants=test_constants, keychain=keychain)
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
