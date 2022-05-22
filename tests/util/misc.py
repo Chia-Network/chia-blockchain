@@ -5,6 +5,7 @@ import dataclasses
 import enum
 import gc
 import math
+from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
@@ -12,7 +13,7 @@ from time import thread_time
 from types import TracebackType
 from typing import Callable, Iterator, List, Optional, Type, TypeVar
 
-from typing_extensions import final
+from typing_extensions import Protocol, final
 
 T = TypeVar("T")
 
@@ -125,29 +126,21 @@ class AssertRuntimeResults:
         return f"{self.percent():.0f} %"
 
 
-@final
-@dataclasses.dataclass
-class ResultsCallable:
-    results: Optional[RuntimeResults] = None
-
-    def __call__(self) -> RuntimeResults:
-        if self.results is None:
-            raise Exception("runtime results not yet available")
-
-        return self.results
+class DurationResultsProtocol(Protocol):
+    duration: float
 
 
 def measure_overhead(
-    manager_maker: Callable[[], contextlib.AbstractContextManager[T]],
-    result_getter: Callable[[T], float],
+    manager_maker: Callable[[], contextlib.AbstractContextManager[Future[DurationResultsProtocol]]],
+    cycles: int = 10,
 ) -> float:
     times: List[float] = []
 
-    for _ in range(10):
+    for _ in range(cycles):
         with manager_maker() as results:
             pass
 
-        times.append(result_getter(results))
+        times.append(results.result(timeout=0).duration)
 
     overhead = mean(times)
 
@@ -161,27 +154,24 @@ def measure_runtime(
     gc_mode: GcMode = GcMode.disable,
     calibrate: bool = True,
     print_results: bool = True,
-) -> Iterator[ResultsCallable]:
+) -> Iterator[Future[RuntimeResults]]:
     entry_line = caller_file_and_line()
 
-    def manager_maker() -> contextlib.AbstractContextManager[ResultsCallable]:
+    def manager_maker() -> contextlib.AbstractContextManager[Future[RuntimeResults]]:
         return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
 
-    def result_getter(result: ResultsCallable) -> float:
-        return result().duration
-
     if calibrate:
-        overhead = measure_overhead(manager_maker=manager_maker, result_getter=result_getter)
+        overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
     else:
         overhead = 0
 
-    results_callable = ResultsCallable()
+    results_future = Future[RuntimeResults]()
 
     with manage_gc(mode=gc_mode):
         start = clock()
 
         try:
-            yield results_callable
+            yield results_future
         finally:
             end = clock()
 
@@ -194,7 +184,7 @@ def measure_runtime(
                 duration=duration,
                 entry_line=entry_line,
             )
-            results_callable.results = results
+            results_future.set_result(results)
 
             if print_results:
                 print(results.block(message=message))
@@ -234,8 +224,8 @@ class AssertMaximumDuration:
     overhead: float = 0
     entry_line: Optional[str] = None
     _results: Optional[AssertRuntimeResults] = None
-    runtime_manager: Optional[contextlib.AbstractContextManager[ResultsCallable]] = None
-    runtime_results_callable: Optional[ResultsCallable] = None
+    runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
+    runtime_results_callable: Optional[Future[RuntimeResults]] = None
 
     def results(self) -> AssertRuntimeResults:
         if self._results is None:
@@ -243,24 +233,22 @@ class AssertMaximumDuration:
 
         return self._results
 
-    def __enter__(self) -> AssertMaximumDuration:
+    def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
         if self.calibrate:
 
-            def manager_maker() -> contextlib.AbstractContextManager[AssertMaximumDuration]:
+            def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
                 return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
 
-            def result_getter(result: AssertMaximumDuration) -> float:
-                return result.results().duration
-
-            self.overhead = measure_overhead(manager_maker=manager_maker, result_getter=result_getter)
+            self.overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
 
         self.runtime_manager = measure_runtime(
             clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
+        self.results_callable = Future[AssertRuntimeResults]()
 
-        return self
+        return self.results_callable
 
     def __exit__(
         self,
@@ -273,7 +261,7 @@ class AssertMaximumDuration:
 
         self.runtime_manager.__exit__(exc_type, exc, traceback)
 
-        runtime = self.runtime_results_callable()
+        runtime = self.runtime_results_callable.result(timeout=0)
         results = AssertRuntimeResults.from_runtime_results(
             results=runtime,
             limit=self.seconds,
@@ -281,7 +269,7 @@ class AssertMaximumDuration:
             overhead=self.overhead,
         )
 
-        self._results = results
+        self.results_callable.set_result(results)
 
         if self.print:
             print(results.block(message=self.message))
