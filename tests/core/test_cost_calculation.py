@@ -12,7 +12,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import test_constants
-from tests.util.misc import assert_maximum_duration
+from tests.util.misc import assert_runtime
 
 from .make_block_generator import make_block_generator
 
@@ -196,7 +196,7 @@ class TestCostCalculation:
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
-        with assert_maximum_duration(seconds=0.5):
+        with assert_runtime(seconds=0.5):
             generator = BlockGenerator(program, [], [])
             npc_result = get_name_puzzle_conditions(
                 generator,
@@ -261,7 +261,7 @@ class TestCostCalculation:
             p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         )
 
-        with assert_maximum_duration(seconds=0.1):
+        with assert_runtime(seconds=0.1):
             total_cost = 0
             for i in range(0, 1000):
                 cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)

@@ -11,7 +11,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.time_out_assert import time_out_assert
-from tests.util.misc import assert_maximum_duration
+from tests.util.misc import assert_runtime
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -75,5 +75,5 @@ class TestMempoolPerformance:
             else:
                 duration = 0.001
 
-            with assert_maximum_duration(seconds=duration):
+            with assert_runtime(seconds=duration):
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))

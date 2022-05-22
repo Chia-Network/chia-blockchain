@@ -191,7 +191,7 @@ def measure_runtime(
 
 @final
 @dataclasses.dataclass
-class _AssertMaximumDuration:
+class _AssertRuntime:
     """Prepare for, measure, and assert about the time taken by code in the context.
 
     Defaults are set for single-threaded CPU usage timing without garbage collection.
@@ -275,4 +275,4 @@ class _AssertMaximumDuration:
 # Related to the comment above about needing a class vs. using the context manager
 # decorator, this is just here to retain the function-style naming as the public
 # interface.  Hopefully we can switch away from the class at some point.
-assert_maximum_duration = _AssertMaximumDuration
+assert_runtime = _AssertRuntime

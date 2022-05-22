@@ -5,7 +5,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
 from tests.time_out_assert import time_out_assert
-from tests.util.misc import assert_maximum_duration
+from tests.util.misc import assert_runtime
 
 
 class TestNodeLoad:
@@ -24,7 +24,7 @@ class TestNodeLoad:
 
         await time_out_assert(10, num_connections, 1)
 
-        with assert_maximum_duration(seconds=100) as results_future:
+        with assert_runtime(seconds=100) as results_future:
             for i in range(1, num_blocks):
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
                 await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))

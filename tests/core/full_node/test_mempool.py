@@ -46,7 +46,7 @@ from chia.types.generator_types import BlockGenerator
 from blspy import G1Element
 from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
 
-from tests.util.misc import assert_maximum_duration
+from tests.util.misc import assert_runtime
 from tests.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
@@ -2241,7 +2241,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_ladder(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
 
-        with assert_maximum_duration(seconds=0.7):
+        with assert_runtime(seconds=0.7):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         if softfork_height >= 2300000:
@@ -2271,7 +2271,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with assert_maximum_duration(seconds=1.1):
+        with assert_runtime(seconds=1.1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         if softfork_height >= 2300000:
@@ -2302,7 +2302,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_substr(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with assert_maximum_duration(seconds=1.1):
+        with assert_runtime(seconds=1.1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         if softfork_height >= 2300000:
@@ -2335,7 +2335,7 @@ class TestMaliciousGenerators:
             opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
         )
 
-        with assert_maximum_duration(seconds=0.3):
+        with assert_runtime(seconds=0.3):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         if softfork_height >= 2300000:
@@ -2366,7 +2366,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_negative(self, opcode, softfork_height):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
 
-        with assert_maximum_duration(seconds=1):
+        with assert_runtime(seconds=1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
@@ -2377,7 +2377,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with assert_maximum_duration(seconds=1):
+        with assert_runtime(seconds=1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         if softfork_height >= 2300000:
@@ -2392,7 +2392,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
 
-        with assert_maximum_duration(seconds=0.8):
+        with assert_runtime(seconds=0.8):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         # RESERVE_FEE conditions fail unconditionally if they have a negative
@@ -2407,7 +2407,7 @@ class TestMaliciousGenerators:
     def test_duplicate_coin_announces(self, opcode, softfork_height):
         condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with assert_maximum_duration(seconds=7):
+        with assert_runtime(seconds=7):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
@@ -2423,7 +2423,7 @@ class TestMaliciousGenerators:
         # duplicate
         condition = CREATE_COIN.format(num=600000)
 
-        with assert_maximum_duration(seconds=0.8):
+        with assert_runtime(seconds=0.8):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
@@ -2437,7 +2437,7 @@ class TestMaliciousGenerators:
         # the number 6095 was chosen carefully to not exceed the maximum cost
         condition = CREATE_UNIQUE_COINS.format(num=6094)
 
-        with assert_maximum_duration(seconds=0.2):
+        with assert_runtime(seconds=0.2):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
