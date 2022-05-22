@@ -39,9 +39,8 @@ def cleanup_keyring(keyring: TempKeyring):
 
 @pytest_asyncio.fixture(scope="function")
 async def custom_block_tools() -> BlockTools:
-    temp_keyring = TempKeyring()
-    keychain = temp_keyring.get_keychain()
-    atexit.register(cleanup_keyring, temp_keyring)  # Attempt to cleanup the temp keychain
+    with TempKeyring() as keychain:
+        yield await create_block_tools_async(constants=test_constants, keychain=keychain)
 
     return await create_block_tools_async(constants=test_constants, keychain=keychain)
 
