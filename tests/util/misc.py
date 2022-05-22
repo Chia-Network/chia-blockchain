@@ -48,8 +48,8 @@ def manage_gc(mode: GcMode) -> Iterator[None]:
                 gc.disable()
 
 
-def caller_file_and_line(distance: int = 2) -> str:
-    caller = getframeinfo(stack()[distance][0])
+def caller_file_and_line(distance: int = 1) -> str:
+    caller = getframeinfo(stack()[distance + 1][0])
     return f"{caller.filename}:{caller.lineno}"
 
 
@@ -226,12 +226,6 @@ class AssertMaximumDuration:
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
-
-    def results(self) -> AssertRuntimeResults:
-        if self._results is None:
-            raise Exception("runtime results not yet available")
-
-        return self._results
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
