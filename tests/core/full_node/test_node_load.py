@@ -24,8 +24,9 @@ class TestNodeLoad:
 
         await time_out_assert(10, num_connections, 1)
 
-        with assert_runtime(seconds=100) as results_future:
+        with assert_runtime(seconds=100) as runtime_results_future:
             for i in range(1, num_blocks):
                 await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
                 await full_node_2.full_node.respond_block(full_node_protocol.RespondBlock(blocks[i]))
-        print(f"Time taken to process {num_blocks} is {results_future.result(timeout=0).duration}")
+        runtime_results = runtime_results_future.result(timeout=0)
+        print(f"Time taken to process {num_blocks} is {runtime_results.duration}")
