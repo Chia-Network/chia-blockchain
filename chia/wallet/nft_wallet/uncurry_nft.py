@@ -61,7 +61,6 @@ class UncurriedNFT:
     """
     data_uris: Program
     data_hash: Program
-
     inner_puzzle: Program
     """NFT state layer inner puzzle"""
 
@@ -97,6 +96,7 @@ class UncurriedNFT:
                     data_uris = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"h":
                     data_hash = kv_pair.rest()
+
         except Exception as e:
             raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
         return cls(

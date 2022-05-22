@@ -1,0 +1,36 @@
+(mod
+  (
+    SINGLETON_STRUCT
+    Current_Owner ; Truth
+    (
+      new_owner
+      new_price
+      (new_did_owner new_did_inner_hash)  ; this is the opaque transfer_program_solution
+    )
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defconstant CHANGE_OWNER -10)
+  (defconstant RECURRY_TRANSFER_PROGRAM -22)
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+    ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+    (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+       (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                        inner_puzzle_hash
+                                        (sha256tree SINGLETON_STRUCT)
+       )
+    )
+
+
+  (list new_owner 0
+    (if new_owner
+      (list
+        (list ASERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f (f TRANSFER_PROGRAM_CURRY_PARAMS)) (c new_did_owner (r (r (f TRANSFER_PROGRAM_CURRY_PARAMS))))) new_did_inner_hash) (f (r (f TRANSFER_PROGRAM_CURRY_PARAMS)))))
+      )
+      0
+    )
+  )
+)

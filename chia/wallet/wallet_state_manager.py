@@ -725,7 +725,7 @@ class WalletStateManager:
                     wallet_info.name,
                     uncurried_nft.inner_puzzle.get_tree_hash(),
                 )
-                if not nft_wallet_info.did_wallet_id:
+                if not nft_wallet_info.did_id:
                     # standard NFT wallet
                     wallet_id = wallet_info.id
                     wallet_type = WalletType.NFT
