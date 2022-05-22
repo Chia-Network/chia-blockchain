@@ -1435,7 +1435,7 @@ class WalletRpcApi:
                 full_puzzle = nft_puzzles.create_full_puzzle(
                     uncurried_nft.singleton_launcher_id,
                     metadata,
-                    uncurried_nft.metdata_updater_hash,
+                    uncurried_nft.metadata_updater_hash,
                     uncurried_nft.inner_puzzle,
                 )
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(full_puzzle, coin_state.coin)
@@ -1447,7 +1447,8 @@ class WalletRpcApi:
     async def nft_add_uri(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
-        # Note metadata updater can only add one uri for one field at once
+        # Note metadata updater can only add one uri for each field per spend.
+        # If you want to add multiple uris for one field, you need to spend multiple times.
         uris = {
             "u": request.get("uri", None),
             "mu": request.get("meta_uri", None),

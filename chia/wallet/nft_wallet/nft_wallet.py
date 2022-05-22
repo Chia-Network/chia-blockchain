@@ -264,7 +264,7 @@ class NFTWallet:
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
             singleton_id,
             metadata,
-            bytes32(uncurried_nft.metdata_updater_hash.atom),
+            bytes32(uncurried_nft.metadata_updater_hash.atom),
             new_inner_puzzle,
         )
         self.log.debug(

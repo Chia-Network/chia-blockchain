@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -80,13 +80,13 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     """
     # TODO Update this method after the NFT code finalized
     uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
-    data_uris = []
+    data_uris: List[str] = []
     for uri in uncurried_nft.data_uris.as_python():
         data_uris.append(str(uri, "utf-8"))
-    meta_uris = []
+    meta_uris: List[str] = []
     for uri in uncurried_nft.meta_uris.as_python():
         meta_uris.append(str(uri, "utf-8"))
-    license_uris = []
+    license_uris: List[str] = []
     for uri in uncurried_nft.license_uris.as_python():
         license_uris.append(str(uri, "utf-8"))
 
@@ -104,7 +104,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         uint64(uncurried_nft.series_total.as_int()),
         uint64(uncurried_nft.series_total.as_int()),
         LAUNCHER_PUZZLE_HASH.hex().upper(),
-        str(uncurried_nft.metdata_updater_hash).upper(),
+        str(uncurried_nft.metadata_updater_hash).upper(),
         str(uncurried_nft.metadata).upper(),
     )
     return nft_info

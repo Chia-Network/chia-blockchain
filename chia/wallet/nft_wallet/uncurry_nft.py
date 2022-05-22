@@ -38,7 +38,7 @@ class UncurriedNFT:
     owner_did: Program
     """Owner's DID"""
 
-    metdata_updater_hash: Program
+    metadata_updater_hash: Program
     """Metadata updater puzzle hash"""
 
     transfer_program_hash: Program
@@ -95,7 +95,7 @@ class UncurriedNFT:
             raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
         try:
             # Set nft parameters
-            (nft_mod_hash, metadata, metdata_updater_hash, inner_puzzle) = curried_args.as_iter()
+            (nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle) = curried_args.as_iter()
             data_uris = Program.to([])
             data_hash = Program.to(0)
             meta_uris = Program.to([])
@@ -140,7 +140,7 @@ class UncurriedNFT:
             license_hash=license_hash,
             series_number=series_number,
             series_total=series_total,
-            metdata_updater_hash=metdata_updater_hash,
+            metadata_updater_hash=metadata_updater_hash,
             inner_puzzle=inner_puzzle,
             # TODO Set/Remove following fields after NFT1 implemented
             owner_did=Program.to([]),
