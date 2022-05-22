@@ -11,19 +11,9 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, List, Optional, Type, TypeVar
+from typing import Callable, Iterator, List, Optional, Type, Union
 
-from typing_extensions import Protocol, final
-
-T = TypeVar("T")
-
-
-class DurationResultsProtocol(Protocol):
-    start: float
-    end: float
-    duration: float
-    entry_line: str
-    overhead: float
+from typing_extensions import final
 
 
 class GcMode(enum.Enum):
@@ -137,7 +127,9 @@ class AssertRuntimeResults:
 
 
 def measure_overhead(
-    manager_maker: Callable[[], contextlib.AbstractContextManager[Future[DurationResultsProtocol]]],
+    manager_maker: Callable[
+        [], contextlib.AbstractContextManager[Union[Future[RuntimeResults], Future[AssertRuntimeResults]]]
+    ],
     cycles: int = 10,
 ) -> float:
     times: List[float] = []
@@ -167,9 +159,7 @@ def measure_runtime(
         return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
 
     if calibrate:
-        # The need for this ignore is presently unclear.  The classes seem to match the
-        # DurationResultsProtocol protocol, but still fails mypy.
-        overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
+        overhead = measure_overhead(manager_maker=manager_maker)
     else:
         overhead = 0
 
@@ -243,9 +233,7 @@ class _AssertMaximumDuration:
             def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
                 return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
 
-            # The need for this ignore is presently unclear.  The classes seem to match the
-            # DurationResultsProtocol protocol, but still fails mypy.
-            self.overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
+            self.overhead = measure_overhead(manager_maker=manager_maker)
 
         self.runtime_manager = measure_runtime(
             clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
