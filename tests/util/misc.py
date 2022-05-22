@@ -10,9 +10,11 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, List, Optional, Type
+from typing import Callable, Iterator, List, Optional, Type, TypeVar
 
 from typing_extensions import final
+
+T = TypeVar("T")
 
 
 class GcMode(enum.Enum):
@@ -23,7 +25,7 @@ class GcMode(enum.Enum):
 
 
 @contextlib.contextmanager
-def gc_mode(mode: GcMode) -> Iterator[None]:
+def manage_gc(mode: GcMode) -> Iterator[None]:
     if mode == GcMode.precollect:
         gc.collect()
         yield
@@ -51,27 +53,62 @@ def caller_file_and_line(distance: int = 2) -> str:
 
 
 @dataclasses.dataclass(frozen=True)
-class AssertMaximumDurationResults:
+class RuntimeResults:
     start: float
     end: float
     duration: float
-    limit: float
-    ratio: float
     entry_line: str
 
     def block(self, message: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
         # PyCharm to highlight as a link to the source.
 
-        heading = " ".join(["Asserting maximum duration:", message])
+        return dedent(
+            f"""\
+            Measuring runtime: {message}
+            {self.entry_line}
+                run time: {self.duration}
+            """
+        )
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class AssertRuntimeResults:
+    start: float
+    end: float
+    duration: float
+    limit: float
+    ratio: float
+    entry_line: str
+    overhead: float
+
+    @classmethod
+    def from_runtime_results(
+        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: float
+    ) -> AssertRuntimeResults:
+        return cls(
+            start=results.start,
+            end=results.end,
+            duration=results.duration,
+            limit=limit,
+            ratio=results.duration / limit,
+            entry_line=entry_line,
+            overhead=overhead,
+        )
+
+    def block(self, message: str = "") -> str:
+        # The entry line is reported starting at the beginning of the line to trigger
+        # PyCharm to highlight as a link to the source.
 
         return dedent(
             f"""\
-            {heading}
+            Asserting maximum duration: {message}
             {self.entry_line}
                 run time: {self.duration}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
+                 overhead: {self.overhead}
             """
         )
 
@@ -86,6 +123,81 @@ class AssertMaximumDurationResults:
 
     def percent_str(self) -> str:
         return f"{self.percent():.0f} %"
+
+
+@final
+@dataclasses.dataclass
+class ResultsCallable:
+    results: Optional[RuntimeResults] = None
+
+    def __call__(self) -> RuntimeResults:
+        if self.results is None:
+            raise Exception("runtime results not yet available")
+
+        return self.results
+
+
+def measure_overhead(
+    manager_maker: Callable[[], contextlib.AbstractContextManager[T]],
+    result_getter: Callable[[T], float],
+) -> float:
+    times: List[float] = []
+
+    for _ in range(10):
+        with manager_maker() as results:
+            pass
+
+        times.append(result_getter(results))
+
+    overhead = mean(times)
+
+    return overhead
+
+
+@contextlib.contextmanager
+def measure_runtime(
+    message: str = "",
+    clock: Callable[[], float] = thread_time,
+    gc_mode: GcMode = GcMode.disable,
+    calibrate: bool = True,
+    print_results: bool = True,
+) -> Iterator[ResultsCallable]:
+    entry_line = caller_file_and_line()
+
+    def manager_maker() -> contextlib.AbstractContextManager[ResultsCallable]:
+        return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
+
+    def result_getter(result: ResultsCallable) -> float:
+        return result().duration
+
+    if calibrate:
+        overhead = measure_overhead(manager_maker=manager_maker, result_getter=result_getter)
+    else:
+        overhead = 0
+
+    results_callable = ResultsCallable()
+
+    with manage_gc(mode=gc_mode):
+        start = clock()
+
+        try:
+            yield results_callable
+        finally:
+            end = clock()
+
+            duration = end - start
+            duration -= overhead
+
+            results = RuntimeResults(
+                start=start,
+                end=end,
+                duration=duration,
+                entry_line=entry_line,
+            )
+            results_callable.results = results
+
+            if print_results:
+                print(results.block(message=message))
 
 
 @final
@@ -110,42 +222,43 @@ class AssertMaximumDuration:
             percent: 28 %
     """
 
+    # A class is only being used here, to make __tracebackhide__ work.
+    # https://github.com/pytest-dev/pytest/issues/2057
+
     seconds: float
     message: str
     clock: Callable[[], float]
     gc_mode: GcMode
     calibrate: bool
     print: bool = True
-    compensation: float = 0
-    start: Optional[float] = None
+    overhead: float = 0
     entry_line: Optional[str] = None
-    _results: Optional[AssertMaximumDurationResults] = None
-    gc_manager: Optional[contextlib.AbstractContextManager[None]] = None
+    _results: Optional[AssertRuntimeResults] = None
+    runtime_manager: Optional[contextlib.AbstractContextManager[ResultsCallable]] = None
+    runtime_results_callable: Optional[ResultsCallable] = None
 
-    def results(self) -> AssertMaximumDurationResults:
+    def results(self) -> AssertRuntimeResults:
         if self._results is None:
             raise Exception("runtime results not yet available")
 
         return self._results
 
-    def calibrate_compensation(self) -> float:
-        times: List[float] = []
-        for _ in range(10):
-            manager = dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
-            with manager:
-                pass
-            times.append(manager.results().duration)
-        compensation = mean(times)
-
-        return compensation
-
     def __enter__(self) -> AssertMaximumDuration:
         self.entry_line = caller_file_and_line()
         if self.calibrate:
-            self.compensation = self.calibrate_compensation()
-        self.gc_manager = gc_mode(mode=self.gc_mode)
-        self.gc_manager.__enter__()
-        self.start = self.clock()
+
+            def manager_maker() -> contextlib.AbstractContextManager[AssertMaximumDuration]:
+                return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
+
+            def result_getter(result: AssertMaximumDuration) -> float:
+                return result.results().duration
+
+            self.overhead = measure_overhead(manager_maker=manager_maker, result_getter=result_getter)
+
+        self.runtime_manager = measure_runtime(
+            clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
+        )
+        self.runtime_results_callable = self.runtime_manager.__enter__()
 
         return self
 
@@ -155,24 +268,17 @@ class AssertMaximumDuration:
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        end = self.clock()
-
-        if self.start is None or self.entry_line is None or self.gc_manager is None:
+        if self.entry_line is None or self.runtime_manager is None or self.runtime_results_callable is None:
             raise Exception("Context manager must be entered before exiting")
 
-        self.gc_manager.__exit__(exc_type, exc, traceback)
+        self.runtime_manager.__exit__(exc_type, exc, traceback)
 
-        duration = end - self.start
-        duration -= self.compensation
-        ratio = duration / self.seconds
-
-        results = AssertMaximumDurationResults(
-            start=self.start,
-            end=end,
-            duration=duration,
+        runtime = self.runtime_results_callable()
+        results = AssertRuntimeResults.from_runtime_results(
+            results=runtime,
             limit=self.seconds,
-            ratio=ratio,
             entry_line=self.entry_line,
+            overhead=self.overhead,
         )
 
         self._results = results
@@ -182,7 +288,7 @@ class AssertMaximumDuration:
 
         if exc_type is None:
             __tracebackhide__ = True
-            assert results.passed(), results.message()
+            assert runtime.duration < self.seconds, results.message()
 
 
 def assert_maximum_duration(
