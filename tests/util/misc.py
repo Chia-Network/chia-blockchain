@@ -18,6 +18,14 @@ from typing_extensions import Protocol, final
 T = TypeVar("T")
 
 
+class DurationResultsProtocol(Protocol):
+    start: float
+    end: float
+    duration: float
+    entry_line: str
+    overhead: float
+
+
 class GcMode(enum.Enum):
     nothing = enum.auto
     precollect = enum.auto
@@ -59,6 +67,7 @@ class RuntimeResults:
     end: float
     duration: float
     entry_line: str
+    overhead: float
 
     def block(self, message: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -69,6 +78,7 @@ class RuntimeResults:
             Measuring runtime: {message}
             {self.entry_line}
                 run time: {self.duration}
+                overhead: {self.overhead}
             """
         )
 
@@ -79,10 +89,10 @@ class AssertRuntimeResults:
     start: float
     end: float
     duration: float
-    limit: float
-    ratio: float
     entry_line: str
     overhead: float
+    limit: float
+    ratio: float
 
     @classmethod
     def from_runtime_results(
@@ -107,9 +117,9 @@ class AssertRuntimeResults:
             Asserting maximum duration: {message}
             {self.entry_line}
                 run time: {self.duration}
+                overhead: {self.overhead}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
-                 overhead: {self.overhead}
             """
         )
 
@@ -124,10 +134,6 @@ class AssertRuntimeResults:
 
     def percent_str(self) -> str:
         return f"{self.percent():.0f} %"
-
-
-class DurationResultsProtocol(Protocol):
-    duration: float
 
 
 def measure_overhead(
@@ -161,6 +167,8 @@ def measure_runtime(
         return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
 
     if calibrate:
+        # The need for this ignore is presently unclear.  The classes seem to match the
+        # DurationResultsProtocol protocol, but still fails mypy.
         overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
     else:
         overhead = 0
@@ -183,6 +191,7 @@ def measure_runtime(
                 end=end,
                 duration=duration,
                 entry_line=entry_line,
+                overhead=overhead,
             )
             results_future.set_result(results)
 
@@ -192,7 +201,7 @@ def measure_runtime(
 
 @final
 @dataclasses.dataclass
-class AssertMaximumDuration:
+class _AssertMaximumDuration:
     """Prepare for, measure, and assert about the time taken by code in the context.
 
     Defaults are set for single-threaded CPU usage timing without garbage collection.
@@ -216,10 +225,10 @@ class AssertMaximumDuration:
     # https://github.com/pytest-dev/pytest/issues/2057
 
     seconds: float
-    message: str
-    clock: Callable[[], float]
-    gc_mode: GcMode
-    calibrate: bool
+    message: str = ""
+    clock: Callable[[], float] = thread_time
+    gc_mode: GcMode = GcMode.disable
+    calibrate: bool = True
     print: bool = True
     overhead: float = 0
     entry_line: Optional[str] = None
@@ -234,6 +243,8 @@ class AssertMaximumDuration:
             def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
                 return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
 
+            # The need for this ignore is presently unclear.  The classes seem to match the
+            # DurationResultsProtocol protocol, but still fails mypy.
             self.overhead = measure_overhead(manager_maker=manager_maker)  # type: ignore[arg-type]
 
         self.runtime_manager = measure_runtime(
@@ -273,11 +284,7 @@ class AssertMaximumDuration:
             assert runtime.duration < self.seconds, results.message()
 
 
-def assert_maximum_duration(
-    seconds: float,
-    message: str = "",
-    clock: Callable[[], float] = thread_time,
-    gc_mode: GcMode = GcMode.disable,
-    calibrate: bool = True,
-) -> AssertMaximumDuration:
-    return AssertMaximumDuration(seconds=seconds, message=message, clock=clock, gc_mode=gc_mode, calibrate=calibrate)
+# Related to the comment above about needing a class vs. using the context manager
+# decorator, this is just here to retain the function-style naming as the public
+# interface.  Hopefully we can switch away from the class at some point.
+assert_maximum_duration = _AssertMaximumDuration
