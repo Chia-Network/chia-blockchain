@@ -173,7 +173,7 @@ def measure_runtime(
     else:
         overhead = 0
 
-    results_future = Future[RuntimeResults]()
+    results_future: Future[RuntimeResults] = Future()
 
     with manage_gc(mode=gc_mode):
         start = clock()
@@ -251,7 +251,7 @@ class _AssertMaximumDuration:
             clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
-        self.results_callable = Future[AssertRuntimeResults]()
+        self.results_callable: Future[AssertRuntimeResults] = Future()
 
         return self.results_callable
 
