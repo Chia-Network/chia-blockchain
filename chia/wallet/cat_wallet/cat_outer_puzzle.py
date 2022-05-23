@@ -41,11 +41,12 @@ class CATOuterPuzzle:
             return None
 
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-        matched, curried_args = match_cat_puzzle(puzzle)
+        matched, curried_args = match_cat_puzzle(puzzle_reveal)
         if matched:
             _, _, inner_puzzle = curried_args
             if constructor.also() is not None:
-                return self._get_inner_puzzle(constructor.also(), inner_puzzle)
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
+                return deep_inner_puzzle
             else:
                 return inner_puzzle
         else:
@@ -85,7 +86,7 @@ class CATOuterPuzzle:
             parent_coin: Coin = parent_spend.coin
             if constructor.also() is not None:
                 puzzle = self._construct(constructor.also(), puzzle)
-                solution = self._solve(constructor.also(), solver, puzzle, solution)
+                solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
             matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
             assert matched
             _, _, parent_inner_puzzle = curried_args

@@ -53,7 +53,7 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
 
 
 def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(puzzle_reveal)  # type: ignore
+    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)  # type: ignore
 
 
 def create_asset_id(constructor: PuzzleInfo) -> bytes32:
