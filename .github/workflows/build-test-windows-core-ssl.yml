@@ -109,7 +109,6 @@ jobs:
 
     - name: Process coverage data
       run: |
-        # TODO: just new click might avoid the need to expand .coverage.* this way
         venv/Scripts/coverage combine --rcfile=.coveragerc
         venv/Scripts/coverage xml --rcfile=.coveragerc -o coverage.xml
         mkdir coverage_reports
