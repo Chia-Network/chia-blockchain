@@ -222,7 +222,11 @@ class TradeManager:
 
             if wallet is None:
                 continue
-            new_ph = await wallet.get_new_puzzlehash()
+
+            if wallet.type() == WalletType.NFT:
+                new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            else:
+                new_ph = await wallet.get_new_puzzlehash()
             # This should probably not switch on whether or not we're spending a XCH but it has to for now
             if wallet.type() == WalletType.STANDARD_WALLET:
                 if fee_to_pay > coin.amount:
