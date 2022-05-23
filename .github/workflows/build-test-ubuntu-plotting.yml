@@ -94,7 +94,7 @@ jobs:
     - name: Test plotting code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/plotting/test_plot_manager.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/plotting/test_plot_manager.py
 
     - name: Process coverage data
       run: |
