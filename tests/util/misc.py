@@ -59,13 +59,13 @@ class RuntimeResults:
     entry_line: str
     overhead: float
 
-    def block(self, message: str = "") -> str:
+    def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
         # PyCharm to highlight as a link to the source.
 
         return dedent(
             f"""\
-            Measuring runtime: {message}
+            Measuring runtime: {label}
             {self.entry_line}
                 run time: {self.duration}
                 overhead: {self.overhead}
@@ -98,13 +98,13 @@ class AssertRuntimeResults:
             overhead=overhead,
         )
 
-    def block(self, message: str = "") -> str:
+    def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
         # PyCharm to highlight as a link to the source.
 
         return dedent(
             f"""\
-            Asserting maximum duration: {message}
+            Asserting maximum duration: {label}
             {self.entry_line}
                 run time: {self.duration}
                 overhead: {self.overhead}
@@ -147,7 +147,7 @@ def measure_overhead(
 
 @contextlib.contextmanager
 def measure_runtime(
-    message: str = "",
+    label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
     calibrate: bool = True,
@@ -186,7 +186,7 @@ def measure_runtime(
             results_future.set_result(results)
 
             if print_results:
-                print(results.block(message=message))
+                print(results.block(label=label))
 
 
 @final
@@ -215,7 +215,7 @@ class _AssertRuntime:
     # https://github.com/pytest-dev/pytest/issues/2057
 
     seconds: float
-    message: str = ""
+    label: str = ""
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
     calibrate: bool = True
@@ -265,7 +265,7 @@ class _AssertRuntime:
         self.results_callable.set_result(results)
 
         if self.print:
-            print(results.block(message=self.message))
+            print(results.block(label=self.label))
 
         if exc_type is None:
             __tracebackhide__ = True

@@ -116,7 +116,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.001, message="mempool"):
+        with assert_runtime(seconds=0.001, label="mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
                 num_tx += 1
@@ -173,7 +173,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.1, message="unfinished"):
+        with assert_runtime(seconds=0.1, label="unfinished"):
             res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
 
         log.warning(f"Res: {res}")
@@ -184,7 +184,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with assert_runtime(seconds=0.1, message="full block"):
+        with assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
             res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
