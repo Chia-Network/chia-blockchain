@@ -35,7 +35,9 @@ log = logging.getLogger(__name__)
 class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_mempool_update_performance(self, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname):
+    async def test_mempool_update_performance(
+        self, request, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+    ):
         blocks = default_400_blocks
         full_nodes, wallets = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
@@ -75,5 +77,5 @@ class TestMempoolPerformance:
             else:
                 duration = 0.001
 
-            with assert_runtime(seconds=duration):
+            with assert_runtime(seconds=duration, label=request.node.name):
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
