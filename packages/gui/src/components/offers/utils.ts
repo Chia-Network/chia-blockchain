@@ -1,4 +1,5 @@
 import { WalletType } from '@chia/api';
+import { t } from '@lingui/macro';
 import type { ChipProps } from '@mui/material';
 import type {
   OfferSummaryAssetInfo,
@@ -9,6 +10,8 @@ import { mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
 import OfferState from './OfferState';
 import OfferAsset from './OfferAsset';
 import { AssetIdMapEntry } from '../../hooks/useAssetIdName';
+import { launcherIdToNFTId } from '../../util/nfts';
+import { lookup } from 'dns';
 
 let filenameCounter = 0;
 
@@ -29,6 +32,44 @@ export function summaryStringsForOffer(
 
   const makerString = makerAssetInfoAndAmounts.reduce(builder, '');
   const takerString = takerAssetInfoAndAmounts.reduce(builder, '');
+
+  return [makerString, takerString];
+}
+
+export function summaryStringsForNFTOffer(
+  summary: OfferSummaryRecord,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
+  builder: (
+    filename: string,
+    args: [assetInfo: AssetIdMapEntry | undefined, amount: string],
+  ) => string,
+): [makerString: string, takerString: string] {
+  // const makerAssetType = offerAssetTypeForAssetId
+  // TODO: Remove 1:1 NFT <--> XCH assumption
+  const makerEntry: [string, string] = Object.entries(summary.offered)[0];
+  const takerEntry: [string, string] = Object.entries(summary.requested)[0];
+  const makerAssetType = offerAssetTypeForAssetId(makerEntry[0], summary);
+  const takerAssetType = offerAssetTypeForAssetId(takerEntry[0], summary);
+  let makerString = '';
+  let takerString = '';
+
+  if (makerAssetType === OfferAsset.NFT) {
+    makerString = `${makerEntry[1]}_${launcherIdToNFTId(makerEntry[0])}`;
+  } else {
+    const makerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = [
+      makerEntry,
+    ].map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+    makerString = makerAssetInfoAndAmounts.reduce(builder, '');
+  }
+
+  if (takerAssetType === OfferAsset.NFT) {
+    takerString = `${takerEntry[1]}_${launcherIdToNFTId(takerEntry[0])}`;
+  } else {
+    const takerAssetInfoAndAmounts: [AssetIdMapEntry | undefined, string][] = [
+      takerEntry,
+    ].map(([assetId, amount]) => [lookupByAssetId(assetId), amount]);
+    takerString = takerAssetInfoAndAmounts.reduce(builder, '');
+  }
 
   return [makerString, takerString];
 }
@@ -65,11 +106,12 @@ export function suggestedFilenameForOffer(
     return filename;
   }
 
-  const [makerString, takerString] = summaryStringsForOffer(
+  const [makerString, takerString] = offerContainsAssetOfType(
     summary,
-    lookupByAssetId,
-    filenameBuilder,
-  );
+    'singleton',
+  )
+    ? summaryStringsForNFTOffer(summary, lookupByAssetId, filenameBuilder)
+    : summaryStringsForOffer(summary, lookupByAssetId, filenameBuilder);
 
   return `${makerString}_x_${takerString}.offer`;
 }
@@ -102,31 +144,32 @@ export function shortSummaryForOffer(
     return shortSummary;
   }
 
-  const [makerString, takerString] = summaryStringsForOffer(
+  const [makerString, takerString] = offerContainsAssetOfType(
     summary,
-    lookupByAssetId,
-    summaryBuilder,
-  );
+    'singleton',
+  )
+    ? summaryStringsForNFTOffer(summary, lookupByAssetId, summaryBuilder)
+    : summaryStringsForOffer(summary, lookupByAssetId, summaryBuilder);
 
-  return `Offering: [${makerString}], Requesting: [${takerString}]`;
+  return t`Offering: [${makerString}], Requesting: [${takerString}]`;
 }
 
 export function displayStringForOfferState(state: OfferState): string {
   switch (state) {
     case OfferState.PENDING_ACCEPT:
-      return 'Pending Accept';
+      return t`Pending Accept`;
     case OfferState.PENDING_CONFIRM:
-      return 'Pending Confirm';
+      return t`Pending Confirm`;
     case OfferState.PENDING_CANCEL:
-      return 'Pending Cancel';
+      return t`Pending Cancel`;
     case OfferState.CANCELLED:
-      return 'Cancelled';
+      return t`Cancelled`;
     case OfferState.CONFIRMED:
-      return 'Confirmed';
+      return t`Confirmed`;
     case OfferState.FAILED:
-      return 'Failed';
+      return t`Failed`;
     default:
-      return 'Unknown';
+      return t`Unknown`;
   }
 }
 
@@ -165,7 +208,7 @@ export function formatAmountForWalletType(
 
 export function offerContainsAssetOfType(
   offerSummary: OfferSummaryRecord,
-  assetType: OfferAsset,
+  assetType: string,
 ): boolean {
   const infos: OfferSummaryInfos = offerSummary.infos;
   const matchingAssetId: string | undefined = Object.keys(infos).find(
@@ -181,4 +224,33 @@ export function offerContainsAssetOfType(
     (offerSummary.offered.hasOwnProperty(matchingAssetId) ||
       offerSummary.requested.hasOwnProperty(matchingAssetId))
   );
+}
+
+export function offerAssetTypeForAssetId(
+  assetId: string,
+  offerSummary: OfferSummaryRecord,
+): OfferAsset | undefined {
+  let assetType: OfferAsset | undefined;
+
+  if (['xch', 'txch'].includes(assetId)) {
+    assetType = OfferAsset.CHIA;
+  } else {
+    const infos: OfferSummaryInfos = offerSummary.infos;
+    const info: OfferSummaryAssetInfo = infos[assetId];
+
+    if (info) {
+      switch (info.type.toLowerCase()) {
+        case 'cat':
+          assetType = OfferAsset.TOKEN;
+          break;
+        case 'singleton':
+          assetType = OfferAsset.NFT;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  return assetType;
 }

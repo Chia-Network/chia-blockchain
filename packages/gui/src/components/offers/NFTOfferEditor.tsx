@@ -5,7 +5,10 @@ import BigNumber from 'bignumber.js';
 import { Trans, t } from '@lingui/macro';
 import { useLocalStorage } from '@rehooks/local-storage';
 import type { NFTInfo } from '@chia/api';
-import { useCreateOfferForIdsMutation } from '@chia/api-react';
+import {
+  useCreateOfferForIdsMutation,
+  useGetNFTInfoQuery,
+} from '@chia/api-react';
 import {
   Amount,
   Back,
@@ -215,7 +218,7 @@ type NFTOfferEditorFormData = {
 
 type NFTOfferEditorValidatedFormData = {
   exchangeType: NFTOfferEditorExchangeType;
-  nftLauncherId: string;
+  launcherId: string;
   xchAmount: string;
   fee: string;
 };
@@ -227,31 +230,45 @@ type NFTOfferEditorProps = {
 
 function buildOfferRequest(
   exchangeType: NFTOfferEditorExchangeType,
+  nft: NFTInfo, // TODO: determine if backend can load this
   nftLauncherId: string,
   xchAmount: string,
+  fee: string,
 ) {
   const baseMojoAmount: BigNumber = chiaToMojo(xchAmount);
   const mojoAmount =
     exchangeType === NFTOfferEditorExchangeType.NFTForXCH
       ? baseMojoAmount
       : baseMojoAmount.negated();
+  const feeMojoAmount = chiaToMojo(fee);
   const nftAmount =
     exchangeType === NFTOfferEditorExchangeType.NFTForXCH ? -1 : 1;
   const xchWalletId = 1;
   const driverDict = {
     [nftLauncherId]: {
+      type: 'singleton',
       launcher_id: `0x${nftLauncherId}`,
+      launcher_ph:
+        '0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9',
       also: {
-        metadata: '',
+        type: 'metadata',
+        metadata: `((117 ${nft.dataUris
+          .map((u: string) => '"' + u + '"')
+          .join(' ')}) (104 . 0x${nft.dataHash.toLowerCase()}))`,
+        updater_hash:
+          '0x81970d352e6a39a241eaf8ca510a0e669e40d778ba612621c60a50ef6cf29c7b',
       },
     },
   };
 
-  return {
-    [nftLauncherId]: nftAmount,
-    [xchWalletId]: mojoAmount,
-    driver_dict: driverDict,
-  };
+  return [
+    {
+      [nftLauncherId]: nftAmount,
+      [xchWalletId]: mojoAmount,
+    },
+    driverDict,
+    feeMojoAmount,
+  ];
 }
 
 export default function NFTOfferEditor(props: NFTOfferEditorProps) {
@@ -266,7 +283,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   );
   const defaultValues: NFTOfferEditorFormData = {
     exchangeType: NFTOfferEditorExchangeType.NFTForXCH,
-    nftId: nft?.id ?? '',
+    nftId: nft?.$nftId ?? '',
     xchAmount: '',
     fee: '',
   };
@@ -275,12 +292,18 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     defaultValues,
   });
   const nftId = methods.watch('nftId');
+  const launcherId = launcherIdFromNFTId(nftId ?? '');
+  const {
+    data: queriedNFTInfo,
+    isLoading,
+    error,
+  } = useGetNFTInfoQuery({ coinId: launcherId });
 
   function validateFormData(
     unvalidatedFormData: NFTOfferEditorFormData,
   ): NFTOfferEditorValidatedFormData | undefined {
     const { exchangeType, nftId, xchAmount, fee } = unvalidatedFormData;
-    const nftLauncherId = nftId ? launcherIdFromNFTId(nftId) : undefined;
+    // const nftLauncherId = nftId ? launcherIdFromNFTId(nftId) : undefined;
     let result: NFTOfferEditorValidatedFormData | undefined = undefined;
 
     console.log('validateFormData:');
@@ -290,14 +313,14 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
       errorDialog(new Error(t`Please enter an NFT identifier`));
     } else if (!isValidNFTId(nftId)) {
       errorDialog(new Error(t`Invalid NFT identifier`));
-    } else if (!nftLauncherId) {
+    } else if (!launcherId) {
       errorDialog(new Error(t`Failed to decode NFT identifier`));
     } else if (!xchAmount || xchAmount === '0') {
       errorDialog(new Error(t`Please enter an amount`));
     } else {
       result = {
         exchangeType,
-        nftLauncherId,
+        launcherId,
         xchAmount,
         fee,
       };
@@ -315,8 +338,24 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
       return;
     }
 
-    const { exchangeType, nftLauncherId, xchAmount, fee } = formData;
-    const offer = buildOfferRequest(exchangeType, nftLauncherId, xchAmount);
+    const offerNFT = nft || queriedNFTInfo;
+
+    if (!offerNFT) {
+      errorDialog(new Error(t`NFT details not available`));
+      return;
+    }
+
+    console.log('offerNFT:');
+    console.log(offerNFT);
+
+    const { exchangeType, launcherId, xchAmount, fee } = formData;
+    const [offer, driverDict, feeInMojos] = buildOfferRequest(
+      exchangeType,
+      offerNFT,
+      launcherId,
+      xchAmount,
+      fee,
+    );
 
     console.log('offer:');
     console.log(offer);
@@ -332,18 +371,13 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     setIsProcessing(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      // const response = await createOfferForIds({
-      //   walletIdsAndAmounts: offer,
-      //   feeInMojos: fee,
-      //   validateOnly: false,
-      // }).unwrap();
-      const response = {
-        success: true,
-        error: '',
-        offer: '',
-        tradeRecord: {},
-      };
+      const response = await createOfferForIds({
+        walletIdsAndAmounts: offer,
+        feeInMojos,
+        driverDict,
+        validateOnly: false,
+        disableJSONFormatting: true,
+      }).unwrap();
 
       if (response.success === false) {
         const error =

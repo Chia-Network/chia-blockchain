@@ -11,6 +11,8 @@ import {
 } from '@chia/core';
 import useAssetIdName from './useAssetIdName';
 import OfferAcceptConfirmationDialog from '../components/offers/OfferAcceptConfirmationDialog';
+import OfferAsset from '../components/offers/OfferAsset';
+import { offerAssetTypeForAssetId } from '../components/offers/utils';
 
 export type AcceptOfferHook = (
   offerData: string,
@@ -35,7 +37,11 @@ export default function useAcceptOfferHook(): [AcceptOfferHook] {
   ): Promise<void> {
     const feeInMojos: BigNumber = fee ? chiaToMojo(fee) : new BigNumber(0);
     const offeredUnknownCATs: string[] = Object.entries(offerSummary.offered)
-      .filter(([assetId]) => lookupByAssetId(assetId) === undefined)
+      .filter(
+        ([assetId]) =>
+          offerAssetTypeForAssetId(assetId, offerSummary) !== OfferAsset.NFT &&
+          lookupByAssetId(assetId) === undefined,
+      )
       .map(([assetId]) => assetId);
 
     const confirmedAccept = await openDialog(

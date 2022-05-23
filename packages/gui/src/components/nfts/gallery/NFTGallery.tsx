@@ -53,7 +53,7 @@ export default function NFTGallery() {
       return {
         items: selected
           ? [...items, nft]
-          : items.filter((item) => item.id !== nft.id),
+          : items.filter((item) => item.$nftId !== nft.$nftId),
       };
     });
   }
@@ -65,7 +65,7 @@ export default function NFTGallery() {
   return (
     <LayoutDashboardSub
       sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
-      header={(
+      header={
         <Flex justifyContent="space-between" alignItems="center">
           <Search
             onChange={setSearch}
@@ -74,15 +74,17 @@ export default function NFTGallery() {
           />
           <NFTContextualActions selection={selection} />
         </Flex>
-      )}
+      }
     >
       <Grid spacing={2} alignItems="stretch" container>
         {filteredData?.map((nft: NFTInfo) => (
-          <Grid xs={12} md={6} lg={4} xl={3} key={nft.id} item>
+          <Grid xs={12} md={6} lg={4} xl={3} key={nft.$nftId} item>
             <NFTCard
               nft={nft}
               onSelect={(selected) => handleSelect(nft, selected)}
-              selected={selection.items.some((item) => item.id === nft.id)}
+              selected={selection.items.some(
+                (item) => item.$nftId === nft.$nftId,
+              )}
             />
           </Grid>
         ))}

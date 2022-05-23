@@ -2,6 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { OfferTradeRecord } from '@chia/api';
+import { Flex } from '@chia/core';
 
 type OfferViewerTitleProps = {
   offerFilePath?: string;
@@ -14,7 +15,7 @@ export default function OfferViewerTitle(
   const { offerFilePath, tradeRecord } = props;
 
   return (
-    <>
+    <Flex flexDirection="row" style={{ wordBreak: 'break-all' }}>
       {offerFilePath ? (
         <Trans>Viewing offer: {offerFilePath}</Trans>
       ) : tradeRecord ? (
@@ -25,6 +26,6 @@ export default function OfferViewerTitle(
       ) : (
         <Trans>Viewing offer</Trans>
       )}
-    </>
+    </Flex>
   );
 }

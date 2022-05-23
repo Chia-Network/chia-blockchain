@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { Trans } from '@lingui/macro';
+import { Plural, Trans } from '@lingui/macro';
 import {
   useCheckOfferValidityMutation,
   useGetNFTWallets,
@@ -15,17 +15,30 @@ import {
   Fee,
   Flex,
   Form,
+  FormatLargeNumber,
+  StateColor,
+  TooltipIcon,
   useShowError,
 } from '@chia/core';
 import { Divider, Grid, Typography } from '@mui/material';
 import useAcceptOfferHook from '../../hooks/useAcceptOfferHook';
+import useAssetIdName from '../../hooks/useAssetIdName';
 import useFetchNFTs from '../../hooks/useFetchNFTs';
+import { launcherIdToNFTId } from '../../util/nfts';
+import { offerAssetTypeForAssetId } from './utils';
 import OfferAsset from './OfferAsset';
 import OfferHeader from './OfferHeader';
 import OfferState from './OfferState';
 import { OfferSummaryNFTRow, OfferSummaryTokenRow } from './OfferSummaryRow';
 import OfferViewerTitle from './OfferViewerTitle';
 import NFTOfferPreview from './NFTOfferPreview';
+import styled from 'styled-components';
+
+/* ========================================================================== */
+
+const StyledWarningText = styled(Typography)`
+  color: ${StateColor.WARNING};
+`;
 
 /* ========================================================================== */
 
@@ -33,10 +46,11 @@ type NFTOfferSummaryRowProps = {
   title: React.ReactElement | string;
   summaryKey: string;
   summary: any;
+  unknownAssets?: string[];
 };
 
 function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
-  const { title, summaryKey, summary } = props;
+  const { title, summaryKey, summary, unknownAssets } = props;
   const summaryData: { [key: string]: number } = summary[summaryKey];
   const summaryInfo = summary.infos;
   const assetIdsToTypes: { [key: string]: OfferAsset | undefined }[] =
@@ -49,7 +63,7 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
           assetType = OfferAsset.CHIA;
         } else if (!!infoDict?.type) {
           switch (infoDict.type.toLowerCase()) {
-            case 'nft':
+            case 'singleton':
               assetType = OfferAsset.NFT;
               break;
             case 'cat':
@@ -66,12 +80,6 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
         return { [key]: assetType };
       });
     }, [summaryData, summaryInfo]);
-
-  console.log('summaryData:');
-  console.log(summaryData);
-
-  console.log('summaryInfo:');
-  console.log(summaryInfo);
 
   const rows: (React.ReactElement | null)[] = assetIdsToTypes.map((entry) => {
     const [assetId, assetType]: [string, OfferAsset | undefined] =
@@ -110,12 +118,27 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
     }
   });
 
+  if (unknownAssets?.length ?? 0 > 0) {
+    console.log('Unknown assets');
+    console.log(unknownAssets);
+  }
+
   return (
     <Flex flexDirection="column" gap={2}>
-      {title}
-      {rows.map((row, index) => (
-        <div key={index}>{row}</div>
-      ))}
+      <Flex flexDirection="column" gap={2}>
+        {title}
+        {rows.map((row, index) => (
+          <div key={index}>{row}</div>
+        ))}
+      </Flex>
+      {unknownAssets !== undefined && unknownAssets.length > 0 && (
+        <Flex flexDirection="row" gap={1}>
+          <StyledWarningText variant="caption">
+            Offer cannot be accepted because you don't possess the requested
+            assets
+          </StyledWarningText>
+        </Flex>
+      )}
     </Flex>
   );
 }
@@ -130,15 +153,60 @@ type NFTOfferSummaryProps = {
   summary: any;
   makerTitle: React.ReactElement | string;
   takerTitle: React.ReactElement | string;
+  setIsMissingRequestedAsset?: (isMissing: boolean) => void;
 };
 
 function NFTOfferSummary(props: NFTOfferSummaryProps) {
-  const { isMyOffer, imported, summary, makerTitle, takerTitle } = props;
+  const {
+    isMyOffer,
+    imported,
+    summary,
+    makerTitle,
+    takerTitle,
+    setIsMissingRequestedAsset,
+  } = props;
+  const { lookupByAssetId } = useAssetIdName();
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
+  const makerEntries: [string, number][] = Object.entries(summary.offered);
+  const takerEntries: [string, number][] = Object.entries(summary.requested);
+  const [takerUnknownAssets, makerUnknownAssets] = useMemo(() => {
+    if (isMyOffer || isLoadingNFTs) {
+      return [];
+    }
+    const takerUnknownAssets = makerEntries
+      .filter(
+        ([assetId, _]) =>
+          offerAssetTypeForAssetId(assetId, summary) !== OfferAsset.NFT &&
+          lookupByAssetId(assetId) === undefined,
+      )
+      .map(([assetId, _]) => assetId);
+
+    const makerUnknownAssets = takerEntries
+      .filter(([assetId, _]) => {
+        const assetType = offerAssetTypeForAssetId(assetId, summary);
+        if (assetType === OfferAsset.NFT) {
+          return (
+            nfts.find(
+              (nft) => nft.launcherId.toLowerCase() === assetId.toLowerCase(),
+            ) === undefined
+          );
+        }
+        return lookupByAssetId(assetId) === undefined;
+      })
+      .map(([assetId, _]) => assetId);
+
+    return [takerUnknownAssets, makerUnknownAssets];
+  }, [summary, isLoadingNFTs]);
   const makerSummary: React.ReactElement = (
     <NFTOfferSummaryRow
       title={makerTitle}
       summaryKey="offered"
       summary={summary}
+      unknownAssets={isMyOffer ? undefined : takerUnknownAssets}
     />
   );
   const takerSummary: React.ReactElement = (
@@ -146,9 +214,19 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
       title={takerTitle}
       summaryKey="requested"
       summary={summary}
+      unknownAssets={isMyOffer ? undefined : makerUnknownAssets}
     />
   );
+  const makerFee: number = summary.fees;
   const summaries: React.ReactElement[] = [makerSummary, takerSummary];
+
+  if (setIsMissingRequestedAsset) {
+    const isMissingRequestedAsset = isMyOffer
+      ? false
+      : makerUnknownAssets?.length !== 0 ?? false;
+
+    setIsMissingRequestedAsset(isMissingRequestedAsset);
+  }
 
   if (isMyOffer) {
     summaries.reverse();
@@ -165,6 +243,40 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
           {index !== summaries.length - 1 && <Divider />}
         </Flex>
       ))}
+      {makerFee > 0 && (
+        <Flex flexDirection="column" gap={2}>
+          <Divider />
+          <Flex flexDirection="row" alignItems="center" gap={1}>
+            <Typography
+              variant="body1"
+              color="secondary"
+              style={{ fontWeight: 'bold' }}
+            >
+              <Trans>Fees included in offer:</Trans>
+            </Typography>
+            <Typography color="primary">
+              <FormatLargeNumber value={makerFee} />
+            </Typography>
+            <Typography>
+              <Plural value={makerFee} one="mojo" other="mojos" />
+            </Typography>
+            <TooltipIcon>
+              {imported ? (
+                <Trans>
+                  This offer has a fee included to help expedite the transaction
+                  when the offer is accepted. You may specify an additional fee
+                  if you feel that the included fee is too small.
+                </Trans>
+              ) : (
+                <Trans>
+                  This offer has a fee included to help expedite the transaction
+                  when the offer is accepted.
+                </Trans>
+              )}
+            </TooltipIcon>
+          </Flex>
+        </Flex>
+      )}
     </>
   );
 }
@@ -198,21 +310,13 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const [isMissingRequestedAsset, setIsMissingRequestedAsset] =
     useState<boolean>(false);
   const [checkOfferValidity] = useCheckOfferValidityMutation();
-  const { wallets: nftWallets, isLoading: isLoadingWallets } =
-    useGetNFTWallets();
-  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
-    nftWallets.map((wallet: Wallet) => wallet.id),
+  const driverDict: { [key: string]: any } = summary?.infos ?? {};
+  const launcherId: string | undefined = Object.keys(driverDict).find(
+    (id: string) => driverDict[id].launcherId?.length > 0,
   );
-  const nft: NFTInfo | undefined = useMemo(() => {
-    const driverDict: { [key: string]: any } = summary?.infos;
-    const launcherId = Object.keys(driverDict ?? {}).find((id: string) => {
-      return driverDict[id].launcherId?.length > 0;
-    });
-
-    if (launcherId && nfts.length > 0) {
-      return nfts.find((nft: NFTInfo) => nft.launcherId === launcherId);
-    }
-  }, [summary, nfts]);
+  const nftId: string | undefined = launcherId
+    ? launcherIdToNFTId(launcherId)
+    : undefined;
 
   useMemo(async () => {
     // TODO: Remove this
@@ -306,6 +410,9 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                     <Trans>In exchange for</Trans>
                   </Typography>
                 }
+                setIsMissingRequestedAsset={(isMissing: boolean) =>
+                  setIsMissingRequestedAsset(isMissing)
+                }
               />
               <Divider />
               {imported && (
@@ -363,7 +470,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                 </Flex>
               )}
             </Flex>
-            <NFTOfferPreview nft={nft} />
+            <NFTOfferPreview nftId={nftId} />
           </Flex>
         </Flex>
       </Flex>

@@ -32,7 +32,7 @@ import {
   Tooltip,
   LayoutDashboardSub,
 } from '@chia/core';
-import { OfferTradeRecord } from '@chia/api';
+import { OfferSummaryRecord, OfferTradeRecord } from '@chia/api';
 import fs from 'fs';
 import { Remote } from 'electron';
 import {
@@ -67,8 +67,11 @@ import {
   colorForOfferState,
   displayStringForOfferState,
   formatAmountForWalletType,
+  offerAssetTypeForAssetId,
+  offerContainsAssetOfType,
   suggestedFilenameForOffer,
 } from './utils';
+import { launcherIdToNFTId } from '../../util/nfts';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import useWalletOffers from '../../hooks/useWalletOffers';
 import { CreateOfferEditor } from './OfferEditor';
@@ -76,9 +79,11 @@ import { CreateNFTOfferEditor } from './NFTOfferEditor';
 import { OfferImport } from './OfferImport';
 import { OfferViewer } from './OfferViewer';
 import NFTOfferViewer from './NFTOfferViewer';
+import OfferAsset from './OfferAsset';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
+import { lookup } from 'dns';
 
 type ConfirmOfferCancellationProps = {
   canCancelWithTransaction: boolean;
@@ -215,6 +220,34 @@ ConfirmOfferCancellation.defaultProps = {
   open: true,
 };
 
+function resolveOfferInfo(
+  summary: OfferSummaryRecord,
+  summaryKey: string,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
+) {
+  const resolvedOfferInfo = Object.entries(summary[summaryKey]).map(
+    ([assetId, amount]) => {
+      const assetType = offerAssetTypeForAssetId(assetId, summary);
+      const assetIdInfo =
+        assetType === OfferAsset.NFT ? undefined : lookupByAssetId(assetId);
+      const displayAmount = assetIdInfo
+        ? formatAmountForWalletType(amount as number, assetIdInfo.walletType)
+        : amount;
+      let displayName = '';
+      if (assetType === OfferAsset.NFT) {
+        displayName = launcherIdToNFTId(assetId);
+      } else {
+        displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
+      }
+      return {
+        displayAmount,
+        displayName,
+      };
+    },
+  );
+  return resolvedOfferInfo;
+}
+
 type OfferListProps = {
   title: string | React.ReactElement;
   includeMyOffers: boolean;
@@ -300,7 +333,11 @@ function OfferList(props: OfferListProps) {
   }
 
   function handleRowClick(event: any, row: OfferTradeRecord) {
-    navigate('/dashboard/offers/view', {
+    const navigationPath = offerContainsAssetOfType(row.summary, 'singleton')
+      ? '/dashboard/offers/view-nft'
+      : '/dashboard/offers/view';
+
+    navigate(navigationPath, {
       state: {
         tradeRecord: row,
       },
@@ -335,21 +372,10 @@ function OfferList(props: OfferListProps) {
       },
       {
         field: (row: OfferTradeRecord) => {
-          const resolvedOfferInfo = Object.entries(row.summary.offered).map(
-            ([assetId, amount]) => {
-              const assetIdInfo = lookupByAssetId(assetId);
-              const displayAmount = assetIdInfo
-                ? formatAmountForWalletType(
-                    amount as number,
-                    assetIdInfo.walletType,
-                  )
-                : mojoToCATLocaleString(amount);
-              const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
-              return {
-                displayAmount,
-                displayName,
-              };
-            },
+          const resolvedOfferInfo = resolveOfferInfo(
+            row.summary,
+            'offered',
+            lookupByAssetId,
           );
           return resolvedOfferInfo.map((info, index) => (
             <Flex
@@ -369,21 +395,10 @@ function OfferList(props: OfferListProps) {
       },
       {
         field: (row: OfferTradeRecord) => {
-          const resolvedOfferInfo = Object.entries(row.summary.requested).map(
-            ([assetId, amount]) => {
-              const assetIdInfo = lookupByAssetId(assetId);
-              const displayAmount = assetIdInfo
-                ? formatAmountForWalletType(
-                    amount as number,
-                    assetIdInfo.walletType,
-                  )
-                : mojoToCATLocaleString(amount);
-              const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
-              return {
-                displayAmount,
-                displayName,
-              };
-            },
+          const resolvedOfferInfo = resolveOfferInfo(
+            row.summary,
+            'requested',
+            lookupByAssetId,
           );
           return resolvedOfferInfo.map((info, index) => (
             <Flex

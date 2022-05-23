@@ -48,22 +48,23 @@ const cols = [
 ];
 
 export default function NFTDetail() {
-  const { nftId: launcherId } = useParams();
+  const { nftId } = useParams();
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
     useGetNFTWallets();
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
   const { metadata: fakeMetadata, isLoading } = useNFTMetadata({
-    id: launcherId,
+    id: nftId,
   });
 
-  const nft = useMemo(() => {
+  const nft: NFTInfo | undefined = useMemo(() => {
     if (!nfts) {
       return;
     }
-    return nfts.find((nft: NFTInfo) => nft.launcherId === launcherId);
+    return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
+  const launcherId: string | undefined = nft?.launcherId;
 
   const metadata = { ...fakeMetadata, ...nft };
 
@@ -75,12 +76,20 @@ export default function NFTDetail() {
     {
       key: 'id',
       label: <Trans>Launcher ID</Trans>,
-      value: <Truncate tooltip copyToClipboard>{launcherId}</Truncate>,
+      value: (
+        <Truncate tooltip copyToClipboard>
+          {launcherId}
+        </Truncate>
+      ),
     },
     {
       key: 'contract',
       label: <Trans>Contract Address</Trans>,
-      value: <Truncate tooltip copyToClipboard>{metadata.contractAddress}</Truncate>,
+      value: (
+        <Truncate tooltip copyToClipboard>
+          {metadata.contractAddress}
+        </Truncate>
+      ),
     },
     {
       key: 'tokenStandard',
@@ -95,7 +104,11 @@ export default function NFTDetail() {
     {
       key: 'dataHash',
       label: <Trans>Data Hash</Trans>,
-      value: <Truncate tooltip copyToClipboard>{metadata.hash}</Truncate>,
+      value: (
+        <Truncate tooltip copyToClipboard>
+          {metadata.hash}
+        </Truncate>
+      ),
     },
   ];
 
@@ -114,7 +127,9 @@ export default function NFTDetail() {
           alignSelf="center"
           width="100%"
         >
-          {nft && <NFTPreview nft={nft} width="100%" height="400px" fit="contain" />}
+          {nft && (
+            <NFTPreview nft={nft} width="100%" height="400px" fit="contain" />
+          )}
         </Box>
         <Flex flexDirection="column" gap={3}>
           <Flex flexDirection="column" gap={1}>

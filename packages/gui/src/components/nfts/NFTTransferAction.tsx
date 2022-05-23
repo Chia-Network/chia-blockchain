@@ -166,7 +166,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
   const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata({
-    id: nft.id,
+    id: nft.$nftId,
   });
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferFormData>({
@@ -257,7 +257,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
               sx={{ overflow: 'hidden' }}
             >
               <Typography noWrap variant="body1">
-                {nft.id}
+                {nft.$nftId}
               </Typography>
               <TooltipIcon interactive>
                 <Flex flexDirection="column" gap={2}>
@@ -267,9 +267,9 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
                     </StyledTitle>
                     <Flex alignItems="center" gap={1}>
                       <StyledValue>
-                        <Typography variant="caption">{nft.id}</Typography>
+                        <Typography variant="caption">{nft.$nftId}</Typography>
                       </StyledValue>
-                      <CopyToClipboard value={nft.id} fontSize="small" />
+                      <CopyToClipboard value={nft.$nftId} fontSize="small" />
                     </Flex>
                     <StyledTitle>
                       <Trans>Launcher ID</Trans>

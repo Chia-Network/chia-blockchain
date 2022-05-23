@@ -1,26 +1,34 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
+import { useGetNFTInfoQuery } from '@chia/api-react';
 import { Flex } from '@chia/core';
 import { Box, Typography } from '@mui/material';
 import NFTCard from '../nfts/NFTCard';
 import { isValidNFTId, launcherIdFromNFTId } from '../../util/nfts';
+import useGetNFTInfoById from '../../hooks/useGetNFTInfoById';
 
 /* ========================================================================== */
 
 type NFTOfferPreviewProps = {
   nftId?: string;
-  nft?: NFTInfo;
+  // nft?: NFTInfo;
 };
 
 export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
-  const { nft, nftId } = props;
+  const { /*nft,*/ nftId } = props;
   const borderStyle = isValidNFTId(nftId ?? '')
     ? 'none' //'2px solid #E0E0E0'
     : '2px dashed #E0E0E0';
   // TODO: Load NFT info
-  // const launcherId = launcherIdFromNFTId(nftId ?? "");
-  // const { nft, isLoading, error } = useGetNFTInfoQuery({ launcherId });
+  const launcherId = launcherIdFromNFTId(nftId ?? '');
+  const {
+    data: nft,
+    isLoading,
+    error,
+  } = useGetNFTInfoQuery({ coinId: launcherId });
+  // const nft = data ? { ...data, id: nftId } : undefined;
+  // const nft = useGetNFTInfoById(nftId);
 
   return (
     <Flex
@@ -54,7 +62,7 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
             overflow: 'hidden',
           }}
         >
-          {!!nft ? (
+          {nft !== undefined ? (
             <NFTCard nft={nft} />
           ) : (
             <Flex

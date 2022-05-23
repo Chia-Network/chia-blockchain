@@ -62,10 +62,7 @@ function SelectOfferFile() {
     }
 
     if (offerSummary) {
-      const navigationPath = offerContainsAssetOfType(
-        offerSummary,
-        OfferAsset.NFT,
-      )
+      const navigationPath = offerContainsAssetOfType(offerSummary, 'singleton')
         ? '/dashboard/offers/view-nft'
         : '/dashboard/offers/view';
 

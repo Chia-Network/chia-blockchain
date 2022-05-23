@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { toBech32m } from '@chia/api';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTsQuery } from '@chia/api-react';
 
@@ -20,7 +19,6 @@ export default function useFetchNFTs(walletIds: number[]): UseFetchNFTsResult {
       return nfts.map((nft) => ({
         ...nft,
         walletId: Number(walletId), // Add in the source wallet id
-        id: toBech32m(nft.launcherId, 'nft'), // Convert the launcher id to a bech32m encoded nft id
       }));
     });
   }, [data, isLoading]);

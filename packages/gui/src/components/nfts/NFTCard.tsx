@@ -35,14 +35,8 @@ export type NFTCardProps = {
 };
 
 export default function NFTCard(props: NFTCardProps) {
-  const {
-    nft,
-    onSelect,
-    selected,
-    nft: {
-      id,
-    }
-  } = props;
+  const { nft, onSelect, selected } = props;
+  const nftId = nft.$nftId;
 
   const navigate = useNavigate();
   const currencyCode = useCurrencyCode();
@@ -56,11 +50,10 @@ export default function NFTCard(props: NFTCardProps) {
 
   const isVisible = !!entry?.isIntersecting;
 
-
   const metadata = { ...fakeMetadata, ...nft };
 
   function handleClick() {
-    navigate(`/dashboard/nfts/${nft.launcherId}`);
+    navigate(`/dashboard/nfts/${nft.$nftId}`);
   }
 
   function handleSelectChange(event) {
@@ -100,17 +93,13 @@ export default function NFTCard(props: NFTCardProps) {
                   checked={!!selected}
                   onClick={handleClickRadio}
                   onChange={handleSelectChange}
-                  value={id}
-                  name={`nft-${id}`}
+                  value={nftId}
+                  name={`nft-${nftId}`}
                 />
               </Box>
             </Flex>
           </CardContent>
-          {isVisible ? (
-            <NFTPreview nft={nft} />
-          ) : (
-            <Box height="300px" />
-          )}
+          {isVisible ? <NFTPreview nft={nft} /> : <Box height="300px" />}
           <CardContent>
             <Flex flexDirection="column" gap={2}>
               <Flex flexDirection="column" gap={1}>
@@ -135,13 +124,13 @@ export default function NFTCard(props: NFTCardProps) {
           </CardContent>
           <StyledCardFooter>
             <Flex justifyContent="space-between" alignItems="center">
-                <Tooltip title={id}>
-                  <Typography noWrap>
-                    <Truncate>{id}</Truncate>
-                  </Typography>
-                </Tooltip>
-                <CopyToClipboard value={id} />
-              </Flex>
+              <Tooltip title={nftId}>
+                <Typography noWrap>
+                  <Truncate>{nftId}</Truncate>
+                </Typography>
+              </Tooltip>
+              <CopyToClipboard value={nftId} />
+            </Flex>
           </StyledCardFooter>
         </CardActionArea>
       )}
