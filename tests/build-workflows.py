@@ -79,7 +79,7 @@ def generate_replacements(conf, dir):
 
     if os == "windows":
         # TODO: review for potential stable level of parallel testing processes
-        xdist_numprocesses = {False: 0, True: 2}.get(conf["parallel"], conf["parallel"])
+        xdist_numprocesses = {False: 0, True: 3}.get(conf["parallel"], conf["parallel"])
     else:
         xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
 
