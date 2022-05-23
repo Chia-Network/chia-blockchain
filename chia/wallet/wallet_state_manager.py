@@ -606,11 +606,12 @@ class WalletStateManager:
         trade_coin_removed: List[CoinState] = []
 
         for coin_state_idx, coin_state in enumerate(coin_states):
+            coin_name: bytes32 = coin_state.coin.name()
             wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                 coin_state.coin.puzzle_hash
             )
-            local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_state.coin.name())
-            self.log.debug(f"{coin_state.coin.name()}: {coin_state}")
+            local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
+            self.log.debug(f"{coin_name}: {coin_state}")
 
             # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
             if local_record is not None:
@@ -637,13 +638,15 @@ class WalletStateManager:
                 self.log.info(f"No wallet for coin state: {coin_state}")
                 continue
 
-            if wallet_id in all_txs_per_wallet:
-                all_txs = all_txs_per_wallet[wallet_id]
-            else:
-                all_txs = await self.tx_store.get_all_transactions_for_wallet(wallet_id)
-                all_txs_per_wallet[wallet_id] = all_txs
-
-            all_outgoing = [tx for tx in all_txs if "OUTGOING" in TransactionType(tx.type).name]
+            if wallet_id not in all_txs_per_wallet:
+                all_outgoing_trades: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
+                    wallet_id, type=TransactionType.OUTGOING_TRADE
+                )
+                all_outgoing_std_tx: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
+                    wallet_id, type=TransactionType.OUTGOING_TX
+                )
+                all_txs_per_wallet[wallet_id] = all_outgoing_std_tx + all_outgoing_trades
+            all_outgoing_tx: List[TransactionRecord] = all_txs_per_wallet[wallet_id]
 
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
             if derivation_index is not None:
@@ -654,10 +657,12 @@ class WalletStateManager:
                 # TODO: we need to potentially roll back the pool wallet here
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
-                await self.coin_added(coin_state.coin, coin_state.created_height, all_txs, wallet_id, wallet_type)
+                await self.coin_added(
+                    coin_state.coin, coin_state.created_height, all_outgoing_tx, wallet_id, wallet_type, coin_name
+                )
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
-                record = await self.coin_store.get_coin_record(coin_state.coin.name())
+                record = await self.coin_store.get_coin_record(coin_name)
                 if coin_state.coin.name() in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
@@ -739,7 +744,7 @@ class WalletStateManager:
                         # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                         # Even though we are just adding coin record to the db (after reorg)
                         tx_records: List[TransactionRecord] = []
-                        for out_tx_record in all_outgoing:
+                        for out_tx_record in all_outgoing_tx:
                             for rem_coin in out_tx_record.removals:
                                 if rem_coin.name() == coin_state.coin.name():
                                     tx_records.append(out_tx_record)
@@ -771,7 +776,7 @@ class WalletStateManager:
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
                     rem_tx_records: List[TransactionRecord] = []
-                    for out_tx_record in all_outgoing:
+                    for out_tx_record in all_outgoing_tx:
                         for rem_coin in out_tx_record.removals:
                             if rem_coin.name() == coin_state.coin.name():
                                 rem_tx_records.append(out_tx_record)
@@ -919,11 +924,14 @@ class WalletStateManager:
         all_outgoing_transaction_records: List[TransactionRecord],
         wallet_id: uint32,
         wallet_type: WalletType,
+        coin_name: Optional[bytes32] = None,
     ) -> Optional[WalletCoinRecord]:
         """
         Adding coin to DB, return wallet coin record if it get's added
         """
-        existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.name())
+        if coin_name is None:
+            coin_name = coin.name()
+        existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
         if existing is not None:
             return None
 
@@ -965,7 +973,7 @@ class WalletStateManager:
                 sent_to=[],
                 trade_id=None,
                 type=uint32(tx_type),
-                name=coin.name(),
+                name=coin_name,
                 memos=[],
             )
             await self.tx_store.add_transaction_record(tx_record, True)
@@ -973,7 +981,7 @@ class WalletStateManager:
             records: List[TransactionRecord] = []
             for record in all_outgoing_transaction_records:
                 for add_coin in record.additions:
-                    if add_coin.name() == coin.name():
+                    if add_coin.name() == coin_name:
                         records.append(record)
 
             if len(records) > 0:
@@ -997,7 +1005,7 @@ class WalletStateManager:
                     sent_to=[],
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
-                    name=coin.name(),
+                    name=coin_name,
                     memos=[],
                 )
                 if coin.amount > 0:

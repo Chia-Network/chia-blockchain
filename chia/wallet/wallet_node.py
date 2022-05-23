@@ -727,12 +727,16 @@ class WalletNode:
                 async with self.wallet_state_manager.db_wrapper.lock:
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
+                        start_t = time.time()
                         await self.wallet_state_manager.db_wrapper.begin_transaction()
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        self.log.info(f"NCS benchmark 1: {time.time() - start_t}")
+                        start_t = time.time()
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                             last_change_height_cs(states[-1]) - 1, in_transaction=True
                         )
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
+                        self.log.info(f"NCS benchmark 2: {time.time() - start_t}")
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
                         await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
