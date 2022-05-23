@@ -208,13 +208,19 @@ async def setup_farmer_multi_harvester(
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
 
+    if start_services:
+        farmer_port = uint16(0)
+    else:
+        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
+        farmer_port = uint16(find_available_listen_port("farmer_server"))
+
     node_iterators = [
         setup_farmer(
             block_tools,
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
             consensus_constants,
-            uint16(0),
+            port=farmer_port,
             start_service=start_services,
         )
     ]
