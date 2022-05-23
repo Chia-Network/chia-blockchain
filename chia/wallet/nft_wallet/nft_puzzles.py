@@ -1,20 +1,18 @@
 import logging
-from typing import List, Set
-from chia.types.announcement import Announcement
+from typing import Any, List, Tuple
+
+from blspy import G1Element
+from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
+from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.puzzles.load_clvm import load_clvm
-
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.util.debug_spend_bundle import disassemble
 
 log = logging.getLogger(__name__)
@@ -107,14 +105,14 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         "",
         [],
         "",
-        "NFT0",
+        "NFT1",
         uint64(1),
         uint64(1),
     )
     return nft_info
 
 
-def create_ownership_layer_puzzle(nft_id, did_id, p2_puzzle, percentage):
+def create_ownership_layer_puzzle(nft_id: bytes32, did_id: bytes32, p2_puzzle: Program, percentage: uint16) -> Program:
     log.debug(f"Creating ownership layer puzzle with {nft_id=} {did_id=} {percentage=} {p2_puzzle=}")
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
@@ -125,7 +123,7 @@ def create_ownership_layer_puzzle(nft_id, did_id, p2_puzzle, percentage):
         CAT_MOD.get_tree_hash(),
     )
     nft_inner_puzzle = NFT_INNER_INNERPUZ.curry(
-        NFT_INNER_INNERPUZ.get_tree_hash(), NFT_INNER_INNERPUZ.get_tree_hash(), p2_puzzle
+        STANDARD_PUZZLE_MOD.get_tree_hash(), NFT_INNER_INNERPUZ.get_tree_hash(), p2_puzzle
     )
     nft_ownership_layer_puzzle = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(), did_id, transfer_program, nft_inner_puzzle
@@ -133,10 +131,63 @@ def create_ownership_layer_puzzle(nft_id, did_id, p2_puzzle, percentage):
     return nft_ownership_layer_puzzle
 
 
-def create_ownership_layer_transfer_solution(new_did, new_did_inner_hash, trade_prices_list, new_pubkey, conditions=[]):
+def create_ownership_layer_transfer_solution(
+    new_did: bytes32,
+    new_did_inner_hash: bytes,
+    trade_prices_list: List[List[int]],
+    new_pubkey: G1Element,
+    conditions: List[Any] = [],
+) -> Program:
     log.debug(f"Creating a transfer solution with: {new_did=} {new_did_inner_hash=} {trade_prices_list=} {new_pubkey=}")
     condition_list = [new_did, [trade_prices_list], new_pubkey, [new_did_inner_hash], 0, 0, conditions]
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to([[solution_for_conditions(condition_list)]])
     log.debug("Generated transfer solution: %s", disassemble(solution))
     return solution
+
+
+def get_metadata_and_p2_puzhash(unft, solution: Program) -> Tuple[Program, bytes32]:
+    if unft.owner_did:
+        conditions = solution.at("ffffrrrrrrf").as_iter()
+    else:
+        conditions = solution.rest().first().rest().as_iter()
+    metadata = unft.metadata
+    for condition in conditions:
+        log.debug("Checking solution condition: %s", disassemble(condition))
+        if condition.list_len() < 2:
+            # invalid condition
+            continue
+
+        condition_code = int_from_bytes(condition.first().atom)
+        log.debug("Checking condition code: %r", condition_code)
+        if condition_code == -24:
+            # metadata update
+            # (-24 (meta updater puzzle) url)
+            metadata_list = list(metadata.as_python())
+            new_metadata = []
+            for metadata_entry in metadata_list:
+                key = metadata_entry[0]
+                if key == b"u":
+                    new_metadata.append((b"u", [condition.rest().rest().first().atom] + list(metadata_entry[1:])))
+                else:
+                    new_metadata.append((b"h", metadata_entry[1]))
+            metadata = Program.to(new_metadata)
+        elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
+            puzhash = bytes32(condition.rest().first().atom)
+            log.debug("Got back puzhash from solution: %s", puzhash)
+    assert puzhash
+    return metadata, puzhash
+
+
+def generate_new_puzzle(unft, new_p2_puzzle, metadata, solution):
+    if not unft.owner_did:
+        inner_puzzle = new_p2_puzzle
+    else:
+        new_did_id = solution.at("ffffrf").atom
+        new_did_inner_hash = solution.at("ffffrrff").atom
+        inner_puzzle = create_ownership_layer_puzzle(
+            unft.singleton_launcher_id, new_did_id, new_did_inner_hash, unft.trade_price_percentage
+        )
+    return create_full_puzzle(
+        unft.singleton_launcher_id, Program.to(metadata), unft.metadata_updater_hash, inner_puzzle
+    )
