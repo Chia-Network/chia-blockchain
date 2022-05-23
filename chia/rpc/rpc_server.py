@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 
@@ -309,7 +309,8 @@ async def start_rpc_server(
     net_config,
     connect_to_daemon=True,
     max_request_body_size=None,
-):
+    name: str = "rpc_server",
+) -> Tuple[Callable[[], Coroutine[Any, Any, None]], uint16]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -324,8 +325,10 @@ async def start_rpc_server(
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
+
     site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
     await site.start()
+    rpc_port = runner.addresses[0][1]
 
     async def cleanup():
         await rpc_server.stop()
@@ -333,4 +336,4 @@ async def start_rpc_server(
         if connect_to_daemon:
             await daemon_connection
 
-    return cleanup
+    return cleanup, rpc_port

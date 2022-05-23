@@ -15,7 +15,7 @@ class Spend(Streamable):
     puzzle_hash: bytes32
     height_relative: Optional[uint32]
     seconds_relative: uint64
-    create_coin: List[Tuple[bytes32, uint64, bytes]]
+    create_coin: List[Tuple[bytes32, uint64, Optional[bytes]]]
     agg_sig_me: List[Tuple[bytes48, bytes]]
 
 

@@ -3,30 +3,16 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
-import sys
 from enum import Enum
 from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
 
 from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import Literal
+from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
-
-if sys.version_info < (3, 8):
-
-    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
-        return getattr(t, "__args__", ())
-
-    def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
-        return getattr(t, "__origin__", None)
-
-else:
-
-    from typing import get_args, get_origin
-
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 

@@ -2055,7 +2055,7 @@ class TestGeneratorConditions:
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 2
         for s in npc_result.conds.spends:
-            assert s.create_coin == [(puzzle_hash.encode("ascii"), 10, b"")]
+            assert s.create_coin == [(puzzle_hash.encode("ascii"), 10, None)]
 
     def test_create_coin_different_puzzhash(self, softfork_height):
         # CREATE_COIN
@@ -2067,8 +2067,8 @@ class TestGeneratorConditions:
         )
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
-        assert (puzzle_hash_1.encode("ascii"), 5, b"") in npc_result.conds.spends[0].create_coin
-        assert (puzzle_hash_2.encode("ascii"), 5, b"") in npc_result.conds.spends[0].create_coin
+        assert (puzzle_hash_1.encode("ascii"), 5, None) in npc_result.conds.spends[0].create_coin
+        assert (puzzle_hash_2.encode("ascii"), 5, None) in npc_result.conds.spends[0].create_coin
 
     def test_create_coin_different_amounts(self, softfork_height):
         # CREATE_COIN
@@ -2080,8 +2080,8 @@ class TestGeneratorConditions:
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 1
         coins = npc_result.conds.spends[0].create_coin
-        assert (puzzle_hash.encode("ascii"), 5, b"") in coins
-        assert (puzzle_hash.encode("ascii"), 4, b"") in coins
+        assert (puzzle_hash.encode("ascii"), 5, None) in coins
+        assert (puzzle_hash.encode("ascii"), 4, None) in coins
 
     def test_create_coin_with_hint(self, softfork_height):
         # CREATE_COIN
@@ -2458,7 +2458,7 @@ class TestMaliciousGenerators:
         spend = npc_result.conds.spends[0]
         assert len(spend.create_coin) == 6094
         print(f"run time:{run_time}")
-        assert run_time < 0.2
+        assert run_time < 0.3
 
     @pytest.mark.asyncio
     async def test_invalid_coin_spend_coin(self, bt, one_node_one_block, wallet_a):
