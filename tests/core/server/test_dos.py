@@ -201,15 +201,9 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
-        try:
-            for i in range(6000):
-                await ws_con._send_message(new_tx_message)
-            await asyncio.sleep(1)
-        except ConnectionResetError:
-            # based on timing the connection may get closed by rate limits during the loop
-            # and this is actually want we want so catch this exception and ignore it
-            # seen primarily on my Windows box
-            pass
+        for i in range(6000):
+            await ws_con._send_message(new_tx_message)
+        await asyncio.sleep(1)
 
         def is_closed():
             return ws_con.closed
