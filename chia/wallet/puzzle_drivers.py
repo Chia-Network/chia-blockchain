@@ -33,10 +33,10 @@ class PuzzleInfo:
         value = self.info[item]
         return decode_info_value(PuzzleInfo, value)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
-                if self[key] != other[key]:
+                if self[key] != other[key]:  # type: ignore
                     return False
             except Exception:
                 return False
@@ -60,10 +60,10 @@ class Solver:
         value = self.info[item]
         return decode_info_value(Solver, value)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
-                if self[key] != other[key]:
+                if self[key] != other[key]:  # type: ignore
                     return False
             except Exception:
                 return False

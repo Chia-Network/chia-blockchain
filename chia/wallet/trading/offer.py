@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, Dict, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
@@ -9,22 +10,17 @@ from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
+from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.ints import uint64
+from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, match_puzzle, solve_puzzle
+from chia.wallet.payment import Payment
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.outer_puzzles import (
-    create_asset_id,
-    construct_puzzle,
-    match_puzzle,
-    solve_puzzle,
-)
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.payment import Payment
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
