@@ -151,7 +151,7 @@ for os in testconfig.oses:
             continue
         replacements = generate_replacements(conf, dir)
         if os == "windows":
-            # TODO: force windows to sequential only
+            # TODO: review for potential stable level of parallel testing processes
             replacements["PYTEST_PARALLEL_ARGS"] = " -n 0"
         txt = transform_template(template_text, replacements)
         # remove trailing whitespace from lines and assure a single EOF at EOL
