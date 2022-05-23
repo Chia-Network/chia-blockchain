@@ -785,7 +785,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
     assert res["success"]
     assert res["name"] == new_wallet_name
-    with pytest.raises(ValueError, match='Wallet id 1 is not a DID wallet'):
+    with pytest.raises(ValueError, match="Wallet id 1 is not a DID wallet"):
         await wallet_1_rpc.did_set_wallet_name(wallet_1.id(), new_wallet_name)
 
     # Check DID ID
