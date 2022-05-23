@@ -519,6 +519,10 @@ class CoinStore:
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
         assert len(coin_names) == 0 or index > 0
+
+        if len(coin_names) == 0:
+            return
+
         updates = []
         for coin_name in coin_names:
             updates.append((index, self.maybe_to_hex(coin_name)))
