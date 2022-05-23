@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import math
 import random
+import time
 from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -262,7 +263,8 @@ class WeightProofHandlerV2:
         """
         creates and persists sub epoch segments for the prev sub epoch
         """
-        log.debug("create prev sub_epoch_segments")
+        start = time.time()
+        log.info("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
             return
@@ -274,7 +276,7 @@ class WeightProofHandlerV2:
         await self.blockchain.persist_sub_epoch_challenge_segments_v2(
             ses_sub_block.header_hash, bytes(SubEpochSegmentsV2(segments)), len(segments)
         )
-        log.debug("sub_epoch_segments done")
+        log.info(f"sub_epoch_segments done {time.time() - start}")
         return
 
     async def check_prev_sub_epoch_segments(self) -> bool:

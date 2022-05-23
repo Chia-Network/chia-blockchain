@@ -1,7 +1,9 @@
 import asyncio
 from pathlib import Path
+
 import click
-from chia.cmds.weight_proof_funcs import check_weight_proof_v2_database, build_weight_proof_v2_database
+
+from chia.cmds.weight_proof_funcs import build_weight_proof_v2_database, check_weight_proof_v2_database
 
 
 @click.group("wp", short_help="weight proof db cli")

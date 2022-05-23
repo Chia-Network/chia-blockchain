@@ -2,23 +2,25 @@ import logging
 import multiprocessing
 import time
 from pathlib import Path
+from typing import Tuple
+
+import aiosqlite
+
 from chia.consensus.blockchain import Blockchain
+from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
-from chia.consensus.constants import ConsensusConstants
 from chia.server.start_full_node import SERVICE_NAME
-from chia.util.config import process_config_start_method, load_config
+from chia.util.config import load_config, process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32
 from chia.util.path import path_from_root
-from typing import Tuple
-import aiosqlite
 
 
 async def build_weight_proof_v2_database(path: Path) -> None:
