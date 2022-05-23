@@ -432,9 +432,9 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        if i == 0:
+        if i == 0 or i > 10:
             node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
-        elif i < 10:
+        else:
             reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
             node_hash = await data_store.insert(
                 key=key,
@@ -446,8 +446,6 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
             )
             ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
             assert len(ancestors) == i
-        else:
-            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
         hashes.append(node_hash)
 
     avg_height = 0
