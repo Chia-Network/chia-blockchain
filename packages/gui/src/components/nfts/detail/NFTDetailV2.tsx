@@ -108,76 +108,73 @@ export default function NFTDetail() {
   const attributes = metadata?.attributes ?? [];
 
   return (
-    <LayoutDashboardSub>
-      <Flex flexDirection="column" gap={2}>
-        <Back variant="h5">{metadata?.name ?? <Trans>Title Not Available</Trans>}</Back>
+    <Flex flexDirection="column" gap={2}>
+      <Flex backgroundColor="white" justifyContent="center" py={8}>
+
         <Box
-          border={1}
-          borderColor="grey.300"
-          borderRadius={4}
+          // border={1}
+          // borderColor="grey.300"
+          // borderRadius={4}
           overflow="hidden"
           alignItems="center"
           justifyContent="center"
-          display={{ xs: 'flex', md: 'none' }}
+          maxWidth="800px"
+          alignSelf="center"
+          width="100%"
+          position="relative"
         >
-          {nft && <NFTPreview nft={nft} height="400px" fit="contain" />}
-        </Box>
-        <Flex gap={2} alignItems="stretch">
-          <Flex
-            flexGrow={1}
-            border={1}
-            borderColor="grey.300"
-            borderRadius={4}
-            overflow="hidden"
-            alignItems="stretch"
-            justifyContent="stretch"
-            display={{ xs: 'none', md: 'flex' }}
-            minHeight="500px"
-          >
-            {nft && <NFTPreview nft={nft} height="auto" fit="contain" />}
-          </Flex>
-          <Box maxWidth={{ md: '500px', lg: '600px' }} width="100%">
-            <Flex flexDirection="column" gap={3}>
-              <Flex flexDirection="column" gap={1}>
-                <Typography variant="h6">
-                  <Trans>Description</Trans>
-                </Typography>
-
-                <Typography>{metadata?.description ?? <Trans>Not Available</Trans>}</Typography>
-              </Flex>
-              {!!attributes.length && (
-                <Flex flexDirection="column" gap={1}>
-                  <Typography variant="h6">
-                    <Trans>Properties</Trans>
-                  </Typography>
-
-                  <Grid spacing={2} container>
-                    {attributes.map((attribute, index) => (
-                      <Grid xs={12} sm={6} key={`${attribute?.name}-${index}`} item>
-                        <Box border={1} borderRadius={1} borderColor="black" p={2}>
-                          <Typography variant="body1" noWrap>
-                            {attribute?.name}
-                          </Typography>
-                          <Typography variant="h6" noWrap>
-                            {attribute?.value}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Flex>
-              )}
-              <Flex flexDirection="column" gap={1}>
-                <Typography variant="h6">
-                  <Trans>Details</Trans>
-                </Typography>
-
-                <CardKeyValue rows={details} hideDivider />
-              </Flex>
-            </Flex>
+          {nft && (
+            <NFTPreview nft={nft} width="100%" height="400px" fit="contain" />
+          )}
+          <Box position="absolute" left={1} top={1}>
+            <Back variant="h5"></Back>
           </Box>
+        </Box>
+      </Flex>
+    <LayoutDashboardSub>
+      <Flex flexDirection="column" gap={2} maxWidth="1200px" alignSelf="center">
+
+
+        <Typography variant="h5">{metadata?.name ?? <Trans>Title Not Available</Trans>}</Typography>
+        <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={1}>
+            <Typography variant="h6">
+              <Trans>Description</Trans>
+            </Typography>
+
+            <Typography>{metadata?.description ?? <Trans>Not Available</Trans>}</Typography>
+          </Flex>
+          {!!attributes.length && (
+            <Flex flexDirection="column" gap={1}>
+            <Typography variant="h6">
+              <Trans>Properties</Trans>
+            </Typography>
+
+            <Grid spacing={2} container>
+              {attributes.map((attribute, index) => (
+                <Grid xs={12} sm={6} md={4} lg={3} key={`${attribute?.name}-${index}`} item>
+                  <Box border={1} borderRadius={1} borderColor="black" p={2}>
+                    <Typography variant="body1" noWrap>
+                      {attribute?.name}
+                    </Typography>
+                    <Typography variant="h6" noWrap>
+                      {attribute?.value}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Flex>
+          )}
+          <Flex flexDirection="column" gap={1}>
+            <Typography variant="h6">
+              <Trans>Details</Trans>
+            </Typography>
+
+            <CardKeyValue rows={details} hideDivider />
+          </Flex>
         </Flex>
-        {/*
+        {/**
         <Flex flexDirection="column" gap={1}>
           <Typography variant="h6">
             <Trans>Item Activity</Trans>
@@ -187,5 +184,6 @@ export default function NFTDetail() {
         */}
       </Flex>
     </LayoutDashboardSub>
+    </Flex>
   );
 }

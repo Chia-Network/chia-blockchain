@@ -78,11 +78,11 @@ export default function NFTGallery() {
             <NFTContextualActions selection={selection} />
           </Flex>
         </Flex>
-      }
+      )}
     >
       <Grid spacing={2} alignItems="stretch" container>
         {filteredData?.map((nft: NFTInfo) => (
-          <Grid xs={12} md={6} lg={4} xl={3} key={nft.$nftId} item>
+          <Grid xs={12} sm={6} md={4} lg={4} xl={3} key={nft.$nftId} item>
             <NFTCard
               nft={nft}
               onSelect={(selected) => handleSelect(nft, selected)}
