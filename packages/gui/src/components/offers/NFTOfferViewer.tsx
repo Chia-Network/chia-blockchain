@@ -290,12 +290,10 @@ type NFTOfferDetailsProps = {
   offerData?: string;
   offerSummary?: OfferSummaryRecord;
   imported?: boolean;
-  // TODO: Remove this
-  demo?: any;
 };
 
 function NFTOfferDetails(props: NFTOfferDetailsProps) {
-  const { tradeRecord, offerData, offerSummary, imported, demo } = props;
+  const { tradeRecord, offerData, offerSummary, imported } = props;
   const summary = tradeRecord?.summary || offerSummary;
   const isMyOffer = !!tradeRecord?.isMyOffer;
   const showError = useShowError();
@@ -304,9 +302,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const [acceptOffer] = useAcceptOfferHook();
   const [isAccepting, setIsAccepting] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
-  const [isValid, setIsValid] = useState<boolean>(
-    tradeRecord !== undefined || demo?.isValid,
-  );
+  const [isValid, setIsValid] = useState<boolean>(tradeRecord !== undefined);
   const [isMissingRequestedAsset, setIsMissingRequestedAsset] =
     useState<boolean>(false);
   const [checkOfferValidity] = useCheckOfferValidityMutation();
@@ -319,11 +315,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
     : undefined;
 
   useMemo(async () => {
-    // TODO: Remove this
-    if (demo?.isValid) {
-      return;
-    }
-
     if (!offerData) {
       return;
     }

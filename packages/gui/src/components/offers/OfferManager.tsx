@@ -726,7 +726,6 @@ export function CreateOffer() {
               offerSummary={location?.state?.offerSummary}
               offerFilePath={location?.state?.offerFilePath}
               imported={location?.state?.imported}
-              demo={location?.state?.demo} // TODO: Remove this
             />
           }
         />
