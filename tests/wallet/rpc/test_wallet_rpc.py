@@ -44,7 +44,6 @@ from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -106,9 +105,6 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 @pytest_asyncio.fixture(scope="function", params=[True, False])
 async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self_hostname):
-    test_rpc_port: uint16 = uint16(find_available_listen_port())
-    test_rpc_port_2: uint16 = uint16(find_available_listen_port())
-    test_rpc_port_node: uint16 = uint16(find_available_listen_port())
     full_node, wallets = two_wallet_nodes
     full_node_api = full_node[0]
     full_node_server = full_node_api.full_node.server
@@ -136,31 +132,31 @@ async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self
 
     full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-    rpc_cleanup_node = await start_rpc_server(
+    rpc_cleanup_node, test_rpc_port_node = await start_rpc_server(
         full_node_rpc_api,
         hostname,
         daemon_port,
-        test_rpc_port_node,
+        uint16(0),
         stop_node_cb,
         bt.root_path,
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup = await start_rpc_server(
+    rpc_cleanup, test_rpc_port = await start_rpc_server(
         wallet_rpc_api,
         hostname,
         daemon_port,
-        test_rpc_port,
+        uint16(0),
         stop_node_cb,
         bt.root_path,
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup_2 = await start_rpc_server(
+    rpc_cleanup_2, test_rpc_port_2 = await start_rpc_server(
         wallet_rpc_api_2,
         hostname,
         daemon_port,
-        test_rpc_port_2,
+        uint16(0),
         stop_node_cb,
         bt.root_path,
         config,
