@@ -35,11 +35,7 @@ export default function NFTDetail() {
     return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
 
-  const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
-  const launcherId: string | undefined = nft?.launcherId;
-
-  console.log('nft', nft);
-  console.log('metadata', metadata, isLoadingMetadata, error);
+  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
 
   const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 
