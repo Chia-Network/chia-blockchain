@@ -758,6 +758,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
+    wallet_1: Wallet = env.wallet_1.wallet
     wallet_2: Wallet = env.wallet_2.wallet
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_2_node: WalletNode = env.wallet_2.node
@@ -767,10 +768,26 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
     # Create a DID wallet
-    res = await wallet_1_rpc.create_new_did_wallet(1)
+    res = await wallet_1_rpc.create_new_did_wallet(amount=1, name=None)
     assert res["success"]
     did_wallet_id_0 = res["wallet_id"]
     did_id_0 = res["my_did"]
+
+    # Get wallet name
+    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
+    assert res["success"]
+    assert res["name"] == "Profile 1"
+
+    # Set wallet name
+    new_wallet_name = "test name"
+    res = await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, new_wallet_name)
+    assert res["success"]
+    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
+    assert res["success"]
+    assert res["name"] == new_wallet_name
+    with pytest.raises(ValueError, match='Wallet id 1 is not a DID wallet'):
+        await wallet_1_rpc.did_set_wallet_name(wallet_1.id(), new_wallet_name)
+
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
     assert res["success"]
