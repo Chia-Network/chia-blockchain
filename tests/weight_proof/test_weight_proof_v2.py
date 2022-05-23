@@ -906,11 +906,18 @@ class TestWeightProof:
         )
         segment = segments[0]
         modified_sub_slot_data = []
+        after_challenge = False
         for idx, sub_slot in enumerate(segment.sub_slot_data):
-            if idx > 0 and segment.sub_slot_data[idx - 1].is_challenge():
-                modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_sp_vdf_output=bad_b))
-            else:
-                modified_sub_slot_data.append(sub_slot)
+
+            if after_challenge and sub_slot.signage_point_index is not None:
+                if sub_slot.signage_point_index > uint8(0):
+                    modified_sub_slot_data.append(dataclasses.replace(sub_slot, cc_sp_vdf_output=bad_b))
+                    continue
+
+            modified_sub_slot_data.append(sub_slot)
+            if sub_slot.is_challenge():
+                after_challenge = True
+
         segment = dataclasses.replace(segment, sub_slot_data=modified_sub_slot_data)
         with pytest.raises(Exception):
             await validate_segment_util(segment, blockchain, heights, ses_sub_block, 3)
