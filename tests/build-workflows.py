@@ -77,7 +77,12 @@ def generate_replacements(conf, dir):
         "PYTEST_PARALLEL_ARGS": "",
     }
 
-    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    if os == "windows":
+        # TODO: review for potential stable level of parallel testing processes
+        xdist_numprocesses = {False: 0, True: 2}.get(conf["parallel"], conf["parallel"])
+    else:
+        xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+
     replacements["PYTEST_PARALLEL_ARGS"] = f" -n {xdist_numprocesses}"
 
     if not conf["checkout_blocks_and_plots"]:
@@ -150,9 +155,6 @@ for os in testconfig.oses:
             # TODO: enable timelord for windows
             continue
         replacements = generate_replacements(conf, dir)
-        if os == "windows":
-            # TODO: review for potential stable level of parallel testing processes
-            replacements["PYTEST_PARALLEL_ARGS"] = " -n 0"
         txt = transform_template(template_text, replacements)
         # remove trailing whitespace from lines and assure a single EOF at EOL
         txt = "\n".join(line.rstrip() for line in txt.rstrip().splitlines()) + "\n"
