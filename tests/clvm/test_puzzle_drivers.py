@@ -21,10 +21,13 @@ def test_puzzle_info() -> None:
     with pytest.raises(ValueError, match="A type is required"):
         PuzzleInfo(test_driver)
     solver = Solver(test_driver)
+    assert solver == Solver(solver.info)
 
     test_driver["type"] = "TEST"
     puzzle_info = PuzzleInfo(test_driver)
+    assert puzzle_info == PuzzleInfo(puzzle_info.info)
 
+    assert puzzle_info.type() == "TEST"
     assert puzzle_info.also() == PuzzleInfo(test_also)
 
     obj: Union[PuzzleInfo, Solver]

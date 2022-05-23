@@ -33,6 +33,15 @@ class PuzzleInfo:
         value = self.info[item]
         return decode_info_value(PuzzleInfo, value)
 
+    def __eq__(self, other) -> bool:
+        for key, value in self.info.items():
+            try:
+                if self[key] != other[key]:
+                    return False
+            except Exception:
+                return False
+        return True
+
     def type(self) -> str:
         return str(self.info["type"])
 
@@ -50,6 +59,15 @@ class Solver:
     def __getitem__(self, item: str) -> Any:
         value = self.info[item]
         return decode_info_value(Solver, value)
+
+    def __eq__(self, other) -> bool:
+        for key, value in self.info.items():
+            try:
+                if self[key] != other[key]:
+                    return False
+            except Exception:
+                return False
+        return True
 
 
 def decode_info_value(cls: Any, value: Any) -> Any:
