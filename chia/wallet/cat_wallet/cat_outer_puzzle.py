@@ -23,6 +23,7 @@ class CATOuterPuzzle:
     _asset_id: Any
     _construct: Any
     _solve: Any
+    _get_inner_puzzle: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_cat_puzzle(puzzle)
@@ -38,6 +39,17 @@ class CATOuterPuzzle:
             return PuzzleInfo(constructor_dict)
         else:
             return None
+
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+        matched, curried_args = match_cat_puzzle(puzzle)
+        if matched:
+            _, _, inner_puzzle = curried_args
+            if constructor.also() is not None:
+                return self._get_inner_puzzle(constructor.also(), inner_puzzle)
+            else:
+                return inner_puzzle
+        else:
+            raise ValueError("This driver is not for the specified puzzle reveal")
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
         return bytes32(constructor["tail"])

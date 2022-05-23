@@ -14,6 +14,8 @@ This file provides a central location for acquiring drivers for outer puzzles li
 A driver for a puzzle must include the following functions:
   - match(self, puzzle: Program) -> Optional[PuzzleInfo]
     - Given a puzzle reveal, return a PuzzleInfo object that can be used to reconstruct it later
+  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+    - Given a PuzzleInfo object and a puzzle reveal, pull out this outer puzzle's inner puzzle
   - asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]
     - Given a PuzzleInfo object, generate a 32 byte ID for use in dictionaries, etc.
   - construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program
@@ -50,11 +52,15 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
     )
 
 
+def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(puzzle_reveal)  # type: ignore
+
+
 def create_asset_id(constructor: PuzzleInfo) -> bytes32:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)  # type: ignore
 
 
-function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle]
+function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle]
 
 driver_lookup: Dict[AssetType, Any] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
