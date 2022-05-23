@@ -161,6 +161,7 @@ class Service:
             self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
+        self._advertised_port = self._server.get_port()
 
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
@@ -182,6 +183,7 @@ class Service:
                     self.config,
                     self._connect_to_daemon,
                     max_request_body_size=self.max_request_body_size,
+                    name=self._service_name + "_rpc",
                 )
             )
 
@@ -249,7 +251,7 @@ class Service:
 
                 async def close_rpc_server() -> None:
                     if self._rpc_task:
-                        await (await self._rpc_task)()
+                        await (await self._rpc_task)[0]()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
