@@ -11,7 +11,6 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -44,19 +43,18 @@ class TestDIDWallet:
         api_one = WalletRpcApi(wallet_node_0)
         config = bt.config
         daemon_port = config["daemon_port"]
-        test_rpc_port = uint16(find_available_listen_port("rpc_port"))
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
-        rpc_server_cleanup = await start_rpc_server(
+        rpc_server_cleanup, test_rpc_port = await start_rpc_server(
             api_one,
             self_hostname,
             daemon_port,
-            test_rpc_port,
+            uint16(0),
             lambda x: None,
             bt.root_path,
             config,
             connect_to_daemon=False,
         )
+        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
 
         async def got_initial_money():
             balances = await client.get_wallet_balance("1")
