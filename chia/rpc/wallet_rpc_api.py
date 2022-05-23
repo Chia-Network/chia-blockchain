@@ -1333,6 +1333,14 @@ class WalletRpcApi:
             puzzle_hash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
             puzzle_hash = address
+        if "uris" not in request:
+            return {"success": False, "error": "Data URIs is required"}
+        if not isinstance(request["uris"], list):
+            return {"success": False, "error": "Data URIs must be a list"}
+        if not isinstance(request.get("meta_uris", []), list):
+            return {"success": False, "error": "Metadata URIs must be a list"}
+        if not isinstance(request.get("license_uris", []), list):
+            return {"success": False, "error": "License URIs must be a list"}
         metadata = Program.to(
             [
                 ("u", request["uris"]),
@@ -1380,17 +1388,17 @@ class WalletRpcApi:
     async def nft_get_info(self, request: Dict) -> Optional[Dict]:
         assert self.service.wallet_state_manager is not None
         if "coin_id" not in request:
-            raise ValueError("Coin ID is required.")
+            return {"success": False, "error": "Coin ID is required."}
         coin_id = bytes32.from_hexstr(request["coin_id"])
         peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
         if peer is None:
-            raise ValueError("Cannot find a full node peer.")
+            return {"success": False, "error": "Cannot find a full node peer."}
         # Get coin state
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
         )
         if coin_state_list is None or len(coin_state_list) < 1:
-            raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
+            return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
         coin_state: CoinState = coin_state_list[0]
         if request.get("latest", True):
             # Find the unspent coin
@@ -1403,14 +1411,14 @@ class WalletRpcApi:
                     if coin.coin.amount % 2 == 1:
                         odd_coin += 1
                     if odd_coin > 1:
-                        raise ValueError("This is not a singleton, multiple children coins found.")
+                        return {"success": False, "error": "This is not a singleton, multiple children coins found."}
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
-            raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
+            return {"success": False, "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found"}
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
             peer, parent_coin_state.spent_height, parent_coin_state.coin
@@ -1440,9 +1448,9 @@ class WalletRpcApi:
                 )
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(full_puzzle, coin_state.coin)
         except Exception as e:
-            raise ValueError(f"The coin is not a NFT. {e}")
+            return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
-            return {"nft_info": nft_info}
+            return {"success": True, "nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None

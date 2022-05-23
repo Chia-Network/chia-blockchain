@@ -91,21 +91,21 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         license_uris.append(str(uri, "utf-8"))
 
     nft_info = NFTInfo(
-        str(uncurried_nft.singleton_launcher_id).upper(),
+        uncurried_nft.singleton_launcher_id.as_python().hex().upper(),
         nft_coin.name().hex().upper(),
-        str(uncurried_nft.owner_did).upper(),
+        uncurried_nft.owner_did.as_python().hex().upper(),
         uint64(uncurried_nft.trade_price_percentage.as_int()),
         data_uris,
-        str(uncurried_nft.data_hash).upper(),
+        uncurried_nft.data_hash.as_python().hex().upper(),
         meta_uris,
-        str(uncurried_nft.meta_hash).upper(),
+        uncurried_nft.meta_hash.as_python().hex().upper(),
         license_uris,
-        str(uncurried_nft.license_hash).upper(),
+        uncurried_nft.license_hash.as_python().hex().upper(),
         uint64(uncurried_nft.series_total.as_int()),
         uint64(uncurried_nft.series_total.as_int()),
         LAUNCHER_PUZZLE_HASH.hex().upper(),
-        str(uncurried_nft.metadata_updater_hash).upper(),
-        str(uncurried_nft.metadata).upper(),
+        uncurried_nft.metadata_updater_hash.as_python().hex().upper(),
+        bytes(uncurried_nft.metadata).hex().upper(),
     )
     return nft_info
 

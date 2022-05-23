@@ -13,7 +13,8 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
@@ -397,6 +398,19 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
+    assert coin["data_hash"] == "D4584AD463139FA8C0D9F68F4B59F185"
+    assert coin["chain_info"] == bytes(Program.to(
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+            ("mu", []),
+            ("mh", hexstr_to_bytes("00")),
+            ("lu", []),
+            ("lh", hexstr_to_bytes("00")),
+            ("sn", uint64(1)),
+            ("st", uint64(1)),
+        ]
+    )).hex().upper()
     nft_coin_id = coin["nft_coin_id"]
     # add another URI
     tr1 = await api_0.nft_add_uri(
