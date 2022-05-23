@@ -645,8 +645,9 @@ class NFTWallet:
     ) -> TransactionRecord:
         chia_coins = await self.standard_wallet.select_coins(fee)
         chia_tx = await self.standard_wallet.generate_signed_transaction(
-            fee,
+            uint64(0),
             (await self.standard_wallet.get_new_puzzlehash()),
+            fee=fee,
             coins=chia_coins,
             coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
         )
