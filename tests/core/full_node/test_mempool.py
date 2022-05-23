@@ -2437,7 +2437,7 @@ class TestMaliciousGenerators:
         # the number 6095 was chosen carefully to not exceed the maximum cost
         condition = CREATE_UNIQUE_COINS.format(num=6094)
 
-        with assert_runtime(seconds=0.2, label=request.node.name):
+        with assert_runtime(seconds=0.3, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
