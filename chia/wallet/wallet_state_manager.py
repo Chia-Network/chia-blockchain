@@ -642,10 +642,13 @@ class WalletStateManager:
                 all_outgoing_trades: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
                     wallet_id, type=TransactionType.OUTGOING_TRADE
                 )
+                all_incoming_trades: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
+                    wallet_id, type=TransactionType.INCOMING_TRADE
+                )
                 all_outgoing_std_tx: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
                     wallet_id, type=TransactionType.OUTGOING_TX
                 )
-                all_txs_per_wallet[wallet_id] = all_outgoing_std_tx + all_outgoing_trades
+                all_txs_per_wallet[wallet_id] = all_outgoing_std_tx + all_outgoing_trades + all_incoming_trades
             all_outgoing_tx: List[TransactionRecord] = all_txs_per_wallet[wallet_id]
 
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
