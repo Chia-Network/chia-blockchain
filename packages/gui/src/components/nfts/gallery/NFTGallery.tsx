@@ -10,6 +10,7 @@ import Search from './NFTGallerySearch';
 import NFTContextualActions from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
+import NFTProfileDropdown from '../NFTProfileDropdown';
 
 export default function NFTGallery() {
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
@@ -64,15 +65,18 @@ export default function NFTGallery() {
 
   return (
     <LayoutDashboardSub
-      sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
-      header={
-        <Flex justifyContent="space-between" alignItems="center">
-          <Search
-            onChange={setSearch}
-            value={search}
-            placeholder={t(defineMessage({ message: `Search...` }))}
-          />
-          <NFTContextualActions selection={selection} />
+      // sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
+      header={(
+        <Flex gap={2} alignItems="center">
+          <NFTProfileDropdown onChange={setWalletId} />
+          <Flex justifyContent="space-between" alignItems="center" flexGrow={1} gap={1}>
+            <Search
+              onChange={setSearch}
+              value={search}
+              placeholder={t(defineMessage({ message: `Search...` }))}
+            />
+            <NFTContextualActions selection={selection} />
+          </Flex>
         </Flex>
       }
     >

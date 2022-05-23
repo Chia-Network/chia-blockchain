@@ -66,14 +66,18 @@ export default function NFTDetail() {
   }, [nfts]);
   const launcherId: string | undefined = nft?.launcherId;
 
+  console.log('nft', nft);
+
   const metadata = { ...fakeMetadata, ...nft };
 
-  if (isLoading) {
-    return <Loading center />;
-  }
+  const details = useMemo(() => {
+    if (!nft) {
+      return [];
+    }
 
-  const details = [
-    {
+    const { dataUris = []} = nft;
+
+    const rows = [{
       key: 'id',
       label: <Trans>Launcher ID</Trans>,
       value: (
@@ -104,13 +108,25 @@ export default function NFTDetail() {
     {
       key: 'dataHash',
       label: <Trans>Data Hash</Trans>,
-      value: (
-        <Truncate tooltip copyToClipboard>
-          {metadata.hash}
-        </Truncate>
-      ),
-    },
-  ];
+      value: <Truncate tooltip copyToClipboard>{metadata.hash}</Truncate>,
+    }];
+
+    if (dataUris?.length) {
+      dataUris.forEach((uri, index) => {
+        rows.push({
+          key: `dataUri-${index}`,
+          label: <Trans>Data URL {index + 1}</Trans>,
+          value: uri,
+        });
+      });
+    }
+
+    return rows;
+  }, [nft]);
+
+  if (isLoading) {
+    return <Loading center />;
+  }
 
   return (
     <LayoutDashboardSub>
@@ -147,12 +163,14 @@ export default function NFTDetail() {
             <CardKeyValue rows={details} hideDivider />
           </Flex>
         </Flex>
+        {/**
         <Flex flexDirection="column" gap={1}>
           <Typography variant="h6">
             <Trans>Item Activity</Trans>
           </Typography>
           <Table cols={cols} rows={metadata.activity} />
         </Flex>
+        */}
       </Flex>
     </LayoutDashboardSub>
   );
