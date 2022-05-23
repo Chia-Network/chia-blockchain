@@ -8,8 +8,8 @@ from chia.pools.pool_config import PoolWalletConfig
 from chia.util.config import create_default_chia_config, load_config, lock_config, save_config
 
 
-def test_pool_config():
-    test_root = Path(gettempdir())
+def test_pool_config(tmp_path):
+    test_root = tmp_path
     test_path = test_root / "config"
     eg_config = test_path / "config.yaml"
     to_config = test_path / "test_pool_config.yaml"
