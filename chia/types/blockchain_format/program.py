@@ -271,8 +271,11 @@ class SerializedProgram:
         # implement streamable in rust
         spends = []
         for s in conds.spends:
+            create_coins = []
+            for ph, amount, hint in s.create_coin:
+                create_coins.append((ph, amount, None if hint == b"" else hint))
             spends.append(
-                Spend(s.coin_id, s.puzzle_hash, s.height_relative, s.seconds_relative, s.create_coin, s.agg_sig_me)
+                Spend(s.coin_id, s.puzzle_hash, s.height_relative, s.seconds_relative, create_coins, s.agg_sig_me)
             )
 
         ret = SpendBundleConditions(
