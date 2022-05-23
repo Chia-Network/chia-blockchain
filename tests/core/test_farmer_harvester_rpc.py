@@ -41,7 +41,6 @@ from tests.plot_sync.test_delta import dummy_plot
 from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
 
 log = logging.getLogger(__name__)
 
@@ -74,24 +73,21 @@ async def harvester_farmer_environment(bt, harvester_farmer_simulation, self_hos
     farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
     harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
 
-    rpc_port_farmer = uint16(find_available_listen_port("farmer rpc"))
-    rpc_port_harvester = uint16(find_available_listen_port("harvester rpc"))
-
-    rpc_cleanup = await start_rpc_server(
+    rpc_cleanup, rpc_port_farmer = await start_rpc_server(
         farmer_rpc_api,
         hostname,
         daemon_port,
-        rpc_port_farmer,
+        uint16(0),
         stop_node_cb,
         bt.root_path,
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup_2 = await start_rpc_server(
+    rpc_cleanup_2, rpc_port_harvester = await start_rpc_server(
         harvester_rpc_api,
         hostname,
         daemon_port,
-        rpc_port_harvester,
+        uint16(0),
         stop_node_cb,
         bt.root_path,
         config,
