@@ -173,9 +173,6 @@ class CoinStore:
 
         coins: List[CoinRecord] = []
 
-        if len(names) == 0:
-            return coins
-
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
             for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
