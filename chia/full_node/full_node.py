@@ -271,6 +271,7 @@ class FullNode:
 
         self._sync_task = None
         self._segment_task = None
+        self._segmentV2_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -450,6 +451,13 @@ class FullNode:
             except Exception as e:
                 self.log.warning(f"failed to cancel segment task {e}")
             self._segment_task = None
+
+        if self._segmentV2_task is not None and (not self._segmentV2_task.done()):
+            try:
+                self._segmentV2_task.cancel
+            except Exception as e:
+                self.log.warning(f"failed to cancel segment task {e}")
+            self._segmentV2_task = None
 
         try:
             for height in range(start_height, target_height, batch_size):
@@ -1689,7 +1697,9 @@ class FullNode:
             if self._segment_task is None or self._segment_task.done():
                 self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
             if self.weight_proof_handler_v2 is not None:
-                await self.weight_proof_handler_v2.create_prev_sub_epoch_segments()
+                self._segmentV2_task = asyncio.create_task(
+                    self.weight_proof_handler_v2.create_prev_sub_epoch_segments()
+                )
         return None
 
     async def respond_unfinished_block(
