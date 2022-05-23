@@ -327,7 +327,7 @@ class TradeManager:
         if driver_dict is None:
             driver_dict = {}
         try:
-            coins_to_offer: Dict[uint32, List[Coin]] = {}
+            coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
             for id, amount in offer_dict.items():
                 if amount > 0:
@@ -348,7 +348,7 @@ class TradeManager:
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
                     requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
@@ -365,25 +365,24 @@ class TradeManager:
                             )
                     else:
                         asset_id = id
-                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id)
-                        wallet_id = wallet.id()
+                        wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[wallet_id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
-            if asset_id is not None and wallet is not None:
-                if callable(getattr(wallet, "get_puzzle_info", None)):
-                    puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
-                    if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                        raise ValueError(
-                            f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
-                        )
+                if asset_id is not None and wallet is not None:
+                    if callable(getattr(wallet, "get_puzzle_info", None)):
+                        puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
+                        if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                            raise ValueError(
+                                f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
+                            )
+                        else:
+                            driver_dict[asset_id] = puzzle_driver
                     else:
-                        driver_dict[asset_id] = puzzle_driver
-                else:
-                    raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
+                        raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
@@ -393,13 +392,16 @@ class TradeManager:
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
-            for wallet_id, selected_coins in coins_to_offer.items():
-                wallet = self.wallet_state_manager.wallets[wallet_id]
+            for id, selected_coins in coins_to_offer.items():
+                if isinstance(id, int):
+                    wallet = self.wallet_state_manager.wallets[id]
+                else:
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending a CAT but it has to for now
                 # ATTENTION: new_wallets
                 if wallet.type() == WalletType.CAT:
                     txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[int(wallet_id)])],
+                        [abs(offer_dict[id])],
                         [Offer.ph()],
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
@@ -408,7 +410,7 @@ class TradeManager:
                     all_transactions.extend(txs)
                 else:
                     tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[int(wallet_id)]),
+                        abs(offer_dict[id]),
                         Offer.ph(),
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
