@@ -10,9 +10,7 @@
    (include curry-and-treehash.clinc)
 
    (defconstant NEW_OWNER_CONDITION -10)
-   (defconstant RECURRY_TRANSFER_PROGRAM -22)
-   (defconstant METADATA_REVEAL_NUMBER -24)
-
+   
    (defun sha256tree1
           (TREE)
           (if (l TREE)
