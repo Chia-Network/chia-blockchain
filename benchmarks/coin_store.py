@@ -1,17 +1,18 @@
 import asyncio
-import random
-from time import monotonic
-from pathlib import Path
-from chia.full_node.coin_store import CoinStore
-from typing import List, Tuple
 import os
+import random
 import sys
+from pathlib import Path
+from time import monotonic
+from typing import List, Tuple
 
-from chia.util.db_wrapper import DBWrapper
-from chia.types.blockchain_format.sized_bytes import bytes32
+from utils import rand_hash, rewards, setup_db
+
+from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
-from chia.util.ints import uint64, uint32
-from utils import rewards, rand_hash, setup_db
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint32, uint64
 
 NUM_ITERS = 200
 
@@ -37,7 +38,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
 async def run_new_block_benchmark(version: int):
 
     verbose: bool = "--verbose" in sys.argv
-    db_wrapper: DBWrapper = await setup_db("coin-store-benchmark.db", version)
+    db_wrapper: DBWrapper2 = await setup_db("coin-store-benchmark.db", version)
 
     # keep track of benchmark total time
     all_test_time = 0.0
@@ -75,7 +76,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
             # 19 seconds per block
             timestamp += 19
@@ -117,7 +117,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
             stop = monotonic()
 
             # 19 seconds per block
@@ -168,7 +167,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
 
             stop = monotonic()
 
@@ -218,7 +216,6 @@ async def run_new_block_benchmark(version: int):
                 additions,
                 removals,
             )
-            await db_wrapper.db.commit()
             stop = monotonic()
 
             # 19 seconds per block
@@ -305,7 +302,7 @@ async def run_new_block_benchmark(version: int):
         print(f"all tests completed in {all_test_time:0.4f}s")
 
     finally:
-        await db_wrapper.db.close()
+        await db_wrapper.close()
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
     print(f"database size: {db_size/1000000:.3f} MB")

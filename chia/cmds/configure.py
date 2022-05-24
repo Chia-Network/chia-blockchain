@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import click
 
-from chia.util.config import get_config_lock, load_config, save_config, str2bool
+from chia.util.config import lock_and_load_config, save_config, str2bool
 
 
 def configure(
@@ -23,8 +23,7 @@ def configure(
     seeder_domain_name: str,
     seeder_nameserver: str,
 ):
-    with get_config_lock(root_path, "config.yaml"):
-        config: Dict = load_config(root_path, "config.yaml", acquire_lock=False)
+    with lock_and_load_config(root_path, "config.yaml") as config:
         change_made = False
         if set_node_introducer:
             try:
