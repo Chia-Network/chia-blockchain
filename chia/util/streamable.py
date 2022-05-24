@@ -137,6 +137,8 @@ def recurse_jsonify(d: Any) -> Any:
         return f"0x{bytes(d).hex()}"
     elif isinstance(d, Enum):
         return d.name
+    elif isinstance(d, bool):
+        return d
     elif isinstance(d, int):
         return int(d)
     elif d is None or type(d) == str:
