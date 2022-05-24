@@ -1,4 +1,6 @@
 import asyncio
+import time
+
 from chia.protocols.shared_protocol import Capability
 import logging
 import random
@@ -41,10 +43,15 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
         if request_height == -1:
             return None
         request = wallet_protocol.RequestBlockHeader(uint32(request_height))
-        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        start_t = time.time()
+        response: Optional[List[HeaderBlock]] = await request_header_blocks(peer, height, height + 1)
+        response_1: Optional[RespondBlockHeader] = await peer.request_block_header(request)
+        log.warning(
+            f"Time for requesting block {request_height}= {time.time() - start_t} got: {response_1.header_block.header_hash} {response[0].header_hash}"
+        )
         if response is not None and isinstance(response, RespondBlockHeader):
-            if response.header_block.is_transaction_block:
-                return response.header_block
+            if response[0].is_transaction_block:
+                return response[0]
         elif request_height < height:
             # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
             break
@@ -308,7 +315,9 @@ def get_block_header(block):
     )
 
 
-async def request_header_blocks(peer, start_height, end_height) -> Optional[List[HeaderBlock]]:
+async def request_header_blocks(
+    peer: WSChiaConnection, start_height: uint32, end_height: uint32
+) -> Optional[List[HeaderBlock]]:
     if Capability.BLOCK_HEADERS in peer.capabilities:
         response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
     else:

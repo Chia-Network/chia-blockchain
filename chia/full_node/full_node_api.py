@@ -1318,6 +1318,7 @@ class FullNodeAPI:
 
         This method should be used instead of RequestHeaderBlocks
         """
+        start_time = time.time()
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return None
         blocks_bytes: List[bytes] = []
@@ -1350,10 +1351,12 @@ class FullNodeAPI:
             + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
         )
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
+        self.log.warning(f"Time for request_block_headers: {time.time() - start_time}")
         return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
     @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        start_time = time.time()
         """DEPRECATED: please use RequestBlockHeaders"""
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
@@ -1384,6 +1387,7 @@ class FullNodeAPI:
             ProtocolMessageTypes.respond_header_blocks,
             wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks),
         )
+        self.log.warning(f"Time for request_header_blocks: {time.time() - start_time}")
         return msg
 
     @api_request
