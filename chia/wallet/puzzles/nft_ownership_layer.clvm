@@ -10,7 +10,7 @@
    (include curry-and-treehash.clinc)
 
    (defconstant NEW_OWNER_CONDITION -10)
-   
+
    (defun sha256tree1
           (TREE)
           (if (l TREE)
@@ -54,10 +54,10 @@
    )
 
    ; if we don't find the transfer program magic number then we should fail
-   (defun loop_through_conditions_looking_for_transfer_solution (TRANSFER_PROGRAM CURRENT_OWNER conditions)
+   (defun loop_through_conditions_looking_for_transfer_solution (TRANSFER_PROGRAM CURRENT_OWNER conditions all_conditions)
       (if conditions
         (if (= (f (f conditions)) NEW_OWNER_CONDITION)
-          (a TRANSFER_PROGRAM (list CURRENT_OWNER (r (f conditions))))  ; (r (f conditions)) is (new_owner, trade_price, tp_solution)
+          (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions))))  ; (r (f conditions)) is (new_owner, trade_price, tp_solution)
           (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER (r conditions))
         )
         (x)
@@ -65,7 +65,7 @@
    )
 
    (defun transfer_program_loader (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER conditions)
-    (process_transfer_program NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER conditions) conditions)
+    (process_transfer_program NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER conditions conditions) conditions)
    )
 
   ; main
