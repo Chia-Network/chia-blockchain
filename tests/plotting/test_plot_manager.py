@@ -19,7 +19,7 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
-from chia.util.config import create_default_chia_config
+from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.path import mkdir
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
@@ -605,4 +605,40 @@ async def test_callback_event_raises(test_plot_environment, event_to_raise: Plot
     expected_result.removed = []
     expected_result.processed = len(env.dir_1) + len(env.dir_2)
     expected_result.remaining = 0
+    await env.refresh_tester.run(expected_result)
+
+
+@pytest.mark.asyncio
+async def test_recursive_plot_scan(test_plot_environment: TestEnvironment) -> None:
+    env: TestEnvironment = test_plot_environment
+    # Create a directory tree with some subdirectories containing plots, others not.
+    root_plot_dir = env.root_path / "root"
+    sub_dir_0: TestDirectory = TestDirectory(root_plot_dir / "0", env.dir_1.plots[0:2])
+    sub_dir_0_1: TestDirectory = TestDirectory(sub_dir_0.path / "1", env.dir_1.plots[2:3])
+    sub_dir_1: TestDirectory = TestDirectory(root_plot_dir / "1", [])
+    sub_dir_1_0: TestDirectory = TestDirectory(sub_dir_1.path / "0", [])
+    sub_dir_1_0_1: TestDirectory = TestDirectory(sub_dir_1_0.path / "1", env.dir_1.plots[3:7])
+
+    # List of all the plots in the directory tree
+    expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list() + sub_dir_1_0_1.plot_info_list()
+
+    # Adding the root without `recursive_plot_scan` and running a test should not load any plots (match an empty result)
+    expected_result = PlotRefreshResult()
+    add_plot_directory(env.root_path, str(root_plot_dir))
+    await env.refresh_tester.run(expected_result)
+
+    # Set the recursive scan flag in the config
+    with lock_and_load_config(env.root_path, "config.yaml") as config:
+        config["harvester"]["recursive_plot_scan"] = True
+        save_config(env.root_path, "config.yaml", config)
+
+    # With the flag enabled it should load all expected plots
+    expected_result.loaded = expected_plot_list  # type: ignore[assignment]
+    expected_result.processed = len(expected_plot_list)
+    await env.refresh_tester.run(expected_result)
+
+    # Adding the subdirectories also should not lead to some failure or duplicated loading
+    add_plot_directory(env.root_path, str(sub_dir_0_1.path))
+    add_plot_directory(env.root_path, str(sub_dir_1_0_1.path))
+    expected_result.loaded = []
     await env.refresh_tester.run(expected_result)

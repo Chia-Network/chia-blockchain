@@ -8,7 +8,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 from chia.util.chunks import chunks
 import time
 import logging
@@ -21,18 +20,14 @@ MAX_SQLITE_PARAMETERS = 900
 class CoinStore:
     """
     This object handles CoinRecords in DB.
-    A cache is maintained for quicker access to recent coins.
     """
 
-    coin_record_cache: LRUCache
-    cache_size: uint32
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(60000)):
+    async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
-        self.cache_size = cache_size
         self.db_wrapper = db_wrapper
 
         async with self.db_wrapper.write_db() as conn:
@@ -81,7 +76,6 @@ class CoinStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
 
-        self.coin_record_cache = LRUCache(cache_size)
         return self
 
     async def num_unspent(self) -> int:
@@ -161,10 +155,6 @@ class CoinStore:
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        cached = self.coin_record_cache.get(coin_name)
-        if cached is not None:
-            return cached
-
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -174,9 +164,7 @@ class CoinStore:
                 row = await cursor.fetchone()
                 if row is not None:
                     coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
-                    self.coin_record_cache.put(record.coin.name(), record)
-                    return record
+                    return CoinRecord(coin, row[0], row[1], row[2], row[6])
         return None
 
     async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
@@ -184,17 +172,6 @@ class CoinStore:
             return []
 
         coins: List[CoinRecord] = []
-        new_names: List[bytes32] = []
-        for n in names:
-            cached = self.coin_record_cache.get(n)
-            if cached is not None:
-                coins.append(cached)
-            else:
-                new_names.append(n)
-        names = new_names
-
-        if len(names) == 0:
-            return coins
 
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
@@ -218,7 +195,6 @@ class CoinStore:
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(record)
-                    self.coin_record_cache.put(record.coin.name(), record)
 
         return coins
 
@@ -452,23 +428,6 @@ class CoinStore:
         Note that block_index can be negative, in which case everything is rolled back
         Returns the list of coin records that have been modified
         """
-        # Update memory cache
-        delete_queue: List[bytes32] = []
-        for coin_name, coin_record in list(self.coin_record_cache.cache.items()):
-            if int(coin_record.spent_block_index) > block_index:
-                new_record = CoinRecord(
-                    coin_record.coin,
-                    coin_record.confirmed_block_index,
-                    uint32(0),
-                    coin_record.coinbase,
-                    coin_record.timestamp,
-                )
-                self.coin_record_cache.put(coin_record.coin.name(), new_record)
-            if int(coin_record.confirmed_block_index) > block_index:
-                delete_queue.append(coin_name)
-
-        for coin_name in delete_queue:
-            self.coin_record_cache.remove(coin_name)
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
         # Add coins that are confirmed in the reverted blocks to the list of updated coins.
@@ -506,13 +465,12 @@ class CoinStore:
                 )
         return list(coin_changes.values())
 
-    # Store CoinRecord in DB and ram cache
+    # Store CoinRecord in DB
     async def _add_coin_records(self, records: List[CoinRecord]) -> None:
 
         if self.db_wrapper.db_version == 2:
             values2 = []
             for record in records:
-                self.coin_record_cache.put(record.coin.name(), record)
                 values2.append(
                     (
                         record.coin.name(),
@@ -534,7 +492,6 @@ class CoinStore:
         else:
             values = []
             for record in records:
-                self.coin_record_cache.put(record.coin.name(), record)
                 values.append(
                     (
                         record.coin.name().hex(),
@@ -559,20 +516,14 @@ class CoinStore:
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
         assert len(coin_names) == 0 or index > 0
-        # if this coin is in the cache, mark it as spent in there
+
+        if len(coin_names) == 0:
+            return
+
         updates = []
         for coin_name in coin_names:
-            r = self.coin_record_cache.get(coin_name)
-            if r is not None:
-                if r.spent_block_index != uint32(0):
-                    raise ValueError(f"Coin already spent in cache: {coin_name}")
-
-                self.coin_record_cache.put(
-                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
-                )
             updates.append((index, self.maybe_to_hex(coin_name)))
 
-        assert len(updates) == len(coin_names)
         async with self.db_wrapper.write_db() as conn:
             if self.db_wrapper.db_version == 2:
                 ret: Cursor = await conn.executemany(
