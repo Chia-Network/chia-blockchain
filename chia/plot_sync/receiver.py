@@ -1,7 +1,7 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Collection, Coroutine, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
@@ -61,12 +61,12 @@ class Receiver:
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
-    _update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]]
+    _update_callback: Callable[[bytes32, Optional[Delta]], Awaitable[None]]
 
     def __init__(
         self,
         connection: WSChiaConnection,
-        update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]],
+        update_callback: Callable[[bytes32, Optional[Delta]], Awaitable[None]],
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
