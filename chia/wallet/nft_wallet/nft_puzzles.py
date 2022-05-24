@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Dict, List
 
+from clvm_tools.binutils import disassemble
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -8,7 +10,6 @@ from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.util.debug_spend_bundle import disassemble
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
