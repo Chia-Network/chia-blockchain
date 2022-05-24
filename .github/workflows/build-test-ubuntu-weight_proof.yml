@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: Ubuntu weight_proof Test
+    if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:

@@ -75,7 +75,7 @@ def generate_replacements(conf, dir):
         "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
-        "SKIP": "false",
+        "RUN": "true",
     }
 
     if os == "windows":
@@ -108,7 +108,7 @@ def generate_replacements(conf, dir):
         replacements[var] = conf[var] if var in conf else ""
     if os in conf["os_skip"] or (conf["install_timelord"] and os == "windows"):
         # TODO: enable timelord for windows, and stop skipping
-        replacements["SKIP"] = "true"
+        replacements["RUN"] = "false"
     return replacements
 
 

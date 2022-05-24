@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: Ubuntu wallet-rl_wallet Test
+    if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:

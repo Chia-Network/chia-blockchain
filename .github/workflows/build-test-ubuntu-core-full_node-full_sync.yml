@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: Ubuntu core-full_node-full_sync Test
+    if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:

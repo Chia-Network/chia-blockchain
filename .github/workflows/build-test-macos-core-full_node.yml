@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: MacOS core-full_node Tests
+    if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 50
     strategy:
