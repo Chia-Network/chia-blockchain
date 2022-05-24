@@ -295,8 +295,11 @@ async def wallet_node_100_pk():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
+async def two_wallet_nodes(request):
+    params = {}
+    if request and request.param_index > 0:
+        params = request.param
+    async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
         yield _
 
 
