@@ -99,7 +99,7 @@ class WeightProofHandler:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height} ses {ses}")
+            log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
@@ -1278,7 +1278,7 @@ def validate_recent_blocks(
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:
-            prev_challenge = challenge
+            prev_challenge = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             challenge = sub_slot.challenge_chain.get_hash()
             deficit = sub_slot.reward_chain.deficit
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
@@ -1504,6 +1504,10 @@ def __get_rc_sub_slot(
 
     assert segment.rc_slot_end_info is not None
     if idx != 0:
+        # this is not the first slot, ses details should not be included
+        ses_hash = None
+        new_ssi = None
+        new_diff = None
         cc_vdf_info = VDFInfo(sub_slot.cc_slot_end_info.challenge, curr_ssi, sub_slot.cc_slot_end_info.output)
         if sub_slot.icc_slot_end_info is not None:
             icc_slot_end_info = VDFInfo(
@@ -1569,7 +1573,7 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
 
 
 def vars_to_bytes(constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProof):
-    constants_dict = recurse_jsonify(dataclasses.asdict(constants))
+    constants_dict = recurse_jsonify(constants)
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
     summary_bytes = []

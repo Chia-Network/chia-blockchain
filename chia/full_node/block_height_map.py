@@ -13,8 +13,8 @@ from chia.util.db_wrapper import DBWrapper2
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SesCache(Streamable):
     content: List[Tuple[uint32, bytes]]
 
@@ -136,7 +136,7 @@ class BlockHeightMap:
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
-    async def maybe_flush(self):
+    async def maybe_flush(self) -> None:
         if self.__dirty < 1000:
             return
 
