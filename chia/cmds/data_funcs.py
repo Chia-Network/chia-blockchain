@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Optional, Tuple, List, Dict, Type
 from types import TracebackType
+from pathlib import Path
 
 import aiohttp
 
@@ -191,11 +192,15 @@ async def get_root_history_cmd(
         print(f"Exception from 'data': {e}")
 
 
-async def add_missing_files_cmd(rpc_port: Optional[int], ids: Optional[List[str]], override: bool) -> None:
+async def add_missing_files_cmd(
+    rpc_port: Optional[int], ids: Optional[List[str]], override: bool, foldername: Optional[Path]
+) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
             await client.add_missing_files(
-                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]), override=override
+                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
+                override=override,
+                foldername=foldername,
             )
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")

@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Any, Coroutine, Dict, Optional, TypeVar
+from pathlib import Path
 
 import click
 from typing_extensions import Protocol
@@ -240,8 +241,16 @@ def get_root_history(
 @data_cmd.command("add_missing_files", short_help="")
 @click.option("-ids", "--ids", help="", type=str, required=False)
 @click.option("-o", "--override", is_flag=True, type=bool, default=False)
+@click.option("-f", "--foldername", type=str, required=False)
 @create_rpc_port_option()
-def add_missing_files(ids: Optional[str], override: bool, data_rpc_port: int) -> None:
+def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[str], data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import add_missing_files_cmd
 
-    run(add_missing_files_cmd(rpc_port=data_rpc_port, ids=None if ids is None else json.loads(ids), override=override))
+    run(
+        add_missing_files_cmd(
+            rpc_port=data_rpc_port,
+            ids=None if ids is None else json.loads(ids),
+            override=override,
+            foldername=None if foldername is None else Path(foldername),
+        )
+    )

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
@@ -56,12 +57,16 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("unsubscribe", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
 
-    async def add_missing_files(self, store_ids: Optional[List[bytes32]], override: Optional[bool]) -> Dict[str, Any]:
+    async def add_missing_files(
+        self, store_ids: Optional[List[bytes32]], override: Optional[bool], foldername: Optional[Path]
+    ) -> Dict[str, Any]:
         request: Dict[str, Any] = {}
         if store_ids is not None:
             request["ids"] = [store_id.hex() for store_id in store_ids]
         if override is not None:
             request["override"] = override
+        if foldername is not None:
+            request["foldername"] = str(foldername)
         response = await self.fetch("add_missing_files", request)
         return response  # type: ignore[no-any-return]
 

@@ -1,5 +1,6 @@
 import dataclasses
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
+from pathlib import Path
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_types import Side, Subscription
@@ -232,8 +233,11 @@ class DataLayerRpcApi:
             subscriptions: List[Subscription] = await self.service.get_subscriptions()
             ids_bytes = [subscription.tree_id for subscription in subscriptions]
         override = request.get("override", False)
+        foldername: Optional[Path] = None
+        if "foldername" in request:
+            foldername = Path(request["foldername"])
         for tree_id in ids_bytes:
-            await self.service.add_missing_files(tree_id, override)
+            await self.service.add_missing_files(tree_id, override, foldername)
         return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
