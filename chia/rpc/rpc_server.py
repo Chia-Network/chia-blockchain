@@ -315,25 +315,30 @@ async def start_rpc_server(
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
     """
-    if max_request_body_size is None:
-        max_request_body_size = 1024 ** 2
-    app = web.Application(client_max_size=max_request_body_size)
-    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-    rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-    app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
-    if connect_to_daemon:
-        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
-    runner = web.AppRunner(app, access_log=None)
-    await runner.setup()
-
-    site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
-    await site.start()
-    rpc_port = runner.addresses[0][1]
-
-    async def cleanup():
-        await rpc_server.stop()
-        await runner.cleanup()
+    try:
+        if max_request_body_size is None:
+            max_request_body_size = 1024 ** 2
+        app = web.Application(client_max_size=max_request_body_size)
+        rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
+        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
+        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
         if connect_to_daemon:
-            await daemon_connection
+            daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
+        runner = web.AppRunner(app, access_log=None)
+        await runner.setup()
 
-    return cleanup, rpc_port
+        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
+        await site.start()
+        rpc_port = runner.addresses[0][1]
+
+        async def cleanup():
+            await rpc_server.stop()
+            await runner.cleanup()
+            if connect_to_daemon:
+                await daemon_connection
+
+        return cleanup, rpc_port
+    except Exception:
+        tb = traceback.format_exc()
+        log.error(f"Starting RPC server failed. Exception {tb}.")
+        raise
