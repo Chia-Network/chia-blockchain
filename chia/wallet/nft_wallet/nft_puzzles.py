@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Dict, List
 
+from clvm_tools.binutils import disassemble
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -104,7 +106,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         uint64(uncurried_nft.series_total.as_int()),
         uint64(uncurried_nft.series_total.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
-        bytes(uncurried_nft.metadata),
+        disassemble(uncurried_nft.metadata),
     )
     return nft_info
 
@@ -134,24 +136,20 @@ def program_to_metadata(program: Program) -> Dict[bytes, Any]:
     return metadata
 
 
-def prepend_value(key: bytes, condition: Program, metadata: Dict[bytes, Any]) -> None:
+def prepend_value(key: bytes, value: Program, metadata: Dict[bytes, Any]) -> None:
     """
     Prepend a value to a list in the metadata
-    :param key: key of the metadata
-    :param condition: Update condition
+    :param key: Key of the field
+    :param value: Value want to add
     :param metadata: Metadata
     :return:
     """
-    value = None
-    for k, v in condition.as_python():
-        if k == key:
-            value = v
-            break
-    if value is not None:
+
+    if value != Program.to(0):
         if metadata[key] == b"":
-            metadata[key] = [value]
+            metadata[key] = [value.as_python()]
         else:
-            metadata[key].insert(0, value)
+            metadata[key].insert(0, value.as_python())
 
 
 def update_metadata(metadata: Program, update_condition: Program) -> Program:
@@ -161,8 +159,9 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     :param update_condition: Update metadata conditions
     :return: Updated metadata
     """
-    new_metadata = program_to_metadata(metadata)
-    prepend_value(b"u", update_condition.rest().rest().first(), new_metadata)
-    prepend_value(b"mu", update_condition.rest().rest().first(), new_metadata)
-    prepend_value(b"lu", update_condition.rest().rest().first(), new_metadata)
+    new_metadata: Dict[bytes, Any] = program_to_metadata(metadata)
+    uris: Program = update_condition.rest().rest().first()
+    prepend_value(b"u", uris.first(), new_metadata)
+    prepend_value(b"mu", uris.rest().first(), new_metadata)
+    prepend_value(b"lu", uris.rest().rest().first(), new_metadata)
     return metadata_to_program(new_metadata)

@@ -53,7 +53,7 @@ class NFTInfo(Streamable):
     updater_puzhash: bytes32
     """Puzzle hash of the metadata updater in hex"""
 
-    chain_info: bytes
+    chain_info: str
     """Information saved on the chain in hex"""
 
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()

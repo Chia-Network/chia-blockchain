@@ -339,6 +339,7 @@ class NFTWallet:
         target_puzzle_hash: bytes32 = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
+        # TODO Set royalty address after NFT1 chialisp finished
         """
         This must be called under the wallet state manager lock
         """
@@ -514,13 +515,15 @@ class NFTWallet:
         return nft_record
 
     async def update_metadata(
-        self, nft_coin_info: NFTCoinInfo, uris: Dict[str, Optional[str]], fee: uint64 = uint64(0)
+        self, nft_coin_info: NFTCoinInfo, uris: List[Any], fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:
         coin = nft_coin_info.coin
         additional_uris = []
-        for key, uri in uris.items():
+        for uri in uris:
             if uri is not None:
-                additional_uris.append((key, uri))
+                additional_uris.append(uri)
+            else:
+                additional_uris.append(0)
 
         uncurried_nft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
 

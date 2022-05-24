@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
@@ -399,22 +400,19 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
     assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
-    assert (
-        coin["chain_info"][2:]
-        == bytes(
-            Program.to(
-                [
-                    ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-                    ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
-                    ("mu", []),
-                    ("mh", hexstr_to_bytes("00")),
-                    ("lu", []),
-                    ("lh", hexstr_to_bytes("00")),
-                    ("sn", uint64(1)),
-                    ("st", uint64(1)),
-                ]
-            )
-        ).hex()
+    assert coin["chain_info"] == disassemble(
+        Program.to(
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                ("mu", []),
+                ("mh", hexstr_to_bytes("00")),
+                ("lu", []),
+                ("lh", hexstr_to_bytes("00")),
+                ("sn", uint64(1)),
+                ("st", uint64(1)),
+            ]
+        )
     )
     nft_coin_id = coin["nft_coin_id"]
     # add another URI

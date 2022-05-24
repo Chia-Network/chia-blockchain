@@ -1467,11 +1467,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         # Note metadata updater can only add one uri for each field per spend.
         # If you want to add multiple uris for one field, you need to spend multiple times.
-        uris = {
-            "u": request.get("uri", None),
-            "mu": request.get("meta_uri", None),
-            "lu": request.get("license_uri", None),
-        }
+        # DON'T change the order of uris, it is hardcoded in the metadata updater for efficiency purpose.
+        uris = [request.get("uri", None), request.get("meta_uri", None), request.get("license_uri", None)]
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))

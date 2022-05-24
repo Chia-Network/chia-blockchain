@@ -59,9 +59,7 @@ def test_update_metadata() -> None:
     my_amount = 1
     destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append(
-        [-24, NFT_METADATA_UPDATER, [("u", "https://url1"), ("mu", "https://url2"), ("lu", "https://url3")]]
-    )
+    condition_list.append([-24, NFT_METADATA_UPDATER, ["https://url1", "https://url2", "https://url3"]])
 
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
