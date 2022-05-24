@@ -151,6 +151,8 @@ for os in testconfig.oses:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
+        if os in conf["os_skip"]:
+            continue
         if conf["install_timelord"] and os == "windows":
             # TODO: enable timelord for windows
             continue
