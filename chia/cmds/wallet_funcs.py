@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 
@@ -281,7 +281,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if [] in [offers, requests]:
         print("Not creating offer: Must be offering and requesting at least one asset")
     else:
-        offer_dict: Dict[uint32, int] = {}
+        offer_dict: Dict[Union[uint32, str], int] = {}
         printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
         for item in [*offers, *requests]:
             wallet_id, amount = tuple(item.split(":")[0:2])
