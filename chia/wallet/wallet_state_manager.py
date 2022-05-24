@@ -634,7 +634,7 @@ class WalletStateManager:
                 wallet_id, wallet_type = await self.fetch_parent_and_check_for_cat(peer, coin_state, fork_height)
 
             if wallet_id is None or wallet_type is None:
-                self.log.info(f"No wallet for coin state: {coin_state}")
+                self.log.debug(f"No wallet for coin state: {coin_state}")
                 continue
 
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
@@ -904,7 +904,7 @@ class WalletStateManager:
                 return None
             wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
             return uint32(wallet_id), wallet_type
-        return None
+        return await self.puzzle_store.wallet_info_for_puzzle_hash(puzzle_hash)
 
     async def coin_added(
         self,

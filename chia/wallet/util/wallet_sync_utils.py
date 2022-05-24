@@ -44,12 +44,8 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
             return None
         request = wallet_protocol.RequestBlockHeader(uint32(request_height))
         start_t = time.time()
-        response: Optional[List[HeaderBlock]] = await request_header_blocks(peer, height, height + 1)
-        response_1: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-        log.warning(
-            f"Time for requesting block {request_height}= {time.time() - start_t} got: {response_1.header_block.header_hash} {response[0].header_hash}"
-        )
-        if response is not None and isinstance(response, RespondBlockHeader):
+        response: Optional[List[HeaderBlock]] = await request_header_blocks(peer, height, height)
+        if response is not None and len(response) > 0:
             if response[0].is_transaction_block:
                 return response[0]
         elif request_height < height:
