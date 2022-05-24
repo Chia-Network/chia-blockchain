@@ -610,7 +610,7 @@ class WalletStateManager:
                 coin_state.coin.puzzle_hash
             )
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
-            self.log.debug(f"{coin_name}: {coin_state}")
+            self.log.debug("%s: %s", coin_name, coin_state)
 
             # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
             if local_record is not None:
