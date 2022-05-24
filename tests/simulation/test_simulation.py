@@ -8,7 +8,6 @@ from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_full_node, setup_full_system, test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
-from tests.util.socket import find_available_listen_port
 
 test_constants_modified = test_constants.replace(
     **{
@@ -38,8 +37,6 @@ async def extra_node(self_hostname):
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
-            find_available_listen_port(),
-            find_available_listen_port(),
             b_tools,
             db_version=1,
         ):
@@ -55,10 +52,11 @@ async def simulation(bt):
 class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
+        node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
+        server1 = node1.server
 
-        node1_port = node1.full_node.config["port"]
-        node2_port = node2.full_node.config["port"]
+        node1_port = node1.full_node.server.get_port()
+        node2_port = node2.full_node.server.get_port()
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(600, node_height_at_least, True, node2, 7)
