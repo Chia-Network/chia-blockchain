@@ -267,6 +267,7 @@ class ChiaServer:
         # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
+            host=["0.0.0.0", "::"],
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
