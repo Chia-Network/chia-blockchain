@@ -600,7 +600,6 @@ class WalletStateManager:
                 raise ValueError("Input coin_states is not sorted properly")
             curr_h = last_change_height
 
-        all_txs_per_wallet: Dict[int, List[TransactionRecord]] = {}
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
@@ -638,19 +637,6 @@ class WalletStateManager:
                 self.log.info(f"No wallet for coin state: {coin_state}")
                 continue
 
-            if wallet_id not in all_txs_per_wallet:
-                all_outgoing_trades: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
-                    wallet_id, type=TransactionType.OUTGOING_TRADE
-                )
-                all_incoming_trades: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
-                    wallet_id, type=TransactionType.INCOMING_TRADE
-                )
-                all_outgoing_std_tx: List[TransactionRecord] = await self.tx_store.get_all_transactions_for_wallet(
-                    wallet_id, type=TransactionType.OUTGOING_TX
-                )
-                all_txs_per_wallet[wallet_id] = all_outgoing_std_tx + all_outgoing_trades + all_incoming_trades
-            all_outgoing_tx: List[TransactionRecord] = all_txs_per_wallet[wallet_id]
-
             derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
             if derivation_index is not None:
                 await self.puzzle_store.set_used_up_to(derivation_index, True)
@@ -661,7 +647,7 @@ class WalletStateManager:
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 await self.coin_added(
-                    coin_state.coin, coin_state.created_height, all_outgoing_tx, wallet_id, wallet_type, coin_name
+                    coin_state.coin, coin_state.created_height, all_unconfirmed, wallet_id, wallet_type, coin_name
                 )
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
@@ -747,9 +733,9 @@ class WalletStateManager:
                         # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                         # Even though we are just adding coin record to the db (after reorg)
                         tx_records: List[TransactionRecord] = []
-                        for out_tx_record in all_outgoing_tx:
+                        for out_tx_record in all_unconfirmed:
                             for rem_coin in out_tx_record.removals:
-                                if rem_coin.name() == coin_state.coin.name():
+                                if rem_coin == coin_state.coin:
                                     tx_records.append(out_tx_record)
 
                         if len(tx_records) > 0:
@@ -779,16 +765,16 @@ class WalletStateManager:
                 else:
                     await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
                     rem_tx_records: List[TransactionRecord] = []
-                    for out_tx_record in all_outgoing_tx:
+                    for out_tx_record in all_unconfirmed:
                         for rem_coin in out_tx_record.removals:
-                            if rem_coin.name() == coin_state.coin.name():
+                            if rem_coin == coin_state.coin:
                                 rem_tx_records.append(out_tx_record)
 
                     for tx_record in rem_tx_records:
                         await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
-                        if rem_coin.name() == coin_state.coin.name():
+                        if rem_coin == coin_state.coin:
                             self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
                             await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
 
@@ -924,7 +910,7 @@ class WalletStateManager:
         self,
         coin: Coin,
         height: uint32,
-        all_outgoing_transaction_records: List[TransactionRecord],
+        all_unconfirmed_transaction_records: List[TransactionRecord],
         wallet_id: uint32,
         wallet_type: WalletType,
         coin_name: Optional[bytes32] = None,
@@ -982,9 +968,9 @@ class WalletStateManager:
             await self.tx_store.add_transaction_record(tx_record, True)
         else:
             records: List[TransactionRecord] = []
-            for record in all_outgoing_transaction_records:
+            for record in all_unconfirmed_transaction_records:
                 for add_coin in record.additions:
-                    if add_coin.name() == coin_name:
+                    if add_coin == coin:
                         records.append(record)
 
             if len(records) > 0:
