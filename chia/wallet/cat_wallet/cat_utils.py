@@ -3,7 +3,7 @@ from typing import List, Tuple, Iterator
 
 from blspy import G2Element
 
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -113,7 +113,7 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
     ids = []
     for _ in spendable_cat_list:
         infos_for_next.append(next_info_for_spendable_cat(_))
-        infos_for_me.append(Program.to(_.coin.as_list()))
+        infos_for_me.append(Program.to(coin_as_list(_.coin)))
         ids.append(_.coin.name())
 
     coin_spends = []
