@@ -19,6 +19,7 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
+from chia.server.server import ChiaServer
 from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
+    server: Optional[ChiaServer]
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
