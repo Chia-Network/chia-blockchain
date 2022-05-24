@@ -31,15 +31,15 @@ jobs:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
 
-      - name: Add safe git directory
-        uses: Chia-Network/actions/git-mark-workspace-safe@main
-
       - name: Prepare Ubuntu
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get --yes update
           apt-get install --yes git lsb-release sudo
+
+      - name: Add safe git directory
+        uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
         uses: actions/checkout@v3
