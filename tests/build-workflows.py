@@ -78,8 +78,8 @@ def generate_replacements(conf, dir):
         "RUN": "true",
     }
 
+    # TODO: design a configurable system for this
     if os == "windows":
-        # TODO: review for potential stable level of parallel testing processes
         xdist_numprocesses = {False: 0, True: 2}.get(conf["parallel"], conf["parallel"])
     else:
         xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
