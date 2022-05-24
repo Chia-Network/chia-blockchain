@@ -5,7 +5,7 @@ import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -510,7 +510,7 @@ class TradeManager:
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
             to_puzzle_hash = bytes32([1] * 32)  # We use all zeros to be clear not to send here
-            removal_tree_hash = Program.to([rem.as_list() for rem in grouped_removals]).get_tree_hash()
+            removal_tree_hash = Program.to([coin_as_list(rem) for rem in grouped_removals]).get_tree_hash()
             # We also need to calculate the sent amount
             removed: int = sum(c.amount for c in grouped_removals)
             change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []

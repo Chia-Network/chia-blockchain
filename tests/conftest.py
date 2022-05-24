@@ -33,7 +33,6 @@ from tests.setup_nodes import (
 )
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
 multiprocessing.set_start_method("spawn")
@@ -568,18 +567,13 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
 
 @pytest_asyncio.fixture(scope="function")
 async def introducer(bt):
-    introducer_port = find_available_listen_port("introducer")
-    async for _ in setup_introducer(bt, introducer_port):
+    async for _ in setup_introducer(bt, 0):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    timelord_port = find_available_listen_port("timelord")
-    node_port = find_available_listen_port("node")
-    rpc_port = find_available_listen_port("rpc")
-    vdf_port = find_available_listen_port("vdf")
-    async for _ in setup_timelord(timelord_port, node_port, rpc_port, vdf_port, False, test_constants, bt):
+    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
         yield _
 
 
