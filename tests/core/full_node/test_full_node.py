@@ -834,7 +834,6 @@ class TestFullNodeProtocol:
         await full_node_1.new_transaction(new_transaction, fake_peer)
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
-        print(f"FULL NODE HEIGHT: {start_height + 1} {full_node_1.full_node.blockchain.get_peak_height()}")
         await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 1)
         await time_out_assert(10, node_height_at_least, True, full_node_2, start_height + 1)
 
@@ -845,6 +844,7 @@ class TestFullNodeProtocol:
 
         # Fill mempool
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        random.seed(b"123465")
         group_size = 3  # We will generate transaction bundles of this size (* standard transaction of around 3-4M cost)
         for i in range(1, len(puzzle_hashes), group_size):
             phs_to_use = [puzzle_hashes[i + j] for j in range(group_size) if (i + j) < len(puzzle_hashes)]
@@ -897,7 +897,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
         assert included_tx > 0
-        assert not_included_tx > 0
+        assert not_included_tx == 3
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full

@@ -33,13 +33,6 @@ class Coin(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def as_list(self) -> List[Any]:
-        return [self.parent_coin_info, self.puzzle_hash, self.amount]
-
-    @property
-    def name_str(self) -> str:
-        return self.name().hex()
-
     @classmethod
     def from_bytes(cls, blob):
         # this function is never called. We rely on the standard streamable
@@ -53,11 +46,18 @@ class Coin(Streamable):
         assert False
 
 
-def hash_coin_list(coin_list: List[Coin]) -> bytes32:
-    coin_list.sort(key=lambda x: x.name_str, reverse=True)
+def coin_as_list(c: Coin) -> List[Any]:
+    return [c.parent_coin_info, c.puzzle_hash, c.amount]
+
+
+def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
+    if len(coin_ids) == 1:
+        return std_hash(coin_ids[0])
+
+    coin_ids.sort(reverse=True)
     buffer = bytearray()
 
-    for coin in coin_list:
-        buffer.extend(coin.name())
+    for name in coin_ids:
+        buffer.extend(name)
 
     return std_hash(buffer)

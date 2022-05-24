@@ -256,11 +256,14 @@ class Farmer:
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
             del self.plot_sync_receivers[connection.peer_node_id]
+            self.state_changed("harvester_removed", {"node_id": connection.peer_node_id})
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta) -> None:
-        log.info(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
-        if not delta.empty():
-            self.state_changed("new_plots", await self.get_harvesters())
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+        log.debug(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
+        receiver: Receiver = self.plot_sync_receivers[peer_id]
+        harvester_updated: bool = delta is not None and not delta.empty()
+        if receiver.initial_sync() or harvester_updated:
+            self.state_changed("harvester_update", receiver.to_dict(True))
 
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
@@ -649,6 +652,12 @@ class Farmer:
                 )
 
         return {"harvesters": harvesters}
+
+    def get_receiver(self, node_id: bytes32) -> Receiver:
+        receiver: Optional[Receiver] = self.plot_sync_receivers.get(node_id)
+        if receiver is None:
+            raise KeyError(f"Receiver missing for {node_id}")
+        return receiver
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
