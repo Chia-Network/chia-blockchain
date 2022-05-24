@@ -75,6 +75,7 @@ def generate_replacements(conf, dir):
         "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
+        "SKIP": "false",
     }
 
     if os == "windows":
@@ -105,6 +106,9 @@ def generate_replacements(conf, dir):
         replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
+    if os in conf["os_skip"] or (conf["install_timelord"] and os == "windows"):
+        # TODO: enable timelord for windows, and stop skipping
+        replacements["SKIP"] = "true"
     return replacements
 
 
@@ -151,11 +155,6 @@ for os in testconfig.oses:
             logging.info(f"Skipping {dir}: no tests collected")
             continue
         conf = update_config(module_dict(testconfig), dir_config(dir))
-        if os in conf["os_skip"]:
-            continue
-        if conf["install_timelord"] and os == "windows":
-            # TODO: enable timelord for windows
-            continue
         replacements = generate_replacements(conf, dir)
         txt = transform_template(template_text, replacements)
         # remove trailing whitespace from lines and assure a single EOF at EOL
