@@ -655,7 +655,16 @@ class WalletStateManager:
                 if coin_state.coin.name() in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
-                if record is None:
+
+                # Reorg rollback adds reorged transactions so it's possible there is tx_record already
+                # Even though we are just adding coin record to the db (after reorg)
+                tx_records_to_confirm: List[TransactionRecord] = [
+                    tr for tr in all_unconfirmed if coin_state.coin in tr.removals
+                ]
+
+                if record is not None:
+                    await self.coin_store.set_spent(coin_state.coin_name, coin_state.spent_height)
+                else:
                     farmer_reward = False
                     pool_reward = False
                     tx_type: int
@@ -730,18 +739,7 @@ class WalletStateManager:
 
                         spent_timestamp = await self.wallet_node.get_timestamp_for_height(coin_state.spent_height)
 
-                        # Reorg rollback adds reorged transactions so it's possible there is tx_record already
-                        # Even though we are just adding coin record to the db (after reorg)
-                        tx_records: List[TransactionRecord] = []
-                        for out_tx_record in all_unconfirmed:
-                            for rem_coin in out_tx_record.removals:
-                                if rem_coin == coin_state.coin:
-                                    tx_records.append(out_tx_record)
-
-                        if len(tx_records) > 0:
-                            for tx_record in tx_records:
-                                await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                        else:
+                        if len(tx_records_to_confirm) == 0:
                             tx_record = TransactionRecord(
                                 confirmed_at_height=coin_state.spent_height,
                                 created_at_time=uint64(spent_timestamp),
@@ -762,21 +760,10 @@ class WalletStateManager:
                             )
 
                             await self.tx_store.add_transaction_record(tx_record, True)
-                else:
-                    await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
-                    rem_tx_records: List[TransactionRecord] = []
-                    for out_tx_record in all_unconfirmed:
-                        for rem_coin in out_tx_record.removals:
-                            if rem_coin == coin_state.coin:
-                                rem_tx_records.append(out_tx_record)
 
-                    for tx_record in rem_tx_records:
-                        await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
-                for unconfirmed_record in all_unconfirmed:
-                    for rem_coin in unconfirmed_record.removals:
-                        if rem_coin == coin_state.coin:
-                            self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
-                            await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
+                for tr in tx_records_to_confirm:
+                    self.log.info(f"Setting tx_id: {tr.name} to confirmed")
+                    await self.tx_store.set_confirmed(tr.name, coin_state.spent_height)
 
                 if record.wallet_type == WalletType.POOLING_WALLET:
                     if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):

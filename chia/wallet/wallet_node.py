@@ -859,6 +859,7 @@ class WalletNode:
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
         a transaction block
         """
+        return uint64(0)
         if height in self.height_to_time:
             return self.height_to_time[height]
 
