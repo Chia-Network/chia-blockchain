@@ -63,7 +63,7 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
           }}
         >
           {nft !== undefined ? (
-            <NFTCard nft={nft} />
+            <NFTCard nft={nft} canExpandDetails={false} />
           ) : (
             <Flex
               flexDirection="column"

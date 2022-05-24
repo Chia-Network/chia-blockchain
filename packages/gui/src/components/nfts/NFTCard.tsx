@@ -32,10 +32,11 @@ export type NFTCardProps = {
   nft: NFTInfo;
   onSelect?: (selected: boolean) => void;
   selected?: boolean;
+  canExpandDetails?: boolean;
 };
 
 export default function NFTCard(props: NFTCardProps) {
-  const { nft, onSelect, selected } = props;
+  const { nft, onSelect, selected, canExpandDetails } = props;
   const nftId = nft.$nftId;
 
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ export default function NFTCard(props: NFTCardProps) {
           <Loading center />
         </CardContent>
       ) : (
-        <CardActionArea onClick={handleClick}>
+        <>
           <CardContent>
             <Flex justifyContent="space-between" alignItems="top">
               <Flex flexDirection="column" gap={1}>
@@ -99,29 +100,33 @@ export default function NFTCard(props: NFTCardProps) {
               </Box>
             </Flex>
           </CardContent>
-          {isVisible ? <NFTPreview nft={nft} /> : <Box height="300px" />}
-          <CardContent>
-            <Flex flexDirection="column" gap={2}>
-              <Flex flexDirection="column" gap={1}>
-                {metadata.editionCount > 1 && (
-                  <Flex justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6" noWrap>
-                      {metadata.name}
+          <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
+            {isVisible ? <NFTPreview nft={nft} /> : <Box height="300px" />}
+            <CardContent>
+              <Flex flexDirection="column" gap={2}>
+                <Flex flexDirection="column" gap={1}>
+                  {metadata.seriesTotal > 1 && (
+                    <Flex justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6" noWrap>
+                        {metadata.name}
+                      </Typography>
+                      <Typography>
+                        {metadata.seriesNumber ?? '?'}/{metadata.editionCount}
+                      </Typography>
+                    </Flex>
+                  )}
+                  {metadata.price && (
+                    <Typography color="textSecondary">
+                      <Trans>
+                        Sold for {mojoToChiaLocaleString(metadata.price)}{' '}
+                        {currencyCode}
+                      </Trans>
                     </Typography>
-                    <Typography>1/{metadata.editionCount}</Typography>
-                  </Flex>
-                )}
-                {metadata.price && (
-                  <Typography color="textSecondary">
-                    <Trans>
-                      Sold for {mojoToChiaLocaleString(metadata.price)}{' '}
-                      {currencyCode}
-                    </Trans>
-                  </Typography>
-                )}
+                  )}
+                </Flex>
               </Flex>
-            </Flex>
-          </CardContent>
+            </CardContent>
+          </CardActionArea>
           <StyledCardFooter>
             <Flex justifyContent="space-between" alignItems="center">
               <Tooltip title={nftId}>
@@ -132,8 +137,12 @@ export default function NFTCard(props: NFTCardProps) {
               <CopyToClipboard value={nftId} />
             </Flex>
           </StyledCardFooter>
-        </CardActionArea>
+        </>
       )}
     </Card>
   );
 }
+
+NFTCard.defaultProps = {
+  canExpandDetails: true,
+};

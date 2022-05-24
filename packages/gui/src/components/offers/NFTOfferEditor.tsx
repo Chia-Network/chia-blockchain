@@ -230,7 +230,7 @@ type NFTOfferEditorProps = {
 
 function buildOfferRequest(
   exchangeType: NFTOfferEditorExchangeType,
-  nft: NFTInfo, // TODO: determine if backend can load this
+  nft: NFTInfo,
   nftLauncherId: string,
   xchAmount: string,
   fee: string,
@@ -248,15 +248,11 @@ function buildOfferRequest(
     [nftLauncherId]: {
       type: 'singleton',
       launcher_id: `0x${nftLauncherId}`,
-      launcher_ph:
-        '0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9',
+      launcher_ph: nft.launcherPuzhash,
       also: {
         type: 'metadata',
-        metadata: `((117 ${nft.dataUris
-          .map((u: string) => '"' + u + '"')
-          .join(' ')}) (104 . 0x${nft.dataHash.toLowerCase()}))`,
-        updater_hash:
-          '0x81970d352e6a39a241eaf8ca510a0e669e40d778ba612621c60a50ef6cf29c7b',
+        metadata: nft.chainInfo,
+        updater_hash: nft.updaterPuzhash,
       },
     },
   };

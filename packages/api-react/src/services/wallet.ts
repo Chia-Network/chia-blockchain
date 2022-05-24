@@ -1827,7 +1827,11 @@ export const walletApi = apiWithTag.injectEndpoints({
 
                 // Add bech32m-encoded NFT identifier
                 const updatedNFTs = nftsData.nftList.map(nft => {
-                  return { ...nft, $nftId: toBech32m(nft.launcherId, 'nft') };
+                  return {
+                    ...nft,
+                    walletId,
+                    $nftId: toBech32m(nft.launcherId, 'nft'),
+                  };
                 });
 
                 return {

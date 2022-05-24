@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import { Trans, t } from '@lingui/macro';
 import { useLocalStorage } from '@rehooks/local-storage';
 import {
@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import { shortSummaryForOffer, suggestedFilenameForOffer } from './utils';
 import useAssetIdName, { AssetIdMapEntry } from '../../hooks/useAssetIdName';
-import { IncomingMessage, Shell, Remote } from 'electron';
+import { Shell } from 'electron';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferSummary from './OfferSummary';
 import child_process from 'child_process';
@@ -36,19 +36,26 @@ import path from 'path';
 type CommonOfferProps = {
   offerRecord: OfferTradeRecord;
   offerData: string;
+  testnet: boolean;
 };
 
 type CommonDialogProps = {
   open: boolean;
   onClose: (value: boolean) => void;
-}
+};
 
 type OfferShareOfferBinDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareOfferpoolDialogProps = CommonOfferProps & CommonDialogProps;
 
-async function writeTempOfferFile(offerData: string, filename: string): Promise<string> {
+const testnetDummyHost = 'dummy.chiatechlab.com';
+const testnetDummyEndpoint = '/';
+
+async function writeTempOfferFile(
+  offerData: string,
+  filename: string,
+): Promise<string> {
   const ipcRenderer = (window as any).ipcRenderer;
   const tempRoot = await ipcRenderer?.invoke('getTempDir');
   const tempPath = fs.mkdtempSync(path.join(tempRoot, 'offer'));
@@ -60,23 +67,37 @@ async function writeTempOfferFile(offerData: string, filename: string): Promise<
 }
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
-async function postToOfferBin(offerData: string, sharePrivately: boolean): Promise<string> {
+async function postToOfferBin(
+  offerData: string,
+  sharePrivately: boolean,
+  testnet: boolean,
+): Promise<string> {
   const ipcRenderer = (window as any).ipcRenderer;
   const requestOptions = {
     method: 'POST',
     protocol: 'https:',
-    hostname: 'api.offerbin.io',
+    hostname: testnet ? testnetDummyHost : 'api.offerbin.io',
     port: 443,
-    path: '/upload' + (sharePrivately ? '?private=true' : ''),
+    path: testnet
+      ? testnetDummyEndpoint
+      : '/upload' + (sharePrivately ? '?private=true' : ''),
   };
   const requestHeaders = {
     'Content-Type': 'application/text',
-  }
+  };
   const requestData = offerData;
-  const { err, statusCode, statusMessage, responseBody } = await ipcRenderer?.invoke('fetchTextResponse', requestOptions, requestHeaders, requestData);
+  const { err, statusCode, statusMessage, responseBody } =
+    await ipcRenderer?.invoke(
+      'fetchTextResponse',
+      requestOptions,
+      requestHeaders,
+      requestData,
+    );
 
   if (err || statusCode !== 200) {
-    const error = new Error(`OfferBin upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`);
+    const error = new Error(
+      `OfferBin upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`,
+    );
     throw error;
   }
 
@@ -91,26 +112,37 @@ enum HashgreenErrorCodes {
   MARKET_NOT_FOUND = 50029, // Pairing doesn't exist e.g. XCH/RandoCoin
   OFFER_FILE_EXISTS = 50037, // Offer already shared
   COINS_ALREADY_COMMITTED = 50041, // Coins in the offer are already committed in another offer
-};
+}
 
-async function postToHashgreen(offerData: string): Promise<string> {
+async function postToHashgreen(
+  offerData: string,
+  testnet: boolean,
+): Promise<string> {
   const ipcRenderer = (window as any).ipcRenderer;
   const requestOptions = {
     method: 'POST',
     protocol: 'https:',
-    hostname: 'hash.green',
+    hostname: testnet ? testnetDummyHost : 'hash.green',
     port: 443,
-    path: '/api/v1/orders',
+    path: testnet ? testnetDummyEndpoint : '/api/v1/orders',
   };
   const requestHeaders = {
-    'accept': 'application/json',
+    accept: 'application/json',
     'Content-Type': 'application/x-www-form-urlencoded',
-  }
+  };
   const requestData = `offer=${offerData}`;
-  const { err, statusCode, statusMessage, responseBody } = await ipcRenderer?.invoke('fetchTextResponse', requestOptions, requestHeaders, requestData);
+  const { err, statusCode, statusMessage, responseBody } =
+    await ipcRenderer?.invoke(
+      'fetchTextResponse',
+      requestOptions,
+      requestHeaders,
+      requestData,
+    );
 
   if (err) {
-    const error = new Error(`Failed to post offer to hash.green: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}`);
+    const error = new Error(
+      `Failed to post offer to hash.green: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}`,
+    );
     throw error;
   }
 
@@ -122,30 +154,37 @@ async function postToHashgreen(offerData: string): Promise<string> {
 
     if (id) {
       return `https://hash.green/dex?order=${id}`;
-    }
-    else {
-      const error = new Error(`Hashgreen response missing data.id: ${responseBody}`);
+    } else {
+      const error = new Error(
+        `Hashgreen response missing data.id: ${responseBody}`,
+      );
       throw error;
     }
-  }
-  else {
+  } else {
     const jsonObj = JSON.parse(responseBody);
     const { code, msg, data } = jsonObj;
 
     if (code === HashgreenErrorCodes.OFFER_FILE_EXISTS && data) {
       return `https://hash.green/dex?order=${data}`;
-    }
-    else {
+    } else {
       console.log(`Upload failure response: ${responseBody}`);
       switch (code) {
         case HashgreenErrorCodes.MARKET_NOT_FOUND:
-          throw new Error(`Hashgreen upload rejected. Pairing is not supported: ${msg}`);
+          throw new Error(
+            `Hashgreen upload rejected. Pairing is not supported: ${msg}`,
+          );
         case HashgreenErrorCodes.COINS_ALREADY_COMMITTED:
-          throw new Error(`Hashgreen upload rejected. Offer contains coins that are in use by another offer: ${msg}`);
+          throw new Error(
+            `Hashgreen upload rejected. Offer contains coins that are in use by another offer: ${msg}`,
+          );
         case HashgreenErrorCodes.OFFERED_AMOUNT_TOO_SMALL:
-          throw new Error(`Hashgreen upload rejected. Offer amount is too small: ${msg}`);
+          throw new Error(
+            `Hashgreen upload rejected. Offer amount is too small: ${msg}`,
+          );
         default:
-          throw new Error(`Hashgreen upload rejected: code=${code} msg=${msg} data=${data}`);
+          throw new Error(
+            `Hashgreen upload rejected: code=${code} msg=${msg} data=${data}`,
+          );
       }
     }
   }
@@ -156,20 +195,24 @@ enum KeybaseCLIActions {
   JOIN_CHANNEL = 'JOIN_CHANNEL',
   UPLOAD_OFFER = 'UPLOAD_OFFER',
   CHECK_TEAM_MEMBERSHIP = 'CHECK_TEAM_MEMBERSHIP',
-};
+}
 
 type KeybaseCLIRequest = {
-  action: KeybaseCLIActions,
+  action: KeybaseCLIActions;
   uploadArgs?: {
-    title: string,
-    filePath: string,
-  }
+    title: string;
+    filePath: string;
+  };
+  teamName: string;
+  channelName: string;
 };
 
 const KeybaseTeamName = 'chia_offers';
 const KeybaseChannelName = 'offers-trading';
 
 async function execKeybaseCLI(request: KeybaseCLIRequest): Promise<boolean> {
+  const { action, uploadArgs, teamName, channelName } = request;
+
   return new Promise((resolve, reject) => {
     try {
       const options: any = {};
@@ -186,62 +229,57 @@ async function execKeybaseCLI(request: KeybaseCLIRequest): Promise<boolean> {
 
       let command: string | undefined = undefined;
 
-      switch (request.action) {
+      switch (action) {
         case KeybaseCLIActions.JOIN_TEAM:
-          command = `keybase team request-access ${KeybaseTeamName}`;
+          command = `keybase team request-access ${teamName}`;
           break;
         case KeybaseCLIActions.JOIN_CHANNEL:
-          command = `keybase chat join-channel ${KeybaseTeamName} '#${KeybaseChannelName}'`;
+          command = `keybase chat join-channel ${teamName} '#${channelName}'`;
           break;
         case KeybaseCLIActions.UPLOAD_OFFER:
-          const { title, filePath } = request.uploadArgs!;
+          const { title, filePath } = uploadArgs!;
           if (title && filePath) {
-            command = `keybase chat upload "${KeybaseTeamName}" --channel "${KeybaseChannelName}" --title "${title}" "${filePath}"`;
-          }
-          else {
-            reject(new Error(`Missing title or filePath in request.uploadArgs`));
+            command = `keybase chat upload "${teamName}" --channel "${channelName}" --title "${title}" "${filePath}"`;
+          } else {
+            reject(new Error(`Missing title or filePath in uploadArgs`));
           }
           break;
         case KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP:
           command = 'keybase team list-memberships';
           break;
         default:
-          reject(new Error(`Unknown KeybaseCLI action: ${request.action}`));
+          reject(new Error(`Unknown KeybaseCLI action: ${action}`));
           break;
       }
 
       if (command) {
-        child_process.exec(
-          command,
-          options,
-          (error, stdout, stderr) => {
-            if (error) {
-              console.error(`Keybase error: ${error}`);
-              switch (request.action) {
-                case KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP:
-                  resolve(stdout.indexOf(`${KeybaseTeamName}`) === 0);
-                  break;
-                case KeybaseCLIActions.JOIN_TEAM:
-                  resolve(stderr.indexOf('(code 2665)') !== -1);
-                  break;
-                default:
-                  if (stderr.indexOf('(code 2623)') !== -1) {
-                    resolve(false);
-                  }
-                  else {
-                    reject(new Error(t`Failed to execute Keybase command: ${stderr}`));
-                  }
-              }
+        child_process.exec(command, options, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Keybase error: ${error}`);
+            switch (action) {
+              case KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP:
+                resolve(stdout.indexOf(`${teamName}`) === 0);
+                break;
+              case KeybaseCLIActions.JOIN_TEAM:
+                resolve(stderr.indexOf('(code 2665)') !== -1);
+                break;
+              default:
+                if (stderr.indexOf('(code 2623)') !== -1) {
+                  resolve(false);
+                } else {
+                  reject(
+                    new Error(t`Failed to execute Keybase command: ${stderr}`),
+                  );
+                }
             }
+          }
 
-            resolve(true);
+          resolve(true);
         });
+      } else {
+        reject(new Error(`Missing command for action: ${action}`));
       }
-      else {
-        reject(new Error(`Missing command for action: ${request.action}`));
-      }
-    }
-    catch (error) {
+    } catch (error) {
       console.error(error);
       reject(error);
     }
@@ -251,9 +289,14 @@ async function execKeybaseCLI(request: KeybaseCLIRequest): Promise<boolean> {
 async function postToKeybase(
   offerRecord: OfferTradeRecord,
   offerData: string,
-  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined): Promise<boolean> {
-
-  const filename = suggestedFilenameForOffer(offerRecord.summary, lookupByAssetId);
+  teamName: string,
+  channelName: string,
+  lookupByAssetId: (assetId: string) => AssetIdMapEntry | undefined,
+): Promise<boolean> {
+  const filename = suggestedFilenameForOffer(
+    offerRecord.summary,
+    lookupByAssetId,
+  );
   const summary = shortSummaryForOffer(offerRecord.summary, lookupByAssetId);
 
   let filePath = '';
@@ -262,9 +305,13 @@ async function postToKeybase(
   filePath = await writeTempOfferFile(offerData, filename);
 
   try {
-    success = await execKeybaseCLI({ action: KeybaseCLIActions.UPLOAD_OFFER, uploadArgs: { title: summary, filePath } });
-  }
-  finally {
+    success = await execKeybaseCLI({
+      action: KeybaseCLIActions.UPLOAD_OFFER,
+      uploadArgs: { title: summary, filePath },
+      teamName,
+      channelName,
+    });
+  } finally {
     if (filePath) {
       fs.unlinkSync(filePath);
     }
@@ -273,28 +320,39 @@ async function postToKeybase(
 }
 
 type PostToOfferpoolResponse = {
-  success: boolean,
-  error_message?: string
-}
+  success: boolean;
+  error_message?: string;
+};
 
 // Posts the offer data to offerpool and returns success and an error_message on failure
-async function postToOfferpool(offerData: string): Promise<PostToOfferpoolResponse> {
+async function postToOfferpool(
+  offerData: string,
+  testnet: boolean,
+): Promise<PostToOfferpoolResponse> {
   const ipcRenderer = (window as any).ipcRenderer;
   const requestOptions = {
     method: 'POST',
     protocol: 'https:',
-    hostname: 'offerpool.io',
+    hostname: testnet ? testnetDummyHost : 'offerpool.io',
     port: 443,
-    path: '/api/v1/offers',
+    path: testnet ? testnetDummyEndpoint : '/api/v1/offers',
   };
   const requestHeaders = {
     'Content-Type': 'application/json',
-  }
-  const requestData = JSON.stringify({offer: offerData});
-  const { err, statusCode, statusMessage, responseBody } = await ipcRenderer.invoke('fetchTextResponse', requestOptions, requestHeaders, requestData);
+  };
+  const requestData = JSON.stringify({ offer: offerData });
+  const { err, statusCode, statusMessage, responseBody } =
+    await ipcRenderer.invoke(
+      'fetchTextResponse',
+      requestOptions,
+      requestHeaders,
+      requestData,
+    );
 
   if (err || (statusCode !== 200 && statusCode !== 400)) {
-    const error = new Error(`offerpool upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`);
+    const error = new Error(
+      `offerpool upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`,
+    );
     throw error;
   }
 
@@ -303,7 +361,7 @@ async function postToOfferpool(offerData: string): Promise<PostToOfferpoolRespon
 }
 
 function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
-  const { offerRecord, offerData, onClose, open } = props;
+  const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -318,15 +376,13 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
     try {
       setIsSubmitting(true);
 
-      const url = await postToOfferBin(offerData, sharePrivately);
+      const url = await postToOfferBin(offerData, sharePrivately, testnet);
 
       console.log(`OfferBin URL (private=${sharePrivately}): ${url}`);
       setSharedURL(url);
-    }
-    catch (e) {
+    } catch (e) {
       showError(e);
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -361,21 +417,17 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
               fullWidth
             />
             <Flex>
-            <Button
-              variant="outlined"
-              onClick={() => openExternal(sharedURL)}
-            >
-              <Trans>View on OfferBin</Trans>
-            </Button>
+              <Button
+                variant="outlined"
+                onClick={() => openExternal(sharedURL)}
+              >
+                <Trans>View on OfferBin</Trans>
+              </Button>
             </Flex>
           </Flex>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            variant="contained"
-          >
+          <Button onClick={handleClose} color="primary" variant="contained">
             <Trans>Close</Trans>
           </Button>
         </DialogActions>
@@ -399,14 +451,28 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
         <OfferSummary
           isMyOffer={true}
           summary={offerRecord.summary}
-          makerTitle={<Typography variant="subtitle1"><Trans>Your offer:</Trans></Typography>}
-          takerTitle={<Typography variant="subtitle1"><Trans>In exchange for:</Trans></Typography>}
+          makerTitle={
+            <Typography variant="subtitle1">
+              <Trans>Your offer:</Trans>
+            </Typography>
+          }
+          takerTitle={
+            <Typography variant="subtitle1">
+              <Trans>In exchange for:</Trans>
+            </Typography>
+          }
           rowIndentation={4}
         />
       </DialogContent>
       <DialogActions>
         <FormControlLabel
-          control={<Checkbox name="sharePrivately" checked={sharePrivately} onChange={(event) => setSharePrivately(event.target.checked)} />}
+          control={
+            <Checkbox
+              name="sharePrivately"
+              checked={sharePrivately}
+              onChange={(event) => setSharePrivately(event.target.checked)}
+            />
+          }
           label={
             <>
               <Trans>Share Privately</Trans>{' '}
@@ -445,7 +511,7 @@ OfferShareOfferBinDialog.defaultProps = {
 };
 
 function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
-  const { offerRecord, offerData, onClose, open } = props;
+  const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -459,15 +525,13 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
     try {
       setIsSubmitting(true);
 
-      const url = await postToHashgreen(offerData);
+      const url = await postToHashgreen(offerData, testnet);
 
       console.log(`Hashgreen URL: ${url}`);
       setSharedURL(url);
-    }
-    catch (e) {
+    } catch (e) {
       showError(e);
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -502,21 +566,17 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
               fullWidth
             />
             <Flex>
-            <Button
-              variant="outlined"
-              onClick={() => openExternal(sharedURL)}
-            >
-              <Trans>View on Hashgreen DEX</Trans>
-            </Button>
+              <Button
+                variant="outlined"
+                onClick={() => openExternal(sharedURL)}
+              >
+                <Trans>View on Hashgreen DEX</Trans>
+              </Button>
             </Flex>
           </Flex>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            variant="contained"
-          >
+          <Button onClick={handleClose} color="primary" variant="contained">
             <Trans>Close</Trans>
           </Button>
         </DialogActions>
@@ -540,8 +600,16 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
         <OfferSummary
           isMyOffer={true}
           summary={offerRecord.summary}
-          makerTitle={<Typography variant="subtitle1"><Trans>Your offer:</Trans></Typography>}
-          takerTitle={<Typography variant="subtitle1"><Trans>In exchange for:</Trans></Typography>}
+          makerTitle={
+            <Typography variant="subtitle1">
+              <Trans>Your offer:</Trans>
+            </Typography>
+          }
+          takerTitle={
+            <Typography variant="subtitle1">
+              <Trans>In exchange for:</Trans>
+            </Typography>
+          }
           rowIndentation={4}
         />
       </DialogContent>
@@ -572,12 +640,14 @@ OfferShareHashgreenDialog.defaultProps = {
 };
 
 function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
-  const { offerRecord, offerData, onClose, open } = props;
+  const { offerRecord, offerData, testnet, onClose, open } = props;
   const { lookupByAssetId } = useAssetIdName();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isJoiningTeam, setIsJoiningTeam] = React.useState(false);
   const [shared, setShared] = React.useState(false);
+  const teamName = testnet ? 'testxchoffersdev' : KeybaseTeamName;
+  const channelName = testnet ? 'offers' : KeybaseChannelName;
 
   function handleClose() {
     onClose(false);
@@ -587,9 +657,12 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
     try {
       const shell: Shell = (window as any).shell;
       await shell.openExternal('https://keybase.io/download');
-    }
-    catch (e) {
-      showError(new Error(t`Unable to open browser. Install Keybase from https://keybase.io`));
+    } catch (e) {
+      showError(
+        new Error(
+          t`Unable to open browser. Install Keybase from https://keybase.io`,
+        ),
+      );
     }
   }
 
@@ -598,17 +671,25 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
 
     try {
       const shell: Shell = (window as any).shell;
-      const joinTeamSucceeded = await execKeybaseCLI({ action: KeybaseCLIActions.JOIN_TEAM });
+      const joinTeamSucceeded = await execKeybaseCLI({
+        action: KeybaseCLIActions.JOIN_TEAM,
+        teamName,
+        channelName,
+      });
       let joinTeamThroughURL = false;
       if (joinTeamSucceeded) {
         let attempts = 0;
         let isMember = false;
         while (attempts < 20) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          isMember = await execKeybaseCLI({ action: KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP });
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          isMember = await execKeybaseCLI({
+            action: KeybaseCLIActions.CHECK_TEAM_MEMBERSHIP,
+            teamName,
+            channelName,
+          });
 
           if (isMember) {
-            console.log("Joined team successfully");
+            console.log('Joined team successfully');
             break;
           }
 
@@ -619,8 +700,12 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           attempts = 0;
           let joinChannelSucceeded = false;
           while (attempts < 30) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            joinChannelSucceeded = await execKeybaseCLI({ action: KeybaseCLIActions.JOIN_CHANNEL });
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            joinChannelSucceeded = await execKeybaseCLI({
+              action: KeybaseCLIActions.JOIN_CHANNEL,
+              teamName,
+              channelName,
+            });
 
             if (joinChannelSucceeded) {
               break;
@@ -630,32 +715,33 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           }
 
           if (joinChannelSucceeded) {
-            console.log("Joined channel successfully");
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
+            console.log('Joined channel successfully');
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await shell.openExternal(
+              `keybase://chat/${teamName}#${channelName}`,
+            );
+          } else {
+            console.error('Failed to join channel');
+            shell.openExternal(`keybase://chat/${teamName}#${channelName}`);
           }
-          else {
-            console.error("Failed to join channel");
-            shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
-          }
-        }
-        else {
-          console.error("Failed to join team");
+        } else {
+          console.error('Failed to join team');
           joinTeamThroughURL = true;
         }
-      }
-      else {
+      } else {
         joinTeamThroughURL = true;
       }
 
       if (joinTeamThroughURL) {
-        await shell.openExternal(`keybase://team-page/${KeybaseTeamName}/join`);
+        await shell.openExternal(`keybase://team-page/${teamName}/join`);
       }
-    }
-    catch (e) {
-      showError(new Error(t`Keybase command failed ${e}. If you haven't installed Keybase, you can download from https://keybase.io`));
-    }
-    finally {
+    } catch (e) {
+      showError(
+        new Error(
+          t`Keybase command failed ${e}. If you haven't installed Keybase, you can download from https://keybase.io`,
+        ),
+      );
+    } finally {
       setIsJoiningTeam(false);
     }
   }
@@ -663,10 +749,13 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
   async function handleKeybaseGoToChannel() {
     try {
       const shell: Shell = (window as any).shell;
-      await shell.openExternal(`keybase://chat/${KeybaseTeamName}#${KeybaseChannelName}`);
-    }
-    catch (e) {
-      showError(new Error(t`Unable to open Keybase. Install Keybase from https://keybase.io`));
+      await shell.openExternal(`keybase://chat/${teamName}#${channelName}`);
+    } catch (e) {
+      showError(
+        new Error(
+          t`Unable to open Keybase. Install Keybase from https://keybase.io`,
+        ),
+      );
     }
   }
 
@@ -675,16 +764,20 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
 
     try {
       setIsSubmitting(true);
-      success = await postToKeybase(offerRecord, offerData, lookupByAssetId);
+      success = await postToKeybase(
+        offerRecord,
+        offerData,
+        teamName,
+        channelName,
+        lookupByAssetId,
+      );
 
       if (success) {
         setShared(true);
       }
-    }
-    catch (e) {
+    } catch (e) {
       showError(e);
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -708,17 +801,10 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           </Flex>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={handleKeybaseGoToChannel}
-            variant="outlined"
-          >
-            <Trans>Go to #{KeybaseChannelName}</Trans>
+          <Button onClick={handleKeybaseGoToChannel} variant="outlined">
+            <Trans>Go to #{channelName}</Trans>
           </Button>
-          <Button
-            onClick={handleClose}
-            color="primary"
-            variant="contained"
-          >
+          <Button onClick={handleClose} color="primary" variant="contained">
             <Trans>Close</Trans>
           </Button>
         </DialogActions>
@@ -742,24 +828,22 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
         <Flex flexDirection="column" gap={2}>
           <Typography variant="body2">
             <Trans>
-              Keybase is a secure messaging and file sharing application. To share an offer
-              in the Keybase {KeybaseTeamName} team, you must first have Keybase installed.
+              Keybase is a secure messaging and file sharing application. To
+              share an offer in the Keybase {teamName} team, you must first have
+              Keybase installed.
             </Trans>
           </Typography>
-          <Flex justifyContent="center" flexGrow={0} >
-            <Button
-              onClick={handleKeybaseInstall}
-              variant="outlined"
-            >
+          <Flex justifyContent="center" flexGrow={0}>
+            <Button onClick={handleKeybaseInstall} variant="outlined">
               <Trans>Install Keybase</Trans>
             </Button>
           </Flex>
           <Divider />
           <Typography variant="body2">
             <Trans>
-              Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must
-              first join the {KeybaseTeamName} team. Please note that it might take a few moments
-              to join the channel.
+              Before posting an offer in Keybase to the #{channelName} channel,
+              you must first join the {teamName} team. Please note that it might
+              take a few moments to join the channel.
             </Trans>
           </Typography>
           <Flex justifyContent="center" flexGrow={0}>
@@ -768,7 +852,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
               variant="outlined"
               loading={isJoiningTeam}
             >
-              <Trans>Join {KeybaseTeamName}</Trans>
+              <Trans>Join {teamName}</Trans>
             </ButtonLoading>
           </Flex>
         </Flex>
@@ -779,7 +863,7 @@ function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
           color="primary"
           variant="contained"
         >
-          <Trans>Go to #{KeybaseChannelName}</Trans>
+          <Trans>Go to #{channelName}</Trans>
         </Button>
         <Flex flexGrow={1}></Flex>
         <Button
@@ -808,11 +892,12 @@ OfferShareKeybaseDialog.defaultProps = {
 };
 
 function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
-  const { offerRecord, offerData, onClose, open } = props;
+  const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const showError = useShowError();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [offerResponse, setOfferResponse] = React.useState<PostToOfferpoolResponse>();
+  const [offerResponse, setOfferResponse] =
+    React.useState<PostToOfferpoolResponse>();
 
   function handleClose() {
     onClose(false);
@@ -822,15 +907,13 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
     try {
       setIsSubmitting(true);
 
-      const result = await postToOfferpool(offerData);
+      const result = await postToOfferpool(offerData, testnet);
 
       console.log(`offerpool result ${JSON.stringify(result)}`);
       setOfferResponse(result);
-    }
-    catch (e) {
+    } catch (e) {
       showError(e);
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -888,8 +971,16 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
         <OfferSummary
           isMyOffer={true}
           summary={offerRecord.summary}
-          makerTitle={<Typography variant="subtitle1"><Trans>Your offer:</Trans></Typography>}
-          takerTitle={<Typography variant="subtitle1"><Trans>In exchange for:</Trans></Typography>}
+          makerTitle={
+            <Typography variant="subtitle1">
+              <Trans>Your offer:</Trans>
+            </Typography>
+          }
+          takerTitle={
+            <Typography variant="subtitle1">
+              <Trans>In exchange for:</Trans>
+            </Typography>
+          }
           rowIndentation={4}
         />
       </DialogContent>
@@ -920,14 +1011,27 @@ OfferShareOfferpoolDialog.defaultProps = {
   onClose: () => {},
 };
 
-type OfferShareDialogProps = CommonOfferProps & CommonDialogProps & {
-  showSuppressionCheckbox: boolean;
-};
+/* ========================================================================== */
+
+type OfferShareDialogProps = CommonOfferProps &
+  CommonDialogProps & {
+    showSuppressionCheckbox: boolean;
+    exportOffer?: () => void;
+  };
 
 export default function OfferShareDialog(props: OfferShareDialogProps) {
-  const { offerRecord, offerData, showSuppressionCheckbox, onClose, open } = props;
+  const {
+    offerRecord,
+    offerData,
+    showSuppressionCheckbox,
+    testnet,
+    exportOffer,
+    onClose,
+    open,
+  } = props;
   const openDialog = useOpenDialog();
-  const [suppressShareOnCreate, setSuppressShareOnCreate] = useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
+  const [suppressShareOnCreate, setSuppressShareOnCreate] =
+    useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
 
   function handleClose() {
     onClose(false);
@@ -935,25 +1039,41 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
 
   async function handleOfferBin() {
     await openDialog(
-      <OfferShareOfferBinDialog offerRecord={offerRecord} offerData={offerData} />
+      <OfferShareOfferBinDialog
+        offerRecord={offerRecord}
+        offerData={offerData}
+        testnet={testnet}
+      />,
     );
   }
 
   async function handleHashgreen() {
     await openDialog(
-      <OfferShareHashgreenDialog offerRecord={offerRecord} offerData={offerData} />
+      <OfferShareHashgreenDialog
+        offerRecord={offerRecord}
+        offerData={offerData}
+        testnet={testnet}
+      />,
     );
   }
 
   async function handleKeybase() {
     await openDialog(
-      <OfferShareKeybaseDialog offerRecord={offerRecord} offerData={offerData} />
+      <OfferShareKeybaseDialog
+        offerRecord={offerRecord}
+        offerData={offerData}
+        testnet={testnet}
+      />,
     );
   }
 
   async function handleOfferpool() {
     await openDialog(
-      <OfferShareOfferpoolDialog offerRecord={offerRecord} offerData={offerData} />
+      <OfferShareOfferpoolDialog
+        offerRecord={offerRecord}
+        offerData={offerData}
+        testnet={testnet}
+      />,
     );
   }
 
@@ -976,52 +1096,49 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
       <DialogContent dividers>
         <Flex flexDirection="column" gap={2}>
           <Flex flexDirection="column" gap={2}>
-            <Typography variant="subtitle1">Where would you like to share your offer?</Typography>
-            <Flex flexDirection="row" gap={3}>
-              <Button
-                variant="outlined"
-                onClick={handleOfferBin}
-              >
+            <Typography variant="subtitle1">
+              Where would you like to share your offer?
+            </Typography>
+            <Flex flexDirection="column" gap={3}>
+              <Button variant="outlined" onClick={handleOfferBin}>
                 OfferBin
               </Button>
-              <Button
-                variant="outlined"
-                onClick={handleHashgreen}
-              >
+              <Button variant="outlined" onClick={handleHashgreen}>
                 Hashgreen DEX
               </Button>
-              <Button
-                variant="outlined"
-                onClick={handleOfferpool}
-              >
-                <Flex flexDirection="column">
-                  offerpool
-                </Flex>
+              <Button variant="outlined" onClick={handleOfferpool}>
+                <Flex flexDirection="column">offerpool</Flex>
               </Button>
-              <Button
-                variant="outlined"
-                onClick={handleKeybase}
-              >
-                <Flex flexDirection="column">
-                  Keybase
-                </Flex>
+              <Button variant="outlined" onClick={handleKeybase}>
+                <Flex flexDirection="column">Keybase</Flex>
               </Button>
+              {exportOffer !== undefined && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={exportOffer}
+                >
+                  <Flex flexDirection="column">Save Offer File</Flex>
+                </Button>
+              )}
             </Flex>
           </Flex>
           {showSuppressionCheckbox && (
             <FormControlLabel
-              control={<Checkbox name="suppressShareOnCreate" checked={!!suppressShareOnCreate} onChange={(event) => toggleSuppression(event.target.checked)} />}
+              control={
+                <Checkbox
+                  name="suppressShareOnCreate"
+                  checked={!!suppressShareOnCreate}
+                  onChange={(event) => toggleSuppression(event.target.checked)}
+                />
+              }
               label={<Trans>Do not show this dialog again</Trans>}
             />
           )}
         </Flex>
       </DialogContent>
       <DialogActions>
-        <Button
-          onClick={handleClose}
-          color="primary"
-          variant="contained"
-        >
+        <Button onClick={handleClose} color="primary" variant="contained">
           <Trans>Close</Trans>
         </Button>
       </DialogActions>
@@ -1033,4 +1150,5 @@ OfferShareDialog.defaultProps = {
   open: false,
   onClose: () => {},
   showSuppressionCheckbox: false,
+  testnet: false,
 };

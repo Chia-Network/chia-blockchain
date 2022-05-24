@@ -27,14 +27,12 @@ import {
   TooltipIcon,
   useOpenDialog,
   chiaToMojo,
-  mojoToCATLocaleString,
+  useCurrencyCode,
   useShowSaveDialog,
   Tooltip,
   LayoutDashboardSub,
 } from '@chia/core';
 import { OfferSummaryRecord, OfferTradeRecord } from '@chia/api';
-import fs from 'fs';
-import { Remote } from 'electron';
 import {
   Box,
   Checkbox,
@@ -69,10 +67,10 @@ import {
   formatAmountForWalletType,
   offerAssetTypeForAssetId,
   offerContainsAssetOfType,
-  suggestedFilenameForOffer,
 } from './utils';
 import { launcherIdToNFTId } from '../../util/nfts';
 import useAssetIdName from '../../hooks/useAssetIdName';
+import useSaveOfferFile from '../../hooks/useSaveOfferFile';
 import useWalletOffers from '../../hooks/useWalletOffers';
 import { CreateOfferEditor } from './OfferEditor';
 import { CreateNFTOfferEditor } from './NFTOfferEditor';
@@ -83,7 +81,6 @@ import OfferAsset from './OfferAsset';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
-import { lookup } from 'dns';
 
 type ConfirmOfferCancellationProps = {
   canCancelWithTransaction: boolean;
@@ -259,8 +256,10 @@ function OfferList(props: OfferListProps) {
   const showSaveDialog = useShowSaveDialog();
   const [getOfferData] = useGetOfferDataMutation();
   const [cancelOffer] = useCancelOfferMutation();
+  const [saveOffer] = useSaveOfferFile();
   const { data: wallets, isLoading: isLoadingWallets } = useGetWalletsQuery();
   const { lookupByAssetId } = useAssetIdName();
+  const testnet = useCurrencyCode() === 'TXCH';
   const openDialog = useOpenDialog();
   const navigate = useNavigate();
   const {
@@ -281,34 +280,6 @@ function OfferList(props: OfferListProps) {
 
   async function handleShowOfferData(offerData: string) {
     openDialog(<OfferDataDialog offerData={offerData} />);
-  }
-
-  async function handleExportOffer(tradeId: string) {
-    const {
-      data: response,
-    }: {
-      data: { offer: string; tradeRecord: OfferTradeRecord; success: boolean };
-    } = await getOfferData(tradeId);
-    const { offer: offerData, tradeRecord, success } = response;
-    if (success === true) {
-      const dialogOptions = {
-        defaultPath: suggestedFilenameForOffer(
-          tradeRecord.summary,
-          lookupByAssetId,
-        ),
-      };
-      const remote: Remote = (window as any).remote;
-      const result = await showSaveDialog(dialogOptions);
-      const { filePath, canceled } = result;
-
-      if (!canceled && filePath) {
-        try {
-          fs.writeFileSync(filePath, offerData);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
   }
 
   async function handleCancelOffer(
@@ -346,7 +317,12 @@ function OfferList(props: OfferListProps) {
 
   async function handleShare(event: any, row: OfferTradeRecord) {
     await openDialog(
-      <OfferShareDialog offerRecord={row} offerData={row._offerData} />,
+      <OfferShareDialog
+        offerRecord={row}
+        offerData={row._offerData}
+        exportOffer={() => saveOffer(row.tradeId)}
+        testnet={testnet}
+      />,
     );
   }
 
@@ -495,7 +471,7 @@ function OfferList(props: OfferListProps) {
                         <MenuItem
                           onClick={() => {
                             onClose();
-                            handleExportOffer(tradeId);
+                            saveOffer(tradeId);
                           }}
                         >
                           <ListItemIcon>
@@ -685,6 +661,8 @@ export function OfferManager() {
 export function CreateOffer() {
   const location: any = useLocation();
   const openDialog = useOpenDialog();
+  const [saveOffer] = useSaveOfferFile();
+  const testnet = useCurrencyCode() === 'TXCH';
 
   async function handleOfferCreated(obj: { offerRecord: any; offerData: any }) {
     const { offerRecord, offerData } = obj;
@@ -694,6 +672,8 @@ export function CreateOffer() {
         offerRecord={offerRecord}
         offerData={offerData as string}
         showSuppressionCheckbox={true}
+        exportOffer={() => saveOffer(offerRecord.tradeId)}
+        testnet={testnet}
       />,
     );
   }

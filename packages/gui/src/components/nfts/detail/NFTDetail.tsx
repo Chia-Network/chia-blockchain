@@ -55,11 +55,11 @@ export default function NFTDetail() {
         </Truncate>
       ),
     },
-    {
-      key: 'tokenStandard',
-      label: <Trans>Token Standard</Trans>,
-      value: nft.version,
-    },
+    // {
+    //   key: 'tokenStandard',
+    //   label: <Trans>Token Standard</Trans>,
+    //   value: nft.version,
+    // },
     nft.dataHash && {
       key: 'dataHash',
       label: <Trans>Data Hash</Trans>,
