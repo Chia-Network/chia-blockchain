@@ -21,14 +21,17 @@ def test_puzzle_info() -> None:
     with pytest.raises(ValueError, match="A type is required"):
         PuzzleInfo(test_driver)
     solver = Solver(test_driver)
-    assert solver == Solver(solver.info)
 
     test_driver["type"] = "TEST"
     puzzle_info = PuzzleInfo(test_driver)
-    assert puzzle_info == PuzzleInfo(puzzle_info.info)
 
     assert puzzle_info.type() == "TEST"
     assert puzzle_info.also() == PuzzleInfo(test_also)
+
+    capitalize_bytes = test_driver.copy()
+    capitalize_bytes["bytes"] = "0xCAFEF00D"
+    assert solver == Solver(capitalize_bytes)
+    assert puzzle_info == PuzzleInfo(capitalize_bytes)
 
     obj: Union[PuzzleInfo, Solver]
     for obj in (puzzle_info, solver):  # type: ignore
