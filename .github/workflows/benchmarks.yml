@@ -20,7 +20,8 @@ jobs:
     name: Benchmarks
     runs-on: benchmark
     timeout-minutes: 30
-    container: "docker://ubuntu:impish"
+    container:
+      image: ubuntu:impish
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
 
