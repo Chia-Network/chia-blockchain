@@ -55,7 +55,7 @@ class Sync:
 
 
 class ReceiverUpdateCallback(Protocol):
-    def __call__(self, peer_id: bytes32, delta: Delta) -> Awaitable[None]:
+    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
         pass
 
 
