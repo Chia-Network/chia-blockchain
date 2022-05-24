@@ -587,7 +587,6 @@ class WalletRpcApi:
                     wallet_state_manager,
                     main_wallet,
                 )
-            assert nft_wallet.nft_wallet_info is not None
             return {
                 "success": True,
                 "type": nft_wallet.type(),
@@ -1326,6 +1325,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        assert nft_wallet.type() == WalletType.NFT.value, nft_wallet.type()
         address = request.get("artist_address")
         if isinstance(address, str):
             puzzle_hash = decode_puzzle_hash(address)

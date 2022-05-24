@@ -476,8 +476,8 @@ class TestDIDWallet:
         ph = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await time_out_assert(15, did_wallet_2.get_confirmed_balance, 101)
-        await time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 101)
+        await time_out_assert(25, did_wallet_2.get_confirmed_balance, 101)
+        await time_out_assert(25, did_wallet_2.get_unconfirmed_balance, 101)
         assert did_wallet_2.did_info.backup_ids == recovery_list
 
         # Update coin with new ID info
