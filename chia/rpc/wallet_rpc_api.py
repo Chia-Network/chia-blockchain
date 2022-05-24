@@ -1326,13 +1326,20 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        address = request.get("artist_address")
-        if isinstance(address, str):
-            puzzle_hash = decode_puzzle_hash(address)
-        elif address is None:
-            puzzle_hash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        royalty_address = request.get("royalty_address")
+        if isinstance(royalty_address, str):
+            royalty_puzhash = decode_puzzle_hash(royalty_address)
+        elif royalty_address is None:
+            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
-            puzzle_hash = address
+            royalty_puzhash = royalty_address
+        target_address = request.get("target_address")
+        if isinstance(target_address, str):
+            target_puzhash = decode_puzzle_hash(target_address)
+        elif target_address is None:
+            target_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            target_puzhash = target_address
         if "uris" not in request:
             return {"success": False, "error": "Data URIs is required"}
         if not isinstance(request["uris"], list):
@@ -1354,7 +1361,7 @@ class WalletRpcApi:
             ]
         )
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, puzzle_hash, fee=fee)
+        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
@@ -1418,7 +1425,10 @@ class WalletRpcApi:
             [coin_state.coin.parent_coin_info], peer=peer
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
-            return {"success": False, "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found"}
+            return {
+                "success": False,
+                "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found",
+            }
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
             peer, parent_coin_state.spent_height, parent_coin_state.coin

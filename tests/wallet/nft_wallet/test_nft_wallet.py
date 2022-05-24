@@ -399,18 +399,25 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
     assert coin["data_hash"] == "D4584AD463139FA8C0D9F68F4B59F185"
-    assert coin["chain_info"] == bytes(Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
-            ("mu", []),
-            ("mh", hexstr_to_bytes("00")),
-            ("lu", []),
-            ("lh", hexstr_to_bytes("00")),
-            ("sn", uint64(1)),
-            ("st", uint64(1)),
-        ]
-    )).hex().upper()
+    assert (
+        coin["chain_info"]
+        == bytes(
+            Program.to(
+                [
+                    ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                    ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                    ("mu", []),
+                    ("mh", hexstr_to_bytes("00")),
+                    ("lu", []),
+                    ("lh", hexstr_to_bytes("00")),
+                    ("sn", uint64(1)),
+                    ("st", uint64(1)),
+                ]
+            )
+        )
+        .hex()
+        .upper()
+    )
     nft_coin_id = coin["nft_coin_id"]
     # add another URI
     tr1 = await api_0.nft_add_uri(

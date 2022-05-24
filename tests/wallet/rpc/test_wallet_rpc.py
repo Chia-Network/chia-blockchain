@@ -849,6 +849,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.mint_nft(
         nft_wallet_id,
         None,
+        None,
         "0xD4584AD463139FA8C0D9F68F4B59F185",
         ["https://www.chia.net/img/branding/chia-logo.svg"],
         0,

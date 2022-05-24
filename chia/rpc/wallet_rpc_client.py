@@ -574,19 +574,47 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def mint_nft(self, wallet_id, artist_address, hash, uris, fee):
+    async def mint_nft(
+        self,
+        wallet_id,
+        royalty_address,
+        target_address,
+        hash,
+        uris,
+        meta_hash=None,
+        meta_uris=None,
+        license_hash=None,
+        license_uris=None,
+        series_total=None,
+        series_number=None,
+        fee=None,
+    ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
-            "artist_address": artist_address,
+            "royalty_address": royalty_address,
+            "target_address": target_address,
             "hash": hash,
             "uris": uris,
+            "meta_hash": meta_hash,
+            "meta_uris": meta_uris,
+            "license_hash": license_hash,
+            "license_uris": license_uris,
+            "series_number": series_number,
+            "series_total": series_total,
             "fee": fee,
         }
         response = await self.fetch("nft_mint_nft", request)
         return response
 
-    async def add_uri_to_nft(self, wallet_id, nft_coin_id, uri, fee):
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "nft_coin_id": nft_coin_id, "uri": uri, "fee": fee}
+    async def add_uri_to_nft(self, wallet_id, nft_coin_id, uri, meta_uri, license_uri, fee):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "nft_coin_id": nft_coin_id,
+            "uri": uri,
+            "meta_uri": meta_uri,
+            "license_uri": license_uri,
+            "fee": fee,
+        }
         response = await self.fetch("nft_add_uri", request)
         return response
 

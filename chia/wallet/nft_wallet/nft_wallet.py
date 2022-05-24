@@ -333,7 +333,11 @@ class NFTWallet:
         return provenance_puzzle
 
     async def generate_new_nft(
-        self, metadata: Program, target_puzzle_hash: bytes32 = None, fee: uint64 = uint64(0)
+        self,
+        metadata: Program,
+        royalty_puzzle_hash: bytes32 = None,
+        target_puzzle_hash: bytes32 = None,
+        fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
