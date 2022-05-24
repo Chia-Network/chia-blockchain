@@ -5,8 +5,8 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, capabilities
-from chia.protocols.wallet_protocol import RejectBlockHeaders, RespondBlockHeaders
+from chia.protocols.shared_protocol import Capability
+from chia.protocols.wallet_protocol import RespondBlockHeaders
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
@@ -67,11 +67,19 @@ class TestWalletSync:
         bh = res_block_headers.header_blocks
         assert len(bh) == 6
 
+    # @pytest.mark.parametrize(
+    #     "test_case",
+    #     [(1000000, 10000010, False, ProtocolMessageTypes.reject_block_headers)],
+    #     [(80, 99, False, ProtocolMessageTypes.respond_block_headers)],
+    #     [(10, 8, False, None)],
+    # )
     @pytest.mark.asyncio
     async def test_request_block_headers_rejected(self, bt, wallet_node, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api: FullNodeAPI
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        # start_height, end_height, return_filter, expected_res = test_case
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(1000000), uint32(1000010), False)
@@ -110,8 +118,6 @@ class TestWalletSync:
         )
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
-
-class TestWalletSync:
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets = two_wallet_nodes
@@ -148,15 +154,13 @@ class TestWalletSync:
             )
 
     @pytest.mark.parametrize(
-        "wallet_node",
+        "two_wallet_nodes",
         [
             dict(
                 disable_capabilities=[Capability.BLOCK_HEADERS.name],
             ),
             dict(
-                disable_capabilities=
-                # this one should be ignored
-                [Capability.BASE.name],
+                disable_capabilities=[Capability.BASE.name],
             ),
         ],
         indirect=True,
