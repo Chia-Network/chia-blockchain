@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: Windows TEST_NAME Test
+    if: not SKIP
     runs-on: ${{ matrix.os }}
     timeout-minutes: JOB_TIMEOUT
     strategy:
