@@ -331,7 +331,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         uris.append(coin.to_json_dict()["data_uris"][0])
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
-    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"]) in [x.name() for x in sb.additions()]
+    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
 
 
 @pytest.mark.parametrize(
@@ -398,9 +398,9 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
-    assert coin["data_hash"] == "D4584AD463139FA8C0D9F68F4B59F185"
+    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
     assert (
-        coin["chain_info"]
+        coin["chain_info"][2:]
         == bytes(
             Program.to(
                 [
@@ -414,9 +414,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
                     ("st", uint64(1)),
                 ]
             )
-        )
-        .hex()
-        .upper()
+        ).hex()
     )
     nft_coin_id = coin["nft_coin_id"]
     # add another URI
