@@ -681,3 +681,143 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
     assert len(coins_taker) == 0
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True],
+)
+@pytest.mark.asyncio
+async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 5
+    full_nodes, wallets = two_wallet_nodes
+    full_node_api: FullNodeSimulator = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
+
+    maker_ph = await wallet_maker.get_new_puzzlehash()
+    taker_ph = await wallet_taker.get_new_puzzlehash()
+    token_ph = bytes32(token_bytes())
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+
+    # Create NFT wallets and nfts for maker and taker
+    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
+        wallet_node_0.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
+    )
+
+    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
+        wallet_node_1.wallet_state_manager, wallet_taker, name="NFT WALLET 2"
+    )
+
+    trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
+    trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
+
+    metadata = Program.to(
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+        ]
+    )
+
+    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    assert sb
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+
+    metadata_2 = Program.to(
+        [
+            ("u", ["https://www.chia.net/image2.html"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F183"),
+        ]
+    )
+    sb_2 = await nft_wallet_taker.generate_new_nft(metadata_2)
+    assert sb_2
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_2.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+
+    coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
+    assert len(coins_maker) == 1
+    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
+    assert len(coins_taker) == 1
+
+    maker_balance_pre = await wallet_maker.get_confirmed_balance()
+    taker_balance_pre = await wallet_taker.get_confirmed_balance()
+
+    nft_to_offer = coins_maker[0]
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+
+    nft_to_take = coins_taker[0]
+    nft_to_take_info: Optional[PuzzleInfo] = match_puzzle(nft_to_take.full_puzzle)
+    nft_to_take_asset_id: bytes32 = create_asset_id(nft_to_take_info)  # type: ignore
+
+    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {
+        nft_to_offer_asset_id: nft_to_offer_info,
+        nft_to_take_asset_id: nft_to_take_info,
+    }
+
+    maker_fee = uint64(10)
+    offer_nft_for_nft = {nft_to_take_asset_id: 1, nft_to_offer_asset_id: -1}
+
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        offer_nft_for_nft, driver_dict, fee=maker_fee
+    )
+    await asyncio.sleep(1)
+    assert success is True
+    assert error is None
+    assert trade_make is not None
+
+    taker_fee = uint64(1)
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(trade_make.offer), fee=taker_fee
+    )
+
+    await asyncio.sleep(1)
+    assert success
+    assert error is None
+    assert trade_take is not None
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
+    await time_out_assert(10, wallet_maker.get_confirmed_balance, maker_balance_pre - maker_fee)
+    await time_out_assert(10, wallet_taker.get_confirmed_balance, taker_balance_pre - taker_fee)
+
+    coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
+    coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
+    assert len(coins_maker) == 1
+    assert len(coins_taker) == 1
