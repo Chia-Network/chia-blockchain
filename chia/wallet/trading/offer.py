@@ -21,12 +21,6 @@ from chia.wallet.util.puzzle_compression import (
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.outer_puzzles import (
-    create_asset_id,
-    construct_puzzle,
-    match_puzzle,
-    solve_puzzle,
-)
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)

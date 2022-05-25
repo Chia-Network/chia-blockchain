@@ -284,7 +284,7 @@ class TradeManager:
 
     async def create_offer_for_ids(
         self,
-        offer: Dict[Union[int, bytes32], int],
+        offer: Dict[Union[int, bytes32], Union[Solver, int]],
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
@@ -327,12 +327,12 @@ class TradeManager:
         if driver_dict is None:
             driver_dict = {}
         try:
-            coins_to_offer: Dict[Union[int, bytes32], Union[Solver, int]] = {}
+            coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
             fee_left_to_pay: uint64 = fee
-            wallet_paying_fee: uint32
+            wallet_paying_fee: Union[int, bytes32]
             for id, solver in offer_dict.items():
-                if isinstance(solver, int) & (solver > 0):
+                if isinstance(solver, int) & (solver > 0):  # type: ignore
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
@@ -352,8 +352,8 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
-                    requested_payments[asset_id] = [Payment(p2_ph, uint64(solver), memos)]
-                elif (not isinstance(solver, int)) | (solver < 0):
+                    requested_payments[asset_id] = [Payment(p2_ph, uint64(solver), memos)]  # type: ignore
+                else:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
@@ -369,14 +369,14 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if isinstance(solver, int):
+                        if solver == 0:
+                            raise ValueError("You cannot offer nor request 0 amount of something")
                         solver = uint64(abs(solver))
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, solver, fee)
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, solver, fee_left_to_pay)
                     fee_left_to_pay = uint64(0)
                     wallet_paying_fee = id
-                elif solver == 0:
-                    raise ValueError("You cannot offer nor request 0 amount of something")
 
                 if asset_id is not None and wallet is not None:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
@@ -406,7 +406,7 @@ class TradeManager:
                 # ATTENTION: new_wallets
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[id]),
+                        abs(offer_dict[id]),  # type: ignore
                         Offer.ph(),
                         fee=fee if id == wallet_paying_fee else uint64(0),
                         coins=set(selected_coins),
@@ -415,7 +415,7 @@ class TradeManager:
                     all_transactions.append(tx)
                 else:
                     txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[id])],
+                        [abs(offer_dict[id])],  # type: ignore
                         [Offer.ph()],
                         fee=fee if id == wallet_paying_fee else uint64(0),
                         coins=set(selected_coins),
@@ -543,7 +543,7 @@ class TradeManager:
         return txs
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        take_offer_dict: Dict[Union[bytes32, int], int] = {}
+        take_offer_dict: Dict[Union[bytes32, int], Union[Solver, int]] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
         for asset_id, amount in arbitrage.items():
             if asset_id is None:

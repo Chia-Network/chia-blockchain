@@ -531,6 +531,7 @@ class Wallet:
     async def get_coins_to_offer(
         self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
     ) -> Set[Coin]:
+        assert isinstance(amount, int)
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
         balance = await self.get_confirmed_balance()

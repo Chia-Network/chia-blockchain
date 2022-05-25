@@ -5,7 +5,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -38,7 +38,7 @@ from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -821,6 +821,7 @@ class CATWallet:
     async def get_coins_to_offer(
         self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
     ) -> Set[Coin]:
+        assert isinstance(amount, int)
         balance = await self.get_confirmed_balance()
         if balance < amount + fee:
             raise Exception(f"insufficient funds in wallet {self.id()}")

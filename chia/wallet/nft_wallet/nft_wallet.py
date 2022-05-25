@@ -366,7 +366,7 @@ class NFTWallet:
         This must be called under the wallet state manager lock
         """
         amount = 1
-        coins = await self.standard_wallet.select_coins(amount)
+        coins = await self.standard_wallet.select_coins(uint64(amount))
         if coins is None:
             return None
         self.log.debug("Attempt to generate a new NFT")
@@ -610,6 +610,7 @@ class NFTWallet:
     async def get_coins_to_offer(
         self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
     ) -> Set[Coin]:
+        assert asset_id is not None
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(asset_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")

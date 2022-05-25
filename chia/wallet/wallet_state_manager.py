@@ -1313,14 +1313,6 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):
-        for wallet in self.wallets.values():
-            match_function = getattr(wallet, "match_puzzle_info", None)
-            if match_function is not None and callable(match_function):
-                if match_function(puzzle_driver):
-                    return wallet
-        return None
-
     async def create_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo, name=None, in_transaction=False):
         if AssetType(puzzle_driver.type()) in self.asset_to_wallet_map:
             async with self.lock:
