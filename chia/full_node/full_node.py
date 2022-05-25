@@ -92,19 +92,21 @@ class PeakPostProcessingResult:
 def _get_capabilities(disable_capabilities_values):
     if disable_capabilities_values is not None and isinstance(disable_capabilities_values, list):
         try:
-            if Capability.BASE.value in disable_capabilities_values:
+            if Capability.BASE.name in disable_capabilities_values:
                 # BASE capability cannot be removed
-                disable_capabilities_values.remove(Capability.BASE.value)
+                disable_capabilities_values.remove(Capability.BASE.name)
 
             updated_capabilities = []
             for capability in capabilities:
-                if not Capability(int(capability[0])).name in disable_capabilities_values:
+                if Capability(int(capability[0])).name in disable_capabilities_values:
+                    # "0" means capability is disabled
                     updated_capabilities.append((capability[0], "0"))
-                updated_capabilities.append(capability)
+                else:
+                    updated_capabilities.append(capability)
             return updated_capabilities
         except Exception:
             logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
-        return capabilities.copy()
+    return capabilities.copy()
 
 
 class FullNode:
@@ -159,6 +161,7 @@ class FullNode:
         self.log = logging.getLogger(name if name else __name__)
         disable_capabilities_values = config.get("disable_capabilities")
         self.capabilities = _get_capabilities(disable_capabilities_values)
+        self.log.info("Full node capabilities: %s", self.capabilities)
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
         self.multiprocessing_context = None

@@ -18,7 +18,7 @@ Note: When changing this file, also change protocol_message_types.py
 class Capability(IntEnum):
     BASE = 1  # Base capability just means it supports the chia protocol at mainnet
     # introduces RequestBlockHeaders, which is a faster API for fetching header blocks
-    # !the old API is RequestHeaderBlock!
+    # !! the old API is *RequestHeaderBlock* !!
     BLOCK_HEADERS = 2
 
 
