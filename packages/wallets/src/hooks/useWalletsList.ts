@@ -110,8 +110,8 @@ export default function useWalletsList(search?: string): {
       return undefined;
     }
 
-    const baseWallets = wallets.filter((wallet: Wallet) => ![WalletType.CAT, WalletType.POOLING_WALLET].includes(wallet.type));
-    const catBaseWallets = wallets.filter((wallet: Wallet) => wallet.type === WalletType.CAT);
+    const baseWallets = wallets?.filter((wallet: Wallet) => ![WalletType.CAT, WalletType.POOLING_WALLET].includes(wallet.type)) ?? [];
+    const catBaseWallets = wallets?.filter((wallet: Wallet) => wallet.type === WalletType.CAT) ?? [];
 
     // hidden by default because they are not known
     const nonAddedKnownCats = catList?.filter(
