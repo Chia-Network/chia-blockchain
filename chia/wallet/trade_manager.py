@@ -373,17 +373,17 @@ class TradeManager:
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
-            if asset_id is not None and wallet is not None:
-                if callable(getattr(wallet, "get_puzzle_info", None)):
-                    puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
-                    if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                        raise ValueError(
-                            f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
-                        )
+                if asset_id is not None and wallet is not None:
+                    if callable(getattr(wallet, "get_puzzle_info", None)):
+                        puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
+                        if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                            raise ValueError(
+                                f"driver_dict specified {driver_dict[asset_id]}," f" was expecting {puzzle_driver}"
+                            )
+                        else:
+                            driver_dict[asset_id] = puzzle_driver
                     else:
-                        driver_dict[asset_id] = puzzle_driver
-                else:
-                    raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
+                        raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
