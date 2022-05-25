@@ -205,7 +205,7 @@ export default function Block() {
       tooltip: (
         <Trans>
           The total number of VDF (verifiable delay function) or proof of time
-          iterations on the whole chain up to this sub block.
+          iterations on the whole chain up to this block.
         </Trans>
       ),
     },
