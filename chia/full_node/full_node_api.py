@@ -1351,7 +1351,6 @@ class FullNodeAPI:
             + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
         )
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
-        self.log.warning(f"Time for request_block_headers: {time.time() - start_time}")
         return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
     @api_request
@@ -1387,7 +1386,6 @@ class FullNodeAPI:
             ProtocolMessageTypes.respond_header_blocks,
             wallet_protocol.RespondHeaderBlocks(request.start_height, request.end_height, header_blocks),
         )
-        self.log.warning(f"Time for request_header_blocks: {time.time() - start_time}")
         return msg
 
     @api_request
