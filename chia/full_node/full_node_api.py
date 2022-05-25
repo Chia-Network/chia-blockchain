@@ -1,5 +1,4 @@
 import asyncio
-from chia.util.full_block_utils import header_block_from_block
 import dataclasses
 import time
 import traceback
@@ -44,6 +43,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1320,7 +1320,6 @@ class FullNodeAPI:
         """
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return None
-        blocks_bytes: List[bytes] = []
         if self.full_node.block_store.db_wrapper.db_version == 2:
             blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
                 request.start_height, request.end_height
@@ -1344,11 +1343,17 @@ class FullNodeAPI:
         return_filter = request.return_filter
         header_blocks_bytes: List[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
 
+        # we're building the RespondHeaderBlocks manually to avoid cost of
+        # dynamic serialization
+        # ---
+        # we start building RespondBlockHeaders response (start_height, end_height)
+        # and then need to define size of list object
         respond_header_blocks_manually_streamed: bytes = (
             bytes(uint32(request.start_height))
             + bytes(uint32(request.end_height))
             + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
         )
+        # and now stream the whole list in bytes
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
         return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 

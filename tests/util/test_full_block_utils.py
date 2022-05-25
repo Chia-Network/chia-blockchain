@@ -133,10 +133,10 @@ def get_foliage_transaction_block():
 
 
 def get_transactions_info(height, foliage_transaction_block):
-    farmer_coin, pool_coin = rewards(uint32(height))
-    reward_claims_incorporated = [farmer_coin, pool_coin]
-    fees = uint64(random.randint(0, 150000))
     if foliage_transaction_block:
+        farmer_coin, pool_coin = rewards(uint32(height))
+        reward_claims_incorporated = [farmer_coin, pool_coin]
+        fees = uint64(random.randint(0, 150000))
         yield TransactionsInfo(
             hsh(),  # generator_root
             hsh(),  # generator_refs_root
@@ -201,21 +201,19 @@ def get_finished_sub_slots():
 
 
 def get_full_blocks() -> Iterator[FullBlock]:
-
     random.seed(123456789)
 
     generator = SerializedProgram.from_bytes(bytes.fromhex("ff01820539"))
 
     for foliage in get_foliage():
         for foliage_transaction_block in get_foliage_transaction_block():
-            height = random.randint(0, 100000)
+            height = random.randint(0, 1000000)
             for reward_chain_block in get_reward_chain_block(height):
                 for transactions_info in get_transactions_info(height, foliage_transaction_block):
                     for challenge_chain_sp_proof in [vdf_proof(), None]:
                         for reward_chain_sp_proof in [vdf_proof(), None]:
                             for infused_challenge_chain_ip_proof in [vdf_proof(), None]:
                                 for finished_sub_slots in get_finished_sub_slots():
-
                                     yield FullBlock(
                                         finished_sub_slots,
                                         reward_chain_block,
@@ -241,7 +239,6 @@ class TestFullBlockParser:
         # generator_from_block() successfully parses out the generator object
         # correctly
         for block in get_full_blocks():
-
             block_bytes = bytes(block)
             gen = generator_from_block(block_bytes)
             assert gen == block.transactions_generator
