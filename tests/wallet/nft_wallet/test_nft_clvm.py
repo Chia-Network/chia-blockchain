@@ -59,7 +59,7 @@ def test_update_metadata() -> None:
     my_amount = 1
     destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append([-24, NFT_METADATA_UPDATER, ["https://url1", "https://url2", "https://url3"]])
+    condition_list.append([-24, NFT_METADATA_UPDATER, ("mu", "https://url2")])
 
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
@@ -84,11 +84,11 @@ def test_update_metadata() -> None:
     )
 
     metadata = [
-        ("u", ["https://url1", "https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
         ("mu", ["https://url2"]),
         ("mh", 0xD4584AD463139FA8C0D9F68F4B59F185),
-        ("lu", ["https://url3", "https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("lu", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("lh", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
     cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)

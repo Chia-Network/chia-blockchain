@@ -606,13 +606,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_nft", request)
         return response
 
-    async def add_uri_to_nft(self, wallet_id, nft_coin_id, uri, meta_uri, license_uri, fee):
+    async def add_uri_to_nft(self, wallet_id, nft_coin_id, key, uri, fee):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "uri": uri,
-            "meta_uri": meta_uri,
-            "license_uri": license_uri,
+            "key": key,
             "fee": fee,
         }
         response = await self.fetch("nft_add_uri", request)

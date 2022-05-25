@@ -1465,15 +1465,15 @@ class WalletRpcApi:
     async def nft_add_uri(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
-        # Note metadata updater can only add one uri for each field per spend.
+        # Note metadata updater can only add one uri for one field per spend.
         # If you want to add multiple uris for one field, you need to spend multiple times.
-        # DON'T change the order of uris, it is hardcoded in the metadata updater for efficiency purpose.
-        uris = [request.get("uri", None), request.get("meta_uri", None), request.get("license_uri", None)]
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
+            uri = request["uri"]
+            key = request["key"]
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
             fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, uris, fee=fee)
+            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")

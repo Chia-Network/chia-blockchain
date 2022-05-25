@@ -718,9 +718,8 @@ async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint
         nft_coin_id = args["nft_coin_id"]
         uri = args["uri"]
         fee = args["fee"]
-        meta_uri = args.get("meta_uri", None)
-        license_uri = args.get("license_uri", None)
-        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri, meta_uri, license_uri, fee)
+        key = args.get("meta_uri", "u")
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri, fee)
         spend_bundle = response["spend_bundle"]
         print(f"URI added successfully with spend bundle: {spend_bundle}")
     except Exception as e:

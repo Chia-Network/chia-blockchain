@@ -160,8 +160,6 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     :return: Updated metadata
     """
     new_metadata: Dict[bytes, Any] = program_to_metadata(metadata)
-    uris: Program = update_condition.rest().rest().first()
-    prepend_value(b"u", uris.first(), new_metadata)
-    prepend_value(b"mu", uris.rest().first(), new_metadata)
-    prepend_value(b"lu", uris.rest().rest().first(), new_metadata)
+    uri: Program = update_condition.rest().rest().first()
+    prepend_value(uri.first().as_python(), uri.rest(), new_metadata)
     return metadata_to_program(new_metadata)
