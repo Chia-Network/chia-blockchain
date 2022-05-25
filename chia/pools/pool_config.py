@@ -7,7 +7,7 @@ from blspy import G1Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, save_config
+from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -25,8 +25,8 @@ pool_list:
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolWalletConfig(Streamable):
     launcher_id: bytes32
     pool_url: str
@@ -58,7 +58,29 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     return ret_list
 
 
+# TODO: remove this a few versions after 1.3, since authentication_public_key is deprecated. This is here to support
+# downgrading to versions older than 1.3.
+def add_auth_key(root_path: Path, config_entry: PoolWalletConfig, auth_key: G1Element):
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        pool_list = config["pool"].get("pool_list", [])
+        updated = False
+        if pool_list is not None:
+            for pool_config_dict in pool_list:
+                try:
+                    if hexstr_to_bytes(pool_config_dict["owner_public_key"]) == bytes(config_entry.owner_public_key):
+                        auth_key_hex = bytes(auth_key).hex()
+                        if pool_config_dict.get("authentication_public_key", "") != auth_key_hex:
+                            pool_config_dict["authentication_public_key"] = auth_key_hex
+                            updated = True
+                except Exception as e:
+                    log.error(f"Exception updating config: {pool_config_dict} {e}")
+        if updated:
+            log.info(f"Updating pool config for auth key: {auth_key}")
+            config["pool"]["pool_list"] = pool_list
+            save_config(root_path, "config.yaml", config)
+
+
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]):
-    full_config = load_config(root_path, "config.yaml")
-    full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
-    save_config(root_path, "config.yaml", full_config)
+    with lock_and_load_config(root_path, "config.yaml") as full_config:
+        full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
+        save_config(root_path, "config.yaml", full_config)
