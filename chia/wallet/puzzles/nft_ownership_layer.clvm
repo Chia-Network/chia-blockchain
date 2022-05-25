@@ -41,16 +41,9 @@
      )
    )
 
-   (defun merge_list (list_a list_b)
-     (if list_a
-       (c (f list_a) (merge_list (r list_a) list_b))
-       list_b
-     )
-   )
-
    ; Find the magic conditions and remember the values communicated before moving to the next stage (recurrying self)
-   (defun process_transfer_program (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (new_owner optional_new_tp tp_conditions) conditions)
-    (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (merge_list conditions tp_conditions) (if optional_new_tp optional_new_tp TRANSFER_PROGRAM))  ; the new owner can be set to 0, but if new tp is 0 then use the old tp
+   (defun process_transfer_program (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (new_owner optional_new_tp tp_conditions))
+    (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH new_owner tp_conditions (if optional_new_tp optional_new_tp TRANSFER_PROGRAM))  ; the new owner can be set to 0, but if new tp is 0 then use the old tp
    )
 
    ; if we don't find the transfer program magic number then we should fail
@@ -65,7 +58,7 @@
    )
 
    (defun transfer_program_loader (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER conditions)
-    (process_transfer_program NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER conditions conditions) conditions)
+    (process_transfer_program NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER conditions conditions))
    )
 
   ; main
