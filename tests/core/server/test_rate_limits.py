@@ -8,12 +8,6 @@ from chia.server.rate_limits import RateLimiter, NON_TX_FREQ
 from tests.setup_nodes import test_constants
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 constants = test_constants
 
 
@@ -155,7 +149,6 @@ class TestRateLimits:
             if not response:
                 saw_disconnect = True
         assert saw_disconnect
-        assert not r.process_msg_and_check(new_tx_message)
         await asyncio.sleep(6)
         assert r.process_msg_and_check(new_tx_message)
 

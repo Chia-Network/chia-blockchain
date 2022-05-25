@@ -67,7 +67,7 @@ def add_private_key_seed(mnemonic: str):
 
 
 @unlocks_keyring(use_passphrase_cache=True)
-def show_all_keys(show_mnemonic: bool):
+def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
     """
     Prints all keys and mnemonics (if available).
     """
@@ -92,10 +92,13 @@ def show_all_keys(show_mnemonic: bool):
             master_sk_to_farmer_sk(sk).get_g1(),
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
-        print(
-            "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1()), prefix),
+        first_wallet_sk: PrivateKey = (
+            master_sk_to_wallet_sk(sk, uint32(0))
+            if non_observer_derivation
+            else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
+        wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
+        print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
         assert seed is not None
         if show_mnemonic:
             print("Master private key (m):", bytes(sk).hex())
@@ -242,6 +245,7 @@ def _search_derived(
     search_public_key: bool,
     search_private_key: bool,
     search_address: bool,
+    prefix: str,
 ) -> List[str]:  # Return a subset of search_terms that were found
     """
     Performs a shallow search of keys derived from the current sk for items matching
@@ -288,7 +292,7 @@ def _search_derived(
         if search_address:
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
             # TODO: consider generating addresses using other puzzles
-            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
+            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
 
         for term in remaining_search_terms:
             found_item: Any = None
@@ -341,6 +345,7 @@ def _search_derived(
 
 
 def search_derive(
+    root_path: Path,
     private_key: Optional[PrivateKey],
     search_terms: Tuple[str, ...],
     limit: int,
@@ -348,6 +353,7 @@ def search_derive(
     show_progress: bool,
     search_types: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
+    prefix: Optional[str],
 ) -> bool:
     """
     Searches for items derived from the provided private key, or if not specified,
@@ -362,6 +368,11 @@ def search_derive(
     search_address = "address" in search_types
     search_public_key = "public_key" in search_types
     search_private_key = "private_key" in search_types
+
+    if prefix is None:
+        config: Dict = load_config(root_path, "config.yaml")
+        selected: str = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
     if "all" in search_types:
         search_address = True
@@ -399,6 +410,7 @@ def search_derive(
                 search_public_key,
                 search_private_key,
                 search_address,
+                prefix,
             )
 
             # Update remaining_search_terms
@@ -444,6 +456,7 @@ def search_derive(
                     search_public_key,
                     search_private_key,
                     search_address,
+                    prefix,
                 )
 
                 # Update remaining_search_terms

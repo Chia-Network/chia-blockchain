@@ -32,10 +32,7 @@ async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Conn
         updates.append((is_my_offer, row[1]))
 
     try:
-        await db_connection.executemany(
-            "UPDATE trade_records SET is_my_offer=? WHERE trade_id=?",
-            updates,
-        )
+        await db_connection.executemany("UPDATE trade_records SET is_my_offer=? WHERE trade_id=?", updates)
     except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
         log.exception("Failed to migrate is_my_offer property in trade_records")
         raise
@@ -55,12 +52,7 @@ class TradeStore:
     log: logging.Logger
 
     @classmethod
-    async def create(
-        cls,
-        db_wrapper: DBWrapper,
-        cache_size: uint32 = uint32(600000),
-        name: str = None,
-    ) -> "TradeStore":
+    async def create(cls, db_wrapper: DBWrapper, cache_size: uint32 = uint32(600000), name: str = None) -> "TradeStore":
         self = cls()
 
         if name:
@@ -163,11 +155,7 @@ class TradeStore:
         await self.add_trade_record(tx, in_transaction)
 
     async def increment_sent(
-        self,
-        id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        err: Optional[Err],
+        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
@@ -205,31 +193,6 @@ class TradeStore:
         await self.add_trade_record(tx, False)
         return True
 
-    async def set_not_sent(self, id: bytes32):
-        """
-        Updates trade sent count to 0.
-        """
-
-        current: Optional[TradeRecord] = await self.get_trade_record(id)
-        if current is None:
-            return None
-
-        tx: TradeRecord = TradeRecord(
-            confirmed_at_index=current.confirmed_at_index,
-            accepted_at_time=current.accepted_at_time,
-            created_at_time=current.created_at_time,
-            is_my_offer=current.is_my_offer,
-            sent=uint32(0),
-            offer=current.offer,
-            taken_offer=current.taken_offer,
-            coins_of_interest=current.coins_of_interest,
-            trade_id=current.trade_id,
-            status=uint32(TradeStatus.PENDING_CONFIRM.value),
-            sent_to=[],
-        )
-
-        await self.add_trade_record(tx, False)
-
     async def get_trades_count(self) -> Tuple[int, int, int]:
         """
         Returns the number of trades in the database broken down by is_my_offer status
@@ -242,16 +205,27 @@ class TradeStore:
         row = await cursor.fetchone()
         await cursor.close()
 
-        if row is None:
-            return 0, 0, 0
+        total = 0
+        my_offers_count = 0
+        taken_offers_count = 0
 
-        return int(row[0]), int(row[1]), int(row[2])
+        if row is not None:
+            if row[0] is not None:
+                total = int(row[0])
+            if row[1] is not None:
+                my_offers_count = int(row[1])
+            if row[2] is not None:
+                taken_offers_count = int(row[2])
+
+        return total, my_offers_count, taken_offers_count
 
     async def get_trade_record(self, trade_id: bytes32) -> Optional[TradeRecord]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE trade_id=?", (trade_id.hex(),))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE trade_id=?", (trade_id.hex(),)
+        )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -263,7 +237,9 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE status=?", (status.value,))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE status=?", (status.value,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -279,11 +255,7 @@ class TradeStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT trade_record FROM trade_records WHERE sent<? AND confirmed=?",
-            (
-                4,
-                0,
-            ),
+            "SELECT trade_record FROM trade_records WHERE sent<? AND confirmed=?", (4, 0)
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -435,7 +407,9 @@ class TradeStore:
         return records
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE confirmed_at_index>?", (height,))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE confirmed_at_index>?", (height,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -447,10 +421,10 @@ class TradeStore:
         return records
 
     async def rollback_to_block(self, block_index):
-
-        # Delete from storage
-        cursor = await self.db_connection.execute(
-            "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.lock:
+            # Delete from storage
+            cursor = await self.db_connection.execute(
+                "DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,)
+            )
+            await cursor.close()
+            await self.db_connection.commit()
