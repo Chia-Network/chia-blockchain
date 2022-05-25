@@ -317,7 +317,7 @@ class TradeManager:
 
     async def _create_offer_for_ids(
         self,
-        offer_dict: Dict[Union[int, bytes32], int],
+        offer_dict: Dict[Union[int, bytes32], Union[Dict[str, Any], int]],
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:

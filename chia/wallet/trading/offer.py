@@ -21,6 +21,12 @@ from chia.wallet.util.puzzle_compression import (
     decompress_object_with_puzzles,
     lowest_best_version,
 )
+from chia.wallet.outer_puzzles import (
+    create_asset_id,
+    construct_puzzle,
+    match_puzzle,
+    solve_puzzle,
+)
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
@@ -166,8 +172,8 @@ class Offer:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
-            new_dic: Dict[str, int] = {}
+        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
+            new_dic: Dict[str, Any] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]
