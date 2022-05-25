@@ -349,6 +349,11 @@ class FullNodeSimulator(FullNodeAPI):
             A set of the generated coins.  Note that this does not include any change
             coins that were created.
         """
+        invalid_amounts = [amount for amount in amounts if amount <= 0]
+        if len(invalid_amounts) > 0:
+            invalid_amounts_string = ", ".join(str(amount) for amount in invalid_amounts)
+            raise Exception(f"Coins must have a positive value, request included: {invalid_amounts_string}")
+
         if len(amounts) == 0:
             return set()
 
