@@ -818,8 +818,10 @@ class CATWallet:
     def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
         return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
 
-    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
+    ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
-        if balance < amount:
+        if balance < amount + fee:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount)
+        return await self.select_coins(uint64(amount + fee))

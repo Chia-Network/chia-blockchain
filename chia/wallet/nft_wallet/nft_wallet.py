@@ -3,7 +3,7 @@ import logging
 import time
 from dataclasses import dataclass
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -36,6 +36,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer import match_singleton_puzzle
 from chia.wallet.transaction_record import TransactionRecord
@@ -606,7 +607,9 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def get_coins_to_offer(self, asset_id: bytes32, amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
+    ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(asset_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")

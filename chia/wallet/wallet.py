@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 
 from blspy import G1Element
 
@@ -34,6 +34,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -527,10 +528,12 @@ class Wallet:
         )
         return spend_bundle
 
-    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, asset_id: Optional[bytes32], amount: Union[Solver, uint64], fee: uint64
+    ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
         balance = await self.get_confirmed_balance()
-        if balance < amount:
+        if balance < amount + fee:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount)
+        return await self.select_coins(uint64(amount + fee))

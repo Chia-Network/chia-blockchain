@@ -13,7 +13,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -317,20 +317,22 @@ class TradeManager:
 
     async def _create_offer_for_ids(
         self,
-        offer_dict: Dict[Union[int, bytes32], Union[Dict[str, Any], int]],
+        offer_dict: Dict[Union[int, bytes32], Union[Solver, int]],
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
-        Offer is dictionary of wallet ids and amount
+        Offer is dictionary of wallet ids and amounts/Solvers
         """
         if driver_dict is None:
             driver_dict = {}
         try:
-            coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
+            coins_to_offer: Dict[Union[int, bytes32], Union[Solver, int]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
-            for id, amount in offer_dict.items():
-                if amount > 0:
+            fee_left_to_pay: uint64 = fee
+            wallet_paying_fee: uint32
+            for id, solver in offer_dict.items():
+                if isinstance(solver, int) & (solver > 0):
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
@@ -350,8 +352,8 @@ class TradeManager:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
-                    requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
-                elif amount < 0:
+                    requested_payments[asset_id] = [Payment(p2_ph, uint64(solver), memos)]
+                elif (not isinstance(solver, int)) | (solver < 0):
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
@@ -366,10 +368,14 @@ class TradeManager:
                     else:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                    if isinstance(solver, int):
+                        solver = uint64(abs(solver))
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount) + fee))
-                elif amount == 0:
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, solver, fee)
+                    fee_left_to_pay = uint64(0)
+                    wallet_paying_fee = id
+                elif solver == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
                 if asset_id is not None and wallet is not None:
@@ -391,7 +397,6 @@ class TradeManager:
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
             all_transactions: List[TransactionRecord] = []
-            fee_left_to_pay: uint64 = fee
             for id, selected_coins in coins_to_offer.items():
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
@@ -403,7 +408,7 @@ class TradeManager:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
                         Offer.ph(),
-                        fee=fee_left_to_pay,
+                        fee=fee if id == wallet_paying_fee else uint64(0),
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
@@ -412,13 +417,11 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[id])],
                         [Offer.ph()],
-                        fee=fee_left_to_pay,
+                        fee=fee if id == wallet_paying_fee else uint64(0),
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.extend(txs)
-
-                fee_left_to_pay = uint64(0)
 
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
