@@ -21,8 +21,8 @@ class CompressorArg:
     end: int
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
     generator_refs: List[SerializedProgram]
