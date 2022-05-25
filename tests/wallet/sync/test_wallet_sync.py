@@ -181,7 +181,6 @@ class TestWalletSync:
         base_num_blocks = 400
         for block in default_400_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
         all_blocks = default_400_blocks
         both_phs = []
         for wallet_node, wallet_server in wallets:

@@ -5,10 +5,12 @@ from chia.protocols.shared_protocol import Capability
 import logging
 import random
 from typing import List, Optional, Tuple, Union, Dict
+
 from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
     RequestBlockHeaders,
@@ -329,11 +331,10 @@ async def _fetch_header_blocks_inner(
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
     bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer.capabilities]
-    remaining_peers = list(all_peers) + (5 * bytes_api_peers)  # prioritize peers with blob_api
+    remaining_peers = list(all_peers) + (5 * bytes_api_peers)  # prioritize peers with block headers api
     while len(remaining_peers) > 0:
         peer = random.choice(remaining_peers)
-        log.debug("Peer capabilities: %s", peer.capabilities)
-        if Capability.BLOCK_HEADERS in peer.capabilities:
+        if Capability.BLOCK_HEADERS.name in peer.capabilities:
             response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
         else:
             response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
@@ -356,9 +357,9 @@ async def fetch_header_blocks_in_range(
     all_peers: List[WSChiaConnection],
 ) -> Optional[List[HeaderBlock]]:
     blocks: List[HeaderBlock] = []
-    for i in range(start - (start % 128), end + 1, 128):
+    for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
-        request_end = min(uint32(i + 127), end)
+        request_end = min(uint32(i + 31), end)
         res_h_blocks_task: Optional[asyncio.Task] = peer_request_cache.get_block_request(request_start, request_end)
 
         if res_h_blocks_task is not None:
