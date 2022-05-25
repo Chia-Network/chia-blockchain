@@ -147,7 +147,10 @@ class NFTWallet:
 
     async def get_new_puzzle(self) -> Program:
         self.log.debug("Getting new puzzle for NFT wallet: %s", self.id())
-        return self.puzzle_for_pk((await self.wallet_state_manager.get_unused_derivation_record(self.id())).pubkey)
+        return await self.standard_wallet.get_new_puzzle()
+
+    async def get_new_puzzlehash(self) -> bytes32:
+        return await self.standard_wallet.get_new_puzzlehash()
 
     def id(self) -> uint32:
         return self.wallet_info.id

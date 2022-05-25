@@ -223,14 +223,9 @@ class TradeManager:
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            # This should probably not switch on whether or not we're spending a CAT but it has to for now
+            # This should probably not switch on whether or not we're spending an XCH but it has to for now
             # ATTENTION: new_wallets
-            if wallet.type() == WalletType.CAT:
-                txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
-                )
-                all_txs.extend(txs)
-            else:
+            if wallet.type() == WalletType.STANDARD_WALLET:
                 if fee_to_pay > coin.amount:
                     selected_coins: Set[Coin] = await wallet.select_coins(
                         uint64(fee_to_pay - coin.amount),
@@ -247,6 +242,11 @@ class TradeManager:
                     ignore_max_send_amount=True,
                 )
                 all_txs.append(tx)
+            else:
+                txs = await wallet.generate_signed_transaction(
+                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                )
+                all_txs.extend(txs)
             fee_to_pay = uint64(0)
 
             cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
@@ -368,7 +368,7 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount) + fee))
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -397,18 +397,9 @@ class TradeManager:
                     wallet = self.wallet_state_manager.wallets[id]
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
-                # This should probably not switch on whether or not we're spending a CAT but it has to for now
+                # This should probably not switch on whether or not we're spending an XCH but it has to for now
                 # ATTENTION: new_wallets
-                if wallet.type() == WalletType.CAT:
-                    txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[id])],
-                        [Offer.ph()],
-                        fee=fee_left_to_pay,
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.extend(txs)
-                else:
+                if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
                         Offer.ph(),
@@ -417,6 +408,15 @@ class TradeManager:
                         puzzle_announcements_to_consume=announcements_to_assert,
                     )
                     all_transactions.append(tx)
+                else:
+                    txs = await wallet.generate_signed_transaction(
+                        [abs(offer_dict[id])],
+                        [Offer.ph()],
+                        fee=fee_left_to_pay,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
+                    )
+                    all_transactions.extend(txs)
 
                 fee_left_to_pay = uint64(0)
 
@@ -551,10 +551,8 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                elif wallet is None:
-                    key = asset_id
                 else:
-                    key = int(wallet.id())
+                    key = asset_id
             take_offer_dict[key] = amount
 
         # First we validate that all of the coins in this offer exist
