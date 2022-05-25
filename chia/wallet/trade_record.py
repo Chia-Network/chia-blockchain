@@ -9,8 +9,8 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class TradeRecord(Streamable):
     """
     Used for storing transaction data and status in wallets.
@@ -26,7 +26,7 @@ class TradeRecord(Streamable):
     coins_of_interest: List[Coin]
     trade_id: bytes32
     status: uint32  # TradeStatus, enum not streamable
-    sent_to: List[Tuple[str, uint8, Optional[str]]]
+    sent_to: List[Tuple[str, uint8, Optional[str]]]  # MempoolSubmissionStatus.status enum not streamable
 
     def to_json_dict_convenience(self) -> Dict[str, Any]:
         formatted = self.to_json_dict()
@@ -37,6 +37,7 @@ class TradeRecord(Streamable):
         formatted["summary"] = {
             "offered": offered,
             "requested": requested,
+            "fees": offer.bundle.fees(),
         }
         formatted["pending"] = offer.get_pending_amounts()
         del formatted["offer"]

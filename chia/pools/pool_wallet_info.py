@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional, Dict, Any
+from typing import Optional, Dict
 
 from blspy import G1Element
 
@@ -10,7 +10,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint8
-from chia.util.streamable import streamable, Streamable, dataclass_from_dict
+from chia.util.streamable import streamable, Streamable
 
 
 class PoolSingletonState(IntEnum):
@@ -38,8 +38,8 @@ LEAVING_POOL = PoolSingletonState.LEAVING_POOL
 FARMING_TO_POOL = PoolSingletonState.FARMING_TO_POOL
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolState(Streamable):
     """
     `PoolState` is a type that is serialized to the blockchain to track the state of the user's pool singleton
@@ -97,8 +97,8 @@ def create_pool_state(
     return ps
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PoolWalletInfo(Streamable):
     """
     Internal Pool Wallet state, not destined for the blockchain. This can be completely derived with
@@ -113,7 +113,3 @@ class PoolWalletInfo(Streamable):
     current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
     singleton_block_height: uint32  # Block height that current PoolState is from
-
-    @classmethod
-    def from_json_dict(cls: Any, json_dict: Dict) -> Any:
-        return dataclass_from_dict(cls, json_dict)

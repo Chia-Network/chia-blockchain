@@ -21,8 +21,8 @@ from typing import Any, Dict, List, Optional, Tuple
 log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PeerDataSerialization(Streamable):
     """
     Serializable property bag for the peer data that was previously stored in sqlite.
