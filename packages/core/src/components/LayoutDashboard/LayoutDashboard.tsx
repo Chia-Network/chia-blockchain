@@ -107,8 +107,8 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                       </DropdownIconButton>
                       &nbsp;
                       */}
-                      <Tooltip title={<Trans>Logout</Trans>}>
-                        <IconButton onClick={handleLogout} title={t`Log Out`}>
+                      <Tooltip title={<Trans>Log Out</Trans>}>
+                        <IconButton onClick={handleLogout}>
                           <ExitToAppIcon />
                         </IconButton>
                       </Tooltip>
