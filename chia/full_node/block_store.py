@@ -1,19 +1,18 @@
 import logging
-from sqlite3.dbapi2 import NotSupportedError
 from typing import Dict, List, Optional, Tuple, Any
 
 import zstd
 
 from chia.consensus.block_record import BlockRecord
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.errors import Err
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.errors import Err
+from chia.util.full_block_utils import generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.full_block_utils import generator_from_block
 
 log = logging.getLogger(__name__)
 
@@ -435,9 +434,11 @@ class BlockStore:
 
         ret: List[bytes] = []
         for hh in header_hashes:
-            if hh not in all_blocks:
+            block = all_blocks.get(hh)
+            if block is not None:
+                ret.append(block)
+            else:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
-            ret.append(all_blocks[hh])
         return ret
 
     async def get_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[FullBlock]:
@@ -541,17 +542,13 @@ class BlockStore:
         """
 
         maybe_decompress_blob = self.maybe_decompress_blob
-        if self.db_wrapper.db_version == 2:
-
-            async with self.db_wrapper.read_db() as conn:
-                async with conn.execute(
-                    "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
-                    (start, stop),
-                ) as cursor:
-                    return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
-
-        else:
-            raise NotSupportedError("Only supports db version >=2")
+        assert self.db_wrapper.db_version == 2
+        async with self.db_wrapper.read_db() as conn:
+            async with conn.execute(
+                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
+                (start, stop),
+            ) as cursor:
+                return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 

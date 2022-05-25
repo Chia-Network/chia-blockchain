@@ -677,7 +677,7 @@ class WalletNode:
                     ]
                     if len(valid_states) > 0:
                         async with self.wallet_state_manager.db_wrapper.lock:
-                            self.log.info(
+                            self.log.warning(
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )

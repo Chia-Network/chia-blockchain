@@ -603,7 +603,7 @@ class ChiaServer:
                         return None
 
                     response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
-                    connection.log.debug(
+                    connection.log.warning(
                         f"Time taken to process {message_type} from {connection.peer_node_id} is "
                         f"{time.time() - start_time} seconds"
                     )

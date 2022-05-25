@@ -390,7 +390,7 @@ class WSChiaConnection:
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         if not self.outbound_rate_limiter.process_msg_and_check(message):
             if not is_localhost(self.peer_host):
-                self.log.debug(
+                self.log.warning(
                     f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
                     f"peer: {self.peer_host}"
                 )
