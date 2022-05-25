@@ -15,6 +15,7 @@ class PeerRequestCache:
     _states_validated: LRUCache  # coin state hash -> last change height, or None for reorg
     _timestamps: LRUCache  # block height -> timestamp
     _blocks_validated: LRUCache  # header_hash -> height
+    _block_signatures_validated: LRUCache  # header_hash -> height
 
     def __init__(self):
         self._blocks = LRUCache(100)
@@ -23,6 +24,7 @@ class PeerRequestCache:
         self._states_validated = LRUCache(1000)
         self._timestamps = LRUCache(1000)
         self._blocks_validated = LRUCache(10000)
+        self._block_signatures_validated = LRUCache(10000)
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
         return self._blocks.get(height)
@@ -66,6 +68,12 @@ class PeerRequestCache:
     def in_blocks_validated(self, header_hash: bytes32) -> bool:
         return self._blocks_validated.get(header_hash) is not None
 
+    def add_to_block_signatures_validated(self, header_hash: bytes32, height: uint32):
+        self._block_signatures_validated.put(header_hash, height)
+
+    def in_block_signatures_validated(self, header_hash: bytes32) -> bool:
+        return self._block_signatures_validated.get(header_hash) is not None
+
     def clear_after_height(self, height: int):
         # Remove any cached item which relates to an event that happened at a height above height.
         new_blocks = LRUCache(self._blocks.capacity)
@@ -103,6 +111,12 @@ class PeerRequestCache:
             if h <= height:
                 new_blocks_validated.put(hh, h)
         self._blocks_validated = new_blocks_validated
+
+        new_block_signatures_validated = LRUCache(self._block_signatures_validated.capacity)
+        for hh, h in self._block_signatures_validated.cache.items():
+            if h <= height:
+                new_block_signatures_validated.put(hh, h)
+        self._block_signatures_validated = new_block_signatures_validated
 
 
 async def can_use_peer_request_cache(

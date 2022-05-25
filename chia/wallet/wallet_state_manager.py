@@ -552,6 +552,7 @@ class WalletStateManager:
             )
 
             hint_list = compute_coin_hints(cs)
+            self.log.warning(f"hints: {hint_list}")
             derivation_record = None
             for hint in hint_list:
                 derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
@@ -577,6 +578,7 @@ class WalletStateManager:
                     self.state_changed("wallet_created")
                 else:
                     # Found unacknowledged CAT, save it in the database.
+                    self.log.info(f"Received a transaction for an unknown CAT asset_id: {asset_id}")
                     await self.interested_store.add_unacknowledged_token(
                         asset_id,
                         CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
@@ -906,7 +908,7 @@ class WalletStateManager:
                 return None
             wallet_type = WalletType(self.wallets[uint32(wallet_id)].type())
             return uint32(wallet_id), wallet_type
-        return await self.puzzle_store.wallet_info_for_puzzle_hash(puzzle_hash)
+        return None
 
     async def coin_added(
         self,
