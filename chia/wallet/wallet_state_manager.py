@@ -647,7 +647,13 @@ class WalletStateManager:
                 pass
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 await self.coin_added(
-                    coin_state.coin, coin_state.created_height, all_unconfirmed, wallet_id, wallet_type, coin_name
+                    coin_state.coin,
+                    coin_state.created_height,
+                    all_unconfirmed,
+                    wallet_id,
+                    wallet_type,
+                    coin_name,
+                    skip_lookup=local_record is None,
                 )
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
@@ -914,15 +920,17 @@ class WalletStateManager:
         wallet_id: uint32,
         wallet_type: WalletType,
         coin_name: Optional[bytes32] = None,
+        skip_lookup: bool = False,
     ) -> Optional[WalletCoinRecord]:
         """
         Adding coin to DB, return wallet coin record if it get's added
         """
         if coin_name is None:
             coin_name = coin.name()
-        existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
-        if existing is not None:
-            return None
+        if not skip_lookup:
+            existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
+            if existing is not None:
+                return None
 
         self.log.info(f"Adding coin: {coin} at {height} wallet_id:{wallet_id}")
         farmer_reward = False
