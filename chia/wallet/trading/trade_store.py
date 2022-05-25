@@ -223,7 +223,9 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE trade_id=?", (trade_id.hex(),))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE trade_id=?", (trade_id.hex(),)
+        )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -235,7 +237,9 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE status=?", (status.value,))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE status=?", (status.value,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -250,7 +254,9 @@ class TradeStore:
         Returns the list of trades that have not been received by full node yet.
         """
 
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE sent<? AND confirmed=?", (4, 0))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE sent<? AND confirmed=?", (4, 0)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -401,7 +407,9 @@ class TradeStore:
         return records
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        cursor = await self.db_connection.execute("SELECT trade_record FROM trade_records WHERE confirmed_at_index>?", (height,))
+        cursor = await self.db_connection.execute(
+            "SELECT trade_record FROM trade_records WHERE confirmed_at_index>?", (height,)
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
