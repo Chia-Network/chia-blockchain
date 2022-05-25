@@ -27,14 +27,38 @@ NON_TX_MAX_TOTAL_SIZE = 100 * 1024 * 1024
 # The three values in the tuple correspond to the three limits above
 # The third is optional
 
+# All of these rate limits scale with the number of transactions so the aggregate amounts are higher
 rate_limits_tx = {
     ProtocolMessageTypes.new_transaction: RLSettings(5000, 100, 5000 * 100),
     ProtocolMessageTypes.request_transaction: RLSettings(5000, 100, 5000 * 100),
     ProtocolMessageTypes.respond_transaction: RLSettings(5000, 1 * 1024 * 1024, 20 * 1024 * 1024),  # TODO: check this
     ProtocolMessageTypes.send_transaction: RLSettings(5000, 1024 * 1024),
     ProtocolMessageTypes.transaction_ack: RLSettings(5000, 2048),
+    ProtocolMessageTypes.request_block_header: RLSettings(500, 100),
+    ProtocolMessageTypes.respond_block_header: RLSettings(500, 500 * 1024),
+    ProtocolMessageTypes.reject_header_request: RLSettings(500, 100),
+    ProtocolMessageTypes.request_removals: RLSettings(5000, 50 * 1024, 10 * 1024 * 1024),
+    ProtocolMessageTypes.respond_removals: RLSettings(5000, 1024 * 1024, 10 * 1024 * 1024),
+    ProtocolMessageTypes.reject_removals_request: RLSettings(500, 100),
+    ProtocolMessageTypes.request_additions: RLSettings(50000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.respond_additions: RLSettings(50000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.reject_additions_request: RLSettings(500, 100),
+    ProtocolMessageTypes.request_header_blocks: RLSettings(5000, 100),
+    ProtocolMessageTypes.reject_header_blocks: RLSettings(1000, 100),
+    ProtocolMessageTypes.respond_header_blocks: RLSettings(5000, 2 * 1024 * 1024),
+    ProtocolMessageTypes.request_block_headers: RLSettings(5000, 100),
+    ProtocolMessageTypes.reject_block_headers: RLSettings(1000, 100),
+    ProtocolMessageTypes.respond_block_headers: RLSettings(5000, 2 * 1024 * 1024),
+    ProtocolMessageTypes.request_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.respond_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_children: RLSettings(2000, 1024 * 1024),
+    ProtocolMessageTypes.respond_children: RLSettings(2000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_puzzle_solution: RLSettings(5000, 100),
+    ProtocolMessageTypes.respond_puzzle_solution: RLSettings(5000, 1024 * 1024),
+    ProtocolMessageTypes.reject_puzzle_solution: RLSettings(5000, 100),
 }
 
+# These will have a lower cap since they don't scale with high TPS (NON_TX_FREQ)
 rate_limits_other = {
     ProtocolMessageTypes.handshake: RLSettings(5, 10 * 1024, 5 * 10 * 1024),
     ProtocolMessageTypes.harvester_handshake: RLSettings(5, 1024 * 1024),
@@ -76,25 +100,7 @@ rate_limits_other = {
     ProtocolMessageTypes.new_compact_vdf: RLSettings(100, 1024),
     ProtocolMessageTypes.request_peers: RLSettings(10, 100),
     ProtocolMessageTypes.respond_peers: RLSettings(10, 1 * 1024 * 1024),
-    ProtocolMessageTypes.request_puzzle_solution: RLSettings(1000, 100),
-    ProtocolMessageTypes.respond_puzzle_solution: RLSettings(1000, 1024 * 1024),
-    ProtocolMessageTypes.reject_puzzle_solution: RLSettings(1000, 100),
     ProtocolMessageTypes.new_peak_wallet: RLSettings(200, 300),
-    ProtocolMessageTypes.request_block_header: RLSettings(500, 100),
-    ProtocolMessageTypes.respond_block_header: RLSettings(500, 500 * 1024),
-    ProtocolMessageTypes.reject_header_request: RLSettings(500, 100),
-    ProtocolMessageTypes.request_removals: RLSettings(500, 50 * 1024, 10 * 1024 * 1024),
-    ProtocolMessageTypes.respond_removals: RLSettings(500, 1024 * 1024, 10 * 1024 * 1024),
-    ProtocolMessageTypes.reject_removals_request: RLSettings(500, 100),
-    ProtocolMessageTypes.request_additions: RLSettings(200000, 100 * 1024 * 1024),
-    ProtocolMessageTypes.respond_additions: RLSettings(200000, 100 * 1024 * 1024),
-    ProtocolMessageTypes.reject_additions_request: RLSettings(500, 100),
-    ProtocolMessageTypes.request_header_blocks: RLSettings(500, 100),
-    ProtocolMessageTypes.reject_header_blocks: RLSettings(100, 100),
-    ProtocolMessageTypes.respond_header_blocks: RLSettings(500, 2 * 1024 * 1024, 100 * 1024 * 1024),
-    ProtocolMessageTypes.request_block_headers: RLSettings(500, 100),
-    ProtocolMessageTypes.reject_block_headers: RLSettings(100, 100),
-    ProtocolMessageTypes.respond_block_headers: RLSettings(1000, 2 * 1024 * 1024, 100 * 1024 * 1024),
     ProtocolMessageTypes.request_peers_introducer: RLSettings(100, 100),
     ProtocolMessageTypes.respond_peers_introducer: RLSettings(100, 1024 * 1024),
     ProtocolMessageTypes.farm_new_block: RLSettings(200, 200),
@@ -113,10 +119,6 @@ rate_limits_other = {
     ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
-    ProtocolMessageTypes.request_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
-    ProtocolMessageTypes.respond_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
-    ProtocolMessageTypes.request_children: RLSettings(2000, 1024 * 1024),
-    ProtocolMessageTypes.respond_children: RLSettings(2000, 1 * 1024 * 1024),
 }
 
 
@@ -185,10 +187,10 @@ class RateLimiter:
                 new_non_tx_count = self.non_tx_message_counts + 1
                 new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
                 if new_non_tx_count > NON_TX_FREQ * proportion_of_limit:
-                    log.debug(f"Rate limit: {new_non_tx_count} > {NON_TX_FREQ} * {proportion_of_limit}")
+                    log.warning(f"Rate limit1: {new_non_tx_count} > {NON_TX_FREQ} * {proportion_of_limit}")
                     return False
                 if new_non_tx_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
-                    log.debug(f"Rate limit: {new_non_tx_size} > {NON_TX_MAX_TOTAL_SIZE} * {proportion_of_limit}")
+                    log.warning(f"Rate limit2: {new_non_tx_size} > {NON_TX_MAX_TOTAL_SIZE} * {proportion_of_limit}")
                     return False
             else:
                 log.warning(f"Message type {message_type} not found in rate limits")
@@ -198,13 +200,13 @@ class RateLimiter:
             assert limits.max_total_size is not None
 
             if new_message_counts > limits.frequency * proportion_of_limit:
-                log.debug(f"Rate limit: {new_message_counts} > {limits.frequency} * {proportion_of_limit}")
+                log.warning(f"Rate limit3: {new_message_counts} > {limits.frequency} * {proportion_of_limit}")
                 return False
             if len(message.data) > limits.max_size:
-                log.debug(f"Rate limit: {len(message.data)} > {limits.max_size}")
+                log.warning(f"Rate limit4: {len(message.data)} > {limits.max_size}")
                 return False
             if new_cumulative_size > limits.max_total_size * proportion_of_limit:
-                log.debug(f"Rate limit: {new_cumulative_size} > {limits.max_total_size} * {proportion_of_limit}")
+                log.warning(f"Rate limit5: {new_cumulative_size} > {limits.max_total_size} * {proportion_of_limit}")
                 return False
 
             ret = True
