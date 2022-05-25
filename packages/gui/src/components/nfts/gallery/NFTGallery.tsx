@@ -4,13 +4,23 @@ import { defineMessage } from '@lingui/macro';
 import type { NFTInfo, Wallet } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
 import { Grid } from '@mui/material';
-import NFTGallerySidebar from './NFTGallerySidebar';
-import NFTCard from '../NFTCard';
+// import NFTGallerySidebar from './NFTGallerySidebar';
+import NFTCardLazy from '../NFTCardLazy';
 import Search from './NFTGallerySearch';
 import NFTContextualActions from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import NFTProfileDropdown from '../NFTProfileDropdown';
+
+function searchableNFTContent(nft: NFTInfo) {
+  const items = [
+    nft.$nftId,
+    nft.dataUris?.join(' ') ?? '',
+    nft.launcherId,
+  ];
+
+  return items.join(' ').toLowerCase();
+}
 
 export default function NFTGallery() {
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
@@ -32,15 +42,15 @@ export default function NFTGallery() {
     }
 
     return nfts.filter((nft) => {
-      const { metadata = {} } = nft;
+      const { walletId } = nft;
 
       if (walletId !== undefined && nft.walletId !== walletId) {
         return false;
       }
 
-      const { name = 'Test' } = metadata;
+      const content = searchableNFTContent(nft);
       if (search) {
-        return name.toLowerCase().includes(search.toLowerCase());
+        return content.includes(search.toLowerCase());
       }
 
       return true;
@@ -75,7 +85,9 @@ export default function NFTGallery() {
               value={search}
               placeholder={t(defineMessage({ message: `Search...` }))}
             />
+            {/*
             <NFTContextualActions selection={selection} />
+            */}
           </Flex>
         </Flex>
       )}
@@ -83,7 +95,7 @@ export default function NFTGallery() {
       <Grid spacing={2} alignItems="stretch" container>
         {filteredData?.map((nft: NFTInfo) => (
           <Grid xs={12} sm={6} md={4} lg={4} xl={3} key={nft.$nftId} item>
-            <NFTCard
+            <NFTCardLazy
               nft={nft}
               onSelect={(selected) => handleSelect(nft, selected)}
               selected={selection.items.some(

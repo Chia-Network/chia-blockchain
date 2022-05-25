@@ -17,10 +17,11 @@ export type CopyToClipboardProps = {
   size: 'small' | 'medium';
   clearCopiedDelay: number;
   invertColor?: boolean;
+  color?: string;
 };
 
 export default function CopyToClipboard(props: CopyToClipboardProps) {
-  const { value, size = 'small', fontSize = 'medium', clearCopiedDelay = 1000, invertColor = false } = props;
+  const { value, size = 'small', fontSize = 'medium', clearCopiedDelay = 1000, invertColor = false, ...rest } = props;
   const [, copyToClipboard] = useCopyToClipboard();
   const [copied, setCopied] = useState<boolean>(false);
   const timeout = useTimeout(() => {
@@ -45,7 +46,7 @@ export default function CopyToClipboard(props: CopyToClipboardProps) {
   return (
     <Tooltip title={tooltipTitle}>
       <IconButton onClick={handleCopy} size={size}>
-        <StyledAssignmentIcon fontSize={fontSize} invertColor={invertColor} />
+        <StyledAssignmentIcon fontSize={fontSize} invertColor={invertColor} {...rest} />
       </IconButton>
     </Tooltip>
   );

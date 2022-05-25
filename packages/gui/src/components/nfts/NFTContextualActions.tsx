@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
@@ -132,15 +132,18 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
 /* ========================================================================== */
 
 type NFTContextualActionsProps = {
+  label?: ReactNode;
   selection?: NFTSelection;
-  availableActions: NFTContextualActionTypes;
+  availableActions?: NFTContextualActionTypes;
 };
 
 export default function NFTContextualActions(props: NFTContextualActionsProps) {
-  const { selection, availableActions } = props;
-
-  console.log('availableActions:');
-  console.log(availableActions);
+  const {
+    label = <Trans>Actions</Trans>,
+    selection,
+    availableActions = NFTContextualActionTypes.CreateOffer | NFTContextualActionTypes.Transfer,
+    ...rest
+  } = props;
 
   const actions = useMemo(() => {
     const actionComponents = {
@@ -157,7 +160,7 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
   }, [availableActions]);
 
   return (
-    <DropdownActions label={<Trans>Actions</Trans>} variant="outlined">
+    <DropdownActions label={label} variant="outlined" {...rest}>
       {({ onClose }: DropdownActionsChildProps) => (
         <>
           {actions.map((Action) => (
@@ -168,9 +171,3 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
     </DropdownActions>
   );
 }
-
-NFTContextualActions.defaultProps = {
-  selection: undefined,
-  availableActions:
-    NFTContextualActionTypes.CreateOffer | NFTContextualActionTypes.Transfer,
-};

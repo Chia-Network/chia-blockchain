@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React, { cloneElement, type ReactNode } from 'react';
 import { styled, alpha } from '@mui/material/styles';
 import Button, { type ButtonProps } from '@mui/material/Button';
 import Menu, { MenuProps } from '@mui/material/Menu';
@@ -49,6 +49,7 @@ const StyledMenu = styled((props: MenuProps) => (
 
 export type DropdownActionsProps = ButtonProps & {
   label?: ReactNode;
+  toggle?: ReactNode;
   children: (props: { onClose: () => void }) => ReactNode;
 };
 
@@ -57,28 +58,42 @@ export type DropdownActionsChildProps = {
 };
 
 export default function DropdownActions(props: DropdownActionsProps) {
-  const { label, children, ...rest } = props;
+  const { label, children, toggle, ...rest } = props;
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     setAnchorEl(event.currentTarget);
   };
+
   const handleClose = () => {
     setAnchorEl(null);
   };
 
+  function handlePreventDefault(event: any) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   return (
     <div>
-      <Button
-        variant="contained"
-        onClick={handleClick}
-        endIcon={<KeyboardArrowDownIcon />}
-        disableElevation
-        {...rest}
-      >
-        {label}
-      </Button>
-      <StyledMenu anchorEl={anchorEl} open={open} onClose={handleClose}>
+      {toggle ? cloneElement(toggle, {
+        onClick: handleClick,
+      }) : (
+        <Button
+          variant="contained"
+          onClick={handleClick}
+          endIcon={<KeyboardArrowDownIcon />}
+          disableElevation
+          {...rest}
+        >
+          {label}
+        </Button>
+      )}
+
+      <StyledMenu anchorEl={anchorEl} open={open} onClose={handleClose} onClick={handlePreventDefault}>
         {children({ onClose: handleClose })}
       </StyledMenu>
     </div>

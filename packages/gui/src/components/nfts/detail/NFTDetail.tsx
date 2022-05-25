@@ -19,7 +19,8 @@ import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
-
+import NFTRankings from '../NFTRankings';
+import NFTProperties from '../NFTProperties';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
@@ -64,7 +65,15 @@ export default function NFTDetail() {
       key: 'dataHash',
       label: <Trans>Data Hash</Trans>,
       value: <Truncate tooltip copyToClipboard>{nft.dataHash}</Truncate>,
-    }].filter(Boolean);
+    },
+
+    metadata?.collection_name && {
+      key: 'collectionName',
+      label: <Trans>Collection Name</Trans>,
+      value: <Truncate tooltip copyToClipboard>{metadata?.collection_name}</Truncate>,
+    },
+    ].filter(Boolean);
+
 
     if (dataUris?.length) {
       dataUris.forEach((uri, index) => {
@@ -100,8 +109,6 @@ export default function NFTDetail() {
   if (isLoading) {
     return <Loading center />;
   }
-
-  const attributes = metadata?.attributes ?? [];
 
   return (
     <LayoutDashboardSub>
@@ -141,28 +148,8 @@ export default function NFTDetail() {
 
                 <Typography>{metadata?.description ?? <Trans>Not Available</Trans>}</Typography>
               </Flex>
-              {!!attributes.length && (
-                <Flex flexDirection="column" gap={1}>
-                  <Typography variant="h6">
-                    <Trans>Properties</Trans>
-                  </Typography>
-
-                  <Grid spacing={2} container>
-                    {attributes.map((attribute, index) => (
-                      <Grid xs={12} sm={6} key={`${attribute?.name}-${index}`} item>
-                        <Box border={1} borderRadius={1} borderColor="black" p={2}>
-                          <Typography variant="body1" noWrap>
-                            {attribute?.name}
-                          </Typography>
-                          <Typography variant="h6" noWrap>
-                            {attribute?.value}
-                          </Typography>
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Flex>
-              )}
+              <NFTProperties attributes={metadata?.attributes} />
+              <NFTRankings attributes={metadata?.attributes} />
               <Flex flexDirection="column" gap={1}>
                 <Typography variant="h6">
                   <Trans>Details</Trans>
