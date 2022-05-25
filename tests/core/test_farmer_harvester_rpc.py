@@ -40,6 +40,7 @@ from tests.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
 from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
@@ -569,14 +570,14 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     test_path = Path(root_path / "test_path").resolve()
 
     # The test_path doesn't exist at this point
-    with pytest.raises(ValueError, match=f"Path doesn't exist: {test_path}"):
+    with assert_rpc_error(f"Path doesn't exist: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Create a file at the test_path and make sure it detects this
     with open(test_path, "w"):
         pass
 
-    with pytest.raises(ValueError, match=f"Path is not a directory: {test_path}"):
+    with assert_rpc_error(f"Path is not a directory: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Drop the file, make it a directory and make sure it gets added properly.
@@ -585,7 +586,7 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
 
     await assert_added(test_path)
 
-    with pytest.raises(ValueError, match=f"Path already added: {test_path}"):
+    with assert_rpc_error(f"Path already added: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Add another one and make sure they are still both there.
