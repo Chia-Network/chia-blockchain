@@ -7,15 +7,16 @@ from blspy import G1Element
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.hash import std_hash
+from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -24,23 +25,23 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_coin_announcement,
-    make_assert_puzzle_announcement,
-    make_assert_my_coin_id_condition,
     make_assert_absolute_seconds_exceeds_condition,
+    make_assert_coin_announcement,
+    make_assert_my_coin_id_condition,
+    make_assert_puzzle_announcement,
     make_create_coin_announcement,
-    make_create_puzzle_announcement,
     make_create_coin_condition,
+    make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.util.compute_memos import compute_memos
 
 
 class Wallet:
@@ -64,7 +65,7 @@ class Wallet:
         self.cost_of_single_tx = None
         return self
 
-    async def get_max_send_amount(self, records=None):
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> int:
         spendable: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
@@ -76,6 +77,7 @@ class Wallet:
             tx = await self.generate_signed_transaction(
                 coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
+            assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
             # npc contains names of the coins removed, puzzle_hashes and their spend conditions
             result: NPCResult = get_name_puzzle_conditions(
@@ -120,12 +122,15 @@ class Wallet:
         return spendable
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
+        unconfirmed_tx: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
+        )
         addition_amount = 0
 
         for record in unconfirmed_tx:
             if not record.is_in_mempool():
-                self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
+                if record.spend_bundle is not None:
+                    self.log.warning(f"Record: {record} not in mempool, {record.sent_to}")
                 continue
             our_spend = False
             for coin in record.removals:
@@ -241,59 +246,36 @@ class Wallet:
         python_program[1].append(condition)
         return Program.to(python_program)
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
+    async def select_coins(
+        self, amount: uint64, exclude: List[Coin] = None, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
-        Note: This must be called under a wallet state manager lock
+        Note: Must be called under wallet state manager lock
         """
-        if exclude is None:
-            exclude = []
-
-        spendable_amount = await self.get_spendable_balance()
-
-        if amount > spendable_amount:
-            error_msg = (
-                f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
-                f" {spendable_amount}"
-            )
-            self.log.warning(error_msg)
-            raise ValueError(error_msg)
-
-        self.log.info(f"About to select coins for amount {amount}")
-        unspent: List[WalletCoinRecord] = list(
+        spendable_amount: uint128 = await self.get_spendable_balance()
+        spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
         )
-        sum_value = 0
-        used_coins: Set = set()
-
-        # Use older coins first
-        unspent.sort(reverse=True, key=lambda r: r.coin.amount)
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        for coinrecord in unspent:
-            if sum_value >= amount and len(used_coins) > 0:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            if coinrecord.coin in exclude:
-                continue
-            sum_value += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
-            self.log.debug(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_height}!")
 
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_value < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-
-        self.log.debug(f"Successfully selected coins: {used_coins}")
-        return used_coins
+        coins = await select_coins(
+            spendable_amount,
+            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            spendable_coins,
+            unconfirmed_removals,
+            self.log,
+            uint128(amount),
+            exclude,
+            min_coin_amount,
+        )
+        assert sum(c.amount for c in coins) >= amount
+        return coins
 
     async def _generate_unsigned_transaction(
         self,
@@ -329,7 +311,7 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
 
         if coins is None:
-            coins = await self.select_coins(total_amount)
+            coins = await self.select_coins(uint64(total_amount))
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -361,10 +343,9 @@ class Wallet:
             memos = []
         assert memos is not None
         for coin in coins:
-            self.log.info(f"coin from coins: {coin.name()} {coin}")
-            puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             # Only one coin creates outputs
-            if primary_announcement_hash is None and origin_id in (None, coin.name()):
+            if origin_id in (None, coin.name()):
+                origin_id = coin.name()
                 if primaries is None:
                     if amount > 0:
                         primaries = [{"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos}]
@@ -379,6 +360,7 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
+                puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -387,10 +369,23 @@ class Wallet:
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
-            else:
-                assert primary_announcement_hash is not None
-                solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
 
+                spends.append(
+                    CoinSpend(
+                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+                    )
+                )
+                break
+        else:
+            raise ValueError("origin_id is not in the set of selected coins")
+
+        # Process the non-origin coins now that we have the primary announcement hash
+        for coin in coins:
+            if coin.name() == origin_id:
+                continue
+
+            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -491,7 +486,7 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(tx)
         await self.wallet_state_manager.wallet_node.update_ui()
 
-    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
+    # This is to be aggregated together with a CAT offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
         list_of_solutions = []
         utxos = None
@@ -499,9 +494,9 @@ class Wallet:
         # If we're losing value then get coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if chia_amount < 0:
-            utxos = await self.select_coins(abs(chia_amount), exclude)
+            utxos = await self.select_coins(uint64(abs(chia_amount)), exclude)
         else:
-            utxos = await self.select_coins(0, exclude)
+            utxos = await self.select_coins(uint64(0), exclude)
 
         assert len(utxos) > 0
 

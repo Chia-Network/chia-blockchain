@@ -13,6 +13,9 @@ SERVICES_FOR_GROUP = {
     "wallet": "chia_wallet".split(),
     "introducer": "chia_introducer".split(),
     "simulator": "chia_full_node_simulator".split(),
+    "crawler": "chia_crawler".split(),
+    "seeder": "chia_crawler chia_seeder".split(),
+    "seeder-only": "chia_seeder".split(),
 }
 
 

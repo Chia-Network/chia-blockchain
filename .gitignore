@@ -90,6 +90,9 @@ win_code_sign_cert.p12
 # chia-blockchain wheel build folder
 build/
 
+# Temporal `n` (node version manager) directory
+.n/
+
 # pytest-monitor
 # https://pytest-monitor.readthedocs.io/en/latest/operating.html?highlight=.pymon#storage
 .pymon
@@ -295,3 +298,7 @@ tags
 [._]*.un~
 
 # End of https://www.toptal.com/developers/gitignore/api/python,git,vim
+
+# Ignore the binaries that are pulled for the installer
+/bladebit/
+/madmax/

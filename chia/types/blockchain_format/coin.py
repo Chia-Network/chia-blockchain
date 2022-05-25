@@ -1,15 +1,16 @@
 from dataclasses import dataclass
 from typing import Any, List
 
+from clvm.casts import int_to_bytes
+
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.clvm import int_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class Coin(Streamable):
     """
     This structure is used in the body for the reward and fees genesis coins.
@@ -27,17 +28,12 @@ class Coin(Streamable):
         # significant bit is set, to encode it as a positive number. This
         # despite "amount" being unsigned. This way, a CLVM program can generate
         # these hashes easily.
-        return std_hash(self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount))
+        return std_hash(
+            self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount), skip_bytes_conversion=True
+        )
 
     def name(self) -> bytes32:
         return self.get_hash()
-
-    def as_list(self) -> List[Any]:
-        return [self.parent_coin_info, self.puzzle_hash, self.amount]
-
-    @property
-    def name_str(self) -> str:
-        return self.name().hex()
 
     @classmethod
     def from_bytes(cls, blob):
@@ -52,11 +48,18 @@ class Coin(Streamable):
         assert False
 
 
-def hash_coin_list(coin_list: List[Coin]) -> bytes32:
-    coin_list.sort(key=lambda x: x.name_str, reverse=True)
+def coin_as_list(c: Coin) -> List[Any]:
+    return [c.parent_coin_info, c.puzzle_hash, c.amount]
+
+
+def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
+    if len(coin_ids) == 1:
+        return std_hash(coin_ids[0])
+
+    coin_ids.sort(reverse=True)
     buffer = bytearray()
 
-    for coin in coin_list:
-        buffer.extend(coin.name())
+    for name in coin_ids:
+        buffer.extend(name)
 
-    return std_hash(buffer)
+    return std_hash(buffer, skip_bytes_conversion=True)

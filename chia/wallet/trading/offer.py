@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Set, Tuple
 from blspy import G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
@@ -60,7 +60,7 @@ class Offer:
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List] = [c.as_list() for c in sorted_coins]
+        sorted_coin_list: List[List] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
@@ -94,6 +94,8 @@ class Offer:
         offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
         if offered_coins == {}:
             raise ValueError("Bundle is not offering anything")
+        if self.get_requested_payments() == {}:
+            raise ValueError("Bundle is not requesting anything")
 
         # Verify that there are no duplicate payments
         for payments in self.requested_payments.values():
@@ -190,12 +192,6 @@ class Offer:
 
                 for addition in filter(lambda c: c.parent_coin_info == root_removal.name(), all_additions):
                     pending_dict[name] += addition.amount
-
-        # Then we add a potential fee as pending XCH
-        fee: int = sum(c.amount for c in all_removals) - sum(c.amount for c in all_additions)
-        if fee > 0:
-            pending_dict.setdefault("xch", 0)
-            pending_dict["xch"] += fee
 
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())

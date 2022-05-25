@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import os
 import subprocess
 import sys
@@ -37,7 +38,8 @@ async def create_start_daemon_connection(root_path: Path) -> Optional[DaemonProx
         if await connection.is_keyring_locked():
             passphrase = Keychain.get_cached_master_passphrase()
             if not Keychain.master_passphrase_is_valid(passphrase):
-                passphrase = get_current_passphrase()
+                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="get_current_passphrase") as executor:
+                    passphrase = await asyncio.get_running_loop().run_in_executor(executor, get_current_passphrase)
 
         if passphrase:
             print("Unlocking daemon keyring")
@@ -62,9 +64,7 @@ async def async_start(root_path: Path, group: str, restart: bool) -> None:
         if await daemon.is_running(service_name=service):
             print(f"{service}: ", end="", flush=True)
             if restart:
-                if not await daemon.is_running(service_name=service):
-                    print("not running")
-                elif await daemon.stop_service(service_name=service):
+                if await daemon.stop_service(service_name=service):
                     print("stopped")
                 else:
                     print("stop failed")

@@ -68,10 +68,17 @@ def generate_replacements(conf, dir):
         "CHECKOUT_TEST_BLOCKS_AND_PLOTS": read_file(
             Path(root_path / "runner_templates/checkout-test-plots.include.yml")
         ).rstrip(),
-        "TEST_DIR": "",
+        "CHECK_RESOURCE_USAGE": read_file(
+            Path(root_path / "runner_templates/check-resource-usage.include.yml")
+        ).rstrip(),
+        "ENABLE_PYTEST_MONITOR": "",
+        "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
     }
+
+    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    replacements["PYTEST_PARALLEL_ARGS"] = f" -n {xdist_numprocesses}"
 
     if not conf["checkout_blocks_and_plots"]:
         replacements[
@@ -79,14 +86,18 @@ def generate_replacements(conf, dir):
         ] = "# Omitted checking out blocks and plots repo Chia-Network/test-cache"
     if not conf["install_timelord"]:
         replacements["INSTALL_TIMELORD"] = "# Omitted installing Timelord"
-    if conf["parallel"]:
-        replacements["PYTEST_PARALLEL_ARGS"] = " -n auto"
     if conf["job_timeout"]:
         replacements["JOB_TIMEOUT"] = str(conf["job_timeout"])
-    replacements["TEST_DIR"] = "/".join([*dir.relative_to(root_path.parent).parts, "test_*.py"])
+    test_files = sorted(dir.glob("test_*.py"))
+    test_file_paths = [file.relative_to(root_path.parent).as_posix() for file in test_files]
+    replacements["TEST_FILES"] = " ".join(test_file_paths)
     replacements["TEST_NAME"] = test_name(dir)
     if "test_name" in conf:
         replacements["TEST_NAME"] = conf["test_name"]
+    if conf["check_resource_usage"]:
+        replacements["ENABLE_PYTEST_MONITOR"] = "-p monitor"
+    else:
+        replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
     return replacements
@@ -123,7 +134,9 @@ if args.verbose:
 
 # main
 test_dirs = subdirs()
-current_workflows: Dict[Path, str] = {file: read_file(file) for file in args.output_dir.iterdir()}
+current_workflows: Dict[Path, str] = {
+    file: read_file(file) for file in args.output_dir.iterdir() if str(file).endswith(".yml")
+}
 changed: bool = False
 
 for os in testconfig.oses:
@@ -135,6 +148,8 @@ for os in testconfig.oses:
         conf = update_config(module_dict(testconfig), dir_config(dir))
         replacements = generate_replacements(conf, dir)
         txt = transform_template(template_text, replacements)
+        # remove trailing whitespace from lines and assure a single EOF at EOL
+        txt = "\n".join(line.rstrip() for line in txt.rstrip().splitlines()) + "\n"
         logging.info(f"Writing {os}-{test_name(dir)}")
         workflow_yaml_path: Path = workflow_yaml_file(args.output_dir, os, test_name(dir))
         if workflow_yaml_path not in current_workflows or current_workflows[workflow_yaml_path] != txt:

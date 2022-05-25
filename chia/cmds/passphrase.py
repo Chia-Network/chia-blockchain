@@ -65,11 +65,7 @@ def set_cmd(
 
     if success:
         # Attempt to update the daemon's passphrase cache
-        sys.exit(
-            asyncio.get_event_loop().run_until_complete(
-                async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
-            )
-        )
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
 
 
 @passphrase_cmd.command(
@@ -95,11 +91,7 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
 
     if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
-        sys.exit(
-            asyncio.get_event_loop().run_until_complete(
-                async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])
-            )
-        )
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
 
 
 @passphrase_cmd.group("hint", short_help="Manage the optional keyring passphrase hint")

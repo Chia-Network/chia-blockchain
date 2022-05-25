@@ -5,7 +5,7 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union, Set
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -81,7 +81,7 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, coin_state: CoinState):
+    async def coins_of_interest_farmed(self, coin_state: CoinState, fork_height: Optional[uint32]):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -110,7 +110,7 @@ class TradeManager:
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids)
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids, fork_height)
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
@@ -122,7 +122,7 @@ class TradeManager:
             for tx in tx_records:
                 if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
                     await self.wallet_state_manager.add_transaction(
-                        dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
+                        dataclasses.replace(tx, confirmed_at_height=height, confirmed=True), in_transaction=True
                     )
 
             self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
@@ -212,8 +212,30 @@ class TradeManager:
                 all_txs.append(tx)
             fee_to_pay = uint64(0)
 
+            cancellation_addition = Coin(coin.name(), new_ph, coin.amount)
+            all_txs.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=new_ph,
+                    amount=coin.amount,
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[cancellation_addition],
+                    removals=[coin],
+                    wallet_id=wallet.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=cancellation_addition.name(),
+                    memos=[],
+                )
+            )
+
         for tx in all_txs:
-            await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
+            await self.wallet_state_manager.add_pending_transaction(tx_record=dataclasses.replace(tx, fee_amount=fee))
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL, False)
 
@@ -353,8 +375,7 @@ class TradeManager:
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
             [c.name() for c in non_ephemeral_removals]
         )
-        assert coin_states is not None
-        return not any([cs.spent_height is not None for cs in coin_states])
+        return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
@@ -414,7 +435,7 @@ class TradeManager:
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
             to_puzzle_hash = bytes32([1] * 32)  # We use all zeros to be clear not to send here
-            removal_tree_hash = Program.to([rem.as_list() for rem in grouped_removals]).get_tree_hash()
+            removal_tree_hash = Program.to([coin_as_list(rem) for rem in grouped_removals]).get_tree_hash()
             # We also need to calculate the sent amount
             removed: int = sum(c.amount for c in grouped_removals)
             change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []

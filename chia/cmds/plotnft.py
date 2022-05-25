@@ -117,13 +117,6 @@ def create_cmd(
     callback=validate_fee,
 )
 @click.option(
-    "--fee",
-    help="Fee Per Transaction, in Mojos. Fee is used TWICE: once to leave pool, once to join.",
-    type=int,
-    callback=validate_fee,
-    default=0,
-)
-@click.option(
     "-wp",
     "--wallet-rpc-port",
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
@@ -152,13 +145,6 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
     show_default=True,
     required=True,
     callback=validate_fee,
-)
-@click.option(
-    "--fee",
-    help="Transaction Fee, in Mojos. Fee is charged twice if already in a pool.",
-    type=int,
-    callback=validate_fee,
-    default=0,
 )
 @click.option(
     "-wp",

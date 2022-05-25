@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import os
 import logging
 import logging.config
@@ -42,6 +43,7 @@ class Service:
         advertised_port: int,
         service_name: str,
         network_id: str,
+        *,
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
@@ -50,6 +52,9 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
+        running_new_process=True,
+        service_name_prefix="",
+        max_request_body_size: Optional[int] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -63,25 +68,34 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self.max_request_body_size = max_request_body_size
+        self._running_new_process = running_new_process
 
-        proctitle_name = f"chia_{service_name}"
-        setproctitle(proctitle_name)
+        # when we start this service as a component of an existing process,
+        # don't change its proctitle
+        if running_new_process:
+            proctitle_name = f"chia_{service_name_prefix}{service_name}"
+            setproctitle(proctitle_name)
+
         self._log = logging.getLogger(service_name)
 
         if parse_cli_args:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, service_config["logging"], root_path)
+
+        # only initialize logging once per process
+        if running_new_process:
+            initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
         chia_ca_crt, chia_ca_key = chia_ssl_ca_paths(root_path, self.config)
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
-        if NodeType == NodeType.WALLET:
+        if node_type == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
-            outbound_rlp = service_config.get("outbound_rate_limit_percent", 60)
+            outbound_rlp = 60
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -134,7 +148,8 @@ class Service:
 
         self._did_start = True
 
-        self._enable_signals()
+        if self._running_new_process:
+            self._enable_signals()
 
         await self._node._start(**kwargs)
         self._node._shut_down = False
@@ -146,6 +161,7 @@ class Service:
             self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
+        self._advertised_port = self._server.get_port()
 
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
@@ -166,6 +182,8 @@ class Service:
                     self.root_path,
                     self.config,
                     self._connect_to_daemon,
+                    max_request_body_size=self.max_request_body_size,
+                    name=self._service_name + "_rpc",
                 )
             )
 
@@ -181,13 +199,23 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        signal.signal(signal.SIGINT, self._accept_signal)
-        signal.signal(signal.SIGTERM, self._accept_signal)
         if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
             signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
+            signal.signal(signal.SIGINT, self._accept_signal)
+            signal.signal(signal.SIGTERM, self._accept_signal)
+        else:
+            loop = asyncio.get_running_loop()
+            loop.add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            loop.add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
 
-    def _accept_signal(self, signal_number: int, stack_frame):
+    def _accept_signal(self, signal_number: int, stack_frame=None):
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor
@@ -223,7 +251,7 @@ class Service:
 
                 async def close_rpc_server() -> None:
                     if self._rpc_task:
-                        await (await self._rpc_task)()
+                        await (await self._rpc_task)[0]()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 
