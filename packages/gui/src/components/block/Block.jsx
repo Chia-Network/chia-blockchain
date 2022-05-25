@@ -184,7 +184,7 @@ export default function Block() {
       value: <FormatLargeNumber value={blockRecord.weight} />,
       tooltip: (
         <Trans>
-          Weight is the total added difficulty of all sub blocks up to and
+          Weight is the total added difficulty of all blocks up to and
           including this one
         </Trans>
       ),
