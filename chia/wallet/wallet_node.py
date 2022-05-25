@@ -635,7 +635,7 @@ class WalletNode:
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
         if self.validation_semaphore is None:
-            self.validation_semaphore = asyncio.Semaphore(10)
+            self.validation_semaphore = asyncio.Semaphore(6)
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
         # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX dissapear.
@@ -654,7 +654,7 @@ class WalletNode:
                 self.log.info(f"clear_after_height {fork_height} for peer {peer}")
 
         all_tasks: List[asyncio.Task] = []
-        target_concurrent_tasks: int = 30
+        target_concurrent_tasks: int = 20
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
@@ -718,7 +718,7 @@ class WalletNode:
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
-        chunk_size: int = 900 if trusted else 20
+        chunk_size: int = 900 if trusted else 10
         for states in chunks(items, chunk_size):
             if self.server is None:
                 self.log.error("No server")
