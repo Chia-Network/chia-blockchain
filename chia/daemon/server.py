@@ -892,7 +892,10 @@ class WebSocketServer:
         exclude_final_dir: bool = job["exclude_final_dir"]
         log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
         if not exclude_final_dir:
-            add_plot_directory(self.root_path, final_dir)
+            try:
+                add_plot_directory(self.root_path, final_dir)
+            except ValueError as e:
+                log.warning(f"_post_process_plotting_job: {e}")
 
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None

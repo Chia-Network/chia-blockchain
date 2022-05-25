@@ -624,91 +624,69 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_node: WalletNode = env.wallet_1.node
-
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    client_2: WalletRpcClient = env.wallet_2.rpc_client
-
+    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
 
     await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
-    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
-    res = await client.create_new_cat_and_wallet(uint64(20))
-    assert res["success"]
-    cat_0_id = res["wallet_id"]
-    asset_id = bytes32.fromhex(res["asset_id"])
-    assert len(asset_id) > 0
-
-    # TODO: Investigate why farming only one block here makes it flaky
+    # Creates a CAT wallet with 20 mojos
+    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    cat_wallet_id = res["wallet_id"]
+    cat_asset_id = bytes32.fromhex(res["asset_id"])
+    # TODO: Investigate why farming only two blocks here makes it flaky
     await farm_transaction_block(full_node_api, wallet_node)
     await farm_transaction_block(full_node_api, wallet_node)
-
-    await time_out_assert(10, get_confirmed_balance, 20, client, cat_0_id)
-
-    # Creates a second wallet with the same CAT
-    res = await client_2.create_wallet_for_existing_cat(asset_id)
-    assert res["success"]
-    cat_1_id = res["wallet_id"]
-    cat_1_asset_id = bytes.fromhex(res["asset_id"])
-    assert cat_1_asset_id == asset_id
-
-    await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
-    await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 1})
-
     await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(10, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
-    bal_1 = await client_2.get_wallet_balance(cat_1_id)
-    assert bal_1["confirmed_wallet_balance"] == 0
-
-    addr_0 = await client.get_next_address(cat_0_id, False)
-    addr_1 = await client_2.get_next_address(cat_1_id, False)
-
-    assert addr_0 != addr_1
-
-    tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
+    # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
+    await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
+    wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
+    tx_res = await wallet_1_rpc.cat_spend(cat_wallet_id, uint64(4), wallet_2_address, uint64(0), ["the cat memo"])
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
+    await time_out_assert(10, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
 
     # Create an offer of 5 chia for one CAT
-    offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, validate_only=True)
-    all_offers = await client.get_all_offers()
+    offer, trade_record = await wallet_1_rpc.create_offer_for_ids({uint32(1): -5, cat_wallet_id: 1}, validate_only=True)
+    all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 0
     assert offer is None
 
-    offer, trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
+    offer, trade_record = await wallet_1_rpc.create_offer_for_ids({uint32(1): -5, cat_wallet_id: 1}, fee=uint64(1))
     assert offer is not None
 
-    col = await client.get_cat_asset_id(cat_0_id)
+    summary = await wallet_1_rpc.get_offer_summary(offer)
+    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "fees": 1}
 
-    summary = await client.get_offer_summary(offer)
-    assert summary == {"offered": {"xch": 5}, "requested": {col.hex(): 1}, "fees": 1}
+    assert await wallet_1_rpc.check_offer_validity(offer)
 
-    assert await client.check_offer_validity(offer)
-
-    all_offers = await client.get_all_offers(file_contents=True)
+    all_offers = await wallet_1_rpc.get_all_offers(file_contents=True)
     assert len(all_offers) == 1
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
 
-    trade_record = await client_2.take_offer(offer, fee=uint64(1))
+    trade_record = await wallet_2_rpc.take_offer(offer, fee=uint64(1))
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
-    await client.cancel_offer(offer.name(), secure=False)
+    await wallet_1_rpc.cancel_offer(offer.name(), secure=False)
 
-    trade_record = await client.get_offer(offer.name(), file_contents=True)
+    trade_record = await wallet_1_rpc.get_offer(offer.name(), file_contents=True)
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
-    await client.cancel_offer(offer.name(), fee=uint64(1), secure=True)
+    await wallet_1_rpc.cancel_offer(offer.name(), fee=uint64(1), secure=True)
 
-    trade_record = await client.get_offer(offer.name())
+    trade_record = await wallet_1_rpc.get_offer(offer.name())
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
-    new_offer, new_trade_record = await client.create_offer_for_ids({uint32(1): -5, cat_0_id: 1}, fee=uint64(1))
-    all_offers = await client.get_all_offers()
+    new_offer, new_trade_record = await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_wallet_id: 1}, fee=uint64(1)
+    )
+    all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 2
 
     await farm_transaction_block(full_node_api, wallet_node)
@@ -717,30 +695,30 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         trade_record = await client.get_offer(trade.name())
         return TradeStatus(trade_record.status) == TradeStatus.CONFIRMED
 
-    await time_out_assert(15, is_trade_confirmed, True, client, offer)
+    await time_out_assert(15, is_trade_confirmed, True, wallet_1_rpc, offer)
 
     # Test trade sorting
     def only_ids(trades):
         return [t.trade_id for t in trades]
 
-    trade_record = await client.get_offer(offer.name())
-    all_offers = await client.get_all_offers(include_completed=True)  # confirmed at index descending
+    trade_record = await wallet_1_rpc.get_offer(offer.name())
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True)  # confirmed at index descending
     assert len(all_offers) == 2
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
-    all_offers = await client.get_all_offers(include_completed=True, reverse=True)  # confirmed at index ascending
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, reverse=True)  # confirmed at index ascending
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await client.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, sort_key="RELEVANCE")  # most relevant
     assert only_ids(all_offers) == only_ids([new_trade_record, trade_record])
-    all_offers = await client.get_all_offers(
+    all_offers = await wallet_1_rpc.get_all_offers(
         include_completed=True, sort_key="RELEVANCE", reverse=True
     )  # least relevant
     assert only_ids(all_offers) == only_ids([trade_record, new_trade_record])
     # Test pagination
-    all_offers = await client.get_all_offers(include_completed=True, start=0, end=1)
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=1)
     assert len(all_offers) == 1
-    all_offers = await client.get_all_offers(include_completed=True, start=50)
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=50)
     assert len(all_offers) == 0
-    all_offers = await client.get_all_offers(include_completed=True, start=0, end=50)
+    all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=50)
     assert len(all_offers) == 2
 
 
