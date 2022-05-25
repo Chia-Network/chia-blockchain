@@ -92,7 +92,7 @@ export default function PlotAddDirectoryDialog(props: Props) {
         </Typography>
         <Box display="flex">
           <List dense>
-            {directories.map((dir: string) => (
+            {directories?.map((dir: string) => (
               <ListItem key={dir}>
                 <ListItemAvatar>
                   <Avatar>
