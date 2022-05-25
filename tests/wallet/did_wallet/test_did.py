@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 import pytest
 from blspy import AugSchemeMPL
@@ -597,8 +598,7 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         # Check if the DID wallet is created in the wallet2
-        await time_out_assert(60, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
-
+        await time_out_assert(30, len, 2, wallet_node_2.wallet_state_manager.wallets)
         # Get the new DID wallet
         did_wallets = list(
             filter(
@@ -606,7 +606,7 @@ class TestDIDWallet:
                 await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
             )
         )
-        did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
+        did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         if with_recovery:
             assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
