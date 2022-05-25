@@ -201,8 +201,10 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
-        for i in range(6000):
-            await ws_con._send_message(new_tx_message)
+        with pytest.raises(ConnectionResetError):
+            for i in range(6000):
+                await ws_con._send_message(new_tx_message)
+                await asyncio.sleep(0)
         await asyncio.sleep(1)
 
         def is_closed():

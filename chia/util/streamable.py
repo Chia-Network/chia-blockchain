@@ -3,44 +3,16 @@ from __future__ import annotations
 import dataclasses
 import io
 import pprint
-import sys
 from enum import Enum
-from typing import (
-    Any,
-    BinaryIO,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    get_type_hints,
-    overload,
-)
+from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
 
 from blspy import G1Element, G2Element, PrivateKey
-from typing_extensions import Literal
+from typing_extensions import Literal, get_args, get_origin
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import int64, int512, uint32, uint64, uint128
-
-if sys.version_info < (3, 8):
-
-    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
-        return getattr(t, "__args__", ())
-
-    def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
-        return getattr(t, "__origin__", None)
-
-else:
-
-    from typing import get_args, get_origin
-
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -74,12 +46,14 @@ _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
 ParseFunctionType = Callable[[BinaryIO], object]
 StreamFunctionType = Callable[[object, BinaryIO], None]
+ConvertFunctionType = Callable[[object], object]
 
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
 FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Dict[str, Type[object]]] = {}
 STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[StreamFunctionType]] = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]] = {}
+CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionType]] = {}
 
 
 def is_type_List(f_type: object) -> bool:
@@ -97,91 +71,139 @@ def is_type_Tuple(f_type: object) -> bool:
     return get_origin(f_type) == tuple or f_type == tuple
 
 
-def dataclass_from_dict(klass: Type[Any], d: Any) -> Any:
+def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
+    if item is None:
+        return None
+    return convert_func(item)
+
+
+def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Tuple[Any, ...]) -> Tuple[Any, ...]:
+    tuple_data = []
+    for i in range(len(items)):
+        tuple_data.append(convert_funcs[i](items[i]))
+    return tuple(tuple_data)
+
+
+def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
+    list_data = []
+    for item in items:
+        list_data.append(convert_func(item))
+    return list_data
+
+
+def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
+    if type(item) == f_type:
+        return item
+    return f_type(hexstr_to_bytes(item))
+
+
+def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
+    if type(item) == f_type:
+        return item
+    if hasattr(f_type, "from_bytes_unchecked"):
+        from_bytes_method = f_type.from_bytes_unchecked
+    else:
+        from_bytes_method = f_type.from_bytes
+    return from_bytes_method(hexstr_to_bytes(item))
+
+
+def convert_primitive(f_type: Type[Any], item: Any) -> Any:
+    if type(item) == f_type:
+        return item
+    return f_type(item)
+
+
+def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     """
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
     """
-    if is_type_SpecificOptional(klass):
-        # Type is optional, data is either None, or Any
-        if d is None:
-            return None
-        return dataclass_from_dict(get_args(klass)[0], d)
-    elif is_type_Tuple(klass):
-        # Type is tuple, can have multiple different types inside
-        i = 0
-        klass_properties = []
-        for item in d:
-            klass_properties.append(dataclass_from_dict(klass.__args__[i], item))
-            i = i + 1
-        return tuple(klass_properties)
-    elif dataclasses.is_dataclass(klass):
-        # Type is a dataclass, data is a dictionary
+    if type(item) == klass:
+        return item
+    obj = object.__new__(klass)
+    if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
+        # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
+        # functions only.
+        convert_funcs = []
         hints = get_type_hints(klass)
-        fieldtypes = {f.name: hints.get(f.name, f.type) for f in dataclasses.fields(klass)}
-        return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    elif is_type_List(klass):
-        # Type is a list, data is a list
-        return [dataclass_from_dict(get_args(klass)[0], item) for item in d]
-    elif issubclass(klass, bytes):
-        # Type is bytes, data is a hex string
-        return klass(hexstr_to_bytes(d))
-    elif klass.__name__ in unhashable_types:
+        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(klass)}
+
+        for _, f_type in fields.items():
+            convert_funcs.append(function_to_convert_one_item(f_type))
+
+        FIELDS_FOR_STREAMABLE_CLASS[klass] = fields
+        CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass] = convert_funcs
+    else:
+        fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
+        convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
+
+    for field, convert_func in zip(fields, convert_funcs):
+        object.__setattr__(obj, field, convert_func(item[field]))
+    return obj
+
+
+def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
+    if is_type_SpecificOptional(f_type):
+        convert_inner_func = function_to_convert_one_item(get_args(f_type)[0])
+        return lambda item: convert_optional(convert_inner_func, item)
+    elif is_type_Tuple(f_type):
+        args = get_args(f_type)
+        convert_inner_tuple_funcs = []
+        for arg in args:
+            convert_inner_tuple_funcs.append(function_to_convert_one_item(arg))
+        # Ignoring for now as the proper solution isn't obvious
+        return lambda items: convert_tuple(convert_inner_tuple_funcs, items)  # type: ignore[arg-type]
+    elif is_type_List(f_type):
+        inner_type = get_args(f_type)[0]
+        convert_inner_func = function_to_convert_one_item(inner_type)
+        # Ignoring for now as the proper solution isn't obvious
+        return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
+    elif dataclasses.is_dataclass(f_type):
+        # Type is a dataclass, data is a dictionary
+        return lambda item: dataclass_from_dict(f_type, item)
+    elif issubclass(f_type, bytes):
+        # Type is bytes, data is a hex string or bytes
+        return lambda item: convert_byte_type(f_type, item)
+    elif f_type.__name__ in unhashable_types:
         # Type is unhashable (bls type), so cast from hex string
-        return klass.from_bytes(hexstr_to_bytes(d))
+        return lambda item: convert_unhashable_type(f_type, item)
     else:
         # Type is a primitive, cast with correct class
-        return klass(d)
+        return lambda item: convert_primitive(f_type, item)
 
 
-@overload
-def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...]]) -> List[Any]:
-    ...
-
-
-@overload
-def recurse_jsonify(d: Dict[str, Any]) -> Dict[str, Any]:
-    ...
-
-
-def recurse_jsonify(d: Union[List[Any], Tuple[Any, ...], Dict[str, Any]]) -> Union[List[Any], Dict[str, Any]]:
+def recurse_jsonify(d: Any) -> Any:
     """
     Makes bytes objects and unhashable types into strings with 0x, and makes large ints into
     strings.
     """
-    if isinstance(d, list) or isinstance(d, tuple):
+    if dataclasses.is_dataclass(d):
+        new_dict = {}
+        for field in dataclasses.fields(d):
+            new_dict[field.name] = recurse_jsonify(getattr(d, field.name))
+        return new_dict
+
+    elif isinstance(d, list) or isinstance(d, tuple):
         new_list = []
         for item in d:
-            if type(item).__name__ in unhashable_types or issubclass(type(item), bytes):
-                item = f"0x{bytes(item).hex()}"
-            if isinstance(item, dict):
-                item = recurse_jsonify(item)
-            if isinstance(item, list):
-                item = recurse_jsonify(item)
-            if isinstance(item, tuple):
-                item = recurse_jsonify(item)
-            if isinstance(item, Enum):
-                item = item.name
-            if isinstance(item, int) and type(item) in big_ints:
-                item = int(item)
-            new_list.append(item)
-        d = new_list
+            new_list.append(recurse_jsonify(item))
+        return new_list
 
-    else:
-        for key, value in d.items():
-            if type(value).__name__ in unhashable_types or issubclass(type(value), bytes):
-                d[key] = f"0x{bytes(value).hex()}"
-            if isinstance(value, dict):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, list):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, tuple):
-                d[key] = recurse_jsonify(value)
-            if isinstance(value, Enum):
-                d[key] = value.name
-            if isinstance(value, int) and type(value) in big_ints:
-                d[key] = int(value)
-    return d
+    elif isinstance(d, dict):
+        new_dict = {}
+        for name, val in d.items():
+            new_dict[name] = recurse_jsonify(val)
+        return new_dict
+
+    elif type(d).__name__ in unhashable_types or issubclass(type(d), bytes):
+        return f"0x{bytes(d).hex()}"
+    elif isinstance(d, Enum):
+        return d.name
+    elif isinstance(d, int):
+        return int(d)
+    elif d is None or type(d) == str:
+        return d
+    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -239,10 +261,13 @@ def parse_tuple(f: BinaryIO, list_parse_inner_type_f: List[ParseFunctionType]) -
     return tuple(full_list)
 
 
-def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int) -> Any:
+def parse_size_hints(f: BinaryIO, f_type: Type[Any], bytes_to_read: int, unchecked: bool) -> Any:
     bytes_read = f.read(bytes_to_read)
     assert bytes_read is not None and len(bytes_read) == bytes_to_read
-    return f_type.from_bytes(bytes_read)
+    if unchecked:
+        return f_type.from_bytes_unchecked(bytes_read)
+    else:
+        return f_type.from_bytes(bytes_read)
 
 
 def parse_str(f: BinaryIO) -> str:
@@ -332,6 +357,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     stream_functions = []
     parse_functions = []
+    convert_functions = []
     try:
         hints = get_type_hints(cls)
         fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(cls)}
@@ -343,9 +369,11 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     for _, f_type in fields.items():
         stream_functions.append(cls.function_to_stream_one_item(f_type))
         parse_functions.append(cls.function_to_parse_one_item(f_type))
+        convert_functions.append(function_to_convert_one_item(f_type))
 
     STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
+    CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = convert_functions
     return cls
 
 
@@ -425,10 +453,14 @@ class Streamable:
             try:
                 item = f_type(item)
             except (TypeError, AttributeError, ValueError):
+                if hasattr(f_type, "from_bytes_unchecked"):
+                    from_bytes_method: Callable[[bytes], Any] = f_type.from_bytes_unchecked
+                else:
+                    from_bytes_method = f_type.from_bytes
                 try:
-                    item = f_type.from_bytes(item)
+                    item = from_bytes_method(item)
                 except Exception:
-                    item = f_type.from_bytes(bytes(item))
+                    item = from_bytes_method(bytes(item))
         if not isinstance(item, f_type):
             raise ValueError(f"Wrong type for {f_name}")
         return item
@@ -475,9 +507,12 @@ class Streamable:
             inner_types = get_args(f_type)
             list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
             return lambda f: parse_tuple(f, list_parse_inner_type_f)
+        if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
+            bytes_to_read = size_hints[f_type.__name__]
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
         if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
             bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read)
+            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
         if f_type is str:
             return parse_str
         raise NotImplementedError(f"Type {f_type} does not have parse")
@@ -556,13 +591,14 @@ class Streamable:
         return bytes(f.getvalue())
 
     def __str__(self: Any) -> str:
-        return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
+        return pp.pformat(recurse_jsonify(self))
 
     def __repr__(self: Any) -> str:
-        return pp.pformat(recurse_jsonify(dataclasses.asdict(self)))
+        return pp.pformat(recurse_jsonify(self))
 
     def to_json_dict(self) -> Dict[str, Any]:
-        return recurse_jsonify(dataclasses.asdict(self))
+        ret: Dict[str, Any] = recurse_jsonify(self)
+        return ret
 
     @classmethod
     def from_json_dict(cls: Any, json_dict: Dict[str, Any]) -> Any:

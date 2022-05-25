@@ -152,16 +152,14 @@ async def run_sync_test(
                                 )
                                 await full_node.respond_block(full_node_protocol.RespondBlock(b))
                         else:
-                            success, advanced_peak, fork_height, coin_changes = await full_node.receive_block_batch(
-                                block_batch, peer, None
-                            )
+                            success, summary = await full_node.receive_block_batch(block_batch, peer, None)
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                             if not success:
                                 raise RuntimeError("failed to ingest block batch")
 
-                            assert advanced_peak
+                            assert summary is not None
 
                         time_per_block = (time.monotonic() - batch_start_time) / len(block_batch)
                         if not worst_batch_height or worst_batch_time_per_block > time_per_block:
@@ -174,13 +172,11 @@ async def run_sync_test(
                         f"\rheight {height} {time_per_block:0.2f} s/block   ",
                         end="",
                     )
-                    batch_start_time = time.monotonic()
                     block_batch = []
                     if check_log.exit_with_failure:
                         raise RuntimeError("error printed to log. exiting")
 
                     if counter >= 100000:
-                        batch_start_time = time.monotonic()
                         counter = 0
                         print()
                 end_time = time.monotonic()

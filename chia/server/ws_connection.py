@@ -115,7 +115,7 @@ class WSChiaConnection:
         server_port: int,
         local_type: NodeType,
         capabilities: List[Tuple[uint16, str]],
-    ):
+    ) -> None:
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -193,7 +193,6 @@ class WSChiaConnection:
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
-        return True
 
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """

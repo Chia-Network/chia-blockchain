@@ -15,11 +15,10 @@ from tests.block_tools import test_constants
 from tests.setup_nodes import setup_harvester_farmer
 
 
-async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> bool:
+async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
     timeout = aiohttp.ClientTimeout(total=10)
-    session = aiohttp.ClientSession(timeout=timeout)
     dummy_port = 5  # this does not matter
-    try:
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         incoming_queue: asyncio.Queue = asyncio.Queue()
         url = f"wss://{self_hostname}:{server._port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
@@ -37,19 +36,14 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             100,
             30,
         )
-        handshake = await wsc.perform_handshake(
+        await wsc.perform_handshake(
             server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE, server._local_capabilities
         )
-        await session.close()
-        return handshake
-    except Exception:
-        await session.close()
-        return False
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer(bt):
-    async for _ in setup_harvester_farmer(bt, test_constants, start_services=True):
+async def harvester_farmer(bt, tmp_path):
+    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
         yield _
 
 
@@ -82,8 +76,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(farmer_server, self_hostname, ssl_context)
-        assert connected is True
+        await establish_connection(farmer_server, self_hostname, ssl_context)
 
         # Create not authenticated cert
         pub_crt = farmer_server._private_key_path.parent / "non_valid.crt"
@@ -94,13 +87,13 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             farmer_server.chia_ca_crt_path, farmer_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(farmer_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorCertificateError):
+            await establish_connection(farmer_server, self_hostname, ssl_context)
         ssl_context = ssl_context_for_client(
             farmer_server.ca_private_crt_path, farmer_server.ca_private_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(farmer_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ServerDisconnectedError):
+            await establish_connection(farmer_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
     async def test_full_node(self, wallet_node_sim_and_wallet, self_hostname):
@@ -120,8 +113,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             full_node_server.chia_ca_crt_path, full_node_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(full_node_server, self_hostname, ssl_context)
-        assert connected is True
+        await establish_connection(full_node_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
     async def test_wallet(self, wallet_node_sim_and_wallet, self_hostname):
@@ -137,8 +129,8 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             wallet_server.chia_ca_crt_path, wallet_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(wallet_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(wallet_server, self_hostname, ssl_context)
 
         # Not even signed by private cert
         priv_crt = wallet_server._private_key_path.parent / "valid.crt"
@@ -152,8 +144,8 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             wallet_server.ca_private_crt_path, wallet_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(wallet_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(wallet_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
     async def test_harvester(self, harvester_farmer, self_hostname):
@@ -172,8 +164,8 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             harvester_server.chia_ca_crt_path, harvester_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(harvester_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(harvester_server, self_hostname, ssl_context)
 
         # Not even signed by private cert
         priv_crt = harvester_server._private_key_path.parent / "valid.crt"
@@ -187,8 +179,8 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             harvester_server.ca_private_crt_path, harvester_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(harvester_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(harvester_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
     async def test_introducer(self, introducer, self_hostname):
@@ -206,8 +198,7 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             introducer_server.chia_ca_crt_path, introducer_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(introducer_server, self_hostname, ssl_context)
-        assert connected is True
+        await establish_connection(introducer_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
     async def test_timelord(self, timelord, self_hostname):
@@ -225,8 +216,8 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             timelord_server.chia_ca_crt_path, timelord_server.chia_ca_key_path, pub_crt, pub_key
         )
-        connected = await establish_connection(timelord_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(timelord_server, self_hostname, ssl_context)
 
         # Not even signed by private cert
         priv_crt = timelord_server._private_key_path.parent / "valid.crt"
@@ -240,5 +231,5 @@ class TestSSL:
         ssl_context = ssl_context_for_client(
             timelord_server.ca_private_crt_path, timelord_server.ca_private_key_path, priv_crt, priv_key
         )
-        connected = await establish_connection(timelord_server, self_hostname, ssl_context)
-        assert connected is False
+        with pytest.raises(aiohttp.ClientConnectorError):
+            await establish_connection(timelord_server, self_hostname, ssl_context)

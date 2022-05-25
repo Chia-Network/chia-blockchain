@@ -54,6 +54,7 @@ class Service:
         connect_to_daemon=True,
         running_new_process=True,
         service_name_prefix="",
+        max_request_body_size: Optional[int] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -67,6 +68,7 @@ class Service:
         self._rpc_task: Optional[asyncio.Task] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
+        self.max_request_body_size = max_request_body_size
         self._running_new_process = running_new_process
 
         # when we start this service as a component of an existing process,
@@ -159,6 +161,7 @@ class Service:
             self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
+        self._advertised_port = self._server.get_port()
 
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
@@ -179,6 +182,8 @@ class Service:
                     self.root_path,
                     self.config,
                     self._connect_to_daemon,
+                    max_request_body_size=self.max_request_body_size,
+                    name=self._service_name + "_rpc",
                 )
             )
 
@@ -246,7 +251,7 @@ class Service:
 
                 async def close_rpc_server() -> None:
                     if self._rpc_task:
-                        await (await self._rpc_task)()
+                        await (await self._rpc_task)[0]()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 

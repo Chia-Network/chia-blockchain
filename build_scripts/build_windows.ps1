@@ -3,77 +3,15 @@
 $ErrorActionPreference = "Stop"
 
 mkdir build_scripts\win_build
-Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 git status
-
-Write-Output "   ---"
-Write-Output "curl miniupnpc"
-Write-Output "   ---"
-# download.chia.net is the CDN url behind all the files that are actually on pypi.chia.net/simple now
-Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.2.2-cp39-cp39-win_amd64.whl" -OutFile "miniupnpc-2.2.2-cp39-cp39-win_amd64.whl"
-Write-Output "Using win_amd64 python 3.9 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
-Write-Output "Actual build from https://github.com/miniupnp/miniupnp/commit/7783ac1545f70e3341da5866069bde88244dd848"
-If ($LastExitCode -gt 0){
-    Throw "Failed to download miniupnpc!"
-}
-else
-{
-    Set-Location -Path - -PassThru
-    Write-Output "miniupnpc download successful."
-}
-
-Write-Output "   ---"
-Write-Output "Create venv - python3.9 is required in PATH"
-Write-Output "   ---"
-python -m venv venv
-. .\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install wheel pep517
-pip install pywin32
-pip install pyinstaller==5.0
-
-Write-Output "   ---"
-# The environment variable CHIA_INSTALLER_VERSION needs to be defined
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
   Write-Output "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0"
-  }
+}
 Write-Output "Chia Version is: $env:CHIA_INSTALLER_VERSION"
 Write-Output "   ---"
-
-Write-Output "Checking if madmax exists"
-Write-Output "   ---"
-if (Test-Path -Path .\madmax\) {
-    Write-Output "   madmax exists, moving to expected directory"
-    mv .\madmax\ .\venv\lib\site-packages\
-}
-
-Write-Output "Checking if bladebit exists"
-Write-Output "   ---"
-if (Test-Path -Path .\bladebit\) {
-    Write-Output "   bladebit exists, moving to expected directory"
-    mv .\bladebit\ .\venv\lib\site-packages\
-}
-
-Write-Output "   ---"
-Write-Output "Build chia-blockchain wheels"
-Write-Output "   ---"
-pip wheel --use-pep517 --extra-index-url https://pypi.chia.net/simple/ -f . --wheel-dir=.\build_scripts\win_build .
-
-Write-Output "   ---"
-Write-Output "Install chia-blockchain wheels into venv with pip"
-Write-Output "   ---"
-
-Write-Output "pip install miniupnpc"
-Set-Location -Path ".\build_scripts" -PassThru
-pip install --no-index --find-links=.\win_build\ miniupnpc
-# Write-Output "pip install setproctitle"
-# pip install setproctitle==1.2.2
-
-Write-Output "pip install chia-blockchain"
-pip install --no-index --find-links=.\win_build\ chia-blockchain
 
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"

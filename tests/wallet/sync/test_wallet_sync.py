@@ -1,6 +1,3 @@
-# flake8: noqa: F811, F401
-import asyncio
-
 import pytest
 from colorlog import getLogger
 
@@ -8,12 +5,11 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, capabilities
-from chia.protocols.wallet_protocol import RejectBlockHeaders, RespondBlockHeaders
+from chia.protocols.shared_protocol import Capability
+from chia.protocols.wallet_protocol import RespondBlockHeaders
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
@@ -156,9 +152,8 @@ class TestWalletSync:
                 disable_capabilities=[Capability.BLOCK_HEADERS.name],
             ),
             dict(
-                disable_capabilities=
                 # this one should be ignored
-                [Capability.BASE.name],
+                disable_capabilities=[Capability.BASE.name],
             ),
         ],
         indirect=True,
