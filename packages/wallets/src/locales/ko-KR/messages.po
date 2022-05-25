@@ -384,6 +384,7 @@ msgstr ""
 #~ msgid "Can be backed up to mnemonic seed"
 #~ msgstr "Can be backed up to mnemonic seed"
 
+#: src/components/PasteMnemonic.tsx:78
 #: src/components/WalletRenameDialog.tsx:90
 #: src/components/offers/OfferDataEntryDialog.tsx:67
 #: src/components/offers/OfferShareDialog.tsx:428
@@ -989,7 +990,7 @@ msgstr ""
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr "Enter a strong passphrase to secure your keys:"
 
-#: src/components/WalletImport.tsx:84
+#: src/components/WalletImport.tsx:133
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "치아 지갑을 복구하기 위해서 24자로 된 니모닉 단어를 입력하세요."
 
@@ -1321,11 +1322,12 @@ msgstr ""
 msgid "If you would like to speed up the transaction, please delete unconfirmed transactions and retry with a higher fee."
 msgstr ""
 
+#: src/components/PasteMnemonic.tsx:86
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
 msgstr ""
 
-#: src/components/WalletImport.tsx:81
+#: src/components/WalletImport.tsx:130
 msgid "Import Wallet from Mnemonics"
 msgstr "니모닉으로부터 지갑 가져오기"
 
@@ -1390,12 +1392,14 @@ msgid "Install Keybase"
 msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:358
-msgid "Insufficient funds available to accept offer. Ensure that your\n"
+msgid ""
+"Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
 #: src/components/offers/OfferEditor.tsx:166
-msgid "Insufficient funds available to create offer. Ensure that your\n"
+msgid ""
+"Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
@@ -1686,7 +1690,7 @@ msgstr "새 지갑"
 #~ msgstr "New passphrase is the same as your current passphrase"
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:111
+#: src/components/WalletImport.tsx:164
 msgid "Next"
 msgstr "다음"
 
@@ -1923,6 +1927,14 @@ msgstr ""
 #: src/components/settings/Settings.tsx:124
 #~ msgid "Passphrase support requires migrating your keys to a new keyring"
 #~ msgstr "Passphrase support requires migrating your keys to a new keyring"
+
+#: src/components/WalletImport.tsx:95
+msgid "Paste Mnemonic"
+msgstr ""
+
+#: src/components/PasteMnemonic.tsx:55
+msgid "Paste Mnemonic (24 words)"
+msgstr ""
 
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
@@ -2843,7 +2855,6 @@ msgstr ""
 #~ msgid "State"
 #~ msgstr "State"
 
-#: src/components/WalletStatusCard.tsx:22
 #: src/components/offers/OfferManager.tsx:277
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
@@ -3076,8 +3087,12 @@ msgstr "이것은 들어오고 나가는 보류 트랜잭션의 합계입니다 
 #~ msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
 #: src/components/standard/WalletStandardCards.tsx:16
-msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "이것은 개인 키에 의해 제어되는 현재 피크 하위 블록에서 블록 체인의 총 chia 양입니다. 여기에는 냉동 농업 보상이 포함되지만 보류중인 들어오고 나가는 거래는 포함되지 않습니다."
+msgid "This is the total amount of chia in the blockchain at the current peak block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr ""
+
+#: src/components/standard/WalletStandardCards.tsx:16
+#~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+#~ msgstr "이것은 개인 키에 의해 제어되는 현재 피크 하위 블록에서 블록 체인의 총 chia 양입니다. 여기에는 냉동 농업 보상이 포함되지만 보류중인 들어오고 나가는 거래는 포함되지 않습니다."
 
 #: src/components/standard/WalletStandardCards.tsx:31
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -3682,6 +3697,10 @@ msgstr ""
 #~ msgid "Your passphrase has been updated"
 #~ msgstr "Your passphrase has been updated"
 
+#: src/components/WalletImport.tsx:71
+msgid "Your pasted list does not include 24 valid mnemonic words."
+msgstr ""
+
 #: src/util/getDescriptiveError.ts:5
 #~ msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
 #~ msgstr "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3691,12 +3710,12 @@ msgstr ""
 #~ msgstr "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 
 #: src/components/WalletStatusCard.tsx:41
-msgid "connections:"
-msgstr "연결:"
+#~ msgid "connections:"
+#~ msgstr "연결:"
 
 #: src/components/WalletStatusCard.tsx:33
-msgid "height:"
-msgstr "높이:"
+#~ msgid "height:"
+#~ msgstr "높이:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
 #~ msgid "not synced"
@@ -3711,16 +3730,16 @@ msgstr "높이:"
 #~ msgstr "p2_singleton_puzzle_hash is not defined"
 
 #: src/components/WalletStatusCard.tsx:27
-msgid "status:"
-msgstr "상태:"
+#~ msgid "status:"
+#~ msgstr "상태:"
 
 #: src/components/WalletStatusCard.tsx:29
-msgid "synced"
-msgstr "동기화됨"
+#~ msgid "synced"
+#~ msgstr "동기화됨"
 
 #: src/components/WalletStatusCard.tsx:29
-msgid "syncing"
-msgstr "동기화중"
+#~ msgid "syncing"
+#~ msgstr "동기화중"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"
@@ -3779,4 +3798,3 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-

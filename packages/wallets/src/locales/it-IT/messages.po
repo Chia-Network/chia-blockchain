@@ -384,6 +384,7 @@ msgstr "Prima di pubblicare un'offerta su Keybase sul canale #{KeybaseChannelNam
 #~ msgid "Can be backed up to mnemonic seed"
 #~ msgstr "Can be backed up to mnemonic seed"
 
+#: src/components/PasteMnemonic.tsx:78
 #: src/components/WalletRenameDialog.tsx:90
 #: src/components/offers/OfferDataEntryDialog.tsx:67
 #: src/components/offers/OfferShareDialog.tsx:428
@@ -989,7 +990,7 @@ msgstr "Trascina e rilascia il tuo file di backup per il recovery"
 #~ msgid "Enter a strong passphrase to secure your keys:"
 #~ msgstr "Enter a strong passphrase to secure your keys:"
 
-#: src/components/WalletImport.tsx:84
+#: src/components/WalletImport.tsx:133
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Inserisci le 24 parole mnemoniche che hai salvato per poter ripristinare il tuo wallet Chia."
 
@@ -1321,11 +1322,12 @@ msgstr "Se hai già condiviso il tuo file di offerta, devi inviare una transazio
 msgid "If you would like to speed up the transaction, please delete unconfirmed transactions and retry with a higher fee."
 msgstr "Se si desidera accelerare la transazione, si prega di eliminare le transazioni non confermate e riprovare con una commissione più alta."
 
+#: src/components/PasteMnemonic.tsx:86
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
 msgstr "Importa"
 
-#: src/components/WalletImport.tsx:81
+#: src/components/WalletImport.tsx:130
 msgid "Import Wallet from Mnemonics"
 msgstr "Importa Wallet dalle Mnemonic"
 
@@ -1390,15 +1392,19 @@ msgid "Install Keybase"
 msgstr "Installa Keybase"
 
 #: src/components/offers/OfferViewer.tsx:358
-msgid "Insufficient funds available to accept offer. Ensure that your\n"
+msgid ""
+"Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr "Fondi insufficienti per accettare l'offerta. Assicurati che il tuo saldo spendibile\n"
+msgstr ""
+"Fondi insufficienti per accettare l'offerta. Assicurati che il tuo saldo spendibile\n"
 "sia sufficiente a coprire l'importo dell'offerta."
 
 #: src/components/offers/OfferEditor.tsx:166
-msgid "Insufficient funds available to create offer. Ensure that your\n"
+msgid ""
+"Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr "Fondi insufficienti per creare l'offerta. Assicurati che il tuo saldo spendibile\n"
+msgstr ""
+"Fondi insufficienti per creare l'offerta. Assicurati che il tuo saldo spendibile\n"
 "sia sufficiente a coprire l'importo dell'offerta."
 
 #: src/components/create/createRLAdmin.jsx:217
@@ -1688,7 +1694,7 @@ msgstr "Nuovo Wallet"
 #~ msgstr "New passphrase is the same as your current passphrase"
 
 #: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:111
+#: src/components/WalletImport.tsx:164
 msgid "Next"
 msgstr "Prossimo"
 
@@ -1925,6 +1931,14 @@ msgstr "Moneta Padre"
 #: src/components/settings/Settings.tsx:124
 #~ msgid "Passphrase support requires migrating your keys to a new keyring"
 #~ msgstr "Passphrase support requires migrating your keys to a new keyring"
+
+#: src/components/WalletImport.tsx:95
+msgid "Paste Mnemonic"
+msgstr ""
+
+#: src/components/PasteMnemonic.tsx:55
+msgid "Paste Mnemonic (24 words)"
+msgstr ""
 
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
@@ -2845,7 +2859,6 @@ msgstr "Portafoglio Standard"
 #~ msgid "State"
 #~ msgstr "State"
 
-#: src/components/WalletStatusCard.tsx:22
 #: src/components/offers/OfferManager.tsx:277
 #: src/components/offers/OfferViewer.tsx:177
 msgid "Status"
@@ -3078,8 +3091,12 @@ msgstr "Questa è la somma delle transazioni in sospeso in entrata e in uscita (
 #~ msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
 #: src/components/standard/WalletStandardCards.tsx:16
-msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sottoblocco di picco che è controllato dalle tue chiavi private. Questo include le ricompense da farming congelate, ma non le transazioni in entrata e uscita che sono in attesa."
+msgid "This is the total amount of chia in the blockchain at the current peak block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr ""
+
+#: src/components/standard/WalletStandardCards.tsx:16
+#~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+#~ msgstr "Questo è l'ammontare totale di chia nella blockchain nell'attuale sottoblocco di picco che è controllato dalle tue chiavi private. Questo include le ricompense da farming congelate, ma non le transazioni in entrata e uscita che sono in attesa."
 
 #: src/components/standard/WalletStandardCards.tsx:31
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -3684,6 +3701,10 @@ msgstr "La tua offerta:"
 #~ msgid "Your passphrase has been updated"
 #~ msgstr "Your passphrase has been updated"
 
+#: src/components/WalletImport.tsx:71
+msgid "Your pasted list does not include 24 valid mnemonic words."
+msgstr ""
+
 #: src/util/getDescriptiveError.ts:5
 #~ msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
 #~ msgstr "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3693,12 +3714,12 @@ msgstr "La tua offerta:"
 #~ msgstr "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 
 #: src/components/WalletStatusCard.tsx:41
-msgid "connections:"
-msgstr "connessioni:"
+#~ msgid "connections:"
+#~ msgstr "connessioni:"
 
 #: src/components/WalletStatusCard.tsx:33
-msgid "height:"
-msgstr "altezza:"
+#~ msgid "height:"
+#~ msgstr "altezza:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
 #~ msgid "not synced"
@@ -3713,16 +3734,16 @@ msgstr "altezza:"
 #~ msgstr "p2_singleton_puzzle_hash is not defined"
 
 #: src/components/WalletStatusCard.tsx:27
-msgid "status:"
-msgstr "stato:"
+#~ msgid "status:"
+#~ msgstr "stato:"
 
 #: src/components/WalletStatusCard.tsx:29
-msgid "synced"
-msgstr "sincronizzato"
+#~ msgid "synced"
+#~ msgstr "sincronizzato"
 
 #: src/components/WalletStatusCard.tsx:29
-msgid "syncing"
-msgstr "sincronizzando"
+#~ msgid "syncing"
+#~ msgstr "sincronizzando"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"
@@ -3781,4 +3802,3 @@ msgstr "{mojos, plural, one {mojo} other {mojos}}"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-

@@ -1270,7 +1270,7 @@ msgstr "Läser in en lista över nycklarna"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:111
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
 msgstr "Logga ut"
@@ -1279,7 +1279,6 @@ msgstr "Logga ut"
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
 msgstr "Logga ut"
@@ -3215,4 +3214,3 @@ msgstr "{minPassphraseLength, plural, one {Lösenfraser måste vara minst # teck
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-

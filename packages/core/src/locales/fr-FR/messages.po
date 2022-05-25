@@ -1270,7 +1270,7 @@ msgstr "Chargement de la liste des clés"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:111
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
 msgstr "Se déconnecter"
@@ -1279,7 +1279,6 @@ msgstr "Se déconnecter"
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
 msgstr "Déconnexion"
@@ -3215,4 +3214,3 @@ msgstr "{minPassphraseLength, plural, one {Les phrases secrètes doivent comport
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-
