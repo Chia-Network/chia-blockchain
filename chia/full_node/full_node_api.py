@@ -1149,6 +1149,7 @@ class FullNodeAPI:
                 coins_map.append((puzzle_hash, coins))
             response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, None)
         else:
+            coins_map_filtered = [(ph, c) for (ph, c) in coins_map if ph in request.puzzle_hashes]
             # Create addition Merkle set
             addition_merkle_set = MerkleSet()
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
@@ -1170,7 +1171,7 @@ class FullNodeAPI:
                     coins_map.append((puzzle_hash, []))
                     assert not result
                     proofs_map.append((puzzle_hash, proof, None))
-            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, proofs_map)
+            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map_filtered, proofs_map)
         msg = make_msg(ProtocolMessageTypes.respond_additions, response)
         return msg
 
