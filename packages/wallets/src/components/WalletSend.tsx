@@ -67,7 +67,7 @@ export default function WalletSend(props: SendCardProps) {
     return null;
   }
 
-  const syncing = walletState.syncing;
+  const syncing = !!walletState?.syncing;
 
   async function farm() {
     if (addressValue) {
