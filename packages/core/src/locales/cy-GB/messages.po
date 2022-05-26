@@ -8,7 +8,7 @@ msgstr ""
 "Language: cy_GB\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-09 18:33\n"
+"PO-Revision-Date: 2022-05-26 15:59\n"
 "Last-Translator: \n"
 "Language-Team: Welsh\n"
 "Plural-Forms: nplurals=6; plural=(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n == 3) ? 3 : ((n == 6) ? 4 : 5))));\n"
@@ -1270,7 +1270,7 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:111
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
 msgstr ""
@@ -1279,7 +1279,6 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
 msgstr ""
