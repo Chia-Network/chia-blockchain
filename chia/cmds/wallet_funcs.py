@@ -654,7 +654,7 @@ async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
         wallet_id = response["wallet_id"]
         my_did = response["my_did"]
         print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
-        print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+        print(f"Successfully created a DID in the newly created DID wallet: {my_did}")
     except Exception as e:
         print(f"Failed to create DID wallet: {e}")
 

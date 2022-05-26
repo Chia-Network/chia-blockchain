@@ -3,7 +3,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Set, Any
 
 from blspy import G1Element, PrivateKey
 
