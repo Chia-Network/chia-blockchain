@@ -845,9 +845,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.mint_nft(
         nft_wallet_id,
         None,
+        None,
         "0xD4584AD463139FA8C0D9F68F4B59F185",
         ["https://www.chia.net/img/branding/chia-logo.svg"],
-        0,
     )
     assert res["success"]
 
@@ -859,7 +859,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
     nft_id = nft_wallet.get_current_nfts()[0].coin.name()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"] == nft_wallet.get_current_nfts()[0].coin.name().hex().upper()
+    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id.hex(), addr, 0)
@@ -877,7 +877,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
     assert nft_info_1 == nft_info
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"] == nft_wallet_1.get_current_nfts()[0].coin.name().hex().upper()
+    assert nft_info_1["nft_coin_id"][2:] == nft_wallet_1.get_current_nfts()[0].coin.name().hex()
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2

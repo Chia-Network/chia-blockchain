@@ -1,14 +1,12 @@
 import json
 import logging
 import time
-from dataclasses import dataclass
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
-from chia.clvm.singleton import SINGLETON_TOP_LAYER_MOD
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -20,11 +18,11 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_puzzles import LAUNCHER_PUZZLE, NFT_METADATA_UPDATER, NFT_STATE_LAYER_MOD_HASH
+from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, NFT_STATE_LAYER_MOD_HASH
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -46,28 +44,6 @@ _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTCoinInfo(Streamable):
-    coin: Coin
-    lineage_proof: LineageProof
-    full_puzzle: Program
-
-
-@streamable
-@dataclass(frozen=True)
-class NFTWalletInfo(Streamable):
-    my_nft_coins: List[NFTCoinInfo]
-    did_wallet_id: Optional[uint32] = None
-
-
-def create_fullpuz(innerpuz: Program, genesis_id: bytes32) -> Program:
-    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((mod_hash, (genesis_id, LAUNCHER_PUZZLE.get_tree_hash())))
-    return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
 class NFTWallet:
@@ -264,7 +240,7 @@ class NFTWallet:
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
             singleton_id,
             metadata,
-            bytes32(uncurried_nft.metdata_updater_hash.atom),
+            bytes32(uncurried_nft.metadata_updater_hash.atom),
             new_inner_puzzle,
         )
         self.log.debug(
@@ -333,8 +309,13 @@ class NFTWallet:
         return provenance_puzzle
 
     async def generate_new_nft(
-        self, metadata: Program, target_puzzle_hash: bytes32 = None, fee: uint64 = uint64(0)
+        self,
+        metadata: Program,
+        royalty_puzzle_hash: bytes32 = None,
+        target_puzzle_hash: bytes32 = None,
+        fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
+        # TODO Set royalty address after NFT1 chialisp finished
         """
         This must be called under the wallet state manager lock
         """
@@ -465,11 +446,13 @@ class NFTWallet:
     async def _make_nft_transaction(
         self, nft_coin_info: NFTCoinInfo, inner_solution: Program, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
-
+        # Update NFT status
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         coin = nft_coin_info.coin
         amount = coin.amount
         full_puzzle = nft_coin_info.full_puzzle
         lineage_proof = nft_coin_info.lineage_proof
+        assert lineage_proof is not None
         self.log.debug("Inner solution: %r", disassemble(inner_solution))
         full_solution = Program.to(
             [
@@ -510,21 +493,23 @@ class NFTWallet:
         return nft_record
 
     async def update_metadata(
-        self, nft_coin_info: NFTCoinInfo, uri: str, fee: uint64 = uint64(0)
+        self, nft_coin_info: NFTCoinInfo, key: str, uri: str, fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:
         coin = nft_coin_info.coin
-        # we're not changing it
 
         uncurried_nft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
 
         puzzle_hash = uncurried_nft.inner_puzzle.get_tree_hash()
         condition_list = [make_create_coin_condition(puzzle_hash, coin.amount, [puzzle_hash])]
-        condition_list.append([int_to_bytes(-24), NFT_METADATA_UPDATER, uri.encode("utf-8")])
+        condition_list.append([int_to_bytes(-24), NFT_METADATA_UPDATER, (key, uri)])
 
-        self.log.info("Attempting to add a url to NFT coin %s in the metadata: %s", nft_coin_info, uri)
+        self.log.info(
+            "Attempting to add urls to NFT coin %s in the metadata: %s", nft_coin_info, uncurried_nft.metadata
+        )
         inner_solution = solution_for_conditions(condition_list)
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
+        self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
     async def transfer_nft(
@@ -544,10 +529,32 @@ class NFTWallet:
         inner_solution = solution_for_conditions(condition_list)
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
+        self.wallet_state_manager.state_changed("nft_coin_transferred", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
     def get_current_nfts(self) -> List[NFTCoinInfo]:
         return self.nft_wallet_info.my_nft_coins
+
+    async def update_coin_status(
+        self, coin_id: bytes32, pending_transaction: bool, in_transaction: bool = False
+    ) -> None:
+        my_nft_coins = self.nft_wallet_info.my_nft_coins
+        target_nft: Optional[NFTCoinInfo] = None
+        for coin_info in my_nft_coins:
+            if coin_info.coin.name() == coin_id:
+                target_nft = coin_info
+                my_nft_coins.remove(coin_info)
+        if target_nft is None:
+            raise ValueError(f"NFT coin {coin_id} doesn't exist.")
+
+        my_nft_coins.append(
+            NFTCoinInfo(target_nft.coin, target_nft.lineage_proof, target_nft.full_puzzle, pending_transaction)
+        )
+        new_nft_wallet_info = NFTWalletInfo(
+            my_nft_coins,
+            self.nft_wallet_info.did_wallet_id,
+        )
+        await self.save_info(new_nft_wallet_info, in_transaction=in_transaction)
 
     async def save_info(self, nft_info: NFTWalletInfo, in_transaction: bool) -> None:
         self.nft_wallet_info = nft_info

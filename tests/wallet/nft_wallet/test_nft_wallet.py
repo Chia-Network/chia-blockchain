@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
@@ -13,7 +14,8 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
@@ -343,7 +345,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
                 uris.append(coin.to_json_dict()["data_uris"][0])
             assert len(uris) == 2
             assert "https://chialisp.com/img/logo.svg" in uris
-            assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"]) in [x.name() for x in sb.additions()]
+            assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
         except AssertionError:
             if time_left < 0:
                 raise
@@ -429,20 +431,32 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
+    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
+    assert coin["chain_info"] == disassemble(
+        Program.to(
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                ("mu", []),
+                ("mh", hexstr_to_bytes("00")),
+                ("lu", []),
+                ("lh", hexstr_to_bytes("00")),
+                ("sn", uint64(1)),
+                ("st", uint64(1)),
+            ]
+        )
+    )
     nft_coin_id = coin["nft_coin_id"]
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     # add another URI
     tr1 = await api_0.nft_add_uri(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uri": "https://www.chia.net/img/branding/chia-logo-white.svg",
-        }
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu"}
     )
 
     assert isinstance(tr1, dict)
     assert tr1.get("success")
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert coins_response["nft_list"][0].pending_transaction
     sb = tr1["spend_bundle"]
     await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
@@ -458,13 +472,17 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
             assert len(coins) == 1
             coin = coins[0].to_json_dict()
             uris = coin["data_uris"]
-            assert len(uris) == 2
-            assert "https://www.chia.net/img/branding/chia-logo-white.svg" in uris
+            assert len(uris) == 1
+            assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
+            assert len(coin["metadata_uris"]) == 1
+            assert "http://metadata" == coin["metadata_uris"][0]
+            assert len(coin["license_uris"]) == 0
         except AssertionError:
             if time_left < 0:
                 raise
         await asyncio.sleep(0.5)
         time_left -= 0.5
+
     # add yet another URI
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     nft_coin_id = coin["nft_coin_id"]
@@ -472,8 +490,8 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         {
             "wallet_id": nft_wallet_0_id,
             "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uri": "https://www.chia.net/img/branding/chia-logo-more-white.svg",
+            "uri": "http://data",
+            "key": "u",
         }
     )
 
@@ -493,8 +511,9 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
             assert len(coins) == 1
             coin = coins[0].to_json_dict()
             uris = coin["data_uris"]
-            assert len(uris) == 3
-            assert "https://www.chia.net/img/branding/chia-logo-more-white.svg" in uris
+            assert len(uris) == 2
+            assert len(coin["metadata_uris"]) == 1
+            assert "http://data" == coin["data_uris"][0]
         except AssertionError:
             if time_left < 0:
                 raise
