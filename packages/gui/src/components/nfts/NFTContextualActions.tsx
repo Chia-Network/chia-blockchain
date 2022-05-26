@@ -14,9 +14,12 @@ import NFTSelection from '../../types/NFTSelection';
 /*                          Common Action Types/Enums                         */
 /* ========================================================================== */
 
-enum NFTContextualActionTypes {
+export enum NFTContextualActionTypes {
+  None = 0,
   CreateOffer = 1 << 0, // 1
   Transfer = 1 << 1, // 2
+
+  All = CreateOffer | Transfer,
 }
 
 type NFTContextualActionProps = {
@@ -135,13 +138,15 @@ type NFTContextualActionsProps = {
   label?: ReactNode;
   selection?: NFTSelection;
   availableActions?: NFTContextualActionTypes;
+  toggle?: ReactNode;
 };
 
 export default function NFTContextualActions(props: NFTContextualActionsProps) {
   const {
     label = <Trans>Actions</Trans>,
     selection,
-    availableActions = NFTContextualActionTypes.CreateOffer | NFTContextualActionTypes.Transfer,
+    availableActions = NFTContextualActionTypes.CreateOffer |
+      NFTContextualActionTypes.Transfer,
     ...rest
   } = props;
 

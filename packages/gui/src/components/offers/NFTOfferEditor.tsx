@@ -299,11 +299,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     unvalidatedFormData: NFTOfferEditorFormData,
   ): NFTOfferEditorValidatedFormData | undefined {
     const { exchangeType, nftId, xchAmount, fee } = unvalidatedFormData;
-    // const nftLauncherId = nftId ? launcherIdFromNFTId(nftId) : undefined;
     let result: NFTOfferEditorValidatedFormData | undefined = undefined;
-
-    console.log('validateFormData:');
-    console.log(unvalidatedFormData);
 
     if (!nftId) {
       errorDialog(new Error(t`Please enter an NFT identifier`));
@@ -341,9 +337,6 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
       return;
     }
 
-    console.log('offerNFT:');
-    console.log(offerNFT);
-
     const { exchangeType, launcherId, xchAmount, fee } = formData;
     const [offer, driverDict, feeInMojos] = buildOfferRequest(
       exchangeType,
@@ -352,9 +345,6 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
       xchAmount,
       fee,
     );
-
-    console.log('offer:');
-    console.log(offer);
 
     const confirmedCreation = await openDialog(
       <OfferEditorConfirmationDialog />,

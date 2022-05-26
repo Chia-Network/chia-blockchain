@@ -1,12 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router-dom';
-import {
-  Card,
-  CardActionArea,
-  CardContent,
-  Typography,
-} from '@mui/material';
+import { Card, CardActionArea, CardContent, Typography } from '@mui/material';
 import {
   IconButton,
   CopyToClipboard,
@@ -20,7 +15,9 @@ import styled from 'styled-components';
 import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
 import useNFTMetadata from '../../hooks/useNFTMetadata';
-import NFTContextualActions from './NFTContextualActions';
+import NFTContextualActions, {
+  NFTContextualActionTypes,
+} from './NFTContextualActions';
 
 const StyledCardFooter = styled(CardContent)`
   padding-top: ${({ theme }) => theme.spacing(1)};
@@ -37,11 +34,12 @@ export type NFTCardProps = {
   nft: NFTInfo;
   onSelect?: (selected: boolean) => void;
   selected?: boolean;
-  canExpandDetails?: boolean;
+  canExpandDetails: boolean;
+  availableActions: NFTContextualActionTypes;
 };
 
 export default function NFTCard(props: NFTCardProps) {
-  const { nft, canExpandDetails = true } = props;
+  const { nft, canExpandDetails, availableActions } = props;
   const nftId = nft.$nftId;
 
   const navigate = useNavigate();
@@ -67,25 +65,42 @@ export default function NFTCard(props: NFTCardProps) {
                 {metadata?.name ?? <Trans>Title Not Available</Trans>}
               </Typography>
             </StyledCardContent>
-            <StyledCardFooter>
-              <Flex justifyContent="space-between" alignItems="center">
-                <Flex gap={1} alignItems="center">
-                  <CopyToClipboard value={nftId} color="#90A4AE" size="small" sx={{ color: '#90A4AE' }} />
-                  <Tooltip title={nftId}>
-                    <Typography color="textSecondary" variant="body2" noWrap>
-                      <Truncate>{nftId}</Truncate>
-                    </Typography>
-                  </Tooltip>
-                </Flex>
+          </CardActionArea>
+          <StyledCardFooter>
+            <Flex justifyContent="space-between" alignItems="center">
+              <Flex gap={1} alignItems="center">
+                <CopyToClipboard
+                  value={nftId}
+                  color="#90A4AE"
+                  size="small"
+                  sx={{ color: '#90A4AE' }}
+                />
+                <Tooltip title={nftId}>
+                  <Typography color="textSecondary" variant="body2" noWrap>
+                    <Truncate>{nftId}</Truncate>
+                  </Typography>
+                </Tooltip>
+              </Flex>
+              {availableActions !== NFTContextualActionTypes.None && (
                 <NFTContextualActions
                   selection={{ items: [nft] }}
-                  toggle={(<IconButton><MoreVert /></IconButton>)}
+                  availableActions={availableActions}
+                  toggle={
+                    <IconButton>
+                      <MoreVert />
+                    </IconButton>
+                  }
                 />
-              </Flex>
-            </StyledCardFooter>
-          </CardActionArea>
+              )}
+            </Flex>
+          </StyledCardFooter>
         </>
       )}
     </Card>
   );
 }
+
+NFTCard.defaultProps = {
+  canExpandDetails: true,
+  availableActions: NFTContextualActionTypes.None,
+};

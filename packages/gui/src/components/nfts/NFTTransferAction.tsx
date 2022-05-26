@@ -28,7 +28,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
-import { useNFTMetadata, useTransferNFTMutation } from '@chia/api-react';
+import { useTransferNFTMutation } from '@chia/api-react';
+import useNFTMetadata from '../../hooks/useNFTMetadata';
 
 /* ========================================================================== */
 /*                                   Styles                                   */
@@ -165,9 +166,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   const { nft, destination, onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
-  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata({
-    id: nft.$nftId,
-  });
+  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferFormData>({
     shouldUnregister: false,
@@ -225,7 +224,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Flex flexDirection="column" gap={1}>
-          {!isLoadingMetadata && (
+          {!isLoadingMetadata && metadata && (
             <Flex flexDirection="row" gap={1}>
               <Flex flexShrink={0}>
                 <Typography variant="body1">

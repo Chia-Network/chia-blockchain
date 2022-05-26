@@ -7,17 +7,13 @@ import { Grid } from '@mui/material';
 // import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCardLazy from '../NFTCardLazy';
 import Search from './NFTGallerySearch';
-import NFTContextualActions from '../NFTContextualActions';
+import { NFTContextualActionTypes } from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import NFTProfileDropdown from '../NFTProfileDropdown';
 
 function searchableNFTContent(nft: NFTInfo) {
-  const items = [
-    nft.$nftId,
-    nft.dataUris?.join(' ') ?? '',
-    nft.launcherId,
-  ];
+  const items = [nft.$nftId, nft.dataUris?.join(' ') ?? '', nft.launcherId];
 
   return items.join(' ').toLowerCase();
 }
@@ -76,10 +72,15 @@ export default function NFTGallery() {
   return (
     <LayoutDashboardSub
       // sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
-      header={(
+      header={
         <Flex gap={2} alignItems="center">
           <NFTProfileDropdown onChange={setWalletId} />
-          <Flex justifyContent="space-between" alignItems="center" flexGrow={1} gap={1}>
+          <Flex
+            justifyContent="space-between"
+            alignItems="center"
+            flexGrow={1}
+            gap={1}
+          >
             <Search
               onChange={setSearch}
               value={search}
@@ -90,7 +91,7 @@ export default function NFTGallery() {
             */}
           </Flex>
         </Flex>
-      )}
+      }
     >
       <Grid spacing={2} alignItems="stretch" container>
         {filteredData?.map((nft: NFTInfo) => (
@@ -101,6 +102,8 @@ export default function NFTGallery() {
               selected={selection.items.some(
                 (item) => item.$nftId === nft.$nftId,
               )}
+              canExpandDetails={true}
+              availableActions={NFTContextualActionTypes.All}
             />
           </Grid>
         ))}
