@@ -104,7 +104,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         license_uris,
         uncurried_nft.license_hash.as_python(),
         uint64(uncurried_nft.series_total.as_int()),
-        uint64(uncurried_nft.series_total.as_int()),
+        uint64(uncurried_nft.series_number.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
     )
