@@ -147,9 +147,8 @@ class WalletStateManager:
 
             def sql_trace_callback(req: str):
                 timestamp = datetime.now().strftime("%H:%M:%S.%f")
-                log = open(sql_log_path, "a")
-                log.write(timestamp + " " + req + "\n")
-                log.close()
+                with open(sql_log_path, "a") as log:
+                    log.write(timestamp + " " + req + "\n")
 
             await self.db_connection.set_trace_callback(sql_trace_callback)
 
