@@ -8,12 +8,10 @@
     CAT_MOD_HASH
     Current_Owner  ; Truth
     conditions  ; Truth
-    (new_owner trade_price tp_solution)  ; solution - created from NFT's innerpuz
+    (new_owner trade_price new_pk tp_solution)  ; solution - created from NFT's innerpuz
   )
 
-  ; tp_solution is new_did_inner_hash
-
-  ; This is a metadata updater - which must return (new_owner, Optional[new_transfer_program], conditions)
+  ; This is a transfer program - which must return (new_owner, Optional[new_transfer_program], conditions)
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -74,7 +72,7 @@
       )
   )
 
-    (defun calculate_royalties (SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (new_owner trade_prices_list (new_did_inner_hash)))
+    (defun calculate_royalties (SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (cond_code new_owner trade_prices_list new_pk (new_did_inner_hash)))
       (if (all new_owner (not (= new_owner Current_Owner)))
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c new_owner (r (r SINGLETON_STRUCT)))) new_did_inner_hash) (f (r SINGLETON_STRUCT))))
@@ -86,36 +84,29 @@
 
 
     ; The magic conditions look like this:
-    ; (NEW_OWNER_CONDITION new_owner trade_prices_list transfer_program_solution)
-    ; (MAGIC_AGGSIG new_pk (sha256tree1 trade_prices_list))
+    ; (NEW_OWNER_CONDITION new_owner trade_prices_list new_pk transfer_program_solution)
 
-    (defun check_found_values (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH aggsig_condition odd_create_coin new_owner_condition)
-      (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r aggsig_condition)))))  ; check create coin uses same key as is signing trade_prices
-        (if (= (f (r (r aggsig_condition))) (sha256tree1 (f (r (r new_owner_condition)))))
-            (c odd_create_coin (c (c AGG_SIG_ME (r aggsig_condition)) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (r new_owner_condition))))  ; if current_owner == new_owner - no need for royalties or announces
-          (x)
-        )
+    (defun check_found_values (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH odd_create_coin new_owner_condition)
+      (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r (r (r new_owner_condition)))))))  ; check create coin uses same key as is signing trade_prices
+        (c odd_create_coin (c (list AGG_SIG_ME (f (r (r (r new_owner_condition)))) (f (r (r (r (r new_owner_condition)))))) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner new_owner_condition)))
         (x)
       )
     )
 
-    (defun loop_through_conditions (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions aggsig_condition odd_create_coin new_owner_condition)
+    (defun loop_through_conditions (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions odd_create_coin new_owner_condition)
       (if conditions
         (if (= (f (f conditions)) CREATE_COIN)
           (if (logand (f (r (r (f conditions)))) ONE)
-            (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) aggsig_condition (f conditions) new_owner_condition)
-            (c (f conditions) (loop_through_conditions Current_Owner conditions aggsig_condition odd_create_coin new_owner_condition))
+            (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) (f conditions) new_owner_condition)
+            (c (f conditions) (loop_through_conditions P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (r conditions) odd_create_coin new_owner_condition))
           )
-          (if (= (f (f conditions)) MAGIC_AGGSIG)
-            (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) (f conditions) odd_create_coin new_owner_condition)
-            (if (= (f (f conditions)) NEW_OWNER)
-              (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) aggsig_condition odd_create_coin (f conditions))
-              (c (f conditions) (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) aggsig_condition odd_create_coin new_owner_condition))  ; cons the rest of the conditions
-            )
+          (if (= (f (f conditions)) NEW_OWNER)
+            (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin (f conditions))
+            (c (f conditions) (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin new_owner_condition))  ; cons the rest of the conditions
           )
         )
-        (if (all aggsig_condition odd_create_coin new_owner_condition)
-          (check_found_values Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH aggsig_condition odd_create_coin new_owner_condition)
+        (if (all odd_create_coin new_owner_condition)
+          (check_found_values Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH odd_create_coin new_owner_condition)
           (x)
         )
       )
@@ -123,6 +114,6 @@
 
     ; main
 
-    (list new_owner 0 (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions 0 0 0))
+    (list new_owner 0 (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions 0 0))
 
 )

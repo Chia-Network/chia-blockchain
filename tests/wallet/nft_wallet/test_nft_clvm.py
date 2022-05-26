@@ -30,7 +30,6 @@ DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_TRANSFER_PROGRAM = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties_new.clvm")
-NFT_INNER_INNERPUZ = load_clvm("nft_v1_innerpuz.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
@@ -171,16 +170,16 @@ def test_transfer_program() -> None:
     # )
 
     # (CREATE_COIN p2dohp odd_number)
-    # (NEW_OWNER_CONDITION new_owner trade_prices_list transfer_program_solution)
-    # (MAGIC_AGGSIG new_pk (sha256tree1 trade_prices_list))
+    # (NEW_OWNER_CONDITION new_owner trade_prices_list new_pk transfer_program_solution)
     trade_prices_list = [[200]]
-    conditions = Program.to([[51, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1], [-10, new_owner, trade_prices_list, [new_inner]], [-25, new_pk, Program.to(trade_prices_list).get_tree_hash()]])
+    conditions = Program.to([[51, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1], [-10, new_owner, trade_prices_list, new_pk, [new_inner]]])
     solution = Program.to([
         current_owner,
         conditions,
         [
             new_owner,
             trade_prices_list,
+            new_pk,
             [new_inner]
         ]
     ])
@@ -221,7 +220,7 @@ def test_ownership_layer() -> None:
         curried_tp,
         curried_inner,
     )
-    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, [new_did_inner_hash]], [-25, destination, Program.to(trade_prices_list).get_tree_hash()]]
+    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
     solution = Program.to([solution_for_conditions(condition_list)])
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
     assert res.rest().first().first().as_int() == 51
@@ -278,7 +277,7 @@ def test_full_stack() -> None:
         curried_ownership_layer,
     )
 
-    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, [new_did_inner_hash]], [-25, destination, Program.to(trade_prices_list).get_tree_hash()]]
+    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
     solution = Program.to([
         [solution_for_conditions(condition_list)],
         my_amount,
