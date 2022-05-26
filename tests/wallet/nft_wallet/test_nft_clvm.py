@@ -189,8 +189,13 @@ def test_transfer_program() -> None:
     conditions = res.rest().rest().first()
     assert conditions.first().first().as_int() == 51
     assert conditions.first().rest().rest().first().as_int() == 1
+    assert conditions.rest().rest().first().first().as_int() == 63
+    SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (new_owner, LAUNCHER_PUZZLE_HASH)))
+    new_owner_coin_puzhash = SINGLETON_MOD.curry(SINGLETON_STRUCT, "new_owner_inner").get_tree_hash()
+    assert conditions.rest().rest().first().rest().first().as_atom() == Announcement(new_owner_coin_puzhash, nft_id).name()
     assert conditions.rest().rest().rest().first().first().as_int() == 51
     assert conditions.rest().rest().rest().first().rest().rest().first().as_int() == 40
+
 
 
 def test_ownership_layer() -> None:
@@ -220,11 +225,11 @@ def test_ownership_layer() -> None:
         curried_tp,
         curried_inner,
     )
-    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
+    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()]], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
     solution = Program.to([solution_for_conditions(condition_list)])
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
-    assert res.rest().first().first().as_int() == 51
-    assert res.rest().first().rest().rest().first().as_int() == 1
+    assert res.first().first().as_int() == 51
+    assert res.first().rest().rest().first().as_int() == 1
     curried_inner = STANDARD_PUZZLE_MOD.curry(destination)
     curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
@@ -232,10 +237,10 @@ def test_ownership_layer() -> None:
         curried_tp,
         curried_inner,
     )
-    assert res.rest().first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
-    assert res.rest().first().rest().rest().rest().first().as_atom() == curried_inner.get_tree_hash()
-    assert res.rest().rest().rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().rest().rest().first().rest().rest().first().as_int() == 40
+    assert res.first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
+    assert res.first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
+    assert res.rest().rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().rest().first().rest().rest().first().as_int() == 40
 
 
 def test_full_stack() -> None:
@@ -277,14 +282,14 @@ def test_full_stack() -> None:
         curried_ownership_layer,
     )
 
-    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
+    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1, [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()]], [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
     solution = Program.to([
         [solution_for_conditions(condition_list)],
         my_amount,
     ])
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
-    assert res.rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().first().rest().rest().first().as_int() == 1
+    assert res.rest().first().first().as_int() == 51
+    assert res.rest().first().rest().rest().first().as_int() == 1
     curried_inner = STANDARD_PUZZLE_MOD.curry(destination)
     curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
@@ -298,5 +303,5 @@ def test_full_stack() -> None:
         NFT_METADATA_UPDATER_UPDATEABLE.get_tree_hash(),
         curried_ownership_layer,
     )
-    assert res.rest().rest().first().rest().first().as_atom() == curried_state_layer.get_tree_hash()
-    assert res.rest().rest().first().rest().rest().rest().first().as_atom() == curried_inner.get_tree_hash()
+    assert res.rest().first().rest().first().as_atom() == curried_state_layer.get_tree_hash()
+    assert res.rest().first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
