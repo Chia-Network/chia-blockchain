@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-09 18:34\n"
+"PO-Revision-Date: 2022-05-26 15:57\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -1392,19 +1392,15 @@ msgid "Install Keybase"
 msgstr "Nainstalovat Keybase"
 
 #: src/components/offers/OfferViewer.tsx:358
-msgid ""
-"Insufficient funds available to accept offer. Ensure that your\n"
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Nedostatek dostupných finančních prostředků k přijetí nabídky. Ujistěte se, že Váš\n"
+msgstr "Nedostatek dostupných finančních prostředků k přijetí nabídky. Ujistěte se, že Váš\n"
 "disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/offers/OfferEditor.tsx:166
-msgid ""
-"Insufficient funds available to create offer. Ensure that your\n"
+msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Nedostatek dostupných finančních prostředků k vytvoření nabídky. Ujistěte se, že Váš\n"
+msgstr "Nedostatek dostupných finančních prostředků k vytvoření nabídky. Ujistěte se, že Váš\n"
 "disponibilní zůstatek je dostatečný k pokrytí částky nabídky."
 
 #: src/components/create/createRLAdmin.jsx:217
@@ -3096,7 +3092,7 @@ msgstr ""
 
 #: src/components/standard/WalletStandardCards.tsx:16
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-#~ msgstr "Celkový počet Chia v blockchainu při aktuální sub bloku kontrolovaný vaším privátním klíčem. Zahrnuje zmrazené odměny z farmaření ale nezahrnuje čekající příchozí ani odchozí transakce."
+#~ msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
 #: src/components/standard/WalletStandardCards.tsx:31
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -3715,11 +3711,11 @@ msgstr ""
 
 #: src/components/WalletStatusCard.tsx:41
 #~ msgid "connections:"
-#~ msgstr "spojení:"
+#~ msgstr "connections:"
 
 #: src/components/WalletStatusCard.tsx:33
 #~ msgid "height:"
-#~ msgstr "výška:"
+#~ msgstr "height:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
 #~ msgid "not synced"
@@ -3735,15 +3731,15 @@ msgstr ""
 
 #: src/components/WalletStatusCard.tsx:27
 #~ msgid "status:"
-#~ msgstr "stav:"
+#~ msgstr "status:"
 
 #: src/components/WalletStatusCard.tsx:29
 #~ msgid "synced"
-#~ msgstr "synchronizováno"
+#~ msgstr "synced"
 
 #: src/components/WalletStatusCard.tsx:29
 #~ msgid "syncing"
-#~ msgstr "synchronizace"
+#~ msgstr "syncing"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"
@@ -3802,3 +3798,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
+
