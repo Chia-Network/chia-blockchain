@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 18:06\n"
+"PO-Revision-Date: 2022-05-26 19:21\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -1418,7 +1418,7 @@ msgstr "Высота последнего выращенного блока"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "Last Transaction Block Time"
-msgstr ""
+msgstr "Время блока последней транзакции"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Latest Block Challenges"
@@ -1520,7 +1520,7 @@ msgstr "Локальный"
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "Управление CAT токенами"
 
 #: src/components/farm/FarmHeader.tsx:41
 msgid "Manage Farming Rewards"
@@ -1919,7 +1919,7 @@ msgstr ""
 
 #: src/components/app/AppPassPrompt.tsx:89
 msgid "Please enter your passphrase to proceed"
-msgstr ""
+msgstr "Чтобы продолжить, введите ваш пароль"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:623
 #: src/components/_wallet_old/standard/WalletStandard.tsx:420
@@ -2049,7 +2049,7 @@ msgstr "Участки - это выделенное пространство н
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:103
 msgid "Plotter"
-msgstr ""
+msgstr "Плоттер"
 
 #: src/components/plot/PlotPlotting.tsx:49
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
@@ -2058,7 +2058,7 @@ msgstr "Засеивание"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "Plotting Manager"
-msgstr ""
+msgstr "Управление плоттерами"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -2295,7 +2295,7 @@ msgstr "Максимальное использование ОЗУ"
 
 #: src/components/app/AppSelectMode.tsx:116
 msgid "Recommended"
-msgstr ""
+msgstr "Рекомендуется"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
@@ -2346,7 +2346,7 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:195
 msgid "Remove keys from old keyring upon successful migration"
-msgstr ""
+msgstr "Удалить ключи из старого списка ключей после успешной миграции"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:36
 msgid "Removing"
@@ -2370,7 +2370,7 @@ msgstr "Восстановление метаданных цветных мон�
 
 #: src/components/app/AppSelectMode.tsx:152
 msgid "Runs the full node"
-msgstr ""
+msgstr "Запуск полного узла"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2391,7 +2391,7 @@ msgstr "Сохранить"
 #: src/components/settings/ChangePassphrasePrompt.tsx:206
 #: src/components/settings/SetPassphrasePrompt.tsx:188
 msgid "Save passphrase"
-msgstr ""
+msgstr "Сохранить пароль"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -2408,7 +2408,7 @@ msgstr "Расположение второй временной папки"
 #: src/components/settings/Settings.tsx:130
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
-msgstr ""
+msgstr "Защитите вашу связку ключей при помощи надежного пароля"
 
 #: src/components/_selectKey_old/SelectKey.tsx:216
 #~ msgid "See private key"
@@ -2444,7 +2444,7 @@ msgstr "Выберите временный каталог"
 
 #: src/components/app/AppSelectMode.tsx:65
 msgid "Select Your Client Mode"
-msgstr ""
+msgstr "Выберите режим клиента"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -2519,7 +2519,7 @@ msgstr ""
 #: src/components/dashboard/DashboardSideBar.tsx:108
 #: src/components/settings/Settings.tsx:248
 msgid "Settings"
-msgstr ""
+msgstr "Настройки"
 
 #: src/components/app/AppSelectMode.tsx:171
 #~ msgid "Settings are located at the upper right corner"
@@ -2545,11 +2545,11 @@ msgstr ""
 #: src/components/app/AppKeyringMigrator.tsx:57
 #: src/components/app/AppKeyringMigrator.tsx:218
 msgid "Skip"
-msgstr ""
+msgstr "Пропустить"
 
 #: src/components/app/AppKeyringMigrator.tsx:56
 msgid "Skip Keyring Migration"
-msgstr ""
+msgstr "Пропустить миграцию ключей"
 
 #: src/components/app/AppPassPrompt.tsx:73
 #~ msgid "Skip Passphrase Protection"
@@ -2609,7 +2609,7 @@ msgstr "Речь"
 
 #: src/components/app/AppState.tsx:172
 msgid "Starting services"
-msgstr ""
+msgstr "Запуск сервисов"
 
 #: src/components/fullNode/FullNode.jsx:95
 msgid "State"
@@ -2646,7 +2646,7 @@ msgstr "Статус"
 
 #: src/components/app/AppSelectMode.tsx:89
 msgid "Store and Send XCH"
-msgstr ""
+msgstr "Хранить и отправлять XCH"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 #~ msgid "Stripe Size"
@@ -3037,7 +3037,7 @@ msgstr "Разблокировать связку ключей"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
-msgstr ""
+msgstr "Пользовательские комиссии"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
@@ -3123,7 +3123,7 @@ msgstr "Режим кошелька"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:72
 msgid "Wallet is not defined"
-msgstr ""
+msgstr "Кошелек не определен"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
