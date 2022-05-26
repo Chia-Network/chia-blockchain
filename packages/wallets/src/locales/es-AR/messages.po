@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_AR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:58\n"
+"PO-Revision-Date: 2022-05-26 17:03\n"
 "Last-Translator: \n"
 "Language-Team: Spanish, Argentina\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1928,11 +1928,11 @@ msgstr ""
 
 #: src/components/WalletImport.tsx:95
 msgid "Paste Mnemonic"
-msgstr ""
+msgstr "Pegar mnemotécnico"
 
 #: src/components/PasteMnemonic.tsx:55
 msgid "Paste Mnemonic (24 words)"
-msgstr ""
+msgstr "Pegar Mnemotécnico"
 
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
@@ -3086,7 +3086,7 @@ msgstr "Esta es la suma de las transacciones pendientes entrantes y salientes (a
 
 #: src/components/standard/WalletStandardCards.tsx:16
 msgid "This is the total amount of chia in the blockchain at the current peak block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Esta es la cantidad total de chía en la cadena de bloques en el bloque máximo actual que está controlado por sus claves privadas. Incluye recompensas de cultivo congeladas, pero no transacciones entrantes y salientes pendientes."
 
 #: src/components/standard/WalletStandardCards.tsx:16
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -3697,7 +3697,7 @@ msgstr ""
 
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
-msgstr ""
+msgstr "Su lista pegada no incluye 24 palabras mnemotécnicas válidas."
 
 #: src/util/getDescriptiveError.ts:5
 #~ msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
