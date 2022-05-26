@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-09 16:43\n"
+"PO-Revision-Date: 2022-05-26 15:56\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1392,19 +1392,15 @@ msgid "Install Keybase"
 msgstr "Asenna Keybase"
 
 #: src/components/offers/OfferViewer.tsx:358
-msgid ""
-"Insufficient funds available to accept offer. Ensure that your\n"
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Riittämätön määrä varoja tarjouksen hyväksymiseen. Varmista, että\n"
+msgstr "Riittämätön määrä varoja tarjouksen hyväksymiseen. Varmista, että\n"
 "käytettävissä oleva saldo riittää tarjouksen määrän kattamiseen."
 
 #: src/components/offers/OfferEditor.tsx:166
-msgid ""
-"Insufficient funds available to create offer. Ensure that your\n"
+msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
-msgstr ""
-"Riittämätön määrä varoja tarjouksen luomiseen. Varmista, että\n"
+msgstr "Riittämätön määrä varoja tarjouksen luomiseen. Varmista, että\n"
 "käytettävissä oleva saldo riittää tarjouksen määrän kattamiseen."
 
 #: src/components/create/createRLAdmin.jsx:217
@@ -3096,7 +3092,7 @@ msgstr ""
 
 #: src/components/standard/WalletStandardCards.tsx:16
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-#~ msgstr "Yksityisten avaimiesi hallinoimien Chiojen kokonaissumma lohkoketjussa. Sisälytää jäädytetyt palkkiot, mutta ei tulevia tai lähteviä transaktioita."
+#~ msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
 #: src/components/standard/WalletStandardCards.tsx:31
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -3715,11 +3711,11 @@ msgstr ""
 
 #: src/components/WalletStatusCard.tsx:41
 #~ msgid "connections:"
-#~ msgstr "yhteydet:"
+#~ msgstr "connections:"
 
 #: src/components/WalletStatusCard.tsx:33
 #~ msgid "height:"
-#~ msgstr "korkeus:"
+#~ msgstr "height:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
 #~ msgid "not synced"
@@ -3735,15 +3731,15 @@ msgstr ""
 
 #: src/components/WalletStatusCard.tsx:27
 #~ msgid "status:"
-#~ msgstr "tila:"
+#~ msgstr "status:"
 
 #: src/components/WalletStatusCard.tsx:29
 #~ msgid "synced"
-#~ msgstr "synkronoitu"
+#~ msgstr "synced"
 
 #: src/components/WalletStatusCard.tsx:29
 #~ msgid "syncing"
-#~ msgstr "synkronoi"
+#~ msgstr "syncing"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"
@@ -3802,3 +3798,4 @@ msgstr "{mojos, plural, one {mojo} other {mojoa}}"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
+
