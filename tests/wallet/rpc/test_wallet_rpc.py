@@ -772,6 +772,16 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["success"]
     did_wallet_id_0 = res["wallet_id"]
     did_id_0 = res["my_did"]
+    # Change wallet name
+    await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, "Test Profile")
+    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
+    assert res["name"] == "Test Profile"
+    try:
+        await wallet_1_rpc.did_set_wallet_name(1, "Test")
+    except ValueError:
+        pass
+    else:
+        raise ValueError("Missing expected ValueError.")
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
     assert res["success"]
