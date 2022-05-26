@@ -374,7 +374,16 @@ class TradeManager:
                         solver = uint64(abs(solver))
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, solver, fee_left_to_pay)
+                    # Have the standard_wallet pay the fee if possible to prevent coin selection conflicts
+                    if 1 in offer_dict or None in offer_dict:
+                        if wallet.type() == WalletType.STANDARD_WALLET:
+                            this_fee: uint64 = fee_left_to_pay
+                        else:
+                            this_fee = uint64(0)
+                    else:
+                        this_fee = fee_left_to_pay
+
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, solver, this_fee)
                     fee_left_to_pay = uint64(0)
                     wallet_paying_fee = id
 
@@ -408,9 +417,8 @@ class TradeManager:
                     solver = abs(solver)
 
                 # ATTENTION: new_wallets
-                this_fee: uint64 = fee if id == wallet_paying_fee else uint64(0)
                 txs: List[TransactionRecord] = await wallet.create_offer_transactions(
-                    solver, selected_coins, announcements_to_assert, this_fee
+                    solver, selected_coins, announcements_to_assert, fee if id == wallet_paying_fee else uint64(0)
                 )
                 all_transactions.extend(txs)
 
