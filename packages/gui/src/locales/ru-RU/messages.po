@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 19:21\n"
+"PO-Revision-Date: 2022-05-26 20:31\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -20,11 +20,11 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:74
 msgid "(Not Installed)"
-msgstr ""
+msgstr "(Не установлен)"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:71
 msgid "(Not Supported)"
-msgstr ""
+msgstr "(Не поддерживается)"
 
 #: src/components/plot/add/PlotAddNFT.tsx:67
 msgid "(Optional)"
@@ -153,11 +153,11 @@ msgstr "Добавить {currencyCode} из крана"
 
 #: src/components/app/AppKeyringMigrator.tsx:198
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
-msgstr ""
+msgstr "После того как ваши ключи будут успешно перенесены в новую связку ключей, вы можете удалить ключи из старой связки."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
-msgstr ""
+msgstr "Альтернативный tmpdir/tmpdir2"
 
 #: src/components/trading/CreateOffer.jsx:197
 #: src/components/trading/TradesTable.tsx:19
@@ -581,13 +581,13 @@ msgstr "Подтвердить отключение"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
-msgstr ""
+msgstr "Подтвердите новый пароль"
 
 #: src/components/app/AppKeyringMigrator.tsx:149
 #: src/components/app/AppKeyringMigrator.tsx:150
 #: src/components/settings/SetPassphrasePrompt.tsx:160
 msgid "Confirm Passphrase"
-msgstr ""
+msgstr "Подтверждение пароля"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:120
 msgid "Confirmation"
@@ -784,7 +784,7 @@ msgstr "Текущая сложность"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:160
 msgid "Current Passphrase"
-msgstr ""
+msgstr "Текущая пароль"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:155
 #: src/components/plotNFT/PlotNFTCard.tsx:194
@@ -863,7 +863,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
-msgstr ""
+msgstr "В зависимости от конфигурации системы, вы можете заметить, что альтернативный плоттер создает участки быстрее, чем стандартный плоттер Chia Proof Space. Если вы не уверены, то используйте стандартный плоттер Chia Proof Space."
 
 #: src/electron/main.tsx:389
 msgid "Developer"
@@ -884,7 +884,7 @@ msgstr "Сложность"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
-msgstr ""
+msgstr "Отключить NUMA"
 
 #: src/components/app/AppPassPrompt.tsx:77
 #~ msgid "Disable Passphrase Protection"
@@ -972,7 +972,7 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:128
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
-msgstr ""
+msgstr "Введите надежную парольную фразу и нажмите \"Мигрировать ключи\", чтобы защитить ваши ключи"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:139
 msgid "Enter a strong passphrase to secure your keys:"
@@ -984,7 +984,7 @@ msgstr ""
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:102
 msgid "Enter your passphrase:"
-msgstr ""
+msgstr "Введите ваш пароль:"
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
@@ -1040,7 +1040,7 @@ msgstr "Неудачно"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:83
 msgid "Failed to set passphrase: {0}"
-msgstr ""
+msgstr "Не удалось установить пароль: {0}"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:92
 #~ msgid "Failed to set passphrase: {error}"
@@ -1048,7 +1048,7 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:111
 msgid "Failed to update passphrase: {0}"
-msgstr ""
+msgstr "Не удалось обновить пароль: {0}"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:120
 #~ msgid "Failed to update passphrase: {error}"
@@ -1101,7 +1101,7 @@ msgstr "Фермер не запущен"
 
 #: src/components/farm/FarmHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
-msgstr ""
+msgstr "Фермеры получают вознаграждения за блоки и комиссии за транзакции, выделяя свободное место в сети для обеспечения безопасности транзакций. Здесь будет ваша ферма после добавления участков. <0>Подробнее</0>"
 
 #: src/components/dashboard/DashboardSideBar.tsx:94
 #: src/components/farm/FarmerStatus.tsx:18
@@ -1263,7 +1263,7 @@ msgstr "Ниже приведены значения испытаний для �
 #: src/components/app/AppPassPrompt.tsx:127
 #: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
-msgstr ""
+msgstr "Подсказка"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
@@ -1550,7 +1550,7 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
-msgstr ""
+msgstr "Мигрировать ключи"
 
 #: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
@@ -1604,7 +1604,7 @@ msgstr "Имя сети"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:170
 msgid "New Passphrase"
-msgstr ""
+msgstr "Новый пароль"
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
 #~ msgid "New Wallet"
@@ -1710,7 +1710,7 @@ msgstr "Количество сегментов"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
 msgid "Number of buckets for phase 3 & 4"
-msgstr ""
+msgstr "Количество сегментов на фазе 3 и 4"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
 msgid "Number of threads"
@@ -1755,23 +1755,23 @@ msgstr "Заявки"
 #: src/components/settings/SetPassphrasePrompt.tsx:149
 #: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
-msgstr ""
+msgstr "Парольная фраза"
 
 #: src/components/app/AppKeyringMigrator.tsx:162
 #: src/components/settings/ChangePassphrasePrompt.tsx:191
 #: src/components/settings/SetPassphrasePrompt.tsx:173
 msgid "Passphrase Hint"
-msgstr ""
+msgstr "Подсказка к паролю"
 
 #: src/components/app/AppKeyringMigrator.tsx:161
 #: src/components/settings/ChangePassphrasePrompt.tsx:190
 #: src/components/settings/SetPassphrasePrompt.tsx:172
 msgid "Passphrase Hint (Optional)"
-msgstr ""
+msgstr "Подсказка к паролю (необязательно)"
 
 #: src/components/settings/Settings.tsx:217
 msgid "Passphrase Settings"
-msgstr ""
+msgstr "Параметры пароля"
 
 #: src/components/app/AppPassPrompt.tsx:152
 #: src/components/settings/RemovePassphrasePrompt.tsx:67
@@ -1858,7 +1858,7 @@ msgstr "Подтвердите, пожалуйста"
 #: src/components/app/AppPassPrompt.tsx:52
 #: src/components/settings/SetPassphrasePrompt.tsx:51
 msgid "Please enter a passphrase"
-msgstr ""
+msgstr "Пожалуйста, введите пароль"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:937
 #~ msgid "Please enter a pubkey"
@@ -1909,13 +1909,13 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:73
 msgid "Please enter your current passphrase, and a new passphrase"
-msgstr ""
+msgstr "Пожалуйста, введите ваш текущий пароль и новую парольную фразу"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #: src/components/app/AppPassPrompt.tsx:95
 #: src/components/settings/RemovePassphrasePrompt.tsx:50
 msgid "Please enter your passphrase"
-msgstr ""
+msgstr "Пожалуйста, введите ваш пароль"
 
 #: src/components/app/AppPassPrompt.tsx:89
 msgid "Please enter your passphrase to proceed"
@@ -2342,7 +2342,7 @@ msgstr "Удаленный"
 #: src/components/settings/Settings.tsx:198
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
-msgstr ""
+msgstr "Удалить пароль"
 
 #: src/components/app/AppKeyringMigrator.tsx:195
 msgid "Remove keys from old keyring upon successful migration"
@@ -2510,7 +2510,7 @@ msgstr "Cвой пул. Когда вы выиграете блок, вы пол
 #: src/components/settings/Settings.tsx:209
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
-msgstr ""
+msgstr "Установить пароль"
 
 #: src/components/app/AppPassPrompt.tsx:75
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
@@ -2573,7 +2573,7 @@ msgstr "Получите свои награды за фарм XCH, присое
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 msgid "Specify a value of 0 to use all available threads"
-msgstr ""
+msgstr "Укажите значение 0 для использования всех доступных потоков"
 
 #: src/electron/main.tsx:561
 msgid "Speech"
@@ -2779,7 +2779,7 @@ msgstr "Зерно, которое использовалось для созд�
 
 #: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
-msgstr ""
+msgstr "Общее количество итерации VDF (от англ. Verifiable Delay Function - проверяемая функция задержки) или доказательств временных итераций по всей цепочке до этого блока."
 
 #: src/components/block/Block.jsx:206
 #~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
@@ -2836,7 +2836,7 @@ msgstr "Это момент времени, когда блок был созд�
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the timestamp of the most recent transaction block."
-msgstr ""
+msgstr "Это временная метка самого последнего блока транзакций."
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
@@ -2890,7 +2890,7 @@ msgstr "Эта таблица показывает вам, когда ваша �
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
 msgid "Thread Multiplier for Phase 2"
-msgstr ""
+msgstr "Множитель потоков для этапа 2"
 
 #: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
@@ -3175,7 +3175,7 @@ msgstr "Хотите установить задержку между старт
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 msgid "Warm start"
-msgstr ""
+msgstr "Горячий запуск"
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
@@ -3196,7 +3196,7 @@ msgstr "Вес"
 
 #: src/components/block/Block.jsx:186
 msgid "Weight is the total added difficulty of all blocks up to and including this one"
-msgstr ""
+msgstr "Вес - общая сложность всех блоков до, включая этот"
 
 #: src/components/block/Block.jsx:186
 #~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
@@ -3246,7 +3246,7 @@ msgstr "Вы все еще можете создавать участки для
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "Вам не нужно синхронизироваться или подключаться к участку. В процессе построения участка создаются временные файлы, превышающие размер конечных файлов участков. Убедитесь, что у вас имеется достаточно места. <0>Подробнее</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3319,11 +3319,11 @@ msgstr "Обзор вашей фермы"
 
 #: src/components/app/AppPassPrompt.tsx:78
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "Ваша связка ключей заблокирована"
 
 #: src/components/app/AppKeyringMigrator.tsx:62
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "Ваши ключи не были перенесены в новую связку ключей. Вы не сможете создать новые ключи или удалить существующие ключи до тех пор, пока миграция не завершится. Вы уверены, что хотите пропустить миграцию ключей?"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
@@ -3331,11 +3331,11 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:105
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
-msgstr ""
+msgstr "Ваши ключи должны быть перенесены в новую связку ключей, которые по желанию могут быть защищены паролем."
 
 #: src/components/app/AppKeyringMigrator.tsx:111
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
-msgstr ""
+msgstr "Ваши ключи должны быть перенесены в новую связку ключей, которая будет защищена мастер паролем."
 
 #: src/components/app/AppKeyringMigrator.tsx:180
 #: src/components/settings/ChangePassphrasePrompt.tsx:209
@@ -3377,7 +3377,7 @@ msgstr "[Ошибка 22] Файл не найден. Скорее всего, �
 
 #: src/components/plot/add/PlotAddForm.tsx:123
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2SingletonPuzzleHash не определен"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
@@ -3417,7 +3417,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
-msgstr ""
+msgstr "рекомендуется сегментов {0}"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
