@@ -89,27 +89,26 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
 
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    await asyncio.sleep(5)
+    await time_out_assert(15, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
     coins = nft_wallet_0.nft_wallet_info.my_nft_coins
     assert len(coins) == 1, "nft not generated"
 
     sb = await nft_wallet_0.transfer_nft(coins[0], ph1)
     assert sb is not None
-    await asyncio.sleep(3)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await asyncio.sleep(5)
-
-    assert len(wallet_node_1.wallet_state_manager.wallets) == 2
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+    await time_out_assert(15, len, 2, wallet_node_1.wallet_state_manager.wallets)
     # Get the new NFT wallet
     nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 1
     nft_wallet_1: NFTWallet = wallet_node_1.wallet_state_manager.wallets[nft_wallets[0].id]
+    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
     coins = nft_wallet_0.nft_wallet_info.my_nft_coins
     assert len(coins) == 0
     coins = nft_wallet_1.nft_wallet_info.my_nft_coins
@@ -122,7 +121,7 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 5
+    num_blocks = 2
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -174,19 +173,18 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         ]
     )
 
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 2000000000000)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 2000000000000)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
     assert compute_memos(sb)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await asyncio.sleep(5)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 1, "nft not generated"
-
+    await time_out_assert(10, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
     metadata = Program.to(
         [
             ("u", ["https://www.test.net/logo.svg"]),
@@ -194,19 +192,22 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         ]
     )
 
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 - 1)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
     assert compute_memos(sb)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(10, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
+    await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
-    await asyncio.sleep(5)
+    await time_out_assert(15, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
     coins = nft_wallet_0.nft_wallet_info.my_nft_coins
     assert len(coins) == 2, "nft not generated"
 
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
@@ -216,35 +217,32 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     # ensure hints are generated
     assert compute_memos(sb)
 
-    await asyncio.sleep(3)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await asyncio.sleep(5)
-
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 1
+    await time_out_assert(15, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
+    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
     coins = nft_wallet_1.nft_wallet_info.my_nft_coins
     assert len(coins) == 1
 
+    await time_out_assert(15, wallet_1.get_pending_change_balance, 0)
     # Send it back to original owner
     nsb = await nft_wallet_1.transfer_nft(coins[0], ph)
     assert nsb is not None
 
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, nsb.name())
     # ensure hints are generated
     assert compute_memos(nsb)
-    await asyncio.sleep(5)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await asyncio.sleep(5)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 2
-
-    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
-    assert len(coins) == 0
+    await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
+    await time_out_assert(15, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
+    await time_out_assert(15, len, 0, nft_wallet_1.nft_wallet_info.my_nft_coins)
 
 
 @pytest.mark.parametrize(
@@ -281,7 +279,12 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(5)
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
     api_0 = WalletRpcApi(wallet_node_0)
     nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
@@ -301,11 +304,20 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert tr1.get("success")
     sb = tr1["spend_bundle"]
 
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(3)
+
+    time_left = 5.0
+    while time_left > 0:
+        coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+        if len(coins_response.get("nft_list", [])) > 0:
+            break
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
+    else:
+        raise AssertionError("NFT not minted")
+    await time_out_assert(15, wallet_1.get_pending_change_balance, 0)
     tr2 = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_0_id,
@@ -317,22 +329,28 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert isinstance(tr2, dict)
     assert tr2.get("success")
     sb = tr2["spend_bundle"]
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(3)
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    assert isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins = coins_response["nft_list"]
-    assert len(coins) == 2
-    uris = []
-    for coin in coins:
-        uris.append(coin.to_json_dict()["data_uris"][0])
-    assert len(uris) == 2
-    assert "https://chialisp.com/img/logo.svg" in uris
-    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
+    time_left = 5.0
+    while time_left > 0:
+        coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+        try:
+            assert isinstance(coins_response, dict)
+            assert coins_response.get("success")
+            coins = coins_response["nft_list"]
+            assert len(coins) == 2
+            uris = []
+            for coin in coins:
+                uris.append(coin.to_json_dict()["data_uris"][0])
+            assert len(uris) == 2
+            assert "https://chialisp.com/img/logo.svg" in uris
+            assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
+        except AssertionError:
+            if time_left < 0:
+                raise
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
 
 
 @pytest.mark.parametrize(
@@ -341,7 +359,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 5
+    num_blocks = 3
     full_nodes, wallets = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -364,13 +382,22 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await asyncio.sleep(5)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(5)
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
     api_0 = WalletRpcApi(wallet_node_0)
+    await time_out_assert(10, wallet_node_0.wallet_state_manager.synced, True)
+    await time_out_assert(10, wallet_node_1.wallet_state_manager.synced, True)
     nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
     assert nft_wallet_0.get("success")
@@ -389,13 +416,18 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert resp.get("success")
     sb = resp["spend_bundle"]
 
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(3)
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    assert isinstance(coins_response, dict)
+    time_left = 5.0
+    coins_response = {}
+    while time_left > 0:
+        coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+        if coins_response.get("nft_list"):
+            break
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
+    assert coins_response["nft_list"], isinstance(coins_response, dict)
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
@@ -415,6 +447,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
         )
     )
     nft_coin_id = coin["nft_coin_id"]
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     # add another URI
     tr1 = await api_0.nft_add_uri(
         {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu"}
@@ -425,26 +458,33 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert coins_response["nft_list"][0].pending_transaction
     sb = tr1["spend_bundle"]
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(5)
     # check that new URI was added
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    assert isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins = coins_response["nft_list"]
-    assert len(coins) == 1
-    coin = coins[0].to_json_dict()
-    uris = coin["data_uris"]
-    assert len(uris) == 1
-    assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
-    assert len(coin["metadata_uris"]) == 1
-    assert "http://metadata" == coin["metadata_uris"][0]
-    assert len(coin["license_uris"]) == 0
+    time_left = 5.0
+    while time_left > 0:
+        coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+        try:
+            assert isinstance(coins_response, dict)
+            assert coins_response.get("success")
+            coins = coins_response["nft_list"]
+            assert len(coins) == 1
+            coin = coins[0].to_json_dict()
+            uris = coin["data_uris"]
+            assert len(uris) == 1
+            assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
+            assert len(coin["metadata_uris"]) == 1
+            assert "http://metadata" == coin["metadata_uris"][0]
+            assert len(coin["license_uris"]) == 0
+        except AssertionError:
+            if time_left < 0:
+                raise
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
 
     # add yet another URI
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     nft_coin_id = coin["nft_coin_id"]
     tr1 = await api_0.nft_add_uri(
         {
@@ -458,19 +498,24 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert isinstance(tr1, dict)
     assert tr1.get("success")
     sb = tr1["spend_bundle"]
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(5)
-    # check that new URI was added
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    assert isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins = coins_response["nft_list"]
-    assert len(coins) == 1
-    coin = coins[0].to_json_dict()
-    uris = coin["data_uris"]
-    assert len(uris) == 2
-    assert len(coin["metadata_uris"]) == 1
-    assert "http://data" == coin["data_uris"][0]
+    time_left = 5.0
+    while time_left > 0:
+        coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+        try:
+            assert isinstance(coins_response, dict)
+            assert coins_response.get("success")
+            coins = coins_response["nft_list"]
+            assert len(coins) == 1
+            coin = coins[0].to_json_dict()
+            uris = coin["data_uris"]
+            assert len(uris) == 2
+            assert len(coin["metadata_uris"]) == 1
+            assert "http://data" == coin["data_uris"][0]
+        except AssertionError:
+            if time_left < 0:
+                raise
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
