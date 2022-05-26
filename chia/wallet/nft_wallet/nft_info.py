@@ -1,15 +1,16 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.puzzles.load_clvm import load_clvm
-
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.load_clvm import load_clvm
+
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
+
 
 @streamable
 @dataclass(frozen=True)
@@ -65,7 +66,6 @@ class NFTInfo(Streamable):
     """Puzzle hash of the singleton launcher in hex"""
 
 
-
 @streamable
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
@@ -80,4 +80,3 @@ class NFTCoinInfo(Streamable):
 class NFTWalletInfo(Streamable):
     my_nft_coins: List[NFTCoinInfo]
     did_wallet_id: Optional[uint32] = None
-
