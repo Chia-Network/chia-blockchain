@@ -14,6 +14,8 @@ async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
             print(f"        {dict(row)}")
 
 
-def row_to_node(row: aiosqlite.Row) -> Node:
+# It is unclear how to properly satisfy the generic Row normally, let alone for
+# dict-like rows.
+def row_to_node(row: aiosqlite.Row) -> Node:  # type: ignore[type-arg]
     cls = node_type_to_class[row["node_type"]]
     return cls.from_row(row=row)
