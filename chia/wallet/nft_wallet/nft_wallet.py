@@ -39,6 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer import match_singleton_puzzle
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
@@ -809,3 +810,17 @@ class NFTWallet:
         unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
 
         return (unsigned_spend_bundle, chia_tx)
+
+    async def create_offer_transactions(
+        self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
+    ) -> List[TransactionRecord]:
+        if isinstance(amount, int):
+            return await self.generate_signed_transaction(
+                [amount],
+                [Offer.ph()],
+                fee=fee,
+                coins=set(coins),
+                puzzle_announcements_to_consume=announcements,
+            )
+        else:
+            raise ValueError("No support for non-standard offers yet")

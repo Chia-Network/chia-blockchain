@@ -45,6 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -826,3 +827,15 @@ class CATWallet:
         if balance < amount + fee:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(uint64(amount + fee))
+
+    async def create_offer_transactions(
+        self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
+    ) -> List[TransactionRecord]:
+        assert isinstance(amount, int)
+        return await self.generate_signed_transaction(
+            [amount],
+            [Offer.ph()],
+            fee=fee,
+            coins=set(coins),
+            puzzle_announcements_to_consume=announcements,
+        )

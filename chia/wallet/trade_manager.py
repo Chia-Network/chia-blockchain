@@ -402,26 +402,17 @@ class TradeManager:
                     wallet = self.wallet_state_manager.wallets[id]
                 else:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
-                # This should probably not switch on whether or not we're spending an XCH but it has to for now
+
+                solver = offer_dict[id]
+                if isinstance(solver, int):
+                    solver = abs(solver)
+
                 # ATTENTION: new_wallets
-                if wallet.type() == WalletType.STANDARD_WALLET:
-                    tx = await wallet.generate_signed_transaction(
-                        abs(offer_dict[id]),  # type: ignore
-                        Offer.ph(),
-                        fee=fee if id == wallet_paying_fee else uint64(0),
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.append(tx)
-                else:
-                    txs = await wallet.generate_signed_transaction(
-                        [abs(offer_dict[id])],  # type: ignore
-                        [Offer.ph()],
-                        fee=fee if id == wallet_paying_fee else uint64(0),
-                        coins=set(selected_coins),
-                        puzzle_announcements_to_consume=announcements_to_assert,
-                    )
-                    all_transactions.extend(txs)
+                this_fee: uint64 = fee if id == wallet_paying_fee else uint64(0)
+                txs: List[TransactionRecord] = await wallet.create_offer_transactions(
+                    solver, selected_coins, announcements_to_assert, this_fee
+                )
+                all_transactions.extend(txs)
 
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))

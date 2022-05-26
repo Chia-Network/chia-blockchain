@@ -38,7 +38,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_puzzles import get_nft_info_from_puzzle
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -981,11 +981,16 @@ class WalletRpcApi:
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
-        for key in offer:
+        for key, value in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+                new_key = bytes32.from_hexstr(key)
             except ValueError:
-                modified_offer[int(key)] = offer[key]
+                new_key = int(key)
+            if isinstance(value, dict):
+                new_value = Solver(value)
+            else:
+                new_value = value
+            modified_offer[new_key] = new_value
 
         async with self.service.wallet_state_manager.lock:
             (
