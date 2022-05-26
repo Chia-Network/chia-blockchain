@@ -8,7 +8,7 @@ msgstr ""
 "Language: ru_RU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 18:06\n"
+"PO-Revision-Date: 2022-05-26 19:21\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Plural-Forms: nplurals=4; plural=((n%10==1 && n%100!=11) ? 0 : ((n%10 >= 2 && n%10 <=4 && (n%100 < 12 || n%100 > 14)) ? 1 : ((n%10 == 0 || (n%10 >= 5 && n%10 <=9)) || (n%100 >= 11 && n%100 <= 14)) ? 2 : 3));\n"
@@ -36,7 +36,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:150
 msgid "+"
-msgstr ""
+msgstr "+"
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 #~ msgid "+ Add New Plot NFT"
@@ -52,7 +52,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:149
 msgid "-"
-msgstr ""
+msgstr "-"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -212,7 +212,7 @@ msgstr "Начальное количество монет"
 
 #: src/components/offers/OfferEditor.tsx:115
 msgid "Amount exceeds spendable balance"
-msgstr ""
+msgstr "Сумма превышает расходный баланс"
 
 #: src/components/did/WalletDIDCreate.tsx:61
 msgid "Amount must be an even amount."
@@ -255,11 +255,11 @@ msgstr ""
 
 #: src/components/offers/OfferAssetSelector.tsx:117
 msgid "Asset Type"
-msgstr ""
+msgstr "Тип актива"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
-msgstr ""
+msgstr "Кошелек для атомарного обмена"
 
 #: src/components/app/AppState.tsx:148
 #~ msgid "Attempt {attempt}"
@@ -399,7 +399,7 @@ msgstr "Отмена"
 #: src/components/offers/OfferManager.tsx:166
 #: src/components/offers/OfferManager.tsx:423
 msgid "Cancel Offer"
-msgstr ""
+msgstr "Отменить заявку"
 
 #: src/components/trading/TradingOverview.jsx:388
 #~ msgid "Cancel and Spend"
@@ -407,7 +407,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:121
 msgid "Cancel on blockchain"
-msgstr ""
+msgstr "Отменить в блокчейне"
 
 #: src/components/WalletSend.tsx:101
 #: src/components/cat/WalletCATSend.tsx:119
@@ -557,7 +557,7 @@ msgstr "Подтверждение"
 
 #: src/components/WalletHistory.tsx:111
 msgid "Confirmed"
-msgstr ""
+msgstr "Подтверждено"
 
 #: src/components/WalletHistory.tsx:290
 #: src/components/offers/OfferViewer.tsx:188
@@ -668,7 +668,7 @@ msgstr ""
 #: src/components/cat/WalletCATSelect.tsx:32
 #: src/components/did/WalletDIDSelect.tsx:32
 msgid "Create New Wallet"
-msgstr ""
+msgstr "Создать новый кошелек"
 
 #: src/components/trading/TradeManager.tsx:45
 #~ msgid "Create Offer"
@@ -719,11 +719,11 @@ msgstr "Создать транзакцию"
 #: src/components/offers/OfferEditor.tsx:227
 #: src/components/offers/OfferManager.tsx:518
 msgid "Create an Offer"
-msgstr ""
+msgstr "Создать заявку"
 
 #: src/components/offers/OfferManager.tsx:512
 msgid "Create an offer to exchange XCH or other tokens. View an offer to inspect and accept an offer made by another party."
-msgstr ""
+msgstr "Создавайте заявки для обмена XCH или других токенов. Просматривайте заявки, чтобы проверять и принимать предложения, сделанные встречной стороной."
 
 #: src/components/cat/WalletCATCreateExisting.tsx:75
 msgid "Create custom CAT Wallet"
@@ -772,7 +772,7 @@ msgstr ""
 #: src/components/offers/OfferManager.tsx:339
 #: src/components/offers/OfferViewer.tsx:204
 msgid "Creation Date"
-msgstr ""
+msgstr "Дата создания"
 
 #: src/components/plot/add/PlotAddForm.tsx:109
 #~ msgid "Currency code is not defined"
@@ -949,7 +949,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:122
 msgid "Drag & drop an offer file below to view its details"
-msgstr ""
+msgstr "Перетащите файл заявки для просмотра его сведений"
 
 #: src/components/cat/WalletDID.tsx:426
 #: src/components/did/WalletDID.tsx:426
@@ -1325,7 +1325,7 @@ msgstr ""
 #: src/components/PasteMnemonic.tsx:86
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
-msgstr ""
+msgstr "Импорт"
 
 #: src/components/WalletImport.tsx:130
 msgid "Import Wallet from Mnemonics"
@@ -1342,17 +1342,17 @@ msgstr "Импортировать кошелек из мнемоники"
 #: src/components/offers/OfferEditorConditionsPanel.tsx:249
 #: src/components/offers/OfferViewer.tsx:459
 msgid "In exchange for"
-msgstr ""
+msgstr "В обмен на"
 
 #: src/components/offers/OfferShareDialog.tsx:403
 #: src/components/offers/OfferShareDialog.tsx:544
 #: src/components/offers/OfferShareDialog.tsx:892
 msgid "In exchange for:"
-msgstr ""
+msgstr "В обмен на:"
 
 #: src/components/offers/OfferEditorConditionsPanel.tsx:339
 msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
-msgstr ""
+msgstr "Включение комиссии в заявку может помочь ускорить обработку транзакции в случае, если предложение будет принято."
 
 #: src/components/WalletHistory.tsx:60
 msgid "Incoming"
@@ -1590,7 +1590,7 @@ msgstr ""
 
 #: src/components/WalletsManageTokens.tsx:135
 msgid "Manage token list"
-msgstr ""
+msgstr "Управление списком токенов"
 
 #: src/components/WalletHistory.tsx:116
 #: src/components/cat/WalletCATSend.tsx:232
@@ -1711,7 +1711,7 @@ msgstr "Псевдоним"
 
 #: src/components/offers/OfferManager.tsx:458
 msgid "No current offers"
-msgstr ""
+msgstr "Нет текущих заявок"
 
 #: src/components/WalletHistory.tsx:323
 msgid "No previous transactions"
@@ -1723,7 +1723,7 @@ msgstr "Нет предыдущих транзакций"
 
 #: src/components/offers/OfferViewer.tsx:209
 msgid "Node Count"
-msgstr ""
+msgstr "Количество узлов"
 
 #: src/components/WalletConnections.tsx:23
 msgid "Node ID"
@@ -1838,7 +1838,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:300
 msgid "Offered"
-msgstr ""
+msgstr "Предложено"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1846,11 +1846,11 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:534
 msgid "Offers you accepted"
-msgstr ""
+msgstr "Предложения, которые вы приняли"
 
 #: src/components/offers/OfferManager.tsx:529
 msgid "Offers you created"
-msgstr ""
+msgstr "Заявки, которые вы создали"
 
 #: src/components/WalletSend.tsx:139
 #: src/components/cat/WalletCATSend.tsx:180
@@ -1879,7 +1879,7 @@ msgstr "Исходящие"
 
 #: src/components/offers/OfferViewer.tsx:249
 msgid "Parent Coin"
-msgstr ""
+msgstr "Родительская монета"
 
 #: src/components/app/AppKeyringMigrator.tsx:139
 #: src/components/app/AppKeyringMigrator.tsx:140
@@ -1928,7 +1928,7 @@ msgstr ""
 
 #: src/components/WalletImport.tsx:95
 msgid "Paste Mnemonic"
-msgstr ""
+msgstr "Вставить мнемонику"
 
 #: src/components/PasteMnemonic.tsx:55
 msgid "Paste Mnemonic (24 words)"
@@ -1937,7 +1937,7 @@ msgstr ""
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
 msgid "Paste Offer Data"
-msgstr ""
+msgstr "Вставить данные заявки"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:358
 #~ msgid "Payout Address"
@@ -1997,7 +1997,7 @@ msgstr ""
 #: src/components/did/WalletDID.tsx:525
 #: src/components/did/WalletDID.tsx:914
 msgid "Please enter a filename"
-msgstr ""
+msgstr "Пожалуйста, укажите имя файла"
 
 #: src/components/app/AppPassPrompt.tsx:53
 #: src/components/settings/SetPassphrasePrompt.tsx:53
@@ -2007,7 +2007,7 @@ msgstr ""
 #: src/components/cat/WalletDID.tsx:934
 #: src/components/did/WalletDID.tsx:934
 msgid "Please enter a pubkey"
-msgstr ""
+msgstr "Пожалуйста, введите публичный ключ"
 
 #: src/components/cat/WalletDID.tsx:944
 #: src/components/did/WalletDID.tsx:944
@@ -2071,7 +2071,7 @@ msgstr ""
 
 #: src/components/WalletRenameDialog.tsx:49
 msgid "Please enter valid wallet name"
-msgstr ""
+msgstr "Пожалуйста, введите корректное имя кошелька"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:75
 #~ msgid "Please enter your current passphrase, and a new passphrase"
@@ -2459,7 +2459,7 @@ msgstr "Адрес для получения платежа"
 
 #: src/components/cat/WalletCATSend.tsx:123
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
-msgstr ""
+msgstr "Адрес получателя не является адресом цветного кошелька. Пожалуйста, введите адрес цветного кошелька"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:104
 #: src/components/cat/WalletDID.tsx:463
@@ -2537,11 +2537,11 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:323
 msgid "Requested"
-msgstr ""
+msgstr "Запрошено"
 
 #: src/components/offers/OfferEditor.tsx:195
 msgid "Reset"
-msgstr ""
+msgstr "Сброс"
 
 #: src/components/backup/BackupRestore.tsx:160
 #~ msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -2570,11 +2570,11 @@ msgstr "Сохранить"
 
 #: src/components/offers/OfferEditor.tsx:203
 msgid "Save Offer"
-msgstr ""
+msgstr "Сохранить заявку"
 
 #: src/components/offers/OfferManager.tsx:408
 msgid "Save Offer File"
-msgstr ""
+msgstr "Сохранить файл заявки"
 
 #: src/components/app/AppKeyringMigrator.tsx:178
 #: src/components/settings/ChangePassphrasePrompt.tsx:208
@@ -2630,7 +2630,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:136
 msgid "Select Offer File"
-msgstr ""
+msgstr "Сохранить файл заявки"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 #~ msgid "Select Temporary Directory"
@@ -2639,7 +2639,7 @@ msgstr ""
 #: src/components/WalletsList.tsx:32
 #: src/components/hero/WalletHeroWallets.tsx:47
 msgid "Select Wallet"
-msgstr ""
+msgstr "Выбрать кошелек"
 
 #: src/components/create/WalletCreateList.tsx:25
 msgid "Select Wallet Type"
@@ -2762,7 +2762,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:379
 msgid "Show Details"
-msgstr ""
+msgstr "Показать сведения"
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -2843,7 +2843,7 @@ msgstr "Лимит расходования (chia за интервал): {0}"
 
 #: src/constants/WalletName.ts:5
 msgid "Standard Wallet"
-msgstr ""
+msgstr "Стандартный кошелек"
 
 #: src/components/app/AppState.tsx:161
 #~ msgid "Starting services"
@@ -3120,7 +3120,7 @@ msgstr ""
 
 #: src/components/offers/OfferSummary.tsx:128
 msgid "This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small."
-msgstr ""
+msgstr "Эта заявка включает в себя комиссию, которая помогает ускорить обработку транзакции в случае, если предложение будет принято. Вы можете указать дополнительную плату, если считаете, что включенная плата слишком мала."
 
 #: src/components/offers/OfferViewer.tsx:389
 msgid "This offer has completed successfully"
@@ -3265,7 +3265,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:244
 msgid "Transactions"
-msgstr ""
+msgstr "Транзакции"
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -3374,7 +3374,7 @@ msgstr "Пользовательский публичный ключ"
 #: src/components/offers/OfferImport.tsx:153
 #: src/components/offers/OfferManager.tsx:521
 msgid "View an Offer"
-msgstr ""
+msgstr "Просмотр заявок"
 
 #: src/components/offers/OfferShareDialog.tsx:509
 msgid "View on Hashgreen DEX"
@@ -3673,7 +3673,7 @@ msgstr ""
 
 #: src/components/offers/OfferShareDialog.tsx:707
 msgid "Your offer has been successfully posted to Keybase."
-msgstr ""
+msgstr "Ваше предложение было успешно отправлено в Keybase."
 
 #: src/components/offers/OfferShareDialog.tsx:402
 #: src/components/offers/OfferShareDialog.tsx:543
@@ -3749,7 +3749,7 @@ msgstr "Вставленный список не содержит 24 валид�
 
 #: src/components/offers/OfferShareDialog.tsx:853
 msgid "{0}"
-msgstr ""
+msgstr "{0}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
