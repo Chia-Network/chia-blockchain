@@ -830,12 +830,18 @@ class CATWallet:
 
     async def create_offer_transactions(
         self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
-    ) -> List[TransactionRecord]:
+    ) -> List[SpendBundle]:
         assert isinstance(amount, int)
-        return await self.generate_signed_transaction(
-            [amount],
-            [Offer.ph()],
-            fee=fee,
-            coins=set(coins),
-            puzzle_announcements_to_consume=announcements,
-        )
+        spend_bundles: List[Optional[SpendBundle]] = [
+            tx.spend_bundle
+            for tx in await self.generate_signed_transaction(
+                [amount],
+                [Offer.ph()],
+                fee=fee,
+                coins=set(coins),
+                puzzle_announcements_to_consume=announcements,
+            )
+        ]
+        for b in spend_bundles:
+            assert b is not None
+        return spend_bundles  # type: ignore

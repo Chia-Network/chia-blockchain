@@ -405,7 +405,7 @@ class TradeManager:
             )
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
-            all_transactions: List[TransactionRecord] = []
+            all_transactions: List[SpendBundle] = []
             for id, selected_coins in coins_to_offer.items():
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
@@ -417,13 +417,12 @@ class TradeManager:
                     solver = abs(solver)
 
                 # ATTENTION: new_wallets
-                txs: List[TransactionRecord] = await wallet.create_offer_transactions(
+                bundle: SpendBundle = await wallet.create_offer_transactions(
                     solver, selected_coins, announcements_to_assert, fee if id == wallet_paying_fee else uint64(0)
                 )
-                all_transactions.extend(txs)
+                all_transactions.append(bundle)
 
-            transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
-            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
+            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, all_transactions)))
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 

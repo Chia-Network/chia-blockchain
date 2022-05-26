@@ -542,9 +542,9 @@ class Wallet:
 
     async def create_offer_transactions(
         self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
-    ) -> List[TransactionRecord]:
+    ) -> List[SpendBundle]:
         assert isinstance(amount, int)
-        return [
+        spend_bundle: Optional[SpendBundle] = (
             await self.generate_signed_transaction(
                 amount,
                 Offer.ph(),
@@ -552,4 +552,6 @@ class Wallet:
                 coins=set(coins),
                 puzzle_announcements_to_consume=announcements,
             )
-        ]
+        ).spend_bundle
+        assert spend_bundle is not None
+        return [spend_bundle]
