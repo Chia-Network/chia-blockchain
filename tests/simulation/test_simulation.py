@@ -302,7 +302,7 @@ class TestSimulation:
         argnames="amounts",
         argvalues=[
             *[pytest.param([1] * n, id=f"1 mojo x {n}") for n in [0, 1, 10, 49, 51, 103]],
-            *[pytest.param(list(range(n)), id=f"incrementing x {n}") for n in [1, 10, 49, 51, 103]],
+            *[pytest.param(list(range(1, n + 1)), id=f"incrementing x {n}") for n in [1, 10, 49, 51, 103]],
         ],
     )
     async def test_create_coins_with_amounts(
@@ -326,3 +326,30 @@ class TestSimulation:
         coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
 
         assert sorted(coin.amount for coin in coins) == sorted(amounts)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        argnames="amounts",
+        argvalues=[
+            [0],
+            [5, -5],
+            [4, 0],
+        ],
+        ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
+    )
+    async def test_create_coins_with_invalid_amounts_raises(
+        self,
+        amounts: List[int],
+        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+    ) -> None:
+        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        with pytest.raises(Exception, match="Coins must have a positive value"):
+            await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
