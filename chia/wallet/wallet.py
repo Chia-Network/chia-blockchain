@@ -542,7 +542,7 @@ class Wallet:
 
     async def create_offer_transactions(
         self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
-    ) -> List[SpendBundle]:
+    ) -> SpendBundle:
         assert isinstance(amount, int)
         spend_bundle: Optional[SpendBundle] = (
             await self.generate_signed_transaction(
@@ -554,4 +554,4 @@ class Wallet:
             )
         ).spend_bundle
         assert spend_bundle is not None
-        return [spend_bundle]
+        return spend_bundle

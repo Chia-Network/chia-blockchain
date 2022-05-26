@@ -813,9 +813,9 @@ class NFTWallet:
 
     async def create_offer_transactions(
         self, amount: Union[Solver, uint64], coins: List[Coin], announcements: Set[Announcement], fee: uint64
-    ) -> List[SpendBundle]:
+    ) -> SpendBundle:
         if isinstance(amount, int):
-            spend_bundles: List[Optional[SpendBundle]] = [
+            spend_bundles: List[SpendBundle] = [
                 tx.spend_bundle
                 for tx in await self.generate_signed_transaction(
                     [amount],
@@ -824,9 +824,8 @@ class NFTWallet:
                     coins=set(coins),
                     puzzle_announcements_to_consume=announcements,
                 )
+                if tx.spend_bundle is not None
             ]
-            for b in spend_bundles:
-                assert b is not None
-            return spend_bundles  # type: ignore
+            return SpendBundle.aggregate(spend_bundles)
         else:
             raise ValueError("No support for non-standard offers yet")

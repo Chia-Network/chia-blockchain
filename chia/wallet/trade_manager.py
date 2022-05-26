@@ -422,7 +422,7 @@ class TradeManager:
                 )
                 all_transactions.append(bundle)
 
-            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, all_transactions)))
+            total_spend_bundle = SpendBundle.aggregate(all_transactions)
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 
