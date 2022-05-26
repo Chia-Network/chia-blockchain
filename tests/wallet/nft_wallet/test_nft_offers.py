@@ -69,16 +69,18 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+    await asyncio.sleep(5)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, funds)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
@@ -104,6 +106,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -147,8 +150,8 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
@@ -193,8 +196,8 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, maker_balance_pre - xch_offered - maker_fee)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, taker_balance_pre + xch_offered - taker_fee)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_balance_pre - xch_offered - maker_fee)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_balance_pre + xch_offered - taker_fee)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
@@ -238,16 +241,18 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+    await asyncio.sleep(5)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, funds)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
@@ -273,6 +278,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -314,6 +320,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
 
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -359,16 +366,18 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+    await asyncio.sleep(5)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, funds)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
@@ -394,6 +403,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -410,6 +420,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     updated_nft = coins_maker[0]
@@ -453,8 +464,8 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
@@ -498,16 +509,18 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+    await asyncio.sleep(5)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, funds)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     # Create NFT wallets and nfts for maker and taker
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
@@ -534,6 +547,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -556,6 +570,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, cats_to_mint)
     await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, cats_to_mint)
@@ -719,16 +734,18 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(maker_ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(taker_ph))
+    await asyncio.sleep(5)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, funds)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     # Create NFT wallets and nfts for maker and taker
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
@@ -765,6 +782,7 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
+    await asyncio.sleep(5)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -814,8 +832,8 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, maker_balance_pre - maker_fee)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, taker_balance_pre - taker_fee)
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_balance_pre - maker_fee)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_balance_pre - taker_fee)
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     coins_taker = nft_wallet_taker.nft_wallet_info.my_nft_coins
