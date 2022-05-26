@@ -14,7 +14,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -534,7 +534,7 @@ class WalletRpcApi:
                 assert did_wallet.did_info.temp_pubkey is not None
                 my_did = did_wallet.get_my_DID()
                 coin_name = did_wallet.did_info.temp_coin.name().hex()
-                coin_list = did_wallet.did_info.temp_coin.as_list()
+                coin_list = coin_as_list(did_wallet.did_info.temp_coin)
                 newpuzhash = did_wallet.did_info.temp_puzhash
                 pubkey = did_wallet.did_info.temp_pubkey
                 return {

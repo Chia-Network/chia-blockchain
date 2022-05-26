@@ -149,7 +149,6 @@ class TestRateLimits:
             if not response:
                 saw_disconnect = True
         assert saw_disconnect
-        assert not r.process_msg_and_check(new_tx_message)
         await asyncio.sleep(6)
         assert r.process_msg_and_check(new_tx_message)
 

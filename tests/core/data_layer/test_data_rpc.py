@@ -62,7 +62,7 @@ async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup, rpc_port = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
             daemon_port,

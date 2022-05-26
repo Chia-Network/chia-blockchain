@@ -19,7 +19,6 @@ from tests.setup_nodes import (
 )
 from tests.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
-from tests.util.socket import find_available_listen_port
 
 test_constants_modified = test_constants.replace(
     **{
@@ -49,8 +48,6 @@ async def extra_node(self_hostname):
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
-            find_available_listen_port(),
-            find_available_listen_port(),
             b_tools,
             db_version=1,
         ):
@@ -72,10 +69,11 @@ async def one_wallet_node() -> AsyncIterator[Tuple[List[FullNodeSimulator], List
 class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        node1, node2, _, _, _, _, _, _, _, sanitizer_server, server1 = simulation
+        node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
+        server1 = node1.server
 
-        node1_port = node1.full_node.config["port"]
-        node2_port = node2.full_node.config["port"]
+        node1_port = node1.full_node.server.get_port()
+        node2_port = node2.full_node.server.get_port()
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(600, node_height_at_least, True, node2, 7)
@@ -224,7 +222,7 @@ class TestSimulation:
         # The expected number of coins were received.
         # TODO: pick a better way to check coin count
         spendable_amount = await wallet.get_spendable_balance()
-        all_coins = await wallet.select_coins(amount=spendable_amount)
+        all_coins = await wallet.select_coins(amount=uint64(spendable_amount))
         assert len(all_coins) == coin_count
 
     @pytest.mark.asyncio
