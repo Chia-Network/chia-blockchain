@@ -422,6 +422,8 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
 
     assert isinstance(tr1, dict)
     assert tr1.get("success")
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert coins_response["nft_list"][0].pending_transaction
     sb = tr1["spend_bundle"]
     await asyncio.sleep(5)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())

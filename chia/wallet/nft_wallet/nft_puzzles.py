@@ -3,11 +3,10 @@ from typing import Any, Dict, List
 
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -73,16 +72,15 @@ def create_full_puzzle(
     return full_puzzle
 
 
-def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
+def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
-    :param puzzle: NFT full puzzle
-    :param nft_coin: NFT coin
+    :param nft_coin_info NFTCoinInfo in local database
     :return: NFTInfo
     """
-    # TODO Update this method after the NFT code finalized
-    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
+    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
     data_uris: List[str] = []
+
     for uri in uncurried_nft.data_uris.as_python():
         data_uris.append(str(uri, "utf-8"))
     meta_uris: List[str] = []
@@ -94,7 +92,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
 
     nft_info = NFTInfo(
         uncurried_nft.singleton_launcher_id.as_python(),
-        nft_coin.name(),
+        nft_coin_info.coin.name(),
         uncurried_nft.owner_did.as_python(),
         uint64(uncurried_nft.trade_price_percentage.as_int()),
         data_uris,
@@ -107,6 +105,7 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
         uint64(uncurried_nft.series_total.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
+        nft_coin_info.pending_transaction,
     )
     return nft_info
 

@@ -39,7 +39,7 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -1371,7 +1371,7 @@ class WalletRpcApi:
         nfts = nft_wallet.get_current_nfts()
         nft_info_list = []
         for nft in nfts:
-            nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft.full_puzzle, nft.coin))
+            nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_transfer_nft(self, request):
@@ -1456,7 +1456,7 @@ class WalletRpcApi:
                     uncurried_nft.metadata_updater_hash,
                     uncurried_nft.inner_puzzle,
                 )
-            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(full_puzzle, coin_state.coin)
+            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(NFTCoinInfo(coin_state.coin, None, full_puzzle))
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
