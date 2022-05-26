@@ -71,7 +71,10 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
             <NFTCard
               nft={nft}
               canExpandDetails={false}
-              availableActions={NFTContextualActionTypes.None}
+              availableActions={
+                NFTContextualActionTypes.OpenInBrowser |
+                NFTContextualActionTypes.CopyURL
+              }
             />
           ) : (
             <Flex

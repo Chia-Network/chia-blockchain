@@ -1,14 +1,36 @@
 import React, { useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCopyToClipboard } from 'react-use';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
-import { AlertDialog, DropdownActions, useOpenDialog } from '@chia/core';
+import {
+  AlertDialog,
+  DropdownActions,
+  useOpenDialog,
+  useOpenExternal,
+} from '@chia/core';
 import type { DropdownActionsChildProps } from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
 import { ListItemIcon, MenuItem, Typography } from '@mui/material';
-import { ArrowForward as TransferIcon } from '@mui/icons-material';
+import {
+  ArrowForward as TransferIcon,
+  Assignment as AssignmentIcon,
+  OpenInBrowser,
+} from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
+import isURL from 'validator/lib/isURL';
+import { styled } from '@mui/system';
+
+/* ========================================================================== */
+
+const StyledAssignmentIcon = styled(AssignmentIcon)(
+  ({ theme, invertColor }) => `
+  color: ${
+    invertColor ? theme.palette.common.white : theme.palette.text.primary
+  };
+`,
+);
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -18,8 +40,10 @@ export enum NFTContextualActionTypes {
   None = 0,
   CreateOffer = 1 << 0, // 1
   Transfer = 1 << 1, // 2
+  OpenInBrowser = 1 << 2, // 4
+  CopyURL = 1 << 3, // 8
 
-  All = CreateOffer | Transfer,
+  All = CreateOffer | Transfer | OpenInBrowser | CopyURL,
 }
 
 type NFTContextualActionProps = {
@@ -131,6 +155,91 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
 }
 
 /* ========================================================================== */
+/*                       Open Data URL in Browser Action                      */
+/* ========================================================================== */
+
+type NFTOpenInBrowserContextualActionProps = NFTContextualActionProps;
+
+function NFTOpenInBrowserContextualAction(
+  props: NFTOpenInBrowserContextualActionProps,
+) {
+  const { onClose, selection } = props;
+  const openExternal = useOpenExternal();
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const haveDataUrl = selectedNft?.dataUris?.length && selectedNft?.dataUris[0];
+  const dataUrl: string | undefined = haveDataUrl
+    ? selectedNft.dataUris[0]
+    : undefined;
+  const isUrlValid = useMemo(() => {
+    if (!dataUrl) {
+      return false;
+    }
+
+    return isURL(dataUrl);
+  }, [dataUrl]);
+  const disabled = !haveDataUrl || !isUrlValid;
+
+  function handleOpenInBrowser() {
+    openExternal(dataUrl);
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleOpenInBrowser();
+      }}
+      disabled={disabled}
+    >
+      <ListItemIcon>
+        <OpenInBrowser />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Open in Web Browser</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
+/* ========================================================================== */
+/*                               Copy URL Action                              */
+/* ========================================================================== */
+
+type NFTCopyURLContextualActionProps = NFTContextualActionProps;
+
+function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
+  const { onClose, selection } = props;
+  const [, copyToClipboard] = useCopyToClipboard();
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const haveDataUrl = selectedNft?.dataUris?.length && selectedNft?.dataUris[0];
+  const dataUrl: string | undefined = haveDataUrl
+    ? selectedNft.dataUris[0]
+    : undefined;
+  const disabled = !haveDataUrl;
+
+  function handleCopy() {
+    copyToClipboard(dataUrl);
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleCopy();
+      }}
+      disabled={disabled}
+    >
+      <ListItemIcon>
+        <StyledAssignmentIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Copy URL</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
+/* ========================================================================== */
 /*                             Contextual Actions                             */
 /* ========================================================================== */
 
@@ -154,6 +263,9 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
     const actionComponents = {
       [NFTContextualActionTypes.CreateOffer]: NFTCreateOfferContextualAction,
       [NFTContextualActionTypes.Transfer]: NFTTransferContextualAction,
+      [NFTContextualActionTypes.OpenInBrowser]:
+        NFTOpenInBrowserContextualAction,
+      [NFTContextualActionTypes.CopyURL]: NFTCopyURLContextualAction,
     };
 
     return Object.keys(NFTContextualActionTypes)
