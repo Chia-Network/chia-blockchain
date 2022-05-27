@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -420,13 +420,24 @@ class WalletRpcClient(RpcClient):
 
     # Offers
     async def create_offer_for_ids(
-        self, offer_dict: Dict[uint32, int], fee=uint64(0), validate_only: bool = False
+        self,
+        offer_dict: Dict[Union[uint32, str], int],
+        driver_dict: Dict[str, Any] = None,
+        fee=uint64(0),
+        validate_only: bool = False,
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {}
         for key in offer_dict:
             send_dict[str(key)] = offer_dict[key]
 
-        res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
+        req = {
+            "offer": send_dict,
+            "validate_only": validate_only,
+            "fee": fee,
+        }
+        if driver_dict is not None:
+            req["driver_dict"] = driver_dict
+        res = await self.fetch("create_offer_for_ids", req)
         offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
