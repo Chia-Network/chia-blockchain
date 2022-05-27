@@ -2,7 +2,6 @@ import asyncio
 
 import aiohttp
 import pytest
-import pytest_asyncio
 
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.outbound_message import NodeType
@@ -11,8 +10,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from tests.block_tools import test_constants
-from tests.setup_nodes import setup_harvester_farmer
 
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
@@ -39,12 +36,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
         await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
 
 
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer(bt, tmp_path):
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
-
-
 class TestSSL:
     @pytest.mark.asyncio
     async def test_public_connections(self, wallet_node_sim_and_wallet, self_hostname):
@@ -57,8 +48,8 @@ class TestSSL:
         assert success is True
 
     @pytest.mark.asyncio
-    async def test_farmer(self, harvester_farmer, self_hostname):
-        harvester_service, farmer_service = harvester_farmer
+    async def test_farmer(self, farmer_one_harvester, self_hostname):
+        _, farmer_service = farmer_one_harvester
         farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
@@ -146,9 +137,9 @@ class TestSSL:
             await establish_connection(wallet_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_harvester(self, harvester_farmer, self_hostname):
-        harvester, farmer_api = harvester_farmer
-        harvester_server = harvester._server
+    async def test_harvester(self, farmer_one_harvester, self_hostname):
+        harvesters, _ = farmer_one_harvester
+        harvester_server = harvesters[0]._server
 
         # harvester should not accept incoming connections
         pub_crt = harvester_server._private_key_path.parent / "p2p.crt"

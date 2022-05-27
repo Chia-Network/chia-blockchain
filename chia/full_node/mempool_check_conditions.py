@@ -58,8 +58,8 @@ def get_name_puzzle_conditions(
             return NPCResult(uint16(err), None, uint64(0))
         else:
             return NPCResult(None, result, uint64(result.cost + size_cost))
-    except BaseException as e:
-        log.debug(f"get_name_puzzle_condition failed: {e}")
+    except BaseException:
+        log.exception("get_name_puzzle_condition failed")
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
 
 

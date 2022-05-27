@@ -8,17 +8,16 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import aiohttp
 
+from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
 from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -551,7 +550,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
-    await print_connections(wallet_client, time, NodeType, trusted_peers)
+    await print_connections(wallet_client, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
