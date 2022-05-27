@@ -8,7 +8,7 @@ msgstr ""
 "Language: cs_CZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-05-27 04:37\n"
 "Last-Translator: \n"
 "Language-Team: Czech\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -2659,7 +2659,7 @@ msgstr "Seed použitý k vytvoření pole. To závisí na pk poolu a pk pole."
 
 #: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
-msgstr ""
+msgstr "Celkový počet VDF (verifiable delay function) nebo tzv. proof of time opakování v celém blockchainu až po tento blok."
 
 #: src/components/block/Block.jsx:206
 #~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
@@ -3076,7 +3076,7 @@ msgstr "Váha"
 
 #: src/components/block/Block.jsx:186
 msgid "Weight is the total added difficulty of all blocks up to and including this one"
-msgstr ""
+msgstr "Váha je celková přidaná obtížnost všech bloků až po tento včetně něj"
 
 #: src/components/block/Block.jsx:186
 #~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
