@@ -42,7 +42,7 @@ jobs:
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
-  macos:
+  🍎:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -53,7 +53,7 @@ jobs:
       concurrency_name: macos
       configuration: ${{ needs.configure.outputs.configuration }}
       runs-on: macos-latest
-  ubuntu:
+  🐧:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -64,7 +64,7 @@ jobs:
       concurrency_name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
       runs-on: ubuntu-latest
-#  windows:
+#  🪟:
 #    uses: ./.github/workflows/test-single.yml
 #    needs: configure
 #    with:
