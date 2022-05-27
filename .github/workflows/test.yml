@@ -24,6 +24,8 @@ jobs:
       emoji: 🍎
       matrix: macos
       name: macOS
+      file_name: macos
+      concurrency_name: macos
       runs-on: macos-latest
   ubuntu:
     uses: ./.github/workflows/test-single.yml
@@ -31,11 +33,15 @@ jobs:
       emoji: 🐧
       matrix: ubuntu
       name: Ubuntu
+      file_name: ubuntu
+      concurrency_name: ubuntu
       runs-on: ubuntu-latest
-  windows:
-    uses: ./.github/workflows/test-single.yml
-    with:
-      emoji: 🪟
-      matrix: windows
-      name: Windows
-      runs-on: windows-latest
+#  windows:
+#    uses: ./.github/workflows/test-single.yml
+#    with:
+#      emoji: 🪟
+#      matrix: windows
+#      name: Windows
+#      file_name: windows
+#      concurrency_name: windows
+#      runs-on: windows-latest
