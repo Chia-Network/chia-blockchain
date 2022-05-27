@@ -241,7 +241,12 @@ class WalletRpcClient(RpcClient):
 
     # DID wallet
     async def create_new_did_wallet(
-        self, amount: int, fee: int = 0, name: str = "DID Wallet", backup_ids: List[str] = [], required_num: int = 0
+        self,
+        amount: int,
+        fee: int = 0,
+        name: Optional[str] = "DID Wallet",
+        backup_ids: List[str] = [],
+        required_num: int = 0,
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
