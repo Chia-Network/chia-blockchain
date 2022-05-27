@@ -1439,10 +1439,13 @@ class WalletRpcApi:
             inner_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
             update_condition = None
-            for condition in inner_solution.rest().first().rest().as_iter():
-                if condition.first().as_int() == -24:
-                    update_condition = condition
-                    break
+            try:
+                for condition in inner_solution.rest().first().rest().as_iter():
+                    if condition.first().as_int() == -24:
+                        update_condition = condition
+                        break
+            except Exception:
+                log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
             if update_condition is not None:
                 uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
                 metadata: Program = uncurried_nft.metadata
