@@ -51,6 +51,7 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
+from chia.util.network import is_localhost
 from chia.util.path import mkdir, path_from_root
 from chia.util.profiler import profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -472,6 +473,10 @@ class WalletNode:
         if not trusted and self.local_node_synced:
             await peer.close()
 
+        # if not is_localhost(peer.peer_host):
+        #     self.log.info("Closing non localhost")
+        #     await peer.close()
+
         if peer.peer_node_id in self.synced_peers:
             self.synced_peers.remove(peer.peer_node_id)
 
@@ -793,7 +798,8 @@ class WalletNode:
 
     def is_trusted(self, peer) -> bool:
         assert self.server is not None
-        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return False
+        # return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
@@ -1380,9 +1386,7 @@ class WalletNode:
                         return False
 
             all_peers = self.server.get_full_node_connections()
-            blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
-                start, end, peer_request_cache, all_peers
-            )
+            blocks: List[HeaderBlock] = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
             if blocks is None:
                 self.log.error(f"Error fetching blocks {start} {end}")
                 return False
@@ -1401,6 +1405,9 @@ class WalletNode:
                     return False
 
             for idx, en_block in enumerate(reversed_blocks):
+                hh: bytes32 = en_block.header_hash
+                if peer_request_cache.in_blocks_validated(hh):
+                    continue
                 if idx == len(reversed_blocks) - 1:
                     next_block_rc_hash = block.reward_chain_block.get_hash()
                     prev_hash = block.header_hash
@@ -1437,6 +1444,7 @@ class WalletNode:
                     ):
                         self.log.error("Failed validation 9")
                         return False
+                peer_request_cache.add_to_blocks_validated(header_hash=hh, height=en_block.height)
             return True
 
     async def fetch_puzzle_solution(self, peer: WSChiaConnection, height: uint32, coin: Coin) -> CoinSpend:
