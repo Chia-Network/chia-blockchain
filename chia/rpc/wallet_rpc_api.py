@@ -1445,7 +1445,7 @@ class WalletRpcApi:
                         update_condition = condition
                         break
             except Exception:
-                log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
+                log.info(f"Inner solution is not a metadata updater solution, no metadata update.")
             if update_condition is not None:
                 uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
                 metadata: Program = uncurried_nft.metadata
