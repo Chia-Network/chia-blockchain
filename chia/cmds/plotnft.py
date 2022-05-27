@@ -31,13 +31,7 @@ def plotnft_cmd() -> None:
     default=None,
 )
 @click.option(
-    "-i",
-    "--id",
-    help="ID of the Pooling wallet in use",
-    type=int,
-    default=None,
-    show_default=True,
-    required=False
+    "-i", "--id", help="ID of the Pooling wallet in use", type=int, default=None, show_default=True, required=False
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
@@ -118,7 +112,7 @@ def create_cmd(
     type=int,
     default=None,
     show_default=True,
-    required=True
+    required=True,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
@@ -157,7 +151,7 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
     type=int,
     default=None,
     show_default=True,
-    required=True
+    required=True,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
@@ -188,13 +182,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 
 @plotnft_cmd.command("inspect", short_help="Get Detailed plotnft information as JSON")
 @click.option(
-    "-i",
-    "--id",
-    help="ID of the Pooling wallet to use",
-    type=int,
-    default=None,
-    show_default=True,
-    required=True
+    "-i", "--id", help="ID of the Pooling wallet to use", type=int, default=None, show_default=True, required=True
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
@@ -221,7 +209,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     type=int,
     default=None,
     show_default=True,
-    required=True
+    required=True,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
