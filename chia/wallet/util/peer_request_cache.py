@@ -2,8 +2,10 @@ import asyncio
 from typing import Optional
 
 from chia.protocols.wallet_protocol import CoinState, RespondSESInfo
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
 
@@ -23,8 +25,8 @@ class PeerRequestCache:
         self._ses_requests = LRUCache(100)
         self._states_validated = LRUCache(1000)
         self._timestamps = LRUCache(1000)
-        self._blocks_validated = LRUCache(10000)
-        self._block_signatures_validated = LRUCache(10000)
+        self._blocks_validated = LRUCache(1000)
+        self._block_signatures_validated = LRUCache(1000)
 
     def get_block(self, height: uint32) -> Optional[HeaderBlock]:
         return self._blocks.get(height)
@@ -62,17 +64,26 @@ class PeerRequestCache:
     def get_height_timestamp(self, height: uint32) -> Optional[uint64]:
         return self._timestamps.get(height)
 
-    def add_to_blocks_validated(self, header_hash: bytes32, height: uint32):
-        self._blocks_validated.put(header_hash, height)
+    def add_to_blocks_validated(self, reward_chain_hash: bytes32, height: uint32):
+        self._blocks_validated.put(reward_chain_hash, height)
 
-    def in_blocks_validated(self, header_hash: bytes32) -> bool:
-        return self._blocks_validated.get(header_hash) is not None
+    def in_blocks_validated(self, reward_chain_hash: bytes32) -> bool:
+        return self._blocks_validated.get(reward_chain_hash) is not None
 
-    def add_to_block_signatures_validated(self, header_hash: bytes32, height: uint32):
-        self._block_signatures_validated.put(header_hash, height)
+    def add_to_block_signatures_validated(self, block: HeaderBlock):
+        sig_hash: bytes = self._calculate_sig_hash_from_block(block)
+        self._block_signatures_validated.put(sig_hash, block.height)
 
-    def in_block_signatures_validated(self, header_hash: bytes32) -> bool:
-        return self._block_signatures_validated.get(header_hash) is not None
+    def _calculate_sig_hash_from_block(self, block: HeaderBlock) -> bytes32:
+        return std_hash(
+            bytes(block.reward_chain_block.proof_of_space.plot_public_key)
+            + bytes(block.foliage.foliage_block_data)
+            + bytes(block.foliage.foliage_block_data_signature)
+        )
+
+    def in_block_signatures_validated(self, block: HeaderBlock) -> bool:
+        sig_hash: bytes = self._calculate_sig_hash_from_block(block)
+        return self._block_signatures_validated.get(sig_hash) is not None
 
     def clear_after_height(self, height: int):
         # Remove any cached item which relates to an event that happened at a height above height.
@@ -113,9 +124,9 @@ class PeerRequestCache:
         self._blocks_validated = new_blocks_validated
 
         new_block_signatures_validated = LRUCache(self._block_signatures_validated.capacity)
-        for hh, h in self._block_signatures_validated.cache.items():
+        for sig_hash, h in self._block_signatures_validated.cache.items():
             if h <= height:
-                new_block_signatures_validated.put(hh, h)
+                new_block_signatures_validated.put(sig_hash, h)
         self._block_signatures_validated = new_block_signatures_validated
 
 

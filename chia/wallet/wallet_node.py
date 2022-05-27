@@ -1402,13 +1402,13 @@ class WalletNode:
                     self.log.error("Failed validation 4")
                     return False
             pk_m_sig: List[Tuple[G1Element, bytes32, G2Element]] = []
-            sig_hhs_height: List[Tuple[bytes32, uint32]] = []
+            sigs_to_cache: List[HeaderBlock] = []
+            blocks_to_cache: List[Tuple[bytes32, uint32]] = []
 
             signatures_to_validate: int = 30
             for idx in range(len(blocks)):
                 en_block = blocks[idx]
-                hh = en_block.header_hash
-                if idx < signatures_to_validate and not peer_request_cache.in_block_signatures_validated(hh):
+                if idx < signatures_to_validate and not peer_request_cache.in_block_signatures_validated(en_block):
                     # Validate that the block is buried in the foliage by checking the signatures
                     pk_m_sig.append(
                         (
@@ -1417,19 +1417,22 @@ class WalletNode:
                             en_block.foliage.foliage_block_data_signature,
                         )
                     )
-                    sig_hhs_height.append((hh, en_block.height))
+                    sigs_to_cache.append(en_block)
 
-                if peer_request_cache.in_blocks_validated(hh):
+                # This is the reward chain challenge. If this is in the cache, it means the prev block
+                # has been validated. We must at least check the first block to ensure they are connected
+                reward_chain_hash: Optional[bytes32] = en_block.reward_chain_block.reward_chain_ip_vdf.challenge
+                if idx != 0 and peer_request_cache.in_blocks_validated(reward_chain_hash):
                     # As soon as we see a block we have already concluded is in the chain, we can quit.
                     if idx > signatures_to_validate:
                         break
                 else:
                     # Validate that the block is committed to by the weight proof
                     if idx == 0:
-                        next_block_rc_hash = block.reward_chain_block.get_hash()
+                        prev_block_rc_hash: bytes32 = block.reward_chain_block.get_hash()
                         prev_hash = block.header_hash
                     else:
-                        next_block_rc_hash = blocks[idx - 1].reward_chain_block.get_hash()
+                        prev_block_rc_hash = blocks[idx - 1].reward_chain_block.get_hash()
                         prev_hash = blocks[idx - 1].header_hash
 
                     if not en_block.prev_header_hash == prev_hash:
@@ -1445,15 +1448,14 @@ class WalletNode:
                             if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
                                 self.log.error("Failed validation 6")
                                 return False
-                        if not next_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
+                        if not prev_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
                             self.log.error("Failed validation 7")
                             return False
                     else:
-                        if not next_block_rc_hash == en_block.reward_chain_block.reward_chain_ip_vdf.challenge:
+                        if not prev_block_rc_hash == reward_chain_hash:
                             self.log.error("Failed validation 8")
                             return False
-
-                peer_request_cache.add_to_blocks_validated(header_hash=hh, height=en_block.height)
+                    blocks_to_cache.append((reward_chain_hash, en_block.height))
 
             agg_sig: G2Element = AugSchemeMPL.aggregate([sig for (_, _, sig) in pk_m_sig])
             if not AugSchemeMPL.aggregate_verify(
@@ -1461,8 +1463,10 @@ class WalletNode:
             ):
                 self.log.error("Failed signature validation")
                 return False
-            for hh, height in sig_hhs_height:
-                peer_request_cache.add_to_block_signatures_validated(header_hash=hh, height=height)
+            for header_block in sigs_to_cache:
+                peer_request_cache.add_to_block_signatures_validated(header_block)
+            for reward_chain_hash, height in blocks_to_cache:
+                peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
             return True
 
     async def fetch_puzzle_solution(self, peer: WSChiaConnection, height: uint32, coin: Coin) -> CoinSpend:
