@@ -227,11 +227,11 @@ class TestConfig:
             == "ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
         )
 
-    def test_load_config_exit_on_error(self, tmpdir):
+    def test_load_config_exit_on_error(self, tmp_path: Path):
         """
         Call load_config() with an invalid path. Behavior should be dependent on the exit_on_error flag.
         """
-        root_path: Path = tmpdir
+        root_path = tmp_path
         config_file_path: Path = root_path / "config" / "config.yaml"
         # When: config file path points to a directory
         config_file_path.mkdir(parents=True, exist_ok=True)
