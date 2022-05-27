@@ -573,7 +573,7 @@ def nft_add_uri_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
-@click.option("-aa", "--artist-address", help="Target artist's wallet address", type=str, required=True)
+@click.option("-ta", "--target-address", help="Target recipient wallet address", type=str, required=True)
 @click.option(
     "-m",
     "--fee",
@@ -588,7 +588,7 @@ def nft_transfer_cmd(
     fingerprint: int,
     id: int,
     nft_coin_id: str,
-    artist_address: str,
+    target_address: str,
     fee: str,
 ) -> None:
     import asyncio
@@ -597,7 +597,7 @@ def nft_transfer_cmd(
     extra_params = {
         "wallet_id": id,
         "nft_coin_id": nft_coin_id,
-        "artist_address": artist_address,
+        "target_address": target_address,
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))

@@ -326,7 +326,7 @@ class WalletStateManager:
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
-    async def update_wallet_puzzle_hashes(self, wallet_id):
+    async def update_wallet_puzzle_hashes(self, wallet_id, in_transaction=False):
         derivation_paths: List[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
@@ -353,7 +353,7 @@ class WalletStateManager:
                     False,
                 )
             )
-        await self.puzzle_store.add_derivation_paths(derivation_paths)
+        await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction=in_transaction)
 
     async def get_unused_derivation_record(
         self, wallet_id: uint32, in_transaction=False, hardened=False
@@ -1397,6 +1397,10 @@ class WalletStateManager:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == uint8(WalletType.POOLING_WALLET):
                 await wallet.new_peak(peak.height)
+        current_time = int(time.time())
+
+        if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
+            self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(
         self, puzzle_hashes: List[bytes32], wallet_ids: List[int], in_transaction: bool = False

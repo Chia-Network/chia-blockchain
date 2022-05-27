@@ -8,6 +8,7 @@ from blspy import G1Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint16
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 log = logging.getLogger(__name__)
@@ -51,6 +52,13 @@ class UncurriedNFT:
     """
     data_uris: Program
     data_hash: Program
+    meta_uris: Program
+    meta_hash: Program
+    license_uris: Program
+    license_hash: Program
+    series_number: Program
+    series_total: Program
+
     inner_puzzle: Program
     """NFT state layer inner puzzle"""
 
@@ -71,8 +79,8 @@ class UncurriedNFT:
     Curried parameters of the transfer program
     [royalty_address, trade_price_percentage, settlement_mod_hash, cat_mod_hash]
     """
-    royalty_address: Optional[Program]
-    trade_price_percentage: Optional[Program]
+    royalty_address: Optional[bytes32]
+    trade_price_percentage: Optional[uint16]
 
     @classmethod
     def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> UncurriedNFT:
@@ -98,15 +106,34 @@ class UncurriedNFT:
             raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
         try:
             # Set nft parameters
-            (nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle) = curried_args.as_iter()
 
+            (nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle) = curried_args.as_iter()
+            data_uris = Program.to([])
+            data_hash = Program.to(0)
+            meta_uris = Program.to([])
+            meta_hash = Program.to(0)
+            license_uris = Program.to([])
+            license_hash = Program.to(0)
+            series_number = Program.to(1)
+            series_total = Program.to(1)
             # Set metadata
             for kv_pair in metadata.as_iter():
                 if kv_pair.first().as_atom() == b"u":
                     data_uris = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"h":
                     data_hash = kv_pair.rest()
-
+                if kv_pair.first().as_atom() == b"mu":
+                    meta_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"mh":
+                    meta_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lu":
+                    license_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lh":
+                    license_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"sn":
+                    series_number = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"st":
+                    series_total = kv_pair.rest()
             current_did = None
             pubkey = None
             transfer_program_mod = None
@@ -137,6 +164,12 @@ class UncurriedNFT:
             data_hash=data_hash,
             p2_puzzle=p2_puzzle,
             metadata_updater_hash=metadata_updater_hash,
+            meta_uris=meta_uris,
+            meta_hash=meta_hash,
+            license_uris=license_uris,
+            license_hash=license_hash,
+            series_number=series_number,
+            series_total=series_total,
             inner_puzzle=inner_puzzle,
             # TODO: Set/Remove following fields after NFT1 implemented
             owner_did=current_did,

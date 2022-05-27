@@ -1,28 +1,10 @@
-from blspy import G1Element
-from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_secret_key,
-    puzzle_for_pk,
-    solution_for_conditions,
-)
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.core.make_block_generator import int_to_public_key
-from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_coin_announcement,
-    make_assert_puzzle_announcement,
-    make_assert_my_coin_id_condition,
-    make_assert_absolute_seconds_exceeds_condition,
-    make_create_coin_announcement,
-    make_create_puzzle_announcement,
-    make_create_coin_condition,
-    make_reserve_fee_condition,
-)
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
@@ -41,11 +23,12 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
 NFT_METADATA_UPDATER_UPDATEABLE = load_clvm("nft_metadata_updater_updateable.clvm")
 
+
 def test_new_nft_state_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     my_amount = 1
-    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
+    destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
@@ -67,21 +50,31 @@ def test_new_nft_state_layer() -> None:
     assert res.first().first().as_int() == 73
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination).get_tree_hash()
+    assert (
+        res.rest().rest().first().rest().first().as_atom()
+        == NFT_STATE_LAYER_MOD.curry(
+            NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
+        ).get_tree_hash()
+    )
 
 
 def test_update_metadata() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     my_amount = 1
-    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
+    destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append([-24, NFT_METADATA_UPDATER_DEFAULT, "https://www.chia.net/img/branding/chia-logo-2.svg"])
-    condition_list.append([-24, NFT_METADATA_UPDATER_DEFAULT, "https://www.chia.net/img/branding/chia-logo-2.svg"])  # check it doesn't run twice
+    condition_list.append([-24, NFT_METADATA_UPDATER_DEFAULT, ("mu", "https://url2")])
+
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("mu", []),
+        ("mh", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("lu", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("lh", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
+
     solution = Program.to(
         [
             NFT_STATE_LAYER_MOD_HASH,
@@ -96,25 +89,38 @@ def test_update_metadata() -> None:
     )
 
     metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("mu", ["https://url2"]),
+        ("mh", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("lu", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("lh", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
-
     cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)
     assert len(res.as_python()) == 3  # check that the negative conditions have been filtered out
     assert res.first().first().as_int() == 73
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination).get_tree_hash()
+    assert bytes32(res.rest().rest().first().rest().first().as_atom()) == NFT_STATE_LAYER_MOD.curry(
+        NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
+    )
+    assert (
+        res.rest().rest().first().rest().first().as_atom()
+        == NFT_STATE_LAYER_MOD.curry(
+            NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
+        ).get_tree_hash()
+    )
 
 
 def test_update_metadata_updater() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     my_amount = 1
-    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
+    destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append([-24, NFT_METADATA_UPDATER_UPDATEABLE, ["test", NFT_METADATA_UPDATER_DEFAULT.get_tree_hash()]])
+    condition_list.append(
+        [-24, NFT_METADATA_UPDATER_UPDATEABLE, ["test", NFT_METADATA_UPDATER_DEFAULT.get_tree_hash()]]
+    )
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
@@ -142,35 +148,48 @@ def test_update_metadata_updater() -> None:
     assert res.first().first().as_int() == 73
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().first().rest().first().as_atom() == NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination).get_tree_hash()
+    assert (
+        res.rest().rest().first().rest().first().as_atom()
+        == NFT_STATE_LAYER_MOD.curry(
+            NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
+        ).get_tree_hash()
+    )
 
 
 def test_innerpuz_enforcement_layer() -> None:
     pubkey = int_to_public_key(1)
-    innerpuz = puzzle_for_pk(pubkey)
-    my_amount = 1
     destination = int_to_public_key(2)
     new_did = Program.to("test").get_tree_hash()
     # P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     # NFT_V1_MOD_HASH
     # PUBKEY
-    # INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
-    # inner_solution
-    condition_list = [new_did, [[200]], destination, ["fake solution"], 0, 0, [[51, 0xcafef00d, 200]]]
-    solution = Program.to([
-        STANDARD_PUZZLE_MOD.get_tree_hash(),
-        NFT_INNER_INNERPUZ.get_tree_hash(),
-        STANDARD_PUZZLE_MOD.curry(pubkey),
-        solution_for_conditions(condition_list),
-    ])
+    # INNER_PUZZLE
+    # returns [ (new_owner, trade_prices_list,
+    # new_pk, transfer_program_solution, Optional[metadata_updater_reveal],
+    # Optional[metadata_updater_solution], Conditions)
+    # inner_solution ]
+    condition_list = [new_did, [[200]], destination, ["fake solution"], 0, 0, [[51, 0xCAFEF00D, 200]]]
+    solution = Program.to(
+        [
+            STANDARD_PUZZLE_MOD.get_tree_hash(),
+            NFT_INNER_INNERPUZ.get_tree_hash(),
+            STANDARD_PUZZLE_MOD.curry(pubkey),
+            solution_for_conditions(condition_list),
+        ]
+    )
     cost, res = NFT_INNER_INNERPUZ.run_with_cost(INFINITE_COST, solution)
     assert res.first().first().as_int() == 51
-    assert res.first().rest().first().as_atom() == NFT_INNER_INNERPUZ.curry(
-        STANDARD_PUZZLE_MOD.get_tree_hash(),
-        NFT_INNER_INNERPUZ.get_tree_hash(),
-        STANDARD_PUZZLE_MOD.curry(destination)
-    ).get_tree_hash()
-    assert res.first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
+    assert (
+        res.first().rest().first().as_atom()
+        == NFT_INNER_INNERPUZ.curry(
+            STANDARD_PUZZLE_MOD.get_tree_hash(),
+            NFT_INNER_INNERPUZ.get_tree_hash(),
+            STANDARD_PUZZLE_MOD.curry(destination),
+        ).get_tree_hash()
+    )
+    assert res.first().rest().rest().rest().first() == Program.to(
+        [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()]
+    )
 
 
 def test_transfer_program() -> None:
@@ -188,7 +207,7 @@ def test_transfer_program() -> None:
         OFFER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
     )
-#     Current_Owner
+    #     Current_Owner
     # (
     #   new_owner
     #   trade_prices_list
@@ -196,14 +215,7 @@ def test_transfer_program() -> None:
     # )
 
     trade_prices_list = [[200]]
-    solution = Program.to([
-        current_owner,
-        [
-            new_owner,
-            trade_prices_list,
-            [new_inner]
-        ]
-    ])
+    solution = Program.to([current_owner, [new_owner, trade_prices_list, [new_inner]]])
     cost, res = curried_tp.run_with_cost(INFINITE_COST, solution)
     assert res.first().as_atom() == new_owner
     assert res.rest().first().as_int() == 0
@@ -216,14 +228,13 @@ def test_transfer_program() -> None:
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
-    my_amount = 1
     destination = int_to_public_key(2)
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     old_did = Program.to("test_2").get_tree_hash()
     nft_id = Program.to("nft_id")
     trade_prices_list = [[200]]
-    condition_list = [new_did, trade_prices_list, destination, [new_did_inner_hash], 0, 0, [[51, 0xcafef00d, 200]]]
+    condition_list = [new_did, trade_prices_list, destination, [new_did_inner_hash], 0, 0, [[51, 0xCAFEF00D, 200]]]
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
         SINGLETON_STRUCT,
@@ -243,15 +254,23 @@ def test_ownership_layer() -> None:
         curried_tp,
         curried_inner,
     )
-    # INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution, Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
+    # INNER_PUZZLE  ; returns (new_owner, trade_prices_list, new_pk, transfer_program_solution,
+    #                Optional[metadata_updater_reveal], Optional[metadata_updater_solution], Conditions)
     # inner_solution
-    # new_owner trade_prices_list new_pk transfer_program_solution metadata_updater_reveal metadata_updater_solution conditions
+    # - new_owner
+    # - trade_prices_list
+    # - new_pk
+    # - transfer_program_solution
+    # - metadata_updater_reveal
+    # - metadata_updater_solution conditions
     condition_list = [new_did, trade_prices_list, destination, [new_did_inner_hash], 0, 0, [[60, "congratulations"]]]
     solution = Program.to([[solution_for_conditions(condition_list)]])
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
     assert res.first().first().as_int() == 51
     assert res.first().rest().rest().first().as_int() == 1
-    assert res.first().rest().rest().rest().first() == Program.to([STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()])
+    assert res.first().rest().rest().rest().first() == Program.to(
+        [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()]
+    )
     assert res.rest().first().first().as_int() == -10
     assert res.rest().first().rest().rest().first() == Program.to(trade_prices_list)
     assert res.rest().rest().rest().rest().rest().rest().first().first().as_int() == 51
@@ -300,9 +319,12 @@ def test_full_stack() -> None:
         curried_ownership_layer,
     )
 
-    solution = Program.to([
-        [[solution_for_conditions(condition_list)]],
-        my_amount,
-    ])
+    solution = Program.to(
+        [
+            [[solution_for_conditions(condition_list)]],
+            my_amount,
+        ]
+    )
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
-    
+    assert cost
+    assert res

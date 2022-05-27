@@ -1,8 +1,9 @@
 import logging
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from blspy import G1Element
 from clvm.casts import int_from_bytes
+from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -13,7 +14,6 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.util.debug_spend_bundle import disassemble
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -88,28 +88,88 @@ def get_nft_info_from_puzzle(puzzle: Program, nft_coin: Coin) -> NFTInfo:
     :param nft_coin: NFT coin
     :return: NFTInfo
     """
-    # TODO Update this method after the NFT code finalized
     uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(puzzle)
-    data_uris = []
+    data_uris: List[str] = []
     for uri in uncurried_nft.data_uris.as_python():
         data_uris.append(str(uri, "utf-8"))
+    meta_uris: List[str] = []
+    for uri in uncurried_nft.meta_uris.as_python():
+        meta_uris.append(str(uri, "utf-8"))
+    license_uris: List[str] = []
+    for uri in uncurried_nft.license_uris.as_python():
+        license_uris.append(str(uri, "utf-8"))
 
     nft_info = NFTInfo(
-        uncurried_nft.singleton_launcher_id.as_python().hex().upper(),
-        nft_coin.name().hex().upper(),
-        uncurried_nft.owner_did.as_python().hex().upper(),
-        uint64(uncurried_nft.trade_price_percentage.as_int()),
+        uncurried_nft.singleton_launcher_id.as_python(),
+        nft_coin.name(),
+        uncurried_nft.owner_did,
+        uncurried_nft.trade_price_percentage,
         data_uris,
-        uncurried_nft.data_hash.as_python().hex().upper(),
-        [],
-        "",
-        [],
-        "",
-        "NFT1",
-        uint64(1),
-        uint64(1),
+        uncurried_nft.data_hash.as_python(),
+        meta_uris,
+        uncurried_nft.meta_hash.as_python(),
+        license_uris,
+        uncurried_nft.license_hash.as_python(),
+        uint64(uncurried_nft.series_total.as_int()),
+        uint64(uncurried_nft.series_total.as_int()),
+        uncurried_nft.metadata_updater_hash.as_python(),
+        disassemble(uncurried_nft.metadata),
     )
     return nft_info
+
+
+def metadata_to_program(metadata: Dict[bytes, Any]) -> Program:
+    """
+    Convert the metadata dict to a Chialisp program
+    :param metadata: User defined metadata
+    :return: Chialisp program
+    """
+    kv_list = []
+    for key, value in metadata.items():
+        kv_list.append((key, value))
+    program: Program = Program.to(kv_list)
+    return program
+
+
+def program_to_metadata(program: Program) -> Dict[bytes, Any]:
+    """
+    Convert a program to a metadata dict
+    :param program: Chialisp program contains the metadata
+    :return: Metadata dict
+    """
+    metadata = {}
+    for kv_pair in program.as_iter():
+        metadata[kv_pair.first().as_atom()] = kv_pair.rest().as_python()
+    return metadata
+
+
+def prepend_value(key: bytes, value: Program, metadata: Dict[bytes, Any]) -> None:
+    """
+    Prepend a value to a list in the metadata
+    :param key: Key of the field
+    :param value: Value want to add
+    :param metadata: Metadata
+    :return:
+    """
+
+    if value != Program.to(0):
+        if metadata[key] == b"":
+            metadata[key] = [value.as_python()]
+        else:
+            metadata[key].insert(0, value.as_python())
+
+
+def update_metadata(metadata: Program, update_condition: Program) -> Program:
+    """
+    Apply conditions of metadata updater to the previous metadata
+    :param metadata: Previous metadata
+    :param update_condition: Update metadata conditions
+    :return: Updated metadata
+    """
+    new_metadata: Dict[bytes, Any] = program_to_metadata(metadata)
+    uri: Program = update_condition.rest().rest().first()
+    prepend_value(uri.first().as_python(), uri.rest(), new_metadata)
+    return metadata_to_program(new_metadata)
 
 
 def create_ownership_layer_puzzle(nft_id: bytes32, did_id: bytes32, p2_puzzle: Program, percentage: uint16) -> Program:
@@ -146,7 +206,7 @@ def create_ownership_layer_transfer_solution(
     return solution
 
 
-def get_metadata_and_p2_puzhash(unft, solution: Program) -> Tuple[Program, bytes32]:
+def get_metadata_and_p2_puzhash(unft: UncurriedNFT, solution: Program) -> Tuple[Program, bytes32]:
     if unft.owner_did:
         conditions = solution.at("ffffrrrrrrf").as_iter()
     else:

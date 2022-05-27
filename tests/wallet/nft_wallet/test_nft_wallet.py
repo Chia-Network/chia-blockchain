@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
@@ -13,17 +14,13 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
-import logging
-
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("fsevents").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.plotting").setLevel(logging.INFO)  # Too much logging on debug level
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
@@ -35,7 +32,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
 
 @pytest.mark.parametrize(
     "trusted",
-    [True],
+    [True, False],
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -122,7 +119,7 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
 
 @pytest.mark.parametrize(
     "trusted",
-    [True],
+    [True, False],
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -253,7 +250,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
 @pytest.mark.parametrize(
     "trusted",
-    [True],
+    [True, False],
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -336,12 +333,12 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         uris.append(coin.to_json_dict()["data_uris"][0])
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
-    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"]) in [x.name() for x in sb.additions()]
+    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
 
 
 @pytest.mark.parametrize(
     "trusted",
-    [True],
+    [True, False],
 )
 @pytest.mark.asyncio
 async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -403,14 +400,57 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     coin = coins[0].to_json_dict()
+    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
+    assert coin["chain_info"] == disassemble(
+        Program.to(
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                ("mu", []),
+                ("mh", hexstr_to_bytes("00")),
+                ("lu", []),
+                ("lh", hexstr_to_bytes("00")),
+                ("sn", uint64(1)),
+                ("st", uint64(1)),
+            ]
+        )
+    )
     nft_coin_id = coin["nft_coin_id"]
     # add another URI
+    tr1 = await api_0.nft_add_uri(
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu"}
+    )
+
+    assert isinstance(tr1, dict)
+    assert tr1.get("success")
+    sb = tr1["spend_bundle"]
+    await asyncio.sleep(5)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await asyncio.sleep(5)
+    # check that new URI was added
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    coin = coins[0].to_json_dict()
+    uris = coin["data_uris"]
+    assert len(uris) == 1
+    assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
+    assert len(coin["metadata_uris"]) == 1
+    assert "http://metadata" == coin["metadata_uris"][0]
+    assert len(coin["license_uris"]) == 0
+
+    # add yet another URI
+    nft_coin_id = coin["nft_coin_id"]
     tr1 = await api_0.nft_add_uri(
         {
             "wallet_id": nft_wallet_0_id,
             "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uri": "https://www.chia.net/img/branding/chia-logo-white.svg",
+            "uri": "http://data",
+            "key": "u",
         }
     )
 
@@ -431,37 +471,8 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     coin = coins[0].to_json_dict()
     uris = coin["data_uris"]
     assert len(uris) == 2
-    assert "https://www.chia.net/img/branding/chia-logo-white.svg" in uris
-
-    # add yet another URI
-    nft_coin_id = coin["nft_coin_id"]
-    tr1 = await api_0.nft_add_uri(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "nft_coin_id": nft_coin_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uri": "https://www.chia.net/img/branding/chia-logo-more-white.svg",
-        }
-    )
-
-    assert isinstance(tr1, dict)
-    assert tr1.get("success")
-    sb = tr1["spend_bundle"]
-    await asyncio.sleep(5)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await asyncio.sleep(5)
-    # check that new URI was added
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    assert isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins = coins_response["nft_list"]
-    assert len(coins) == 1
-    coin = coins[0].to_json_dict()
-    uris = coin["data_uris"]
-    assert len(uris) == 3
-    assert "https://www.chia.net/img/branding/chia-logo-more-white.svg" in uris
+    assert len(coin["metadata_uris"]) == 1
+    assert "http://data" == coin["data_uris"][0]
 
 
 @pytest.mark.parametrize(

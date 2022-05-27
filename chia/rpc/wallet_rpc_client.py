@@ -52,16 +52,16 @@ class WalletRpcClient(RpcClient):
     async def generate_mnemonic(self) -> List[str]:
         return (await self.fetch("generate_mnemonic", {}))["mnemonic"]
 
-    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> None:
+    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
         return await self.fetch("add_key", {"mnemonic": mnemonic, "type": request_type})
 
-    async def delete_key(self, fingerprint: int) -> None:
+    async def delete_key(self, fingerprint: int) -> Dict[str, Any]:
         return await self.fetch("delete_key", {"fingerprint": fingerprint})
 
-    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> None:
+    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> Dict[str, Any]:
         return await self.fetch("check_delete_key", {"fingerprint": fingerprint, "max_ph_to_search": max_ph_to_search})
 
-    async def delete_all_keys(self) -> None:
+    async def delete_all_keys(self) -> Dict[str, Any]:
         return await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
@@ -77,7 +77,7 @@ class WalletRpcClient(RpcClient):
     async def push_tx(self, spend_bundle):
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
-    async def farm_block(self, address: str) -> None:
+    async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
     # Wallet Management APIs
@@ -105,6 +105,7 @@ class WalletRpcClient(RpcClient):
         end: int = None,
         sort_key: SortKey = None,
         reverse: bool = False,
+        to_address: Optional[str] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -115,6 +116,9 @@ class WalletRpcClient(RpcClient):
         if sort_key is not None:
             request["sort_key"] = sort_key.name
         request["reverse"] = reverse
+
+        if to_address is not None:
+            request["to_address"] = to_address
 
         res = await self.fetch(
             "get_transactions",
@@ -429,11 +433,11 @@ class WalletRpcClient(RpcClient):
         }
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: str) -> bytes:
+    async def get_cat_asset_id(self, wallet_id: str) -> bytes32:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
-        return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
+        return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
 
     async def get_stray_cats(self) -> Dict:
         response = await self.fetch("get_stray_cats", {})
@@ -570,27 +574,59 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def mint_nft(self, wallet_id, artist_address, hash, uris, fee):
+    async def mint_nft(
+        self,
+        wallet_id,
+        royalty_address,
+        target_address,
+        hash,
+        uris,
+        meta_hash="00",
+        meta_uris=[],
+        license_hash="00",
+        license_uris=[],
+        series_total=1,
+        series_number=1,
+        fee=0,
+    ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
-            "artist_address": artist_address,
+            "royalty_address": royalty_address,
+            "target_address": target_address,
             "hash": hash,
             "uris": uris,
+            "meta_hash": meta_hash,
+            "meta_uris": meta_uris,
+            "license_hash": license_hash,
+            "license_uris": license_uris,
+            "series_number": series_number,
+            "series_total": series_total,
             "fee": fee,
         }
         response = await self.fetch("nft_mint_nft", request)
         return response
 
-    async def add_uri_to_nft(self, wallet_id, nft_coin_id, uri, fee):
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "nft_coin_id": nft_coin_id, "uri": uri, "fee": fee}
-        response = await self.fetch("nft_add_uri", request)
-        return response
-
-    async def transfer_nft(self, wallet_id, nft_coin_id, artist_address, fee):
+    async def add_uri_to_nft(self, wallet_id, nft_coin_id, key, uri, fee):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
-            "target_address": artist_address,
+            "uri": uri,
+            "key": key,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_add_uri", request)
+        return response
+
+    async def get_nft_info(self, coin_id: bytes32, latest: bool = True):
+        request: Dict[str, Any] = {"coin_id": coin_id.hex(), "latest": latest}
+        response = await self.fetch("nft_get_info", request)
+        return response
+
+    async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "nft_coin_id": nft_coin_id,
+            "target_address": target_address,
             "fee": fee,
         }
         response = await self.fetch("nft_transfer_nft", request)

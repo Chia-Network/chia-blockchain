@@ -14,4 +14,4 @@ def _expected_plot_size(k: int) -> uint64:
     is necessary to store the entries in the plot.
     """
 
-    return ((2 * k) + 1) * (2 ** (k - 1))
+    return uint64(((2 * k) + 1) * (2 ** (k - 1)))
