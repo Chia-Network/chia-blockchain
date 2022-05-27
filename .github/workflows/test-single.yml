@@ -1,17 +1,20 @@
 name: test
 
 on:
-  push:
-    branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
-    tags:
-      - '**'
-  pull_request:
-    branches:
-      - '**'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      emoji:
+        required: true
+        type: string
+      matrix:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+      runs-on:
+        required: true
+        type: string
 
 
 concurrency:
@@ -45,27 +48,15 @@ jobs:
       configuration: ${{ steps.configure.outputs.configuration }}
 
   test:
-    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    name: ${{ inputs.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     needs: configure
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ${{ inputs.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
       fail-fast: false
       matrix:
         configuration: ${{ fromJson(needs.configure.outputs.configuration) }}
-        os:
-          - emoji: 🍎
-            matrix: macos
-            name: macOS
-            runs-on: macos-latest
-          - emoji: 🐧
-            matrix: ubuntu
-            name: Ubuntu
-            runs-on: ubuntu-latest
-#          - emoji: 🪟
-#            matrix: windows
-#            name: Windows
-#            runs-on: windows-latest
+        os: ${{ inputs.os }}
         python:
           - name: '3.7'
             action: '3.7'
@@ -99,7 +90,7 @@ jobs:
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{ matrix.configuration.name }}
+      JOB_FILE_NAME: tests_${{ inputs.name }}_python-${{ matrix.python-version }}_${{ matrix.configuration.name }}
 
     steps:
       - name: Checkout code
@@ -113,7 +104,7 @@ jobs:
           python-version: ${{ matrix.python.action }}
 
       - name: Create keychain for CI use
-        if: matrix.os.matrix == 'macos'
+        if: inputs.matrix == 'macos'
         run: |
           security create-keychain -p foo chiachain
           security default-keychain -s chiachain
@@ -121,7 +112,7 @@ jobs:
           security set-keychain-settings -t 7200 -u chiachain
 
       - name: Cache npm
-        if: matrix.os.matrix == 'ubuntu'
+        if: inputs.matrix == 'ubuntu'
         uses: actions/cache@v2.1.6
         with:
           path: ~/.npm
@@ -161,7 +152,7 @@ jobs:
           mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
 
       - name: Run install script (macOS)
-        if: matrix.os.matrix == 'macos'
+        if: inputs.matrix == 'macos'
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
@@ -169,7 +160,7 @@ jobs:
           sh install.sh -d
 
       - name: Run install script (Ubuntu)
-        if: matrix.os.matrix == 'ubuntu'
+        if: inputs.matrix == 'ubuntu'
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
@@ -204,14 +195,14 @@ jobs:
           if-no-files-found: error
 
       - name: Check resource usage
-        if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
+        if: inputs.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
         run: |
           sqlite3 -readonly -separator " " .pymon "select item,cpu_usage,total_time,mem_usage from TEST_METRICS order by mem_usage desc;" >metrics.out
           ./tests/check_pytest_monitor_output.py <metrics.out
 
   coverage:
-    name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    name: Coverage - ${{ inputs.name }} ${{ matrix.python.name }}
+    runs-on: ${{ inputs.runs-on }}
     needs:
       - test
     strategy:
