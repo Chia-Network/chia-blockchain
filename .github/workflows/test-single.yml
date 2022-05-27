@@ -18,6 +18,9 @@ on:
       concurrency_name:
         required: true
         type: string
+      configuration:
+        required: true
+        type: string
       runs-on:
         required: true
         type: string
@@ -29,30 +32,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  configure:
-    name: Configure test matrix
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Python environment
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-
-      - name: Find test paths
-        id: configure
-        run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
-          cat matrix.json
-          echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=steps::$(cat some.json)
-
-    outputs:
-      configuration: ${{ steps.configure.outputs.configuration }}
-
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     needs: configure
@@ -61,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration: ${{ fromJson(needs.configure.outputs.configuration) }}
+        configuration: ${{ fromJson(inputs.configuration) }}
         os:
           - emoji: ${{ inputs.emoji }}
             matrix: ${{ inputs.matrix }}
