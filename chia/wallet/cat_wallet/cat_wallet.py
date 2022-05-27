@@ -733,7 +733,6 @@ class CATWallet:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
-
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -742,7 +741,6 @@ class CATWallet:
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
-
         # TODO add support for array in stored records
         tx_list = [
             TransactionRecord(
