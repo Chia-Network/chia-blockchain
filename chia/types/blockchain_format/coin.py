@@ -28,7 +28,9 @@ class Coin(Streamable):
         # significant bit is set, to encode it as a positive number. This
         # despite "amount" being unsigned. This way, a CLVM program can generate
         # these hashes easily.
-        return std_hash(self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount))
+        return std_hash(
+            self.parent_coin_info + self.puzzle_hash + int_to_bytes(self.amount), skip_bytes_conversion=True
+        )
 
     def name(self) -> bytes32:
         return self.get_hash()
@@ -60,4 +62,4 @@ def hash_coin_ids(coin_ids: List[bytes32]) -> bytes32:
     for name in coin_ids:
         buffer.extend(name)
 
-    return std_hash(buffer)
+    return std_hash(buffer, skip_bytes_conversion=True)

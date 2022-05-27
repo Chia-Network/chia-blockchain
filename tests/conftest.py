@@ -458,19 +458,31 @@ async def two_nodes_one_block(bt, wallet_a):
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants):
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=True):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_two_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants):
+async def farmer_one_harvester_not_started(
+    tmp_path: Path, bt: BlockTools
+) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_three_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants):
+async def farmer_two_harvester_not_started(
+    tmp_path: Path, bt: BlockTools
+) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants, start_services=False):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_three_harvester_not_started(
+    tmp_path: Path, bt: BlockTools
+) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants, start_services=False):
         yield _
 
 

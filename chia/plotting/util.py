@@ -79,10 +79,16 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
 
 
 def add_plot_directory(root_path: Path, str_path: str) -> Dict:
+    path: Path = Path(str_path).resolve()
+    if not path.exists():
+        raise ValueError(f"Path doesn't exist: {path}")
+    if not path.is_dir():
+        raise ValueError(f"Path is not a directory: {path}")
     log.debug(f"add_plot_directory {str_path}")
     with lock_and_load_config(root_path, "config.yaml") as config:
-        if str(Path(str_path).resolve()) not in get_plot_directories(root_path, config):
-            config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
+        if str(Path(str_path).resolve()) in get_plot_directories(root_path, config):
+            raise ValueError(f"Path already added: {path}")
+        config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
     return config
 
@@ -92,7 +98,7 @@ def remove_plot_directory(root_path: Path, str_path: str) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         str_paths: List[str] = get_plot_directories(root_path, config)
         # If path str matches exactly, remove
-        if str_path in str_paths:
+        if str_path not in str_paths:
             str_paths.remove(str_path)
 
         # If path matches full path, remove
