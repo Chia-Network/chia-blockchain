@@ -15,14 +15,13 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint16
 from tests.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
-from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
 
@@ -30,7 +29,6 @@ class TestRpc:
     @pytest.mark.asyncio
     async def test1(self, two_nodes_sim_and_wallets, bt, self_hostname):
         num_blocks = 5
-        test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
@@ -46,11 +44,11 @@ class TestRpc:
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup, test_rpc_port = await start_rpc_server(
             full_node_rpc_api,
             hostname,
             daemon_port,
-            test_rpc_port,
+            uint16(0),
             stop_node_cb,
             bt.root_path,
             config,
@@ -265,7 +263,6 @@ class TestRpc:
 
     @pytest.mark.asyncio
     async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain, bt):
-        test_rpc_port = find_available_listen_port()
         nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
@@ -283,11 +280,11 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup, test_rpc_port = await start_rpc_server(
             full_node_rpc_api,
             self_hostname,
             daemon_port,
-            test_rpc_port,
+            uint16(0),
             stop_node_cb,
             bt.root_path,
             config,

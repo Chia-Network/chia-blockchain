@@ -544,6 +544,9 @@ wallet:
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
 
+  # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
+  tx_resend_timeout_secs: 1800
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections

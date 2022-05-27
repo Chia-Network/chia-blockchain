@@ -17,7 +17,7 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Python environment
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -94,7 +94,7 @@ jobs:
     - name: Test core-util code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark" -p no:monitor tests/core/util/test_cached_bls.py tests/core/util/test_config.py tests/core/util/test_db_wrapper.py tests/core/util/test_file_keyring_synchronization.py tests/core/util/test_files.py tests/core/util/test_keychain.py tests/core/util/test_keyring_wrapper.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 4 -m "not benchmark"  tests/core/util/test_cached_bls.py tests/core/util/test_config.py tests/core/util/test_db_wrapper.py tests/core/util/test_file_keyring_synchronization.py tests/core/util/test_files.py tests/core/util/test_jsonify.py tests/core/util/test_keychain.py tests/core/util/test_keyring_wrapper.py tests/core/util/test_lru_cache.py tests/core/util/test_significant_bits.py tests/core/util/test_streamable.py
 
     - name: Process coverage data
       run: |

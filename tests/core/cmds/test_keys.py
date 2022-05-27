@@ -608,6 +608,56 @@ class TestKeysCommands:
             != -1
         )
 
+    def test_derive_search_wallet_testnet_address(self, tmp_path, keyring_with_one_key):
+        """
+        Test the `chia keys derive search` command, searching for a testnet wallet address
+        """
+
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
+
+        assert init_result.exit_code == 0
+        assert len(keychain.get_all_private_keys()) == 1
+
+        runner = CliRunner()
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "search",
+                "--limit",
+                "40",
+                "--search-type",
+                "address",
+                "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7",
+                "--prefix",
+                "txch",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                (
+                    "Found wallet address: "
+                    "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7 (HD path: m/12381/8444/2/30)"
+                )
+            )
+            != -1
+        )
+
     def test_derive_search_failure(self, tmp_path, keyring_with_one_key):
         """
         Test the `chia keys derive search` command with a failing search.
@@ -750,6 +800,66 @@ class TestKeysCommands:
                 (
                     "Wallet address 51 (m/12381n/8444n/2n/51n): "
                     "xch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8sumvfmt"
+                )
+            )
+            != -1
+        )
+
+    def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_key):
+        """
+        Test the `chia keys derive wallet-address` command, generating a couple of testnet wallet addresses.
+        """
+
+        keychain = keyring_with_one_key
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+
+        runner = CliRunner()
+        init_result: Result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
+
+        assert init_result.exit_code == 0
+        assert len(keychain.get_all_private_keys()) == 1
+
+        runner = CliRunner()
+        result: Result = runner.invoke(
+            cli,
+            [
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "derive",
+                "--fingerprint",
+                str(TEST_FINGERPRINT),
+                "wallet-address",
+                "--index",
+                "50",
+                "--count",
+                "2",
+                "--non-observer-derivation",
+                "--show-hd-path",
+                "--prefix",
+                "txch",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.find(
+                (
+                    "Wallet address 50 (m/12381n/8444n/2n/50n): "
+                    "txch1jp2u7an0mn9hdlw2x05nmje49gwgzmqyvh0qmh6008yksetuvkfshfylvn"
+                )
+            )
+            != -1
+        )
+        assert (
+            result.output.find(
+                (
+                    "Wallet address 51 (m/12381n/8444n/2n/51n): "
+                    "txch1006n6l3x5e8exar8mlj004znjl5pq0tq73h76kz0yergswnjzn8s3utl6c"
                 )
             )
             != -1
