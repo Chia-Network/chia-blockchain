@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import pytest
+from blspy import G1Element
 from clvm_tools import binutils
 from typing_extensions import Literal
 
@@ -18,6 +19,7 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
     DefinitionError,
     Streamable,
+    dataclass_from_dict,
     is_type_List,
     is_type_SpecificOptional,
     parse_bool,
@@ -89,6 +91,58 @@ def test_plain_class_not_supported() -> None:
         @dataclass(frozen=True)
         class TestClassPlain(Streamable):
             a: PlainClass
+
+
+@dataclass
+class TestDataclassFromDict1:
+    a: int
+    b: str
+    c: G1Element
+
+
+@dataclass
+class TestDataclassFromDict2:
+    a: TestDataclassFromDict1
+    b: TestDataclassFromDict1
+    c: float
+
+
+def test_pure_dataclasses_in_dataclass_from_dict() -> None:
+
+    d1_dict = {"a": 1, "b": "2", "c": str(G1Element())}
+
+    d1: TestDataclassFromDict1 = dataclass_from_dict(TestDataclassFromDict1, d1_dict)
+    assert d1.a == 1
+    assert d1.b == "2"
+    assert d1.c == G1Element()
+
+    d2_dict = {"a": d1, "b": d1_dict, "c": 1.2345}
+
+    d2: TestDataclassFromDict2 = dataclass_from_dict(TestDataclassFromDict2, d2_dict)
+    assert d2.a == d1
+    assert d2.b == d1
+    assert d2.c == 1.2345
+
+
+@pytest.mark.parametrize(
+    "test_class, input_dict, error",
+    [
+        [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ValueError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, ValueError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ValueError],
+        [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
+        [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
+        [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
+        [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
+    ],
+)
+def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:
+
+    with pytest.raises(error):
+        dataclass_from_dict(test_class, input_dict)
 
 
 def test_basic_list() -> None:
