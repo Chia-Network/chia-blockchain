@@ -162,17 +162,18 @@ class Offer:
                 asset_id = None
 
             if asset_id in offered_coins:
-                offered_coins[asset_id].append(addition)
+                offered_coins[asset_id].append(spend.coin)
             else:
-                offered_coins[asset_id] = [addition]
+                offered_coins[asset_id] = [spend.coin]
 
         return offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
+        incomplete_coins: List[Coin] = [cs.coin for cs in self.incomplete_spends()]
         offered_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
-            offered_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
+            offered_amounts[asset_id] = uint64(sum([c.amount for c in coins if c not in incomplete_coins]))
         return offered_amounts
 
     def get_requested_payments(self) -> Dict[Optional[bytes32], List[NotarizedPayment]]:

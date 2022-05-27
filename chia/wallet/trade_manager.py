@@ -566,6 +566,8 @@ class TradeManager:
             return False, None, error
 
         complete_offer = Offer.aggregate([offer, take_offer])
+        if complete_offer.incomplete_spends() != []:
+            complete_offer = await self.fix_incomplete_offer(complete_offer)
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
 
@@ -613,3 +615,12 @@ class TradeManager:
             await self.wallet_state_manager.add_transaction(tx)
 
         return True, trade_record, None
+
+    async def fix_incomplete_offer(self, offer: Offer) -> Offer:
+        incomplete_spends: List[CoinSpend] = offer.incomplete_spends()
+        for _, wallet in self.wallet_state_manager.wallets.items():
+            if callable(getattr(wallet, "fix_incomplete_offer", None)):
+                offer = await wallet.fix_incomplete_offer(offer, incomplete_spends)
+            if offer.incomplete_spends() == []:
+                return offer
+        raise ValueError("This offer contained invalid spends that the trade manager couldn't fix")

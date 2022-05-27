@@ -829,3 +829,26 @@ class NFTWallet:
             return SpendBundle.aggregate(spend_bundles)
         else:
             raise ValueError("No support for non-standard offers yet")
+
+    async def fix_incomplete_offer(self, offer: Offer, incomplete_spends: List[CoinSpend]) -> Offer:
+        spends_to_fix: List[CoinSpend] = []
+        for spend in incomplete_spends:
+            # TODO: identify this as an NFT1 with the proper graftroot solution
+            if True:
+                spends_to_fix.append(spend)
+
+        replacement_spends: List[CoinSpend] = []
+        for spend in spends_to_fix:
+            # TODO: solve the graftroot inner puzzle w/ a pubkey etc.
+            # TODO: reach into the appropriate wallets to add royalty payments to the offer spend bundle
+            # (be sure to exclude coins from selection that are already in the offer)
+            # TODO: Add a signature of the trade prices list
+            pass
+
+        new_spend_list: List[CoinSpend] = [cs for cs in offer.bundle.coin_spends if cs not in spends_to_fix]
+        new_bundle = SpendBundle([*new_spend_list, *replacement_spends], offer.bundle.aggregated_signature)
+        return Offer(
+            offer.requested_payments,
+            new_bundle,
+            offer.driver_dict,
+        )
