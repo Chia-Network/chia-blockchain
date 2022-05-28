@@ -8,7 +8,7 @@ msgstr ""
 "Language: ja_JP\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-05-28 06:48\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -167,7 +167,7 @@ msgstr "金額"
 
 #: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
-msgstr ""
+msgstr "外観の設定"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -659,7 +659,7 @@ msgstr "！危険！: 秘密鍵を永久的に削除"
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
-msgstr ""
+msgstr "暗め"
 
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
@@ -734,7 +734,7 @@ msgstr "鍵を削除すると復元することができませんので、必ず
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:51
 msgid "Disable"
-msgstr ""
+msgstr "無効にする"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 #~ msgid "Disable NUMA"
@@ -742,7 +742,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:50
 msgid "Disable Passphrase Protection"
-msgstr ""
+msgstr "パスフレーズで保護しない"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -755,7 +755,7 @@ msgstr ""
 #: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
-msgstr ""
+msgstr "破棄する"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:20
 #~ msgid "Disconnect"
@@ -832,7 +832,7 @@ msgstr "エラー"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:78
 msgid "Error:"
-msgstr ""
+msgstr "エラー:"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -866,7 +866,7 @@ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
 msgid "FAQ"
-msgstr ""
+msgstr "よくある質問"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -935,7 +935,7 @@ msgstr ""
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:67
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:67
 msgid "Farmer public key:"
-msgstr ""
+msgstr "農家公開鍵:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1121,7 +1121,7 @@ msgstr "合言葉 (24語) で鍵をインポート"
 
 #: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
-msgstr ""
+msgstr "不正な値"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:17
 #~ msgid "Index"
@@ -1206,7 +1206,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
-msgstr ""
+msgstr "言語"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
@@ -1236,7 +1236,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
-msgstr ""
+msgstr "明るめ"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1256,7 +1256,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:116
 msgid "Loading list of the keys"
-msgstr ""
+msgstr "鍵一覧を読み込み中"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -1273,7 +1273,7 @@ msgstr ""
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
-msgstr ""
+msgstr "ログアウトする"
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
@@ -1281,7 +1281,7 @@ msgstr ""
 
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
-msgstr ""
+msgstr "ログアウトする"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1341,7 +1341,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:16
 msgid "Migrate"
-msgstr ""
+msgstr "移行する"
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1353,7 +1353,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:15
 msgid "Migration required"
-msgstr ""
+msgstr "移行必須"
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1369,7 +1369,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
-msgstr ""
+msgstr "モード"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -1410,7 +1410,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:38
 msgid "New passphrase is the same as your current passphrase"
-msgstr ""
+msgstr "新しいパスフレーズが現在のパスフレーズと同じです"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
@@ -1518,7 +1518,7 @@ msgstr "未接続"
 
 #: src/components/ConfirmDialog/ConfirmDialog.tsx:106
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1932,7 +1932,7 @@ msgstr ""
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:75
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:75
 msgid "Pool public key:"
-msgstr ""
+msgstr "プール公開鍵:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:324
@@ -1990,7 +1990,7 @@ msgstr "公開指紋 {fingerprint} に対応する秘密鍵"
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:28
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:40
 msgid "Private key {fingerprint}"
-msgstr ""
+msgstr "秘密鍵 {fingerprint}"
 
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
@@ -2110,7 +2110,7 @@ msgstr "公開鍵:"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:91
 msgid "Reload Application"
-msgstr ""
+msgstr "アプリの再読み込み"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
@@ -2132,7 +2132,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:87
 msgid "Report an Issue"
-msgstr ""
+msgstr "問題を報告する"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2238,7 +2238,7 @@ msgstr "鍵を選択してください:"
 
 #: src/components/Dropdown/Dropdown.tsx:85
 msgid "Select..."
-msgstr ""
+msgstr "選択してください..."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
@@ -2274,7 +2274,7 @@ msgstr ""
 #: src/components/LayoutMain/LayoutFooter.tsx:53
 #: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
-msgstr ""
+msgstr "フィードバックの送信"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -2297,7 +2297,7 @@ msgstr ""
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
 msgid "Settings"
-msgstr ""
+msgstr "設定"
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2318,7 +2318,7 @@ msgstr "ログイン"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:47
 msgid "Skip"
-msgstr ""
+msgstr "スキップする"
 
 #: src/components/app/AppKeyringMigrator.tsx:57
 #~ msgid "Skip Keyring Migration"
@@ -2326,7 +2326,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:46
 msgid "Skip Passphrase Protection"
-msgstr ""
+msgstr "パスフレーズ保護をスキップする"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2342,7 +2342,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:73
 msgid "Something went wrong"
-msgstr ""
+msgstr "問題が発生しました"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -2883,7 +2883,7 @@ msgstr ""
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:84
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
-msgstr ""
+msgstr "ウォレット"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
