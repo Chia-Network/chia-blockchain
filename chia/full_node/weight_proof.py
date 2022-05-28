@@ -756,6 +756,9 @@ def _sample_sub_epoch(
         if weight > end_of_epoch_weight:
             return False
         if start_of_epoch_weight < weight < end_of_epoch_weight:
+            log.debug(f"start weight: {start_of_epoch_weight}")
+            log.debug(f"weight to check {weight}")
+            log.debug(f"end weight: {end_of_epoch_weight}")
             choose = True
             break
 
@@ -960,6 +963,7 @@ def _map_sub_epoch_summaries(
             delta = 0
             if idx > 0:
                 delta = sub_epoch_data[idx].num_blocks_overflow
+            log.debug(f"sub epoch {idx} start weight is {total_weight+curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
             total_weight = total_weight + uint128(  # type: ignore
                 curr_difficulty * (sub_blocks_for_se + sub_epoch_data[idx + 1].num_blocks_overflow - delta)
@@ -1009,6 +1013,7 @@ def _validate_sub_epoch_segments(
     for sub_epoch_n, segments in segments_by_sub_epoch.items():
         prev_ssi = curr_ssi
         curr_difficulty, curr_ssi = _get_curr_diff_ssi(constants, sub_epoch_n, summaries)
+        log.debug(f"validate sub epoch {sub_epoch_n}")
         # recreate RewardChainSubSlot for next ses rc_hash
         sampled_seg_index = rng.choice(range(len(segments)))
         if sub_epoch_n > 0:
@@ -1146,6 +1151,7 @@ def _validate_sub_slot_data(
                 # dont validate intermediate vdfs if slot is blue boxed
                 assert curr_slot.cc_slot_end
                 if curr_slot.cc_slot_end.normalized_to_identity is True:
+                    log.debug(f"skip intermediate vdfs slot {sub_slot_idx}")
                     return True, to_validate
                 else:
                     break
@@ -1294,6 +1300,7 @@ def validate_recent_blocks(
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
+            log.debug(f"wp, validate block {block.height}")
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
                 caluclated_required_iters, error = validate_finished_header_block(
                     constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
@@ -1314,6 +1321,7 @@ def validate_recent_blocks(
         block_record = header_block_to_sub_block_record(
             constants, required_iters, block, ssi, overflow, deficit, height, curr_block_ses
         )
+        log.debug(f"add block {block_record.height} to tmp sub blocks")
         sub_blocks.add_block_record(block_record)
 
         if block.first_in_sub_slot:
