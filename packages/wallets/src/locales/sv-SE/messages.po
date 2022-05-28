@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:58\n"
+"PO-Revision-Date: 2022-05-28 08:31\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1928,11 +1928,11 @@ msgstr "Överordnat mynt"
 
 #: src/components/WalletImport.tsx:95
 msgid "Paste Mnemonic"
-msgstr ""
+msgstr "Klistra in minnesfras"
 
 #: src/components/PasteMnemonic.tsx:55
 msgid "Paste Mnemonic (24 words)"
-msgstr ""
+msgstr "Klistra in minnesfras (24 ord)"
 
 #: src/components/offers/OfferDataEntryDialog.tsx:40
 #: src/components/offers/OfferImport.tsx:129
@@ -3697,7 +3697,7 @@ msgstr "Ditt erbjudande:"
 
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
-msgstr ""
+msgstr "Den lista du klistrat in är inte en giltig minnesfras med 24 ord."
 
 #: src/util/getDescriptiveError.ts:5
 #~ msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
