@@ -468,10 +468,6 @@ class WalletNode:
         if not trusted and self.local_node_synced:
             await peer.close()
 
-        # if not is_localhost(peer.peer_host):
-        #     self.log.info("Closing non localhost")
-        #     await peer.close()
-
         if peer.peer_node_id in self.synced_peers:
             self.synced_peers.remove(peer.peer_node_id)
 
@@ -793,8 +789,7 @@ class WalletNode:
 
     def is_trusted(self, peer) -> bool:
         assert self.server is not None
-        return False
-        # return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
+        return self.server.is_trusted_peer(peer, self.config["trusted_peers"])
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
         # Clears old state that is no longer relevant
