@@ -520,7 +520,7 @@ class CoinStore:
 
         async with self.db_wrapper.write_db() as conn:
             rows_updated: int = 0
-            for coin_names_chunk in chunks(coin_names, MAX_SQLITE_PARAMETERS):
+            for coin_names_chunk in chunks(coin_names, SQLITE_MAX_VARIABLE_NUMBER):
                 name_params = ",".join(["?"] * len(coin_names_chunk))
                 if self.db_wrapper.db_version == 2:
                     ret: Cursor = await conn.execute(
