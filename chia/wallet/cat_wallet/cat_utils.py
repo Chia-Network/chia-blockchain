@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List, Tuple, Iterator, Optional
+from typing import List, Tuple, Iterator
 
 from blspy import G2Element
 
@@ -41,15 +41,11 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
         return False, iter(())
 
 
-def construct_cat_puzzle(
-    mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None
-) -> Program:
+def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
     """
     Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
     """
-    if mod_code_hash is None:
-        mod_code_hash = mod_code.get_tree_hash()
-    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
+    return mod_code.curry(mod_code.get_tree_hash(), limitations_program_hash, inner_puzzle)
 
 
 def subtotals_for_deltas(deltas) -> List[int]:

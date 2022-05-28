@@ -578,7 +578,7 @@ class Streamable:
             stream_func(getattr(self, field), f)
 
     def get_hash(self) -> bytes32:
-        return bytes32(std_hash(self))
+        return bytes32(std_hash(bytes(self)))
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:

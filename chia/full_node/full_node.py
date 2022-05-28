@@ -3,16 +3,15 @@ import contextlib
 import dataclasses
 import logging
 import multiprocessing
+from multiprocessing.context import BaseContext
 import random
-import sqlite3
 import time
 import traceback
-from datetime import datetime
-from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
+import sqlite3
 from blspy import AugSchemeMPL
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
@@ -27,12 +26,12 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
+from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
+from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
-from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
-from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
@@ -69,14 +68,15 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import mkdir, path_from_root
-from chia.util.profiler import profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
+from chia.util.profiler import profile_task
+from datetime import datetime
+from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version, set_db_version_async
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
@@ -1294,7 +1294,7 @@ class FullNode:
             f"difficulty: {difficulty}, "
             f"sub slot iters: {sub_slot_iters}, "
             f"Generator size: "
-            f"{len(bytes(block.transactions_generator)) if block.transactions_generator else 'No tx'}, "
+            f"{len(bytes(block.transactions_generator)) if  block.transactions_generator else 'No tx'}, "
             f"Generator ref list size: "
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
@@ -2463,6 +2463,7 @@ class FullNode:
 async def node_next_block_check(
     peer: ws.WSChiaConnection, potential_peek: uint32, blockchain: BlockchainInterface
 ) -> bool:
+
     block_response: Optional[Any] = await peer.request_block(full_node_protocol.RequestBlock(potential_peek, True))
     if block_response is not None and isinstance(block_response, full_node_protocol.RespondBlock):
         peak = blockchain.get_peak()
