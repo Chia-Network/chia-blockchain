@@ -137,7 +137,6 @@ class WSChiaConnection:
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
-                self.log.warning("Invalid hanshake 1")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
@@ -145,11 +144,9 @@ class WSChiaConnection:
             try:
                 message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
             except Exception:
-                self.log.warning("Invalid hanshake 2")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message_type != ProtocolMessageTypes.handshake:
-                self.log.warning("Invalid hanshake 3")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.network_id != network_id:
@@ -165,28 +162,23 @@ class WSChiaConnection:
             try:
                 message = await self._read_one_message()
             except Exception:
-                self.log.warning("Invalid hanshake 4")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message is None:
-                self.log.warning("Invalid hanshake 5")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Handle case of invalid ProtocolMessageType
             try:
                 message_type = ProtocolMessageTypes(message.type)
             except Exception:
-                self.log.warning("Invalid hanshake 6")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message_type != ProtocolMessageTypes.handshake:
-                self.log.warning("Invalid hanshake 7")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
-            self.log.warning(f"Sending caps: {self.local_capabilities_for_handshake}")
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
                 Handshake(
