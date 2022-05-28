@@ -5,7 +5,7 @@ from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability
 from chia.server.start_service import Service
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32

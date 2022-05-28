@@ -12,7 +12,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from tests.conftest import setup_two_nodes_and_wallet, node_with_params
+from tests.conftest import node_with_params
 from tests.setup_nodes import test_constants
 
 

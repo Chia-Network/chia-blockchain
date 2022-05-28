@@ -9,7 +9,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from ..protocols.shared_protocol import Capability, capabilities
+from ..protocols.shared_protocol import capabilities
 
 try:
     import uvloop

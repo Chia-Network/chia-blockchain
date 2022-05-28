@@ -1,10 +1,9 @@
 # All of these rate limits scale with the number of transactions so the aggregate amounts are higher
 import dataclasses
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.util.ints import uint16
 
 
 @dataclasses.dataclass(frozen=True)

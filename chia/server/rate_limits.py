@@ -2,13 +2,12 @@ import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message
 from chia.server.rate_limit_numbers import RLSettings, get_rate_limits_to_use
-from chia.util.ints import uint16, uint64
 
 log = logging.getLogger(__name__)
 

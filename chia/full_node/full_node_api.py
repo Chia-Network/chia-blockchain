@@ -1303,7 +1303,6 @@ class FullNodeAPI:
 
         This method should be used instead of RequestHeaderBlocks
         """
-        start_time = time.time()
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return None
         if self.full_node.block_store.db_wrapper.db_version == 2:
@@ -1345,7 +1344,6 @@ class FullNodeAPI:
 
     @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
-        start_time = time.time()
         """DEPRECATED: please use RequestBlockHeaders"""
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None

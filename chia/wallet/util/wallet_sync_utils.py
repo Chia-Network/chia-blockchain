@@ -18,7 +18,6 @@ from chia.protocols.wallet_protocol import (
     RespondBlockHeaders,
     RespondRemovals,
     RequestRemovals,
-    RespondBlockHeader,
     CoinState,
     RespondToPhUpdates,
     RespondToCoinUpdates,
@@ -43,7 +42,6 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
         if request_height == -1:
             return None
         response: Optional[List[HeaderBlock]] = await request_header_blocks(peer, request_height, request_height)
-        log.warning(f"Requesting height: {height}")
         if response is not None and len(response) > 0:
             if response[0].is_transaction_block:
                 return response[0]
