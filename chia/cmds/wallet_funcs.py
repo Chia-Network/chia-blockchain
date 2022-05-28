@@ -4,21 +4,20 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 
+from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
 from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -281,7 +280,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if [] in [offers, requests]:
         print("Not creating offer: Must be offering and requesting at least one asset")
     else:
-        offer_dict: Dict[uint32, int] = {}
+        offer_dict: Dict[Union[uint32, str], int] = {}
         printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
         for item in [*offers, *requests]:
             wallet_id, amount = tuple(item.split(":")[0:2])
@@ -375,7 +374,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested = offer.summary()
+        offered, requested, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.bundle.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -452,7 +451,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
-    offered, requested = offer.summary()
+    offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
@@ -551,7 +550,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
-    await print_connections(wallet_client, time, NodeType, trusted_peers)
+    await print_connections(wallet_client, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
