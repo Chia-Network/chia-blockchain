@@ -6,7 +6,7 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
 from chia.util.chunks import chunks
 import time
@@ -15,8 +15,6 @@ import logging
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
-
-MAX_SQLITE_PARAMETERS = 900
 
 
 class CoinStore:
@@ -179,7 +177,7 @@ class CoinStore:
 
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
-            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+            for names_chunk in chunks(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
@@ -352,7 +350,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for puzzles in chunks(puzzle_hashes, MAX_SQLITE_PARAMETERS):
+            for puzzles in chunks(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     puzzle_hashes_db = tuple(puzzles)
@@ -384,7 +382,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(parent_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     parent_ids_db = tuple(ids)
@@ -415,7 +413,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(coin_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     coin_ids_db = tuple(ids)
