@@ -651,16 +651,24 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await time_out_assert(10, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
 
     # Create an offer of 5 chia for one CAT
-    offer, trade_record = await wallet_1_rpc.create_offer_for_ids({uint32(1): -5, cat_wallet_id: 1}, validate_only=True)
+    offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1}, validate_only=True
+    )
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 0
     assert offer is None
 
-    offer, trade_record = await wallet_1_rpc.create_offer_for_ids({uint32(1): -5, cat_wallet_id: 1}, fee=uint64(1))
+    driver_dict: Dict[str, Any] = {cat_asset_id.hex(): {"type": "CAT", "tail": "0x" + cat_asset_id.hex()}}
+
+    offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        driver_dict=driver_dict,
+        fee=uint64(1),
+    )
     assert offer is not None
 
     summary = await wallet_1_rpc.get_offer_summary(offer)
-    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "fees": 1}
+    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
 
     assert await wallet_1_rpc.check_offer_validity(offer)
 
