@@ -2,7 +2,6 @@ import asyncio
 from typing import Optional
 
 from chia.protocols.wallet_protocol import CoinState, RespondSESInfo
-from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.util.hash import std_hash

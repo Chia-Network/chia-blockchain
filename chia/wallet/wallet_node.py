@@ -50,7 +50,6 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
-from chia.util.network import is_localhost
 from chia.util.path import mkdir, path_from_root
 from chia.util.profiler import profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -1379,7 +1378,9 @@ class WalletNode:
                         return False
 
             all_peers = self.server.get_full_node_connections()
-            blocks: List[HeaderBlock] = await fetch_header_blocks_in_range(start, end, peer_request_cache, all_peers)
+            blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
+                start, end, peer_request_cache, all_peers
+            )
             if blocks is None:
                 self.log.error(f"Error fetching blocks {start} {end}")
                 return False
@@ -1413,7 +1414,7 @@ class WalletNode:
 
                 # This is the reward chain challenge. If this is in the cache, it means the prev block
                 # has been validated. We must at least check the first block to ensure they are connected
-                reward_chain_hash: Optional[bytes32] = en_block.reward_chain_block.reward_chain_ip_vdf.challenge
+                reward_chain_hash: bytes32 = en_block.reward_chain_block.reward_chain_ip_vdf.challenge
                 if idx != 0 and peer_request_cache.in_blocks_validated(reward_chain_hash):
                     # As soon as we see a block we have already concluded is in the chain, we can quit.
                     if idx > signatures_to_validate:

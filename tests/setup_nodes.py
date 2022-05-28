@@ -5,6 +5,7 @@ from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.shared_protocol import Capability, capabilities
 from chia.server.start_service import Service
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
@@ -157,7 +158,7 @@ async def setup_simulators_and_wallets(
     initial_num_public_keys=5,
     db_version=1,
     config_overrides: Optional[Dict] = None,
-    disable_capabilities=None,
+    disable_capabilities: Optional[List[Capability]] = None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[FullNodeAPI] = []

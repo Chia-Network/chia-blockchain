@@ -4,7 +4,7 @@ import aiohttp
 import pytest
 import pytest_asyncio
 
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import protocol_version, capabilities
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
@@ -35,10 +35,9 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             None,
             100,
             30,
+            local_capabilities_for_handshake=capabilities,
         )
-        await wsc.perform_handshake(
-            server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE, server._local_capabilities
-        )
+        await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
 
 
 @pytest_asyncio.fixture(scope="function")

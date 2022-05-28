@@ -46,6 +46,7 @@ class WSChiaConnection:
         peer_id,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
+        local_capabilities_for_handshake: List[Tuple[uint16, str]],
         close_event=None,
         session=None,
     ):
@@ -53,6 +54,11 @@ class WSChiaConnection:
         self.ws: Any = ws
         self.local_type = local_type
         self.local_port = server_port
+        self.local_capabilities_for_handshake = local_capabilities_for_handshake
+        self.local_capabilities: List[Capability] = [
+            Capability(x[0]) for x in local_capabilities_for_handshake if x[1] == "1"
+        ]
+
         # Remote properties
         self.peer_host = peer_host
 
@@ -103,7 +109,7 @@ class WSChiaConnection:
         # disconnect. Also it allows a little flexibility.
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
-        self.capabilities: List[Capability] = []
+        self.peer_capabilities: List[Capability] = []
         # Used by the Chia Seeder.
         self.version = None
         self.protocol_version = ""
@@ -114,7 +120,6 @@ class WSChiaConnection:
         protocol_version: str,
         server_port: int,
         local_type: NodeType,
-        capabilities: List[Tuple[uint16, str]],
     ) -> None:
         if self.is_outbound:
             outbound_handshake = make_msg(
@@ -125,13 +130,14 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    capabilities,
+                    self.local_capabilities_for_handshake,
                 ),
             )
             assert outbound_handshake is not None
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
+                self.log.warning("Invalid hanshake 1")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             inbound_handshake = Handshake.from_bytes(inbound_handshake_msg.data)
 
@@ -139,9 +145,11 @@ class WSChiaConnection:
             try:
                 message_type: ProtocolMessageTypes = ProtocolMessageTypes(inbound_handshake_msg.type)
             except Exception:
+                self.log.warning("Invalid hanshake 2")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message_type != ProtocolMessageTypes.handshake:
+                self.log.warning("Invalid hanshake 3")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if inbound_handshake.network_id != network_id:
@@ -152,28 +160,33 @@ class WSChiaConnection:
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
-            self.capabilities = [x[0] for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
         else:
             try:
                 message = await self._read_one_message()
             except Exception:
+                self.log.warning("Invalid hanshake 4")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message is None:
+                self.log.warning("Invalid hanshake 5")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             # Handle case of invalid ProtocolMessageType
             try:
                 message_type = ProtocolMessageTypes(message.type)
             except Exception:
+                self.log.warning("Invalid hanshake 6")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             if message_type != ProtocolMessageTypes.handshake:
+                self.log.warning("Invalid hanshake 7")
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
 
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+            self.log.warning(f"Sending caps: {self.local_capabilities_for_handshake}")
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
                 Handshake(
@@ -182,14 +195,14 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    capabilities,
+                    self.local_capabilities_for_handshake,
                 ),
             )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
-            self.capabilities = [x[0] for x in inbound_handshake.capabilities if x[1] == "1"]
+            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -388,7 +401,9 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        if not self.outbound_rate_limiter.process_msg_and_check(message):
+        if not self.outbound_rate_limiter.process_msg_and_check(
+            message, self.local_capabilities, self.peer_capabilities
+        ):
             if not is_localhost(self.peer_host):
                 self.log.warning(
                     f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
@@ -455,7 +470,9 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(full_message_loaded.type).name
             except Exception:
                 message_type = "Unknown"
-            if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
+            if not self.inbound_rate_limiter.process_msg_and_check(
+                full_message_loaded, self.local_capabilities, self.peer_capabilities
+            ):
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
                     self.log.error(
                         f"Peer has been rate limited and will be disconnected: {self.peer_host}, "

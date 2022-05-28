@@ -157,10 +157,10 @@ class TestWalletSync:
         "two_wallet_nodes",
         [
             dict(
-                disable_capabilities=[Capability.BLOCK_HEADERS.name],
+                disable_capabilities=[Capability.BLOCK_HEADERS],
             ),
             dict(
-                disable_capabilities=[Capability.BASE.name],
+                disable_capabilities=[Capability.BASE],
             ),
         ],
         indirect=True,

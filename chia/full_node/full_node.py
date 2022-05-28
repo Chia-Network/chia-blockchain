@@ -89,26 +89,6 @@ class PeakPostProcessingResult:
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
-def _get_capabilities(disable_capabilities_values):
-    if disable_capabilities_values is not None and isinstance(disable_capabilities_values, list):
-        try:
-            if Capability.BASE.name in disable_capabilities_values:
-                # BASE capability cannot be removed
-                disable_capabilities_values.remove(Capability.BASE.name)
-
-            updated_capabilities = []
-            for capability in capabilities:
-                if Capability(int(capability[0])).name in disable_capabilities_values:
-                    # "0" means capability is disabled
-                    updated_capabilities.append((capability[0], "0"))
-                else:
-                    updated_capabilities.append(capability)
-            return updated_capabilities
-        except Exception:
-            logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
-    return capabilities.copy()
-
-
 class FullNode:
     block_store: BlockStore
     full_node_store: FullNodeStore
@@ -159,9 +139,7 @@ class FullNode:
         self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name if name else __name__)
-        disable_capabilities_values = config.get("disable_capabilities")
-        self.capabilities = _get_capabilities(disable_capabilities_values)
-        self.log.info("Full node capabilities: %s", self.capabilities)
+
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
         self.multiprocessing_context = None
