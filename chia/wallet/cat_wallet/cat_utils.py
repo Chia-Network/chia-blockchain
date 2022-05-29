@@ -49,7 +49,9 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
         raise ValueError("Not a CAT puzzle")
 
 
-def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None) -> Program:
+def construct_cat_puzzle(
+    mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None
+) -> Program:
     """
     Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
     """
