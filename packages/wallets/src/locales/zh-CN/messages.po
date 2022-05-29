@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:59\n"
+"PO-Revision-Date: 2022-05-29 23:53\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1928,7 +1928,7 @@ msgstr ""
 
 #: src/components/WalletImport.tsx:95
 msgid "Paste Mnemonic"
-msgstr ""
+msgstr "粘贴助记符"
 
 #: src/components/PasteMnemonic.tsx:55
 msgid "Paste Mnemonic (24 words)"
