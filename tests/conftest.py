@@ -595,3 +595,32 @@ async def setup_sim():
     sim_client = SimClient(sim)
     await sim.farm_block()
     return sim, sim_client
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "uncollect_if(*, func): function to unselect tests from parametrization")
+
+
+def uncollect_requested(item) -> bool:
+    for uncollect_if_marker in item.iter_markers(name="uncollect_if"):
+        if uncollect_if_marker:
+            func = uncollect_if_marker.kwargs["func"]
+            if func(**item.callspec.params):
+                return True
+
+    return False
+
+
+# https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
+def pytest_collection_modifyitems(config, items):
+    removed = []
+    kept = []
+    for item in items:
+        if uncollect_requested(item=item):
+            removed.append(item)
+        else:
+            kept.append(item)
+
+    if len(removed) > 0:
+        config.hook.pytest_deselected(items=removed)
+        items[:] = kept
