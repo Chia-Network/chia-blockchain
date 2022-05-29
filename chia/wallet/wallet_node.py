@@ -1437,7 +1437,6 @@ class WalletNode:
                         return False
 
                     if len(en_block.finished_sub_slots) > 0:
-                        #  What to do here
                         reversed_slots = en_block.finished_sub_slots.copy()
                         reversed_slots.reverse()
                         for slot_idx, slot in enumerate(reversed_slots[:-1]):
