@@ -32,6 +32,8 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -918,10 +920,28 @@ class WalletRpcApi:
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
+        driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
+
+        # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
+        driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        if driver_dict_str is None:
+            for key in offer:
+                try:
+                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                        {"type": AssetType.CAT.value, "tail": "0x" + key}
+                    )
+                except ValueError:
+                    pass
+        else:
+            for key, value in driver_dict_str.items():
+                driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            modified_offer[int(key)] = offer[key]
+            try:
+                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+            except ValueError:
+                modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
             (
@@ -929,7 +949,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only
             )
         if success:
             return {
@@ -942,9 +962,9 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-        offered, requested = offer.summary()
+        offered, requested, infos = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees()}}
+        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None

@@ -1,6 +1,15 @@
+import dataclasses
 from typing import Any, Dict, Sequence, Union
 
-from chia.util.streamable import recurse_jsonify
+from chia.util.ints import uint16
+from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VersionedBlob(Streamable):
+    version: uint16
+    blob: bytes
 
 
 def format_bytes(bytes: int) -> str:

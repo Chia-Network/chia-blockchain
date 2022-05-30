@@ -37,6 +37,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -111,6 +113,7 @@ class WalletStateManager:
     wallet_node: Any
     pool_store: WalletPoolStore
     default_cats: Dict[str, Any]
+    asset_to_wallet_map: Dict[AssetType, Any]
 
     @staticmethod
     async def create(
@@ -175,6 +178,10 @@ class WalletStateManager:
         self.main_wallet = await Wallet.create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
+
+        self.asset_to_wallet_map = {
+            AssetType.CAT: CATWallet,
+        }
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -1133,6 +1140,25 @@ class WalletStateManager:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
         return None
+
+    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):
+        for wallet in self.wallets.values():
+            match_function = getattr(wallet, "match_puzzle_info", None)
+            if match_function is not None and callable(match_function):
+                if match_function(puzzle_driver):
+                    return wallet
+        return None
+
+    async def create_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo, name=None, in_transaction=False):
+        if AssetType(puzzle_driver.type()) in self.asset_to_wallet_map:
+            async with self.lock:
+                await self.asset_to_wallet_map[AssetType(puzzle_driver.type())].create_from_puzzle_info(
+                    self,
+                    self.main_wallet,
+                    puzzle_driver,
+                    name,
+                    in_transaction,
+                )
 
     async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet
