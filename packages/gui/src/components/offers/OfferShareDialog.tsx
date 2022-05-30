@@ -24,9 +24,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { shortSummaryForOffer, suggestedFilenameForOffer } from './utils';
+import {
+  offerContainsAssetOfType,
+  shortSummaryForOffer,
+  suggestedFilenameForOffer,
+} from './utils';
 import useAssetIdName, { AssetIdMapEntry } from '../../hooks/useAssetIdName';
 import { Shell } from 'electron';
+import { NFTOfferSummary } from './NFTOfferViewer';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferSummary from './OfferSummary';
 import child_process from 'child_process';
@@ -363,8 +368,6 @@ async function postToOfferpool(
 function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
-  const showError = useShowError();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [sharePrivately, setSharePrivately] = React.useState(false);
   const [sharedURL, setSharedURL] = React.useState('');
 
@@ -373,18 +376,9 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
   }
 
   async function handleConfirm() {
-    try {
-      setIsSubmitting(true);
-
-      const url = await postToOfferBin(offerData, sharePrivately, testnet);
-
-      console.log(`OfferBin URL (private=${sharePrivately}): ${url}`);
-      setSharedURL(url);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const url = await postToOfferBin(offerData, sharePrivately, testnet);
+    console.log(`OfferBin URL (private=${sharePrivately}): ${url}`);
+    setSharedURL(url);
   }
 
   if (sharedURL) {
@@ -436,35 +430,15 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
   }
 
   return (
-    <Dialog
-      onClose={handleClose}
-      aria-labelledby="alert-dialog-title"
-      aria-describedby="alert-dialog-description"
-      maxWidth="sm"
+    <OfferShareConfirmationDialog
+      offerRecord={offerRecord}
+      offerData={offerData}
+      testnet={testnet}
+      title={<Trans>Share on OfferBin</Trans>}
+      onConfirm={handleConfirm}
       open={open}
-      fullWidth
-    >
-      <DialogTitle id="alert-dialog-title">
-        <Trans>Share on OfferBin</Trans>
-      </DialogTitle>
-      <DialogContent dividers>
-        <OfferSummary
-          isMyOffer={true}
-          summary={offerRecord.summary}
-          makerTitle={
-            <Typography variant="subtitle1">
-              <Trans>Your offer:</Trans>
-            </Typography>
-          }
-          takerTitle={
-            <Typography variant="subtitle1">
-              <Trans>In exchange for:</Trans>
-            </Typography>
-          }
-          rowIndentation={4}
-        />
-      </DialogContent>
-      <DialogActions>
+      onClose={onClose}
+      actions={
         <FormControlLabel
           control={
             <Checkbox
@@ -484,24 +458,8 @@ function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
             </>
           }
         />
-        <Flex flexGrow={1}></Flex>
-        <Button
-          onClick={handleClose}
-          color="primary"
-          variant="contained"
-          disabled={isSubmitting}
-        >
-          <Trans>Cancel</Trans>
-        </Button>
-        <ButtonLoading
-          onClick={handleConfirm}
-          variant="outlined"
-          loading={isSubmitting}
-        >
-          <Trans>Share</Trans>
-        </ButtonLoading>
-      </DialogActions>
-    </Dialog>
+      }
+    />
   );
 }
 
@@ -513,8 +471,6 @@ OfferShareOfferBinDialog.defaultProps = {
 function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
-  const showError = useShowError();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [sharedURL, setSharedURL] = React.useState('');
 
   function handleClose() {
@@ -522,18 +478,9 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
   }
 
   async function handleConfirm() {
-    try {
-      setIsSubmitting(true);
-
-      const url = await postToHashgreen(offerData, testnet);
-
-      console.log(`Hashgreen URL: ${url}`);
-      setSharedURL(url);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const url = await postToHashgreen(offerData, testnet);
+    console.log(`Hashgreen URL: ${url}`);
+    setSharedURL(url);
   }
 
   if (sharedURL) {
@@ -585,52 +532,15 @@ function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
   }
 
   return (
-    <Dialog
-      onClose={handleClose}
-      aria-labelledby="alert-dialog-title"
-      aria-describedby="alert-dialog-description"
-      maxWidth="sm"
+    <OfferShareConfirmationDialog
+      offerRecord={offerRecord}
+      offerData={offerData}
+      testnet={testnet}
+      title={<Trans>Share on Hashgreen DEX</Trans>}
+      onConfirm={handleConfirm}
       open={open}
-      fullWidth
-    >
-      <DialogTitle id="alert-dialog-title">
-        <Trans>Share on Hashgreen DEX</Trans>
-      </DialogTitle>
-      <DialogContent dividers>
-        <OfferSummary
-          isMyOffer={true}
-          summary={offerRecord.summary}
-          makerTitle={
-            <Typography variant="subtitle1">
-              <Trans>Your offer:</Trans>
-            </Typography>
-          }
-          takerTitle={
-            <Typography variant="subtitle1">
-              <Trans>In exchange for:</Trans>
-            </Typography>
-          }
-          rowIndentation={4}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={handleClose}
-          color="primary"
-          variant="contained"
-          disabled={isSubmitting}
-        >
-          <Trans>Cancel</Trans>
-        </Button>
-        <ButtonLoading
-          onClick={handleConfirm}
-          variant="outlined"
-          loading={isSubmitting}
-        >
-          <Trans>Share</Trans>
-        </ButtonLoading>
-      </DialogActions>
-    </Dialog>
+      onClose={onClose}
+    />
   );
 }
 
@@ -894,8 +804,6 @@ OfferShareKeybaseDialog.defaultProps = {
 function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
-  const showError = useShowError();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [offerResponse, setOfferResponse] =
     React.useState<PostToOfferpoolResponse>();
 
@@ -904,18 +812,9 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
   }
 
   async function handleConfirm() {
-    try {
-      setIsSubmitting(true);
-
-      const result = await postToOfferpool(offerData, testnet);
-
-      console.log(`offerpool result ${JSON.stringify(result)}`);
-      setOfferResponse(result);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const result = await postToOfferpool(offerData, testnet);
+    console.log(`offerpool result ${JSON.stringify(result)}`);
+    setOfferResponse(result);
   }
 
   if (offerResponse) {
@@ -956,6 +855,67 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
   }
 
   return (
+    <OfferShareConfirmationDialog
+      offerRecord={offerRecord}
+      offerData={offerData}
+      testnet={testnet}
+      title={<Trans>Share on offerpool</Trans>}
+      onConfirm={handleConfirm}
+      open={open}
+      onClose={onClose}
+    />
+  );
+}
+
+OfferShareOfferpoolDialog.defaultProps = {
+  open: false,
+  onClose: () => {},
+};
+
+/* ========================================================================== */
+
+type OfferShareConfirmationDialogProps = CommonOfferProps &
+  CommonDialogProps & {
+    title: React.ReactElement;
+    onConfirm: () => Promise<void>;
+    actions?: React.ReactElement;
+  };
+
+function OfferShareConfirmationDialog(
+  props: OfferShareConfirmationDialogProps,
+) {
+  const {
+    offerRecord,
+    offerData,
+    testnet,
+    title,
+    onConfirm,
+    actions = null,
+    onClose,
+    open,
+  } = props;
+  const showError = useShowError();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isNFTOffer = offerContainsAssetOfType(offerRecord.summary, 'singleton');
+  const OfferSummaryComponent = isNFTOffer ? NFTOfferSummary : OfferSummary;
+
+  function handleClose() {
+    onClose(false);
+  }
+
+  async function handleConfirm() {
+    try {
+      setIsSubmitting(true);
+
+      await onConfirm();
+    } catch (e) {
+      showError(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
     <Dialog
       onClose={handleClose}
       aria-labelledby="alert-dialog-title"
@@ -964,27 +924,30 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
       open={open}
       fullWidth
     >
-      <DialogTitle id="alert-dialog-title">
-        <Trans>Share on offerpool</Trans>
-      </DialogTitle>
+      <DialogTitle id="alert-dialog-title">{title}</DialogTitle>
       <DialogContent dividers>
-        <OfferSummary
-          isMyOffer={true}
-          summary={offerRecord.summary}
-          makerTitle={
-            <Typography variant="subtitle1">
-              <Trans>Your offer:</Trans>
-            </Typography>
-          }
-          takerTitle={
-            <Typography variant="subtitle1">
-              <Trans>In exchange for:</Trans>
-            </Typography>
-          }
-          rowIndentation={4}
-        />
+        <Flex flexDirection="column" gap={1} style={{ paddingTop: '1em' }}>
+          <OfferSummaryComponent
+            isMyOffer={true}
+            imported={false}
+            summary={offerRecord.summary}
+            makerTitle={
+              <Typography variant="subtitle1">
+                <Trans>Your offer:</Trans>
+              </Typography>
+            }
+            takerTitle={
+              <Typography variant="subtitle1">
+                <Trans>In exchange for:</Trans>
+              </Typography>
+            }
+            rowIndentation={3}
+            showNFTPreview={true}
+          />
+        </Flex>
       </DialogContent>
       <DialogActions>
+        {actions}
         <Flex flexGrow={1}></Flex>
         <Button
           onClick={handleClose}
@@ -1005,11 +968,6 @@ function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
     </Dialog>
   );
 }
-
-OfferShareOfferpoolDialog.defaultProps = {
-  open: false,
-  onClose: () => {},
-};
 
 /* ========================================================================== */
 

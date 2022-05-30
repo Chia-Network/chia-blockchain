@@ -3,13 +3,54 @@ import type { NFTAttribute } from '@chia/api';
 import { Trans } from '@lingui/macro';
 import { Flex } from '@chia/core';
 import { Box, Grid, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import isRankingAttribute from '../../util/isRankingAttribute';
 
-export type NFTRankingsProps = {
+export type NFTPropertyProps = {
+  attribute: NFTAttribute;
+  size?: 'small' | 'regular';
+  color?: 'primary' | 'secondary';
+};
+
+export type NFTPropertiesProps = {
   attributes?: NFTAttribute[];
 };
 
-export default function NFTProperties(props: NFTRankingsProps) {
+export function NFTProperty(props: NFTPropertyProps) {
+  const { attribute, size = 'regular', color = 'secondary' } = props;
+  const theme = useTheme();
+  const { name, trait_type, value } = attribute;
+  const title = trait_type ?? name;
+  const borderStyle = {
+    border: 1,
+    borderRadius: 1,
+    borderColor: `${theme.palette[color].main}`,
+    p: size === 'small' ? 1 : 2,
+  };
+
+  return (
+    <Grid xs={12} sm={6} item>
+      <Box {...borderStyle}>
+        <Typography
+          variant={size === 'small' ? 'caption' : 'body1'}
+          color={color}
+          noWrap
+        >
+          {title}
+        </Typography>
+        <Typography
+          variant={size === 'small' ? 'body2' : 'h6'}
+          color={color}
+          noWrap
+        >
+          {value}
+        </Typography>
+      </Box>
+    </Grid>
+  );
+}
+
+export default function NFTProperties(props: NFTPropertiesProps) {
   const { attributes } = props;
 
   const valueAttributes = useMemo(() => {
@@ -26,23 +67,11 @@ export default function NFTProperties(props: NFTRankingsProps) {
         <Trans>Properties</Trans>
       </Typography>
       <Grid spacing={2} container>
-        {valueAttributes.map((attribute, index) => {
-          const { name, trait_type, value } = attribute;
-          const title = trait_type ?? name;
-
-          return (
-            <Grid xs={12} sm={6} key={`${attribute?.name}-${index}`} item>
-              <Box border={1} borderRadius={1} borderColor="black" p={2}>
-                <Typography variant="body1" noWrap>
-                  {title}
-                </Typography>
-                <Typography variant="h6" noWrap>
-                  {value}
-                </Typography>
-              </Box>
-            </Grid>
-          );
-        })}
+        {valueAttributes.map((attribute, index) => (
+          <React.Fragment key={`${attribute?.name}-${index}`}>
+            <NFTProperty attribute={attribute} />
+          </React.Fragment>
+        ))}
       </Grid>
     </Flex>
   );

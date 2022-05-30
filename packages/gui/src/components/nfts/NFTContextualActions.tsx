@@ -14,23 +14,12 @@ import { Offers as OffersIcon } from '@chia/icons';
 import { ListItemIcon, MenuItem, Typography } from '@mui/material';
 import {
   ArrowForward as TransferIcon,
-  Assignment as AssignmentIcon,
+  Link as LinkIcon,
   OpenInBrowser,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
 import isURL from 'validator/lib/isURL';
-import { styled } from '@mui/system';
-
-/* ========================================================================== */
-
-const StyledAssignmentIcon = styled(AssignmentIcon)(
-  ({ theme, invertColor }) => `
-  color: ${
-    invertColor ? theme.palette.common.white : theme.palette.text.primary
-  };
-`,
-);
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -218,7 +207,9 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
   const disabled = !haveDataUrl;
 
   function handleCopy() {
-    copyToClipboard(dataUrl);
+    if (dataUrl) {
+      copyToClipboard(dataUrl);
+    }
   }
 
   return (
@@ -230,7 +221,7 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
       disabled={disabled}
     >
       <ListItemIcon>
-        <StyledAssignmentIcon />
+        <LinkIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
         <Trans>Copy URL</Trans>

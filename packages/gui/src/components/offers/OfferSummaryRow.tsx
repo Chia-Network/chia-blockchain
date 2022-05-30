@@ -10,11 +10,13 @@ import {
 } from '@chia/core';
 import { Box, Typography } from '@mui/material';
 import useAssetIdName from '../../hooks/useAssetIdName';
-
 import { WalletType } from '@chia/api';
 import { formatAmountForWalletType } from './utils';
-import { launcherIdFromNFTId, launcherIdToNFTId } from '../../util/nfts';
+import { launcherIdToNFTId } from '../../util/nfts';
+import NFTSummary from '../nfts/NFTSummary';
 import styled from 'styled-components';
+
+/* ========================================================================== */
 
 const StyledTitle = styled(Box)`
   font-size: 0.625rem;
@@ -24,6 +26,8 @@ const StyledTitle = styled(Box)`
 const StyledValue = styled(Box)`
   word-break: break-all;
 `;
+
+/* ========================================================================== */
 
 type OfferMojoAmountProps = {
   mojos: number;
@@ -63,51 +67,51 @@ type OfferSummaryNFTRowProps = {
   launcherId: string;
   amount: number;
   rowNumber?: number;
+  showNFTPreview: boolean;
 };
 
 export function OfferSummaryNFTRow(
   props: OfferSummaryNFTRowProps,
 ): React.ReactElement {
-  const { launcherId, _amount, rowNumber } = props;
+  const { launcherId, rowNumber, showNFTPreview } = props;
   const nftId = launcherIdToNFTId(launcherId);
 
   return (
-    <Flex flexDirections="row" alignItems="center" gap={1}>
-      <Typography variant="body1">
-        <Flex flexDirection="row" alignItems="center" gap={1}>
-          {rowNumber !== undefined && (
-            <Typography
-              variant="body1"
-              color="secondary"
-              style={{ fontWeight: 'bold' }}
-            >{`${rowNumber})`}</Typography>
-          )}
-          <Typography>{nftId}</Typography>
-        </Flex>
-      </Typography>
-      {launcherId !== undefined && (
-        <TooltipIcon interactive>
-          <Flex flexDirection="column" gap={1}>
-            <Flex flexDirection="column" gap={0}>
-              <Flex>
-                <Box flexGrow={1}>
-                  <StyledTitle>Launcher ID</StyledTitle>
-                </Box>
-                {/* <Link
-                  href={`https://testnet.mintgarden.io/nfts/${launcherId.toLowerCase()}`}
-                  target="_blank"
-                >
-                  <Trans>Show on MintGarden</Trans>
-                </Link> */}
-              </Flex>
-              <Flex alignItems="center" gap={1}>
-                <StyledValue>{launcherId}</StyledValue>
-                <CopyToClipboard value={launcherId} fontSize="small" />
-              </Flex>
+    <Flex flexDirection="column" gap={2}>
+      {!showNFTPreview && (
+        <Flex flexDirections="row" alignItems="center" gap={1}>
+          <Typography variant="body1">
+            <Flex flexDirection="row" alignItems="center" gap={1}>
+              {rowNumber !== undefined && (
+                <Typography
+                  variant="body1"
+                  color="secondary"
+                  style={{ fontWeight: 'bold' }}
+                >{`${rowNumber})`}</Typography>
+              )}
+              <Typography>{nftId}</Typography>
             </Flex>
-          </Flex>
-        </TooltipIcon>
+          </Typography>
+          {launcherId !== undefined && (
+            <TooltipIcon interactive>
+              <Flex flexDirection="column" gap={1}>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
+                      <StyledTitle>Launcher ID</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{launcherId}</StyledValue>
+                    <CopyToClipboard value={launcherId} fontSize="small" />
+                  </Flex>
+                </Flex>
+              </Flex>
+            </TooltipIcon>
+          )}
+        </Flex>
       )}
+      {showNFTPreview && <NFTSummary launcherId={launcherId} />}
     </Flex>
   );
 }

@@ -6,7 +6,6 @@ import {
   Button,
   ButtonLoading,
   ConfirmDialog,
-  CopyToClipboard,
   Fee,
   Form,
   FormatLargeNumber,
@@ -29,7 +28,7 @@ import {
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { useTransferNFTMutation } from '@chia/api-react';
-import useNFTMetadata from '../../hooks/useNFTMetadata';
+import NFTSummary from './NFTSummary';
 
 /* ========================================================================== */
 /*                                   Styles                                   */
@@ -166,7 +165,6 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   const { nft, destination, onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
-  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
   const openDialog = useOpenDialog();
   const methods = useForm<NFTTransferFormData>({
     shouldUnregister: false,
@@ -224,82 +222,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
     <Form methods={methods} onSubmit={handleSubmit}>
       <Flex flexDirection="column" gap={3}>
         <Flex flexDirection="column" gap={1}>
-          {!isLoadingMetadata && metadata && (
-            <Flex flexDirection="row" gap={1}>
-              <Flex flexShrink={0}>
-                <Typography variant="body1">
-                  <Trans>Name:</Trans>
-                </Typography>
-              </Flex>
-              <Flex
-                flexDirection="row"
-                alignItems="center"
-                gap={1}
-                sx={{ overflow: 'hidden' }}
-              >
-                <Typography noWrap variant="body1">
-                  {metadata.name}
-                </Typography>
-              </Flex>
-            </Flex>
-          )}
-          <Flex flexDirection="row" gap={1}>
-            <Flex flexShrink={0}>
-              <Typography variant="body1">
-                <Trans>ID:</Trans>
-              </Typography>
-            </Flex>
-            <Flex
-              flexDirection="row"
-              alignItems="center"
-              gap={1}
-              sx={{ overflow: 'hidden' }}
-            >
-              <Typography noWrap variant="body1">
-                {nft.$nftId}
-              </Typography>
-              <TooltipIcon interactive>
-                <Flex flexDirection="column" gap={2}>
-                  <Flex flexDirection="column" gap={1}>
-                    <StyledTitle>
-                      <Trans>NFT ID</Trans>
-                    </StyledTitle>
-                    <Flex alignItems="center" gap={1}>
-                      <StyledValue>
-                        <Typography variant="caption">{nft.$nftId}</Typography>
-                      </StyledValue>
-                      <CopyToClipboard value={nft.$nftId} fontSize="small" />
-                    </Flex>
-                    <StyledTitle>
-                      <Trans>Launcher ID</Trans>
-                    </StyledTitle>
-                    <Flex alignItems="center" gap={1}>
-                      <StyledValue>
-                        <Typography variant="caption">
-                          {nft.launcherId}
-                        </Typography>
-                      </StyledValue>
-                      <CopyToClipboard
-                        value={nft.launcherId}
-                        fontSize="small"
-                      />
-                    </Flex>
-                    <StyledTitle>
-                      <Trans>Coin ID</Trans>
-                    </StyledTitle>
-                    <Flex alignItems="center" gap={1}>
-                      <StyledValue>
-                        <Typography variant="caption">
-                          {nft.nftCoinId}
-                        </Typography>
-                      </StyledValue>
-                      <CopyToClipboard value={nft.nftCoinId} fontSize="small" />
-                    </Flex>
-                  </Flex>
-                </Flex>
-              </TooltipIcon>
-            </Flex>
-          </Flex>
+          <NFTSummary launcherId={nft.launcherId} />
         </Flex>
         <TextField
           name="destination"

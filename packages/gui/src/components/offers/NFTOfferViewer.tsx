@@ -20,7 +20,8 @@ import {
   TooltipIcon,
   useShowError,
 } from '@chia/core';
-import { Divider, Grid, Typography } from '@mui/material';
+import { Box, Divider, Grid, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import useAcceptOfferHook from '../../hooks/useAcceptOfferHook';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import useFetchNFTs from '../../hooks/useFetchNFTs';
@@ -47,10 +48,21 @@ type NFTOfferSummaryRowProps = {
   summaryKey: string;
   summary: any;
   unknownAssets?: string[];
+  rowIndentation: number;
+  showNFTPreview: boolean;
 };
 
 function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
-  const { title, summaryKey, summary, unknownAssets } = props;
+  const {
+    title,
+    summaryKey,
+    summary,
+    unknownAssets,
+    rowIndentation = 0,
+    showNFTPreview = false,
+  } = props;
+  const theme = useTheme();
+  const horizontalPadding = `${theme.spacing(rowIndentation)}`; // logic borrowed from Flex's gap computation
   const summaryData: { [key: string]: number } = summary[summaryKey];
   const summaryInfo = summary.infos;
   const assetIdsToTypes: { [key: string]: OfferAsset | undefined }[] =
@@ -85,9 +97,6 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
     const [assetId, assetType]: [string, OfferAsset | undefined] =
       Object.entries(entry)[0];
 
-    console.log('assetId and amount:');
-    console.log(assetId);
-    console.log(summaryData[assetId]);
     switch (assetType) {
       case undefined:
         return null;
@@ -104,6 +113,7 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
           <OfferSummaryNFTRow
             launcherId={assetId}
             amount={summaryData[assetId]}
+            showNFTPreview={showNFTPreview}
           />
         );
       default:
@@ -127,9 +137,16 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
     <Flex flexDirection="column" gap={2}>
       <Flex flexDirection="column" gap={2}>
         {title}
-        {rows.map((row, index) => (
-          <div key={index}>{row}</div>
-        ))}
+        <Box
+          sx={{
+            marginLeft: `${horizontalPadding}`,
+            marginRight: `${horizontalPadding}`,
+          }}
+        >
+          {rows.map((row, index) => (
+            <div key={index}>{row}</div>
+          ))}
+        </Box>
       </Flex>
       {unknownAssets !== undefined && unknownAssets.length > 0 && (
         <Flex flexDirection="row" gap={1}>
@@ -151,19 +168,25 @@ type NFTOfferSummaryProps = {
   isMyOffer: boolean;
   imported: boolean;
   summary: any;
+  title?: React.ReactElement | string;
   makerTitle: React.ReactElement | string;
   takerTitle: React.ReactElement | string;
+  rowIndentation: number;
   setIsMissingRequestedAsset?: (isMissing: boolean) => void;
+  showNFTPreview: boolean;
 };
 
-function NFTOfferSummary(props: NFTOfferSummaryProps) {
+export function NFTOfferSummary(props: NFTOfferSummaryProps) {
   const {
     isMyOffer,
     imported,
     summary,
+    title,
     makerTitle,
     takerTitle,
+    rowIndentation = 0,
     setIsMissingRequestedAsset,
+    showNFTPreview = false,
   } = props;
   const { lookupByAssetId } = useAssetIdName();
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
@@ -207,6 +230,8 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
       summaryKey="offered"
       summary={summary}
       unknownAssets={isMyOffer ? undefined : takerUnknownAssets}
+      rowIndentation={rowIndentation}
+      showNFTPreview={showNFTPreview}
     />
   );
   const takerSummary: React.ReactElement = (
@@ -215,6 +240,8 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
       summaryKey="requested"
       summary={summary}
       unknownAssets={isMyOffer ? undefined : makerUnknownAssets}
+      rowIndentation={rowIndentation}
+      showNFTPreview={showNFTPreview}
     />
   );
   const makerFee: number = summary.fees;
@@ -233,12 +260,10 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
   }
 
   return (
-    <>
-      <Typography variant="h6" style={{ fontWeight: 'bold' }}>
-        <Trans>Purchase Summary</Trans>
-      </Typography>
+    <Flex flexDirection="column" gap={2}>
+      {title}
       {summaries.map((summary, index) => (
-        <Flex flexDirection="column" key={index} gap={3}>
+        <Flex flexDirection="column" key={index} gap={2}>
           {summary}
           {index !== summaries.length - 1 && <Divider />}
         </Flex>
@@ -277,7 +302,7 @@ function NFTOfferSummary(props: NFTOfferSummaryProps) {
           </Flex>
         </Flex>
       )}
-    </>
+    </Flex>
   );
 }
 
@@ -391,6 +416,11 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                 isMyOffer={isMyOffer}
                 imported={!!imported}
                 summary={summary}
+                title={
+                  <Typography variant="h6" style={{ fontWeight: 'bold' }}>
+                    <Trans>Purchase Summary</Trans>
+                  </Typography>
+                }
                 makerTitle={
                   <Typography variant="body1">
                     <Trans>You will receive</Trans>
@@ -404,6 +434,8 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                 setIsMissingRequestedAsset={(isMissing: boolean) =>
                   setIsMissingRequestedAsset(isMissing)
                 }
+                rowIndentation={0}
+                showNFTPreview={false}
               />
               <Divider />
               {imported && (

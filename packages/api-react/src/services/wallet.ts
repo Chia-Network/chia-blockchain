@@ -1882,14 +1882,19 @@ export const walletApi = apiWithTag.injectEndpoints({
     getNFTInfo: build.query<any, { coinId: string }>({
       async queryFn(args, _queryApi, _extraOptions, fetchWithBQ) {
         try {
-          if (args.coinId.length !== 64) {
+          // Slice off the '0x' prefix, if present
+          const coinId = args.coinId.toLowerCase().startsWith('0x')
+            ? args.coinId.slice(2)
+            : args.coinId;
+
+          if (coinId.length !== 64) {
             throw new Error('Invalid coinId');
           }
 
           const { data: nftData, error: nftError } = await fetchWithBQ({
             command: 'getNftInfo',
             service: NFT,
-            args: [args.coinId],
+            args: [coinId],
           });
 
           if (nftError) {

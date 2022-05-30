@@ -24,7 +24,8 @@ import NFTProperties from '../NFTProperties';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
-  const { wallets: nftWallets, isLoading: isLoadingWallets } = useGetNFTWallets();
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
@@ -45,35 +46,44 @@ export default function NFTDetail() {
       return [];
     }
 
-    const { dataUris = []} = nft;
+    const { dataUris = [] } = nft;
 
-    const rows = [{
-      key: 'id',
-      label: <Trans>Launcher ID</Trans>,
-      value: (
-        <Truncate tooltip copyToClipboard>
-          {nft.launcherId}
-        </Truncate>
-      ),
-    },
-    // {
-    //   key: 'tokenStandard',
-    //   label: <Trans>Token Standard</Trans>,
-    //   value: nft.version,
-    // },
-    nft.dataHash && {
-      key: 'dataHash',
-      label: <Trans>Data Hash</Trans>,
-      value: <Truncate tooltip copyToClipboard>{nft.dataHash}</Truncate>,
-    },
+    const rows = [
+      {
+        key: 'id',
+        label: <Trans>Launcher ID</Trans>,
+        value: (
+          <Truncate tooltip copyToClipboard>
+            {nft.launcherId}
+          </Truncate>
+        ),
+      },
+      // {
+      //   key: 'tokenStandard',
+      //   label: <Trans>Token Standard</Trans>,
+      //   value: nft.version,
+      // },
+      nft.dataHash && {
+        key: 'dataHash',
+        label: <Trans>Data Hash</Trans>,
+        value: (
+          <Truncate tooltip copyToClipboard>
+            {nft.dataHash}
+          </Truncate>
+        ),
+      },
 
-    metadata?.collection_name && {
-      key: 'collectionName',
-      label: <Trans>Collection Name</Trans>,
-      value: <Truncate tooltip copyToClipboard>{metadata?.collection_name}</Truncate>,
-    },
+      // Moved below Description
+      // metadata?.collection_name && {
+      //   key: 'collectionName',
+      //   label: <Trans>Collection Name</Trans>,
+      //   value: (
+      //     <Truncate tooltip copyToClipboard>
+      //       {metadata?.collection_name}
+      //     </Truncate>
+      //   ),
+      // },
     ].filter(Boolean);
-
 
     if (dataUris?.length) {
       dataUris.forEach((uri, index) => {
@@ -113,7 +123,9 @@ export default function NFTDetail() {
   return (
     <LayoutDashboardSub>
       <Flex flexDirection="column" gap={2}>
-        <Back variant="h5">{metadata?.name ?? <Trans>Title Not Available</Trans>}</Back>
+        <Back variant="h5">
+          {metadata?.name ?? <Trans>Title Not Available</Trans>}
+        </Back>
         <Box
           border={1}
           borderColor="grey.300"
@@ -146,8 +158,34 @@ export default function NFTDetail() {
                   <Trans>Description</Trans>
                 </Typography>
 
-                <Typography>{metadata?.description ?? <Trans>Not Available</Trans>}</Typography>
+                <Typography>
+                  {metadata?.description ?? <Trans>Not Available</Trans>}
+                </Typography>
               </Flex>
+              {metadata?.collection_name && (
+                <Flex flexDirection="column" gap={1}>
+                  <Typography variant="h6">
+                    <Trans>Collection</Trans>
+                  </Typography>
+
+                  <Typography>
+                    {metadata?.collection_name ?? <Trans>Not Available</Trans>}
+                  </Typography>
+                </Flex>
+              )}
+              {(nft?.seriesTotal ?? 0) > 1 && (
+                <Flex flexDirection="column" gap={1}>
+                  <Typography variant="h6">
+                    <Trans>Series Number</Trans>
+                  </Typography>
+
+                  <Typography>
+                    <Trans>
+                      {nft.seriesNumber} of {nft.seriesTotal}
+                    </Trans>
+                  </Typography>
+                </Flex>
+              )}
               <NFTProperties attributes={metadata?.attributes} />
               <NFTRankings attributes={metadata?.attributes} />
               <Flex flexDirection="column" gap={1}>

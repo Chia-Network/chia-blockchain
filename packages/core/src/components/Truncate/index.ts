@@ -1,1 +1,1 @@
-export { default } from './Truncate';
+export { default, truncateValue } from './Truncate';
