@@ -26,13 +26,12 @@ NFT_TRANSFER_PROGRAM = load_clvm("nft_transfer_program.clvm")
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
-NFT_INNER_INNERPUZ = load_clvm("nft_v1_innerpuz.clvm")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties_new.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
 
 def create_nft_layer_puzzle_with_curry_params(
-    metadata: Program, metadata_updater_hash: bytes32, inner_puzzle: Program
+        metadata: Program, metadata_updater_hash: bytes32, inner_puzzle: Program
 ) -> Program:
     """Curries params into nft_state_layer.clvm
 
@@ -47,6 +46,8 @@ def create_nft_layer_puzzle_with_curry_params(
         metadata,
         metadata_updater_hash,
     )
+    log.debug("Currying with: %s %s %s %s", NFT_STATE_LAYER_MOD_HASH, inner_puzzle.get_tree_hash(),
+              metadata_updater_hash, metadata.get_tree_hash())
     return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, metadata_updater_hash, inner_puzzle)
 
 
@@ -64,7 +65,7 @@ def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Prog
 
 
 def create_full_puzzle(
-    singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
+        singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
 ) -> Program:
     log.debug(
         "Creating full NFT puzzle with: \n%r\n%r\n%r\n%r",
@@ -176,15 +177,15 @@ def create_ownership_layer_puzzle(nft_id: bytes32, did_id: bytes32, p2_puzzle: P
     log.debug(f"Creating ownership layer puzzle with {nft_id=} {did_id=} {percentage=} {p2_puzzle=}")
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
+        STANDARD_PUZZLE_MOD.get_tree_hash(),
         singleton_struct,
         p2_puzzle.get_tree_hash(),
         percentage,
         OFFER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
     )
-    nft_inner_puzzle = NFT_INNER_INNERPUZ.curry(
-        STANDARD_PUZZLE_MOD.get_tree_hash(), NFT_INNER_INNERPUZ.get_tree_hash(), p2_puzzle
-    )
+    nft_inner_puzzle = p2_puzzle
+
     nft_ownership_layer_puzzle = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(), did_id, transfer_program, nft_inner_puzzle
     )
@@ -192,16 +193,21 @@ def create_ownership_layer_puzzle(nft_id: bytes32, did_id: bytes32, p2_puzzle: P
 
 
 def create_ownership_layer_transfer_solution(
-    new_did: bytes32,
-    new_did_inner_hash: bytes,
-    trade_prices_list: List[List[int]],
-    new_pubkey: G1Element,
-    conditions: List[Any] = [],
+        new_did: bytes32,
+        new_did_inner_hash: bytes32,
+        trade_prices_list: List[List[int]],
+        new_pubkey: G1Element,
+        conditions: List[Any] = [],
 ) -> Program:
     log.debug(f"Creating a transfer solution with: {new_did=} {new_did_inner_hash=} {trade_prices_list=} {new_pubkey=}")
-    condition_list = [new_did, [trade_prices_list], new_pubkey, [new_did_inner_hash], 0, 0, conditions]
+    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash(), 1,
+                       [STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()]],
+                      [-10, new_did, trade_prices_list, new_pubkey, [new_did_inner_hash]]]
     log.debug("Condition list raw: %r", condition_list)
-    solution = Program.to([[solution_for_conditions(condition_list)]])
+    solution = Program.to([
+        [solution_for_conditions(condition_list)],
+        1,
+    ])
     log.debug("Generated transfer solution: %s", disassemble(solution))
     return solution
 
@@ -239,15 +245,19 @@ def get_metadata_and_p2_puzhash(unft: UncurriedNFT, solution: Program) -> Tuple[
     return metadata, puzhash
 
 
-def generate_new_puzzle(unft, new_p2_puzzle, metadata, solution):
+def apply_nft_puzzle(unft: UncurriedNFT, new_p2_puzzle: Program, metadata: List,
+                     solution: Program) -> Program:
+    log.debug("Generating a new NFT puzzle")
     if not unft.owner_did:
         inner_puzzle = new_p2_puzzle
     else:
-        new_did_id = solution.at("ffffrf").atom
-        new_did_inner_hash = solution.at("ffffrrff").atom
-        inner_puzzle = create_ownership_layer_puzzle(
-            unft.singleton_launcher_id, new_did_id, new_did_inner_hash, unft.trade_price_percentage
+        assert unft.trade_price_percentage
+        log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
+        new_did_id = solution.at("ffrfrrfrf").atom
+        log.debug(
+            f"Found NFT puzzle details: {new_did_id.hex()=} {unft.trade_price_percentage=} {unft.singleton_launcher_id=}")
+        inner_puzzle = NFT_OWNERSHIP_LAYER.curry(
+            NFT_OWNERSHIP_LAYER.get_tree_hash(), new_did_id, unft.transfer_program, new_p2_puzzle
         )
-    return create_full_puzzle(
-        unft.singleton_launcher_id, Program.to(metadata), unft.metadata_updater_hash, inner_puzzle
-    )
+    return create_nft_layer_puzzle_with_curry_params(Program.to(metadata), NFT_METADATA_UPDATER.get_tree_hash(),
+                                                     inner_puzzle)

@@ -39,7 +39,7 @@ class UncurriedNFT:
     [singleton_mod_hash, singleton_launcher_id, launcher_puzhash]
     """
     singleton_mod_hash: Program
-    singleton_launcher_id: Program
+    singleton_launcher_id: bytes32
     launcher_puzhash: Program
 
     metadata_updater_hash: Program
@@ -71,7 +71,7 @@ class UncurriedNFT:
     nft_inner_puzzle_hash: Optional[bytes32]
     """Puzzle hash of the ownership layer inner puzzle """
 
-    transfer_program_hash: Optional[bytes32]
+    transfer_program: Optional[Program]
     """Puzzle hash of the transfer program"""
 
     transfer_program_curry_params: Optional[Program]
@@ -106,8 +106,7 @@ class UncurriedNFT:
             raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
         try:
             # Set nft parameters
-
-            (nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle) = curried_args.as_iter()
+            nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
             data_uris = Program.to([])
             data_hash = Program.to(0)
             meta_uris = Program.to([])
@@ -141,14 +140,18 @@ class UncurriedNFT:
             royalty_address = None
             royalty_percentage = None
             nft_inner_puzzle_mod = None
-            mod_hash, ol_args = inner_puzzle.uncurry()
-            if mod_hash == NFT_OWNERSHIP_LAYER.get_tree_hash():
-                current_did, transfer_program, nft_inner_puzzle = ol_args
+            mod, ol_args = inner_puzzle.uncurry()
+            if mod == NFT_OWNERSHIP_LAYER:
+                log.debug("Parsing ownership layer")
+                _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
+                _, p2_args = p2_puzzle.uncurry()
+                (pubkey,) = p2_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                nft_inner_puzzle_mod, nft_inner_puzzle_args = nft_inner_puzzle.uncurry()
-                _, royalty_address, royalty_percentage, _, _ = transfer_program_args
-                _, _, p2_puzzle = nft_inner_puzzle_args
+                _, _, royalty_address, royalty_percentage, _, _ = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage.as_int())
+                current_did = current_did.atom
             else:
+                log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
         except Exception as e:
             raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
@@ -157,7 +160,7 @@ class UncurriedNFT:
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id,
+            singleton_launcher_id=singleton_launcher_id.atom,
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,
@@ -174,7 +177,7 @@ class UncurriedNFT:
             # TODO: Set/Remove following fields after NFT1 implemented
             owner_did=current_did,
             owner_pubkey=pubkey,
-            transfer_program_hash=transfer_program_mod,
+            transfer_program=transfer_program,
             transfer_program_curry_params=transfer_program_args,
             royalty_address=royalty_address,
             trade_price_percentage=royalty_percentage,
