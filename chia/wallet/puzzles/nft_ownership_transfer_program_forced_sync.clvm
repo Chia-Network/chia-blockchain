@@ -4,8 +4,8 @@
     Current_Owner ; Truth
     (
       new_owner
-      new_price
-      (new_did_owner new_did_inner_hash)  ; this is the opaque transfer_program_solution
+      trade_prices_list
+      (current_owner_inner new_did_inner_hash)  ; this is the opaque transfer_program_solution
     )
   )
 
@@ -28,7 +28,8 @@
   (list new_owner 0
     (if new_owner
       (list
-        (list ASERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f (f TRANSFER_PROGRAM_CURRY_PARAMS)) (c new_did_owner (r (r (f TRANSFER_PROGRAM_CURRY_PARAMS))))) new_did_inner_hash) (f (r (f TRANSFER_PROGRAM_CURRY_PARAMS)))))
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f (f TRANSFER_PROGRAM_CURRY_PARAMS)) (c new_did_owner (r (r (f TRANSFER_PROGRAM_CURRY_PARAMS))))) new_did_inner_hash) (f (r SINGLETON_STRUCT))))
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f (f TRANSFER_PROGRAM_CURRY_PARAMS)) (c Current_Owner (r (r (f TRANSFER_PROGRAM_CURRY_PARAMS))))) current_owner_inner) (f (r SINGLETON_STRUCT))))
       )
       0
     )
