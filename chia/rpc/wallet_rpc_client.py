@@ -240,7 +240,14 @@ class WalletRpcClient(RpcClient):
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
 
     # DID wallet
-    async def create_new_did_wallet(self, amount, fee=0, name="DID Wallet", backup_ids=[], required_num=0) -> Dict:
+    async def create_new_did_wallet(
+        self,
+        amount: int,
+        fee: int = 0,
+        name: Optional[str] = "DID Wallet",
+        backup_ids: List[str] = [],
+        required_num: int = 0,
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
             "did_type": "new",
@@ -253,14 +260,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def get_did_id(self, wallet_id) -> Dict:
+    async def get_did_id(self, wallet_id: int) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
         response = await self.fetch("did_get_did", request)
         return response
 
-    async def create_did_backup_file(self, wallet_id, filename) -> Dict:
+    async def create_did_backup_file(self, wallet_id: int, filename: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "filename": filename,
@@ -268,7 +275,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_create_backup_file", request)
         return response
 
-    async def update_did_recovery_list(self, wallet_id, recovery_list, num_verification) -> Dict:
+    async def update_did_recovery_list(self, wallet_id: int, recovery_list: List[str], num_verification: int) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "new_list": recovery_list,
@@ -277,14 +284,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_update_recovery_ids", request)
         return response
 
-    async def get_did_recovery_list(self, wallet_id) -> Dict:
+    async def get_did_recovery_list(self, wallet_id: int) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
         response = await self.fetch("did_get_recovery_list", request)
         return response
 
-    async def update_did_metadata(self, wallet_id, metadata) -> Dict:
+    async def update_did_metadata(self, wallet_id: int, metadata: Dict) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "metadata": metadata,
@@ -292,14 +299,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_update_metadata", request)
         return response
 
-    async def get_did_metadata(self, wallet_id) -> Dict:
+    async def get_did_metadata(self, wallet_id: int) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
         response = await self.fetch("did_get_metadata", request)
         return response
 
-    async def create_new_did_wallet_from_recovery(self, filename) -> Dict:
+    async def create_new_did_wallet_from_recovery(self, filename: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
             "did_type": "recovery",
@@ -308,7 +315,9 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def did_create_attest(self, wallet_id, coin_name, pubkey, puzhash, file_name) -> Dict:
+    async def did_create_attest(
+        self, wallet_id: int, coin_name: str, pubkey: str, puzhash: str, file_name: str
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "coin_name": coin_name,
@@ -319,7 +328,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_create_attest", request)
         return response
 
-    async def did_recovery_spend(self, wallet_id, attest_filenames) -> Dict:
+    async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "attest_filenames": attest_filenames,
@@ -327,7 +336,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_recovery_spend", request)
         return response
 
-    async def did_transfer_did(self, wallet_id, address, fee, with_recovery) -> Dict:
+    async def did_transfer_did(self, wallet_id: int, address: str, fee: int, with_recovery: bool) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "inner_address": address,
@@ -337,12 +346,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_transfer_did", request)
         return response
 
-    async def did_set_wallet_name(self, wallet_id, name) -> Dict:
+    async def did_set_wallet_name(self, wallet_id: int, name: str) -> Dict:
         request = {"wallet_id": wallet_id, "name": name}
         response = await self.fetch("did_set_wallet_name", request)
         return response
 
-    async def did_get_wallet_name(self, wallet_id) -> Dict:
+    async def did_get_wallet_name(self, wallet_id: int) -> Dict:
         request = {"wallet_id": wallet_id}
         response = await self.fetch("did_get_wallet_name", request)
         return response

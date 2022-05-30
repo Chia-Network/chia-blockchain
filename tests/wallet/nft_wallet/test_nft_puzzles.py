@@ -6,7 +6,11 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
-from chia.wallet.nft_wallet.nft_puzzles import create_full_puzzle, apply_nft_puzzle
+from chia.wallet.nft_wallet.nft_puzzles import (
+    create_full_puzzle,
+    create_nft_layer_puzzle_with_curry_params,
+    recurry_nft_puzzle,
+)
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
@@ -28,20 +32,28 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
 
 
-def make_a_new_solution() -> Program:
+def make_a_new_solution() -> Tuple[bytes, Program]:
     destination = int_to_public_key(2)
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list = [[200]]
     my_amount = 1
 
-    condition_list = [[51, STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(), 1,
-                       [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()]],
-                      [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]]]
-    solution = Program.to([
-        [solution_for_conditions(condition_list)],
-        my_amount,
-    ])
+    condition_list = [
+        [
+            51,
+            STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(),
+            1,
+            [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()],
+        ],
+        [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]],
+    ]
+    solution = Program.to(
+        [
+            [solution_for_conditions(condition_list)],
+            my_amount,
+        ]
+    )
     print(disassemble(solution))
     return destination, solution
 
@@ -72,10 +84,7 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
 
 def make_a_new_nft_puzzle(curried_ownership_layer: Program, metadata: Program) -> Program:
     curried_state_layer = NFT_STATE_LAYER_MOD.curry(
-        NFT_STATE_LAYER_MOD_HASH,
-        metadata,
-        NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(),
-        curried_ownership_layer
+        NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), curried_ownership_layer
     )
     return curried_state_layer
 
@@ -112,5 +121,8 @@ def test_transfer_puzzle_builder() -> None:
     unft = uncurry_nft.UncurriedNFT.uncurry(puzzle)
     assert disassemble(unft.inner_puzzle) == disassemble(ownership_puzzle)
 
-    py_puzzle = apply_nft_puzzle(unft, STANDARD_PUZZLE_MOD.curry(destination), metadata, solution)
+    ol_puzzle = recurry_nft_puzzle(unft, STANDARD_PUZZLE_MOD.curry(destination), metadata, solution)
+    py_puzzle = create_nft_layer_puzzle_with_curry_params(
+        Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ol_puzzle
+    )
     assert clvm_puzzle_hash == py_puzzle.get_tree_hash()

@@ -39,7 +39,7 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -587,7 +587,6 @@ class WalletRpcApi:
                     wallet_state_manager,
                     main_wallet,
                 )
-            assert nft_wallet.nft_wallet_info is not None
             return {
                 "success": True,
                 "type": nft_wallet.type(),
@@ -1326,6 +1325,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        assert nft_wallet.type() == WalletType.NFT.value
         royalty_address = request.get("royalty_address")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
@@ -1371,7 +1371,7 @@ class WalletRpcApi:
         nfts = nft_wallet.get_current_nfts()
         nft_info_list = []
         for nft in nfts:
-            nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft.full_puzzle, nft.coin))
+            nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_transfer_nft(self, request):
@@ -1439,10 +1439,13 @@ class WalletRpcApi:
             inner_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
             update_condition = None
-            for condition in inner_solution.rest().first().rest().as_iter():
-                if condition.first().as_int() == -24:
-                    update_condition = condition
-                    break
+            try:
+                for condition in inner_solution.rest().first().rest().as_iter():
+                    if condition.first().as_int() == -24:
+                        update_condition = condition
+                        break
+            except Exception:
+                log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
             if update_condition is not None:
                 uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
                 metadata: Program = uncurried_nft.metadata
@@ -1456,7 +1459,7 @@ class WalletRpcApi:
                     uncurried_nft.metadata_updater_hash,
                     uncurried_nft.inner_puzzle,
                 )
-            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(full_puzzle, coin_state.coin)
+            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(NFTCoinInfo(coin_state.coin, None, full_puzzle))
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
