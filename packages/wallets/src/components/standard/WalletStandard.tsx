@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
+import { Trans } from '@lingui/macro';
+import { useNavigate } from 'react-router-dom';
+import { WalletType } from '@chia/api';
 import { Flex } from '@chia/core';
+import { Offers as OffersIcon } from '@chia/icons';
+import { Typography, ListItemIcon, MenuItem } from '@mui/material';
 import WalletHistory from '../WalletHistory';
 import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
@@ -13,7 +18,20 @@ type StandardWalletProps = {
 export default function StandardWallet(props: StandardWalletProps) {
   const { walletId } = props;
   // const showDebugInformation = useShowDebugInformation();
-  const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
+  const navigate = useNavigate();
+  const [selectedTab, setSelectedTab] = useState<
+    'summary' | 'send' | 'receive'
+  >('summary');
+
+  function handleCreateOffer() {
+    navigate('/dashboard/offers/create', {
+      state: {
+        walletId,
+        walletType: WalletType.STANDARD_WALLET,
+        referrerPath: location.hash.split('#').slice(-1)[0],
+      },
+    });
+  }
 
   return (
     <Flex flexDirection="column" gap={2.5}>
@@ -21,6 +39,23 @@ export default function StandardWallet(props: StandardWalletProps) {
         walletId={walletId}
         tab={selectedTab}
         onTabChange={setSelectedTab}
+        actions={({ onClose }) => (
+          <>
+            <MenuItem
+              onClick={() => {
+                onClose();
+                handleCreateOffer();
+              }}
+            >
+              <ListItemIcon>
+                <OffersIcon />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                <Trans>Create Offer</Trans>
+              </Typography>
+            </MenuItem>
+          </>
+        )}
       />
 
       {selectedTab === 'summary' && (
@@ -29,9 +64,7 @@ export default function StandardWallet(props: StandardWalletProps) {
           <WalletHistory walletId={walletId} />
         </Flex>
       )}
-      {selectedTab === 'send' && (
-        <WalletSend walletId={walletId} />
-      )}
+      {selectedTab === 'send' && <WalletSend walletId={walletId} />}
       {selectedTab === 'receive' && (
         <WalletReceiveAddress walletId={walletId} />
       )}

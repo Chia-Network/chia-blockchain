@@ -683,7 +683,14 @@ export function CreateOffer() {
       <Routes>
         <Route
           path="create"
-          element={<CreateOfferEditor onOfferCreated={handleOfferCreated} />}
+          element={
+            <CreateOfferEditor
+              walletId={location?.state?.walletId}
+              walletType={location?.state?.walletType}
+              referrerPath={location?.state?.referrerPath}
+              onOfferCreated={handleOfferCreated}
+            />
+          }
         />
         <Route
           path="create-with-nft"

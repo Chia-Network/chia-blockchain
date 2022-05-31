@@ -35,22 +35,29 @@ type FormData = {
 };
 
 type OfferEditorProps = {
+  walletId?: number;
+  walletType?: WalletType;
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
+function defaultMakerRow(
+  walletId?: number,
+  walletType?: WalletType,
+): OfferEditorRowData {
+  return {
+    amount: '',
+    assetWalletId: walletId ?? 0,
+    walletType: walletType ?? WalletType.STANDARD_WALLET,
+    spendableBalance: new BigNumber(0),
+  };
+}
+
 function OfferEditor(props: OfferEditorProps) {
-  const { onOfferCreated } = props;
+  const { walletId, walletType, onOfferCreated } = props;
   const navigate = useNavigate();
   const defaultValues: FormData = {
     selectedTab: 0,
-    makerRows: [
-      {
-        amount: '',
-        assetWalletId: 0,
-        walletType: WalletType.STANDARD_WALLET,
-        spendableBalance: new BigNumber(0),
-      },
-    ],
+    makerRows: [defaultMakerRow(walletId, walletType)],
     takerRows: [
       {
         amount: '',
@@ -67,7 +74,7 @@ function OfferEditor(props: OfferEditorProps) {
   const openDialog = useOpenDialog();
   const errorDialog = useShowError();
   const [suppressShareOnCreate] = useLocalStorage<boolean>(
-    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE
+    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
   );
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [processing, setIsProcessing] = useState<boolean>(false);
@@ -75,7 +82,7 @@ function OfferEditor(props: OfferEditorProps) {
   function updateOffer(
     offer: { [key: string]: BigNumber },
     row: OfferEditorRowData,
-    debit: boolean
+    debit: boolean,
   ) {
     const { amount, assetWalletId, walletType } = row;
     if (assetWalletId > 0) {
@@ -135,7 +142,7 @@ function OfferEditor(props: OfferEditorProps) {
     }
 
     const confirmedCreation = await openDialog(
-      <OfferEditorConfirmationDialog />
+      <OfferEditorConfirmationDialog />,
     );
 
     if (!confirmedCreation) {
@@ -184,7 +191,10 @@ function OfferEditor(props: OfferEditorProps) {
   }
 
   function handleReset() {
-    methods.reset(defaultValues);
+    methods.reset({
+      ...defaultValues,
+      makerRows: [defaultMakerRow()],
+    });
   }
 
   return (
@@ -221,21 +231,33 @@ OfferEditor.defaultProps = {
 };
 
 type CreateOfferEditorProps = {
+  walletId?: number;
+  walletType?: WalletType;
+  referrerPath?: string;
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 export function CreateOfferEditor(props: CreateOfferEditorProps) {
-  const { onOfferCreated } = props;
+  const { walletId, walletType, referrerPath, onOfferCreated } = props;
+
+  const title = <Trans>Create an Offer</Trans>;
+  const navElement = referrerPath ? (
+    <Back variant="h5" to={referrerPath}>
+      {title}
+    </Back>
+  ) : (
+    <>{title}</>
+  );
 
   return (
     <Grid container>
       <Flex flexDirection="column" flexGrow={1} gap={3}>
-        <Flex>
-          <Back variant="h5" to="/dashboard/offers/manage">
-            <Trans>Create an Offer</Trans>
-          </Back>
-        </Flex>
-        <OfferEditor onOfferCreated={onOfferCreated} />
+        <Flex>{navElement}</Flex>
+        <OfferEditor
+          walletId={walletId}
+          walletType={walletType}
+          onOfferCreated={onOfferCreated}
+        />
       </Flex>
     </Grid>
   );
