@@ -45,6 +45,7 @@ jobs:
 
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    if: ${{ matrix.configuration.run[matrix.os.matrix] }}
     needs: configure
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
@@ -61,10 +62,10 @@ jobs:
             matrix: ubuntu
             name: Ubuntu
             runs-on: ubuntu-latest
-#          - emoji: 🪟
-#            matrix: windows
-#            name: Windows
-#            runs-on: windows-latest
+          - emoji: 🪟
+            matrix: windows
+            name: Windows
+            runs-on: windows-latest
         python:
           - name: '3.7'
             action: '3.7'
@@ -101,6 +102,10 @@ jobs:
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_${{ matrix.configuration.name }}
 
     steps:
+      - name: Configure git
+        run: |
+          git config --global core.autocrlf false
+
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -152,32 +157,47 @@ jobs:
             ${{ github.workspace }}/.chia/test-plots
           key: 0.29.0
 
-      - name: Checkout test blocks and plots
-        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
+      - name: Checkout test blocks and plots (Linux, macOS)
+        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (startswith(matrix.os, 'ubuntu') || startswith(matrix.os, 'macos'))
         run: |
           wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
 
-      - name: Run install script (macOS)
+      - name: Checkout test blocks and plots (Windows)
+        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && startswith(matrix.os, 'windows')
+        run: |
+          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
+          mkdir ${{ github.workspace }}/.chia
+          mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
+
+      - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
           brew install boost
-          sh install.sh -d
 
-      - name: Run install script (Ubuntu)
-        if: matrix.os.matrix == 'ubuntu'
+      - name: Run install script (macOS, Ubuntu)
+        if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'ubuntu'
         env:
           INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
         run: |
           sh install.sh -d
+          echo "$(cd venv/bin/; pwd)" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$(cd venv/; pwd)" >> $GITHUB_ENV
+
+      - name: Run install script (Windows)
+        if: matrix.os.matrix == 'windows'
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+        run: |
+          ./Install.ps1 -d
+          (Resolve-Path venv/Scripts/).Path >> %GITHUB_PATH%
+          $env_path = (Resolve-Path venv/).Path
+          Write-Output "VIRTUAL_ENV=$env_path" >> %GITHUB_ENV%
 
       - name: Install timelord
         if: matrix.configuration.install_timelord
         run: |
-          . ./activate
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
@@ -185,17 +205,16 @@ jobs:
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage || '' }}
         run: |
-          . ./activate
-          venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Process coverage data
         run: |
-          venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
-          venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+          coverage combine --rcfile=.coveragerc .coverage.*
+          coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage_reports
           cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
           cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
-          venv/bin/coverage report --rcfile=.coveragerc --show-missing
+          coverage report --rcfile=.coveragerc --show-missing
 
       - name: Publish coverage
         uses: actions/upload-artifact@v3

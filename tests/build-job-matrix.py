@@ -92,8 +92,19 @@ for path in test_paths:
 
     conf = update_config(module_dict(testconfig), dir_config(path))
 
-    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
-    pytest_parallel_args = f" -n {xdist_numprocesses}"
+    # TODO: design a configurable system for this
+    process_count = {
+        "macos": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
+        "ubuntu": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
+        "windows": {False: 0, True: 2}.get(conf["parallel"], conf["parallel"]),
+    }
+    pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
+
+    run = {
+        "macos": "macos" not in conf["os_skip"],
+        "ubuntu": "ubuntu" not in conf["os_skip"],
+        "windows": "windows" not in conf["od_skip"] and not conf["install_timelord"],
+    }
 
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
@@ -104,6 +115,7 @@ for path in test_paths:
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
         "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
+        "run": run,
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
