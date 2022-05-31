@@ -335,6 +335,89 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "use_optimized",
+    [True, False],
+)
+async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool) -> None:
+    num_batches = 10
+    num_ops_per_batch = 250 if use_optimized else 20
+    saved_roots: List[Root] = []
+    saved_batches: List[List[Dict[str, Any]]] = []
+
+    with tempfile.TemporaryDirectory() as temp_directory:
+        temp_directory_path = Path(temp_directory)
+        db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+
+        connection = await aiosqlite.connect(db_path)
+        db_wrapper = DBWrapper(connection)
+        single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
+
+        await single_op_data_store.create_tree(tree_id)
+        random = Random()
+        random.seed(100, version=2)
+
+        batch: List[Dict[str, Any]] = []
+        keys: List[bytes] = []
+        hint_keys_values: Dict[bytes, bytes] = {}
+        for operation in range(num_batches * num_ops_per_batch):
+            if random.randint(0, 4) > 0 or len(keys) == 0:
+                key = operation.to_bytes(4, byteorder="big")
+                value = (2 * operation).to_bytes(4, byteorder="big")
+                if use_optimized:
+                    await single_op_data_store.autoinsert(
+                        key=key,
+                        value=value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                    )
+                else:
+                    await single_op_data_store.autoinsert(key=key, value=value, tree_id=tree_id, use_optimized=False)
+                batch.append({"action": "insert", "key": key, "value": value})
+                keys.append(key)
+            else:
+                key = random.choice(keys)
+                keys.remove(key)
+                if use_optimized:
+                    await single_op_data_store.delete(key=key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+                else:
+                    await single_op_data_store.delete(key=key, tree_id=tree_id, use_optimized=False)
+                batch.append({"action": "delete", "key": key})
+            if (operation + 1) % num_ops_per_batch == 0:
+                saved_batches.append(batch)
+                batch = []
+                root = await single_op_data_store.get_tree_root(tree_id=tree_id)
+                saved_roots.append(root)
+
+        await connection.close()
+
+    for batch_number, batch in enumerate(saved_batches):
+        assert len(batch) == num_ops_per_batch
+        await data_store.insert_batch(tree_id, batch)
+        root = await data_store.get_tree_root(tree_id)
+        assert root.generation == batch_number + 1
+        assert root.node_hash == saved_roots[batch_number].node_hash
+        assert root.node_hash is not None
+        queue: List[bytes32] = [root.node_hash]
+        ancestors: Dict[bytes32, bytes32] = {}
+        while len(queue) > 0:
+            node_hash = queue.pop(0)
+            expected_ancestors = []
+            ancestor = node_hash
+            while ancestor in ancestors:
+                ancestor = ancestors[ancestor]
+                expected_ancestors.append(ancestor)
+            result_ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
+            assert [node.hash for node in result_ancestors] == expected_ancestors
+            node = await data_store.get_node(node_hash)
+            if isinstance(node, InternalNode):
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
+                ancestors[node.left_hash] = node_hash
+                ancestors[node.right_hash] = node_hash
+
+
+@pytest.mark.asyncio
 async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store=data_store, tree_id=tree_id)
     hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
@@ -975,32 +1058,6 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
 
 
 @pytest.mark.asyncio
-async def test_left_to_right_ordering(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_01234567_example(data_store=data_store, tree_id=tree_id)
-    root = await data_store.get_tree_root(tree_id)
-    assert root.node_hash is not None
-    all_nodes = await data_store.get_left_to_right_ordering(root.node_hash, tree_id, num_nodes=1000)
-    expected_nodes = [
-        bytes32.from_hexstr("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
-        bytes32.from_hexstr("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
-        bytes32.from_hexstr("9831a17b4c16ee6167ce4748ccd98ce1ccd0cf43f4dce8298390fd46c2d2e3b0"),
-        bytes32.from_hexstr("cb9ab4524540e37fd79377891ff46c143dc97c2eb57f4c106c07e9c321100874"),
-        bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535"),
-        bytes32.from_hexstr("3ab212e30b0e746d81a993e39f2cb4ba843412d44b402c1117a500d6451309e3"),
-        bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40"),
-        bytes32.from_hexstr("d068b836d74781f7025dade5b300fcb0474a71d9ac27b8c7dfb7f85750a841a5"),
-        bytes32.from_hexstr("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
-        bytes32.from_hexstr("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
-        bytes32.from_hexstr("19a28f80fe7bc17a2ef67836d40bee765fb20e58d5001517e0f1070de895c50b"),
-        bytes32.from_hexstr("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
-        bytes32.from_hexstr("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
-        bytes32.from_hexstr("1d2534d20e63e9f730fc4b919857fb0f9529eaaab65c8baf3c443aa1c327b510"),
-        bytes32.from_hexstr("50e2f97295de32c7b0eaea32bf1969ceab2e4645b17882e8f1080d143aa262ab"),
-    ]
-    assert [node.hash for node in all_nodes] == expected_nodes
-
-
-@pytest.mark.asyncio
 async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
@@ -1110,7 +1167,6 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             connection = await aiosqlite.connect(db_path)
             db_wrapper = DBWrapper(connection)
             data_store_server = await DataStore.create(db_wrapper=db_wrapper)
-            tree_id = bytes32(b"0" * 32)
             await data_store_server.create_tree(tree_id)
             random = Random()
             random.seed(100, version=2)

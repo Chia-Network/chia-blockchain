@@ -510,30 +510,14 @@ class DataStore:
     ) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = []
-            if generation is None:
-                generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             root = await self.get_tree_root(tree_id=tree_id, generation=generation, lock=False)
             if root.node_hash is None:
                 return []
 
             while True:
-                cursor = await self.db.execute(
-                    """
-                    SELECT * from node INNER JOIN (
-                        SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
-                        FROM ancestors
-                        WHERE ancestors.hash == :hash
-                        AND ancestors.tree_id == :tree_id
-                        AND ancestors.generation <= :generation
-                        GROUP BY hash
-                    ) asc on asc.hash == node.hash
-                    """,
-                    {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
-                )
-                row = await cursor.fetchone()
-                if row is None:
+                internal_node = await self._get_one_ancestor(node_hash, tree_id, generation)
+                if internal_node is None:
                     break
-                internal_node = InternalNode.from_row(row=row)
                 nodes.append(internal_node)
                 node_hash = internal_node.hash
 
@@ -882,6 +866,33 @@ class DataStore:
             await self.insert_batch_root(tree_id, root.node_hash, status, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
             assert new_root.node_hash == root.node_hash
+            assert new_root.generation == old_root.generation + 1
+
+    async def _get_one_ancestor(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        generation: Optional[int] = None,
+    ) -> Optional[InternalNode]:
+        if generation is None:
+            generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
+        cursor = await self.db.execute(
+            """
+            SELECT * from node INNER JOIN (
+                SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                FROM ancestors
+                WHERE ancestors.hash == :hash
+                AND ancestors.tree_id == :tree_id
+                AND ancestors.generation <= :generation
+                GROUP BY hash
+            ) asc on asc.hash == node.hash
+            """,
+            {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return InternalNode.from_row(row=row)
 
     async def insert_batch_root(
         self,
@@ -896,10 +907,25 @@ class DataStore:
             new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
             if new_root.node_hash is None:
                 return
-            nodes = await self.get_left_to_right_ordering(new_root.node_hash, tree_id, lock=False)
-            for node in nodes:
-                if isinstance(node, InternalNode):
+            queue: List[bytes32] = [new_root.node_hash]
+            while len(queue) > 0:
+                node_hash = queue.pop(0)
+                node = await self.get_node(node_hash, lock=False)
+                if isinstance(node, TerminalNode):
+                    continue
+                new_entry: bool = False
+                for child_hash in (node.left_hash, node.right_hash):
+                    # Check we've either had a different parent for this hash, or it's the first time we see it.
+                    # If both childs have the current parent, there's no information to update into the ancestors table
+                    old_parent = await self._get_one_ancestor(child_hash, tree_id)
+                    if old_parent is None or old_parent.hash != node_hash:
+                        new_entry = True
+                        break
+
+                if new_entry:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
+                    queue.append(node.left_hash)
+                    queue.append(node.right_hash)
 
     async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -1043,33 +1069,6 @@ class DataStore:
         with open(filename, "ab") as writer:
             writer.write(len(to_write).to_bytes(4, byteorder="big"))
             writer.write(to_write)
-
-    async def get_left_to_right_ordering(
-        self,
-        node_hash: bytes32,
-        tree_id: bytes32,
-        *,
-        lock: bool = True,
-        num_nodes: int = 1000000000,
-    ) -> List[Node]:
-        stack: List[bytes32] = []
-        nodes: List[Node] = []
-        while len(nodes) < num_nodes:
-            try:
-                node = await self.get_node(node_hash, lock=lock)
-            except Exception:
-                return []
-            if isinstance(node, TerminalNode):
-                nodes.append(node)
-                if len(stack) > 0:
-                    node_hash = stack.pop()
-                else:
-                    break
-            elif isinstance(node, InternalNode):
-                nodes.append(node)
-                stack.append(node.right_hash)
-                node_hash = node.left_hash
-        return nodes
 
     async def insert_batch_for_generation(
         self,
