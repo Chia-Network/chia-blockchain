@@ -89,33 +89,6 @@ def test_update_metadata() -> None:
     )
 
     metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
-
-    cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)
-    assert len(res.as_python()) == 3  # check that the negative conditions have been filtered out
-    assert res.first().first().as_int() == 73
-    assert res.first().rest().first().as_int() == 1
-    assert res.rest().rest().first().first().as_int() == 51
-    assert (
-        res.rest().rest().first().rest().first().as_atom()
-        == NFT_STATE_LAYER_MOD.curry(
-            NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
-        ).get_tree_hash()
-    )
-
-
-def test_update_metadata_updater() -> None:
-    pubkey = int_to_public_key(1)
-    innerpuz = puzzle_for_pk(pubkey)
-    my_amount = 1
-    destination: bytes32 = puzzle_for_pk(int_to_public_key(2))
-    condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append(
-        [-24, NFT_METADATA_UPDATER_UPDATEABLE, ["test", NFT_METADATA_UPDATER_DEFAULT.get_tree_hash()]]
-    )
-    metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
         ("mu", ["https://url2"]),
@@ -134,7 +107,6 @@ def test_update_metadata_updater() -> None:
             NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
         ).get_tree_hash()
     )
-
 
 def test_transfer_program() -> None:
     pubkey = int_to_public_key(1)
@@ -187,7 +159,7 @@ def test_transfer_program() -> None:
     assert conditions.rest().rest().rest().first().rest().rest().first().as_int() == 40
 
     conditions = NFT_GRAFTROOT_TRANSFER.curry(
-        Program.to([[60, bytes32([0] * 32)]]),
+        Program.to([[60, bytes([0] * 32)]]),
         Program.to(trade_prices_list),
     ).run(Program.to([new_pk, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1]))
     solution = Program.to([current_owner, conditions, [[], trade_prices_list, new_pk, []]])

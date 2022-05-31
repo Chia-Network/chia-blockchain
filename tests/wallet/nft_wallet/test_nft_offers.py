@@ -414,7 +414,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     nft_to_update = coins_maker[0]
     url_to_add = "https://new_url.com"
     fee_for_update = uint64(10)
-    update_sb = await nft_wallet_maker.update_metadata(nft_to_update, url_to_add, fee=fee_for_update)
+    update_sb = await nft_wallet_maker.update_metadata(nft_to_update, "u", url_to_add, fee=fee_for_update)
     mempool_mgr = full_node_api.full_node.mempool_manager
     await time_out_assert_not_none(5, mempool_mgr.get_spendbundle, update_sb.name())  # type: ignore
 
