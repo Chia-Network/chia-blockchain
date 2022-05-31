@@ -41,7 +41,7 @@ async def insert_into_data_store_from_file(
 
     async with data_store.db_wrapper.locked_transaction(lock=True):
         await data_store._insert_root(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
-    await data_store.build_ancestor_table_from_root(tree_id, root_hash, Status.COMMITTED)
+    await data_store.build_ancestor_table_from_root(tree_id)
 
 
 async def write_files_for_root(

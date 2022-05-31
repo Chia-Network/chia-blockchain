@@ -864,7 +864,7 @@ class DataStore:
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
             await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
-            await self.build_ancestor_table_from_root(tree_id, root.node_hash, status, lock=False)
+            await self.build_ancestor_table_from_root(tree_id, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
             assert new_root.node_hash == root.node_hash
             assert new_root.generation == old_root.generation + 1
@@ -895,19 +895,12 @@ class DataStore:
             return None
         return InternalNode.from_row(row=row)
 
-    async def build_ancestor_table_from_root(
-        self,
-        tree_id: bytes32,
-        node_hash: Optional[bytes32],
-        status: Status,
-        *,
-        lock: bool = True,
-    ) -> None:
+    async def build_ancestor_table_from_root(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            if new_root.node_hash is None:
+            root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            if root.node_hash is None:
                 return
-            queue: List[bytes32] = [new_root.node_hash]
+            queue: List[bytes32] = [root.node_hash]
             while len(queue) > 0:
                 node_hash = queue.pop(0)
                 node = await self.get_node(node_hash, lock=False)
@@ -923,7 +916,7 @@ class DataStore:
                         break
 
                 if new_entry:
-                    await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, new_root.generation)
+                    await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
                     queue.append(node.left_hash)
                     queue.append(node.right_hash)
 
