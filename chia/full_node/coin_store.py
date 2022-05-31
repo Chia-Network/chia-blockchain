@@ -9,6 +9,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
 from chia.util.chunks import chunks
+import asyncio
 import time
 import logging
 
@@ -188,11 +189,11 @@ class CoinStore:
                     )
                 )
 
-            for cursor in cursors:
-                for row in await cursor.fetchall():
-                    coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
-                    coins.append(record)
+        for cursor in cursors:
+            for row in await cursor.fetchall():
+                coin = self.row_to_coin(row)
+                record = CoinRecord(coin, row[0], row[1], row[2], row[6])
+                coins.append(record)
 
         return coins
 
@@ -482,11 +483,19 @@ class CoinStore:
                     )
                 )
             if len(values2) > 0:
-                async with self.db_wrapper.write_db() as conn:
-                    await conn.executemany(
-                        "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                        values2,
-                    )
+                tasks: List[asyncio.Task] = []
+                try:
+                    async with self.db_wrapper.write_db() as conn:
+                        tasks.append(
+                            asyncio.create_task(
+                                conn.executemany(
+                                    "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                                    values2,
+                                )
+                            )
+                        )
+                finally:
+                    await asyncio.wait(tasks)
         else:
             values = []
             for record in records:
@@ -523,17 +532,21 @@ class CoinStore:
             updates.append((index, self.maybe_to_hex(coin_name)))
 
         async with self.db_wrapper.write_db() as conn:
+            task: asyncio.Task
             if self.db_wrapper.db_version == 2:
-                ret: Cursor = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
+                task = asyncio.create_task(
+                    conn.executemany(
+                        "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
+                    )
                 )
 
             else:
-                ret = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
-                    updates,
+                task = asyncio.create_task(
+                    conn.executemany(
+                        "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
+                        updates,
+                    )
                 )
-            if ret.rowcount != len(coin_names):
-                raise ValueError(
-                    f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}"
-                )
+        ret: Cursor = await task
+        if ret.rowcount != len(coin_names):
+            raise ValueError(f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}")
