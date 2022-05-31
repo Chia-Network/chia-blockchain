@@ -72,7 +72,14 @@ class FakePeer:
 
 
 async def run_sync_test(
-    file: Path, db_version, profile: bool, single_thread: bool, test_constants: bool, keep_up: bool
+    file: Path,
+    db_version,
+    profile: bool,
+    single_thread: bool,
+    test_constants: bool,
+    keep_up: bool,
+    db_sync: str,
+    node_profiler: bool,
 ) -> None:
 
     logger = logging.getLogger()
@@ -101,7 +108,8 @@ async def run_sync_test(
             constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
         if single_thread:
             config["full_node"]["single_threaded"] = True
-        config["full_node"]["db_sync"] = "off"
+        config["full_node"]["db_sync"] = db_sync
+        config["full_node"]["enable_profiler"] = node_profiler
         full_node = FullNode(
             config["full_node"],
             root_path=root_path,
@@ -185,6 +193,8 @@ async def run_sync_test(
                 logger.warning(f"worst time-per-block: {worst_batch_time_per_block:0.2f} s")
                 logger.warning(f"worst height: {worst_batch_height}")
                 logger.warning(f"end-height: {height}")
+            if node_profiler:
+                (root_path / "profile-node").rename("./profile-node")
         finally:
             print("closing full node")
             full_node._close()
@@ -200,6 +210,8 @@ def main() -> None:
 @click.argument("file", type=click.Path(), required=True)
 @click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
+@click.option("--db-sync", type=str, required=False, default="off", help="sqlite sync mode. One of: off, normal, full")
+@click.option("--node-profiler", is_flag=True, required=False, default=False, help="enable the built-in node-profiler")
 @click.option(
     "--test-constants",
     is_flag=True,
@@ -221,12 +233,23 @@ def main() -> None:
     default=False,
     help="pass blocks to the full node as if we're staying synced, rather than syncing",
 )
-def run(file: Path, db_version: int, profile: bool, single_thread: bool, test_constants: bool, keep_up: bool) -> None:
+def run(
+    file: Path,
+    db_version: int,
+    profile: bool,
+    single_thread: bool,
+    test_constants: bool,
+    keep_up: bool,
+    db_sync: str,
+    node_profiler: bool,
+) -> None:
     """
     The FILE parameter should point to an existing blockchain database file (in v2 format)
     """
     print(f"PID: {os.getpid()}")
-    asyncio.run(run_sync_test(Path(file), db_version, profile, single_thread, test_constants, keep_up))
+    asyncio.run(
+        run_sync_test(Path(file), db_version, profile, single_thread, test_constants, keep_up, db_sync, node_profiler)
+    )
 
 
 @main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")
