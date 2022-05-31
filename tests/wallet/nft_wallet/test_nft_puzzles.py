@@ -119,9 +119,9 @@ def test_transfer_puzzle_builder() -> None:
     )
     clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution)
     unft = uncurry_nft.UncurriedNFT.uncurry(puzzle)
-    assert disassemble(unft.inner_puzzle) == disassemble(ownership_puzzle)
+    assert unft.inner_puzzle == ownership_puzzle
 
-    ol_puzzle = recurry_nft_puzzle(unft, STANDARD_PUZZLE_MOD.curry(destination), metadata, solution)
+    ol_puzzle = recurry_nft_puzzle(unft, solution.first())
     py_puzzle = create_nft_layer_puzzle_with_curry_params(
         Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ol_puzzle
     )

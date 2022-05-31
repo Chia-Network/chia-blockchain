@@ -178,13 +178,21 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     return metadata_to_program(new_metadata)
 
 
-def create_ownership_layer_puzzle(nft_id: bytes32, did_id: bytes32, p2_puzzle: Program, percentage: uint16) -> Program:
+def create_ownership_layer_puzzle(
+    nft_id: bytes32,
+    did_id: bytes32,
+    p2_puzzle: Program,
+    percentage: uint16,
+    royalty_puzzle_hash: Optional[bytes32] = None,
+) -> Program:
     log.debug(f"Creating ownership layer puzzle with {nft_id=} {did_id=} {percentage=} {p2_puzzle=}")
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
+    if not royalty_puzzle_hash:
+        royalty_puzzle_hash = p2_puzzle.get_tree_hash()
     transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
         STANDARD_PUZZLE_MOD.get_tree_hash(),
         singleton_struct,
-        p2_puzzle.get_tree_hash(),
+        royalty_puzzle_hash,
         percentage,
         OFFER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
@@ -202,16 +210,16 @@ def create_ownership_layer_transfer_solution(
     new_did_inner_hash: bytes32,
     trade_prices_list: List[List[int]],
     new_pubkey: G1Element,
-    target_puzzle_hash: bytes32,
     conditions: List[Any] = [],
 ) -> Program:
     log.debug(f"Creating a transfer solution with: {new_did=} {new_did_inner_hash=} {trade_prices_list=} {new_pubkey=}")
+    puzhash = STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()
     condition_list = [
         [
             51,
-            STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash(),
+            puzhash,
             1,
-            [target_puzzle_hash],
+            [puzhash],
         ],
         [-10, new_did, trade_prices_list, new_pubkey, [new_did_inner_hash]],
     ]
@@ -226,14 +234,13 @@ def create_ownership_layer_transfer_solution(
     return solution
 
 
-def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program, bytes32, bytes32]:
+def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program, bytes32]:
     if unft.owner_did:
         conditions = solution.at("frfr").as_iter()
     else:
         conditions = solution.rest().first().rest().as_iter()
     metadata = unft.metadata
     puzhash: Optional[bytes32] = None
-    inner_ph: Optional[bytes32] = None
     for condition in conditions:
         log.debug("Checking solution condition: %s", disassemble(condition))
         if condition.list_len() < 2:
@@ -251,32 +258,29 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program
                 # ignore duplicated create coin conditions
                 continue
             puzhash = bytes32(condition.at("rrrff").atom)
-            inner_ph = bytes32(condition.at("rf").atom)
             log.debug("Got back puzhash from solution: %s", puzhash)
-    assert puzhash and inner_ph
-    return metadata, puzhash, inner_ph
+    assert puzhash
+    return metadata, puzhash
 
 
-def recurry_nft_puzzle(unft: UncurriedNFT, new_p2_puzzle: Program, metadata: List, solution: Program) -> Program:
+def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:
     log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
     conditions = solution.at("frfr").as_iter()
     for change_did_condition in conditions:
         if change_did_condition.first().as_int() == -10:
             # this is the change owner magic condition
             break
-    if change_did_condition:
-        new_did_id = change_did_condition.at("rf").atom
-        # trade_list_price = change_did_condition.at("rrf").as_python()
-        # new_did_inner_hash = change_did_condition.at("rrrrf").atom
-        # new_pub_key = G1Element.from_bytes(change_did_condition.at("rrrf").atom)
-        log.debug(f"Found NFT puzzle details: {new_did_id.hex()=} ")
-        inner_puzzle = NFT_OWNERSHIP_LAYER.curry(
-            NFT_OWNERSHIP_LAYER.get_tree_hash(), new_did_id, unft.transfer_program, new_p2_puzzle
-        )
     else:
-        inner_puzzle = new_p2_puzzle
-
+        raise ValueError("Not a valid puzzle")
+    new_did_id = change_did_condition.at("rf").atom
+    # trade_list_price = change_did_condition.at("rrf").as_python()
+    # new_did_inner_hash = change_did_condition.at("rrrrf").atom
+    new_pub_key = G1Element.from_bytes(change_did_condition.at("rrrf").atom)
+    log.debug(f"Found NFT puzzle details: {new_did_id.hex()=} ")
+    inner_puzzle = NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        new_did_id,
+        unft.transfer_program,
+        STANDARD_PUZZLE_MOD.curry(new_pub_key),
+    )
     return inner_puzzle
-    # return create_nft_layer_puzzle_with_curry_params(
-    #     Program.to(metadata), NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
-    # )

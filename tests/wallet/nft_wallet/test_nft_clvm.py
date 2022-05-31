@@ -108,54 +108,6 @@ def test_update_metadata() -> None:
     )
 
 
-def test_update_metadata_updater() -> None:
-    pubkey = int_to_public_key(1)
-    innerpuz = puzzle_for_pk(pubkey)
-    my_amount = 1
-    destination: Program = puzzle_for_pk(int_to_public_key(2))
-    condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append([-24, NFT_METADATA_UPDATER_DEFAULT, "https://www.chia.net/img/branding/chia-logo-2.svg"])
-    condition_list.append(
-        [-24, NFT_METADATA_UPDATER_DEFAULT, "https://www.chia.net/img/branding/chia-logo-2.svg"]
-    )  # check it doesn't run twice
-    condition_list.append(
-        [-24, NFT_METADATA_UPDATER_UPDATEABLE, ["test", NFT_METADATA_UPDATER_DEFAULT.get_tree_hash()]]
-    )
-    metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
-    solution = Program.to(
-        [
-            NFT_STATE_LAYER_MOD_HASH,
-            metadata,
-            NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(),
-            innerpuz,
-            # below here is the solution
-            solution_for_conditions(condition_list),
-            my_amount,
-            0,
-        ]
-    )
-
-    metadata = [
-        ("u", ["test", "https://www.chia.net/img/branding/chia-logo.svg"]),
-        ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
-    ]
-
-    cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)
-    assert len(res.as_python()) == 3  # check that the negative conditions have been filtered out
-    assert res.first().first().as_int() == 73
-    assert res.first().rest().first().as_int() == 1
-    assert res.rest().rest().first().first().as_int() == 51
-    assert (
-        res.rest().rest().first().rest().first().as_atom()
-        == NFT_STATE_LAYER_MOD.curry(
-            NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
-        ).get_tree_hash()
-    )
-
-
 def test_transfer_program() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)

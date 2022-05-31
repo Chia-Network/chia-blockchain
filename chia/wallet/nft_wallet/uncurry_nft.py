@@ -27,7 +27,7 @@ class UncurriedNFT:
     This is the only place you need to change after modified the Chialisp curried parameters.
     """
 
-    nft_mod_hash: Program
+    nft_mod_hash: bytes32
     """NFT module hash"""
 
     nft_state_layer: Program
@@ -65,7 +65,7 @@ class UncurriedNFT:
     p2_puzzle: Program
     """p2 puzzle of the owner, either for ownership layer or standard"""
     # ownership layer fields
-    owner_did: Optional[Program]
+    owner_did: Optional[bytes32]
     """Owner's DID"""
     owner_pubkey: Optional[G1Element]
     nft_inner_puzzle_hash: Optional[bytes32]
@@ -135,7 +135,7 @@ class UncurriedNFT:
                     series_total = kv_pair.rest()
             current_did = None
             pubkey = None
-            transfer_program_mod = None
+            transfer_program = None
             transfer_program_args = None
             royalty_address = None
             royalty_percentage = None
@@ -145,11 +145,12 @@ class UncurriedNFT:
                 log.debug("Parsing ownership layer")
                 _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
                 _, p2_args = p2_puzzle.uncurry()
-                (pubkey,) = p2_args.as_iter()
+                (pubkey_sexp,) = p2_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
                 _, _, royalty_address, royalty_percentage, _, _ = transfer_program_args.as_iter()
                 royalty_percentage = uint16(royalty_percentage.as_int())
                 current_did = current_did.atom
+                pubkey = pubkey_sexp.atom
             else:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle

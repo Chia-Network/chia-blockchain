@@ -532,18 +532,16 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     [True],
 )
 @pytest.mark.asyncio
-async def test_nft_with_did_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 5
+async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 2
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
     ph = await wallet_0.get_new_puzzlehash()
-    ph1 = await wallet_1.get_new_puzzlehash()
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -596,7 +594,8 @@ async def test_nft_with_did_wallet_creation_and_transfer(two_wallet_nodes: Any, 
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
         ]
     )
-
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 5999999999999)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
@@ -604,11 +603,9 @@ async def test_nft_with_did_wallet_creation_and_transfer(two_wallet_nodes: Any, 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await asyncio.sleep(5)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 1, "nft1 not generated"
+    await time_out_assert(10, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
 
     metadata = Program.to(
         [
@@ -616,7 +613,8 @@ async def test_nft_with_did_wallet_creation_and_transfer(two_wallet_nodes: Any, 
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F181"),
         ]
     )
-
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 7999999999999 - 1)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 7999999999999 - 1)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
@@ -624,47 +622,6 @@ async def test_nft_with_did_wallet_creation_and_transfer(two_wallet_nodes: Any, 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await asyncio.sleep(5)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 2, "nft not generated"
-
-    nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
-        wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
-    )
-    sb = await nft_wallet_0.transfer_nft(coins[1], ph1)
-
-    assert sb is not None
-    # ensure hints are generated
-    assert compute_memos(sb)
-
-    await asyncio.sleep(3)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await asyncio.sleep(5)
-
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 1
-    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
-    assert len(coins) == 1
-
-    # Send it back to original owner
-    nsb = await nft_wallet_1.transfer_nft(coins[0], ph)
-    assert nsb is not None
-
-    # ensure hints are generated
-    assert compute_memos(nsb)
-    await asyncio.sleep(5)
-
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
-    await asyncio.sleep(5)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
-    assert len(coins) == 2
-
-    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
-    assert len(coins) == 0
+    await time_out_assert(10, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
