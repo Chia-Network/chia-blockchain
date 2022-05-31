@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-31 13:07\n"
+"PO-Revision-Date: 2022-05-31 14:57\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2750,11 +2750,11 @@ msgstr "La transacción aún no se ha enviado al nodo"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
-msgstr ""
+msgstr "La transacción se ha enviado a un nodo completo y está pendiente de inclusión en el mempool. {0}"
 
 #: src/utils/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
-msgstr ""
+msgstr "La transacción se envió con éxito a un nodo completo y se incluyó en el mempool."
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -2762,7 +2762,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:123
 msgid "Try Again"
-msgstr ""
+msgstr "Intentar otra vez"
 
 #: src/components/_wallet_old/WalletHistory.tsx:25
 #~ msgid "Type"
@@ -2774,7 +2774,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:127
 msgid "Unable to load the list of the keys"
-msgstr ""
+msgstr "No se puede cargar la lista de las llaves"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:147
 #: src/components/pool/PoolOverview.tsx:63
@@ -2813,7 +2813,7 @@ msgstr "Cambios sin guardar"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:52
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-msgstr ""
+msgstr "Se recomienda encarecidamente utilizar una frase de contraseña para proteger sus claves. ¿Está seguro de que desea deshabilitar la protección con frase de contraseña?"
 
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
 #~ msgid "VDF Sub Slot Iterations"
@@ -2883,7 +2883,7 @@ msgstr "El valor parece alto"
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:84
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
-msgstr ""
+msgstr "Cartera"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:649
 #: src/components/pool/PoolOverview.tsx:182
@@ -3093,7 +3093,7 @@ msgstr "Ha hecho cambios. ¿Desea descartarlos?"
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:20
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-msgstr ""
+msgstr "Sus claves no se han migrado a un nuevo conjunto de claves. No podrá crear claves nuevas ni eliminar claves existentes hasta que finalice la migración. ¿Le gustaría migrar sus claves ahora?"
 
 #: src/components/app/AppKeyringMigrator.tsx:106
 #~ msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
@@ -3172,7 +3172,7 @@ msgstr ""
 
 #: src/components/Amount/Amount.tsx:96
 msgid "{0, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{0, plural, one {mojo} other {mojos}}"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
 #~ msgid "{0} Block Rewards"
@@ -3205,7 +3205,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:33
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-msgstr ""
+msgstr "{minPassphraseLength, plural, one {Las frases de contraseña deben tener al menos # caracteres de longitud} other {Las frases de contraseña deben tener al menos # caracteres de longitud}}"
 
 #: src/components/Amount/Amount.tsx:95
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
