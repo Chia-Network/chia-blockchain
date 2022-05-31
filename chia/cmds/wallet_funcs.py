@@ -233,7 +233,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             return None
 
     print("Transaction not yet submitted to nodes")
-    print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

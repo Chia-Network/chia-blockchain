@@ -12,7 +12,7 @@ from typing_extensions import Literal, get_args, get_origin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import int64, int512, uint32, uint64, uint128
+from chia.util.ints import uint32
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -39,8 +39,6 @@ unhashable_types = [
     "Program",
     "SerializedProgram",
 ]
-# JSON does not support big ints, so these types must be serialized differently in JSON
-big_ints = [uint64, int64, uint128, int512]
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
