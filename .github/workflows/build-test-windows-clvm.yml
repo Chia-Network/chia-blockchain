@@ -85,7 +85,7 @@ jobs:
     - name: Test clvm code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 2 -m "not benchmark" tests/clvm/test_chialisp_deserialization.py tests/clvm/test_clvm_compilation.py tests/clvm/test_clvm_step.py tests/clvm/test_program.py tests/clvm/test_puzzle_compression.py tests/clvm/test_puzzles.py tests/clvm/test_serialized_program.py tests/clvm/test_singletons.py tests/clvm/test_spend_sim.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 2 -m "not benchmark" tests/clvm/test_chialisp_deserialization.py tests/clvm/test_clvm_compilation.py tests/clvm/test_clvm_step.py tests/clvm/test_program.py tests/clvm/test_puzzle_compression.py tests/clvm/test_puzzle_drivers.py tests/clvm/test_puzzles.py tests/clvm/test_serialized_program.py tests/clvm/test_singletons.py tests/clvm/test_spend_sim.py
 
     - name: Process coverage data
       run: |
