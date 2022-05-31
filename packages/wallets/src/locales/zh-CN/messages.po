@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-31 05:57\n"
+"PO-Revision-Date: 2022-05-31 07:01\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -293,7 +293,7 @@ msgstr "余额"
 
 #: src/components/offers/OfferShareDialog.tsx:759
 msgid "Before posting an offer in Keybase to the #{KeybaseChannelName} channel, you must first join the {KeybaseTeamName} team. Please note that it might take a few moments to join the channel."
-msgstr ""
+msgstr "在 #{KeybaseChannelName} 频道发布密钥库之前, 您必须先加入 {KeybaseTeamName} 团队。 请注意，加入频道可能需要一些时间。"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:33
 #: src/components/farm/FarmLatestBlockChallenges.tsx:43
@@ -936,7 +936,7 @@ msgstr "分布式身份认证"
 
 #: src/components/offers/OfferShareDialog.tsx:1014
 msgid "Do not show this dialog again"
-msgstr ""
+msgstr "不再显示此对话框"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:51
 #: src/components/plot/overview/PlotOverviewHero.tsx:67
@@ -1325,7 +1325,7 @@ msgstr ""
 #: src/components/PasteMnemonic.tsx:86
 #: src/components/offers/OfferDataEntryDialog.tsx:74
 msgid "Import"
-msgstr ""
+msgstr "导入"
 
 #: src/components/WalletImport.tsx:130
 msgid "Import Wallet from Mnemonics"
@@ -2541,7 +2541,7 @@ msgstr ""
 
 #: src/components/offers/OfferEditor.tsx:195
 msgid "Reset"
-msgstr ""
+msgstr "重置"
 
 #: src/components/backup/BackupRestore.tsx:160
 #~ msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
