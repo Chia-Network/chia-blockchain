@@ -1,4 +1,5 @@
 from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
@@ -58,11 +59,17 @@ def test_update_metadata() -> None:
     my_amount = 1
     destination: Program = puzzle_for_pk(int_to_public_key(2))
     condition_list = [make_create_coin_condition(destination.get_tree_hash(), my_amount, [])]
-    condition_list.append([-24, NFT_METADATA_UPDATER, "https://www.chia.net/img/branding/chia-logo-2.svg"])
+    condition_list.append([-24, NFT_METADATA_UPDATER, ("mu", "https://url2")])
+
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("mu", []),
+        ("mh", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("lu", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("lh", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
+
     solution = Program.to(
         [
             NFT_STATE_LAYER_MOD_HASH,
@@ -77,16 +84,19 @@ def test_update_metadata() -> None:
     )
 
     metadata = [
-        ("u", ["https://www.chia.net/img/branding/chia-logo-2.svg", "https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("mu", ["https://url2"]),
+        ("mh", 0xD4584AD463139FA8C0D9F68F4B59F185),
+        ("lu", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+        ("lh", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
-
     cost, res = NFT_STATE_LAYER_MOD.run_with_cost(INFINITE_COST, solution)
     assert res.first().first().as_int() == 73
     assert res.first().rest().first().as_int() == 1
     assert res.rest().rest().first().first().as_int() == 51
     assert (
-        res.rest().rest().first().rest().first().as_atom()
+        bytes32(res.rest().rest().first().rest().first().as_atom())
         == NFT_STATE_LAYER_MOD.curry(
             NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER.get_tree_hash(), destination
         ).get_tree_hash()
