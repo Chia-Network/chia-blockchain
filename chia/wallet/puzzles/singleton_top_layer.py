@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import Iterator, List, Tuple, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -10,7 +10,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
 P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
@@ -157,6 +157,14 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
+def match_singleton_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+    mod, curried_args = puzzle.uncurry()
+    if mod == SINGLETON_MOD:
+        return True, curried_args.as_iter()
+    else:
+        return False, iter(())
+
+
 # Given the parent and amount of the launcher coin, return the launcher coin
 def generate_launcher_coin(coin: Coin, amount: uint64) -> Coin:
     return Coin(coin.name(), SINGLETON_LAUNCHER_HASH, amount)
@@ -249,9 +257,11 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
 
 
 # Return the puzzle reveal of a singleton with specific ID and innerpuz
-def puzzle_for_singleton(launcher_id: bytes32, inner_puz: Program) -> Program:
+def puzzle_for_singleton(
+    launcher_id: bytes32, inner_puz: Program, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
+) -> Program:
     return SINGLETON_MOD.curry(
-        (SINGLETON_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_HASH)),
+        (SINGLETON_MOD_HASH, (launcher_id, launcher_hash)),
         inner_puz,
     )
 
