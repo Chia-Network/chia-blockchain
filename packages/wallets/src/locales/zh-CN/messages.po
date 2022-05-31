@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-31 07:01\n"
+"PO-Revision-Date: 2022-05-31 09:21\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2493,7 +2493,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATSelect.tsx:39
 msgid "Recovery Wallet"
-msgstr ""
+msgstr "恢复钱包"
 
 #: src/components/plot/PlotHeader.tsx:76
 #: src/components/plot/overview/PlotOverviewHero.tsx:60
@@ -2529,7 +2529,7 @@ msgstr ""
 #: src/components/WalletRenameDialog.tsx:69
 #: src/components/cat/WalletCAT.tsx:91
 msgid "Rename Wallet"
-msgstr ""
+msgstr "重命名钱包"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2570,11 +2570,11 @@ msgstr "保存"
 
 #: src/components/offers/OfferEditor.tsx:203
 msgid "Save Offer"
-msgstr ""
+msgstr "保存报价"
 
 #: src/components/offers/OfferManager.tsx:408
 msgid "Save Offer File"
-msgstr ""
+msgstr "保存报价文件"
 
 #: src/components/app/AppKeyringMigrator.tsx:178
 #: src/components/settings/ChangePassphrasePrompt.tsx:208
@@ -2594,7 +2594,7 @@ msgstr ""
 #: src/components/cat/WalletCATTAILDialog.tsx:71
 #: src/components/offers/OfferSummaryRow.tsx:95
 msgid "Search on Tail Database"
-msgstr ""
+msgstr "在 Tail 数据库中搜索"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
 #~ msgid "Second temporary folder location"
@@ -2630,7 +2630,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:136
 msgid "Select Offer File"
-msgstr ""
+msgstr "选择报价文件"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 #~ msgid "Select Temporary Directory"
@@ -2730,7 +2730,7 @@ msgstr "分享"
 
 #: src/components/offers/OfferShareDialog.tsx:973
 msgid "Share Offer"
-msgstr ""
+msgstr "分享报价"
 
 #: src/components/offers/OfferShareDialog.tsx:412
 msgid "Share Privately"
@@ -2903,12 +2903,12 @@ msgstr "提交"
 #: src/components/WalletSendTransactionResultDialog.tsx:15
 #: src/components/offers/OfferViewer.tsx:343
 msgid "Success"
-msgstr ""
+msgstr "成功"
 
 #: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:452
 msgid "Summary"
-msgstr ""
+msgstr "摘要"
 
 #: src/components/WalletStatus.tsx:44
 msgid "Synced"
