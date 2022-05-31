@@ -87,9 +87,10 @@
     ; (new_owner trade_prices_list new_pk transfer_program_solution)
 
     (defun check_found_values (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH odd_create_coin new_owner_condition)
-      (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r (r new_owner_condition))))))  ; check create coin uses same key as is signing trade_prices
+      ; check create coin uses same key as is signing trade_prices
+      (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r (r new_owner_condition))))))
         (c odd_create_coin (c (list AGG_SIG_ME (f (r (r new_owner_condition))) (sha256tree1 (f (r (r (r new_owner_condition)))))) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner new_owner_condition)))
-        (x)
+        (x "check found values")
       )
     )
 
@@ -102,7 +103,7 @@
           )
           (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin new_owner_condition)
         )
-        (x)
+        (x "no create coins")
       )
     )
 

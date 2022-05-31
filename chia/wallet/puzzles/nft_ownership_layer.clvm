@@ -53,7 +53,7 @@
           (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions))))  ; (r (f conditions)) is (new_owner, trade_price, tp_solution)
           (loop_through_conditions_looking_for_transfer_solution TRANSFER_PROGRAM CURRENT_OWNER (r conditions) all_conditions)
         )
-        (x)
+        (x "yolo")
       )
    )
 

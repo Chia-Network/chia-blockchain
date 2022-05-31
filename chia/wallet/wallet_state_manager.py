@@ -40,7 +40,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTWalletInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -326,7 +326,7 @@ class WalletStateManager:
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
-    async def update_wallet_puzzle_hashes(self, wallet_id):
+    async def update_wallet_puzzle_hashes(self, wallet_id, in_transaction=False):
         derivation_paths: List[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
@@ -353,7 +353,7 @@ class WalletStateManager:
                     False,
                 )
             )
-        await self.puzzle_store.add_derivation_paths(derivation_paths)
+        await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction=in_transaction)
 
     async def get_unused_derivation_record(
         self, wallet_id: uint32, in_transaction=False, hardened=False
@@ -715,21 +715,17 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-
         self.log.debug("Handling NFT: %s", coin_spend)
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.NFT:
-                nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
                 self.log.debug(
                     "Checking NFT wallet %r and inner puzzle %s",
                     wallet_info.name,
                     uncurried_nft.inner_puzzle.get_tree_hash(),
                 )
-                if not nft_wallet_info.did_wallet_id:
-                    # standard NFT wallet
-                    wallet_id = wallet_info.id
-                    wallet_type = WalletType.NFT
-                    break
+                wallet_id = wallet_info.id
+                wallet_type = WalletType.NFT
+
         if wallet_id is None:
             # TODO Modify this for NFT1
             self.log.info("Cannot find a NFT wallet, creating a new one.")

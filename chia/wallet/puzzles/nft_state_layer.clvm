@@ -41,6 +41,7 @@
           (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount)
         )
       )
+      ()
     )
   )
 
@@ -82,7 +83,6 @@
        METADATA_UPDATER_PUZZLE_HASH METADATA (a INNER_PUZZLE solution)
       )
       my_amount
-      0
     )
   )
 )
