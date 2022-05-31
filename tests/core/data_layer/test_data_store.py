@@ -1,5 +1,5 @@
 import itertools
-import math
+import statistics
 import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set
 from random import Random
@@ -414,12 +414,10 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
         node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
         hashes.append(node_hash)
 
-    avg_height = 0
-    for node_hash in hashes:
-        ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
-        assert len(ancestors) <= 14
-        avg_height += len(ancestors)
-    assert math.ceil(avg_height // 2000) == 11
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    too_tall = {hash: height for hash, height in heights.items() if height > 14}
+    assert too_tall == {}
+    assert 11 <= statistics.mean(heights.values()) <= 12
 
 
 @pytest.mark.asyncio()
@@ -448,12 +446,10 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
             assert len(ancestors) == i
         hashes.append(node_hash)
 
-    avg_height = 0
-    for node_hash in hashes:
-        ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
-        assert len(ancestors) <= 14
-        avg_height += len(ancestors)
-    assert math.ceil(avg_height // 2000) == 11
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    too_tall = {hash: height for hash, height in heights.items() if height > 14}
+    assert too_tall == {}
+    assert 11 <= statistics.mean(heights.values()) <= 12
 
 
 @pytest.mark.parametrize(
