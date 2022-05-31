@@ -5,7 +5,7 @@ from blspy import G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
@@ -57,7 +57,7 @@ class Offer:
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List] = [c.as_list() for c in sorted_coins]
+        sorted_coin_list: List[List] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
@@ -200,8 +200,8 @@ class Offer:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
-            new_dic: Dict[str, Any] = {}
+        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
+            new_dic: Dict[str, int] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]

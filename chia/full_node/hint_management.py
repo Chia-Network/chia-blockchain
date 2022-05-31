@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary
 from chia.types.blockchain_format.coin import Coin
@@ -14,7 +14,7 @@ def get_hints_and_subscription_coin_ids(
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
     # Finds the coin IDs that we need to lookup in order to notify wallets of hinted transactions
-    hint: bytes
+    hint: Optional[bytes]
     hints_to_add: List[Tuple[bytes32, bytes]] = []
 
     # Goes through additions and removals for each block and flattens to a map and a set
@@ -40,6 +40,8 @@ def get_hints_and_subscription_coin_ids(
                     addition_coin_name = addition_coin.name()
                     add_if_coin_subscription(addition_coin_name)
                     add_if_ph_subscription(addition_coin.puzzle_hash, addition_coin_name)
+                    if hint is None:
+                        continue
                     if len(hint) == 32:
                         add_if_ph_subscription(bytes32(hint), addition_coin_name)
 
