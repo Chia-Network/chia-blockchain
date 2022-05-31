@@ -626,7 +626,7 @@ class TestSimpleSyncProtocol:
 
         await fn_server_1.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         node0_height = full_node_api.full_node.blockchain.get_peak_height()
-        await time_out_assert(15, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
+        await time_out_assert(60, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
         all_messages_1 = await get_all_messages_in_queue(incoming_queue_1)
