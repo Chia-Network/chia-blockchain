@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-30 00:56\n"
+"PO-Revision-Date: 2022-05-31 01:04\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -705,7 +705,7 @@ msgstr "删除"
 
 #: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
-msgstr ""
+msgstr "删除密钥"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
@@ -735,7 +735,7 @@ msgstr "删除未确认的交易"
 
 #: src/components/app/AppPassPrompt.tsx:88
 msgid "Deleting key"
-msgstr ""
+msgstr "正在删除密钥"
 
 #: src/components/selectKey/SelectKey.tsx:101
 #~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -743,7 +743,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
-msgstr ""
+msgstr "根据您的系统配置，您可能会发现替代的绘图器产生的农田比默认的空间绘图器Chia Proof 更快。 如果不确定, 请使用默认的Chia Proof空间绘图器。"
 
 #: src/electron/main.tsx:389
 msgid "Developer"
@@ -764,7 +764,7 @@ msgstr "难度"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
-msgstr ""
+msgstr "禁用 NUMA"
 
 #: src/components/app/AppPassPrompt.tsx:77
 #~ msgid "Disable Passphrase Protection"
@@ -772,7 +772,7 @@ msgstr ""
 
 #: src/electron/main.tsx:401
 msgid "Disable Simulator"
-msgstr ""
+msgstr "禁用模拟器"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -826,11 +826,11 @@ msgstr "拖放你的备份文件"
 
 #: src/components/plot/PlotHarvester.tsx:131
 msgid "Duplicate"
-msgstr ""
+msgstr "复制"
 
 #: src/components/plot/card/PlotCardPlotsDuplicate.tsx:11
 msgid "Duplicate Plots"
-msgstr ""
+msgstr "重复农田"
 
 #: src/electron/main.tsx:348
 msgid "Edit"
@@ -844,7 +844,7 @@ msgstr "编辑支付指令"
 
 #: src/electron/main.tsx:402
 msgid "Enable Simulator"
-msgstr ""
+msgstr "禁用模拟器"
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:111
 #~ msgid "Enter Passphrase"
@@ -852,11 +852,11 @@ msgstr ""
 
 #: src/components/app/AppKeyringMigrator.tsx:128
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
-msgstr ""
+msgstr "请输入较强的私钥密码，然后点击“迁移密钥”以保护您的密钥串"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:139
 msgid "Enter a strong passphrase to secure your keys:"
-msgstr ""
+msgstr "输入复杂的密码来保护您的密钥串："
 
 #: src/components/_wallet_old/WalletImport.tsx:146
 #~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
@@ -864,7 +864,7 @@ msgstr ""
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:102
 msgid "Enter your passphrase:"
-msgstr ""
+msgstr "输入你的密码："
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
@@ -908,7 +908,7 @@ msgstr "不耕种最终输出文件夹"
 
 #: src/components/plot/PlotHarvester.tsx:118
 msgid "Failed"
-msgstr ""
+msgstr "失败"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -920,7 +920,7 @@ msgstr ""
 
 #: src/components/settings/SetPassphrasePrompt.tsx:83
 msgid "Failed to set passphrase: {0}"
-msgstr ""
+msgstr "设置私钥密码失败: {0}"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:92
 #~ msgid "Failed to set passphrase: {error}"
@@ -928,7 +928,7 @@ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:111
 msgid "Failed to update passphrase: {0}"
-msgstr ""
+msgstr "设置私钥密码失败: {0}"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:120
 #~ msgid "Failed to update passphrase: {error}"
@@ -992,7 +992,7 @@ msgstr "正在耕种"
 
 #: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
-msgstr ""
+msgstr "耕作模式"
 
 #: src/components/farm/card/FarmCardStatus.tsx:14
 #: src/components/farm/card/FarmCardStatus.tsx:25
@@ -1022,7 +1022,7 @@ msgstr "费用"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
-msgstr ""
+msgstr "使用的是TWICE：一次离开池，一次加入。"
 
 #: src/components/block/Block.jsx:299
 msgid "Fees Amount"
@@ -1080,7 +1080,7 @@ msgstr "全屏"
 
 #: src/components/settings/Settings.tsx:257
 msgid "General"
-msgstr ""
+msgstr "常规"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
@@ -1108,7 +1108,7 @@ msgstr ""
 
 #: src/components/plot/PlotHarvesters.tsx:39
 msgid "Harvesters"
-msgstr ""
+msgstr "收割机"
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "Header Hash"
@@ -1134,7 +1134,7 @@ msgstr "帮助"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:51
 msgid "Here are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
-msgstr ""
+msgstr "下面是当前的区块挑战。您可能有也可能没有这些挑战的时间证明。 这些块目前还未包含时间证明。"
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
@@ -1143,7 +1143,7 @@ msgstr ""
 #: src/components/app/AppPassPrompt.tsx:127
 #: src/components/settings/RemovePassphrasePrompt.tsx:118
 msgid "Hint"
-msgstr ""
+msgstr "提示"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
@@ -1153,7 +1153,7 @@ msgstr ""
 #: src/components/plot/PlotHarvesterPlotsFailed.tsx:65
 #: src/components/plot/PlotHarvesterPlotsNotFound.tsx:65
 msgid "Hooray, no files here!"
-msgstr ""
+msgstr "今后，这里没有文件！"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:35
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:35
@@ -1224,7 +1224,7 @@ msgstr "索引"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:125
 msgid "Initializing..."
-msgstr ""
+msgstr "正在初始化..."
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:218
 #~ msgid "Interval"
@@ -1264,7 +1264,7 @@ msgstr "加入农业合作社来获得持续的XCH耕种收益。创建一个农
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
-msgstr ""
+msgstr "加入联合耕作池"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:40
 #: src/components/plot/PlotPlotting.tsx:20
@@ -1273,7 +1273,7 @@ msgstr "K值大小"
 
 #: src/components/app/AppKeyringMigrator.tsx:93
 msgid "Keyring migration failed: {0}"
-msgstr ""
+msgstr "钥匙串迁移失败： {0}"
 
 #: src/components/app/AppKeyringMigrator.tsx:86
 #~ msgid "Keyring migration failed: {error}"
@@ -1298,7 +1298,7 @@ msgstr "最新收割的区块高度"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "Last Transaction Block Time"
-msgstr ""
+msgstr "上一次交易块时间"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:31
 msgid "Latest Block Challenges"
@@ -1328,15 +1328,15 @@ msgstr "退出农业合作社"
 
 #: src/components/app/AppProviders.tsx:66
 msgid "Loading configuration"
-msgstr ""
+msgstr "正在加载配置"
 
 #: src/components/farm/Farm.tsx:24
 msgid "Loading farming data"
-msgstr ""
+msgstr "正在加载农业数据"
 
 #: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
-msgstr ""
+msgstr "正在载入密钥串状态"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -1348,7 +1348,7 @@ msgstr "正在载入……"
 
 #: src/components/plot/PlotHarvester.tsx:56
 msgid "Local"
-msgstr ""
+msgstr "区域"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
@@ -1400,7 +1400,7 @@ msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "管理 CAT 令牌"
 
 #: src/components/farm/FarmHeader.tsx:41
 msgid "Manage Farming Rewards"
@@ -1426,20 +1426,20 @@ msgstr "MiB 上传/下载"
 #: src/components/settings/Settings.tsx:186
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
-msgstr ""
+msgstr "迁移钥匙串"
 
 #: src/components/app/AppKeyringMigrator.tsx:229
 msgid "Migrate Keys"
-msgstr ""
+msgstr "迁移钥匙串"
 
 #: src/components/app/AppKeyringMigrator.tsx:124
 msgid "Migration required"
-msgstr ""
+msgstr "需要迁移"
 
 #: src/components/settings/Settings.tsx:127
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
-msgstr ""
+msgstr "迁移支持私钥密码保护"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
@@ -1451,7 +1451,7 @@ msgstr "分钟"
 
 #: src/components/plot/PlotHarvester.tsx:105
 msgid "Missing Keys"
-msgstr ""
+msgstr "缺少密钥"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 msgid "More memory slightly increases speed"
@@ -1484,7 +1484,7 @@ msgstr "网络名称"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:170
 msgid "New Passphrase"
-msgstr ""
+msgstr "新建私钥密码"
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
 #~ msgid "New Wallet"
@@ -1516,7 +1516,7 @@ msgstr "尚未有区块有收获"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:123
 msgid "No plots yet"
-msgstr ""
+msgstr "尚无农田"
 
 #: src/components/_wallet_old/WalletHistory.tsx:102
 #~ msgid "No previous transactions"
@@ -1590,7 +1590,7 @@ msgstr "桶数量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
 msgid "Number of buckets for phase 3 & 4"
-msgstr ""
+msgstr "第三和第四阶段的桶数"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
 msgid "Number of threads"
@@ -1606,7 +1606,7 @@ msgstr "确定"
 
 #: src/components/dashboard/DashboardSideBar.tsx:63
 msgid "Offers"
-msgstr ""
+msgstr "报价"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1635,23 +1635,23 @@ msgstr ""
 #: src/components/settings/SetPassphrasePrompt.tsx:149
 #: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
-msgstr ""
+msgstr "私钥密码"
 
 #: src/components/app/AppKeyringMigrator.tsx:162
 #: src/components/settings/ChangePassphrasePrompt.tsx:191
 #: src/components/settings/SetPassphrasePrompt.tsx:173
 msgid "Passphrase Hint"
-msgstr ""
+msgstr "私钥密码提示"
 
 #: src/components/app/AppKeyringMigrator.tsx:161
 #: src/components/settings/ChangePassphrasePrompt.tsx:190
 #: src/components/settings/SetPassphrasePrompt.tsx:172
 msgid "Passphrase Hint (Optional)"
-msgstr ""
+msgstr "私钥密码提示（可选）"
 
 #: src/components/settings/Settings.tsx:217
 msgid "Passphrase Settings"
-msgstr ""
+msgstr "私钥密码设置"
 
 #: src/components/app/AppPassPrompt.tsx:152
 #: src/components/settings/RemovePassphrasePrompt.tsx:67
@@ -1661,7 +1661,7 @@ msgstr ""
 #: src/components/settings/Settings.tsx:100
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
-msgstr ""
+msgstr "私钥密码保护已禁用"
 
 #: src/components/settings/Settings.tsx:137
 #: src/components/settings/SettingsPanel.tsx:142
@@ -3226,12 +3226,12 @@ msgstr "您的私钥密码可以存储在系统的安全凭据中。Chia将能�
 #: src/components/settings/Settings.tsx:89
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
-msgstr ""
+msgstr "您的私钥密码已经设置"
 
 #: src/components/settings/Settings.tsx:78
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
-msgstr ""
+msgstr "你的密码已被更新"
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3257,7 +3257,7 @@ msgstr "[错误 22] 文件未找到。农田文件夹中的 config.yaml 文件�
 
 #: src/components/plot/add/PlotAddForm.tsx:123
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2SingletonPuzzleHash 未定义"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
@@ -3297,7 +3297,7 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
-msgstr ""
+msgstr "推荐{0} 个bucket"
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
@@ -3321,5 +3321,5 @@ msgstr "{0} 积点 {1} - {2} 小时前"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
-msgstr ""
+msgstr "{warning}"
 
