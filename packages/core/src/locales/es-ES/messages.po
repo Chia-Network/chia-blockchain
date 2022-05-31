@@ -8,7 +8,7 @@ msgstr ""
 "Language: es_ES\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-31 12:02\n"
+"PO-Revision-Date: 2022-05-31 13:07\n"
 "Last-Translator: \n"
 "Language-Team: Spanish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -1273,7 +1273,7 @@ msgstr "Cargando lista de llaves"
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
-msgstr ""
+msgstr "Cerrar sesión"
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
@@ -1281,7 +1281,7 @@ msgstr ""
 
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
-msgstr ""
+msgstr "Cerrar sesión"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1341,7 +1341,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:16
 msgid "Migrate"
-msgstr ""
+msgstr "Emigrar"
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1353,7 +1353,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:15
 msgid "Migration required"
-msgstr ""
+msgstr "Migración requerida"
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1369,7 +1369,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
-msgstr ""
+msgstr "Modo"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -1410,7 +1410,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:38
 msgid "New passphrase is the same as your current passphrase"
-msgstr ""
+msgstr "La nueva contraseña es la misma que su contraseña actual"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
@@ -1518,7 +1518,7 @@ msgstr "Desconectado"
 
 #: src/components/ConfirmDialog/ConfirmDialog.tsx:106
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
@@ -1990,7 +1990,7 @@ msgstr "Llave privada con huella digital pública {fingerprint}"
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:28
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:40
 msgid "Private key {fingerprint}"
-msgstr ""
+msgstr "Clave privada {fingerprint}"
 
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
@@ -2110,7 +2110,7 @@ msgstr "Llave pública:"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:91
 msgid "Reload Application"
-msgstr ""
+msgstr "Recargar aplicación"
 
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
@@ -2132,7 +2132,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:87
 msgid "Report an Issue"
-msgstr ""
+msgstr "Reportar un problema"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2238,7 +2238,7 @@ msgstr "Seleccione Llave"
 
 #: src/components/Dropdown/Dropdown.tsx:85
 msgid "Select..."
-msgstr ""
+msgstr "Seleccione..."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:72
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:90
@@ -2274,7 +2274,7 @@ msgstr ""
 #: src/components/LayoutMain/LayoutFooter.tsx:53
 #: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
-msgstr ""
+msgstr "Enviar comentarios"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
@@ -2292,12 +2292,12 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:48
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-msgstr ""
+msgstr "Se recomienda encarecidamente establecer una contraseña para proteger sus claves. ¿Está seguro de que desea omitir la configuración de una contraseña?"
 
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
 msgid "Settings"
-msgstr ""
+msgstr "Ajustes"
 
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:74
 msgid "Show Advanced Options"
@@ -2318,7 +2318,7 @@ msgstr "Iniciar Sesión"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:47
 msgid "Skip"
-msgstr ""
+msgstr "Saltar"
 
 #: src/components/app/AppKeyringMigrator.tsx:57
 #~ msgid "Skip Keyring Migration"
@@ -2326,7 +2326,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:46
 msgid "Skip Passphrase Protection"
-msgstr ""
+msgstr "Omitir protección de contraseña"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2342,7 +2342,7 @@ msgstr ""
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:73
 msgid "Something went wrong"
-msgstr ""
+msgstr "Algo salió mal"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -2547,7 +2547,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:30
 msgid "The provided passphrase and confirmation do not match"
-msgstr ""
+msgstr "La contraseña y la confirmación proporcionadas no coinciden"
 
 #: src/components/block/Block.jsx:291
 #~ msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
@@ -2746,7 +2746,7 @@ msgstr ""
 
 #: src/utils/getTransactionResult.ts:15
 msgid "Transaction has not been sent to node yet"
-msgstr ""
+msgstr "La transacción aún no se ha enviado al nodo"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
