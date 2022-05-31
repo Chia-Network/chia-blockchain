@@ -39,6 +39,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.key_val_store import KeyValStore
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
@@ -114,6 +116,7 @@ class WalletStateManager:
     pool_store: WalletPoolStore
     dl_store: DataLayerStore
     default_cats: Dict[str, Any]
+    asset_to_wallet_map: Dict[AssetType, Any]
 
     @staticmethod
     async def create(
@@ -180,6 +183,10 @@ class WalletStateManager:
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
+        self.asset_to_wallet_map = {
+            AssetType.CAT: CATWallet,
+        }
+
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.STANDARD_WALLET:
@@ -216,16 +223,6 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
 
         return self
-
-    def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
-        for i in range(0, max_depth):
-            derived = self.get_public_key(uint32(i))
-            if derived == pubkey:
-                return i
-            derived = self.get_public_key_unhardened(uint32(i))
-            if derived == pubkey:
-                return i
-        return -1
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
@@ -1141,7 +1138,7 @@ class WalletStateManager:
         wallet = self.wallets[wallet_id]
         return wallet
 
-    async def reorg_rollback(self, height: int):
+    async def reorg_rollback(self, height: int) -> List[uint32]:
         """
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
@@ -1167,7 +1164,8 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id, in_transaction=True)
-            self.wallets.pop(wallet_id)
+
+        return remove_ids
 
     async def _await_closed(self) -> None:
         await self.db_connection.close()
@@ -1195,6 +1193,25 @@ class WalletStateManager:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
         return None
+
+    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):
+        for wallet in self.wallets.values():
+            match_function = getattr(wallet, "match_puzzle_info", None)
+            if match_function is not None and callable(match_function):
+                if match_function(puzzle_driver):
+                    return wallet
+        return None
+
+    async def create_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo, name=None, in_transaction=False):
+        if AssetType(puzzle_driver.type()) in self.asset_to_wallet_map:
+            async with self.lock:
+                await self.asset_to_wallet_map[AssetType(puzzle_driver.type())].create_from_puzzle_info(
+                    self,
+                    self.main_wallet,
+                    puzzle_driver,
+                    name,
+                    in_transaction,
+                )
 
     async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet
@@ -1274,6 +1291,10 @@ class WalletStateManager:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == uint8(WalletType.POOLING_WALLET):
                 await wallet.new_peak(peak.height)
+        current_time = int(time.time())
+
+        if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
+            self.tx_pending_changed()
 
     async def add_interested_puzzle_hashes(
         self, puzzle_hashes: List[bytes32], wallet_ids: List[int], in_transaction: bool = False

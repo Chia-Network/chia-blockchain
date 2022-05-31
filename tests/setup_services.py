@@ -19,7 +19,7 @@ from chia.server.start_wallet import service_kwargs_for_wallet
 from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config, save_config
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from tests.block_tools import BlockTools
@@ -49,10 +49,8 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
 
 async def setup_full_node(
     consensus_constants: ConsensusConstants,
-    db_name,
+    db_name: str,
     self_hostname: str,
-    port,
-    rpc_port,
     local_bt: BlockTools,
     introducer_port=None,
     simulator=False,
@@ -86,8 +84,8 @@ async def setup_full_node(
     else:
         config["introducer_peer"] = None
     config["dns_servers"] = []
-    config["port"] = port
-    config["rpc_port"] = rpc_port
+    config["port"] = 0
+    config["rpc_port"] = 0
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
@@ -117,8 +115,6 @@ async def setup_full_node(
 # keeping these usable independently?
 async def setup_wallet_node(
     self_hostname: str,
-    port,
-    rpc_port,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
     full_node_port=None,
@@ -129,8 +125,8 @@ async def setup_wallet_node(
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config["wallet"]
-        config["port"] = port
-        config["rpc_port"] = rpc_port
+        config["port"] = 0
+        config["rpc_port"] = 0
         if starting_height is not None:
             config["starting_height"] = starting_height
         config["initial_num_public_keys"] = initial_num_public_keys
@@ -142,7 +138,7 @@ async def setup_wallet_node(
         first_pk = keychain.get_first_public_key()
         assert first_pk is not None
         db_path_key_suffix = str(first_pk.get_fingerprint())
-        db_name = f"test-wallet-db-{port}-KEY.sqlite"
+        db_name = f"test-wallet-db-{full_node_port}-KEY.sqlite"
         db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
         db_path = local_bt.root_path / db_path_replaced
 
@@ -189,24 +185,22 @@ async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
     self_hostname: str,
-    port,
-    rpc_port,
-    farmer_port,
+    farmer_port: uint16,
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    config = load_config(root_path, "config.yaml")
-    config["logging"]["log_stdout"] = True
-    config["selected_network"] = "testnet0"
-    config["harvester"]["selected_network"] = "testnet0"
-    config["harvester"]["port"] = port
-    config["harvester"]["rpc_port"] = rpc_port
-    config["harvester"]["farmer_peer"]["host"] = self_hostname
-    config["harvester"]["farmer_peer"]["port"] = farmer_port
-    config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
-    save_config(root_path, "config.yaml", config)
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        config["logging"]["log_stdout"] = True
+        config["selected_network"] = "testnet0"
+        config["harvester"]["selected_network"] = "testnet0"
+        config["harvester"]["port"] = 0
+        config["harvester"]["rpc_port"] = 0
+        config["harvester"]["farmer_peer"]["host"] = self_hostname
+        config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
+        config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
+        save_config(root_path, "config.yaml", config)
     kwargs = service_kwargs_for_harvester(root_path, config["harvester"], consensus_constants)
     kwargs.update(
         parse_cli_args=False,
@@ -229,26 +223,25 @@ async def setup_farmer(
     b_tools: BlockTools,
     root_path: Path,
     self_hostname: str,
-    port,
-    rpc_port,
     consensus_constants: ConsensusConstants,
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
+    port: uint16 = uint16(0),
 ):
     init(None, root_path)
     init(b_tools.root_path / "config" / "ssl" / "ca", root_path)
-    root_config = load_config(root_path, "config.yaml")
-    root_config["logging"]["log_stdout"] = True
-    root_config["selected_network"] = "testnet0"
-    root_config["farmer"]["selected_network"] = "testnet0"
-    save_config(root_path, "config.yaml", root_config)
+    with lock_and_load_config(root_path, "config.yaml") as root_config:
+        root_config["logging"]["log_stdout"] = True
+        root_config["selected_network"] = "testnet0"
+        root_config["farmer"]["selected_network"] = "testnet0"
+        save_config(root_path, "config.yaml", root_config)
     config = root_config["farmer"]
     config_pool = root_config["pool"]
 
     config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
     config["port"] = port
-    config["rpc_port"] = rpc_port
+    config["rpc_port"] = uint16(0)
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
@@ -327,16 +320,19 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_timelord(
-    port, full_node_port, rpc_port, vdf_port, sanitizer, consensus_constants: ConsensusConstants, b_tools: BlockTools
+    full_node_port,
+    sanitizer,
+    consensus_constants: ConsensusConstants,
+    b_tools: BlockTools,
+    vdf_port: uint16 = uint16(0),
 ):
     config = b_tools.config["timelord"]
-    config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
     config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False
     config["vdf_server"]["port"] = vdf_port
     config["start_rpc_server"] = True
-    config["rpc_port"] = rpc_port
+    config["rpc_port"] = uint16(0)
 
     kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(

@@ -1,7 +1,6 @@
 # flake8: noqa: F811, F401
 
 import logging
-import time
 
 import pytest
 
@@ -12,6 +11,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.time_out_assert import time_out_assert
+from tests.util.misc import assert_runtime
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -35,7 +35,9 @@ log = logging.getLogger(__name__)
 class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_mempool_update_performance(self, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname):
+    async def test_mempool_update_performance(
+        self, request, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+    ):
         blocks = default_400_blocks
         full_nodes, wallets = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
@@ -70,11 +72,10 @@ class TestMempoolPerformance:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
 
         for idx, block in enumerate(blocks):
-            start_t_2 = time.time()
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-            end_t_2 = time.time()
-            duration = end_t_2 - start_t_2
             if idx >= len(blocks) - 3:
-                assert duration < 0.1
+                duration = 0.1
             else:
-                assert duration < 0.001
+                duration = 0.001
+
+            with assert_runtime(seconds=duration, label=request.node.name):
+                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))

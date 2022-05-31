@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol
@@ -60,7 +60,7 @@ class RpcServer:
             await self.client_session.close()
 
     async def _state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
@@ -79,7 +79,7 @@ class RpcServer:
         for payload in payloads:
             if "success" not in payload["data"]:
                 payload["data"]["success"] = True
-            if self.websocket is None:
+            if self.websocket is None or self.websocket.closed:
                 return None
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
@@ -88,7 +88,7 @@ class RpcServer:
                 self.log.warning(f"Sending data failed. Exception {tb}.")
 
     def state_changed(self, *args):
-        if self.websocket is None:
+        if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(*args))
 
@@ -315,7 +315,8 @@ async def start_rpc_server(
     net_config,
     connect_to_daemon=True,
     max_request_body_size=None,
-):
+    name: str = "rpc_server",
+) -> Tuple[Callable[[], Coroutine[Any, Any, None]], uint16]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -332,26 +333,19 @@ async def start_rpc_server(
             daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
         runner = web.AppRunner(app, access_log=None)
         await runner.setup()
+
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
         await site.start()
-    except Exception:
-        # TODO: move this logging to it's own PR
-        tb = traceback.format_exc()
-        log.error(f"Starting RPC server failed. Exception {tb}.")
-        return
+        rpc_port = runner.addresses[0][1]
 
-    try:
-        # TODO: There's only one line calling this function and it uses
-        #       `asyncio.create_task()` without capturing the task for output
-        #       collection.  So, this seems unused and we never do this cleanup?
         async def cleanup():
             await rpc_server.stop()
             await runner.cleanup()
             if connect_to_daemon:
                 await daemon_connection
 
-        return cleanup
+        return cleanup, rpc_port
     except Exception:
         tb = traceback.format_exc()
         log.warning(f"Starting RPC server failed. Exception {tb}.")
-        return
+        raise
