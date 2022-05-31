@@ -863,7 +863,8 @@ class DataStore:
             root = await self.get_tree_root(tree_id, lock=False)
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
-            await self.insert_batch_root(tree_id, root.node_hash, status, lock=False)
+            await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
+            await self.build_ancestor_table_from_root(tree_id, root.node_hash, status, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
             assert new_root.node_hash == root.node_hash
             assert new_root.generation == old_root.generation + 1
@@ -894,7 +895,7 @@ class DataStore:
             return None
         return InternalNode.from_row(row=row)
 
-    async def insert_batch_root(
+    async def build_ancestor_table_from_root(
         self,
         tree_id: bytes32,
         node_hash: Optional[bytes32],
@@ -903,7 +904,6 @@ class DataStore:
         lock: bool = True,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status)
             new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
             if new_root.node_hash is None:
                 return

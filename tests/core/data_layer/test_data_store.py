@@ -8,7 +8,7 @@ import aiosqlite
 
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
 from chia.data_layer.download_data import (
-    insert_into_data_store,
+    insert_into_data_store_from_file,
     write_files_for_root,
     get_full_tree_filename,
     get_delta_filename,
@@ -342,7 +342,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
 )
 async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool) -> None:
     num_batches = 10
-    num_ops_per_batch = 250 if use_optimized else 20
+    num_ops_per_batch = 200 if use_optimized else 20
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
@@ -1166,7 +1166,9 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 filename = get_full_tree_filename(tree_id, root.node_hash, generation)
             else:
                 filename = get_delta_filename(tree_id, root.node_hash, generation)
-            await insert_into_data_store(data_store, tree_id, root.node_hash, os.path.join(foldername, filename))
+            await insert_into_data_store_from_file(
+                data_store, tree_id, root.node_hash, os.path.join(foldername, filename)
+            )
             current_root = await data_store.get_tree_root(tree_id=tree_id)
             assert current_root.node_hash == root.node_hash
             generation += 1

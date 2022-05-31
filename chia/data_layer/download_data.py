@@ -18,7 +18,7 @@ def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) ->
     return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
 
 
-async def insert_into_data_store(
+async def insert_into_data_store_from_file(
     data_store: DataStore,
     tree_id: bytes32,
     root_hash: Optional[bytes32],
@@ -39,7 +39,9 @@ async def insert_into_data_store(
             else:
                 await data_store.insert_node(NodeType.INTERNAL, serialized_node.value1, serialized_node.value2)
 
-    await data_store.insert_batch_root(tree_id, root_hash, Status.COMMITTED)
+    async with data_store.db_wrapper.locked_transaction(lock=True):
+        await data_store._insert_root(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
+    await data_store.build_ancestor_table_from_root(tree_id, root_hash, Status.COMMITTED)
 
 
 async def write_files_for_root(
@@ -114,7 +116,7 @@ async def insert_from_delta_file(
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
-            await insert_into_data_store(
+            await insert_into_data_store_from_file(
                 data_store,
                 tree_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
