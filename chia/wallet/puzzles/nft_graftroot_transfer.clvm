@@ -1,0 +1,23 @@
+; This is a puzzle designed to go in the "delegated_puzzle" field of the standard puzzle's solution
+(mod
+  (
+      CONDITIONS  ; conditions to output in addition to the necessary -10 and CREATE_COIN
+      TRADE_PRICE_LIST
+      new_pk
+      new_ph  ; new_ph has to be the standard puzzle curried with new_pk.  The TP will check that.
+      my_amount
+  )
+
+  (include condition_codes.clvm)
+
+  (c
+    (list ASSERT_MY_AMOUNT my_amount)
+    (c
+      (list -10 () TRADE_PRICE_LIST new_pk ())
+      (c
+        (list CREATE_COIN new_ph my_amount (list new_ph))
+        CONDITIONS
+      )
+    )
+  )
+)

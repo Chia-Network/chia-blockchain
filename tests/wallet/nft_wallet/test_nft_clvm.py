@@ -12,6 +12,7 @@ DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_TRANSFER_PROGRAM = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties_new.clvm")
+NFT_GRAFTROOT_TRANSFER = load_clvm("nft_graftroot_transfer.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
@@ -158,6 +159,16 @@ def test_transfer_program() -> None:
     assert conditions.rest().rest().rest().first().first().as_int() == 51
     assert conditions.rest().rest().rest().first().rest().rest().first().as_int() == 40
 
+    conditions = NFT_GRAFTROOT_TRANSFER.curry(
+        Program.to([[60, bytes32([0] * 32)]]),
+        Program.to(trade_prices_list),
+    ).run(Program.to([new_pk, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1]))
+    solution = Program.to([current_owner, conditions, [[], trade_prices_list, new_pk, []]])
+    cost, res = curried_tp.run_with_cost(INFINITE_COST, solution)
+    assert res.first().as_int() == 0
+    assert res.rest().first().as_int() == 0
+
+    # TODO: check for the announcement.  This is broken currently.
 
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
