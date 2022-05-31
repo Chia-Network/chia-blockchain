@@ -83,6 +83,7 @@
        METADATA_UPDATER_PUZZLE_HASH METADATA (a INNER_PUZZLE solution)
       )
       my_amount
+      0
     )
   )
 )
