@@ -426,7 +426,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
         ),
         (FarmerRpcClient.get_harvester_plots_invalid, [], None, True, 13),
         (FarmerRpcClient.get_harvester_plots_invalid, ["invalid_0"], None, False, 6),
-        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1/"], None, False, 2),
+        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_keys_missing, [], None, True, 3),
         (FarmerRpcClient.get_harvester_plots_keys_missing, ["keys_missing_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_duplicates, [], None, True, 7),
