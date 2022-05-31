@@ -21,6 +21,7 @@ from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
+from chia.rpc.util import create_error_response
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
@@ -230,10 +231,9 @@ class WebSocketServer:
                         decoded["data"] = {}
                     response, sockets_to_use = await self.handle_message(ws, decoded)
                 except Exception as e:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Error while handling message: {tb}")
-                    error = {"success": False, "error": f"{e}"}
-                    response = format_response(decoded, error)
+                    response_dict = create_error_response(exception=e)
+                    self.log.error(f"Error while handling message: {response_dict['traceback']}")
+                    response = format_response(decoded, response_dict)
                     sockets_to_use = []
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
@@ -438,6 +438,7 @@ class WebSocketServer:
                 check_keys(self.root_path)
                 self.run_check_keys_on_unlock = False
             except Exception as e:
+                # TODO: create_error_response
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
 
@@ -454,6 +455,7 @@ class WebSocketServer:
         try:
             success = Keychain.master_passphrase_is_valid(key, force_reload=True)
         except Exception as e:
+            # TODO: create_error_response
             tb = traceback.format_exc()
             self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
             error = "validation exception"
@@ -502,6 +504,7 @@ class WebSocketServer:
             # Inform the GUI of keyring status changes
             self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
         except Exception as e:
+            # TODO: create_error_response
             tb = traceback.format_exc()
             self.log.error(f"Legacy keyring migration failed: {e} {tb}")
             error = f"keyring migration failed: {e}"
@@ -532,6 +535,7 @@ class WebSocketServer:
         if not Keychain.passphrase_meets_requirements(new_passphrase):
             return {"success": False, "error": "passphrase doesn't satisfy requirements"}
 
+        # TODO: create_error_response
         try:
             assert new_passphrase is not None  # mypy, I love you
             Keychain.set_master_passphrase(
@@ -568,6 +572,7 @@ class WebSocketServer:
         if type(current_passphrase) is not str:
             return {"success": False, "error": "missing current_passphrase"}
 
+        # TODO: create_error_response
         try:
             Keychain.remove_master_passphrase(current_passphrase)
         except KeyringCurrentPassphraseIsInvalid:
@@ -593,6 +598,7 @@ class WebSocketServer:
 
         Keychain.handle_migration_completed()
 
+        # TODO: create_error_response
         try:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
@@ -1067,6 +1073,7 @@ class WebSocketServer:
 
             return {"success": True}
         except Exception as e:
+            # TODO: create_error_response
             log.error(f"Error during killing the plot process: {e}")
             config["state"] = PlotState.FINISHED
             config["error"] = str(e)
@@ -1104,6 +1111,7 @@ class WebSocketServer:
         if already_running:
             success = True
         elif error is None:
+            # TODO: create_error_response
             try:
                 exe_command = service_command
                 if testing is True:
