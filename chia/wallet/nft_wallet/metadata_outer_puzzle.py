@@ -35,6 +35,7 @@ class MetadataOuterPuzzle:
     _asset_id: Any
     _construct: Any
     _solve: Any
+    _get_inner_puzzle: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_metadata_layer_puzzle(puzzle)

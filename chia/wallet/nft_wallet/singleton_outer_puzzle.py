@@ -22,6 +22,7 @@ class SingletonOuterPuzzle:
     _asset_id: Any
     _construct: Any
     _solve: Any
+    _get_inner_puzzle: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_singleton_puzzle(puzzle)
