@@ -99,7 +99,7 @@ jobs:
             matrix: '3.8'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -110,7 +110,7 @@ jobs:
           path: coverage_reports
 
       - name: Set up ${{ matrix.python.name }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python.action }}
 
