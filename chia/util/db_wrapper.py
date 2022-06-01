@@ -142,3 +142,25 @@ class DBWrapper2:
             finally:
                 del self._in_use[task]
                 self._read_connections.put_nowait(c)
+
+    @contextlib.asynccontextmanager
+    async def write_transaction(self) -> AsyncIterator[None]:
+        """Create a write transaction without yielding a connection.
+
+        This allows code that does not directly need a connection to explicitly
+        indicate such while still batching multiple calls to other DB using functions
+        within a transaction."""
+
+        async with self.write_db() as _:
+            yield
+
+    @contextlib.asynccontextmanager
+    async def read_transaction(self) -> AsyncIterator[None]:
+        """Create a read transaction without yielding a connection.
+
+        This allows code that does not directly need a connection to explicitly
+        indicate such while still batching multiple calls to other DB using functions
+        within a transaction."""
+
+        async with self.read_db() as _:
+            yield
