@@ -1,1 +1,0 @@
-can't compile ("sha256tree" (c (f "SINGLETON_STRUCT") (c "new_owner" (r (r "SINGLETON_STRUCT"))))), unknown operator
