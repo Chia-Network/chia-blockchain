@@ -211,7 +211,6 @@ def create_ownership_layer_transfer_solution(
     new_pubkey: G1Element,
     conditions: List[Any] = [],
 ) -> Program:
-    log.debug(f"Creating a transfer solution with: {new_did=} {new_did_inner_hash=} {trade_prices_list=} {new_pubkey=}")
     puzhash = STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()
     condition_list = [
         [
