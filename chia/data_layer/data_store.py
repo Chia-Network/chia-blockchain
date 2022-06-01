@@ -1062,29 +1062,6 @@ class DataStore:
             writer.write(len(to_write).to_bytes(4, byteorder="big"))
             writer.write(to_write)
 
-    async def insert_batch_for_generation(
-        self,
-        batch: List[Tuple[NodeType, str, str]],
-        tree_id: bytes32,
-        root_hash: bytes32,
-        generation: int,
-        *,
-        lock: bool = True,
-    ) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
-            for node_type, value1, value2 in batch:
-                if node_type == NodeType.INTERNAL:
-                    left = bytes32.from_hexstr(value1)
-                    right = bytes32.from_hexstr(value2)
-                    await self._insert_internal_node(left, right)
-                    insert_ancestors_cache.append((left, right, tree_id))
-                if node_type == NodeType.TERMINAL:
-                    await self._insert_terminal_node(bytes.fromhex(value1), bytes.fromhex(value2))
-            await self._insert_root(tree_id, root_hash, Status.COMMITTED, generation)
-            for left_hash, right_hash, tree_id in insert_ancestors_cache:
-                await self._insert_ancestor_table(left_hash, right_hash, tree_id, generation)
-
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             servers_ip = json.dumps(subscription.ip)
@@ -1119,14 +1096,6 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
-                {"tree_id": tree_id.hex()},
-            )
-            await self.db.execute(
-                "DELETE FROM ancestors WHERE tree_id == :tree_id",
-                {"tree_id": tree_id.hex()},
-            )
-            await self.db.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id",
                 {"tree_id": tree_id.hex()},
             )
 
