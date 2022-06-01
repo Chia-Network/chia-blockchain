@@ -1303,9 +1303,7 @@ class WalletNode:
 
         return True
 
-    async def validate_block_inclusion(
-        self, block: HeaderBlock, peer_request_cache: PeerRequestCache
-    ) -> bool:
+    async def validate_block_inclusion(self, block: HeaderBlock, peer_request_cache: PeerRequestCache) -> bool:
         assert self.wallet_state_manager is not None
         assert self.server is not None
         if self.wallet_state_manager.blockchain.contains_height(block.height):
@@ -1346,10 +1344,12 @@ class WalletNode:
             for idx, ses in enumerate(weight_proof.sub_epochs):
                 if idx == len(weight_proof.sub_epochs) - 1:
                     break
-                next_ses_height = (idx+1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[idx+1].num_blocks_overflow
+                next_ses_height = (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
+                    idx + 1
+                ].num_blocks_overflow
                 # start_ses_hash
                 if ses_start_height <= start_height < next_ses_height:
-                    inserted = weight_proof.sub_epochs[idx + 1]
+                    inserted = weight_proof.sub_epochs[idx]
                     if ses_start_height < end_height < next_ses_height:
                         end = next_ses_height
                         break
@@ -1357,7 +1357,9 @@ class WalletNode:
                         if idx > len(weight_proof.sub_epochs) - 3:
                             break
                         # else add extra ses as request start <-> end spans two ses
-                        end = (idx+2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[idx+2].num_blocks_overflow
+                        end = (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
+                            idx + 2
+                        ].num_blocks_overflow
                         break
                 ses_start_height = next_ses_height
 
