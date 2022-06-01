@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   configure:
-    name: Configure test matrix
+    name: Configure matrix
     runs-on: ubuntu-latest
 
     steps:
