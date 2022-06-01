@@ -1123,6 +1123,10 @@ class DataStore:
                 {"tree_id": tree_id.hex()},
             )
             await self.db.execute(
+                "DELETE FROM ancestors WHERE tree_id == :tree_id",
+                {"tree_id": tree_id.hex()},
+            )
+            await self.db.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id",
                 {"tree_id": tree_id.hex()},
             )
