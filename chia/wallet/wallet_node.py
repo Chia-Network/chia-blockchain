@@ -812,6 +812,8 @@ class WalletNode:
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
         assert self.wallet_state_manager is not None
         assert self.server is not None
+        for coin in request.items:
+            self.log.info(f"request coin: {coin.coin.name()}{coin}")
 
         async with self.wallet_state_manager.lock:
             await self.receive_state_from_peer(
