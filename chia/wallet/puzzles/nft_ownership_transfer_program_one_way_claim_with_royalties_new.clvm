@@ -16,8 +16,6 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
-  (defconstant NEW_OWNER -10)
-  (defconstant MAGIC_AGGSIG -25)
   (defconstant TEN_THOUSAND 10000)
 
   (defun sha256tree1
