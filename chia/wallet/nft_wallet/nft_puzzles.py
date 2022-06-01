@@ -184,7 +184,7 @@ def create_ownership_layer_puzzle(
     percentage: uint16,
     royalty_puzzle_hash: Optional[bytes32] = None,
 ) -> Program:
-    log.debug(f"Creating ownership layer puzzle with {nft_id=} {did_id=} {percentage=} {p2_puzzle=}")
+    log.debug(f"Creating ownership layer puzzle with {nft_id} {did_id} {percentage} {p2_puzzle}")
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
@@ -211,7 +211,7 @@ def create_ownership_layer_transfer_solution(
     new_pubkey: G1Element,
     conditions: List[Any] = [],
 ) -> Program:
-    log.debug(f"Creating a transfer solution with: {new_did=} {new_did_inner_hash=} {trade_prices_list=} {new_pubkey=}")
+    log.debug(f"Creating a transfer solution with: {new_did} {new_did_inner_hash} {trade_prices_list} {new_pubkey}")
     puzhash = STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()
     condition_list = [
         [
@@ -229,7 +229,7 @@ def create_ownership_layer_transfer_solution(
             1,
         ]
     )
-    log.debug("Generated transfer solution: %s", disassemble(solution))
+    log.debug("Generated transfer solution: %s", solution)
     return solution
 
 
@@ -241,7 +241,6 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program
     metadata = unft.metadata
     puzhash: Optional[bytes32] = None
     for condition in conditions:
-        log.debug("Checking solution condition: %s", disassemble(condition))
         if condition.list_len() < 2:
             # invalid condition
             continue
@@ -263,7 +262,7 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program
 
 
 def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:
-    log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
+    log.debug("Generating NFT puzzle with ownership support: %s", solution)
     conditions = solution.at("frfr").as_iter()
     for change_did_condition in conditions:
         if change_did_condition.first().as_int() == -10:
