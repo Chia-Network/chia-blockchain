@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 import pytest
@@ -143,6 +143,28 @@ def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[st
 
     with pytest.raises(error):
         dataclass_from_dict(test_class, input_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class TestFromJsonDictDefaultValues(Streamable):
+    a: uint64 = uint64(1)
+    b: str = "default"
+    c: List[uint64] = field(default_factory=list)
+
+
+@pytest.mark.parametrize(
+    "input_dict, output_dict",
+    [
+        [{}, {"a": 1, "b": "default", "c": []}],
+        [{"a": 2}, {"a": 2, "b": "default", "c": []}],
+        [{"b": "not_default"}, {"a": 1, "b": "not_default", "c": []}],
+        [{"c": [1, 2]}, {"a": 1, "b": "default", "c": [1, 2]}],
+        [{"a": 2, "b": "not_default", "c": [1, 2]}, {"a": 2, "b": "not_default", "c": [1, 2]}],
+    ],
+)
+def test_from_json_dict_default_values(input_dict: Dict[str, object], output_dict: Dict[str, object]) -> None:
+    assert TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict() == output_dict
 
 
 def test_basic_list() -> None:
