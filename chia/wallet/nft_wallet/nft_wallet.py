@@ -426,7 +426,6 @@ class NFTWallet:
         if record:
             puzzle_hashes_to_sign.append(record.puzzle_hash)
         eve_spend_bundle = await self.sign(eve_spend_bundle, puzzle_hashes_to_sign)
-        eve_spend_bundle.debug()
         bundles_to_agg.append(eve_spend_bundle)
         full_spend = SpendBundle.aggregate(bundles_to_agg)
         nft_record = TransactionRecord(
@@ -515,7 +514,6 @@ class NFTWallet:
         )
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         spend_bundle = await self.sign(spend_bundle, puzzle_hashes_to_sign)
-        spend_bundle.debug()
         full_spend = SpendBundle.aggregate([spend_bundle] + additional_bundles)
         self.log.debug("Memos are: %r", list(compute_memos(full_spend).items()))
         nft_record = TransactionRecord(

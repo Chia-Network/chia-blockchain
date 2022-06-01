@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 from typing import Any
@@ -18,14 +17,11 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
-
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("fsevents").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.plotting").setLevel(logging.INFO)  # Too much logging on debug level
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
@@ -591,7 +587,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     metadata = Program.to(
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+            ("h", bytes.fromhex("D4584AD463139FA8C0D9F68F4B59F185")),
         ]
     )
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
@@ -609,7 +605,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
 
     metadata = Program.to(
         [
-            ("u", ["https://www.test.net/logo.svg"]),
+            ("u", ["https://url1"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F181"),
         ]
     )
@@ -625,3 +621,15 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await time_out_assert(10, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
+    # check if we uncurry well
+    last_nft_coin = nft_wallet_0.nft_wallet_info.my_nft_coins[-1]
+    unft = uncurry_nft.UncurriedNFT.uncurry(last_nft_coin.full_puzzle)
+    assert unft.data_uris == ["https://url1"]
+    assert unft.data_hash.atom == b"0xD4584AD463139FA8C0D9F68F4B59F181"
+    assert unft.owner_did == nft_wallet_0.nft_wallet_info.did_id
+    assert unft.owner_pubkey is not None
+
+    first_nft_coin = nft_wallet_0.nft_wallet_info.my_nft_coins[0]
+    unft = uncurry_nft.UncurriedNFT.uncurry(first_nft_coin.full_puzzle)
+    assert unft.data_uris == ["https://www.chia.net/img/branding/chia-logo.svg"]
+    assert unft.data_hash.atom == bytes.fromhex("D4584AD463139FA8C0D9F68F4B59F185")
