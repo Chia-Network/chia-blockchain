@@ -1446,8 +1446,8 @@ class WalletRpcApi:
                         break
             except Exception:
                 log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
+            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
             if update_condition is not None:
-                uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
                 metadata: Program = uncurried_nft.metadata
                 metadata = nft_puzzles.update_metadata(metadata, update_condition)
                 # Note: This is not the actual unspent NFT full puzzle.
@@ -1459,7 +1459,18 @@ class WalletRpcApi:
                     uncurried_nft.metadata_updater_hash,
                     uncurried_nft.inner_puzzle,
                 )
-            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(NFTCoinInfo(coin_state.coin, None, full_puzzle))
+            # Get launcher coin
+            launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+                [uncurried_nft.singleton_launcher_id], peer=peer
+            )
+            if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
+                return {
+                    "success": False,
+                    "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
+                }
+            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
+                NFTCoinInfo(coin_state.coin, None, full_puzzle, launcher_coin[0].spent_height)
+            )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:

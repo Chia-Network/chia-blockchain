@@ -64,10 +64,14 @@ class UncurriedNFT:
 
     p2_puzzle: Program
     """p2 puzzle of the owner, either for ownership layer or standard"""
+
     # ownership layer fields
     owner_did: Optional[bytes32]
     """Owner's DID"""
+
     owner_pubkey: Optional[G1Element]
+    """Owner's Pubkey in the P2 puzzle"""
+
     nft_inner_puzzle_hash: Optional[bytes32]
     """Puzzle hash of the ownership layer inner puzzle """
 
@@ -175,7 +179,6 @@ class UncurriedNFT:
             series_number=series_number,
             series_total=series_total,
             inner_puzzle=inner_puzzle,
-            # TODO: Set/Remove following fields after NFT1 implemented
             owner_did=current_did,
             owner_pubkey=pubkey,
             transfer_program=transfer_program,
