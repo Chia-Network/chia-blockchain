@@ -100,12 +100,6 @@ for path in test_paths:
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 
-    run = {
-        "macos": "macos" not in conf["os_skip"],
-        "ubuntu": "ubuntu" not in conf["os_skip"],
-        "windows": "windows" not in conf["os_skip"] and not conf["install_timelord"],
-    }
-
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
         "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
@@ -115,7 +109,6 @@ for path in test_paths:
         "install_timelord": conf["install_timelord"],
         "test_files": paths_for_cli,
         "name": ".".join(path.relative_to(root_path).with_suffix("").parts),
-        "run": run,
     }
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
