@@ -342,7 +342,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
 )
 async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool) -> None:
     num_batches = 10
-    num_ops_per_batch = 200 if use_optimized else 20
+    num_ops_per_batch = 100 if use_optimized else 20
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
