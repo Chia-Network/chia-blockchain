@@ -274,7 +274,7 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:
     # trade_list_price = change_did_condition.at("rrf").as_python()
     # new_did_inner_hash = change_did_condition.at("rrrrf").atom
     new_pub_key = G1Element.from_bytes(change_did_condition.at("rrrf").atom)
-    log.debug(f"Found NFT puzzle details: {new_did_id.hex()=} ")
+    log.debug(f"Found NFT puzzle details: {new_did_id.hex()} ")
     inner_puzzle = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
         new_did_id,
