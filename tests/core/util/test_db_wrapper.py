@@ -1,12 +1,21 @@
 import asyncio
 import contextlib
-from typing import List
+from typing import AsyncContextManager, Callable, List
 
 import aiosqlite
 import pytest
 
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
+
 from chia.util.db_wrapper import DBWrapper2
 from tests.util.db_connection import DBConnection
+
+TransactionManagerCallable = Callable[[DBWrapper2], AsyncContextManager[None]]
+
+
+class TestException(Exception):
+    pass
 
 
 async def increment_counter(db_wrapper: DBWrapper2) -> None:
@@ -46,6 +55,12 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     row = await cursor.fetchone()
     assert row
     return int(row[0])
+
+
+@pytest.fixture(name="transaction_manager", params=[DBWrapper2.read_transaction, DBWrapper2.write_transaction])
+def transaction_manager_fixture(request: SubRequest) -> TransactionManagerCallable:
+    # ignore related to https://github.com/pytest-dev/pytest/issues/8763
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.mark.asyncio
@@ -224,3 +239,59 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
     assert values[0] == 1
     assert values[-1] == 2
     assert len(values) == concurrent_task_count
+
+
+@pytest.mark.asyncio
+async def test_read_and_write_transaction_yields_none(transaction_manager: TransactionManagerCallable) -> None:
+    async with DBConnection(2) as db_wrapper:
+        async with transaction_manager(db_wrapper) as value:
+            assert value is None
+
+
+@pytest.mark.asyncio
+async def test_write_transaction_reverts() -> None:
+    values = []
+    async with DBConnection(2) as db_wrapper:
+        await setup_table(db_wrapper)
+
+        with pytest.raises(TestException):
+            async with db_wrapper.write_transaction():
+                async with db_wrapper.write_db() as connection:
+                    await connection.execute("UPDATE counter SET value = 37")
+
+                async with connection.execute("SELECT value FROM counter") as cursor:
+                    values.append(await get_value(cursor))
+
+                raise TestException()
+
+        async with connection.execute("SELECT value FROM counter") as cursor:
+            values.append(await get_value(cursor))
+
+    assert values == [37, 0]
+
+
+@pytest.mark.asyncio
+async def test_read_and_write_transaction_ignores_other_changes() -> None:
+    values = []
+    async with DBConnection(2) as db_wrapper:
+        await setup_table(db_wrapper)
+
+        async def write_37() -> None:
+            async with db_wrapper.write_db() as connection:
+                await connection.execute("UPDATE counter SET value = 37")
+
+            async with connection.execute("SELECT value FROM counter") as cursor:
+                assert await get_value(cursor) == 37
+
+        async with db_wrapper.read_transaction():
+            async with db_wrapper.read_db() as connection:
+                async with connection.execute("SELECT value FROM counter") as cursor:
+                    values.append(await get_value(cursor))
+
+            await asyncio.create_task(write_37())
+
+            async with db_wrapper.read_db() as connection:
+                async with connection.execute("SELECT value FROM counter") as cursor:
+                    values.append(await get_value(cursor))
+
+    assert values == [0, 0]
