@@ -197,6 +197,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
       const { error, data: response } = await transferNFT({
         walletId: nft.walletId,
         nftCoinId: nft.nftCoinId,
+        launcherId: nft.launcherId,
         targetAddress: destination,
       });
       const success = response?.success ?? false;

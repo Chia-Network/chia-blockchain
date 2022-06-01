@@ -1876,6 +1876,11 @@ export const walletApi = apiWithTag.injectEndpoints({
           service: NFT,
           endpoint: () => walletApi.endpoints.getNFTs,
         },
+        {
+          command: 'onNFTCoinTransferred',
+          service: NFT,
+          endpoint: () => walletApi.endpoints.getNFTs,
+        },
       ]),
     }),
 
@@ -1923,6 +1928,7 @@ export const walletApi = apiWithTag.injectEndpoints({
       {
         walletId: number;
         nftCoinId: string;
+        launcherId: string;
         targetAddress: string;
       }
     >({
@@ -1931,8 +1937,8 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: NFT,
         args: [walletId, nftCoinId, targetAddress],
       }),
-      invalidatesTags: (result, _error, { walletId }) =>
-        result ? [{ type: 'NFTInfo', id: walletId }] : [],
+      invalidatesTags: (result, _error, { launcherId }) =>
+        result ? [{ type: 'NFTInfo', id: launcherId }] : [],
     }),
 
     receiveNFT: build.mutation<

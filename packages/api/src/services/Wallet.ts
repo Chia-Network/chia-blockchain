@@ -445,4 +445,18 @@ export default class Wallet extends Service {
   ) {
     return this.onStateChanged('nft_coin_removed', callback);
   }
+
+  onNFTCoinTransferred(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'nft_coin_transferred';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
+  ) {
+    return this.onStateChanged('nft_coin_transferred', callback);
+  }
 }

@@ -10,6 +10,7 @@ type NFTInfo = {
   metadataHash: string;
   licenseUris: string[];
   licenseHash: string;
+  pendingTransaction: number;
   seriesNumber: number;
   seriesTotal: number;
   chainInfo: string;
