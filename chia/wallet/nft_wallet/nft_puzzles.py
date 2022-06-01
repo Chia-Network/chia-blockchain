@@ -185,7 +185,6 @@ def create_ownership_layer_puzzle(
     percentage: uint16,
     royalty_puzzle_hash: Optional[bytes32] = None,
 ) -> Program:
-    log.debug(f"Creating ownership layer puzzle with {nft_id=} {did_id=} {percentage=} {p2_puzzle=}")
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
