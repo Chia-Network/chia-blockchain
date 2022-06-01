@@ -4,11 +4,12 @@ import asyncio
 import cProfile
 import logging
 import os
+import shutil
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, List
+from typing import Callable, Iterator, List, Optional
 
 import aiosqlite
 import click
@@ -62,6 +63,9 @@ class FakeServer:
     async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
         pass
 
+    def set_received_message_callback(self, callback: Callable):
+        pass
+
 
 class FakePeer:
     def get_peer_logging(self) -> PeerInfo:
@@ -80,6 +84,7 @@ async def run_sync_test(
     keep_up: bool,
     db_sync: str,
     node_profiler: bool,
+    start_at_checkpoint: Optional[str],
 ) -> None:
 
     logger = logging.getLogger()
@@ -98,6 +103,9 @@ async def run_sync_test(
     with tempfile.TemporaryDirectory() as root_dir:
 
         root_path = Path(root_dir)
+        if start_at_checkpoint is not None:
+            shutil.copytree(Path(start_at_checkpoint) / ".", root_path, dirs_exist_ok=True)
+
         chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
 
@@ -117,20 +125,27 @@ async def run_sync_test(
         )
 
         try:
-            await full_node._start()
             full_node.set_server(FakeServer())  # type: ignore[arg-type]
+            await full_node._start()
+
+            peak = full_node.blockchain.get_peak()
+            if peak is not None:
+                height = int(peak.height)
+            else:
+                height = 0
 
             peer: ws.WSChiaConnection = FakePeer()  # type: ignore[assignment]
 
             print()
             counter = 0
-            height = 0
-            monotonic = 0
+            monotonic = height
             prev_hash = None
             async with aiosqlite.connect(file) as in_db:
                 await in_db.execute("pragma query_only")
                 rows = await in_db.execute(
-                    "SELECT header_hash, height, block FROM full_blocks WHERE in_main_chain=1 ORDER BY height"
+                    "SELECT header_hash, height, block FROM full_blocks "
+                    "WHERE height >= ? AND in_main_chain=1 ORDER BY height",
+                    (height,),
                 )
 
                 block_batch = []
@@ -141,7 +156,7 @@ async def run_sync_test(
                 worst_batch_time_per_block = None
                 async for r in rows:
                     batch_start_time = time.monotonic()
-                    with enable_profiler(profile, counter):
+                    with enable_profiler(profile, height):
                         block = FullBlock.from_bytes(zstd.decompress(r[2]))
                         block_batch.append(block)
 
@@ -233,6 +248,13 @@ def main() -> None:
     default=False,
     help="pass blocks to the full node as if we're staying synced, rather than syncing",
 )
+@click.option(
+    "--start-at-checkpoint",
+    type=click.Path(),
+    required=False,
+    default=None,
+    help="start test from this specified checkpoint state",
+)
 def run(
     file: Path,
     db_version: int,
@@ -242,13 +264,24 @@ def run(
     keep_up: bool,
     db_sync: str,
     node_profiler: bool,
+    start_at_checkpoint: Optional[str],
 ) -> None:
     """
     The FILE parameter should point to an existing blockchain database file (in v2 format)
     """
     print(f"PID: {os.getpid()}")
     asyncio.run(
-        run_sync_test(Path(file), db_version, profile, single_thread, test_constants, keep_up, db_sync, node_profiler)
+        run_sync_test(
+            Path(file),
+            db_version,
+            profile,
+            single_thread,
+            test_constants,
+            keep_up,
+            db_sync,
+            node_profiler,
+            start_at_checkpoint,
+        )
     )
 
 
@@ -262,6 +295,82 @@ def analyze() -> None:
         output = input_file.replace(".profile", ".png")
         print(f"{input_file}")
         check_call(f"gprof2dot -f pstats {quote(input_file)} | dot -T png >{quote(output)}", shell=True)
+
+
+@main.command("create-checkpoint", short_help="sync the full node up to specified height and save its state")
+@click.argument("file", type=click.Path(), required=True)
+@click.argument("out-file", type=click.Path(), required=True)
+@click.option("--height", type=int, required=True, help="Sync node up to this height")
+def create_checkpoint(file: Path, out_file: Path, height: int) -> None:
+    """
+    The FILE parameter should point to an existing blockchain database file (in v2 format)
+    """
+    asyncio.run(run_sync_checkpoint(Path(file), Path(out_file), height))
+
+
+async def run_sync_checkpoint(
+    file: Path,
+    root_path: Path,
+    max_height: int,
+) -> None:
+
+    root_path.mkdir(parents=True, exist_ok=True)
+
+    chia_init(root_path, should_check_keys=False, v1_db=False)
+    config = load_config(root_path, "config.yaml")
+
+    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    config["full_node"]["db_sync"] = "off"
+    full_node = FullNode(
+        config["full_node"],
+        root_path=root_path,
+        consensus_constants=constants,
+    )
+
+    try:
+        full_node.set_server(FakeServer())  # type: ignore[arg-type]
+        await full_node._start()
+
+        peer: ws.WSChiaConnection = FakePeer()  # type: ignore[assignment]
+
+        print()
+        height = 0
+        async with aiosqlite.connect(file) as in_db:
+            await in_db.execute("pragma query_only")
+            rows = await in_db.execute(
+                "SELECT block FROM full_blocks WHERE in_main_chain=1 AND height < ? ORDER BY height", (max_height,)
+            )
+
+            block_batch = []
+
+            async for r in rows:
+                block = FullBlock.from_bytes(zstd.decompress(r[0]))
+                block_batch.append(block)
+
+                if len(block_batch) < 32:
+                    continue
+
+                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                end_height = block_batch[-1].height
+                full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
+
+                if not success:
+                    raise RuntimeError("failed to ingest block batch")
+
+                height += len(block_batch)
+                print(f"\rheight {height}    ", end="")
+                block_batch = []
+
+            if len(block_batch) > 0:
+                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                if not success:
+                    raise RuntimeError("failed to ingest block batch")
+
+    finally:
+        print("closing full node")
+        full_node._close()
+        await full_node._await_closed()
 
 
 main.add_command(run)
