@@ -908,17 +908,16 @@ class DataStore:
                     continue
                 new_entry: bool = False
                 for child_hash in (node.left_hash, node.right_hash):
-                    # Check we've either had a different parent for this hash, or it's the first time we see it.
-                    # If both childs have the current parent, there's no information to update into the ancestors table
                     old_parent = await self._get_one_ancestor(child_hash, tree_id)
                     if old_parent is None or old_parent.hash != node_hash:
                         new_entry = True
                         break
 
+                # If no information changed, don't add to the ancestor table in order to save space.
                 if new_entry:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
-                    queue.append(node.left_hash)
-                    queue.append(node.right_hash)
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
 
     async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
