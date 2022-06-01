@@ -29,9 +29,6 @@ on:
       runs-on:
         required: true
         type: string
-      runs:
-        required: true
-        type: boolean
 
 
 concurrency:
@@ -42,7 +39,6 @@ concurrency:
 jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
-    if: inputs.run
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
@@ -84,6 +80,14 @@ jobs:
               matrix: macos
             python:
               matrix: '3.8'
+          - os:
+              matrix: windows
+            configuration:
+              install_timelord: true
+          - os:
+              matrix: windows
+            configuration:
+              name: core.full_node
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
