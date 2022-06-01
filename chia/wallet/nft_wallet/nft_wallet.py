@@ -846,6 +846,7 @@ class NFTWallet:
 
             nft_layer_solution = Program.to([innersol, coin_info.coin.amount])
 
+            assert coin_info.lineage_proof is not None
             singleton_solution = Program.to(
                 [coin_info.lineage_proof.to_program(), coin_info.coin.amount, nft_layer_solution]
             )

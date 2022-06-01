@@ -108,6 +108,7 @@ def test_update_metadata() -> None:
         ).get_tree_hash()
     )
 
+
 def test_transfer_program() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
@@ -168,6 +169,7 @@ def test_transfer_program() -> None:
     assert res.rest().first().as_int() == 0
 
     # TODO: check for the announcement.  This is broken currently.
+
 
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
