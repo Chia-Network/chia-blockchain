@@ -642,3 +642,103 @@ async def execute_with_wallet(
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()
     await wallet_client.await_closed()
+
+
+async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    amount = args["amount"]
+    fee = args["fee"]
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_did_wallet(amount, fee, name)
+        wallet_id = response["wallet_id"]
+        my_did = response["my_did"]
+        print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
+        print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+    except Exception as e:
+        print(f"Failed to create DID wallet: {e}")
+
+
+async def did_set_wallet_name(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    name = args["name"]
+    try:
+        await wallet_client.did_set_wallet_name(wallet_id, name)
+        print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
+    except Exception as e:
+        print(f"Failed to set DID wallet name: {e}")
+
+
+async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        response = await wallet_client.create_new_nft_wallet(None)
+        wallet_id = response["wallet_id"]
+        print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to create NFT wallet: {e}")
+
+
+async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        artist_address = args["artist_address"]
+        hash = args["hash"]
+        uris = args["uris"]
+        fee = args["fee"]
+        response = await wallet_client.mint_nft(wallet_id, artist_address, hash, uris, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to mint NFT: {e}")
+
+
+async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        uri = args["uri"]
+        fee = args["fee"]
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"URI added successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to add URI to NFT: {e}")
+
+
+async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        artist_address = args["artist_address"]
+        fee = args["fee"]
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, artist_address, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to transfer NFT: {e}")
+
+
+async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    try:
+        response = await wallet_client.list_nfts(wallet_id)
+        nft_list = response["nft_list"]
+        if len(nft_list) > 0:
+            from chia.wallet.nft_wallet.nft_info import NFTInfo
+
+            indent: str = "   "
+
+            for n in nft_list:
+                nft = NFTInfo.from_json_dict(n)
+                print()
+                print(f"{'Launcher coin ID:'.ljust(23)} {nft.launcher_id}")
+                print(f"{'Current NFT coin ID:'.ljust(23)} {nft.nft_coin_id}")
+                print(f"{'NFT content hash:'.ljust(23)} {nft.data_hash}")
+                print(f"{'Current NFT version:'.ljust(23)} {nft.version}")
+                print()
+                print("URIs:")
+                for uri in nft.data_uris:
+                    print(f"{indent}{uri}")
+        else:
+            print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
