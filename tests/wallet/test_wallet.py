@@ -86,7 +86,7 @@ class TestWalletSimulator:
                 return False
             return True
 
-        await time_out_assert(10, check_tx_are_pool_farm_rewards, True)
+        await time_out_assert(20, check_tx_are_pool_farm_rewards, True)
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.parametrize(
@@ -126,7 +126,7 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         tx = await wallet.generate_signed_transaction(
@@ -627,7 +627,7 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds

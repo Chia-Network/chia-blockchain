@@ -38,8 +38,8 @@ from chia.util.streamable import dataclass_from_dict
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
-from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
@@ -54,14 +54,9 @@ async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) 
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt, tmp_path):
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment(bt, harvester_farmer_simulation, self_hostname):
-    harvester_service, farmer_service = harvester_farmer_simulation
+async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
+    harvesters, farmer_service = farmer_one_harvester
+    harvester_service = harvesters[0]
 
     def stop_node_cb():
         pass
@@ -431,7 +426,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
         ),
         (FarmerRpcClient.get_harvester_plots_invalid, [], None, True, 13),
         (FarmerRpcClient.get_harvester_plots_invalid, ["invalid_0"], None, False, 6),
-        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1/"], None, False, 2),
+        (FarmerRpcClient.get_harvester_plots_invalid, ["inval", "lid_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_keys_missing, [], None, True, 3),
         (FarmerRpcClient.get_harvester_plots_keys_missing, ["keys_missing_1"], None, False, 2),
         (FarmerRpcClient.get_harvester_plots_duplicates, [], None, True, 7),
@@ -569,14 +564,14 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     test_path = Path(root_path / "test_path").resolve()
 
     # The test_path doesn't exist at this point
-    with pytest.raises(ValueError, match=f"Path doesn't exist: {test_path}"):
+    with assert_rpc_error(f"Path doesn't exist: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Create a file at the test_path and make sure it detects this
     with open(test_path, "w"):
         pass
 
-    with pytest.raises(ValueError, match=f"Path is not a directory: {test_path}"):
+    with assert_rpc_error(f"Path is not a directory: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Drop the file, make it a directory and make sure it gets added properly.
@@ -585,7 +580,7 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
 
     await assert_added(test_path)
 
-    with pytest.raises(ValueError, match=f"Path already added: {test_path}"):
+    with assert_rpc_error(f"Path already added: {test_path}"):
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Add another one and make sure they are still both there.
