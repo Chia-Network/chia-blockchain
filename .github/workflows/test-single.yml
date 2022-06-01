@@ -39,6 +39,7 @@ concurrency:
 jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    if: ${{ matrix.configuration.run[matrix.os.matrix] }}
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
