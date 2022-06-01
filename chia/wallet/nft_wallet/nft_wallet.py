@@ -32,7 +32,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, match_puzzle
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -40,7 +40,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
 from chia.wallet.trading.offer import Offer
