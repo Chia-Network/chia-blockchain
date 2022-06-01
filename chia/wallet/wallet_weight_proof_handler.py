@@ -180,10 +180,10 @@ class WalletWeightProofHandler:
 
         overflow = 0
         count = 0
-        for idx, new_ses in enumerate(new_wp.sub_epochs):
+        for new_ses in new_wp.sub_epochs:
             if new_ses.reward_chain_hash in old_ses:
                 count += 1
-                overflow += new_ses.num_blocks_overflow
+                overflow = new_ses.num_blocks_overflow
                 continue
             else:
                 break
