@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-06-01 00:56\n"
+"PO-Revision-Date: 2022-06-01 02:11\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -2065,11 +2065,11 @@ msgstr "请输入一个正确的公钥"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:45
 msgid "Please enter a valid token name"
-msgstr ""
+msgstr "请输入有效的令牌名称"
 
 #: src/components/offers/OfferEditor.tsx:112
 msgid "Please enter an amount for each row"
-msgstr ""
+msgstr "请为每行输入一个金额"
 
 #: src/components/WalletRenameDialog.tsx:49
 msgid "Please enter valid wallet name"
