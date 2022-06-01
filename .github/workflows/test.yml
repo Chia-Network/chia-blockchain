@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Find test paths
+      - name: Generate matrix configuration
         id: configure
         run: |
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
