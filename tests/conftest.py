@@ -612,7 +612,6 @@ async def setup_node_rpc(
 ) -> AsyncGenerator[Tuple[FullNodeRpcClient, FullNodeRpcApi], None]:
     full_node_api = setup_one_node[0][0]
     server_1 = full_node_api.full_node.server
-    test_rpc_port = find_available_listen_port()
 
     def stop_node_cb():
         full_node_api._close()
@@ -635,7 +634,7 @@ async def setup_node_rpc(
 
     client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
     await validate_get_routes(client, full_node_rpc_api)
-    state = await client.get_blockchain_state()
+    await client.get_blockchain_state()
 
     yield client, full_node_rpc_api
 
