@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-31 09:21\n"
+"PO-Revision-Date: 2022-06-01 00:00\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -802,7 +802,7 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:102
 msgid "Custom"
-msgstr ""
+msgstr "自定义"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
@@ -810,7 +810,7 @@ msgstr ""
 
 #: src/constants/WalletName.ts:29
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID钱包"
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
@@ -878,7 +878,7 @@ msgstr "删除未确认的交易"
 
 #: src/components/offers/OfferViewer.tsx:504
 msgid "Details"
-msgstr ""
+msgstr "详情"
 
 #: src/electron/main.tsx:315
 #~ msgid "Developer"
