@@ -180,7 +180,7 @@ jobs:
           Write-Output "VIRTUAL_ENV=$env_path" >> $Env:GITHUB_ENV
 
       - name: Install timelord
-        if: matrix.configuration.install_timelord
+        if: matrix.configuration.install_timelord[matrix.os.matrix]
         run: |
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
