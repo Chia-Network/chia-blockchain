@@ -53,11 +53,6 @@ BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 
 
-@pytest.fixture(scope="module")
-def wallet_a(bt):
-    return bt.get_pool_wallet_tool()
-
-
 log = logging.getLogger(__name__)
 
 

@@ -260,3 +260,11 @@ class FullNodeRpcClient(RpcClient):
                 }
         except Exception:
             return None
+
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Optional[Dict]:
+        response = await self.fetch("get_fee_estimate", {})
+        return response
