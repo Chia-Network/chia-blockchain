@@ -42,7 +42,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from chia.wallet.puzzles.singleton_top_layer import match_singleton_puzzle
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
@@ -845,8 +845,7 @@ class NFTWallet:
                 )
 
             nft_layer_solution = Program.to([innersol, coin_info.coin.amount])
-
-            assert coin_info.lineage_proof is not None
+            assert isinstance(coin_info.lineage_proof, LineageProof)
             singleton_solution = Program.to(
                 [coin_info.lineage_proof.to_program(), coin_info.coin.amount, nft_layer_solution]
             )
