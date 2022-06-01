@@ -193,7 +193,7 @@ jobs:
 
       - name: Process coverage data
         run: |
-          coverage combine --rcfile=.coveragerc .coverage.*
+          coverage combine --rcfile=.coveragerc
           coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage_reports
           cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
