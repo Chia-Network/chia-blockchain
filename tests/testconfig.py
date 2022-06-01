@@ -5,8 +5,6 @@ from typing import List, Union
 from typing_extensions import Literal
 
 Oses = Literal["macos", "ubuntu", "windows"]
-# Github actions template config.
-oses: List[Oses] = ["macos", "ubuntu", "windows"]
 
 # Defaults are conservative.
 parallel: Union[bool, int, Literal["auto"]] = False

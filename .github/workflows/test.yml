@@ -1,0 +1,142 @@
+name: test
+
+on:
+  push:
+    branches:
+    - long_lived/**
+    - main
+    - release/**
+    tags:
+    - '**'
+  pull_request:
+    branches:
+    - '**'
+  workflow_dispatch: null
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    name: Configure test matrix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Find test paths
+        id: configure
+        run: |
+          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          cat matrix.json
+          echo ::set-output name=configuration::$(cat matrix.json)
+          echo ::set-output name=steps::$(cat some.json)
+
+    outputs:
+      configuration: ${{ steps.configure.outputs.configuration }}
+
+  macos:
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      emoji: 🍎
+      matrix: macos
+      name: macOS
+      file_name: macos
+      concurrency_name: macos
+      configuration: ${{ needs.configure.outputs.configuration }}
+      runs-on: macos-latest
+  ubuntu:
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      emoji: 🐧
+      matrix: ubuntu
+      name: Ubuntu
+      file_name: ubuntu
+      concurrency_name: ubuntu
+      configuration: ${{ needs.configure.outputs.configuration }}
+      runs-on: ubuntu-latest
+  windows:
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      emoji: 🪟
+      matrix: windows
+      name: Windows
+      file_name: windows
+      concurrency_name: windows
+      configuration: ${{ needs.configure.outputs.configuration }}
+      runs-on: windows-latest
+
+  coverage:
+    name: Coverage - ${{ matrix.os.name }} ${{ matrix.python.name }}
+    runs-on: ${{ matrix.os.runs-on }}
+    needs:
+      - macos
+      - ubuntu
+      - windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - emoji: 🐧
+            matrix: ubuntu
+            name: Ubuntu
+            runs-on: ubuntu-latest
+        python:
+          - name: '3.8'
+            action: '3.8'
+            apt: '3.8'
+            install_sh: '3.8'
+            matrix: '3.8'
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Download Coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+          path: coverage_reports
+
+      - name: Set up ${{ matrix.python.name }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install coverage diff-cover
+
+      - name: Coverage Processing
+        if: always()
+        run: |
+          coverage combine coverage_reports/
+          coverage xml -o coverage.xml
+          mkdir all_coverage_report
+          cp .coverage "all_coverage_report/.coverage.all"
+          cp coverage.xml "all_coverage_report/coverage.all.xml"
+
+      - name: Coverage report
+        run: |
+          coverage report --rcfile=.coveragerc --fail-under=35 --ignore-errors --show-missing
+          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
+
+      - name: Upload Coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: all_coverage_report/*
+          if-no-files-found: error
