@@ -103,7 +103,7 @@ for path in test_paths:
     run = {
         "macos": "macos" not in conf["os_skip"],
         "ubuntu": "ubuntu" not in conf["os_skip"],
-        "windows": "windows" not in conf["od_skip"] and not conf["install_timelord"],
+        "windows": "windows" not in conf["os_skip"] and not conf["install_timelord"],
     }
 
     for_matrix = {
