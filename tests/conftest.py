@@ -7,23 +7,28 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 from pathlib import Path
-from typing import AsyncIterator, List, Tuple
-from chia.server.start_service import Service
+from typing import AsyncIterator, List, Tuple, AsyncGenerator
 
-# Set spawn after stdlib imports, but before other imports
+multiprocessing.set_start_method("spawn")  # Set spawn after stdlib imports, but before other imports
+
+from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.rpc_server import start_rpc_server
+from chia.server.start_service import Service
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.core.node_height import node_height_at_least
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
+    setup_farmer_multi_harvester,
     setup_full_system,
     setup_daemon,
     setup_n_nodes,
@@ -33,15 +38,13 @@ from tests.setup_nodes import (
 )
 from tests.simulation.test_simulation import test_constants_modified
 from tests.time_out_assert import time_out_assert
+from tests.util.keyring import TempKeyring
+from chia.util.keyring_wrapper import KeyringWrapper
+from tests.util.rpc import validate_get_routes
+from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
-multiprocessing.set_start_method("spawn")
 
-from pathlib import Path
-from chia.util.keyring_wrapper import KeyringWrapper
-from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
-from tests.util.keyring import TempKeyring
-from tests.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(scope="session")
@@ -224,6 +227,12 @@ async def wallet_node(self_hostname):
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes(db_version, self_hostname):
     async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def setup_one_node():
+    async for _ in setup_simulators_and_wallets(1, 0, {}):
         yield _
 
 
@@ -595,3 +604,46 @@ async def setup_sim():
     sim_client = SimClient(sim)
     await sim.farm_block()
     return sim, sim_client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def setup_node_rpc(
+    setup_one_node, self_hostname, bt
+) -> AsyncGenerator[Tuple[FullNodeRpcClient, FullNodeRpcApi], None]:
+    full_node_api = setup_one_node[0][0]
+    server_1 = full_node_api.full_node.server
+    test_rpc_port = find_available_listen_port()
+
+    def stop_node_cb():
+        full_node_api._close()
+        server_1.close_all()
+
+    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+
+    daemon_port = bt.config["daemon_port"]
+
+    rpc_cleanup, test_rpc_port = await start_rpc_server(
+        full_node_rpc_api,
+        self_hostname,
+        daemon_port,
+        uint16(0),
+        stop_node_cb,
+        bt.root_path,
+        bt.config,
+        connect_to_daemon=False,
+    )
+
+    client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, bt.config)
+    await validate_get_routes(client, full_node_rpc_api)
+    state = await client.get_blockchain_state()
+
+    yield client, full_node_rpc_api
+
+    client.close()
+    await client.await_closed()
+    await rpc_cleanup()
+
+
+@pytest.fixture(scope="module")
+def wallet_a(bt):
+    return bt.get_pool_wallet_tool()
