@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Ubuntu wallet-nft_wallet Test
+name: Windows wallet-nft_wallet Test
 
 on:
   push:
@@ -17,12 +17,12 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Ubuntu wallet-nft_wallet Test
+    name: Windows wallet-nft_wallet Test
     if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -31,19 +31,23 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10']
-        os: [ubuntu-latest]
+        os: [windows-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-nft_wallet
 
     steps:
+    - name: Configure git
+      run: |
+        git config --global core.autocrlf false
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Setup Python environment
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -95,23 +99,23 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh -d
+        ./Install.ps1 -d
 
 # Omitted installing Timelord
 
     - name: Test wallet-nft_wallet code with pytest
       run: |
-        . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_wallet.py
+        ./venv/Scripts/activate.ps1
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_wallet.py
 
     - name: Process coverage data
       run: |
-        venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
-        venv/bin/coverage xml --rcfile=.coveragerc -o coverage.xml
+        venv/Scripts/coverage combine --rcfile=.coveragerc
+        venv/Scripts/coverage xml --rcfile=.coveragerc -o coverage.xml
         mkdir coverage_reports
         cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
         cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
-        venv/bin/coverage report --rcfile=.coveragerc --show-missing
+        venv/Scripts/coverage report --rcfile=.coveragerc --show-missing
 
     - name: Publish coverage
       uses: actions/upload-artifact@v3
@@ -119,8 +123,6 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
-
-# Omitted resource usage check
 
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
