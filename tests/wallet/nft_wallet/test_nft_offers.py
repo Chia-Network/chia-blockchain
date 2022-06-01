@@ -11,6 +11,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -168,10 +169,9 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
     driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {nft_to_buy_asset_id: nft_to_buy_info}
 
-    xch_offered = 100
+    xch_offered = 1000
     maker_fee = uint64(10)
     offer_xch_for_nft = {wallet_maker.id(): -xch_offered, nft_to_buy_asset_id: 1}
-
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
         offer_xch_for_nft, driver_dict_to_buy, fee=maker_fee
     )
@@ -394,6 +394,12 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
         [
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+            ("mu", []),
+            ("mh", hexstr_to_bytes("00")),
+            ("lu", []),
+            ("lh", hexstr_to_bytes("00")),
+            ("sn", uint64(1)),
+            ("st", uint64(1)),
         ]
     )
 
@@ -413,8 +419,9 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     # Maker updates metadata:
     nft_to_update = coins_maker[0]
     url_to_add = "https://new_url.com"
+    key = "mu"
     fee_for_update = uint64(10)
-    update_sb = await nft_wallet_maker.update_metadata(nft_to_update, url_to_add, fee=fee_for_update)
+    update_sb = await nft_wallet_maker.update_metadata(nft_to_update, key, url_to_add, fee=fee_for_update)
     mempool_mgr = full_node_api.full_node.mempool_manager
     await time_out_assert_not_none(5, mempool_mgr.get_spendbundle, update_sb.name())  # type: ignore
 
@@ -425,6 +432,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     updated_nft = coins_maker[0]
     updated_nft_info = match_puzzle(updated_nft.full_puzzle)
+
     assert url_to_add in updated_nft_info.also().info["metadata"]  # type: ignore
 
     # MAKE FIRST TRADE: 1 NFT for 100 xch

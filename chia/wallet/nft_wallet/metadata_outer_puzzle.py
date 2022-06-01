@@ -22,7 +22,7 @@ def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Union[List[Any],
 
 
 def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_puzzle: Program) -> Program:
-    return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)  # type: ignore
+    return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, updater_hash, inner_puzzle)
 
 
 def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Program:
