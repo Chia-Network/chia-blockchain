@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.policy.fee_estimator_zero import FeeEstimatorZero
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -62,6 +64,8 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Fee estimation
+            "/get_fee_estimate": self.get_fee_estimate,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
@@ -712,3 +716,32 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def get_fee_estimate(self, request: Dict) -> Optional[Dict]:
+        if "spend_bundle" in request and "cost" in request:
+            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
+        if "spend_bundle" not in request and "cost" not in request:
+            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any([t < 0 for t in request["target_times"]]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+        cost = 0
+        if "spend_bundle" in request:
+            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_name = spend_bundle.name()
+            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, None, spend_name
+            )
+            if npc_result.error is not None:
+                raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
+            cost = npc_result.cost
+        if "cost" in request:
+            cost = uint64(request["cost"])
+
+        target_times = request["target_times"]
+        estimator = FeeEstimatorZero(config=None)
+        estimates = [estimator.estimate_fee(time, cost) for time in target_times]
+
+        return {"estimates": estimates, "target_times": target_times}
