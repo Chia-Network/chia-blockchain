@@ -271,7 +271,7 @@ async def test_write_transaction_reverts() -> None:
 
 
 @pytest.mark.asyncio
-async def test_read_and_write_transaction_ignores_other_changes() -> None:
+async def test_read_transaction_ignores_other_changes() -> None:
     values = []
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
