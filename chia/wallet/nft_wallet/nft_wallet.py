@@ -200,7 +200,6 @@ class NFTWallet:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
-        breakpoint()
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
@@ -431,7 +430,6 @@ class NFTWallet:
             disassemble(fullsol),
         )
         list_of_coinspends = [CoinSpend(eve_coin, eve_fullpuz, fullsol)]
-        breakpoint()
         eve_spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         puzzle_hashes_to_sign = [p2_inner_puzzle.get_tree_hash()]
         if record:
