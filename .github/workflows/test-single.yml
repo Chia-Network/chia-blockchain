@@ -123,7 +123,7 @@ jobs:
 
       - name: Cache npm (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v3
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -136,7 +136,7 @@ jobs:
           echo "::set-output name=dir::$(pip cache dir)"
 
       - name: Cache pip
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v3
         with:
           # Note that new runners may break this https://github.com/actions/cache/issues/292
           path: ${{ steps.pip-cache.outputs.dir }}
@@ -146,7 +146,7 @@ jobs:
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: test-blocks-plots
         with:
           path: |
