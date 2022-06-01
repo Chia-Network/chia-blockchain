@@ -107,6 +107,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
         uncurried_nft.owner_did,
+        uncurried_nft.owner_pubkey,
         uncurried_nft.trade_price_percentage,
         data_uris,
         uncurried_nft.data_hash.as_python(),
@@ -118,6 +119,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uint64(uncurried_nft.series_number.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
+        nft_coin_info.mint_height,
         nft_coin_info.pending_transaction,
     )
     return nft_info

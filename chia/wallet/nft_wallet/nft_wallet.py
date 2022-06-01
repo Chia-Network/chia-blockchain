@@ -202,7 +202,7 @@ class NFTWallet:
         self.log.info(
             f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}"
         )
-        singleton_id = bytes32(uncurried_nft.singleton_launcher_id)
+        singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
         metadata, p2_puzzle_hash = get_metadata_and_phs(
             uncurried_nft, puzzle, Program.from_bytes(bytes(coin_spend.solution))
@@ -249,6 +249,15 @@ class NFTWallet:
                 break
         else:
             raise ValueError(f"Couldn't regenerate puzzle reveal for NFT: {coin_spend}")
+        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [singleton_id]
+        )
+        assert (
+            launcher_coin_states is not None
+            and len(launcher_coin_states) == 1
+            and launcher_coin_states[0].spent_height is not None
+        )
+        mint_height: uint32 = launcher_coin_states[0].spent_height
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
         # all is well, lets add NFT to our local db
         parent_coin = None
@@ -263,20 +272,24 @@ class NFTWallet:
             parent_coin = coin_record.coin
         if parent_coin is None:
             raise ValueError("Error finding parent")
+
         await self.add_coin(
             child_coin,
             child_puzzle,
             LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, parent_coin.amount),
+            mint_height,
             in_transaction=in_transaction,
         )
 
-    async def add_coin(self, coin: Coin, puzzle: Program, lineage_proof: LineageProof, in_transaction: bool) -> None:
+    async def add_coin(
+        self, coin: Coin, puzzle: Program, lineage_proof: LineageProof, mint_height: uint32, in_transaction: bool
+    ) -> None:
         my_nft_coins = self.nft_wallet_info.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
 
-        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, puzzle))
+        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, puzzle, mint_height))
         new_nft_wallet_info = NFTWalletInfo(
             my_nft_coins,
             self.nft_wallet_info.did_id,
@@ -621,7 +634,13 @@ class NFTWallet:
             raise ValueError(f"NFT coin {coin_id} doesn't exist.")
 
         my_nft_coins.append(
-            NFTCoinInfo(target_nft.coin, target_nft.lineage_proof, target_nft.full_puzzle, pending_transaction)
+            NFTCoinInfo(
+                target_nft.coin,
+                target_nft.lineage_proof,
+                target_nft.full_puzzle,
+                target_nft.mint_height,
+                pending_transaction,
+            )
         )
         new_nft_wallet_info = NFTWalletInfo(
             my_nft_coins,
