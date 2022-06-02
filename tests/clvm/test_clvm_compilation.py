@@ -41,10 +41,10 @@ wallet_program_files = set(
         "chia/wallet/puzzles/settlement_payments.clvm",
         "chia/wallet/puzzles/genesis_by_coin_id.clvm",
         "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
-        "chia/wallet/puzzles/nft_transfer_program.clvm",
         "chia/wallet/puzzles/nft_ownership_transfer_program.clvm",
         "chia/wallet/puzzles/nft_metadata_updater_updateable.clvm",
         "chia/wallet/puzzles/nft_metadata_updater_default.clvm",
+        "chia/wallet/puzzles/nft_metadata_updater_updateable.clvm",
         "chia/wallet/puzzles/nft_state_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_layer.clvm",
         "chia/wallet/puzzles/nft_graftroot_transfer.clvm",
@@ -163,7 +163,7 @@ class TestClvmCompilation(TestCase):
             self.assertEqual(
                 s.get_tree_hash().hex(),
                 existing_sha,
-                msg=f"Checked-in shatree hash file does not match shatree hash of loaded SerializedProgram: {prog_path}",  # noqa
+                msg=f"Checked-in shatree hash file does not match hash of loaded SerializedProgram: {prog_path}",
             )
             self.assertEqual(
                 p.get_tree_hash().hex(),

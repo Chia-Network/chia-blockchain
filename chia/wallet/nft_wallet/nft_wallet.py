@@ -198,7 +198,7 @@ class NFTWallet:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
+        delegated_puz_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
@@ -216,27 +216,17 @@ class NFTWallet:
         if derivation_record:
             p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         else:
+            # we don't have this puzhash in puzzle store
+            # either it's not our coin or it's a NFT with a DID
             p2_puzzle = None
-        parent_coin = None
-        coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-        if coin_record is None:
-            coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-                [coin_name]
-            )
-            if coin_states is not None:
-                parent_coin = coin_states[0].coin
-        if coin_record is not None:
-            parent_coin = coin_record.coin
-        if parent_coin is None:
-            raise ValueError("Error finding parent")
         self.log.debug("Got back updated metadata: %s", metadata)
-        if p2_puzzle is None and uncurried_nft.owner_did is None:
+        if p2_puzzle is None and uncurried_nft.owner_pubkey is None:
             self.log.info("Received a puzzle hash that is not ours, returning")
             # we transferred it to another wallet, remove the coin from our wallet
             await self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
             return
         if p2_puzzle is None:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, solution)
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, delegated_puz_solution)
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -259,8 +249,22 @@ class NFTWallet:
             if new_coin.puzzle_hash == child_puzzle.get_tree_hash():
                 child_coin = new_coin
                 break
-
+        else:
+            raise ValueError(f"Couldn't regenerate puzzle reveal for NFT: {coin_spend}")
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
+        # all is well, lets add NFT to our local db
+        parent_coin = None
+        coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
+        if coin_record is None:
+            coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+                [coin_name]
+            )
+            if coin_states is not None:
+                parent_coin = coin_states[0].coin
+        if coin_record is not None:
+            parent_coin = coin_record.coin
+        if parent_coin is None:
+            raise ValueError("Error finding parent")
         await self.add_coin(
             child_coin,
             child_puzzle,
@@ -434,7 +438,6 @@ class NFTWallet:
         if record:
             puzzle_hashes_to_sign.append(record.puzzle_hash)
         eve_spend_bundle = await self.sign(eve_spend_bundle, puzzle_hashes_to_sign)
-        eve_spend_bundle.debug()
         bundles_to_agg.append(eve_spend_bundle)
         full_spend = SpendBundle.aggregate(bundles_to_agg)
         nft_record = TransactionRecord(
@@ -458,10 +461,21 @@ class NFTWallet:
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
 
-    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes) -> SpendBundle:
+    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: List[bytes32] = None) -> SpendBundle:
+        if puzzle_hashes is None:
+            puzzle_hashes = []
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
             pks = {}
+            if not puzzle_hashes:
+                try:
+                    uncurried_nft = UncurriedNFT.uncurry(spend.puzzle_reveal.to_program())
+                except ValueError:
+                    # not an NFT
+                    pass
+                else:
+                    self.log.debug("Found a NFT state layer to sign")
+                    puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
             for ph in puzzle_hashes:
                 keys = await self.wallet_state_manager.get_keys(ph)
                 assert keys
@@ -523,7 +537,6 @@ class NFTWallet:
         )
         spend_bundle = SpendBundle(list_of_coinspends, AugSchemeMPL.aggregate([]))
         spend_bundle = await self.sign(spend_bundle, puzzle_hashes_to_sign)
-        spend_bundle.debug()
         full_spend = SpendBundle.aggregate([spend_bundle] + additional_bundles)
         self.log.debug("Memos are: %r", list(compute_memos(full_spend).items()))
         nft_record = TransactionRecord(
