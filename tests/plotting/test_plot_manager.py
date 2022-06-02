@@ -413,7 +413,9 @@ async def test_invalid_plots(environment):
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 1
     assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
     # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
-    env.refresh_tester.plot_manager.refresh_parameter.retry_invalid_seconds = 0
+    env.refresh_tester.plot_manager.refresh_parameter = replace(
+        env.refresh_tester.plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+    )
     move(retry_test_plot_save, retry_test_plot)
     expected_result.loaded = env.dir_1.plot_info_list()[0:1]
     expected_result.processed = len(env.dir_1)
