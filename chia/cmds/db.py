@@ -2,6 +2,7 @@ from pathlib import Path
 import click
 from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
+from chia.cmds.db_backup_func import db_backup_func
 
 
 @click.group("db", short_help="Manage the blockchain database")
@@ -58,6 +59,19 @@ def db_validate_cmd(ctx: click.Context, validate_blocks: bool, **kwargs) -> None
             Path(ctx.obj["root_path"]),
             None if in_db_path is None else Path(in_db_path),
             validate_blocks=validate_blocks,
+        )
+    except RuntimeError as e:
+        print(f"FAILED: {e}")
+
+@db_cmd.command("backup", short_help="backup the blockchain database using VACUUM INTO command")
+@click.option("--backup_file", default=None, type=click.Path(), help="Specifies the backup file") 
+@click.pass_context
+def db_backup_cmd(ctx: click.Context, **kwargs) -> None:
+    try:
+        backup_db_file = kwargs.get("backup_file")
+        db_backup_func(
+            Path(ctx.obj["root_path"]),
+            Path(backup_db_file),
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")
