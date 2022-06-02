@@ -9,7 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 from chia.util.paginator import Paginator
-from chia.util.streamable import Streamable, dataclass_from_dict, streamable
+from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -231,7 +231,7 @@ class FarmerRpcApi:
 
     async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
-        request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+        request = PlotInfoRequestData.from_json_dict(request_dict)
         plot_list = list(self.service.get_receiver(request.node_id).plots().values())
         # Apply filter
         plot_list = [
@@ -248,7 +248,7 @@ class FarmerRpcApi:
     def paginated_plot_path_request(
         self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
     ) -> Dict[str, object]:
-        request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+        request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
         receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
         # Apply filter
