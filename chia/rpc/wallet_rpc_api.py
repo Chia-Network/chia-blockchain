@@ -23,7 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint16
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -1363,7 +1363,7 @@ class WalletRpcApi:
             ]
         )
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, fee=fee)
+        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, uint16(request.get("royalty_percentage", 0)), request.get("use_did", True), fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
@@ -1421,6 +1421,8 @@ class WalletRpcApi:
                         odd_coin += 1
                     if odd_coin > 1:
                         return {"success": False, "error": "This is not a singleton, multiple children coins found."}
+                if odd_coin == 0:
+                    return {"success": False, "error": "Cannot find child coin, please wait then retry."}
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
