@@ -487,9 +487,16 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-@click.option("-aa", "--artist-address", help="Artist's backpayment address", type=str, required=True)
+@click.option("-ra", "--royalty-address", help="Royalty address", type=str)
+@click.option("-ta", "--target-address", help="Target address", type=str)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
+@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default="00")
+@click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
+@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="00")
+@click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
+@click.option("-st", "--series-total", help="NFT series total number", type=int, default=1, show_default=True)
+@click.option("-sn", "--series-number", help="NFT seriese number", type=int, default=1, show_default=True)
 @click.option(
     "-m",
     "--fee",
@@ -503,19 +510,43 @@ def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    artist_address: str,
+    royalty_address: Optional[str],
+    target_address: Optional[str],
     hash: str,
     uris: str,
+    metadata_hash: Optional[str],
+    metadata_uris: Optional[str],
+    license_hash: Optional[str],
+    license_uris: Optional[str],
+    series_total: Optional[int],
+    series_number: Optional[int],
     fee: str,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, mint_nft
 
+    if metadata_uris is None:
+        metadata_uris_list = []
+    else:
+        metadata_uris_list = [mu.strip() for mu in metadata_uris.split(",")]
+
+    if license_uris is None:
+        license_uris_list = []
+    else:
+        license_uris_list = [lu.strip() for lu in license_uris.split(",")]
+
     extra_params = {
         "wallet_id": id,
-        "artist_address": artist_address,
+        "royalty_address": royalty_address,
+        "target_address": target_address,
         "hash": hash,
         "uris": [u.strip() for u in uris.split(",")],
+        "metadata_hash": metadata_hash,
+        "metadata_uris": metadata_uris_list,
+        "license_hash": license_hash,
+        "license_uris": license_uris_list,
+        "series_total": series_total,
+        "series_number": series_number,
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
