@@ -56,50 +56,11 @@ export default function NFTCard(props: NFTCardProps) {
     navigate(`/dashboard/nfts/${nft.$nftId}`);
   }
 
-  const transferPending = nft.pendingTransaction === 1;
+  const transferPending = nft.pendingTransaction;
   const unavailableActions = transferPending
     ? NFTContextualActionTypes.CreateOffer | NFTContextualActionTypes.Transfer
     : NFTContextualActionTypes.None;
   const actions = availableActions & ~unavailableActions;
-
-  const overlay = transferPending ? (
-    <>
-      <Box
-        sx={{
-          boxSizing: 'border-box',
-          position: 'absolute',
-          top: '0',
-          left: '0',
-          backgroundColor: 'rgba(255, 255, 255, 0.5)',
-          boxShadow: '0px 4px 4px rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(16px)',
-          height: '40px',
-          width: '100%',
-          zIndex: 'modal',
-        }}
-      ></Box>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '0',
-          right: '0',
-          height: '40px',
-          width: '100%',
-          zIndex: 'tooltip',
-        }}
-      >
-        <Flex
-          style={{ height: '100%' }}
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Typography variant="caption" color="rgba(0,0,0,1)">
-            <Trans>Pending Transfer</Trans>
-          </Typography>
-        </Flex>
-      </Box>
-    </>
-  ) : null;
 
   return (
     <Card>
@@ -110,7 +71,6 @@ export default function NFTCard(props: NFTCardProps) {
       ) : (
         <>
           <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
-            {overlay}
             <NFTPreview nft={nft} />
             <StyledCardContent>
               <Typography noWrap>

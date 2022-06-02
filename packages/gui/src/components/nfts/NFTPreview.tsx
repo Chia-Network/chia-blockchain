@@ -1,19 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { renderToString } from 'react-dom/server';
 import { Trans } from '@lingui/macro';
-import {
-  Box,
-} from '@mui/material';
+import { Box } from '@mui/material';
 import { Error, NotInterested } from '@mui/icons-material';
-import {
-  IconMessage,
-  Loading,
-  Flex,
-} from '@chia/core';
+import { IconMessage, Loading, Flex } from '@chia/core';
 import styled from 'styled-components';
 import useNFTHash from '../../hooks/useNFTHash';
 import { type NFTInfo } from '@chia/api';
 import isURL from 'validator/lib/isURL';
+import NFTStatusBar from './NFTStatusBar';
 
 const StyledCardPreview = styled(Box)`
   height: ${({ height }) => height};
@@ -30,7 +25,7 @@ const StyledIframe = styled('iframe')`
   pointer-events: none;
   width: 100%;
   height: 100%;
-  opacity: ${({ isVisible }) => isVisible ? 1 : 0};
+  opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
 `;
 
 export type NFTPreviewProps = {
@@ -43,9 +38,7 @@ export type NFTPreviewProps = {
 export default function NFTPreview(props: NFTPreviewProps) {
   const {
     nft,
-    nft: {
-      dataUris,
-    },
+    nft: { dataUris },
     height = '300px',
     width = '100%',
     fit = 'cover',
@@ -94,7 +87,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
       }
     `;
 
-    return renderToString((
+    return renderToString(
       <html>
         <head>
           <style dangerouslySetInnerHTML={{ __html: style }} />
@@ -102,9 +95,18 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <body>
           <img src={file} alt="Preview" width="100%" height="100%" />
         </body>
-      </html>
-    ));
+      </html>,
+    );
   }, [file]);
+
+  const [statusText, isStatusError] = useMemo(() => {
+    if (nft.pendingTransaction) {
+      return [<Trans>Pending Transfer</Trans>, false];
+    } else if (error?.message === 'Hash mismatch') {
+      return [<Trans>Image Hash Mismatch</Trans>, true];
+    }
+    return [undefined, false];
+  }, [nft, isValid, error]);
 
   function handleLoad() {
     setLoaded(true);
@@ -112,6 +114,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   return (
     <StyledCardPreview height={height} width={width}>
+      <NFTStatusBar statusText={statusText} showDropShadow={true} />
       {!hasFile ? (
         <IconMessage icon={<NotInterested fontSize="large" />}>
           <Trans>No file available</Trans>
@@ -124,18 +127,22 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <Loading center>
           <Trans>Loading preview...</Trans>
         </Loading>
-      ) : error ? (
+      ) : error && !isStatusError ? (
         <IconMessage icon={<Error fontSize="large" />}>
           {error.message}
-        </IconMessage>
-      ) :!isValid ? (
-        <IconMessage icon={<Error fontSize="large" />}>
-          <Trans>File hash mismatch</Trans>
         </IconMessage>
       ) : (
         <>
           {!loaded && (
-            <Flex position="absolute" left="0" top="0" bottom="0" right="0" justifyContent="center" alignItems="center">
+            <Flex
+              position="absolute"
+              left="0"
+              top="0"
+              bottom="0"
+              right="0"
+              justifyContent="center"
+              alignItems="center"
+            >
               <Loading center>
                 <Trans>Loading preview...</Trans>
               </Loading>

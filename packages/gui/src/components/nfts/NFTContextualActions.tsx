@@ -6,6 +6,7 @@ import type { NFTInfo } from '@chia/api';
 import {
   AlertDialog,
   DropdownActions,
+  useCurrencyCode,
   useOpenDialog,
   useOpenExternal,
 } from '@chia/core';
@@ -29,10 +30,11 @@ export enum NFTContextualActionTypes {
   None = 0,
   CreateOffer = 1 << 0, // 1
   Transfer = 1 << 1, // 2
-  OpenInBrowser = 1 << 2, // 4
-  CopyURL = 1 << 3, // 8
+  ViewOnExplorer = 1 << 2, // 4
+  OpenInBrowser = 1 << 3, // 8
+  CopyURL = 1 << 4, // 16
 
-  All = CreateOffer | Transfer | OpenInBrowser | CopyURL,
+  All = CreateOffer | Transfer | ViewOnExplorer | OpenInBrowser | CopyURL,
 }
 
 type NFTContextualActionProps = {
@@ -93,7 +95,7 @@ type NFTTransferContextualActionProps = NFTContextualActionProps;
 
 function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   const { onClose, selection } = props;
-  const openDialog = useOpenDialog();
+
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
 
@@ -231,6 +233,63 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
 }
 
 /* ========================================================================== */
+/*                          View on MintGarden Action                         */
+/* ========================================================================== */
+
+type NFTViewOnExplorerContextualActionProps = NFTContextualActionProps & {
+  title?: string | JSX.Element;
+  getURLForNFT?: (nft: NFTInfo, testnet: boolean) => string;
+};
+
+function NFTViewOnExplorerContextualAction(
+  props: NFTViewOnExplorerContextualActionProps,
+) {
+  const { onClose, selection, title, getURLForNFT } = props;
+  const testnet = useCurrencyCode() === 'TXCH';
+  const openExternal = useOpenExternal();
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled = !selectedNft;
+
+  function handleView() {
+    const url = getURLForNFT(selectedNft, testnet);
+    openExternal(url);
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleView();
+      }}
+      disabled={disabled}
+    >
+      <ListItemIcon>
+        <OpenInBrowser />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        {title}
+      </Typography>
+    </MenuItem>
+  );
+}
+
+/* ========================================================================== */
+
+function getMintGardenURL(nft: NFTInfo, testnet: boolean) {
+  const url = `https://${testnet ? 'testnet.' : ''}mintgarden.io/nfts/${
+    nft.$nftId
+  }`;
+  return url;
+}
+
+function getSpacescanURL(nft: NFTInfo, testnet: boolean) {
+  const url = `https://spacescan.io/${testnet ? 'txch10' : 'xch'}/nft/${
+    nft.$nftId
+  }`;
+  return url;
+}
+
+/* ========================================================================== */
 /*                             Contextual Actions                             */
 /* ========================================================================== */
 
@@ -252,11 +311,38 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
 
   const actions = useMemo(() => {
     const actionComponents = {
-      [NFTContextualActionTypes.CreateOffer]: NFTCreateOfferContextualAction,
-      [NFTContextualActionTypes.Transfer]: NFTTransferContextualAction,
-      [NFTContextualActionTypes.OpenInBrowser]:
-        NFTOpenInBrowserContextualAction,
-      [NFTContextualActionTypes.CopyURL]: NFTCopyURLContextualAction,
+      [NFTContextualActionTypes.CreateOffer]: {
+        action: NFTCreateOfferContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.Transfer]: {
+        action: NFTTransferContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.ViewOnExplorer]: [
+        {
+          action: NFTViewOnExplorerContextualAction,
+          props: {
+            title: <Trans>View on MintGarden</Trans>,
+            getURLForNFT: getMintGardenURL,
+          },
+        },
+        {
+          action: NFTViewOnExplorerContextualAction,
+          props: {
+            title: <Trans>View on Spacescan.io</Trans>,
+            getURLForNFT: getSpacescanURL,
+          },
+        },
+      ],
+      [NFTContextualActionTypes.OpenInBrowser]: {
+        action: NFTOpenInBrowserContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.CopyURL]: {
+        action: NFTCopyURLContextualAction,
+        props: {},
+      },
     };
 
     return Object.keys(NFTContextualActionTypes)
@@ -264,15 +350,16 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
       .filter(Number.isInteger)
       .filter((key) => actionComponents.hasOwnProperty(key))
       .filter((key) => availableActions & key)
-      .map((key) => actionComponents[key]);
+      .map((key) => actionComponents[key])
+      .flat();
   }, [availableActions]);
 
   return (
     <DropdownActions label={label} variant="outlined" {...rest}>
       {({ onClose }: DropdownActionsChildProps) => (
         <>
-          {actions.map((Action) => (
-            <Action onClose={onClose} selection={selection} />
+          {actions.map(({ action: Action, props: actionProps }) => (
+            <Action onClose={onClose} selection={selection} {...actionProps} />
           ))}
         </>
       )}
