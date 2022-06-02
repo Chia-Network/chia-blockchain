@@ -54,7 +54,7 @@ def make_a_new_solution() -> Tuple[bytes, Program]:
             my_amount,
         ]
     )
-    print(disassemble(solution))  # type: ignore
+    print(disassemble(solution))
     return destination, solution
 
 
@@ -92,12 +92,12 @@ def make_a_new_nft_puzzle(curried_ownership_layer: Program, metadata: Program) -
 def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
     result = puzzle.run(solution)
     for condition in result.as_iter():
-        print("Condition: %s" % disassemble(condition))  # type: ignore
+        print("Condition: %s" % disassemble(condition))
         code = int_from_bytes(condition.first().atom)
         if code == 51:
             if int_from_bytes(condition.rest().rest().first().atom) == 1:
                 # this is our new puzzle hash
-                print("Found new coin: %s" % disassemble(condition))  # type: ignore
+                print("Found new coin: %s" % disassemble(condition))
                 return bytes32(condition.rest().first().atom)
     raise ValueError("No create coin condition found")
 
