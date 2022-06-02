@@ -1,6 +1,6 @@
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
@@ -20,6 +20,7 @@ from chia.plotting.util import (
     remove_plot_directory,
 )
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
+from chia.util.ints import uint32
 from chia.util.path import mkdir
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
@@ -80,7 +81,9 @@ class PlotRefreshTester:
     def __init__(self, root_path: Path):
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
         # Set a very high refresh interval here to avoid unintentional refresh cycles
-        self.plot_manager.refresh_parameter.interval_seconds = 10000
+        self.plot_manager.refresh_parameter = replace(
+            self.plot_manager.refresh_parameter, interval_seconds=uint32(10000)
+        )
         # Set to the current time to avoid automated refresh after we start below.
         self.plot_manager.last_refresh_time = time.time()
         self.plot_manager.start_refreshing()
