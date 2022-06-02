@@ -42,7 +42,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_f
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTWalletInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.outer_puzzles import AssetType, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
@@ -326,7 +326,7 @@ class WalletStateManager:
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
-    async def update_wallet_puzzle_hashes(self, wallet_id):
+    async def update_wallet_puzzle_hashes(self, wallet_id, in_transaction=False):
         derivation_paths: List[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
@@ -353,7 +353,7 @@ class WalletStateManager:
                     False,
                 )
             )
-        await self.puzzle_store.add_derivation_paths(derivation_paths)
+        await self.puzzle_store.add_derivation_paths(derivation_paths, in_transaction=in_transaction)
 
     async def get_unused_derivation_record(
         self, wallet_id: uint32, in_transaction=False, hardened=False
@@ -1298,6 +1298,11 @@ class WalletStateManager:
             if wallet.type() == WalletType.CAT:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
+            elif wallet.type() == WalletType.NFT:
+                for nft_coin in wallet.nft_wallet_info.my_nft_coins:
+                    nft_info = match_puzzle(nft_coin.full_puzzle)
+                    if nft_info.info["launcher_id"] == "0x" + asset_id:  # type: ignore
+                        return wallet
         return None
 
     async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):
