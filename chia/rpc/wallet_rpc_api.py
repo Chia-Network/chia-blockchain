@@ -1363,7 +1363,14 @@ class WalletRpcApi:
             ]
         )
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, uint16(request.get("royalty_percentage", 0)), request.get("use_did", True), fee)
+        spend_bundle = await nft_wallet.generate_new_nft(
+            metadata,
+            royalty_puzhash,
+            target_puzhash,
+            uint16(request.get("royalty_percentage", 0)),
+            request.get("use_did", True),
+            fee,
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
