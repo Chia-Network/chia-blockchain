@@ -48,11 +48,24 @@ StreamFunctionType = Callable[[object, BinaryIO], None]
 ConvertFunctionType = Callable[[object], object]
 
 
+@dataclasses.dataclass(frozen=True)
+class Field:
+    name: str
+    type: Type[object]
+
+
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
-FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Dict[str, Type[object]]] = {}
+FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Tuple[Field, ...]] = {}
 STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[StreamFunctionType]] = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]] = {}
 CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionType]] = {}
+
+
+def create_fields_cache(cls: Type[object]) -> Tuple[Field, ...]:
+    hints = get_type_hints(cls)
+    fields = tuple(Field(field.name, hints.get(field.name, None)) for field in dataclasses.fields(cls))
+    assert all(field.type is not None for field in fields)
+    return fields
 
 
 def is_type_List(f_type: object) -> bool:
@@ -123,13 +136,8 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
         # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
         # functions only.
-        convert_funcs = []
-        hints = get_type_hints(klass)
-        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(klass)}
-
-        for _, f_type in fields.items():
-            convert_funcs.append(function_to_convert_one_item(f_type))
-
+        fields = create_fields_cache(klass)
+        convert_funcs = [function_to_convert_one_item(field.type) for field in fields]
         FIELDS_FOR_STREAMABLE_CLASS[klass] = fields
         CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass] = convert_funcs
     else:
@@ -137,7 +145,7 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
         convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
 
     for field, convert_func in zip(fields, convert_funcs):
-        object.__setattr__(obj, field, convert_func(item[field]))
+        object.__setattr__(obj, field.name, convert_func(item[field.name]))
     return obj
 
 
@@ -370,18 +378,14 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     stream_functions = []
     parse_functions = []
     convert_functions = []
-    try:
-        hints = get_type_hints(cls)
-        fields = {field.name: hints.get(field.name, field.type) for field in dataclasses.fields(cls)}
-    except Exception:
-        fields = {}
 
+    fields = create_fields_cache(cls)
     FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
 
-    for _, f_type in fields.items():
-        stream_functions.append(cls.function_to_stream_one_item(f_type))
-        parse_functions.append(cls.function_to_parse_one_item(f_type))
-        convert_functions.append(function_to_convert_one_item(f_type))
+    for field in fields:
+        stream_functions.append(cls.function_to_stream_one_item(field.type))
+        parse_functions.append(cls.function_to_parse_one_item(field.type))
+        convert_functions.append(function_to_convert_one_item(field.type))
 
     STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
     PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = parse_functions
@@ -481,17 +485,17 @@ class Streamable:
         try:
             fields = FIELDS_FOR_STREAMABLE_CLASS[type(self)]
         except Exception:
-            fields = {}
+            fields = ()
         data = self.__dict__
-        for (f_name, f_type) in fields.items():
-            if f_name not in data:
-                raise ValueError(f"Field {f_name} not present")
+        for field in fields:
+            if field.name not in data:
+                raise ValueError(f"Field {field.name} not present")
             try:
-                if not isinstance(data[f_name], f_type):
-                    object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
+                if not isinstance(data[field.name], field.type):
+                    object.__setattr__(self, field.name, self.post_init_parse(data[field.name], field.name, field.type))
             except TypeError:
                 # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
-                object.__setattr__(self, f_name, self.post_init_parse(data[f_name], f_name, f_type))
+                object.__setattr__(self, field.name, self.post_init_parse(data[field.name], field.name, field.type))
 
     @classmethod
     def function_to_parse_one_item(cls, f_type: Type[Any]) -> ParseFunctionType:
@@ -535,10 +539,10 @@ class Streamable:
     def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: _T_Streamable = object.__new__(cls)
-        fields: Iterator[str] = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
+        fields = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator[object] = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):
-            object.__setattr__(obj, field, value)
+            object.__setattr__(obj, field.name, value)
 
         # Use -1 as a sentinel value as it's not currently serializable
         if next(fields, -1) != -1:
@@ -583,11 +587,11 @@ class Streamable:
             fields = FIELDS_FOR_STREAMABLE_CLASS[self_type]
             functions = STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[self_type]
         except Exception:
-            fields = {}
+            fields = ()
             functions = []
 
         for field, stream_func in zip(fields, functions):
-            stream_func(getattr(self, field), f)
+            stream_func(getattr(self, field.name), f)
 
     def get_hash(self) -> bytes32:
         return bytes32(std_hash(bytes(self), skip_bytes_conversion=True))
