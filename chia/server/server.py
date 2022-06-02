@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import logging
 import ssl
 import time
@@ -28,6 +29,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost
@@ -267,13 +269,29 @@ class ChiaServer:
         # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            host="0.0.0.0",
+            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
-        self._port = self.runner.addresses[0][1]
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if self._port == 0:
+            global_config = load_config(self.root_path, "config.yaml")
+            prefer_ipv6 = global_config.get("prefer_ipv6", False)
+            self._port = self.runner.addresses[0][1]  # sets the default to handle some edge cases
+            for x in self.runner.addresses:
+                ip_addy = ipaddress.ip_address(x[0])
+                if ip_addy.version == 6 and prefer_ipv6:
+                    self._port = x[1]
+                    break
+                elif ip_addy.version == 4 and not prefer_ipv6:
+                    self._port = x[1]
+                    break
+
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
