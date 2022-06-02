@@ -2,7 +2,7 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.rpc_server import RpcApiProtocol
 
 
-async def validate_get_routes(client: RpcClient, api: RpcApiProtocol):
+async def validate_get_routes(client: RpcClient, api: RpcApiProtocol) -> None:
     routes_client = (await client.fetch("get_routes", {}))["routes"]
     assert len(routes_client) > 0
     routes_api = list(api.get_routes().keys())
