@@ -2,6 +2,7 @@ async def validate_get_routes(client, api):
     routes_client = (await client.fetch("get_routes", {}))["routes"]
     assert len(routes_client) > 0
     routes_api = list(api.get_routes().keys())
+    # TODO: avoid duplication of RpcServer.get_routes()
     routes_server = [
         "/get_connections",
         "/open_connection",
@@ -11,8 +12,6 @@ async def validate_get_routes(client, api):
         "/healthz",
     ]
     assert len(routes_api) > 0
-    for route in routes_api + routes_server:
-        assert route in routes_client
 
     all_server_routes = {*routes_api, *routes_server}
     all_client_routes = {*routes_client}
