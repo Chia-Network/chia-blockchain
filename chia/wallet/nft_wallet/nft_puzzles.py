@@ -5,7 +5,7 @@ from blspy import G1Element
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -115,7 +115,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         license_uris,
         uncurried_nft.license_hash.as_python(),
         uint64(uncurried_nft.series_total.as_int()),
-        uint64(uncurried_nft.series_total.as_int()),
+        uint64(uncurried_nft.series_number.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
         nft_coin_info.pending_transaction,
@@ -233,14 +233,16 @@ def create_ownership_layer_transfer_solution(
     return solution
 
 
-def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program, bytes32]:
-    if unft.owner_did:
-        conditions = solution.at("frfr").as_iter()
+def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
+    full_solution: Program = Program.from_bytes(bytes(solution))
+    delegated_puz_solution: Program = Program.from_bytes(bytes(solution)).rest().rest().first().first()
+    if delegated_puz_solution.rest().as_python() == b"":
+        conditions = puzzle.run(full_solution)
     else:
-        conditions = solution.rest().first().rest().as_iter()
+        conditions = delegated_puz_solution.rest().first().rest()
     metadata = unft.metadata
-    puzhash: Optional[bytes32] = None
-    for condition in conditions:
+    puzhash_for_derivation: Optional[bytes32] = None
+    for condition in conditions.as_iter():
         if condition.list_len() < 2:
             # invalid condition
             continue
@@ -252,13 +254,18 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: Program) -> Tuple[Program
             metadata = Program.to(metadata)
         elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
             # destination puzhash
-            if puzhash is not None:
+            if puzhash_for_derivation is not None:
                 # ignore duplicated create coin conditions
                 continue
-            puzhash = bytes32(condition.at("rrrff").atom)
-            log.debug("Got back puzhash from solution: %s", puzhash)
-    assert puzhash
-    return metadata, puzhash
+            puzhash = bytes32(condition.rest().first().atom)
+            memo = bytes32(condition.as_python()[-1][0])
+            if memo != puzhash:
+                puzhash_for_derivation = memo
+            else:
+                puzhash_for_derivation = puzhash
+            log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
+    assert puzhash_for_derivation
+    return metadata, puzhash_for_derivation
 
 
 def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:

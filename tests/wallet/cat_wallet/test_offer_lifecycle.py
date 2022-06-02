@@ -189,7 +189,7 @@ class TestOfferLifecycle:
                 ),
             }
 
-            driver_dict_as_infos: Dict[bytes32, Any] = {}
+            driver_dict_as_infos: Dict[str, Any] = {}
             for key, value in driver_dict.items():
                 driver_dict_as_infos[key.hex()] = value.info
 
@@ -210,23 +210,45 @@ class TestOfferLifecycle:
             assert not chia_offer.is_valid()
 
             # Create a RED Offer for XCH
+            red_coins_1 = red_coins[0:1]
+            red_coins_2 = red_coins[1:]
             red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 None: [
                     Payment(acs_ph, 300, [b"red memo"]),
-                    Payment(acs_ph, 400, [b"red memo"]),
+                    Payment(acs_ph, 350, [b"red memo"]),
                 ]
             }
 
             red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                red_requested_payments, red_coins
+                red_requested_payments, red_coins_1
             )
             red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments, driver_dict)
-            red_secured_bundle: SpendBundle = generate_secure_bundle(red_coins, red_announcements, 350, tail_str="red")
+            red_secured_bundle: SpendBundle = generate_secure_bundle(
+                red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red"
+            )
             red_offer = Offer(red_requested_payments, red_secured_bundle, driver_dict)
             assert not red_offer.is_valid()
 
+            red_requested_payments_2: Dict[Optional[bytes32], List[Payment]] = {
+                None: [
+                    Payment(acs_ph, 50, [b"red memo"]),
+                ]
+            }
+
+            red_requested_payments_2: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+                red_requested_payments_2, red_coins_2
+            )
+            red_announcements_2: List[Announcement] = Offer.calculate_announcements(
+                red_requested_payments_2, driver_dict
+            )
+            red_secured_bundle_2: SpendBundle = generate_secure_bundle(
+                red_coins_2, red_announcements_2, sum([c.amount for c in red_coins_2]), tail_str="red"
+            )
+            red_offer_2 = Offer(red_requested_payments_2, red_secured_bundle_2, driver_dict)
+            assert not red_offer_2.is_valid()
+
             # Test aggregation of offers
-            new_offer = Offer.aggregate([chia_offer, red_offer])
+            new_offer = Offer.aggregate([chia_offer, red_offer, red_offer_2])
             assert new_offer.get_offered_amounts() == {None: 1000, str_to_tail_hash("red"): 350}
             assert new_offer.get_requested_amounts() == {None: 700, str_to_tail_hash("red"): 300}
             assert new_offer.is_valid()
