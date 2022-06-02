@@ -208,7 +208,7 @@ class NFTWallet:
         )
         singleton_id = bytes32(uncurried_nft.singleton_launcher_id)
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, solution)
+        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, delegated_puz_solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         derivation_record: Optional[
             DerivationRecord
