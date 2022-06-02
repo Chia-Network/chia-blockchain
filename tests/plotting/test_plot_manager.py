@@ -41,7 +41,7 @@ class MockPlotInfo:
     prover: MockDiskProver
 
 
-class TestDirectory:
+class Directory:
     path: Path
     plots: List[Path]
 
@@ -131,28 +131,28 @@ class PlotRefreshTester:
 
 
 @dataclass
-class TestEnvironment:
+class Environment:
     root_path: Path
     refresh_tester: PlotRefreshTester
-    dir_1: TestDirectory
-    dir_2: TestDirectory
+    dir_1: Directory
+    dir_2: Directory
 
 
 @pytest.fixture(scope="function")
-def test_plot_environment(tmp_path, bt) -> Iterator[TestEnvironment]:
+def environment(tmp_path, bt) -> Iterator[Environment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
     plots: List[Path] = get_test_plots()
     assert len(plots) >= dir_1_count + dir_2_count
 
-    dir_1: TestDirectory = TestDirectory(tmp_path / "plots" / "1", plots[0:dir_1_count])
-    dir_2: TestDirectory = TestDirectory(tmp_path / "plots" / "2", plots[dir_1_count : dir_1_count + dir_2_count])
+    dir_1: Directory = Directory(tmp_path / "plots" / "1", plots[0:dir_1_count])
+    dir_2: Directory = Directory(tmp_path / "plots" / "2", plots[dir_1_count : dir_1_count + dir_2_count])
     create_default_chia_config(tmp_path)
 
     refresh_tester = PlotRefreshTester(tmp_path)
     refresh_tester.plot_manager.set_public_keys(bt.plot_manager.farmer_public_keys, bt.plot_manager.pool_public_keys)
 
-    yield TestEnvironment(tmp_path, refresh_tester, dir_1, dir_2)
+    yield Environment(tmp_path, refresh_tester, dir_1, dir_2)
 
     refresh_tester.plot_manager.stop_refreshing()
 
@@ -163,10 +163,10 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing(test_plot_environment):
-    env: TestEnvironment = test_plot_environment
+async def test_plot_refreshing(environment):
+    env: Environment = environment
     expected_result = PlotRefreshResult()
-    dir_duplicates: TestDirectory = TestDirectory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
+    dir_duplicates: Directory = Directory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
 
     async def run_test_case(
         *,
@@ -358,8 +358,8 @@ async def test_plot_refreshing(test_plot_environment):
 
 
 @pytest.mark.asyncio
-async def test_initial_refresh_flag(test_plot_environment: TestEnvironment) -> None:
-    env: TestEnvironment = test_plot_environment
+async def test_initial_refresh_flag(environment: Environment) -> None:
+    env: Environment = environment
     assert env.refresh_tester.plot_manager.initial_refresh()
     for _ in range(2):
         await env.refresh_tester.run(PlotRefreshResult())
@@ -369,8 +369,8 @@ async def test_initial_refresh_flag(test_plot_environment: TestEnvironment) -> N
 
 
 @pytest.mark.asyncio
-async def test_invalid_plots(test_plot_environment):
-    env: TestEnvironment = test_plot_environment
+async def test_invalid_plots(environment):
+    env: Environment = environment
     expected_result = PlotRefreshResult()
     # Test re-trying if processing a plot failed
     # First create a backup of the plot
@@ -420,12 +420,10 @@ async def test_invalid_plots(test_plot_environment):
 
 
 @pytest.mark.asyncio
-async def test_keys_missing(test_plot_environment: TestEnvironment) -> None:
-    env: TestEnvironment = test_plot_environment
+async def test_keys_missing(environment: Environment) -> None:
+    env: Environment = environment
     not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
-    dir_not_in_keychain: TestDirectory = TestDirectory(
-        env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots
-    )
+    dir_not_in_keychain: Directory = Directory(env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots)
     expected_result = PlotRefreshResult()
     # The plots in "not_in_keychain" directory have infinity g1 elements as farmer/pool key so they should be plots
     # with missing keys for now
@@ -458,8 +456,8 @@ async def test_keys_missing(test_plot_environment: TestEnvironment) -> None:
 
 
 @pytest.mark.asyncio
-async def test_plot_info_caching(test_plot_environment, bt):
-    env: TestEnvironment = test_plot_environment
+async def test_plot_info_caching(environment, bt):
+    env: Environment = environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))
     expected_result.loaded = env.dir_1.plot_info_list()
@@ -519,9 +517,9 @@ async def test_plot_info_caching(test_plot_environment, bt):
 
 
 @pytest.mark.asyncio
-async def test_cache_lifetime(test_plot_environment: TestEnvironment) -> None:
+async def test_cache_lifetime(environment: Environment) -> None:
     # Load a directory to produce a cache file
-    env: TestEnvironment = test_plot_environment
+    env: Environment = environment
     expected_result = PlotRefreshResult()
     add_plot_directory(env.root_path, str(env.dir_1.path))
     expected_result.loaded = env.dir_1.plot_info_list()  # type: ignore[assignment]
@@ -561,7 +559,7 @@ async def test_cache_lifetime(test_plot_environment: TestEnvironment) -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_callback_event_raises(test_plot_environment, event_to_raise: PlotRefreshEvents):
+async def test_callback_event_raises(environment, event_to_raise: PlotRefreshEvents):
     last_event_fired: Optional[PlotRefreshEvents] = None
 
     def raising_callback(event: PlotRefreshEvents, _: PlotRefreshResult):
@@ -570,7 +568,7 @@ async def test_callback_event_raises(test_plot_environment, event_to_raise: Plot
         if event == event_to_raise:
             raise Exception(f"run_raise_in_callback {event_to_raise}")
 
-    env: TestEnvironment = test_plot_environment
+    env: Environment = environment
     expected_result = PlotRefreshResult()
     # Load dir_1
     add_plot_directory(env.root_path, str(env.dir_1.path))
@@ -609,15 +607,15 @@ async def test_callback_event_raises(test_plot_environment, event_to_raise: Plot
 
 
 @pytest.mark.asyncio
-async def test_recursive_plot_scan(test_plot_environment: TestEnvironment) -> None:
-    env: TestEnvironment = test_plot_environment
+async def test_recursive_plot_scan(environment: Environment) -> None:
+    env: Environment = environment
     # Create a directory tree with some subdirectories containing plots, others not.
     root_plot_dir = env.root_path / "root"
-    sub_dir_0: TestDirectory = TestDirectory(root_plot_dir / "0", env.dir_1.plots[0:2])
-    sub_dir_0_1: TestDirectory = TestDirectory(sub_dir_0.path / "1", env.dir_1.plots[2:3])
-    sub_dir_1: TestDirectory = TestDirectory(root_plot_dir / "1", [])
-    sub_dir_1_0: TestDirectory = TestDirectory(sub_dir_1.path / "0", [])
-    sub_dir_1_0_1: TestDirectory = TestDirectory(sub_dir_1_0.path / "1", env.dir_1.plots[3:7])
+    sub_dir_0: Directory = Directory(root_plot_dir / "0", env.dir_1.plots[0:2])
+    sub_dir_0_1: Directory = Directory(sub_dir_0.path / "1", env.dir_1.plots[2:3])
+    sub_dir_1: Directory = Directory(root_plot_dir / "1", [])
+    sub_dir_1_0: Directory = Directory(sub_dir_1.path / "0", [])
+    sub_dir_1_0_1: Directory = Directory(sub_dir_1_0.path / "1", env.dir_1.plots[3:7])
 
     # List of all the plots in the directory tree
     expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list() + sub_dir_1_0_1.plot_info_list()

@@ -56,7 +56,7 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 chia tests
+        flake8 benchmarks build_scripts chia tests tools *.py
 
     - name: Lint source with mypy
       run: |

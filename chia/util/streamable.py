@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import io
+import os
 import pprint
 from enum import Enum
 from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
@@ -12,7 +13,7 @@ from typing_extensions import Literal, get_args, get_origin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import int64, int512, uint32, uint64, uint128
+from chia.util.ints import uint32
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -39,8 +40,6 @@ unhashable_types = [
     "Program",
     "SerializedProgram",
 ]
-# JSON does not support big ints, so these types must be serialized differently in JSON
-big_ints = [uint64, int64, uint128, int512]
 
 _T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
 
@@ -199,10 +198,15 @@ def recurse_jsonify(d: Any) -> Any:
         return f"0x{bytes(d).hex()}"
     elif isinstance(d, Enum):
         return d.name
+    elif isinstance(d, bool):
+        return d
     elif isinstance(d, int):
         return int(d)
     elif d is None or type(d) == str:
         return d
+    elif hasattr(d, "to_json_dict"):
+        ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
+        return ret
     raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
 
 
@@ -236,6 +240,14 @@ def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Option
         return parse_inner_type_f(f)
     else:
         raise ValueError("Optional must be 0 or 1")
+
+
+def parse_rust(f: BinaryIO, f_type: Type[Any]) -> Any:
+    assert isinstance(f, io.BytesIO)
+    buf = f.getbuffer()
+    ret, advance = f_type.parse_rust(bytes(buf[f.tell() :]))
+    f.seek(advance, os.SEEK_CUR)
+    return ret
 
 
 def parse_bytes(f: BinaryIO) -> bytes:
@@ -494,6 +506,8 @@ class Streamable:
             inner_type = get_args(f_type)[0]
             parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
             return lambda f: parse_optional(f, parse_inner_type_f)
+        if hasattr(f_type, "parse_rust"):
+            return lambda f: parse_rust(f, f_type)
         if hasattr(f_type, "parse"):
             # Ignoring for now as the proper solution isn't obvious
             return f_type.parse  # type: ignore[no-any-return]
@@ -576,7 +590,7 @@ class Streamable:
             stream_func(getattr(self, field), f)
 
     def get_hash(self) -> bytes32:
-        return bytes32(std_hash(bytes(self)))
+        return bytes32(std_hash(bytes(self), skip_bytes_conversion=True))
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:
