@@ -14,6 +14,7 @@ from chia_rs import run_generator, MEMPOOL_MODE
 
 from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
+from chia.util.ints import uint64
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
@@ -29,7 +30,7 @@ def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
 
     # we don't charge for the size of the generator ROM. However, we do charge
     # cost for the operations it executes
-    max_cost -= len(env_data) * cost_per_byte
+    max_cost = uint64(max_cost - len(env_data) * cost_per_byte)
 
     env_data = b"\xff" + env_data + b"\xff" + block_program_args + b"\x80"
 

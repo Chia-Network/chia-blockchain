@@ -4,13 +4,15 @@ from typing import Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
+@streamable
 @dataclasses.dataclass(frozen=True)
-class ConsensusConstants:
+class ConsensusConstants(Streamable):
     SLOT_BLOCKS_TARGET: uint32  # How many blocks to target per sub-slot
     MIN_BLOCKS_PER_CHALLENGE_BLOCK: uint8  # How many blocks must be created per slot (to make challenge sb)
     # Max number of blocks that can be infused into a sub-slot.
@@ -26,15 +28,15 @@ class ConsensusConstants:
     SUB_EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch
     EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
 
-    SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
-    DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
-    NUMBER_ZERO_BITS_PLOT_FILTER: int  # H(plot id + challenge hash + signage point) must start with these many zeroes
-    MIN_PLOT_SIZE: int
-    MAX_PLOT_SIZE: int
-    SUB_SLOT_TIME_TARGET: int  # The target number of seconds per sub-slot
-    NUM_SP_INTERVALS_EXTRA: int  # The difference between signage point and infusion point (plus required_iters)
-    MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
-    NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
+    SIGNIFICANT_BITS: uint8  # The number of bits to look at in difficulty and min iters. The rest are zeroed
+    DISCRIMINANT_SIZE_BITS: uint32  # Max is 1024 (based on ClassGroupElement int size)
+    NUMBER_ZERO_BITS_PLOT_FILTER: uint16  # H(plot id + challenge hash + signage point) must start with these many zeroes # noqa: E501
+    MIN_PLOT_SIZE: uint16
+    MAX_PLOT_SIZE: uint16
+    SUB_SLOT_TIME_TARGET: uint32  # The target number of seconds per sub-slot
+    NUM_SP_INTERVALS_EXTRA: uint16  # The difference between signage point and infusion point (plus required_iters)
+    MAX_FUTURE_TIME: uint32  # The next block can have a timestamp of at most these many seconds more
+    NUMBER_OF_TIMESTAMPS: uint16  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     GENESIS_CHALLENGE: bytes32
@@ -42,21 +44,21 @@ class ConsensusConstants:
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
-    MAX_VDF_WITNESS_SIZE: int  # The maximum number of classgroup elements within an n-wesolowski proof
+    MAX_VDF_WITNESS_SIZE: uint16  # The maximum number of classgroup elements within an n-wesolowski proof
     # Size of mempool = 10x the size of block
-    MEMPOOL_BLOCK_BUFFER: int
+    MEMPOOL_BLOCK_BUFFER: uint32
     # Max coin amount uint(1 << 64). This allows coin amounts to fit in 64 bits. This is around 18M chia.
-    MAX_COIN_AMOUNT: int
+    MAX_COIN_AMOUNT: uint64
     # Max block cost in clvm cost units
-    MAX_BLOCK_COST_CLVM: int
+    MAX_BLOCK_COST_CLVM: uint64
     # Cost per byte of generator program
-    COST_PER_BYTE: int
+    COST_PER_BYTE: uint64
 
     WEIGHT_PROOF_THRESHOLD: uint8
     WEIGHT_PROOF_RECENT_BLOCKS: uint32
     MAX_BLOCK_COUNT_PER_REQUESTS: uint32
     BLOCKS_CACHE_SIZE: uint32
-    NETWORK_TYPE: int
+    NETWORK_TYPE: uint8
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
