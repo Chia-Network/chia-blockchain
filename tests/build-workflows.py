@@ -75,9 +75,15 @@ def generate_replacements(conf, dir):
         "TEST_FILES": "",
         "TEST_NAME": "",
         "PYTEST_PARALLEL_ARGS": "",
+        "RUN": "true",
     }
 
-    xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+    # TODO: design a configurable system for this
+    if os == "windows":
+        xdist_numprocesses = {False: 0, True: 2}.get(conf["parallel"], conf["parallel"])
+    else:
+        xdist_numprocesses = {False: 0, True: 4}.get(conf["parallel"], conf["parallel"])
+
     replacements["PYTEST_PARALLEL_ARGS"] = f" -n {xdist_numprocesses}"
 
     if not conf["checkout_blocks_and_plots"]:
@@ -100,6 +106,9 @@ def generate_replacements(conf, dir):
         replacements["CHECK_RESOURCE_USAGE"] = "# Omitted resource usage check"
     for var in conf["custom_vars"]:
         replacements[var] = conf[var] if var in conf else ""
+    if os in conf["os_skip"] or (conf["install_timelord"] and os == "windows"):
+        # TODO: enable timelord for windows, and stop skipping
+        replacements["RUN"] = "false"
     return replacements
 
 

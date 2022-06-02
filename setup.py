@@ -8,7 +8,7 @@ dependencies = [
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.2",
+    "chia_rs==0.1.4",
     "clvm-tools-rs==0.1.9",  # Rust implementation of clvm_tools
     "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -109,6 +109,7 @@ kwargs = dict(
         "chia.wallet.rl_wallet",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
+        "chia.wallet.nft_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
