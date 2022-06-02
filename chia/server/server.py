@@ -1,5 +1,4 @@
 import asyncio
-import ipaddress
 import logging
 import ssl
 import time
@@ -284,7 +283,7 @@ class ChiaServer:
             prefer_ipv6 = global_config.get("prefer_ipv6", False)
             self._port = self.runner.addresses[0][1]  # sets the default to handle some edge cases
             for x in self.runner.addresses:
-                ip_addy = ipaddress.ip_address(x[0])
+                ip_addy = ip_address(x[0])
                 if ip_addy.version == 6 and prefer_ipv6:
                     self._port = x[1]
                     break
