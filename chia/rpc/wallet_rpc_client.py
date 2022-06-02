@@ -599,7 +599,7 @@ class WalletRpcClient(RpcClient):
         series_number=1,
         fee=0,
         royalty_percentage=0,
-        use_did=True,
+        did_id=None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -614,7 +614,7 @@ class WalletRpcClient(RpcClient):
             "series_number": series_number,
             "series_total": series_total,
             "royalty_percentage": royalty_percentage,
-            "use_did": use_did,
+            "did_id": did_id,
             "fee": fee,
         }
         response = await self.fetch("nft_mint_nft", request)

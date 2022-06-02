@@ -575,7 +575,7 @@ class WalletRpcApi:
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
                 did_id: Optional[bytes32] = None
-                if "did_id" in request:
+                if "did_id" in request and request["did_id"] is not None:
                     did_id = bytes32.from_hexstr(request["did_id"])
                 if wallet.type() == WalletType.NFT and wallet.get_did() == did_id:
                     log.info("NFT wallet already existed, skipping.")
@@ -1365,12 +1365,15 @@ class WalletRpcApi:
             ]
         )
         fee = uint64(request.get("fee", 0))
+        did_id = request.get("did_id", None)
+        if did_id is not None:
+            did_id = bytes.fromhex(did_id)
         spend_bundle = await nft_wallet.generate_new_nft(
             metadata,
             royalty_puzhash,
             target_puzhash,
             uint16(request.get("royalty_percentage", 0)),
-            request.get("use_did", True),
+            did_id,
             fee,
         )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}

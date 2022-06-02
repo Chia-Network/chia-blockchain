@@ -352,12 +352,15 @@ class NFTWallet:
         target_puzzle_hash: Optional[bytes32] = None,
         royalty_puzzle_hash: Optional[bytes32] = None,
         percentage: uint16 = uint16(0),
-        use_did: bool = True,
+        did_id: Optional[bytes] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
         """
+        if self.did_id is not None and did_id is None:
+            # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
+            did_id = self.did_id
         amount = uint64(1)
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
@@ -372,10 +375,10 @@ class NFTWallet:
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
-        if self.did_id and use_did:
-            self.log.debug("Creating NFT using DID: %s", self.did_id)
+        if did_id is not None:
+            self.log.debug("Creating NFT using DID: %s", did_id)
             inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(), self.did_id, p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
+                launcher_coin.name(), did_id, p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
             )
             self.log.debug("Got back ownership inner puzzle: %s", disassemble(inner_puzzle))
         else:
@@ -422,7 +425,7 @@ class NFTWallet:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
-        if self.did_id:
+        if did_id is not None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_inner_puzzle.get_tree_hash()
             )
@@ -433,7 +436,7 @@ class NFTWallet:
             did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
             pubkey = record.pubkey
             self.log.debug("Going to use this pubkey for NFT mint: %s", pubkey)
-            innersol = create_ownership_layer_transfer_solution(self.did_id, did_inner_hash, [], pubkey)
+            innersol = create_ownership_layer_transfer_solution(did_id, did_inner_hash, [], pubkey)
             bundles_to_agg.append(did_bundle)
 
             self.log.debug("Created an inner DID NFT solution: %s", disassemble(innersol))
