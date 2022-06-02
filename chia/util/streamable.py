@@ -169,7 +169,7 @@ def convert_primitive(f_type: Type[Any], item: Any) -> Any:
         raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
-def dataclass_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable:
+def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable:
     """
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
@@ -658,4 +658,4 @@ class Streamable:
 
     @classmethod
     def from_json_dict(cls: Type[_T_Streamable], json_dict: Dict[str, Any]) -> _T_Streamable:
-        return dataclass_from_dict(cls, json_dict)
+        return streamable_from_dict(cls, json_dict)

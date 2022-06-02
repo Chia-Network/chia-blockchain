@@ -19,7 +19,6 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
     DefinitionError,
     Streamable,
-    dataclass_from_dict,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -32,6 +31,7 @@ from chia.util.streamable import (
     parse_tuple,
     parse_uint32,
     streamable,
+    streamable_from_dict,
     write_uint32,
 )
 from tests.block_tools import BlockTools
@@ -135,7 +135,7 @@ class ConvertTupleFailures(Streamable):
 def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertTupleFailures, input_dict)
+        streamable_from_dict(ConvertTupleFailures, input_dict)
 
 
 @streamable
@@ -159,7 +159,7 @@ class ConvertListFailures(Streamable):
 def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertListFailures, input_dict)
+        streamable_from_dict(ConvertListFailures, input_dict)
 
 
 @streamable
@@ -189,7 +189,7 @@ class ConvertByteTypeFailures(Streamable):
 def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertByteTypeFailures, input_dict)
+        streamable_from_dict(ConvertByteTypeFailures, input_dict)
 
 
 @streamable
@@ -215,7 +215,7 @@ class ConvertUnhashableTypeFailures(Streamable):
 def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertUnhashableTypeFailures, input_dict)
+        streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
 
 class NoStrClass:
@@ -242,7 +242,7 @@ class ConvertPrimitiveFailures(Streamable):
 def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertPrimitiveFailures, input_dict)
+        streamable_from_dict(ConvertPrimitiveFailures, input_dict)
 
 
 @pytest.mark.parametrize(
@@ -260,10 +260,10 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
         [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
     ],
 )
-def test_dataclass_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
+def test_streamable_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(test_class, input_dict)
+        streamable_from_dict(test_class, input_dict)
 
 
 @streamable
