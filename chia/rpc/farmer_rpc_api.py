@@ -1,48 +1,47 @@
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional
-
-from typing_extensions import Protocol
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32
 from chia.util.paginator import Paginator
-from chia.util.streamable import dataclass_from_dict
+from chia.util.streamable import Streamable, dataclass_from_dict, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
-class PaginatedRequestData(Protocol):
-    node_id: bytes32
-    page: int
-    page_size: int
-
-
-@dataclasses.dataclass
-class FilterItem:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class FilterItem(Streamable):
     key: str
     value: Optional[str]
 
 
-@dataclasses.dataclass
-class PlotInfoRequestData:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotInfoRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[FilterItem] = dataclasses.field(default_factory=list)
     sort_key: str = "filename"
     reverse: bool = False
 
 
-@dataclasses.dataclass
-class PlotPathRequestData:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotPathRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
+
+
+PaginatedRequestData = Union[PlotInfoRequestData, PlotPathRequestData]
 
 
 def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
