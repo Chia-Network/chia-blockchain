@@ -573,19 +573,24 @@ class WalletRpcApi:
             else:  # undefined did_type
                 pass
         elif request["wallet_type"] == "nft_wallet":
+            nft_wallet_count = 0
             for wallet in self.service.wallet_state_manager.wallets.values():
+                did_id: Optional[bytes32] = None
+                if "did_id" in request:
+                    did_id = bytes32.from_hexstr(request["did_id"])
                 if wallet.type() == WalletType.NFT:
-                    # TODO Modify this for NFT1
-                    log.info("NFT wallet already existed, skipping.")
-                    return {
-                        "success": True,
-                        "type": wallet.type(),
-                        "wallet_id": wallet.id(),
-                    }
+                    nft_wallet_count += 1
+                    if wallet.get_did() == did_id:
+                        log.info("NFT wallet already existed, skipping.")
+                        return {
+                            "success": True,
+                            "type": wallet.type(),
+                            "wallet_id": wallet.id(),
+                        }
+
             async with self.service.wallet_state_manager.lock:
                 nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
-                    wallet_state_manager,
-                    main_wallet,
+                    wallet_state_manager, main_wallet, did_id, request.get("name", f"NFT Wallet {nft_wallet_count+1}")
                 )
             return {
                 "success": True,

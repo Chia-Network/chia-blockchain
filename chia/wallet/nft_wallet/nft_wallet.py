@@ -136,6 +136,9 @@ class NFTWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
+    def get_did(self) -> Optional[bytes32]:
+        return self.did_id
+
     async def get_confirmed_balance(self, record_list=None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
