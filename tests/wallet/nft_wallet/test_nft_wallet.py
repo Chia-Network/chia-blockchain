@@ -14,6 +14,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
@@ -517,3 +519,115 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
                 raise
         await asyncio.sleep(0.5)
         time_left -= 0.5
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True],
+)
+@pytest.mark.asyncio
+async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 2
+    full_nodes, wallets = two_wallet_nodes
+    full_node_api: FullNodeSimulator = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+    ph = await wallet_0.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
+    )
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
+    hex_did_id = did_wallet.get_my_DID()
+    did_id = bytes32.fromhex(hex_did_id)
+    nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
+        wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET DID 1", did_id=did_id
+    )
+    metadata = Program.to(
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", bytes.fromhex("D4584AD463139FA8C0D9F68F4B59F185")),
+        ]
+    )
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 5999999999999)
+    sb = await nft_wallet_0.generate_new_nft(metadata)
+    assert sb
+    # ensure hints are generated
+    assert compute_memos(sb)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await time_out_assert(10, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
+
+    metadata = Program.to(
+        [
+            ("u", ["https://url1"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F181"),
+        ]
+    )
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 7999999999999 - 1)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 7999999999999 - 1)
+    sb = await nft_wallet_0.generate_new_nft(metadata)
+    assert sb
+    # ensure hints are generated
+    assert compute_memos(sb)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await time_out_assert(10, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
+    # check if we uncurry well
+    last_nft_coin = nft_wallet_0.nft_wallet_info.my_nft_coins[-1]
+    unft = uncurry_nft.UncurriedNFT.uncurry(last_nft_coin.full_puzzle)
+    assert unft.data_uris == ["https://url1"]
+    assert unft.data_hash.atom == b"0xD4584AD463139FA8C0D9F68F4B59F181"
+    assert unft.owner_did == nft_wallet_0.nft_wallet_info.did_id
+    assert unft.owner_pubkey is not None
+
+    first_nft_coin = nft_wallet_0.nft_wallet_info.my_nft_coins[0]
+    unft = uncurry_nft.UncurriedNFT.uncurry(first_nft_coin.full_puzzle)
+    assert unft.data_uris == ["https://www.chia.net/img/branding/chia-logo.svg"]
+    assert unft.data_hash.atom == bytes.fromhex("D4584AD463139FA8C0D9F68F4B59F185")
