@@ -48,19 +48,23 @@ StreamFunctionType = Callable[[object, BinaryIO], None]
 ConvertFunctionType = Callable[[object], object]
 
 
+@dataclasses.dataclass(frozen=True)
+class Field:
+    name: str
+    type: Type[object]
+
+
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
-FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Tuple[dataclasses.Field[object], ...]] = {}
+FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Tuple[Field, ...]] = {}
 STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[StreamFunctionType]] = {}
 PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]] = {}
 CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionType]] = {}
 
 
-def create_fields_cache(cls: Type[object]) -> Tuple[dataclasses.Field[object], ...]:
+def create_fields_cache(cls: Type[object]) -> Tuple[Field, ...]:
     hints = get_type_hints(cls)
-    fields = dataclasses.fields(cls)
-    for field in fields:
-        field.type = hints.get(field.name, None)
-        assert field.type is not None
+    fields = tuple(Field(field.name, hints.get(field.name, None)) for field in dataclasses.fields(cls))
+    assert all(field.type is not None for field in fields)
     return fields
 
 
