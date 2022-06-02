@@ -64,7 +64,7 @@ def db_validate_cmd(ctx: click.Context, validate_blocks: bool, **kwargs) -> None
         print(f"FAILED: {e}")
 
 @db_cmd.command("backup", short_help="backup the blockchain database using VACUUM INTO command")
-@click.option("--backup_file", default=None, type=click.Path(), help="Specifies the backup file") 
+@click.option("--backup_file", required=True, type=click.Path(), help="Specifies the backup file") 
 @click.pass_context
 def db_backup_cmd(ctx: click.Context, **kwargs) -> None:
     try:
