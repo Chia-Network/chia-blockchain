@@ -1,29 +1,26 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, Dict, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 from blspy import G2Element
+from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.bech32m import bech32_encode, bech32_decode, convertbits
+from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.ints import uint64
+from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, match_puzzle, solve_puzzle
+from chia.wallet.payment import Payment
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.outer_puzzles import (
-    create_asset_id,
-    construct_puzzle,
-    match_puzzle,
-    solve_puzzle,
-)
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.payment import Payment
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
@@ -60,7 +57,7 @@ class Offer:
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List] = [c.as_list() for c in sorted_coins]
+        sorted_coin_list: List[List] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
@@ -165,12 +162,12 @@ class Offer:
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]]]:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
-            new_dic: Dict[str, Any] = {}
+        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
+            new_dic: Dict[str, int] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]
@@ -178,11 +175,11 @@ class Offer:
                     new_dic[key.hex()] = dic[key]
             return new_dic
 
-        driver_dict: Dict[Optional[bytes32], Any] = {}
+        driver_dict: Dict[str, Any] = {}
         for key, value in self.driver_dict.items():
-            driver_dict[key] = value.info
+            driver_dict[key.hex()] = value.info
 
-        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), keys_to_strings(driver_dict)
+        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), driver_dict
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends
@@ -263,7 +260,7 @@ class Offer:
                     raise ValueError(f"The offers to aggregate disagree on the drivers for {key.hex()}")
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer.bundle])
-            total_driver_dict = {**total_driver_dict, **offer.driver_dict}
+            total_driver_dict.update(offer.driver_dict)
 
         return cls(total_requested_payments, total_bundle, total_driver_dict)
 
@@ -289,19 +286,46 @@ class Offer:
                 assert arbitrage_ph is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
 
+            # Some assets need to know about siblings so we need to collect all spends first to be able to use them
+            coin_to_spend_dict: Dict[Coin, CoinSpend] = {}
+            coin_to_solution_dict: Dict[Coin, Program] = {}
             for coin in offered_coins:
+                parent_spend: CoinSpend = list(
+                    filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
+                )[0]
+                coin_to_spend_dict[coin] = parent_spend
+
                 inner_solutions = []
                 if coin == offered_coins[0]:
                     nonces: List[bytes32] = [p.nonce for p in all_payments]
                     for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
                         nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
                         inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
+                coin_to_solution_dict[coin] = Program.to(inner_solutions)
 
+            for coin in offered_coins:
                 if asset_id:
-                    # CATs have a special way to be solved so we have to do some calculation before getting the solution
-                    parent_spend: CoinSpend = list(
-                        filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self.bundle.coin_spends)
-                    )[0]
+                    siblings: str = "("
+                    sibling_spends: str = "("
+                    sibling_puzzles: str = "("
+                    sibling_solutions: str = "("
+                    disassembled_offer_mod: str = disassemble(OFFER_MOD)
+                    for sibling_coin in offered_coins:
+                        if sibling_coin != coin:
+                            siblings += (
+                                "0x"
+                                + sibling_coin.parent_coin_info.hex()
+                                + sibling_coin.puzzle_hash.hex()
+                                + bytes(sibling_coin.amount).hex()
+                            )
+                            sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + ")"
+                            sibling_puzzles += disassembled_offer_mod
+                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin])
+                    siblings += ")"
+                    sibling_spends += ")"
+                    sibling_puzzles += ")"
+                    sibling_solutions += ")"
+
                     solution: Program = solve_puzzle(
                         self.driver_dict[asset_id],
                         Solver(
@@ -310,14 +334,18 @@ class Offer:
                                 + coin.parent_coin_info.hex()
                                 + coin.puzzle_hash.hex()
                                 + bytes(coin.amount).hex(),
-                                "parent_spend": "0x" + bytes(parent_spend).hex(),
+                                "parent_spend": "0x" + bytes(coin_to_spend_dict[coin]).hex(),
+                                "siblings": siblings,
+                                "sibling_spends": sibling_spends,
+                                "sibling_puzzles": sibling_puzzles,
+                                "sibling_solutions": sibling_solutions,
                             }
                         ),
                         OFFER_MOD,
-                        Program.to(inner_solutions),
+                        Program.to(coin_to_solution_dict[coin]),
                     )
                 else:
-                    solution = Program.to(inner_solutions)
+                    solution = Program.to(coin_to_solution_dict[coin])
 
                 completion_spends.append(
                     CoinSpend(

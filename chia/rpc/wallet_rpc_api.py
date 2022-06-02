@@ -15,7 +15,7 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -555,7 +555,7 @@ class WalletRpcApi:
                 assert did_wallet.did_info.temp_pubkey is not None
                 my_did = did_wallet.get_my_DID()
                 coin_name = did_wallet.did_info.temp_coin.name().hex()
-                coin_list = did_wallet.did_info.temp_coin.as_list()
+                coin_list = coin_as_list(did_wallet.did_info.temp_coin)
                 newpuzhash = did_wallet.did_info.temp_puzhash
                 pubkey = did_wallet.did_info.temp_pubkey
                 return {
@@ -974,19 +974,21 @@ class WalletRpcApi:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
             for key in offer:
-                if len(key) == 64:
+                try:
                     driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
                         {"type": AssetType.CAT.value, "tail": "0x" + key}
                     )
+                except ValueError:
+                    pass
         else:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer = {}
         for key in offer:
-            if len(key) == 64:
+            try:
                 modified_offer[bytes32.from_hexstr(key)] = offer[key]
-            else:
+            except ValueError:
                 modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
@@ -1361,7 +1363,14 @@ class WalletRpcApi:
             ]
         )
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, uint16(request.get("royalty_percentage", 0)), request.get("use_did", True), fee)
+        spend_bundle = await nft_wallet.generate_new_nft(
+            metadata,
+            royalty_puzhash,
+            target_puzhash,
+            uint16(request.get("royalty_percentage", 0)),
+            request.get("use_did", True),
+            fee,
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:

@@ -3,7 +3,6 @@ import cProfile
 import dataclasses
 import logging
 import random
-import time
 from typing import Dict
 
 import pytest
@@ -21,6 +20,7 @@ from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
 from tests.time_out_assert import time_out_assert
+from tests.util.misc import assert_runtime
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ async def get_block_path(full_node: FullNodeAPI):
 class TestPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_full_block_performance(self, bt, wallet_nodes_perf, self_hostname):
+    async def test_full_block_performance(self, request: pytest.FixtureRequest, bt, wallet_nodes_perf, self_hostname):
         full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
@@ -116,23 +116,21 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        num_tx: int = 0
-        for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
-            num_tx += 1
-            respond_transaction = fnp.RespondTransaction(spend_bundle)
+        with assert_runtime(seconds=0.001, label=f"{request.node.name} - mempool"):
+            num_tx: int = 0
+            for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
+                num_tx += 1
+                respond_transaction = fnp.RespondTransaction(spend_bundle)
 
-            await full_node_1.respond_transaction(respond_transaction, fake_peer)
+                await full_node_1.respond_transaction(respond_transaction, fake_peer)
 
-            request = fnp.RequestTransaction(spend_bundle_id)
-            req = await full_node_1.request_transaction(request)
+                request_transaction = fnp.RequestTransaction(spend_bundle_id)
+                req = await full_node_1.request_transaction(request_transaction)
 
-            if req is None:
-                break
-        end = time.time()
+                if req is None:
+                    break
+
         log.warning(f"Num Tx: {num_tx}")
-        log.warning(f"Time for mempool: {end - start:f}")
-        assert end - start < 0.001
         pr.create_stats()
         pr.dump_stats("./mempool-benchmark.pstats")
 
@@ -175,12 +173,10 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
-        end = time.time()
+        with assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
+            res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
+
         log.warning(f"Res: {res}")
-        log.warning(f"Time for unfinished: {end - start:f}")
-        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./unfinished-benchmark.pstats")
@@ -188,14 +184,12 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        start = time.time()
-        # No transactions generator, the full node already cached it from the unfinished block
-        block_small = dataclasses.replace(block, transactions_generator=None)
-        res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
-        end = time.time()
+        with assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
+            # No transactions generator, the full node already cached it from the unfinished block
+            block_small = dataclasses.replace(block, transactions_generator=None)
+            res = await full_node_1.full_node.respond_block(fnp.RespondBlock(block_small))
+
         log.warning(f"Res: {res}")
-        log.warning(f"Time for full block: {end - start:f}")
-        assert end - start < 0.1
 
         pr.create_stats()
         pr.dump_stats("./full-block-benchmark.pstats")
