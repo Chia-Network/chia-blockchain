@@ -338,6 +338,7 @@ class NFTWallet:
         target_puzzle_hash: Optional[bytes32] = None,
         royalty_puzzle_hash: Optional[bytes32] = None,
         percentage: uint16 = uint16(0),
+        use_did: bool = True,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
@@ -357,7 +358,7 @@ class NFTWallet:
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
-        if self.did_id:
+        if self.did_id and use_did:
             self.log.debug("Creating NFT using DID: %s", self.did_id)
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(), self.did_id, p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
