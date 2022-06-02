@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
+import useOpenUnsafeLink from '../../hooks/useOpenUnsafeLink';
 import isURL from 'validator/lib/isURL';
 
 /* ========================================================================== */
@@ -95,6 +96,7 @@ type NFTTransferContextualActionProps = NFTContextualActionProps;
 
 function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   const { onClose, selection } = props;
+  const openDialog = useOpenDialog();
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
@@ -155,7 +157,7 @@ function NFTOpenInBrowserContextualAction(
   props: NFTOpenInBrowserContextualActionProps,
 ) {
   const { onClose, selection } = props;
-  const openExternal = useOpenExternal();
+  const openUnsafeLink = useOpenUnsafeLink();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const haveDataUrl = selectedNft?.dataUris?.length && selectedNft?.dataUris[0];
   const dataUrl: string | undefined = haveDataUrl
@@ -171,7 +173,9 @@ function NFTOpenInBrowserContextualAction(
   const disabled = !haveDataUrl || !isUrlValid;
 
   function handleOpenInBrowser() {
-    openExternal(dataUrl);
+    if (dataUrl) {
+      openUnsafeLink(dataUrl);
+    }
   }
 
   return (
@@ -248,11 +252,13 @@ function NFTViewOnExplorerContextualAction(
   const testnet = useCurrencyCode() === 'TXCH';
   const openExternal = useOpenExternal();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
-  const disabled = !selectedNft;
+  const disabled = !selectedNft || !getURLForNFT;
 
   function handleView() {
-    const url = getURLForNFT(selectedNft, testnet);
-    openExternal(url);
+    if (getURLForNFT) {
+      const url = getURLForNFT(selectedNft, testnet);
+      openExternal(url);
+    }
   }
 
   return (
