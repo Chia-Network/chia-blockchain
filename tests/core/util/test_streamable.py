@@ -94,41 +94,27 @@ def test_plain_class_not_supported() -> None:
             a: PlainClass
 
 
-@dataclass
-class TestDataclassFromDict1:
-    a: int
+@streamable
+@dataclass(frozen=True)
+class TestDataclassFromDict1(Streamable):
+    a: uint8
     b: str
     c: G1Element
 
 
-@dataclass
-class TestDataclassFromDict2:
+@streamable
+@dataclass(frozen=True)
+class TestDataclassFromDict2(Streamable):
     a: TestDataclassFromDict1
     b: TestDataclassFromDict1
-    c: float
+    c: uint64
 
 
-def test_pure_dataclasses_in_dataclass_from_dict() -> None:
-
-    d1_dict = {"a": 1, "b": "2", "c": str(G1Element())}
-
-    d1: TestDataclassFromDict1 = dataclass_from_dict(TestDataclassFromDict1, d1_dict)
-    assert d1.a == 1
-    assert d1.b == "2"
-    assert d1.c == G1Element()
-
-    d2_dict = {"a": d1, "b": d1_dict, "c": 1.2345}
-
-    d2: TestDataclassFromDict2 = dataclass_from_dict(TestDataclassFromDict2, d2_dict)
-    assert d2.a == d1
-    assert d2.b == d1
-    assert d2.c == 1.2345
-
-
-@dataclass
-class ConvertTupleFailures:
-    a: Tuple[int, int]
-    b: Tuple[int, Tuple[int, int]]
+@streamable
+@dataclass(frozen=True)
+class ConvertTupleFailures(Streamable):
+    a: Tuple[uint8, uint8]
+    b: Tuple[uint8, Tuple[uint8, uint8]]
 
 
 @pytest.mark.parametrize(
@@ -152,10 +138,11 @@ def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
         dataclass_from_dict(ConvertTupleFailures, input_dict)
 
 
-@dataclass
-class ConvertListFailures:
-    a: List[int]
-    b: List[List[int]]
+@streamable
+@dataclass(frozen=True)
+class ConvertListFailures(Streamable):
+    a: List[uint8]
+    b: List[List[uint8]]
 
 
 @pytest.mark.parametrize(
@@ -175,8 +162,9 @@ def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
         dataclass_from_dict(ConvertListFailures, input_dict)
 
 
-@dataclass
-class ConvertByteTypeFailures:
+@streamable
+@dataclass(frozen=True)
+class ConvertByteTypeFailures(Streamable):
     a: bytes4
     b: bytes
 
@@ -204,8 +192,9 @@ def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> N
         dataclass_from_dict(ConvertByteTypeFailures, input_dict)
 
 
-@dataclass
-class ConvertUnhashableTypeFailures:
+@streamable
+@dataclass(frozen=True)
+class ConvertUnhashableTypeFailures(Streamable):
     a: G1Element
 
 
@@ -234,9 +223,10 @@ class NoStrClass:
         raise RuntimeError("No string")
 
 
-@dataclass
-class ConvertPrimitiveFailures:
-    a: int
+@streamable
+@dataclass(frozen=True)
+class ConvertPrimitiveFailures(Streamable):
+    a: uint8
     b: uint8
     c: str
 
@@ -264,13 +254,13 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
         [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
+        [TestDataclassFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, TypeError],
+        [TestDataclassFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, TypeError],
         [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
     ],
 )
-def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:
+def test_dataclass_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
         dataclass_from_dict(test_class, input_dict)
