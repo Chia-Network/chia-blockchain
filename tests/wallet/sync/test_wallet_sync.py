@@ -384,7 +384,7 @@ class TestWalletSync:
         res2: Optional[Message] = await full_node_api.request_additions(
             RequestAdditions(
                 last_block.height,
-                last_block.header_hash,
+                None,
                 [payees[0]["puzzlehash"], payees[2]["puzzlehash"], std_hash(b"1")],
             )
         )
@@ -429,3 +429,12 @@ class TestWalletSync:
         assert response.proofs is None
         assert len(response.coins) == 12
         assert sum([len(c_list) for _, c_list in response.coins]) == 24
+
+        # [] for puzzle hashes returns nothing
+        res4: Optional[Message] = await full_node_api.request_additions(
+            RequestAdditions(last_block.height, last_block.header_hash, [])
+        )
+        assert res4 is not None
+        response = RespondAdditions.from_bytes(res4.data)
+        assert response.proofs == []
+        assert len(response.coins) == 0
