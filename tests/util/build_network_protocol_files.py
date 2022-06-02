@@ -1,6 +1,7 @@
 # flake8: noqa
 
 import os
+from typing import Callable, Any
 from pathlib import Path
 from chia.util.streamable import Streamable, streamable
 from tests.util.network_protocol_data import *
@@ -20,141 +21,138 @@ def encode_data(data) -> bytes:
     return size.to_bytes(4, "big") + data_bytes
 
 
-def get_farmer_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(new_signage_point)
-    result += encode_data(declare_proof_of_space)
-    result += encode_data(request_signed_values)
-    result += encode_data(farming_info)
-    result += encode_data(signed_values)
-    return result
+def visit_farmer_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(new_signage_point)
+    visitor(declare_proof_of_space)
+    visitor(request_signed_values)
+    visitor(farming_info)
+    visitor(signed_values)
 
 
-def get_full_node_bytes() -> bytes:
-    result = b""
-    result += encode_data(new_peak)
-    result += encode_data(new_transaction)
-    result += encode_data(request_transaction)
-    result += encode_data(respond_transaction)
-    result += encode_data(request_proof_of_weight)
-    result += encode_data(respond_proof_of_weight)
-    result += encode_data(request_block)
-    result += encode_data(reject_block)
-    result += encode_data(request_blocks)
-    result += encode_data(respond_blocks)
-    result += encode_data(reject_blocks)
-    result += encode_data(respond_block)
-    result += encode_data(new_unfinished_block)
-    result += encode_data(request_unfinished_block)
-    result += encode_data(respond_unfinished_block)
-    result += encode_data(new_signage_point_or_end_of_subslot)
-    result += encode_data(request_signage_point_or_end_of_subslot)
-    result += encode_data(respond_signage_point)
-    result += encode_data(respond_end_of_subslot)
-    result += encode_data(request_mempool_transaction)
-    result += encode_data(new_compact_vdf)
-    result += encode_data(request_compact_vdf)
-    result += encode_data(respond_compact_vdf)
-    result += encode_data(request_peers)
-    result += encode_data(respond_peers)
-    return result
+def visit_full_node(visitor: Callable[[Any], None]) -> None:
+    visitor(new_peak)
+    visitor(new_transaction)
+    visitor(request_transaction)
+    visitor(respond_transaction)
+    visitor(request_proof_of_weight)
+    visitor(respond_proof_of_weight)
+    visitor(request_block)
+    visitor(reject_block)
+    visitor(request_blocks)
+    visitor(respond_blocks)
+    visitor(reject_blocks)
+    visitor(respond_block)
+    visitor(new_unfinished_block)
+    visitor(request_unfinished_block)
+    visitor(respond_unfinished_block)
+    visitor(new_signage_point_or_end_of_subslot)
+    visitor(request_signage_point_or_end_of_subslot)
+    visitor(respond_signage_point)
+    visitor(respond_end_of_subslot)
+    visitor(request_mempool_transaction)
+    visitor(new_compact_vdf)
+    visitor(request_compact_vdf)
+    visitor(respond_compact_vdf)
+    visitor(request_peers)
+    visitor(respond_peers)
 
 
-def get_wallet_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(request_puzzle_solution)
-    result += encode_data(puzzle_solution_response)
-    result += encode_data(respond_puzzle_solution)
-    result += encode_data(reject_puzzle_solution)
-    result += encode_data(send_transaction)
-    result += encode_data(transaction_ack)
-    result += encode_data(new_peak_wallet)
-    result += encode_data(request_block_header)
-    result += encode_data(respond_header_block)
-    result += encode_data(reject_header_request)
-    result += encode_data(request_removals)
-    result += encode_data(respond_removals)
-    result += encode_data(reject_removals_request)
-    result += encode_data(request_additions)
-    result += encode_data(respond_additions)
-    result += encode_data(reject_additions)
-    result += encode_data(request_header_blocks)
-    result += encode_data(reject_header_blocks)
-    result += encode_data(respond_header_blocks)
-    result += encode_data(coin_state)
-    result += encode_data(register_for_ph_updates)
-    result += encode_data(respond_to_ph_updates)
-    result += encode_data(register_for_coin_updates)
-    result += encode_data(respond_to_coin_updates)
-    result += encode_data(coin_state_update)
-    result += encode_data(request_children)
-    result += encode_data(respond_children)
-    result += encode_data(request_ses_info)
-    result += encode_data(respond_ses_info)
-    return result
+def visit_wallet_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(request_puzzle_solution)
+    visitor(puzzle_solution_response)
+    visitor(respond_puzzle_solution)
+    visitor(reject_puzzle_solution)
+    visitor(send_transaction)
+    visitor(transaction_ack)
+    visitor(new_peak_wallet)
+    visitor(request_block_header)
+    visitor(respond_header_block)
+    visitor(reject_header_request)
+    visitor(request_removals)
+    visitor(respond_removals)
+    visitor(reject_removals_request)
+    visitor(request_additions)
+    visitor(respond_additions)
+    visitor(reject_additions)
+    visitor(request_header_blocks)
+    visitor(reject_header_blocks)
+    visitor(respond_header_blocks)
+    visitor(coin_state)
+    visitor(register_for_ph_updates)
+    visitor(respond_to_ph_updates)
+    visitor(register_for_coin_updates)
+    visitor(respond_to_coin_updates)
+    visitor(coin_state_update)
+    visitor(request_children)
+    visitor(respond_children)
+    visitor(request_ses_info)
+    visitor(respond_ses_info)
 
 
-def get_harvester_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(pool_difficulty)
-    result += encode_data(harvester_handhsake)
-    result += encode_data(new_signage_point_harvester)
-    result += encode_data(new_proof_of_space)
-    result += encode_data(request_signatures)
-    result += encode_data(respond_signatures)
-    result += encode_data(plot)
-    result += encode_data(request_plots)
-    result += encode_data(respond_plots)
-    return result
+def visit_harvester_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(pool_difficulty)
+    visitor(harvester_handhsake)
+    visitor(new_signage_point_harvester)
+    visitor(new_proof_of_space)
+    visitor(request_signatures)
+    visitor(respond_signatures)
+    visitor(plot)
+    visitor(request_plots)
+    visitor(respond_plots)
 
 
-def get_introducer_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(request_peers_introducer)
-    result += encode_data(respond_peers_introducer)
-    return result
+def visit_introducer_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(request_peers_introducer)
+    visitor(respond_peers_introducer)
 
 
-def get_pool_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(authentication_payload)
-    result += encode_data(get_pool_info_response)
-    result += encode_data(post_partial_payload)
-    result += encode_data(post_partial_request)
-    result += encode_data(post_partial_response)
-    result += encode_data(get_farmer_response)
-    result += encode_data(post_farmer_payload)
-    result += encode_data(post_farmer_request)
-    result += encode_data(post_farmer_response)
-    result += encode_data(put_farmer_payload)
-    result += encode_data(put_farmer_request)
-    result += encode_data(put_farmer_response)
-    result += encode_data(error_response)
-    return result
+def visit_pool_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(authentication_payload)
+    visitor(get_pool_info_response)
+    visitor(post_partial_payload)
+    visitor(post_partial_request)
+    visitor(post_partial_response)
+    visitor(get_farmer_response)
+    visitor(post_farmer_payload)
+    visitor(post_farmer_request)
+    visitor(post_farmer_response)
+    visitor(put_farmer_payload)
+    visitor(put_farmer_request)
+    visitor(put_farmer_response)
+    visitor(error_response)
 
 
-def get_timelord_protocol_bytes() -> bytes:
-    result = b""
-    result += encode_data(new_peak_timelord)
-    result += encode_data(new_unfinished_block_timelord)
-    result += encode_data(new_infusion_point_vdf)
-    result += encode_data(new_signage_point_vdf)
-    result += encode_data(new_end_of_sub_slot_bundle)
-    result += encode_data(request_compact_proof_of_time)
-    result += encode_data(respond_compact_proof_of_time)
-    return result
+def visit_timelord_protocol(visitor: Callable[[Any], None]) -> None:
+    visitor(new_peak_timelord)
+    visitor(new_unfinished_block_timelord)
+    visitor(new_infusion_point_vdf)
+    visitor(new_signage_point_vdf)
+    visitor(new_end_of_sub_slot_bundle)
+    visitor(request_compact_proof_of_time)
+    visitor(respond_compact_proof_of_time)
+
+
+def visit_all_messages(visitor: Callable[[Any], None]) -> None:
+    visit_farmer_protocol(visitor)
+    visit_full_node(visitor)
+    visit_wallet_protocol(visitor)
+    visit_harvester_protocol(visitor)
+    visit_introducer_protocol(visitor)
+    visit_pool_protocol(visitor)
+    visit_timelord_protocol(visitor)
 
 
 def get_protocol_bytes() -> bytes:
-    return (
-        get_farmer_protocol_bytes()
-        + get_full_node_bytes()
-        + get_wallet_protocol_bytes()
-        + get_harvester_protocol_bytes()
-        + get_introducer_protocol_bytes()
-        + get_pool_protocol_bytes()
-        + get_timelord_protocol_bytes()
-    )
+
+    result = b""
+
+    def visitor(obj: Any) -> None:
+        nonlocal result
+        result += encode_data(obj)
+
+    visit_all_messages(visitor)
+
+    return result
 
 
 if __name__ == "__main__":
