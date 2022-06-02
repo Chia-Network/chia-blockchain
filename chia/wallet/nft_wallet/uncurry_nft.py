@@ -69,6 +69,9 @@ class UncurriedNFT:
     owner_did: Optional[bytes32]
     """Owner's DID"""
 
+    support_did: bool
+    """If the inner puzzle support the DID"""
+
     owner_pubkey: Optional[G1Element]
     """Owner's Pubkey in the P2 puzzle"""
 
@@ -145,7 +148,9 @@ class UncurriedNFT:
             royalty_percentage = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
+            support_did = False
             if mod == NFT_OWNERSHIP_LAYER:
+                support_did = True
                 log.debug("Parsing ownership layer")
                 _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
                 _, p2_args = p2_puzzle.uncurry()
@@ -180,6 +185,7 @@ class UncurriedNFT:
             series_total=series_total,
             inner_puzzle=inner_puzzle,
             owner_did=current_did,
+            support_did=support_did,
             owner_pubkey=pubkey,
             transfer_program=transfer_program,
             transfer_program_curry_params=transfer_program_args,

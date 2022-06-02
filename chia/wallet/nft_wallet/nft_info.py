@@ -65,6 +65,9 @@ class NFTInfo(Streamable):
     mint_height: uint32
     """Block height of the NFT minting"""
 
+    support_did: bool
+    """If the inner puzzle supports DID"""
+
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 

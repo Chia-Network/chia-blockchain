@@ -120,6 +120,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
         nft_coin_info.mint_height,
+        uncurried_nft.support_did,
         nft_coin_info.pending_transaction,
     )
     return nft_info
