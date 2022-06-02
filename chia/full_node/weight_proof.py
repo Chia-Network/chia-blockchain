@@ -42,7 +42,6 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
-from chia.util.streamable import dataclass_from_dict, recurse_jsonify
 
 log = logging.getLogger(__name__)
 
@@ -636,7 +635,7 @@ class WeightProofHandler:
             with _create_shutdown_file() as shutdown_file:
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 # timing reference: 1.1 second
-                constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
+                constants_bytes, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
                     self.constants, summaries, weight_proof
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
@@ -645,7 +644,7 @@ class WeightProofHandler:
                 recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
                     executor,
                     _validate_recent_blocks,
-                    constants,
+                    constants_bytes,
                     wp_recent_chain_bytes,
                     summary_bytes,
                     pathlib.Path(shutdown_file.name),
@@ -653,7 +652,7 @@ class WeightProofHandler:
 
                 # timing reference: 2 second
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes
+                    constants_bytes, rng, wp_segment_bytes, summary_bytes
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 if not segments_validated:
@@ -671,7 +670,7 @@ class WeightProofHandler:
                     vdf_task = asyncio.get_running_loop().run_in_executor(
                         executor,
                         _validate_vdf_batch,
-                        constants,
+                        constants_bytes,
                         byte_chunks,
                         pathlib.Path(shutdown_file.name),
                     )
@@ -995,12 +994,12 @@ def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_wei
 
 
 def _validate_sub_epoch_segments(
-    constants_dict: Dict,
+    constants_bytes: bytes,
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
 ):
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    constants, summaries = bytes_to_vars(constants_bytes, summaries_bytes)
     sub_epoch_segments: SubEpochSegments = SubEpochSegments.from_bytes(weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
     total_blocks, total_ip_iters = 0, 0
@@ -1340,12 +1339,12 @@ def validate_recent_blocks(
 
 
 def _validate_recent_blocks(
-    constants_dict: Dict,
+    constants_bytes: bytes,
     recent_chain_bytes: bytes,
     summaries_bytes: List[bytes],
     shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> bool:
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    constants, summaries = bytes_to_vars(constants_bytes, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     success, records = validate_recent_blocks(
         constants=constants,
@@ -1357,12 +1356,12 @@ def _validate_recent_blocks(
 
 
 def _validate_recent_blocks_and_get_records(
-    constants_dict: Dict,
+    constants_bytes: bytes,
     recent_chain_bytes: bytes,
     summaries_bytes: List[bytes],
     shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> Tuple[bool, List[bytes]]:
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    constants, summaries = bytes_to_vars(constants_bytes, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     return validate_recent_blocks(
         constants=constants,
@@ -1573,20 +1572,20 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
 
 
 def vars_to_bytes(constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProof):
-    constants_dict = recurse_jsonify(constants)
+    constants_bytes = bytes(constants)
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
     summary_bytes = []
     for summary in summaries:
         summary_bytes.append(bytes(summary))
-    return constants_dict, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
+    return constants_bytes, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
 
 
-def bytes_to_vars(constants_dict, summaries_bytes):
+def bytes_to_vars(constants_bytes, summaries_bytes):
     summaries = []
     for summary in summaries_bytes:
         summaries.append(SubEpochSummary.from_bytes(summary))
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+    constants: ConsensusConstants = ConsensusConstants.from_bytes(constants_bytes)
     return constants, summaries
 
 
@@ -1719,9 +1718,9 @@ def validate_total_iters(
 
 
 def _validate_vdf_batch(
-    constants_dict, vdf_list: List[Tuple[bytes, bytes, bytes]], shutdown_file_path: Optional[pathlib.Path] = None
+    constants_bytes, vdf_list: List[Tuple[bytes, bytes, bytes]], shutdown_file_path: Optional[pathlib.Path] = None
 ):
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
+    constants: ConsensusConstants = ConsensusConstants.from_bytes(constants_bytes)
 
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
         vdf = VDFProof.from_bytes(vdf_proof_bytes)
