@@ -106,7 +106,7 @@ jobs:
     - name: Test wallet-nft_wallet code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_wallet.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_offers.py tests/wallet/nft_wallet/test_nft_wallet.py
 
     - name: Process coverage data
       run: |

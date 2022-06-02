@@ -42,6 +42,12 @@ class PuzzleInfo:
                 return False
         return True
 
+    def __contains__(self, item: str) -> bool:
+        if item in self.info:
+            return True
+        else:
+            return False
+
     def type(self) -> str:
         return str(self.info["type"])
 
