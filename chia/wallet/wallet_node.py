@@ -1329,7 +1329,7 @@ class WalletNode:
         # block is not included in wp recent chain
         start = block.height + 1
         compare_to_recent = False
-        inserted: Optional[SubEpochData] = None
+        inserted: int = 0
         first_height_recent = weight_proof.recent_chain_data[0].height
         if start > first_height_recent - 1000:
             # compare up to weight_proof.recent_chain_data[0].height
@@ -1349,7 +1349,7 @@ class WalletNode:
                 ].num_blocks_overflow
                 # start_ses_hash
                 if ses_start_height <= start_height < next_ses_height:
-                    inserted = weight_proof.sub_epochs[idx]
+                    inserted = idx + 1
                     if ses_start_height < end_height < next_ses_height:
                         end = next_ses_height
                         break
@@ -1360,6 +1360,7 @@ class WalletNode:
                         end = (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
                             idx + 2
                         ].num_blocks_overflow
+                        inserted += 1
                         break
                 ses_start_height = next_ses_height
 
@@ -1383,7 +1384,7 @@ class WalletNode:
 
         if not compare_to_recent:
             last = reversed_blocks[0].finished_sub_slots[-1].reward_chain.get_hash()
-            if inserted is None or last != inserted.reward_chain_hash:
+            if last != weight_proof.sub_epochs[inserted].reward_chain_hash:
                 self.log.error("Failed validation 4")
                 return False
 
