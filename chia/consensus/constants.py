@@ -29,7 +29,7 @@ class ConsensusConstants(Streamable):
     EPOCH_BLOCKS: uint32  # The number of blocks per sub-epoch, must be a multiple of SUB_EPOCH_BLOCKS
 
     SIGNIFICANT_BITS: uint8  # The number of bits to look at in difficulty and min iters. The rest are zeroed
-    DISCRIMINANT_SIZE_BITS: uint32  # Max is 1024 (based on ClassGroupElement int size)
+    DISCRIMINANT_SIZE_BITS: uint16  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_PLOT_FILTER: uint16  # H(plot id + challenge hash + signage point) must start with these many zeroes # noqa: E501
     MIN_PLOT_SIZE: uint16
     MAX_PLOT_SIZE: uint16
