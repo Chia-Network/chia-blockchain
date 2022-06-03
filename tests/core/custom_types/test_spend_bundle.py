@@ -21,7 +21,7 @@ class TestStructStream(unittest.TestCase):
         """
             % NULL_SIGNATURE
         )
-        spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
+        spend_bundle = SpendBundle.create_from_dict(json.loads(JSON))
         json_1 = json.loads(JSON)
         json_2 = spend_bundle.to_json_dict(include_legacy_keys=True, exclude_modern_keys=True)
         assert json_1 == json_2
@@ -36,7 +36,7 @@ class TestStructStream(unittest.TestCase):
         """
             % NULL_SIGNATURE
         )
-        spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
+        spend_bundle = SpendBundle.create_from_dict(json.loads(JSON))
         json_1 = json.loads(JSON)
         json_2 = spend_bundle.to_json_dict(include_legacy_keys=False, exclude_modern_keys=False)
         assert json_1 == json_2
@@ -50,7 +50,7 @@ class TestStructStream(unittest.TestCase):
     def test_dont_use_both_legacy_and_modern(self):
         json_1 = BLANK_SPEND_BUNDLE.to_json_dict(include_legacy_keys=True, exclude_modern_keys=False)
         with self.assertRaises(ValueError):
-            SpendBundle.from_json_dict(json_1)
+            SpendBundle.create_from_dict(json_1)
 
 
 def round_trip(spend_bundle: SpendBundle, **kwargs):
@@ -69,8 +69,8 @@ def round_trip(spend_bundle: SpendBundle, **kwargs):
     if "coin_spends" in json_dict and "coin_solutions" in json_dict:
         del json_dict["coin_solutions"]
 
-    sb = SpendBundle.from_json_dict(json_dict)
+    sb = SpendBundle.create_from_dict(json_dict)
     json_dict_2 = sb.to_json_dict()
-    sb = SpendBundle.from_json_dict(json_dict_2)
+    sb = SpendBundle.create_from_dict(json_dict_2)
     json_dict_3 = sb.to_json_dict()
     assert json_dict_2 == json_dict_3

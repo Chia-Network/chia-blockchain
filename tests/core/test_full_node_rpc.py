@@ -159,12 +159,12 @@ class TestRpc:
             assert len(await client.get_all_mempool_items()) == 1
             assert len(await client.get_all_mempool_tx_ids()) == 1
             assert (
-                SpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+                SpendBundle.create_from_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
                 == spend_bundle
             )
             assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
             assert (
-                SpendBundle.from_json_dict(
+                SpendBundle.create_from_dict(
                     (await client.get_mempool_item_by_tx_id(spend_bundle.name()))["spend_bundle"]
                 )
                 == spend_bundle

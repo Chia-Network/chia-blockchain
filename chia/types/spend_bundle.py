@@ -87,13 +87,13 @@ class SpendBundle(Streamable):
     #  4. remove all code below this point
 
     @classmethod
-    def from_json_dict(cls, json_dict):
+    def create_from_dict(cls, json_dict):
         if "coin_solutions" in json_dict:
             if "coin_spends" not in json_dict:
                 json_dict = dict(
                     aggregated_signature=json_dict["aggregated_signature"], coin_spends=json_dict["coin_solutions"]
                 )
-                warnings.warn("`coin_solutions` is now `coin_spends` in `SpendBundle.from_json_dict`")
+                warnings.warn("`coin_solutions` is now `coin_spends` in `SpendBundle.create_from_dict`")
             else:
                 raise ValueError("JSON contains both `coin_solutions` and `coin_spends`, just use `coin_spends`")
         return dataclass_from_dict(cls, json_dict)
