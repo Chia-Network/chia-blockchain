@@ -85,7 +85,7 @@ jobs:
     - name: Test util code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 2 -m "not benchmark" tests/util/test_chunks.py tests/util/test_full_block_utils.py tests/util/test_lock_queue.py tests/util/test_misc.py tests/util/test_network.py tests/util/test_network_protocol_files.py tests/util/test_paginator.py tests/util/test_struct_stream.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 2 -m "not benchmark" tests/util/test_chunks.py tests/util/test_full_block_utils.py tests/util/test_lock_queue.py tests/util/test_misc.py tests/util/test_network.py tests/util/test_network_protocol_files.py tests/util/test_network_protocol_json.py tests/util/test_network_protocol_test.py tests/util/test_paginator.py tests/util/test_struct_stream.py
 
     - name: Process coverage data
       run: |
