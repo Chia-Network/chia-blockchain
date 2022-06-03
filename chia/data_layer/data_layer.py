@@ -111,7 +111,10 @@ class DataLayer:
         old_root = await self.data_store.get_tree_root(tree_id=tree_id)
         rollback_generation = 0 if old_root is None else old_root.generation
         try:
+            t1 = time.time()
             await self.data_store.insert_batch(tree_id, changelist)
+            t2 = time.time()
+            self.log.info(f"Data store batch update process time: {t2 - t1}.")
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             # todo return empty node hash from get_tree_root
             if root.node_hash is not None:

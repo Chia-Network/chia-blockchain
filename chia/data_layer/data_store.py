@@ -527,6 +527,37 @@ class DataStore:
 
             return nodes
 
+    async def get_internal_nodes(
+        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+    ) -> List[InternalNode]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root_hash = root.node_hash
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    tree_from_root_hash(hash, node_type, left, right, key, value) AS (
+                        SELECT node.* FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT node.* FROM node, tree_from_root_hash WHERE node.hash == tree_from_root_hash.left
+                        OR node.hash == tree_from_root_hash.right
+                    )
+                SELECT * FROM tree_from_root_hash
+                WHERE node_type == :node_type
+                """,
+                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.INTERNAL},
+            )
+
+            internal_nodes: List[InternalNode] = []
+            async for row in cursor:
+                node = row_to_node(row=row)
+                if not isinstance(node, InternalNode):
+                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
+                internal_nodes.append(node)
+
+        return internal_nodes
+
     async def get_keys_values(
         self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
     ) -> List[TerminalNode]:
@@ -900,24 +931,31 @@ class DataStore:
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             if root.node_hash is None:
                 return
-            queue: List[bytes32] = [root.node_hash]
-            while len(queue) > 0:
-                node_hash = queue.pop(0)
-                node = await self.get_node(node_hash, lock=False)
-                if isinstance(node, TerminalNode):
-                    continue
-                new_entry: bool = False
-                for child_hash in (node.left_hash, node.right_hash):
-                    old_parent = await self._get_one_ancestor(child_hash, tree_id)
-                    if old_parent is None or old_parent.hash != node_hash:
-                        new_entry = True
-                        break
+            previous_root = await self.get_tree_root(
+                tree_id=tree_id,
+                generation=max(root.generation - 1, 0),
+                lock=False,
+            )
 
-                # If no information changed, don't add to the ancestor table in order to save space.
-                if new_entry:
+            if previous_root.node_hash is not None:
+                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
+                    tree_id=tree_id,
+                    root_hash=previous_root.node_hash,
+                    lock=False,
+                )
+                known_hashes: Set[bytes32] = set(node.hash for node in previous_internal_nodes)
+            else:
+                known_hashes = set()
+            internal_nodes: List[InternalNode] = await self.get_internal_nodes(
+                tree_id=tree_id,
+                root_hash=root.node_hash,
+                lock=False,
+            )
+            for node in internal_nodes:
+                # We already have the same values in ancestor tables, if we have the same internal node.
+                # Don't reinsert it so we can save DB space.
+                if node.hash not in known_hashes:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
-                queue.append(node.left_hash)
-                queue.append(node.right_hash)
 
     async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
