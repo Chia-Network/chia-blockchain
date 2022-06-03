@@ -632,7 +632,13 @@ class TradeManager:
         requested_summaries: List[Dict[str, Any]] = []
         for asset_id, coins in offer.get_offered_coins().items():
             for coin in coins:
-                coin_spend: CoinSpend = next(filter(lambda cs: cs.coin == coin, offer.bundle.coin_spends))
+                potential_spends: List[CoinSpend] = list(filter(lambda cs: cs.coin == coin, offer.bundle.coin_spends))
+                if len(potential_spends) > 0:
+                    coin_spend: CoinSpend = potential_spends[0]
+                else:
+                    coin_spend = next(
+                        filter(lambda cs: cs.coin.name() == coin.parent_coin_info, offer.bundle.coin_spends)
+                    )
                 offered_summary: Dict[str, Any] = {
                     "asset_id": None if asset_id is None else asset_id.hex(),
                     "coin": coin.to_json_dict(),

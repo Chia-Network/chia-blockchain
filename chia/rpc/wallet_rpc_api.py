@@ -1012,12 +1012,28 @@ class WalletRpcApi:
         raise ValueError(error)
 
     async def get_offer_summary(self, request):
-        assert self.service.wallet_state_manager is not None
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
+        if not request.get("advanced", False):
+            return {
+                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+            }
+        else:
+            assert self.service.wallet_state_manager is not None
+            (
+                offered_summaries,
+                requested_summaries,
+            ) = await self.service.wallet_state_manager.trade_manager.create_advanced_offer_summary(offer)
+            return {
+                "summary": {
+                    "offered": offered_summaries,
+                    "requested": requested_summaries,
+                    "fees": offer.bundle.fees(),
+                    "infos": infos,
+                }
+            }
 
     async def check_offer_validity(self, request):
         assert self.service.wallet_state_manager is not None
