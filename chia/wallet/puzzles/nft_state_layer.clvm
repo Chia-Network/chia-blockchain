@@ -28,7 +28,7 @@
   )
 
 
-  ; this function does two thins - it wraps the odd value create coins, and it also filters out all negative conditions
+  ; this function does two things - it wraps the odd value create coins, and it also filters out all negative conditions
   (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions) my_amount)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
