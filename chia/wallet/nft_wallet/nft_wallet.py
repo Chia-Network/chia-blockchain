@@ -24,6 +24,7 @@ from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,
+    NFT_TRANSFER_PROGRAM_DEFAULT,
     NFT_STATE_LAYER_MOD_HASH,
     create_ownership_layer_puzzle,
     create_ownership_layer_transfer_solution,
@@ -42,7 +43,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
@@ -912,3 +913,34 @@ class NFTWallet:
             new_bundle,
             offer.driver_dict,
         )
+
+    async def summarize_offer_spend(self, coin_spend: CoinSpend) -> Dict[str, Any]:
+        try:
+            uncurried_nft = UncurriedNFT.uncurry(coin_spend.puzzle_reveal.to_program())
+        except ValueError as e:
+            return {"error": f"error parsing NFT {str(e)}"}
+
+        summary_dict: Dict[str, Any] = {}
+        summary_dict["metadata"] = disassemble(uncurried_nft.metadata)
+        summary_dict["metadata_updater_hash"] = uncurried_nft.metadata_updater_hash.hex()
+        if uncurried_nft.transfer_program is not None:
+            summary_dict["nft_properties"] = ["owned"]
+            if uncurried_nft.transfer_program == NFT_TRANSFER_PROGRAM_DEFAULT:
+                summary_dict["nft_properties"].append("buyer/seller signed royalties")
+                summary_dict["pubkey"] = (
+                    None if uncurried_nft.owner_pubkey is None else bytes(uncurried_nft.owner_pubkey).hex()
+                )
+                summary_dict["royalty_address"] = (
+                    None if uncurried_nft.royalty_address is None else uncurried_nft.royalty_address.hex()
+                )
+                summary_dict["trade_price_percentage"] = (
+                    None if uncurried_nft.trade_price_percentage is None else uncurried_nft.trade_price_percentage
+                )
+            summary_dict["owner"] = None if uncurried_nft.owner_did is None else uncurried_nft.owner_did.hex()
+        return summary_dict
+
+    async def summarize_offer_request(self, asset_id: bytes32, request: NotarizedPayment) -> Dict[str, Any]:
+        summary_dict: Dict[str, Any] = {}
+        summary_dict["trade_prices_list"] = disassemble(Program.from_bytes(request.memos[0]))
+        summary_dict["new_pubkey"] = G1Element.from_bytes(request.memos[1])
+        return summary_dict

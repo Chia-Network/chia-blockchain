@@ -13,6 +13,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
@@ -625,3 +626,53 @@ class TradeManager:
             if offer.incomplete_spends() == []:
                 return offer
         raise ValueError("This offer contained invalid spends that the trade manager couldn't fix")
+
+    async def create_advanced_offer_summary(self, offer: Offer) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        offered_summaries: List[Dict[str, Any]] = []
+        requested_summaries: List[Dict[str, Any]] = []
+        for asset_id, coins in offer.get_offered_coins().items():
+            for coin in coins:
+                coin_spend: CoinSpend = next(filter(lambda cs: cs.coin == coin, offer.bundle.coin_spends))
+                offered_summary: Dict[str, Any] = {
+                    "asset_id": None if asset_id is None else asset_id.hex(),
+                    "coin": coin.to_json_dict(),
+                }
+                if asset_id is not None:
+                    puzzle_info: Optional[PuzzleInfo] = match_puzzle(coin_spend.puzzle_reveal.to_program())
+                    if puzzle_info is None:
+                        offered_summary["error"] = "unknown puzzle type"
+                    else:
+                        wallet = await self.wallet_state_manager.get_wallet_for_puzzle_info(puzzle_info)
+                        if wallet is None:
+                            offered_summary["error"] = "unknown wallet type"
+                        elif not callable(getattr(wallet, "summarize_offer_spend", None)):
+                            offered_summary["error"] = f"wallet with id {wallet.id()} cannot summarize this spend"
+                        else:
+                            offered_summary["wallet_id"] = wallet.id()
+                            offered_summary["wallet_type"] = wallet.type()
+                            offered_summary.update(await wallet.summarize_offer_spend(coin_spend))
+                offered_summaries.append(offered_summary)
+        for asset_id, notarized_payments in offer.get_requested_payments().items():
+            for payment in notarized_payments:
+                requested_summary: Dict[str, Any] = {
+                    "asset_id": None if asset_id is None else asset_id.hex(),
+                    "requested_payment": {
+                        "nonce": payment.nonce,
+                        "puzzle_hash": payment.puzzle_hash,
+                        "amount": payment.amount,
+                        "memos": [m.hex() for m in payment.memos],
+                    },
+                }
+                if asset_id is not None:
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                    if wallet is None:
+                        requested_summary["error"] = "unknown wallet type"
+                    elif not callable(getattr(wallet, "summarize_offer_request", None)):
+                        requested_summary["error"] = f"wallet with id {wallet.id()} cannot summarize this request"
+                    else:
+                        requested_summary["wallet_id"] = wallet.id()
+                        requested_summary["wallet_type"] = wallet.type()
+                        requested_summary.update(await wallet.summarize_offer_request(asset_id, payment))
+                requested_summaries.append(requested_summary)
+
+        return offered_summaries, requested_summaries

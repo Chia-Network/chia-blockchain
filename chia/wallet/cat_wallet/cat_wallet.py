@@ -45,7 +45,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -844,3 +844,9 @@ class CATWallet:
             if tx.spend_bundle is not None
         ]
         return SpendBundle.aggregate(spend_bundles)
+
+    async def summarize_offer_spend(self, coin_spend: CoinSpend) -> Dict[str, Any]:
+        return {}
+
+    async def summarize_offer_request(self, asset_id: bytes32, request: NotarizedPayment) -> Dict[str, Any]:
+        return {}
