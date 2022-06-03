@@ -132,7 +132,7 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     """
     if type(item) == klass:
         return item
-    obj = object.__new__(klass)
+
     if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
         # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
         # functions only.
@@ -144,9 +144,13 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
         fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
         convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
 
-    for field, convert_func in zip(fields, convert_funcs):
-        object.__setattr__(obj, field.name, convert_func(item[field.name]))
-    return obj
+    return klass(
+        **{
+            field.name: convert_func(item[field.name])
+            for field, convert_func in zip(fields, convert_funcs)
+            if field.name in item
+        }
+    )
 
 
 def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
