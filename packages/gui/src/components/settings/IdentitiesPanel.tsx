@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router';
 import {
   CardListItem,
   Flex,
+  Truncate,
 } from '@chia/core';
 import {
   Box,
@@ -71,7 +72,7 @@ function DisplayDid(wallet) {
 
     return (
       <div>
-        {myDidText}
+        <Truncate tooltip copyToClipboard>{myDidText}</Truncate>
       </div>
     )
   } else {
@@ -117,7 +118,7 @@ export default function IdentitiesPanel() {
         </StyledCard>
       )
     } else {
-      const orderedProfiles = orderBy(wallets, ['name'], ['asc']);
+      const orderedProfiles = orderBy(wallets, ['id'], ['asc']);
 
       return orderedProfiles
         .filter(wallet => [WalletType.DISTRIBUTED_ID].includes(wallet.type))

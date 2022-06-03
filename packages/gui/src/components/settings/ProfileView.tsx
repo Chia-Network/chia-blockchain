@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  CopyToClipboard,
   Flex,
   Suspender,
+  Truncate,
 } from '@chia/core';
 import {
   Card,
@@ -14,6 +14,7 @@ import { useParams } from 'react-router-dom';
 import {
   useGetDIDQuery,
   useGetDIDNameQuery,
+  useSetDIDNameMutation,
 } from '@chia/api-react';
 
 const StyledCard = styled(Card)(({ theme }) => `
@@ -22,6 +23,49 @@ const StyledCard = styled(Card)(({ theme }) => `
   border-radius: ${theme.spacing(1)};
   background-color: ${theme.palette.background.paper};
 `);
+
+const InlineEdit = ({ text, walletId }) => {
+  const [editedText, setEditedText] = useState(text);
+  const [setDid, { isLoading: isSetDidLoading }] = useSetDIDNameMutation();
+
+  useEffect(() => {
+    setEditedText(text);
+  }, [text]);
+
+  const handleChange = (event) => setEditedText(event.target.value);
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === "Escape") {
+      event.target.blur();
+    }
+  }
+
+  const handleBlur = (event) => {
+    if (event.target.value.trim() === "") {
+      setEditedText(text);
+    } else {
+      setDid({ walletId: walletId, name: event.target.value});
+    }
+  }
+
+  return (
+    <input
+      type="text"
+      style={{
+          width: "100%",
+          paddingLeft: "8px",
+          paddingTop: "6px",
+          paddingBottom: "6px",
+          fontSize: "20px",
+          fontWeight: "bold",
+        }}
+      value={editedText || ''}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
+    />
+  );
+};
 
 export default function ProfileView() {
   const { walletId } = useParams();
@@ -44,17 +88,14 @@ export default function ProfileView() {
       <div style={{width:"100%"}}>
         <StyledCard>
           <Flex flexDirection="column" gap={2.5} paddingBottom={3}>
-            <Typography variant="h6">
-              <Trans><strong>{nameText}</strong></Trans>
-            </Typography>
+            <InlineEdit text={nameText} walletId={walletId}/>
           </Flex>
           <Flex flexDirection="row" paddingBottom={1}>
             <Flex flexGrow={1}>
               <Trans>My DID</Trans>
             </Flex>
             <Flex>
-              <Trans>{myDidText}</Trans>
-              <CopyToClipboard value={myDidText} fontSize="small"/>
+              <Truncate tooltip copyToClipboard>{myDidText}</Truncate>
             </Flex>
           </Flex>
           <Flex flexDirection="row" paddingBottom={1}>
@@ -62,7 +103,7 @@ export default function ProfileView() {
               <Trans>Token Standard</Trans>
             </Flex>
             <Flex>
-              <Trans>DID1</Trans>
+              DID1
             </Flex>
           </Flex>
         </StyledCard>
