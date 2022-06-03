@@ -49,6 +49,7 @@ type CommonDialogProps = {
   onClose: (value: boolean) => void;
 };
 
+type OfferShareDexieDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareOfferBinDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
@@ -69,6 +70,45 @@ async function writeTempOfferFile(
   fs.writeFileSync(filePath, offerData);
 
   return filePath;
+}
+
+/* ========================================================================== */
+
+async function postToDexie(
+  offerData: string,
+  testnet: boolean,
+): Promise<string> {
+  const ipcRenderer = (window as any).ipcRenderer;
+  const requestOptions = {
+    method: 'POST',
+    protocol: 'https:',
+    hostname: testnet ? 'testnet.dexie.space' : 'dexie.space',
+    port: 443,
+    path: '/v1/offers',
+  };
+  const requestHeaders = {
+    'Content-Type': 'application/json',
+  };
+  const requestData = JSON.stringify({ offer: offerData });
+  const { err, statusCode, statusMessage, responseBody } =
+    await ipcRenderer.invoke(
+      'fetchTextResponse',
+      requestOptions,
+      requestHeaders,
+      requestData,
+    );
+
+  if (err || (statusCode !== 200 && statusCode !== 400)) {
+    const error = new Error(
+      `Dexie upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`,
+    );
+    throw error;
+  }
+
+  console.log('Dexie upload completed');
+  const { id } = JSON.parse(responseBody);
+
+  return `https://${testnet ? 'testnet.' : ''}dexie.space/offers/${id}`;
 }
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
@@ -363,6 +403,84 @@ async function postToOfferpool(
 
   console.log('offerpool upload completed');
   return JSON.parse(responseBody);
+}
+
+/* ========================================================================== */
+
+function OfferShareDexieDialog(props: OfferShareDexieDialogProps) {
+  const { offerRecord, offerData, testnet, onClose, open } = props;
+  const openExternal = useOpenExternal();
+  const [sharedURL, setSharedURL] = React.useState('');
+
+  function handleClose() {
+    onClose(false);
+  }
+
+  async function handleConfirm() {
+    const url = await postToDexie(offerData, testnet);
+    console.log(`Dexie URL: ${url}`);
+    setSharedURL(url);
+  }
+
+  if (sharedURL) {
+    return (
+      <Dialog
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        maxWidth="xs"
+        open={open}
+        onClose={handleClose}
+        fullWidth
+      >
+        <DialogTitle>
+          <Trans>Offer Shared</Trans>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Flex flexDirection="column" gap={3}>
+            <TextField
+              label={<Trans>Dexie URL</Trans>}
+              value={sharedURL}
+              variant="filled"
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <CopyToClipboard value={sharedURL} />
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+            />
+            <Flex>
+              <Button
+                variant="outlined"
+                onClick={() => openExternal(sharedURL)}
+              >
+                <Trans>View on Dexie</Trans>
+              </Button>
+            </Flex>
+          </Flex>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary" variant="contained">
+            <Trans>Close</Trans>
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  return (
+    <OfferShareConfirmationDialog
+      offerRecord={offerRecord}
+      offerData={offerData}
+      testnet={testnet}
+      title={<Trans>Share on Dexie</Trans>}
+      onConfirm={handleConfirm}
+      open={open}
+      onClose={onClose}
+    />
+  );
 }
 
 function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
@@ -995,6 +1113,16 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
     onClose(false);
   }
 
+  async function handleDexie() {
+    await openDialog(
+      <OfferShareDexieDialog
+        offerRecord={offerRecord}
+        offerData={offerData}
+        testnet={testnet}
+      />,
+    );
+  }
+
   async function handleOfferBin() {
     await openDialog(
       <OfferShareOfferBinDialog
@@ -1058,6 +1186,9 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
               Where would you like to share your offer?
             </Typography>
             <Flex flexDirection="column" gap={3}>
+              <Button variant="outlined" onClick={handleDexie}>
+                Dexie
+              </Button>
               <Button variant="outlined" onClick={handleOfferBin}>
                 OfferBin
               </Button>

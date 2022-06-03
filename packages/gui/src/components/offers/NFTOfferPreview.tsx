@@ -108,7 +108,10 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
             <Typography variant="subtitle1">Provenance</Typography>
             <TooltipIcon>
               <Trans>
-                Provenance definition and how it applies to NFTs goes here!
+                An NFT's provenance is a complete record of its ownership
+                history. It provides a direct lineage that connects everyone who
+                has owned the NFT, all the way back to the original artist. This
+                helps to verify that the NFT is authentic.
               </Trans>
             </TooltipIcon>
           </Flex>
