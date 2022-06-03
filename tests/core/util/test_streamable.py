@@ -164,7 +164,7 @@ class TestFromJsonDictDefaultValues(Streamable):
     ],
 )
 def test_from_json_dict_default_values(input_dict: Dict[str, object], output_dict: Dict[str, object]) -> None:
-    assert TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict() == output_dict
+    assert str(TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict()) == str(output_dict)
 
 
 def test_basic_list() -> None:
