@@ -506,6 +506,9 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "-rp", "--royalty-percentage", help="NFT royalty percentage in basis points", type=int, default=0, show_default=True
+)
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -521,6 +524,7 @@ def nft_mint_cmd(
     series_total: Optional[int],
     series_number: Optional[int],
     fee: str,
+    royalty_percentage: int,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, mint_nft
@@ -548,6 +552,7 @@ def nft_mint_cmd(
         "series_total": series_total,
         "series_number": series_number,
         "fee": fee,
+        "royalty_percentage": royalty_percentage,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
 
