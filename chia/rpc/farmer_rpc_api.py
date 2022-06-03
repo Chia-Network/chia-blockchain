@@ -9,38 +9,50 @@ from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32
 from chia.util.paginator import Paginator
-from chia.util.streamable import dataclass_from_dict
+from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class PaginatedRequestData(Protocol):
-    node_id: bytes32
-    page: int
-    page_size: int
+    @property
+    def node_id(self) -> bytes32:
+        pass
+
+    @property
+    def page(self) -> uint32:
+        pass
+
+    @property
+    def page_size(self) -> uint32:
+        pass
 
 
-@dataclasses.dataclass
-class FilterItem:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class FilterItem(Streamable):
     key: str
     value: Optional[str]
 
 
-@dataclasses.dataclass
-class PlotInfoRequestData:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotInfoRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[FilterItem] = dataclasses.field(default_factory=list)
     sort_key: str = "filename"
     reverse: bool = False
 
 
-@dataclasses.dataclass
-class PlotPathRequestData:
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotPathRequestData(Streamable):
     node_id: bytes32
-    page: int
-    page_size: int
+    page: uint32
+    page_size: uint32
     filter: List[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
 
@@ -232,7 +244,7 @@ class FarmerRpcApi:
 
     async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
-        request = dataclass_from_dict(PlotInfoRequestData, request_dict)
+        request = PlotInfoRequestData.from_json_dict(request_dict)
         plot_list = list(self.service.get_receiver(request.node_id).plots().values())
         # Apply filter
         plot_list = [
@@ -249,10 +261,9 @@ class FarmerRpcApi:
     def paginated_plot_path_request(
         self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
     ) -> Dict[str, object]:
-        request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
+        request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
         receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
-        request = dataclass_from_dict(PlotPathRequestData, request_dict)
         # Apply filter
         source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
         # Apply reverse

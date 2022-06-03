@@ -15,4 +15,4 @@ include = '''
     | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
 )$
 '''
-exclude = ''
+exclude = 'tests/util/(protocol_messages_json|test_network_protocol_json).py'

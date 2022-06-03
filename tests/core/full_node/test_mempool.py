@@ -2102,7 +2102,7 @@ class TestGeneratorConditions:
         ],
     )
     def test_unknown_condition(self, mempool: bool, height: uint32):
-        for c in ['(1 100 "foo" "bar")', "(100)", "(1 1) (2 2) (3 3)", '("foobar")']:
+        for c in ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")']:
             npc_result = generator_condition_tester(c, mempool_mode=mempool, height=height)
             print(npc_result)
             if mempool:

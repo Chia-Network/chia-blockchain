@@ -182,7 +182,6 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
         self.plot_dir: Path = get_plot_dir()
         self.temp_dir: Path = get_plot_tmp_dir()
         mkdir(self.plot_dir)
@@ -201,7 +200,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
@@ -211,7 +210,9 @@ class BlockTools:
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
-            self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
+            self.root_path,
+            refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
+            refresh_callback=test_callback,
         )
 
     async def setup_keys(self):
@@ -351,8 +352,8 @@ class BlockTools:
             sys.exit(1)
 
     async def refresh_plots(self):
-        self.plot_manager.refresh_parameter.batch_size = (
-            4 if len(self.expected_plots) % 3 == 0 else 3
+        self.plot_manager.refresh_parameter = replace(
+            self.plot_manager.refresh_parameter, batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3)
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
