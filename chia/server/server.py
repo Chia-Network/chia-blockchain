@@ -28,10 +28,9 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import is_in_network, is_localhost, select_port
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -279,17 +278,7 @@ class ChiaServer:
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
         if self._port == 0:
-            global_config = load_config(self.root_path, "config.yaml")
-            prefer_ipv6 = global_config.get("prefer_ipv6", False)
-            self._port = self.runner.addresses[0][1]  # sets the default to handle some edge cases
-            for x in self.runner.addresses:
-                ip_addy = ip_address(x[0])
-                if ip_addy.version == 6 and prefer_ipv6:
-                    self._port = x[1]
-                    break
-                elif ip_addy.version == 4 and not prefer_ipv6:
-                    self._port = x[1]
-                    break
+            self._port = select_port(self.root_path, self.runner.addresses)
 
         self.log.info(f"Started listening on port: {self._port}")
 

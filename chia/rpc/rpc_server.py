@@ -1,5 +1,4 @@
 import asyncio
-import ipaddress
 import json
 import logging
 import traceback
@@ -13,9 +12,9 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ssl_context_for_client, ssl_context_for_server
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
+from chia.util.network import select_port
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -336,17 +335,7 @@ async def start_rpc_server(
     # prefer_ipv6 is set in which case we use the IPv6 port
     #
     if rpc_port == 0:
-        rpc_port = runner.addresses[0][1]  # Set the port by default to the first thing
-        global_config = load_config(root_path, "config.yaml")
-        prefer_ipv6 = global_config.get("prefer_ipv6", False)
-        for x in runner.addresses:
-            ip_addy = ipaddress.ip_address(x[0])
-            if ip_addy.version == 6 and prefer_ipv6:
-                rpc_port = x[1]
-                break
-            elif ip_addy.version == 4 and not prefer_ipv6:
-                rpc_port = x[1]
-                break
+        rpc_port = select_port(root_path, runner.addresses)
 
     async def cleanup():
         await rpc_server.stop()
