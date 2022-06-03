@@ -4,7 +4,7 @@
     Current_Owner
     (
       new_owner
-      traade_prices_list
+      trade_prices_list
       (new_did_inner_hash)
     )
   )
