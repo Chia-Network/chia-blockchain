@@ -1,6 +1,8 @@
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
+
+from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
@@ -11,6 +13,20 @@ from chia.util.ints import uint32
 from chia.util.paginator import Paginator
 from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+class PaginatedRequestData(Protocol):
+    @property
+    def node_id(self) -> bytes32:
+        pass
+
+    @property
+    def page(self) -> uint32:
+        pass
+
+    @property
+    def page_size(self) -> uint32:
+        pass
 
 
 @streamable
@@ -39,9 +55,6 @@ class PlotPathRequestData(Streamable):
     page_size: uint32
     filter: List[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
-
-
-PaginatedRequestData = Union[PlotInfoRequestData, PlotPathRequestData]
 
 
 def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
