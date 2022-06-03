@@ -183,7 +183,7 @@ async def pre_validate_blocks_multiprocessing(
 
     Args:
         check_filter:
-        constants_json:
+        constants_bytes:
         pool:
         constants:
         block_records:
