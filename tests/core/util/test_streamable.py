@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 import pytest
@@ -128,21 +128,43 @@ def test_pure_dataclasses_in_dataclass_from_dict() -> None:
     "test_class, input_dict, error",
     [
         [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ValueError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2"}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, ValueError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ValueError],
         [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
         [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, TypeError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
     ],
 )
 def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
         dataclass_from_dict(test_class, input_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class TestFromJsonDictDefaultValues(Streamable):
+    a: uint64 = uint64(1)
+    b: str = "default"
+    c: List[uint64] = field(default_factory=list)
+
+
+@pytest.mark.parametrize(
+    "input_dict, output_dict",
+    [
+        [{}, {"a": 1, "b": "default", "c": []}],
+        [{"a": 2}, {"a": 2, "b": "default", "c": []}],
+        [{"b": "not_default"}, {"a": 1, "b": "not_default", "c": []}],
+        [{"c": [1, 2]}, {"a": 1, "b": "default", "c": [1, 2]}],
+        [{"a": 2, "b": "not_default", "c": [1, 2]}, {"a": 2, "b": "not_default", "c": [1, 2]}],
+    ],
+)
+def test_from_json_dict_default_values(input_dict: Dict[str, object], output_dict: Dict[str, object]) -> None:
+    assert str(TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict()) == str(output_dict)
 
 
 def test_basic_list() -> None:

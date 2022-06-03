@@ -9,16 +9,19 @@ from chiapos import DiskProver
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class PlotsRefreshParameter:
-    interval_seconds: int = 120
-    retry_invalid_seconds: int = 1200
-    batch_size: int = 300
-    batch_sleep_milliseconds: int = 1
+@streamable
+@dataclass(frozen=True)
+class PlotsRefreshParameter(Streamable):
+    interval_seconds: uint32 = uint32(120)
+    retry_invalid_seconds: uint32 = uint32(1200)
+    batch_size: uint32 = uint32(300)
+    batch_sleep_milliseconds: uint32 = uint32(1)
 
 
 @dataclass
