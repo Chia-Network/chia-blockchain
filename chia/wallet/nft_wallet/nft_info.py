@@ -4,7 +4,7 @@ from typing import List, Optional
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -23,12 +23,17 @@ class NFTInfo(Streamable):
     nft_coin_id: bytes32
     """Current NFT coin ID"""
 
-    did_owner: str
+    owner_did: Optional[bytes32]
     """Owner DID"""
 
-    royalty: uint64
+    owner_pubkey: Optional[bytes]
+    """Pubkey of the NFT owner"""
+
+    royalty_percentage: Optional[uint16]
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
 
+    royalty_puzzle_hash: Optional[bytes32]
+    """Puzzle hash where royalty will be sent to"""
     data_uris: List[str]
     """ A list of content URIs"""
 
@@ -59,6 +64,12 @@ class NFTInfo(Streamable):
     chain_info: str
     """Information saved on the chain in hex"""
 
+    mint_height: uint32
+    """Block height of the NFT minting"""
+
+    supports_did: bool
+    """If the inner puzzle supports DID"""
+
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
@@ -72,6 +83,7 @@ class NFTCoinInfo(Streamable):
     coin: Coin
     lineage_proof: Optional[LineageProof]
     full_puzzle: Program
+    mint_height: uint32
     pending_transaction: bool = False
 
 
@@ -79,4 +91,4 @@ class NFTCoinInfo(Streamable):
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     my_nft_coins: List[NFTCoinInfo]
-    did_wallet_id: Optional[uint32] = None
+    did_id: Optional[bytes32] = None
