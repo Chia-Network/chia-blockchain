@@ -507,7 +507,12 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
     callback=validate_fee,
 )
 @click.option(
-    "-rp", "--royalty-percentage", help="NFT royalty percentage in basis points", type=int, default=0, show_default=True
+    "-rp",
+    "--royalty-percentage",
+    help="NFT royalty percentage in basis points. Example: 1750 would represent 1.75%",
+    type=int,
+    default=0,
+    show_default=True,
 )
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
