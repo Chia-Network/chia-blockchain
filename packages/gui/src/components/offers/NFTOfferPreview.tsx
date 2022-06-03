@@ -1,33 +1,26 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useGetNFTInfoQuery } from '@chia/api-react';
-import { Flex } from '@chia/core';
-import { Box, Card, Typography } from '@mui/material';
+import { Button, Flex, TooltipIcon } from '@chia/core';
+import { Card, Typography } from '@mui/material';
 import NFTCard from '../nfts/NFTCard';
 import { launcherIdFromNFTId } from '../../util/nfts';
 import { NFTContextualActionTypes } from '../nfts/NFTContextualActions';
 import styled from 'styled-components';
+import useViewNFTOnExplorer, {
+  NFTExplorer,
+} from '../../hooks/useViewNFTOnExplorer';
 
 /* ========================================================================== */
 
 const StyledPreviewContainer = styled(Flex)`
-  width: 328px;
-  // min-height: 576px;
+  width: 364px;
   border-left: 1px solid ${({ theme }) => theme.palette.border.main};
-`;
-
-const StyledEmptyPreview = styled(Box)`
-  width: 264px;
-  height: 406px;
-  box-sizing: border-box;
-  border: none;
-  border-radius: 4px;
-  display: flex;
-  overflow: hidden;
+  padding-bottom: ${({ theme }) => theme.spacing(4)};
 `;
 
 const StyledCard = styled(Card)`
-  width: 264px;
+  width: 300px;
   height: 406px;
   display: flex;
 `;
@@ -49,6 +42,7 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
     isLoading,
     error,
   } = useGetNFTInfoQuery({ coinId: launcherId });
+  const viewOnExplorer = useViewNFTOnExplorer();
 
   return (
     <StyledPreviewContainer
@@ -94,6 +88,52 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
           )}
         </StyledCard>
       </Flex>
+      {nft && (
+        <Flex
+          flexDirection="column"
+          flexGrow={1}
+          alignItems="center"
+          gap={2}
+          style={{
+            width: '100%',
+            padding: '0 2rem',
+          }}
+        >
+          <Flex
+            flexDirection="row"
+            alignItems="center"
+            gap={0.5}
+            style={{ width: '100%' }}
+          >
+            <Typography variant="subtitle1">Provenance</Typography>
+            <TooltipIcon>
+              <Trans>
+                Provenance definition and how it applies to NFTs goes here!
+              </Trans>
+            </TooltipIcon>
+          </Flex>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => viewOnExplorer(nft, NFTExplorer.MintGarden)}
+            style={{ width: '100%' }}
+          >
+            <Typography variant="caption" color="secondary">
+              <Trans>Check Provenance on MintGarden</Trans>
+            </Typography>
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => viewOnExplorer(nft, NFTExplorer.Spacescan)}
+            style={{ width: '100%' }}
+          >
+            <Typography variant="caption" color="secondary">
+              <Trans>Check Provenance on Spacescan.io</Trans>
+            </Typography>
+          </Button>
+        </Flex>
+      )}
     </StyledPreviewContainer>
   );
 }

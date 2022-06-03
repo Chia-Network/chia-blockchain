@@ -39,7 +39,7 @@ function OpenUnsafeLinkConfirmationDialog(
 
   return (
     <ConfirmDialog
-      title={<Trans>Warning: This Link May Be Unsafe</Trans>}
+      title={<Trans>Warning: You're about to visit a website</Trans>}
       confirmTitle={<Trans>Open Link</Trans>}
       confirmColor="primary"
       cancelTitle={<Trans>Cancel</Trans>}
@@ -48,8 +48,8 @@ function OpenUnsafeLinkConfirmationDialog(
       <Flex flexDirection="column" gap={2}>
         <Typography>
           <Trans>
-            The following link may contain unsafe content. Proceed at your own
-            risk.
+            Please check the following link to verify the site you are going to
+            visit. Proceed at your own risk.
           </Trans>
         </Typography>
         <TextField

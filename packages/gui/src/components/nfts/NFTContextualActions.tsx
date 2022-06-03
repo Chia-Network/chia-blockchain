@@ -3,13 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCopyToClipboard } from 'react-use';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
-import {
-  AlertDialog,
-  DropdownActions,
-  useCurrencyCode,
-  useOpenDialog,
-  useOpenExternal,
-} from '@chia/core';
+import { AlertDialog, DropdownActions, useOpenDialog } from '@chia/core';
 import type { DropdownActionsChildProps } from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
 import { ListItemIcon, MenuItem, Typography } from '@mui/material';
@@ -21,6 +15,9 @@ import {
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
 import useOpenUnsafeLink from '../../hooks/useOpenUnsafeLink';
+import useViewNFTOnExplorer, {
+  NFTExplorer,
+} from '../../hooks/useViewNFTOnExplorer';
 import isURL from 'validator/lib/isURL';
 
 /* ========================================================================== */
@@ -242,22 +239,20 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
 
 type NFTViewOnExplorerContextualActionProps = NFTContextualActionProps & {
   title?: string | JSX.Element;
-  getURLForNFT?: (nft: NFTInfo, testnet: boolean) => string;
+  explorer: NFTExplorer;
 };
 
 function NFTViewOnExplorerContextualAction(
   props: NFTViewOnExplorerContextualActionProps,
 ) {
-  const { onClose, selection, title, getURLForNFT } = props;
-  const testnet = useCurrencyCode() === 'TXCH';
-  const openExternal = useOpenExternal();
+  const { onClose, selection, title, explorer } = props;
+  const viewOnExplorer = useViewNFTOnExplorer();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
-  const disabled = !selectedNft || !getURLForNFT;
+  const disabled = !selectedNft;
 
   function handleView() {
-    if (getURLForNFT) {
-      const url = getURLForNFT(selectedNft, testnet);
-      openExternal(url);
+    if (selectedNft) {
+      viewOnExplorer(selectedNft, explorer);
     }
   }
 
@@ -277,22 +272,6 @@ function NFTViewOnExplorerContextualAction(
       </Typography>
     </MenuItem>
   );
-}
-
-/* ========================================================================== */
-
-function getMintGardenURL(nft: NFTInfo, testnet: boolean) {
-  const url = `https://${testnet ? 'testnet.' : ''}mintgarden.io/nfts/${
-    nft.$nftId
-  }`;
-  return url;
-}
-
-function getSpacescanURL(nft: NFTInfo, testnet: boolean) {
-  const url = `https://spacescan.io/${testnet ? 'txch10' : 'xch'}/nft/${
-    nft.$nftId
-  }`;
-  return url;
 }
 
 /* ========================================================================== */
@@ -330,14 +309,14 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
           action: NFTViewOnExplorerContextualAction,
           props: {
             title: <Trans>View on MintGarden</Trans>,
-            getURLForNFT: getMintGardenURL,
+            explorer: NFTExplorer.MintGarden,
           },
         },
         {
           action: NFTViewOnExplorerContextualAction,
           props: {
             title: <Trans>View on Spacescan.io</Trans>,
-            getURLForNFT: getSpacescanURL,
+            explorer: NFTExplorer.Spacescan,
           },
         },
       ],

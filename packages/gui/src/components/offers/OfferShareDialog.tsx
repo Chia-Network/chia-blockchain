@@ -54,7 +54,7 @@ type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
 type OfferShareOfferpoolDialogProps = CommonOfferProps & CommonDialogProps;
 
-const testnetDummyHost = 'dummy.chiatechlab.com';
+const testnetDummyHost = 'file-acceptor.chia.net';
 const testnetDummyEndpoint = '/';
 
 async function writeTempOfferFile(

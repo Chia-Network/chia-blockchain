@@ -470,6 +470,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                     flexGrow={1}
                     alignItems="flex-end"
                     justifyContent="flex-end"
+                    style={{ paddingBottom: '1em' }}
                   >
                     <Flex justifyContent="flex-end" gap={2}>
                       <Button
