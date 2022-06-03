@@ -74,4 +74,4 @@ jobs:
       - name: pytest
         run: |
           . ./activate
-          ./venv/bin/py.test -n 0 -m benchmark tests
+          ./venv/bin/py.test -n 0 --capture no -m benchmark tests

@@ -1,0 +1,99 @@
+(mod (
+    NFT_STATE_LAYER_MOD_HASH
+    METADATA
+    METADATA_UPDATER_PUZZLE_HASH
+    INNER_PUZZLE
+    solution  ; either to inner puzzle or metadata updater
+    my_amount
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun sha256tree1
+         (TREE)
+         (if (l TREE)
+             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+             (sha256 1 TREE)
+         )
+  )
+
+  (defun-inline nft_state_layer_puzzle_hash (NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH inner_puzzle_hash)
+    (puzzle-hash-of-curried-function NFT_STATE_LAYER_MOD_HASH
+                                     inner_puzzle_hash
+                                     (sha256 ONE METADATA_UPDATER_PUZZLE_HASH)
+                                     (sha256tree1 METADATA)
+                                     (sha256 ONE NFT_STATE_LAYER_MOD_HASH)
+    )
+  )
+
+  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions) my_amount new_create_coin_condition)
+    (if conditions
+      (if (= (f (f conditions)) CREATE_COIN)
+        (if (logand (f (r (r (f conditions)))) ONE)
+          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount (f conditions))
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition))
+        )
+        (if (> (f (f conditions)) 0)
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition))
+          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition)
+        )
+      )
+      (if new_create_coin_condition
+        (list (c CREATE_COIN
+          (c (nft_state_layer_puzzle_hash
+               NFT_STATE_LAYER_MOD_HASH METADATA
+               METADATA_UPDATER_PUZZLE_HASH
+               (f (r new_create_coin_condition)))
+            (c my_amount
+              (r (r (r new_create_coin_condition)))
+            )
+          )
+        ))
+        (x)
+      )
+    )
+  )
+
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
+  )
+
+  (defun check_for_metadata_prog_reveal (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions_loop)
+    (if conditions_loop
+      (if (= (f (f conditions_loop)) -24)
+        (if (= (sha256tree1 (f (r (f conditions_loop)))) METADATA_UPDATER_PUZZLE_HASH)
+          (a (f (r (f conditions_loop))) (list CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (r (f conditions_loop))))))
+          (x)
+        )
+        (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA (r conditions_loop))
+      )
+      (list (list CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH) 0)
+    )
+  )
+
+  (defun process_metadata_updater (metadata_result conditions)
+    (c (f metadata_result) (list (merge_list (f (r metadata_result)) conditions)))
+  )
+
+  (defun metadata_updater_loader (METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions)
+    (process_metadata_updater (check_for_metadata_prog_reveal METADATA_UPDATER_PUZZLE_HASH CURRENT_METADATA conditions) conditions)
+  )
+
+  ; main
+  (c
+    (list ASSERT_MY_AMOUNT my_amount)
+    (wrap_odd_create_coins
+      NFT_STATE_LAYER_MOD_HASH
+      (metadata_updater_loader
+       METADATA_UPDATER_PUZZLE_HASH METADATA (a INNER_PUZZLE solution)
+      )
+      my_amount
+      0
+    )
+  )
+)

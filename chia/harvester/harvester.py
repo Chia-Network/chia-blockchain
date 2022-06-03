@@ -20,7 +20,6 @@ from chia.plotting.util import (
     remove_plot_directory,
 )
 from chia.server.server import ChiaServer
-from chia.util.streamable import dataclass_from_dict
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +51,7 @@ class Harvester:
                 refresh_parameter, interval_seconds=config["plot_loading_frequency_seconds"]
             )
         if "plots_refresh_parameter" in config:
-            refresh_parameter = dataclass_from_dict(PlotsRefreshParameter, config["plots_refresh_parameter"])
+            refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
 
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
