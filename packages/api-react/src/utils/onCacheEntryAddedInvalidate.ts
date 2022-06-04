@@ -4,12 +4,12 @@ type Invalidate = {
   command: string;
   service: Service;
   endpoint: () => Object;
-  skip?: (data: any, args: any) => boolean;
+  skip?: (draft: any, data: any, args: any) => boolean;
 } | {
   command: string;
   service: Service;
-  onUpdate: (draft, data, args: any) => void;
-  skip?: (data: any, args: any) => boolean;
+  onUpdate: (draft: any, data, args: any) => void;
+  skip?: (draft: any, data: any, args: any) => boolean;
 };
 
 export default function onCacheEntryAddedInvalidate(rtkQuery, invalidates: Invalidate[]) {
@@ -19,30 +19,30 @@ export default function onCacheEntryAddedInvalidate(rtkQuery, invalidates: Inval
     try {
       await cacheDataLoaded;
 
-      await Promise.all(invalidates.map(async(invalidate) => {
+      await Promise.all(invalidates.map(async (invalidate) => {
         const { command, service, endpoint, onUpdate, skip } = invalidate;
 
         const response = await rtkQuery({
           command,
           service,
-          args: [(data) => {
-            if (skip && !skip(data, args)) {
-              return;
-            }
+          args: [async (data) => {
+            updateCachedData((draft) => {
+              if (skip?.(draft, data, args)) {
+                return;
+              }
 
-            if (onUpdate) {
-              updateCachedData((draft) => {
+              if (onUpdate) {
                 onUpdate(draft, data, args);
-              });
-            }
+              }
 
-            if (endpoint) {
-              const currentEndpoint = endpoint();
-              dispatch(currentEndpoint.initiate(args, { 
-                subscribe: false,
-                forceRefetch: true,
-              }));
-            }
+              if (endpoint) {
+                const currentEndpoint = endpoint();
+                dispatch(currentEndpoint.initiate(args, {
+                  subscribe: false,
+                  forceRefetch: true,
+                }));
+              }
+            });
           }],
         }, api, {});
 

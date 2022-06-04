@@ -145,6 +145,7 @@ export function OfferSummaryTokenRow(
     ? formatAmountForWalletType(amount as number, assetIdInfo.walletType)
     : mojoToCATLocaleString(amount);
   const displayName = assetIdInfo?.displayName ?? t`Unknown CAT`;
+  const tooltipDisplayName = assetIdInfo?.name ?? t`Unknown CAT`;
   const showMojoAmount =
     assetIdInfo?.walletType === WalletType.STANDARD_WALLET &&
     shouldShowMojoAmount(amount);
@@ -177,7 +178,7 @@ export function OfferSummaryTokenRow(
               <Box flexGrow={1}>
                 <StyledTitle>Name</StyledTitle>
               </Box>
-              {assetIdInfo?.walletType === WalletType.CAT && (
+              {(!assetIdInfo || assetIdInfo?.walletType === WalletType.CAT) && (
                 <Link
                   href={`https://www.taildatabase.com/tail/${assetId.toLowerCase()}`}
                   target="_blank"
@@ -187,9 +188,9 @@ export function OfferSummaryTokenRow(
               )}
             </Flex>
 
-            <StyledValue>{assetIdInfo?.name}</StyledValue>
+            <StyledValue>{tooltipDisplayName}</StyledValue>
           </Flex>
-          {assetIdInfo?.walletType === WalletType.CAT && (
+          {(!assetIdInfo || assetIdInfo?.walletType === WalletType.CAT) && (
             <Flex flexDirection="column" gap={0}>
               <StyledTitle>Asset ID</StyledTitle>
               <Flex alignItems="center" gap={1}>

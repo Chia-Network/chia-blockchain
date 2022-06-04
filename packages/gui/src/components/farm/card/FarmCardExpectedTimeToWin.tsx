@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import { useGetBlockchainStateQuery, useGetCombinedPlotsQuery } from '@chia/api-react';
+import BigNumber from 'bignumber.js';
+import { useGetBlockchainStateQuery, useGetTotalHarvestersSummaryQuery } from '@chia/api-react';
 import moment from 'moment';
 import { State, CardSimple } from '@chia/core';
-import type Plot from '../../../types/Plot';
 import FullNodeState from '../../../constants/FullNodeState';
 import useFullNodeState from '../../../hooks/useFullNodeState';
 import FarmCardNotAvailable from './FarmCardNotAvailable';
@@ -14,29 +14,33 @@ export default function FarmCardExpectedTimeToWin() {
   const fullNodeState = useFullNodeState();
 
   const { data, isLoading: isLoadingBlockchainState, error: errorBlockchainState } = useGetBlockchainStateQuery();
-  const { data: plots, isLoading: isLoadingPlots, error: errorLoadingPlots  } = useGetCombinedPlotsQuery();
-  const totalNetworkSpace = data?.space ?? 0;
+  const { totalPlotSize, isLoading: isLoadingTotalHarvesterSummary, error: errorLoadingPlots  } = useGetTotalHarvestersSummaryQuery();
 
-  const isLoading = isLoadingBlockchainState || isLoadingPlots;
+  const isLoading = isLoadingBlockchainState || isLoadingTotalHarvesterSummary;
   const error = errorBlockchainState || errorLoadingPlots;
 
-  const farmerSpace = useMemo(() => {
-    if (!plots) {
-      return 0;
+  const totalNetworkSpace = useMemo(() => new BigNumber(data?.space ?? 0), [data]);
+
+  const proportion = useMemo(() => {
+    if (isLoading || totalNetworkSpace.isZero()) {
+      return new BigNumber(0);
     }
 
-    return plots.map((p: Plot) => p.fileSize).reduce((a, b) => a + b, 0);
-  }, [plots]);
+    return totalPlotSize.div(totalNetworkSpace);
+  }, [isLoading, totalPlotSize, totalNetworkSpace]);
 
-  const proportion = totalNetworkSpace ? farmerSpace / totalNetworkSpace : 0;
+  const minutes = !proportion.isZero()
+    ? new BigNumber(MINUTES_PER_BLOCK).div(proportion)
+    : new BigNumber(0);
 
-  const minutes = proportion ? MINUTES_PER_BLOCK / proportion : 0;
-
-  const expectedTimeToWin = moment.duration({ minutes }).humanize();
+  const expectedTimeToWin = moment.duration({
+    minutes: minutes.toNumber(),
+  }).humanize();
 
   if (fullNodeState !== FullNodeState.SYNCED) {
-    const state =
-      fullNodeState === FullNodeState.SYNCHING ? State.WARNING : undefined;
+    const state = fullNodeState === FullNodeState.SYNCHING
+      ? State.WARNING
+      : undefined;
 
     return (
       <FarmCardNotAvailable

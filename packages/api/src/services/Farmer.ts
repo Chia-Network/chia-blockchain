@@ -81,6 +81,42 @@ export default class Farmer extends Service {
     return this.command('get_harvesters');
   }
 
+  async getHarvesterPlotsValid(nodeId: string, page = 0, pageSize = 10) {
+    return this.command('get_harvester_plots_valid', {
+      nodeId,
+      page,
+      pageSize,
+    });
+  }
+
+  async getHarvesterPlotsInvalid(nodeId: string, page = 0, pageSize = 10) {
+    return this.command('get_harvester_plots_invalid', {
+      nodeId,
+      page,
+      pageSize,
+    });
+  }
+
+  async getHarvesterPlotsKeysMissing(nodeId: string, page = 0, pageSize = 10) {
+    return this.command('get_harvester_plots_keys_missing', {
+      nodeId,
+      page,
+      pageSize,
+    });
+  }
+
+  async getHarvesterPlotsDuplicates(nodeId: string, page = 0, pageSize = 10) {
+    return this.command('get_harvester_plots_duplicates', {
+      nodeId,
+      page,
+      pageSize,
+    });
+  }
+
+  async getHarvestersSummary() {
+    return this.command('get_harvesters_summary');
+  }
+
   async getPoolLoginLink(launcherId: string) {
     return this.command('get_pool_login_link', {
       launcherId,
@@ -120,6 +156,20 @@ export default class Farmer extends Service {
     processData?: (data: any) => any,
   ) {
     return this.onCommand('get_harvesters', callback, processData);
+  }
+
+  onHarvesterUpdated(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('harvester_update', callback, processData);
+  }
+
+  onHarvesterRemoved(
+    callback: (data: any, message: Message) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onCommand('harvester_removed', callback, processData);
   }
 
   onRefreshPlots(

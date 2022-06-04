@@ -1,16 +1,16 @@
 import React from 'react';
 import { Grid } from '@mui/material';
 import FarmCardStatus from '../card/FarmCardStatus';
-import FarmCardTotalChiaFarmed from '../card/FarmCardTotalChiaFarmed';
-import FarmCardBlockRewards from '../card/FarmCardBlockRewards';
-import FarmCardUserFees from '../card/FarmCardUserFees';
-import FarmCardLastHeightFarmed from '../card/FarmCardLastHeightFarmed';
-import FarmCardTotalSizeOfPlots from '../card/FarmCardTotalSizeOfPlots';
-import FarmCardTotalNetworkSpace from '../card/FarmCardTotalNetworkSpace';
-import FarmCardPlotCount from '../card/FarmCardPlotCount';
-import FarmCardExpectedTimeToWin from '../card/FarmCardExpectedTimeToWin';
+import FarmCardTotalChiaFarmed from './FarmCardTotalChiaFarmed';
+import FarmCardBlockRewards from './FarmCardBlockRewards';
+import FarmCardUserFees from './FarmCardUserFees';
+import FarmCardLastHeightFarmed from './FarmCardLastHeightFarmed';
+import FarmCardTotalSizeOfPlots from './FarmCardTotalSizeOfPlots';
+import FarmCardTotalNetworkSpace from './FarmCardTotalNetworkSpace';
+import FarmCardPlotCount from './FarmCardPlotCount';
+import FarmCardExpectedTimeToWin from './FarmCardExpectedTimeToWin';
 
-export default function FarmOverviewCards() {
+export default function FarmCards() {
   return (
     <div>
       <Grid spacing={2} alignItems="stretch" container>

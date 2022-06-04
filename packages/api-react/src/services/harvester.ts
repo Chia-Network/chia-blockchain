@@ -23,14 +23,14 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         command: 'getPlots',
         service: Harvester,
       }),
-      transformResponse: (response: any) => { 
+      transformResponse: (response: any) => {
         return response?.plots;
       },
       providesTags: (plots) => plots
         ? [
           ...plots.map(({ filename }) => ({ type: 'Plots', id: filename } as const)),
           { type: 'Plots', id: 'LIST' },
-        ] 
+        ]
         :  [{ type: 'Plots', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onRefreshPlots',
@@ -38,7 +38,7 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         endpoint: () => harvesterApi.endpoints.getPlots,
       }]),
     }),
-    refreshPlots: build.mutation<undefined, { 
+    refreshPlots: build.mutation<undefined, {
     }>({
       query: () => ({
         command: 'refreshPlots',
@@ -47,7 +47,7 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
       invalidatesTags: [{ type: 'Harvesters', id: 'LIST' }],
     }),
 
-    deletePlot: build.mutation<boolean, { 
+    deletePlot: build.mutation<boolean, {
       filename: string;
     }>({
       /*
@@ -59,14 +59,11 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
       */
       async queryFn({ filename }, _queryApi, _extraOptions, fetchWithBQ) {
         try {
-          console.log('DELETE PLOT', filename);
           const { data, error } = await fetchWithBQ({
             command: 'deletePlot',
             service: Harvester,
             args: [filename],
           });
-
-          console.log('DELETE PLOT response', error, data);
 
           if (error) {
             throw error;
@@ -77,11 +74,9 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
             service: Harvester,
           });
 
-          console.log('refresh response', refreshResponse);
-
           if (refreshResponse.error) {
             throw error;
-          } 
+          }
 
           return {
             data,
@@ -97,7 +92,13 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         return response?.success;
       },
       invalidatesTags: (_result, _error, { filename }) => [
-        { type: 'Plots', id: 'LIST' }, 
+        { type: 'HarvestersSummary', id: 'LIST' },
+        { type: 'HarvesterPlots', id: 'LIST' },
+        { type: 'HarvesterPlotsInvalid', id: 'LIST' },
+        { type: 'HarvesterPlotsKeysMissing', id: 'LIST' },
+        { type: 'HarvesterPlotsDuplicates', id: 'LIST' },
+        // TODO all next are deprecated and removed in long run
+        { type: 'Plots', id: 'LIST' },
         { type: 'Plots', id: filename },
         { type: 'Harvesters', id: 'LIST' },
       ],
@@ -113,7 +114,7 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         ? [
           ...directories.map((directory) => ({ type: 'PlotDirectories', id: directory } as const)),
           { type: 'PlotDirectories', id: 'LIST' },
-        ] 
+        ]
         :  [{ type: 'PlotDirectories', id: 'LIST' }],
     }),
     addPlotDirectory: build.mutation<Object, {
@@ -125,7 +126,7 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         args: [dirname],
       }),
       invalidatesTags: (_result, _error, { dirname }) => [
-        { type: 'PlotDirectories', id: 'LIST'}, 
+        { type: 'PlotDirectories', id: 'LIST'},
         { type: 'PlotDirectories', id: dirname },
       ],
     }),
@@ -138,11 +139,11 @@ export const harvesterApi = apiWithTag2.injectEndpoints({
         args: [dirname],
       }),
       invalidatesTags: (_result, _error, { dirname }) => [{ type: 'PlotDirectories', id: 'LIST'}, { type: 'PlotDirectories', id: dirname }],
-    }), 
+    }),
   }),
 });
 
-export const { 
+export const {
   useHarvesterPingQuery,
   useGetPlotsQuery,
   useRefreshPlotsMutation,

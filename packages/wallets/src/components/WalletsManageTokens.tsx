@@ -1,9 +1,16 @@
 import React, { type ReactNode, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { Box, IconButton, InputBase } from '@mui/material';
-import { Button, useColorModeValue, Spinner, Flex, Tooltip, useTrans } from '@chia/core';
+import {
+  Button,
+  useColorModeValue,
+  Spinner,
+  Flex,
+  Tooltip,
+  useTrans,
+} from '@chia/core';
 import styled from 'styled-components';
-import { Add } from '@mui/icons-material';
+import { Add, KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { useToggle } from 'react-use';
 import useWalletsList from '../hooks/useWalletsList';
 import WalletTokenCard from './WalletTokenCard';
@@ -60,14 +67,15 @@ const StyledButtonContainer = styled(Box)`
 `;
 
 const StyledMainButton = styled(Button)`
-  border-radius: ${({ theme }) => `${theme.spacing(2)} ${theme.spacing(2)} 0 0`};
+  border-radius: ${({ theme }) =>
+    `${theme.spacing(2)} ${theme.spacing(2)} 0 0`};
   border: ${({ theme }) => `1px solid ${useColorModeValue(theme, 'border')}`};
   background-color: ${({ theme }) => theme.palette.action.hover};
   height: ${({ theme }) => theme.spacing(6)};
   pointer-events: auto;
 
   &:hover {
-    background-color: ${({ theme }) => theme.palette.action.hover};
+    background-color: ${({ theme }) => theme.palette.action.selected};
     border-color: ${({ theme }) => theme.palette.highlight.main};
   }
 `;
@@ -77,7 +85,7 @@ const StyledBody = styled(Box)`
   background-color: ${({ theme }) => theme.palette.background.default};
   transition: all 0.25s ease-out;
   overflow: hidden;
-  height: ${({ expanded }) => expanded ? '100%' : '0%'};
+  height: ${({ expanded }) => (expanded ? '100%' : '0%')};
 `;
 
 const StyledContent = styled(Box)`
@@ -94,9 +102,19 @@ const StyledListBody = styled(Flex)`
   overflow-y: overlay;
   flex-direction: column;
   flex-grow: 1;
-  margin-top: ${({ theme }) => theme.spacing(1)};
+  margin-top: ${({ theme }) => theme.spacing(2)};
   padding-left: ${({ theme }) => theme.spacing(2)};
   padding-right: ${({ theme }) => theme.spacing(2)};
+`;
+
+const StyledButtonText = styled(Box)`
+  position: relative;
+`;
+
+const StyledExpandButtonContainer = styled(Box)`
+  position: absolute;
+  right: ${({ theme }) => theme.spacing(-4)};
+  top: ${({ theme }) => theme.spacing(0)};
 `;
 
 export type WalletsManageTokensProps = {
@@ -107,7 +125,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   const [expanded, toggle] = useToggle(false);
   const t = useTrans();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState('');
   const { list, hide, show, isLoading } = useWalletsList(search);
 
   function handleAddToken(event) {
@@ -121,7 +139,12 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
     <StyledRoot>
       <StyledButtonContainer>
         <StyledMainButton onClick={toggle} fullWidth>
-          <Trans>Manage token list</Trans>
+          <StyledButtonText>
+            <Trans>Manage token list</Trans>
+            <StyledExpandButtonContainer>
+              {expanded ? <KeyboardArrowDown /> : <KeyboardArrowUp />}
+            </StyledExpandButtonContainer>
+          </StyledButtonText>
         </StyledMainButton>
       </StyledButtonContainer>
       <StyledBody expanded={expanded}>
@@ -134,7 +157,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
                 </SearchIconWrapper>
                 <StyledInputBase
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={event => setSearch(event.target.value)}
                   placeholder={t('Search...')}
                 />
               </Search>
@@ -152,7 +175,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
               <Spinner center />
             ) : (
               <Flex gap={1} flexDirection="column" width="100%">
-                {list?.map((list) => (
+                {list?.map(list => (
                   <WalletTokenCard
                     item={list}
                     key={list.id}

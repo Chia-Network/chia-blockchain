@@ -19,8 +19,9 @@ const StyledHeader = styled(Box)`
   padding-bottom: ${({ theme }) => theme.spacing(3)};
   padding-right: ${({ theme }) => theme.spacing(3)};
 
-  padding-left: ${({ theme, sidebar }) => !sidebar ? theme.spacing(3) : '10px'};
-  margin-left: ${({ sidebar }) => !sidebar ? `0` : '-10px'};
+  padding-left: ${({ theme, sidebar }) =>
+    !sidebar ? theme.spacing(3) : '10px'};
+  margin-left: ${({ sidebar }) => (!sidebar ? `0` : '-10px')};
 `;
 
 const StyledContent = styled(Box)`
@@ -29,12 +30,13 @@ const StyledContent = styled(Box)`
   overflow-y: scroll;
   position: relative;
 
-  padding-top: ${({ theme, header }) => header ? 0 : theme.spacing(3)};
+  padding-top: ${({ theme, header }) => (header ? 0 : theme.spacing(3))};
   padding-bottom: ${({ theme }) => theme.spacing(3)};
   padding-right: ${({ theme }) => theme.spacing(3)};
 
-  padding-left: ${({ theme, sidebar }) => !sidebar ? theme.spacing(3) : '10px'};
-  margin-left: ${({ sidebar }) => !sidebar ? `0` : '-10px'};
+  padding-left: ${({ theme, sidebar }) =>
+    !sidebar ? theme.spacing(3) : '10px'};
+  margin-left: ${({ sidebar }) => (!sidebar ? `0` : '-10px')};
 `;
 
 export type DashboardLayoutProps = {
@@ -50,16 +52,10 @@ export default function DashboardLayout(props: DashboardLayoutProps) {
   // and right column with content
   return (
     <StyledRoot>
-      {sidebar && (
-        <StyledSidebar>
-          {sidebar}
-        </StyledSidebar>
-      )}
+      {sidebar && <StyledSidebar>{sidebar}</StyledSidebar>}
       {header ? (
         <Flex flexDirection="column" flexGrow={1}>
-          <StyledHeader sidebar={!!sidebar}>
-            {header}
-          </StyledHeader>
+          <StyledHeader sidebar={!!sidebar}>{header}</StyledHeader>
           <StyledContent sidebar={!!sidebar} header={!!header}>
             {outlet ? <Outlet /> : children}
           </StyledContent>

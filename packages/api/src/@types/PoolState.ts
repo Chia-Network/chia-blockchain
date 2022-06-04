@@ -8,6 +8,7 @@ type PoolState = {
   points_acknowledged_24h: [number, number][];
   current_points: number;
   current_difficulty: number;
+  plotCount: number;
   pool_errors_24h: {
     current_difficulty: number;
     error_code: number;

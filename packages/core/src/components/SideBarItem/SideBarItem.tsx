@@ -7,6 +7,7 @@ import useColorModeValue from '../../utils/useColorModeValue';
 
 const StyledListItemIcon = styled(ListItemIcon)`
   min-width: auto;
+  position: relative;
   background-color: ${({ theme, selected }) => selected
     ? useColorModeValue(theme, 'sidebarBackground')
     : 'transparent'};
@@ -19,6 +20,21 @@ const StyledListItemIcon = styled(ListItemIcon)`
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: border 0.3s ease-in-out;
+
+  &::after {
+    content: "";
+    border-radius: ${({ theme }) => theme.spacing(1.5)};
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0px -2px 4px rgba(104, 249, 127, 0.41), 0px 1px 8px rgba(145, 247, 53, 0.45);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
 
   svg {
     color: ${({ selected, theme }) => selected
@@ -30,7 +46,6 @@ const StyledListItemIcon = styled(ListItemIcon)`
 const StyledListItem = styled(ListItem)`
   display: flex;
   flex-direction: column;
-  white-space: nowrap;
   align-items: center;
   padding-left: 0;
   padding-right: 0;
@@ -43,10 +58,13 @@ const StyledListItem = styled(ListItem)`
 
   &:hover ${StyledListItemIcon} {
     border-color: #4CAF50;
-    box-shadow: 0px -2px 4px rgba(104, 249, 127, 0.41), 0px 1px 8px rgba(145, 247, 53, 0.45);
 
     svg {
       color: ${({ theme }) => useColorModeValue(theme, 'sidebarIconHover')} !important;
+    }
+
+    &::after {
+      opacity: 1;
     }
   }
 `;

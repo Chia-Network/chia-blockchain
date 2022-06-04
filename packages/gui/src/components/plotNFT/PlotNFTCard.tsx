@@ -84,6 +84,7 @@ export default function PlotNFTCard(props: Props) {
         poolConfig: { launcherId, poolUrl },
         pointsFound24H,
         pointsAcknowledged24H,
+        plotCount,
       },
       poolWalletStatus: { walletId },
     },
@@ -99,7 +100,7 @@ export default function PlotNFTCard(props: Props) {
 
   const navigate = useNavigate();
   const openDialog = useOpenDialog();
-  const { isSelfPooling, isSynced, plots, balance } = usePlotNFTDetails(nft);
+  const { isSelfPooling, isSynced, balance } = usePlotNFTDetails(nft);
   const totalPointsFound24 = pointsFound24H.reduce(
     (accumulator, item) => accumulator + item[1],
     0,
@@ -155,10 +156,8 @@ export default function PlotNFTCard(props: Props) {
     {
       key: 'plotsCount',
       label: <Trans>Number of Plots</Trans>,
-      value: plots ? (
-        <FormatLargeNumber value={plots.length} />
-      ) : (
-        <Loading size="small" />
+      value: (
+        <FormatLargeNumber value={plotCount} />
       ),
     },
     !isSelfPooling && {

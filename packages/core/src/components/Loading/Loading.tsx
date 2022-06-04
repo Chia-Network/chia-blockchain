@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import {
   CircularProgress,
   CircularProgressProps,
@@ -12,12 +12,12 @@ const StyledCircularProgress = styled(CircularProgress)`
     theme.palette.mode === 'dark' ? 'white' : 'inherit'}; ;
 `;
 
-type Props = CircularProgressProps & {
+export type LoadingProps = CircularProgressProps & {
   children?: ReactNode;
   center?: boolean;
 };
 
-export default function Loading(props: Props) {
+export default function Loading(props: LoadingProps) {
   const { children, center, ...rest } = props;
 
   if (children) {
