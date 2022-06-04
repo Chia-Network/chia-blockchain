@@ -19,6 +19,7 @@ const StyledPaper = styled(Paper)`
   pre {
     word-break: break-all;
     white-space: pre-wrap;
+    font-size: 14px;
     padding: ${({ theme }) => `${theme.spacing(1)} ${theme.spacing(2)}`};
   }
 `;

@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { t, Trans } from '@lingui/macro';
 import { defaultPlotter, toBech32m } from '@chia/api';
-import { useStartPlottingMutation, useCreateNewPoolWalletMutation } from '@chia/api-react';
+import {
+  useStartPlottingMutation,
+  useCreateNewPoolWalletMutation,
+} from '@chia/api-react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Back, useShowError, ButtonLoading, Flex, Form } from '@chia/core';
 import PlotAddChoosePlotter from './PlotAddChoosePlotter';
@@ -35,12 +38,14 @@ export default function PlotAddForm(props: Props) {
   const [loading, setLoading] = useState<boolean>(false);
   const showError = useShowError();
 
-  const { isLoading: isLoadingUnconfirmedPlotNFTs, add: addUnconfirmedPlotNFT } = useUnconfirmedPlotNFTs();
+  const {
+    isLoading: isLoadingUnconfirmedPlotNFTs,
+    add: addUnconfirmedPlotNFT,
+  } = useUnconfirmedPlotNFTs();
   const [startPlotting] = useStartPlottingMutation();
   const [createNewPoolWallet] = useCreateNewPoolWalletMutation();
   const addNFTref = useRef();
   const { state } = useLocation();
-
 
   const otherDefaults = {
     plotCount: 1,
@@ -56,9 +61,12 @@ export default function PlotAddForm(props: Props) {
   };
 
   const defaultsForPlotter = (plotterName: PlotterName) => {
-    const plotterDefaults = plotters[plotterName]?.defaults ?? defaultPlotter.defaults;
+    const plotterDefaults =
+      plotters[plotterName]?.defaults ?? defaultPlotter.defaults;
     const plotSize = plotterDefaults.plotSize;
-    const maxRam = plotSizes.find((element) => element.value === plotSize)?.defaultRam;
+    const maxRam = plotSizes.find(
+      (element) => element.value === plotSize,
+    )?.defaultRam;
     const defaults = {
       ...plotterDefaults,
       ...otherDefaults,
@@ -66,7 +74,7 @@ export default function PlotAddForm(props: Props) {
     };
 
     return defaults;
-  }
+  };
 
   const methods = useForm<FormData>({
     defaultValues: defaultsForPlotter(PlotterName.CHIAPOS),
@@ -85,8 +93,8 @@ export default function PlotAddForm(props: Props) {
 
   const plotter = plotters[plotterName] ?? defaultPlotter;
   let step = 1;
-  const allowTempDirectorySelection: boolean = plotter.options.haveBladebitOutputDir === false;
-
+  const allowTempDirectorySelection: boolean =
+    plotter.options.haveBladebitOutputDir === false;
 
   const handlePlotterChanged = (newPlotterName: PlotterName) => {
     const defaults = defaultsForPlotter(newPlotterName);
@@ -114,10 +122,11 @@ export default function PlotAddForm(props: Props) {
           initialTargetState,
           initialTargetState: { state },
         } = nftData;
-        const { transaction, p2SingletonPuzzleHash } = await createNewPoolWallet({
-          initialTargetState,
-          fee,
-        }).unwrap();
+        const { transaction, p2SingletonPuzzleHash } =
+          await createNewPoolWallet({
+            initialTargetState,
+            fee,
+          }).unwrap();
 
         if (!p2SingletonPuzzleHash) {
           throw new Error(t`p2SingletonPuzzleHash is not defined`);

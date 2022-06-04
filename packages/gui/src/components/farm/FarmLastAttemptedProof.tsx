@@ -1,10 +1,10 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Link, Table, Card, FormatBytes } from '@chia/core';
+import { Link, Table, Card } from '@chia/core';
 import { useGetFarmingInfoQuery } from '@chia/api-react';
 import moment from 'moment';
 import type { Row } from '../core/components/Table/Table';
-import usePlots from '../../hooks/usePlots';
+// import usePlots from '../../hooks/usePlots';
 
 const cols = [
   {
@@ -32,7 +32,7 @@ const cols = [
 ];
 
 export default function FarmLastAttemptedProof() {
-  const { size } = usePlots();
+  // const { size } = usePlots();
 
   const { data: lastAttemptedProof, isLoading } = useGetFarmingInfoQuery();
 
@@ -42,6 +42,7 @@ export default function FarmLastAttemptedProof() {
   return (
     <Card
       title={<Trans>Last Attempted Proof</Trans>}
+      titleVariant="h6"
       tooltip={
         <Trans>
           This table shows you the last time your farm attempted to win a block
@@ -66,7 +67,7 @@ export default function FarmLastAttemptedProof() {
             <>
               <Trans>None of your plots have passed the plot filter yet.</Trans>
 
-              {!!size && (
+              {/* !!size && (
                 <>
                   {' '}
                   <Trans>
@@ -74,7 +75,7 @@ export default function FarmLastAttemptedProof() {
                     <FormatBytes value={size} precision={3} />
                   </Trans>
                 </>
-              )}
+              ) */}
             </>
           )
         }

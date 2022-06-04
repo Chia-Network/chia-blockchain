@@ -211,7 +211,7 @@ export default function WalletHistory(props: Props) {
   const navigate = useNavigate();
 
   const isLoading = isWalletTransactionsLoading || isWalletLoading;
-  const isSyncing = isWalletSyncLoading || walletState.syncing;
+  const isSyncing = isWalletSyncLoading || !walletState || !!walletState?.syncing;
 
   const metadata = useMemo(() => {
     const retireAddress = feeUnit && toBech32m(

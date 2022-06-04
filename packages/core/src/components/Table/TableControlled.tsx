@@ -80,7 +80,6 @@ export type InternalTableRow = Row & { id: string | number };
 export type TableControlledProps = {
   cols: Col[];
   rows: Row[];
-  children?: ReactNode;
   page?: number;
   pages?: boolean;
   rowsPerPageOptions?: number[];
@@ -102,7 +101,6 @@ export default function TableControlled(props: TableControlledProps) {
   const {
     cols,
     rows,
-    children,
     page,
     pages,
     rowsPerPageOptions,
@@ -202,9 +200,8 @@ export default function TableControlled(props: TableControlledProps) {
           )}
 
           <TableBody>
-            {children}
             {preparedRows.map((row, rowIndex) => {
-              const id = row.$uniqueId.toString();
+              const id = `${row.$uniqueId?.toString()}-${rowIndex}`;
               const isExpanded = !!expanded[id];
               const expandableCells = [];
 

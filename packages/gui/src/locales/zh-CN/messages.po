@@ -8,35 +8,35 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-17 17:39\n"
+"PO-Revision-Date: 2022-05-31 07:01\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: zh-CN\n"
-"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 118\n"
+"X-Crowdin-File: /main/packages/gui/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 1888\n"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:74
 msgid "(Not Installed)"
-msgstr ""
+msgstr "(未安装)"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:71
 msgid "(Not Supported)"
-msgstr ""
+msgstr "(不支持)"
 
 #: src/components/plot/add/PlotAddNFT.tsx:67
 msgid "(Optional)"
 msgstr "（可选）"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:60
+#: src/components/farm/FarmLatestBlockChallenges.tsx:67
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 msgstr "* 想要进一步了解奇亚？来看看一位开源开发者创建的 <0>奇亚区块浏览器</0>。"
 
 #: src/components/app/AppSelectMode.tsx:120
 #~ msgid "+"
-#~ msgstr ""
+#~ msgstr "+"
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
@@ -44,7 +44,11 @@ msgstr "+ 添加新的农田NFT"
 
 #: src/components/_wallet_old/Wallets.tsx:132
 #~ msgid "+ Add Wallet"
-#~ msgstr "+ 添加钱包"
+#~ msgstr "+ Add Wallet"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:39
+msgid "+ Add a Plot"
+msgstr "+ 开垦农田"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -52,64 +56,85 @@ msgstr "+ 添加新的农田NFT"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
 #~ msgid "128 buckets is recommended"
-#~ msgstr "排序桶数量推荐设置为128"
+#~ msgstr "128 buckets is recommended"
 
 #: src/components/settings/ProfileAdd.tsx:87
-msgid "<0>Get some XCH</0>"
+#~ msgid "<0>Get some XCH</0>"
+#~ msgstr ""
+
+#: src/components/settings/ProfileAdd.tsx:96
+msgid "<0>Need some XCH?</0>"
 msgstr ""
 
-#: src/components/settings/ProfileAdd.tsx:102
+#: src/components/settings/ProfileAdd.tsx:104
 msgid "<0>Use one (1) mojo to create a Profile.</0>"
 msgstr ""
 
 #: src/components/settings/ProfileView.tsx:25
-msgid "<0>[*Wallet Name*]</0>"
-msgstr ""
+#~ msgid "<0>[*Wallet Name*]</0>"
+#~ msgstr ""
 
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:95
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
 msgstr "收割机是一个在存有农田文件的机器上运行的服务。农民和收割机通过和全节点交互来得到链的状态。你可以在下面看到你网络所连接的收割机。了解更多"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:155
 msgid "A value of {0} is recommended"
-msgstr ""
+msgstr "建议值 {0}"
 
-#: src/electron/main.tsx:513
-#: src/electron/main.tsx:600
+#: src/electron/main.tsx:572
+#: src/electron/main.tsx:659
 msgid "About Chia Blockchain"
 msgstr "关于奇亚Chia区块链项目"
 
 #: src/components/trading/ViewOffer.jsx:74
 #~ msgid "Accept"
-#~ msgstr "接受"
+#~ msgstr "Accept"
+
+#: src/components/offers/NFTOfferViewer.tsx:490
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:23
+#: src/components/offers/OfferViewer.tsx:347
+msgid "Accept Offer"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:227
 #~ msgid "Accepted at time:"
-#~ msgstr "接受时间："
+#~ msgstr "Accepted at time:"
 
-#: src/components/plot/PlotsFailed.tsx:18
-#: src/components/plot/PlotsNotFound.tsx:18
-#: src/components/plot/overview/PlotOverviewPlots.tsx:114
+#: src/components/offers/OfferViewer.tsx:165
+msgid "Accepted on Date"
+msgstr ""
+
+#: src/components/plot/PlotHarvesterPlots.tsx:79
+#: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:18
+#: src/components/plot/PlotHarvesterPlotsFailed.tsx:18
+#: src/components/plot/PlotHarvesterPlotsNotFound.tsx:18
+#: src/components/plot/PlotPlotting.tsx:32
 msgid "Action"
 msgstr "操作"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:66
 #: src/components/fullNode/FullNodeConnections.tsx:81
-#: src/components/nfts/NFTContextualActions.tsx:170
+#: src/components/nfts/NFTContextualActions.tsx:290
 msgid "Actions"
 msgstr "操作"
 
 #: src/components/trading/CreateOffer.jsx:202
 #~ msgid "Add"
-#~ msgstr "添加"
+#~ msgstr "Add"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:877
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:208
 #~ msgid "Add Backup ID"
-#~ msgstr "添加备份 ID"
+#~ msgstr "Add Backup ID"
+
+#: src/components/offers/OfferAssetSelector.tsx:165
+msgid "Add CAT wallets to have more options"
+msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:88
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Add Plot Directory"
 msgstr "添加农田文件夹"
 
@@ -121,12 +146,12 @@ msgstr "将农田开垦任务加入队列"
 #~ msgid "Add Wallet"
 #~ msgstr "Add Wallet"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:41
+#: src/components/farm/FarmHero.tsx:40
 #: src/components/plot/PlotHeader.tsx:60
-#: src/components/plot/add/PlotAddForm.tsx:173
-#: src/components/plot/overview/PlotOverviewHero.tsx:52
+#: src/components/plot/add/PlotAddForm.tsx:182
+#: src/components/plot/overview/PlotOverviewHero.tsx:51
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
-#: src/components/plotNFT/PlotNFTCard.tsx:269
+#: src/components/plotNFT/PlotNFTCard.tsx:268
 msgid "Add a Plot"
 msgstr "开垦农田"
 
@@ -150,44 +175,68 @@ msgstr "从水龙头获取 {currencyCode}"
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:657
 #: src/components/_wallet_old/standard/WalletStandard.tsx:589
 #~ msgid "Address"
-#~ msgstr "地址"
+#~ msgstr "Address"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:701
 #: src/components/_wallet_old/standard/WalletStandard.tsx:496
 #~ msgid "Address / Puzzle hash"
-#~ msgstr "地址 / 谜语哈希"
+#~ msgstr "Address / Puzzle hash"
 
-#: src/components/app/AppKeyringMigrator.tsx:198
+#: src/components/app/AppKeyringMigrator.tsx:247
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
+msgstr "当您的密钥成功迁移到新密钥串后，您可以选择从旧密钥串中移除您的密钥。"
+
+#: src/components/nfts/NFTProfileDropdown.tsx:64
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:44
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:73
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:86
+msgid "All"
+msgstr ""
+
+#: src/components/nfts/NFTProfileDropdown.tsx:42
+msgid "All Profiles"
 msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
-msgstr ""
+msgstr "备用的 tmpdir/tmpdir2"
 
-#: src/components/trading/CreateOffer.jsx:197
-#: src/components/trading/TradesTable.tsx:19
-#~ msgid "Amount"
-#~ msgstr "数量"
+#: src/components/offers/NFTOfferEditor.tsx:95
+#: src/components/offers/OfferEditorConditionsPanel.tsx:148
+#: src/components/offers/OfferViewer.tsx:202
+msgid "Amount"
+msgstr "Amount"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:581
 #~ msgid "Amount ({cc_unit})"
-#~ msgstr "数量 ({cc_unit})"
+#~ msgstr "Amount ({cc_unit})"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:239
 #~ msgid "Amount For Initial Coin"
-#~ msgstr "初始币数量"
+#~ msgstr "Amount for Initial Coin"
+
+#: src/components/offers/OfferEditor.tsx:138
+msgid "Amount exceeds spendable balance"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:62
 #~ msgid "Amount must be an even amount."
-#~ msgstr ""
+#~ msgstr "Amount must be an even amount."
+
+#: src/components/offers/NFTOfferPreview.tsx:110
+msgid "An NFT's provenance is a complete record of its ownership history. It provides a direct lineage that connects everyone who has owned the NFT, all the way back to the original artist. This helps to verify that the NFT is authentic."
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:129
+msgid "Are you sure you want to cancel your offer?"
+msgstr ""
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
 msgid "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgstr "你确定要删除这个农田吗？删除后将不可恢复。"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:126
+#: src/components/plotNFT/PlotNFTCard.tsx:127
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "确定要删除未确认的交易吗？"
 
@@ -195,13 +244,13 @@ msgstr "确定要删除未确认的交易吗？"
 msgid "Are you sure you want to disconnect?"
 msgstr "是否要断开连接？"
 
-#: src/electron/main.tsx:268
+#: src/electron/main.tsx:327
 msgid "Are you sure you want to quit?"
-msgstr ""
+msgstr "您确定要退出吗？"
 
 #: src/electron/main.tsx:262
 #~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-#~ msgstr "确定要退出吗? 农田开垦和耕种将会停止。"
+#~ msgstr "Are you sure you want to quit? GUI plotting and farming will stop."
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:31
 #~ msgid "Are you sure you want to use k={plotSize}"
@@ -212,21 +261,25 @@ msgid "Are you sure you want to use k={plotSize}?"
 msgstr "你确定要使用 k={plotSize}？"
 
 #: src/components/nfts/NFTTransferAction.tsx:259
-msgid "Asset ID:"
+#~ msgid "Asset ID:"
+#~ msgstr ""
+
+#: src/components/offers/OfferAssetSelector.tsx:160
+msgid "Asset Type"
 msgstr ""
 
 #: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
-msgstr ""
+msgstr "尝试 {attempt}"
 
 #: src/components/plotNFT/PlotNFTName.tsx:39
 msgid "Autogenerated name from pool contract address"
 msgstr "从农业合作社合约地址自动生成的名称"
 
-#: src/components/_selectKey_old/SelectKey.tsx:77
-#: src/components/_selectKey_old/SelectKey.tsx:116
-#~ msgid "Back"
-#~ msgstr "返回"
+#: src/components/offers/NFTOfferViewer.tsx:481
+#: src/components/offers/OfferViewer.tsx:338
+msgid "Back"
+msgstr "Back"
 
 #: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
@@ -236,13 +289,21 @@ msgstr "备份文件将用于恢复智能钱包。"
 #: src/components/_wallet_old/did/WalletDID.tsx:647
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:541
 #~ msgid "Balance"
-#~ msgstr "余额"
+#~ msgstr "Balance"
+
+#: src/components/settings/ProfileAdd.tsx:108
+msgid "Balance: {standardBalance} XCH"
+msgstr ""
 
 #: src/components/block/Block.jsx:295
 msgid "Base Farmer Reward Amount"
 msgstr "基础耕种奖励数量"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:35
+#: src/components/offers/OfferShareDialog.tsx:1053
+msgid "Before posting an offer in Keybase to the #{channelName} channel, you must first join the {teamName} team. Please note that it might take a few moments to join the channel."
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:40
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr "下面是当前区块的挑战。 你的农田或许包含了对这些挑战的空间证明。这些区块目前还未包含时间证明。"
 
@@ -260,11 +321,11 @@ msgstr "区块"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:31
 msgid "Block Rewards"
-msgstr ""
+msgstr "区块奖励"
 
 #: src/components/block/Block.jsx:138
 #~ msgid "Block Test"
-#~ msgstr "区块测试"
+#~ msgstr "Block Test"
 
 #: src/components/block/Block.jsx:213
 msgid "Block VDF Iterations"
@@ -300,15 +361,15 @@ msgstr "区块"
 msgid "Browse"
 msgstr "浏览"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:72
-msgid "But you are currently farming <0/>"
-msgstr "但你目前正在耕种<0/>"
+#: src/components/farm/FarmLastAttemptedProof.tsx:74
+#~ msgid "But you are currently farming <0/>"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:162
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
 #~ msgid "Buy"
-#~ msgstr "购买"
+#~ msgstr "Buy"
 
 #: src/components/wallet/Wallets.tsx:49
 #~ msgid "CC Wallet"
@@ -320,37 +381,57 @@ msgstr "但你目前正在耕种<0/>"
 
 #: src/components/_selectKey_old/SelectKey.tsx:212
 #~ msgid "Can be backed up to mnemonic seed"
-#~ msgstr "可备份为助记词"
+#~ msgstr "Can be backed up to mnemonic seed"
 
-#: src/components/app/AppPassPrompt.tsx:151
+#: src/components/app/AppPassPrompt.tsx:184
 #: src/components/backup/BackupCreate.tsx:51
 #: src/components/block/FarmManageFarmingRewards.tsx:175
 #: src/components/block/FullNodeAddConnection.tsx:85
 #: src/components/farm/FarmManageFarmingRewards.tsx:186
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
-#: src/components/nfts/NFTTransferAction.tsx:79
+#: src/components/nfts/NFTTransferAction.tsx:80
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:26
+#: src/components/offers/OfferDataEntryDialog.tsx:67
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:18
+#: src/components/offers/OfferShareDialog.tsx:1085
+#: src/components/offers/OfferShareDialog.tsx:1258
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:29
-#: src/components/settings/ChangePassphrasePrompt.tsx:221
-#: src/components/settings/RemovePassphrasePrompt.tsx:135
-#: src/components/settings/SetPassphrasePrompt.tsx:203
+#: src/components/settings/ChangePassphrasePrompt.tsx:283
+#: src/components/settings/RemovePassphrasePrompt.tsx:167
+#: src/components/settings/SetPassphrasePrompt.tsx:250
+#: src/hooks/useOpenUnsafeLink.tsx:45
 msgid "Cancel"
 msgstr "取消"
 
+#: src/components/offers/OfferManager.tsx:122
+#: src/components/offers/OfferManager.tsx:206
+#: src/components/offers/OfferManager.tsx:499
+msgid "Cancel Offer"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:388
 #~ msgid "Cancel and Spend"
-#~ msgstr "取消并支付"
+#~ msgstr "Cancel and Spend"
+
+#: src/components/offers/OfferManager.tsx:156
+msgid "Cancel on blockchain"
+msgstr ""
+
+#: src/components/offers/utils.ts:166
+msgid "Cancelled"
+msgstr ""
 
 #: src/components/plot/PlotsNotFound.tsx:36
-msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-msgstr "注意，删除这些农田的操作是永久的。请检查存储设备连接正常。"
+#~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+#~ msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
 msgstr "挑战"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:13
+#: src/components/farm/FarmLatestBlockChallenges.tsx:16
 msgid "Challenge Hash"
 msgstr "挑战哈希"
 
@@ -358,36 +439,44 @@ msgstr "挑战哈希"
 msgid "Change"
 msgstr "变更"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:229
-#: src/components/settings/Settings.tsx:166
+#: src/components/settings/ChangePassphrasePrompt.tsx:291
+#: src/components/settings/Settings.tsx:159
 #: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
-msgstr ""
+msgstr "修改私钥密码"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:405
+#: src/components/plotNFT/PlotNFTCard.tsx:404
 #: src/components/plotNFT/PlotNFTChangePool.tsx:121
 msgid "Change Pool"
 msgstr "更换农业合作社"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:551
 msgid "Chat on KeyBase"
 msgstr "在Keybase上参与讨论"
 
-#: src/electron/main.tsx:510
+#: src/components/offers/NFTOfferPreview.tsx:125
+msgid "Check Provenance on MintGarden"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:135
+msgid "Check Provenance on Spacescan.io"
+msgstr ""
+
+#: src/electron/main.tsx:569
 msgid "Chia"
 msgstr "奇亚"
 
-#: src/electron/main.tsx:449
+#: src/electron/main.tsx:508
 msgid "Chia Blockchain Wiki"
 msgstr "奇亚区块链项目维基"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:642
 #~ msgid "Chia Wallet"
-#~ msgstr "奇亚钱包"
+#~ msgstr "Chia Wallet"
 
 #: src/components/app/AppSelectMode.tsx:158
 msgid "Choose Farming Mode"
-msgstr ""
+msgstr "选择耕作模式"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
@@ -399,18 +488,26 @@ msgstr "选择农田文件大小"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
-msgstr ""
+msgstr "选择开垦机"
 
 #: src/components/app/AppSelectMode.tsx:107
 msgid "Choose Wallet Mode"
-msgstr ""
+msgstr "选择钱包模式"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
-#: src/components/plotNFT/PlotNFTCard.tsx:381
+#: src/components/plotNFT/PlotNFTCard.tsx:380
 msgid "Claim Rewards"
 msgstr "申领奖励"
 
-#: src/components/nfts/NFTTransferAction.tsx:309
+#: src/components/nfts/NFTTransferAction.tsx:253
+#: src/components/offers/OfferManager.tsx:199
+#: src/components/offers/OfferShareDialog.tsx:562
+#: src/components/offers/OfferShareDialog.tsx:643
+#: src/components/offers/OfferShareDialog.tsx:725
+#: src/components/offers/OfferShareDialog.tsx:827
+#: src/components/offers/OfferShareDialog.tsx:1018
+#: src/components/offers/OfferShareDialog.tsx:1150
+#: src/components/offers/OfferShareDialog.tsx:1436
 #: src/components/plot/PlotAddDirectoryDialog.tsx:130
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:81
 msgid "Close"
@@ -418,55 +515,69 @@ msgstr "关闭"
 
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing down node and server"
-#~ msgstr "正在关闭节点与服务"
+#~ msgstr "Closing down node and server"
 
 #: src/components/app/AppState.tsx:98
 msgid "Closing down services"
-msgstr ""
+msgstr "关闭服务"
 
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing services"
-#~ msgstr ""
+#~ msgstr "Closing services"
 
 #: src/components/settings/ProfileView.tsx:30
-msgid "Coin ID"
-msgstr ""
+#~ msgid "Coin ID"
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:987
 #~ msgid "Coin Name"
-#~ msgstr "代币名称"
+#~ msgstr "Coin Name"
+
+#: src/components/offers/OfferViewer.tsx:380
+msgid "Coins"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:365
 #~ msgid "Coins:"
-#~ msgstr "币："
+#~ msgstr "Coins:"
+
+#: src/components/nfts/NFTSummary.tsx:59
+#: src/components/nfts/detail/NFTDetail.tsx:168
+msgid "Collection"
+msgstr ""
+
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:81
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:83
+msgid "Collections"
+msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:173
 #: src/components/trading/TradesTable.tsx:23
 #~ msgid "Colour"
-#~ msgstr "颜色"
+#~ msgstr "Color"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:223
 #~ msgid "Colour Info"
-#~ msgstr "色彩信息"
+#~ msgstr "Color Info"
 
 #: src/components/_wallet_old/create/createExistingColouredCoin.jsx:110
 #~ msgid "Colour String"
-#~ msgstr "色彩字符串"
+#~ msgstr "Color String"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:228
 #~ msgid "Colour:"
-#~ msgstr "色彩："
+#~ msgstr "Color:"
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:34
 #~ msgid "Coloured Coin"
-#~ msgstr "染色币"
+#~ msgstr "Colored Coin"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:122
 #~ msgid "Coloured Coin Options"
-#~ msgstr "染色币选项"
+#~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:266
+#: src/electron/main.tsx:325
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "确认"
@@ -475,31 +586,39 @@ msgstr "确认"
 msgid "Confirm Disconnect"
 msgstr "确认断开连接"
 
-#: src/components/nfts/NFTTransferAction.tsx:76
+#: src/components/nfts/NFTTransferAction.tsx:77
 msgid "Confirm NFT Transfer"
 msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:180
+#: src/components/settings/ChangePassphrasePrompt.tsx:229
 msgid "Confirm New Passphrase"
-msgstr ""
+msgstr "确认新私钥密码"
 
-#: src/components/app/AppKeyringMigrator.tsx:149
-#: src/components/app/AppKeyringMigrator.tsx:150
-#: src/components/settings/SetPassphrasePrompt.tsx:160
+#: src/components/app/AppKeyringMigrator.tsx:185
+#: src/components/app/AppKeyringMigrator.tsx:186
+#: src/components/settings/SetPassphrasePrompt.tsx:194
 msgid "Confirm Passphrase"
-msgstr ""
+msgstr "确认私钥密码"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:119
+#: src/components/plotNFT/PlotNFTCard.tsx:120
 msgid "Confirmation"
 msgstr "确认"
 
+#: src/components/offers/utils.ts:168
+msgid "Confirmed"
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:159
+msgid "Confirmed at Height"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:200
 #~ msgid "Confirmed at block:"
-#~ msgstr "区块上已确认："
+#~ msgstr "Confirmed at block:"
 
 #: src/components/_wallet_old/WalletHistory.tsx:51
 #~ msgid "Confirmed at height {0}"
-#~ msgstr "确认于区块高度 {0}"
+#~ msgstr "Confirmed at height {0}"
 
 #: src/components/block/FullNodeAddConnection.tsx:88
 #: src/components/fullNode/FullNodeAddConnection.tsx:87
@@ -508,7 +627,7 @@ msgstr "连接"
 
 #: src/components/block/FullNodeAddConnection.tsx:64
 #: src/components/fullNode/FullNodeAddConnection.tsx:63
-#: src/components/fullNode/FullNodeConnections.tsx:109
+#: src/components/fullNode/FullNodeConnections.tsx:110
 msgid "Connect to other peers"
 msgstr "连接到其它节点"
 
@@ -523,18 +642,18 @@ msgstr "已连接"
 #: src/components/app/AppState.tsx:144
 #: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
-msgstr ""
+msgstr "正在连接到进程"
 
 #: src/components/app/AppRouter.tsx:61
 #~ msgid "Connecting to wallet"
-#~ msgstr "正在连接到钱包"
+#~ msgstr "Connecting to wallet"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:18
 msgid "Connection Status"
 msgstr "连接状态"
 
-#: src/components/farm/FarmFullNodeConnections.tsx:108
-#: src/components/farm/FarmYourHarvesterNetwork.tsx:106
+#: src/components/farm/FarmFullNodeConnections.tsx:109
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:107
 msgid "Connection Status:"
 msgstr "连接状态："
 
@@ -546,39 +665,43 @@ msgstr "连接类型"
 msgid "Connections"
 msgstr "连接数"
 
-#: src/electron/main.tsx:473
+#: src/electron/main.tsx:532
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上贡献"
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
 #~ msgid "Copied"
-#~ msgstr "已复制"
+#~ msgstr "Copied"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:670
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:306
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:428
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:485
 #~ msgid "Copy"
-#~ msgstr "复制"
+#~ msgstr "Copy"
+
+#: src/components/nfts/NFTContextualActions.tsx:230
+msgid "Copy URL"
+msgstr ""
 
 #: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
 #~ msgid "Copy to Clipboard"
-#~ msgstr "复制到剪贴板"
+#~ msgstr "Copy to Clipboard"
 
 #: src/components/backup/BackupCreate.tsx:59
-#: src/components/plot/add/PlotAddForm.tsx:190
+#: src/components/plot/add/PlotAddForm.tsx:199
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
-#: src/components/settings/ProfileAdd.tsx:111
+#: src/components/settings/ProfileAdd.tsx:133
 msgid "Create"
 msgstr "创建"
 
 #: src/components/app/AppSelectMode.tsx:140
 msgid "Create & Manage plots"
-msgstr ""
+msgstr "创建和管理农田"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:970
 #~ msgid "Create An Attestation Packet"
-#~ msgstr ""
+#~ msgstr "Create an Attestation Packet"
 
 #: src/components/wallet/create/WalletCreate.jsx:290
 #~ msgid "Create DID wallet"
@@ -586,16 +709,18 @@ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:110
 #~ msgid "Create Distributed Identity Wallet"
-#~ msgstr "创建分布式身份钱包"
+#~ msgstr "Create Distributed Identity Wallet"
 
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:32
 #~ msgid "Create New Wallet"
-#~ msgstr "新建钱包"
+#~ msgstr "Create New Wallet"
 
-#: src/components/nfts/NFTContextualActions.tsx:84
-#: src/components/nfts/NFTCreateOfferDemo.tsx:59
+#: src/components/nfts/NFTContextualActions.tsx:82
+#: src/components/offers/NFTOfferEditor.tsx:195
+#: src/components/offers/OfferEditor.tsx:221
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:15
 msgid "Create Offer"
-msgstr "创建报价"
+msgstr "Create Offer"
 
 #: src/components/plot/add/PlotAdd.tsx:92
 #~ msgid "Create Plot"
@@ -603,11 +728,11 @@ msgstr "创建报价"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:188
 #~ msgid "Create Rate Limited Admin Wallet"
-#~ msgstr "创建费用限定型管理钱包"
+#~ msgstr "Create Rate Limited Admin Wallet"
 
 #: src/components/_wallet_old/create/createRLUser.jsx:78
 #~ msgid "Create Rate Limited User Wallet"
-#~ msgstr "创建费用限定型用户钱包"
+#~ msgstr "Create Rate Limited User Wallet"
 
 #: src/components/trading/TradeManager.tsx:22
 #~ msgid "Create Trade"
@@ -615,13 +740,13 @@ msgstr "创建报价"
 
 #: src/components/trading/CreateOffer.jsx:136
 #~ msgid "Create Trade Offer"
-#~ msgstr "发起交易出价"
+#~ msgstr "Create Trade Offer"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:543
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:684
 #: src/components/_wallet_old/standard/WalletStandard.tsx:476
 #~ msgid "Create Transaction"
-#~ msgstr "发起交易"
+#~ msgstr "Create Transaction"
 
 #: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
@@ -633,31 +758,44 @@ msgstr "创建农田NFT"
 
 #: src/components/_selectKey_old/SelectKey.tsx:254
 #~ msgid "Create a new private key"
-#~ msgstr "创建新私钥"
+#~ msgstr "Create a new private key"
 
-#: src/components/settings/ProfileAdd.tsx:83
+#: src/components/settings/ProfileAdd.tsx:91
 msgid "Create a new profile"
 msgstr ""
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:186
 #~ msgid "Create admin wallet"
-#~ msgstr "创建管理者钱包"
+#~ msgstr "Create admin wallet"
+
+#: src/components/offers/NFTOfferEditor.tsx:426
+msgid "Create an NFT Offer"
+msgstr ""
+
+#: src/components/offers/OfferEditor.tsx:243
+#: src/components/offers/OfferManager.tsx:606
+msgid "Create an Offer"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:598
+msgid "Create an offer to exchange assets including XCH, tokens, and NFTs. View an offer to inspect and accept an offer made by another party."
+msgstr ""
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:132
 #~ msgid "Create new coloured coin"
-#~ msgstr "创建新的染色币"
+#~ msgstr "Create new colored coin"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:192
 #~ msgid "Create user wallet"
-#~ msgstr "创建用户钱包"
+#~ msgstr "Create user wallet"
 
 #: src/components/_wallet_old/create/createExistingColouredCoin.jsx:93
 #~ msgid "Create wallet for colour"
-#~ msgstr "创建染色钱包"
+#~ msgstr "Create wallet for color"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:139
 #~ msgid "Create wallet for existing colour"
-#~ msgstr "基于已有的染色币来创建一个钱包"
+#~ msgstr "Create wallet for existing color"
 
 #: src/components/wallet/Wallets.tsx:81
 #~ msgid "CreateWallet.addWallet"
@@ -665,11 +803,15 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:185
 #~ msgid "Created At:"
-#~ msgstr "创建于："
+#~ msgstr "Created At:"
 
 #: src/components/trading/TradingOverview.jsx:210
 #~ msgid "Created by us:"
-#~ msgstr "创建人："
+#~ msgstr "Created by us:"
+
+#: src/components/offers/OfferManager.tsx:158
+msgid "Creates and submits a transaction on the blockchain that cancels the offer"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
@@ -679,43 +821,58 @@ msgstr "正在创建农田NFT并加入农业合作社"
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "正在创建自耕种的农田NFT"
 
-#: src/components/plot/add/PlotAddForm.tsx:105
+#: src/components/offers/OfferManager.tsx:409
+#: src/components/offers/OfferViewer.tsx:175
+msgid "Creation Date"
+msgstr ""
+
+#: src/components/plot/add/PlotAddForm.tsx:113
 msgid "Currency code is not defined"
 msgstr "货币代码未定义"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:138
-#: src/components/plotNFT/PlotNFTCard.tsx:178
+#: src/components/plotNFT/PlotNFTCard.tsx:177
 msgid "Current Difficulty"
 msgstr "当前难度"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:160
+#: src/components/settings/ChangePassphrasePrompt.tsx:181
 msgid "Current Passphrase"
-msgstr ""
+msgstr "当前私钥密码"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:155
-#: src/components/plotNFT/PlotNFTCard.tsx:195
+#: src/components/plotNFT/PlotNFTCard.tsx:194
 msgid "Current Points Balance"
 msgstr "当前积点余额"
 
 #: src/components/trading/TradingOverview.jsx:181
 #~ msgid "Current trade status"
-#~ msgstr "当前交易状态"
+#~ msgstr "Current trade status"
 
 #: src/components/_selectKey_old/SelectKey.tsx:227
 #~ msgid "DANGER: permanently delete private key"
-#~ msgstr "注意：永久性删除私钥"
+#~ msgstr "DANGER: permanently delete private key"
 
 #: src/components/wallet/Wallets.tsx:53
 #~ msgid "DID Wallet"
 #~ msgstr "DID Wallet"
 
 #: src/components/settings/ProfileView.tsx:41
-msgid "DID1"
-msgstr ""
+#~ msgid "DID1"
+#~ msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:310
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
+
+#: src/components/nfts/detail/NFTDetail.tsx:68
+#: src/components/nfts/detail/NFTDetailV2.tsx:69
+msgid "Data Hash"
+msgstr ""
+
+#: src/components/nfts/detail/NFTDetail.tsx:92
+#: src/components/nfts/detail/NFTDetailV2.tsx:77
+msgid "Data URL {0}"
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:30
 msgid "Date"
@@ -729,27 +886,27 @@ msgstr "延迟"
 #: src/components/plot/PlotAction.tsx:51
 #: src/components/plot/queue/PlotQueueActions.tsx:41
 #: src/components/plot/queue/PlotQueueActions.tsx:93
-#: src/components/plotNFT/PlotNFTCard.tsx:120
+#: src/components/plotNFT/PlotNFTCard.tsx:121
 msgid "Delete"
 msgstr "删除"
 
-#: src/components/app/AppPassPrompt.tsx:92
+#: src/components/app/AppPassPrompt.tsx:110
 msgid "Delete Key"
-msgstr ""
+msgstr "删除密钥"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
 msgid "Delete Plot"
 msgstr "删除农田"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:312
+#: src/components/plotNFT/PlotNFTCard.tsx:311
 msgid "Delete Unconfirmed Transactions"
 msgstr "删除未确认的交易"
 
 #: src/components/_selectKey_old/SelectKey.tsx:114
 #: src/components/_selectKey_old/SelectKey.tsx:273
 #~ msgid "Delete all keys"
-#~ msgstr "删除所有密钥"
+#~ msgstr "Delete all keys"
 
 #: src/components/selectKey/SelectKey.tsx:58
 #~ msgid "Delete key"
@@ -757,39 +914,54 @@ msgstr "删除未确认的交易"
 
 #: src/components/_selectKey_old/SelectKey.tsx:75
 #~ msgid "Delete key {fingerprint}"
-#~ msgstr "删除密钥 {fingerprint}"
+#~ msgstr "Delete key {fingerprint}"
 
 #: src/components/selectKey/SelectKey.tsx:126
 #~ msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-#~ msgstr "删除所有密钥将会把你的密钥从你的计算机中永久移除，请确保你已经将其备份。确定继续？"
+#~ msgstr "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 
-#: src/components/app/AppPassPrompt.tsx:88
+#: src/components/app/AppPassPrompt.tsx:106
 msgid "Deleting key"
-msgstr ""
+msgstr "正在删除密钥"
 
 #: src/components/selectKey/SelectKey.tsx:101
 #~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-#~ msgstr "删除此密钥将会把密钥从你的计算机中永久移除，请确保你已经将其备份。确定继续？"
+#~ msgstr "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+msgstr "根据您的系统配置，您可能会发现替代的绘图器产生的农田比默认的空间绘图器Chia Proof 更快。 如果不确定, 请使用默认的Chia Proof空间绘图器。"
+
+#: src/components/nfts/detail/NFTDetail.tsx:158
+#: src/components/nfts/detail/NFTDetailV2.tsx:142
+msgid "Description"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:109
+#: src/components/nfts/NFTTransferAction.tsx:110
 msgid "Destination"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:94
+#: src/components/nfts/NFTTransferAction.tsx:95
 msgid "Destination:"
 msgstr ""
 
-#: src/electron/main.tsx:389
+#: src/components/nfts/detail/NFTDetail.tsx:193
+#: src/components/nfts/detail/NFTDetailV2.tsx:171
+#: src/components/offers/OfferViewer.tsx:357
+msgid "Details"
+msgstr ""
+
+#: src/electron/main.tsx:448
 msgid "Developer"
 msgstr "开发者"
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:451
 msgid "Developer Tools"
 msgstr "开发者工具"
+
+#: src/components/offers/OfferShareDialog.tsx:537
+msgid "Dexie URL"
+msgstr ""
 
 #: src/components/block/Block.jsx:199
 #: src/components/fullNode/card/FullNodeCardDifficulty.tsx:14
@@ -798,19 +970,19 @@ msgstr "难度"
 
 #: src/components/app/AppPassPrompt.tsx:78
 #~ msgid "Disable"
-#~ msgstr ""
+#~ msgstr "Disable"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
-msgstr ""
+msgstr "禁用 NUMA"
 
 #: src/components/app/AppPassPrompt.tsx:77
 #~ msgid "Disable Passphrase Protection"
-#~ msgstr ""
+#~ msgstr "Disable Passphrase Protection"
 
-#: src/electron/main.tsx:401
+#: src/electron/main.tsx:460
 msgid "Disable Simulator"
-msgstr ""
+msgstr "禁用模拟器"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -822,23 +994,32 @@ msgstr "开垦时禁用位域"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:26
 #~ msgid "Discard"
-#~ msgstr "放弃"
+#~ msgstr "Discard"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:20
 msgid "Disconnect"
 msgstr "断开连接"
 
+#: src/components/offers/OfferManager.tsx:466
+msgid "Display Offer Data"
+msgstr ""
+
 #: src/components/_wallet_old/create/WalletCreateList.tsx:28
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:25
 #~ msgid "Distributed Identity"
-#~ msgstr "分布式身份认证"
+#~ msgstr "Distributed Identity"
 
 #: src/components/wallet/create/WalletCreate.jsx:280
 #~ msgid "Distributed Identity Options"
 #~ msgstr "Distributed Identity Options"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:47
-#: src/components/plot/overview/PlotOverviewHero.tsx:67
+#: src/components/offers/OfferShareDialog.tsx:1429
+#: src/hooks/useOpenUnsafeLink.tsx:77
+msgid "Do not show this dialog again"
+msgstr ""
+
+#: src/components/farm/FarmHero.tsx:46
+#: src/components/plot/overview/PlotOverviewHero.tsx:66
 msgid "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 msgstr "你的机器上有已经完成的农田文件吗？ <0>添加农田文件路径</0>"
 
@@ -846,13 +1027,17 @@ msgstr "你的机器上有已经完成的农田文件吗？ <0>添加农田文�
 msgid "Does your machine support parallel plotting?"
 msgstr "您的机器是否支持并行开垦？"
 
+#: src/components/offers/OfferImport.tsx:147
+msgid "Drag & drop an offer file below to view its details"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:428
 #~ msgid "Drag and drop attestation packet(s)"
-#~ msgstr ""
+#~ msgstr "Drag and drop attestation packet(s)"
 
-#: src/components/trading/ViewOffer.jsx:39
-#~ msgid "Drag and drop offer file"
-#~ msgstr "拖放报价文件"
+#: src/components/offers/OfferImport.tsx:167
+msgid "Drag and drop offer file"
+msgstr "Drag and drop offer file"
 
 #: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
@@ -860,41 +1045,49 @@ msgstr "拖放你的备份文件"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:109
 #~ msgid "Drag and drop your recovery backup file"
-#~ msgstr ""
+#~ msgstr "Drag and drop your recovery backup file"
 
-#: src/electron/main.tsx:348
+#: src/components/plot/PlotHarvester.tsx:131
+msgid "Duplicate"
+msgstr "复制"
+
+#: src/components/plot/card/PlotCardPlotsDuplicate.tsx:11
+msgid "Duplicate Plots"
+msgstr "重复农田"
+
+#: src/electron/main.tsx:407
 msgid "Edit"
 msgstr "编辑"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:258
-#: src/components/plotNFT/PlotNFTCard.tsx:298
+#: src/components/plotNFT/PlotNFTCard.tsx:297
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:80
 msgid "Edit Payout Instructions"
 msgstr "编辑支付指令"
 
-#: src/electron/main.tsx:402
+#: src/electron/main.tsx:461
 msgid "Enable Simulator"
-msgstr ""
+msgstr "禁用模拟器"
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:111
 #~ msgid "Enter Passphrase"
-#~ msgstr ""
+#~ msgstr "Enter Passphrase"
 
-#: src/components/app/AppKeyringMigrator.tsx:128
+#: src/components/app/AppKeyringMigrator.tsx:149
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
-msgstr ""
+msgstr "请输入较强的私钥密码，然后点击“迁移密钥”以保护您的密钥串"
 
-#: src/components/settings/SetPassphrasePrompt.tsx:139
+#: src/components/settings/SetPassphrasePrompt.tsx:158
 msgid "Enter a strong passphrase to secure your keys:"
-msgstr ""
+msgstr "输入复杂的密码来保护您的密钥串："
 
 #: src/components/_wallet_old/WalletImport.tsx:146
 #~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-#~ msgstr "请输入你保存的24个助记词来恢复奇亚钱包"
+#~ msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
-#: src/components/settings/RemovePassphrasePrompt.tsx:102
+#: src/components/settings/RemovePassphrasePrompt.tsx:121
 msgid "Enter your passphrase:"
-msgstr ""
+msgstr "输入你的密码："
 
 #: src/components/farm/FarmerStatus.tsx:21
 #: src/components/farm/FarmerStatus.tsx:22
@@ -908,14 +1101,14 @@ msgstr "错误"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-#~ msgstr "错误：无法发送奇亚到染色地址。请输入奇亚钱包地址。"
+#~ msgstr "Error: Cannot send chia to colored address. Please enter a chia address."
 
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:14
 msgid "Estimated Network Space"
 msgstr "全网已占用空间（估算）"
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:43
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:51
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:47
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:55
 msgid "Estimated Time to Win"
 msgstr "预计区块发现时间"
 
@@ -936,33 +1129,46 @@ msgstr "不耕种最终输出文件夹"
 #~ msgid "Expected Time to Win"
 #~ msgstr ""
 
+#: src/components/offers/utils.ts:170
+#: src/components/plot/PlotHarvester.tsx:118
+msgid "Failed"
+msgstr "失败"
+
+#: src/components/offers/NFTOfferEditor.tsx:309
+msgid "Failed to decode NFT identifier"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:412
+msgid "Failed to execute Keybase command: {stderr}"
+msgstr ""
+
 #: src/components/plot/PlotsFailed.tsx:34
-msgid "Failed to open (invalid plots)"
-msgstr "打开失败（农田无效）"
+#~ msgid "Failed to open (invalid plots)"
+#~ msgstr ""
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:97
 #~ msgid "Failed to remove passphrase: {error}"
-#~ msgstr ""
+#~ msgstr "Failed to remove passphrase: {error}"
 
-#: src/components/settings/SetPassphrasePrompt.tsx:83
+#: src/components/settings/SetPassphrasePrompt.tsx:90
 msgid "Failed to set passphrase: {0}"
-msgstr ""
+msgstr "设置私钥密码失败: {0}"
 
 #: src/components/settings/SetPassphrasePrompt.tsx:92
 #~ msgid "Failed to set passphrase: {error}"
-#~ msgstr ""
+#~ msgstr "Failed to set passphrase: {error}"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:111
+#: src/components/settings/ChangePassphrasePrompt.tsx:119
 msgid "Failed to update passphrase: {0}"
-msgstr ""
+msgstr "设置私钥密码失败: {0}"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:120
 #~ msgid "Failed to update passphrase: {error}"
-#~ msgstr ""
+#~ msgstr "Failed to update passphrase: {error}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:46
 #~ msgid "Farm"
-#~ msgstr "农场"
+#~ msgstr "Farm"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:297
 msgid "Farmer Public Key"
@@ -1003,9 +1209,9 @@ msgstr "农民节点没有运行"
 
 #: src/_middleware_old/middleware_api.jsx:247
 #~ msgid "Farmer public key:"
-#~ msgstr "农民公钥："
+#~ msgstr "Farmer public key:"
 
-#: src/components/farm/overview/FarmOverviewHero.tsx:28
+#: src/components/farm/FarmHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr "农民们通过贡献自己的空余存储空间，可以帮助提高整个网络的安全性，进而获得区块奖励和交易费用的奖励。当你的第一块农田开垦完成后，这里就是你的农场。<0>了解更多</0>"
 
@@ -1018,7 +1224,7 @@ msgstr "正在耕种"
 
 #: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
-msgstr ""
+msgstr "耕作模式"
 
 #: src/components/farm/card/FarmCardStatus.tsx:14
 #: src/components/farm/card/FarmCardStatus.tsx:25
@@ -1028,10 +1234,16 @@ msgstr ""
 msgid "Farming Status"
 msgstr "耕种状态"
 
-#: src/components/nfts/NFTTransferAction.tsx:298
+#: src/components/nfts/NFTTransferAction.tsx:242
+#: src/components/offers/NFTOfferEditor.tsx:169
+#: src/components/offers/NFTOfferViewer.tsx:462
+#: src/components/offers/OfferEditorConditionsPanel.tsx:457
+#: src/components/offers/OfferManager.tsx:174
+#: src/components/offers/OfferViewer.tsx:327
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:167
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
+#: src/components/settings/ProfileAdd.tsx:117
 msgid "Fee"
 msgstr "费用"
 
@@ -1045,11 +1257,11 @@ msgstr "费用"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:595
 #~ msgid "Fee ({currencyCode})"
-#~ msgstr "交易费 ({currencyCode})"
+#~ msgstr "Fee ({currencyCode})"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
-msgstr ""
+msgstr "使用的是TWICE：一次离开池，一次加入。"
 
 #: src/components/block/Block.jsx:299
 msgid "Fees Amount"
@@ -1059,14 +1271,20 @@ msgstr "费用"
 #~ msgid "Fees Puzzle Hash"
 #~ msgstr ""
 
-#: src/electron/main.tsx:340
-#: src/electron/main.tsx:547
+#: src/components/offers/NFTOfferViewer.tsx:280
+#: src/components/offers/OfferSummary.tsx:190
+msgid "Fees included in offer:"
+msgstr ""
+
+#: src/electron/main.tsx:399
+#: src/electron/main.tsx:606
 msgid "File"
 msgstr "文件"
 
-#: src/components/plot/PlotsFailed.tsx:13
-#: src/components/plot/PlotsNotFound.tsx:13
-#: src/components/plot/overview/PlotOverviewPlots.tsx:106
+#: src/components/plot/PlotHarvesterPlots.tsx:71
+#: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:13
+#: src/components/plot/PlotHarvesterPlotsFailed.tsx:13
+#: src/components/plot/PlotHarvesterPlotsNotFound.tsx:13
 msgid "Filename"
 msgstr "文件名"
 
@@ -1079,11 +1297,11 @@ msgstr "最终输出文件夹位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:498
+#: src/electron/main.tsx:557
 msgid "Follow on Twitter"
 msgstr "关注我们的Twitter"
 
-#: src/electron/main.tsx:457
+#: src/electron/main.tsx:516
 msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
@@ -1094,43 +1312,60 @@ msgstr "全节点"
 
 #: src/components/fullNode/FullNode.jsx:138
 #~ msgid "Full Node Overview"
-#~ msgstr "全节点概览"
+#~ msgstr "Full Node Overview"
 
 #: src/components/fullNode/FullNode.jsx:267
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:423
+#: src/electron/main.tsx:482
 msgid "Full Screen"
 msgstr "全屏"
 
-#: src/components/settings/Settings.tsx:270
+#: src/components/settings/Settings.tsx:268
 msgid "General"
-msgstr ""
+msgstr "常规"
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
 #~ msgid "Generate New Colour"
-#~ msgstr "生成新的色彩"
+#~ msgstr "Generate New Color"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:251
 #~ msgid "Get Pool Login Link"
 #~ msgstr "Get Pool Login Link"
 
+#: src/components/offers/OfferShareDialog.tsx:1015
+#: src/components/offers/OfferShareDialog.tsx:1076
+msgid "Go to #{channelName}"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1147
+msgid "Go to Offerpool"
+msgstr ""
+
 #: src/components/pool/PoolOverview.tsx:172
 #~ msgid "Grid view"
-#~ msgstr "网格视图"
+#~ msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:576
 #~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-#~ msgstr "分层确定性钱包中的私钥可以对应有无限多个公钥（也就是你的钱包接受地址），这所有的公钥都受这个单一的私钥控制。"
+#~ msgstr "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 #~ msgid "Harvester ID"
 #~ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:132
-msgid "Harvester Plots"
-msgstr "收割机农田"
+#~ msgid "Harvester Plots"
+#~ msgstr ""
+
+#: src/components/plot/PlotHarvesters.tsx:39
+msgid "Harvesters"
+msgstr "收割机"
+
+#: src/components/offers/OfferShareDialog.tsx:802
+msgid "Hashgreen DEX URL"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
 msgid "Header Hash"
@@ -1146,35 +1381,45 @@ msgstr "头部哈希"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:445
+#: src/electron/main.tsx:504
 msgid "Help"
 msgstr "帮助"
 
 #: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
 #~ msgid "Help translate"
-#~ msgstr "改进翻译"
+#~ msgstr "Help translate"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:51
+#: src/components/farm/FarmLatestBlockChallenges.tsx:57
 msgid "Here are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
 #~ msgid "Hide Advanced Options"
-#~ msgstr "隐藏高级选项"
+#~ msgstr "Hide Advanced Options"
 
-#: src/components/app/AppPassPrompt.tsx:127
-#: src/components/settings/RemovePassphrasePrompt.tsx:118
+#: src/components/app/AppPassPrompt.tsx:160
+#: src/components/settings/RemovePassphrasePrompt.tsx:150
 msgid "Hint"
-msgstr ""
+msgstr "提示"
 
 #: src/components/_wallet_old/WalletHistory.tsx:91
 #~ msgid "History"
-#~ msgstr "历史"
+#~ msgstr "History"
+
+#: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:65
+#: src/components/plot/PlotHarvesterPlotsFailed.tsx:65
+#: src/components/plot/PlotHarvesterPlotsNotFound.tsx:65
+msgid "Hooray, no files here!"
+msgstr "今后，这里没有文件！"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:35
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:35
 msgid "Host Name"
 msgstr "主机名"
+
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:16
+msgid "I Understand, Create Offer"
+msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "IP address"
@@ -1193,54 +1438,108 @@ msgstr "IP地址 / 主机"
 msgid "If none selected, then it will default to the temporary directory."
 msgstr "如果未指定，将会使用上述临时目录。"
 
+#: src/components/offers/OfferShareDialog.tsx:754
+msgid "If selected, your offer will be not be shared publicly."
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:134
+msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:106
+msgid "Image Hash Mismatch"
+msgstr ""
+
+#: src/components/offers/OfferDataEntryDialog.tsx:74
+msgid "Import"
+msgstr ""
+
 #: src/components/_wallet_old/WalletImport.tsx:143
 #~ msgid "Import Wallet from Mnemonics"
-#~ msgstr "使用助记词导入钱包"
+#~ msgstr "Import Wallet from Mnemonics"
 
 #: src/components/_selectKey_old/SelectKey.tsx:264
 #~ msgid "Import from Mnemonics (24 words)"
-#~ msgstr "自助记词导入（24个词）"
+#~ msgstr "Import from Mnemonics (24 words)"
 
 #: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
 msgstr "处理中"
 
+#: src/components/offers/NFTOfferViewer.tsx:431
+#: src/components/offers/OfferEditorConditionsPanel.tsx:341
+#: src/components/offers/OfferViewer.tsx:304
+msgid "In exchange for"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1241
+msgid "In exchange for:"
+msgstr ""
+
+#: src/components/offers/OfferEditorConditionsPanel.tsx:463
+msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:23
 #~ msgid "Incoming"
-#~ msgstr "收入"
+#~ msgstr "Incoming"
 
 #: src/components/core/components/Fee/Fee.tsx:36
 #~ msgid "Incorrect value"
-#~ msgstr "数值错误"
+#~ msgstr "Incorrect value"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:17
+#: src/components/farm/FarmLatestBlockChallenges.tsx:20
 msgid "Index"
 msgstr "索引"
 
 #: src/components/trading/TradingOverview.jsx:213
 #~ msgid "Indicated if this offer was created by us"
-#~ msgstr "表明此出价是否由我们创建"
+#~ msgstr "Indicated if this offer was created by us"
 
 #: src/components/trading/TradingOverview.jsx:230
 #~ msgid "Indicated what time this offer was accepted"
-#~ msgstr "表明次出价被接受的时间"
+#~ msgstr "Indicated what time this offer was accepted"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:333
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:472
 #~ msgid "Info Packet"
-#~ msgstr "信息包"
+#~ msgstr "Info Packet"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:260
 #~ msgid "Initial Amount"
-#~ msgstr "初始金额"
+#~ msgstr "Initial Amount"
 
 #: src/components/_wallet_old/create/createRLUser.jsx:87
 #~ msgid "Initialize a Rate Limited User Wallet:"
-#~ msgstr "初始化费用限定型用户钱包："
+#~ msgstr "Initialize a Rate Limited User Wallet:"
+
+#: src/components/plot/PlotHarvesterPlots.tsx:125
+msgid "Initializing..."
+msgstr "正在初始化..."
+
+#: src/components/offers/OfferShareDialog.tsx:1048
+msgid "Install Keybase"
+msgstr ""
+
+#: src/hooks/useAcceptOfferHook.tsx:78
+msgid ""
+"Insufficient funds available to accept offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
+
+#: src/components/offers/OfferEditor.tsx:182
+msgid ""
+"Insufficient funds available to create offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:218
 #~ msgid "Interval"
-#~ msgstr "间隔"
+#~ msgstr "Interval"
+
+#: src/components/offers/NFTOfferEditor.tsx:307
+msgid "Invalid NFT identifier"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
@@ -1250,7 +1549,7 @@ msgstr "无效状态"
 msgid "It is a one-time login link that can be used to log in to a pool's website. It contains a signature using the farmer's key from the plot NFT. Not all pools support this feature."
 msgstr "这是一个用于登录农业合作社网站的一次性链接。此链接包含农田NFT对应的农民密钥的签名。并非所有耕种池都支持此功能。"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:403
+#: src/components/plotNFT/PlotNFTCard.tsx:402
 msgid "Join Pool"
 msgstr "加入农业合作社"
 
@@ -1276,23 +1575,36 @@ msgstr "加入农业合作社来获得持续的XCH耕种收益。创建一个农
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
+msgstr "加入联合耕作池"
+
+#: src/components/offers/OfferShareDialog.tsx:1065
+msgid "Join {teamName}"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:63
+#: src/components/plot/PlotHarvesterPlots.tsx:40
+#: src/components/plot/PlotPlotting.tsx:20
 msgid "K-Size"
 msgstr "K值大小"
 
-#: src/components/app/AppKeyringMigrator.tsx:93
-msgid "Keyring migration failed: {0}"
+#: src/components/offers/OfferShareDialog.tsx:951
+msgid "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
 msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1040
+msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {teamName} team, you must first have Keybase installed."
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:100
+msgid "Keyring migration failed: {0}"
+msgstr "钥匙串迁移失败： {0}"
 
 #: src/components/app/AppKeyringMigrator.tsx:86
 #~ msgid "Keyring migration failed: {error}"
-#~ msgstr ""
+#~ msgstr "Keyring migration failed: {error}"
 
 #: src/components/dashboard/DashboardSideBar.tsx:85
 #~ msgid "Keys"
-#~ msgstr "密钥"
+#~ msgstr "Keys"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:63
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:63
@@ -1309,14 +1621,19 @@ msgstr "最新收割的区块高度"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 msgid "Last Transaction Block Time"
-msgstr ""
+msgstr "上一次交易块时间"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:32
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
 msgid "Latest Block Challenges"
 msgstr "最新的区块挑战"
 
+#: src/components/nfts/detail/NFTDetail.tsx:54
+#: src/components/nfts/detail/NFTDetailV2.tsx:55
+msgid "Launcher ID"
+msgstr ""
+
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:294
-#: src/components/plotNFT/PlotNFTCard.tsx:347
+#: src/components/plotNFT/PlotNFTCard.tsx:346
 msgid "Launcher Id"
 msgstr "启动器ID"
 
@@ -1329,29 +1646,56 @@ msgstr "了解更多"
 msgid "Leaving Pool"
 msgstr "退出农业合作社"
 
+#: src/components/nfts/detail/NFTDetail.tsx:101
+#: src/components/nfts/detail/NFTDetailV2.tsx:86
+msgid "License Hash"
+msgstr ""
+
+#: src/components/nfts/detail/NFTDetail.tsx:110
+#: src/components/nfts/detail/NFTDetailV2.tsx:95
+msgid "License URL {0}"
+msgstr ""
+
 #: src/components/pool/PoolOverview.tsx:172
 #~ msgid "List view"
-#~ msgstr "列表视图"
+#~ msgstr ""
+
+#: src/components/nfts/NFTSummary.tsx:114
+msgid "Loading NFT"
+msgstr ""
 
 #: src/components/pool/Pool.tsx:21
 #~ msgid "Loading Plot NFTs"
-#~ msgstr "正在加载农田NFT"
+#~ msgstr "Loading Plot NFTs"
 
-#: src/components/app/AppProviders.tsx:65
+#: src/components/app/AppProviders.tsx:66
 msgid "Loading configuration"
-msgstr ""
+msgstr "正在加载配置"
+
+#: src/components/farm/Farm.tsx:24
+msgid "Loading farming data"
+msgstr "正在加载农业数据"
 
 #: src/components/app/AppState.tsx:117
 msgid "Loading keyring status"
-msgstr ""
+msgstr "正在载入密钥串状态"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
-#~ msgstr "正在加载钱包列表"
+#~ msgstr "Loading list of wallets"
+
+#: src/components/nfts/NFTPreview.tsx:128
+#: src/components/nfts/NFTPreview.tsx:147
+msgid "Loading preview..."
+msgstr ""
 
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "Loading..."
 msgstr "正在载入……"
+
+#: src/components/plot/PlotHarvester.tsx:56
+msgid "Local"
+msgstr "区域"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
@@ -1359,7 +1703,7 @@ msgstr "正在载入……"
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
-#~ msgstr "正在登录"
+#~ msgstr "Logging in"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1403,15 +1747,19 @@ msgstr "正在载入……"
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "管理 CAT 令牌"
 
-#: src/components/farm/overview/FarmOverview.tsx:49
+#: src/components/farm/FarmHeader.tsx:41
 msgid "Manage Farming Rewards"
 msgstr "管理耕种奖励"
 
+#: src/components/offers/OfferManager.tsx:591
+msgid "Manage Offers"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:806
 #~ msgid "Manage Recovery DIDs"
-#~ msgstr "管理恢复去中心化标识"
+#~ msgstr "Manage Recovery DIDs"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:98
 #: src/components/farm/FarmManageFarmingRewards.tsx:109
@@ -1424,72 +1772,108 @@ msgstr "MiB 上传/下载"
 
 #: src/components/_selectKey_old/SelectKey.tsx:137
 #~ msgid "Migrate"
-#~ msgstr ""
+#~ msgstr "Migrate"
 
-#: src/components/settings/Settings.tsx:188
+#: src/components/settings/Settings.tsx:182
 #: src/components/settings/SettingsPanel.tsx:186
 msgid "Migrate Keyring"
-msgstr ""
+msgstr "迁移钥匙串"
 
-#: src/components/app/AppKeyringMigrator.tsx:229
+#: src/components/app/AppKeyringMigrator.tsx:278
 msgid "Migrate Keys"
-msgstr ""
+msgstr "迁移钥匙串"
 
-#: src/components/app/AppKeyringMigrator.tsx:124
+#: src/components/app/AppKeyringMigrator.tsx:145
 msgid "Migration required"
-msgstr ""
+msgstr "需要迁移"
 
-#: src/components/settings/Settings.tsx:129
+#: src/components/settings/Settings.tsx:115
 #: src/components/settings/SettingsPanel.tsx:131
 msgid "Migration required to support passphrase protection"
-msgstr ""
+msgstr "迁移支持私钥密码保护"
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
 msgstr "最小难度"
 
+#: src/components/offers/OfferShareDialog.tsx:618
+msgid "MintGarden URL"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:98
 msgid "Minutes"
 msgstr "分钟"
+
+#: src/components/plot/PlotHarvester.tsx:105
+msgid "Missing Keys"
+msgstr "缺少密钥"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 msgid "More memory slightly increases speed"
 msgstr "增加内存可以略微提高速度"
 
+#: src/components/settings/ProfileView.tsx:95
+msgid "My DID"
+msgstr ""
+
 #: src/components/_wallet_old/did/WalletDID.tsx:537
 #~ msgid "My DID Wallet"
-#~ msgstr "我的去中心化标识钱包"
+#~ msgstr "My DID Wallet"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:415
 #~ msgid "My Pubkey"
-#~ msgstr "我的公钥"
+#~ msgstr "My Pubkey"
 
-#: src/components/nfts/NFTTransferAction.tsx:274
-msgid "NFT Asset ID"
+#: src/components/offers/NFTOfferEditor.tsx:77
+msgid "NFT"
 msgstr ""
 
+#: src/components/nfts/NFTTransferAction.tsx:274
+#~ msgid "NFT Asset ID"
+#~ msgstr ""
+
 #: src/components/nfts/NFTContextualActions.tsx:60
-msgid "NFT Create Offer Demo"
+#~ msgid "NFT Create Offer Demo"
+#~ msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:79
+msgid "NFT Identifier"
 msgstr ""
 
 #: src/components/nfts/NFTTransferAction.tsx:247
-msgid "NFT Name"
-msgstr ""
+#~ msgid "NFT Name"
+#~ msgstr ""
 
 #: src/components/nfts/NFTTransferAction.tsx:232
-msgid "NFT Name:"
+#~ msgid "NFT Name:"
+#~ msgstr ""
+
+#: src/components/offers/OfferManager.tsx:626
+msgid "NFT Offer"
 msgstr ""
 
-#: src/components/nfts/NFTTransferDemo.tsx:35
+#: src/components/nfts/NFTContextualActions.tsx:105
 msgid "NFT Transfer Complete"
 msgstr ""
 
 #: src/components/nfts/NFTContextualActions.tsx:115
-msgid "NFT Transfer Demo"
+#~ msgid "NFT Transfer Demo"
+#~ msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:115
+msgid "NFT Transfer Failed"
 msgstr ""
 
-#: src/components/nfts/NFTTransferDemo.tsx:45
-msgid "NFT Transfer Failed"
+#: src/components/offers/NFTOfferEditor.tsx:336
+msgid "NFT details not available"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:140
+msgid "NFT for XCH"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:85
+msgid "NFT not specified"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:60
@@ -1511,19 +1895,19 @@ msgstr "网络名称"
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:685
 #: src/components/_wallet_old/standard/WalletStandard.tsx:572
 #~ msgid "New Address"
-#~ msgstr "新地址"
+#~ msgstr "New Address"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:170
+#: src/components/settings/ChangePassphrasePrompt.tsx:205
 msgid "New Passphrase"
-msgstr ""
+msgstr "新建私钥密码"
 
 #: src/components/_wallet_old/WalletAdd.tsx:63
 #~ msgid "New Wallet"
-#~ msgstr "新钱包"
+#~ msgstr "New Wallet"
 
 #: src/components/app/AppPassPrompt.tsx:60
 #~ msgid "New passphrase is the same as your current passphrase"
-#~ msgstr ""
+#~ msgstr "New passphrase is the same as your current passphrase"
 
 #: src/components/block/Block.jsx:328
 msgid "Next"
@@ -1531,28 +1915,44 @@ msgstr "下一步"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:249
 #~ msgid "Nickname"
-#~ msgstr "昵称"
+#~ msgstr "Nickname"
 
-#: src/electron/main.tsx:263
+#: src/electron/main.tsx:322
 msgid "No"
 msgstr "否"
 
 #: src/_middleware_old/middleware_api.jsx:273
 #~ msgid "No 24 word seed, since this key is imported."
-#~ msgstr "没有24个助记词种子，因为此密钥已导入。"
+#~ msgstr "No 24 word seed, since this key is imported."
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:15
 msgid "No blocks farmed yet"
 msgstr "尚未有区块有收获"
 
+#: src/components/offers/OfferManager.tsx:537
+msgid "No current offers"
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:120
+msgid "No file available"
+msgstr ""
+
+#: src/components/plot/PlotHarvesterPlots.tsx:123
+msgid "No plots yet"
+msgstr "尚无农田"
+
 #: src/components/_wallet_old/WalletHistory.tsx:102
 #~ msgid "No previous transactions"
-#~ msgstr "无过往交易"
+#~ msgstr "No previous transactions"
 
 #: src/components/block/FarmManageFarmingRewards.tsx:135
 #: src/components/farm/FarmManageFarmingRewards.tsx:146
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
 msgstr "本机没有所输入地址对应的私钥。请确认是否要将奖励发送至非本机钱包。"
+
+#: src/components/offers/OfferViewer.tsx:180
+msgid "Node Count"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:31
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:31
@@ -1561,22 +1961,25 @@ msgid "Node ID"
 msgstr "节点ID"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:87
-msgid "Node Id"
-msgstr "节点ID"
+#~ msgid "Node Id"
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:91
 msgid "None"
 msgstr "无"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:67
+#: src/components/farm/FarmLastAttemptedProof.tsx:68
 msgid "None of your plots have passed the plot filter yet."
 msgstr "你的农田还没有通过过滤器检查."
 
 #: src/components/farm/FarmerStatus.tsx:20
 #: src/components/farm/card/FarmCardNotAvailable.tsx:19
 #: src/components/farm/card/FarmCardNotAvailable.tsx:22
+#: src/components/nfts/detail/NFTDetail.tsx:162
+#: src/components/nfts/detail/NFTDetail.tsx:172
+#: src/components/nfts/detail/NFTDetailV2.tsx:145
 #: src/components/plot/PlotStatus.tsx:19
-#: src/components/plotNFT/PlotNFTCard.tsx:362
+#: src/components/plotNFT/PlotNFTCard.tsx:361
 msgid "Not Available"
 msgstr "不可用"
 
@@ -1585,21 +1988,29 @@ msgstr "不可用"
 msgid "Not Synced"
 msgstr "未同步"
 
+#: src/components/offers/OfferViewer.tsx:169
+msgid "Not accepted"
+msgstr ""
+
 #: src/components/trading/TradingOverview.jsx:221
 #~ msgid "Not accepted yet"
-#~ msgstr "尚未被接受"
+#~ msgstr "Not accepted yet"
+
+#: src/components/offers/OfferViewer.tsx:160
+msgid "Not confirmed"
+msgstr ""
 
 #: src/components/trading/TradingOverview.jsx:194
 #~ msgid "Not confirmed yet"
-#~ msgstr "尚未被确认"
+#~ msgstr "Not confirmed yet"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
 msgstr "未连接"
 
 #: src/components/plot/PlotsNotFound.tsx:34
-msgid "Not found Plots"
-msgstr "未找到农田"
+#~ msgid "Not found Plots"
+#~ msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:163
 #: src/components/farm/FarmManageFarmingRewards.tsx:174
@@ -1607,7 +2018,7 @@ msgid "Note that this does not change your pooling payout addresses. This only a
 msgstr "请注意，这将不会改变你的合作社耕作支付地址。这只会影响旧农田文件，以及0.25XCH的合作社耕作奖励。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:117
-#: src/components/plotNFT/PlotNFTCard.tsx:157
+#: src/components/plotNFT/PlotNFTCard.tsx:158
 msgid "Number of Plots"
 msgstr "农田数"
 
@@ -1617,99 +2028,167 @@ msgstr "桶数量"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:188
 msgid "Number of buckets for phase 3 & 4"
-msgstr ""
+msgstr "第三和第四阶段的桶数"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:136
 msgid "Number of threads"
 msgstr "线程数量"
 
+#: src/components/offers/OfferDataDialog.tsx:75
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:87
 msgid "OK"
 msgstr "确定"
 
 #: src/components/trading/ViewOffer.jsx:67
 #~ msgid "Offer"
-#~ msgstr "出价"
+#~ msgstr "Offer"
+
+#: src/components/offers/OfferDataDialog.tsx:42
+#: src/components/offers/OfferDataDialog.tsx:50
+msgid "Offer Data"
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:154
+msgid "Offer Identifier"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:532
+#: src/components/offers/OfferShareDialog.tsx:613
+#: src/components/offers/OfferShareDialog.tsx:695
+#: src/components/offers/OfferShareDialog.tsx:797
+#: src/components/offers/OfferShareDialog.tsx:1006
+#: src/components/offers/OfferShareDialog.tsx:1131
+msgid "Offer Shared"
+msgstr ""
+
+#: src/hooks/useAcceptOfferHook.tsx:63
+msgid "Offer has been accepted and is awaiting confirmation."
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:700
+msgid "OfferBin URL"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:370
+msgid "Offered"
+msgstr ""
+
+#: src/components/offers/utils.ts:154
+msgid "Offering: [{makerString}], Requesting: [{takerString}]"
+msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:65
 msgid "Offers"
-msgstr ""
+msgstr "报价"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
-#~ msgstr "已创建的出价"
+#~ msgstr "Offers Created"
+
+#: src/components/offers/OfferManager.tsx:653
+msgid "Offers you accepted"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:648
+msgid "Offers you created"
+msgstr ""
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:478
 #~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-#~ msgstr "每个交易区块平均打包时间为一分钟。通常您的交易将在一分钟内被确认，除非出现拥堵。"
+#~ msgstr "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 
-#: src/components/nfts/NFTTransferAction.tsx:84
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:68
+msgid "Once you accept this offer, you will not be able to cancel the transaction. Are you sure you want to accept this offer?"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:85
 msgid "Once you initiate this transfer, you will not be able to cancel the transaction. Are you sure you want to transfer the NFT?"
+msgstr ""
+
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:37
+msgid "One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive."
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:34
 #~ msgid "Only one backup file is allowed."
-#~ msgstr "只允许一个备份文件。"
+#~ msgstr "Only one backup file is allowed."
 
 #: src/components/wallet/create/recoverDIDWallet.js:156
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
+#: src/hooks/useOpenUnsafeLink.tsx:43
+msgid "Open Link"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:190
+msgid "Open in Web Browser"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:23
 #~ msgid "Outgoing"
-#~ msgstr "支出"
+#~ msgstr "Outgoing"
 
-#: src/components/app/AppKeyringMigrator.tsx:138
-#: src/components/app/AppKeyringMigrator.tsx:139
-#: src/components/app/AppPassPrompt.tsx:119
-#: src/components/settings/RemovePassphrasePrompt.tsx:110
-#: src/components/settings/SetPassphrasePrompt.tsx:149
+#: src/components/offers/OfferViewer.tsx:230
+msgid "Parent Coin"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:160
+#: src/components/app/AppKeyringMigrator.tsx:161
+#: src/components/app/AppPassPrompt.tsx:139
+#: src/components/settings/RemovePassphrasePrompt.tsx:129
+#: src/components/settings/SetPassphrasePrompt.tsx:169
 #: src/components/settings/SettingsPanel.tsx:217
 msgid "Passphrase"
-msgstr ""
+msgstr "私钥密码"
 
-#: src/components/app/AppKeyringMigrator.tsx:162
-#: src/components/settings/ChangePassphrasePrompt.tsx:191
-#: src/components/settings/SetPassphrasePrompt.tsx:173
+#: src/components/app/AppKeyringMigrator.tsx:211
+#: src/components/settings/ChangePassphrasePrompt.tsx:253
+#: src/components/settings/SetPassphrasePrompt.tsx:220
 msgid "Passphrase Hint"
-msgstr ""
+msgstr "私钥密码提示"
 
-#: src/components/app/AppKeyringMigrator.tsx:161
-#: src/components/settings/ChangePassphrasePrompt.tsx:190
-#: src/components/settings/SetPassphrasePrompt.tsx:172
+#: src/components/app/AppKeyringMigrator.tsx:210
+#: src/components/settings/ChangePassphrasePrompt.tsx:252
+#: src/components/settings/SetPassphrasePrompt.tsx:219
 msgid "Passphrase Hint (Optional)"
-msgstr ""
+msgstr "私钥密码提示（可选）"
 
-#: src/components/settings/Settings.tsx:219
+#: src/components/settings/Settings.tsx:213
 msgid "Passphrase Settings"
-msgstr ""
+msgstr "私钥密码设置"
 
 #: src/components/app/AppPassPrompt.tsx:152
 #: src/components/settings/RemovePassphrasePrompt.tsx:67
 #~ msgid "Passphrase is incorrect"
-#~ msgstr ""
+#~ msgstr "Passphrase is incorrect"
 
-#: src/components/settings/Settings.tsx:102
+#: src/components/settings/Settings.tsx:86
 #: src/components/settings/SettingsPanel.tsx:102
 msgid "Passphrase protection has been disabled"
-msgstr ""
+msgstr "私钥密码保护已禁用"
 
-#: src/components/settings/Settings.tsx:139
+#: src/components/settings/Settings.tsx:132
 #: src/components/settings/SettingsPanel.tsx:142
 msgid "Passphrase protection is disabled"
-msgstr ""
+msgstr "私钥密码保护已禁用"
 
-#: src/components/settings/Settings.tsx:136
+#: src/components/settings/Settings.tsx:129
 #: src/components/settings/SettingsPanel.tsx:138
 msgid "Passphrase protection is enabled"
-msgstr ""
+msgstr "私钥密码保护已启用"
 
-#: src/components/settings/Settings.tsx:130
+#: src/components/settings/Settings.tsx:118
 #: src/components/settings/SettingsPanel.tsx:132
 msgid "Passphrase support requires migrating your keys to a new keyring"
+msgstr "私钥密码要求将密钥迁移到新的密钥串中"
+
+#: src/components/offers/OfferDataEntryDialog.tsx:40
+#: src/components/offers/OfferImport.tsx:155
+msgid "Paste Offer Data"
 msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:358
+#: src/components/plotNFT/PlotNFTCard.tsx:357
 msgid "Payout Address"
 msgstr "支付地址"
 
@@ -1723,26 +2202,42 @@ msgstr "最高高度"
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
 #~ msgid "Peak Time"
-#~ msgstr "最高时间"
+#~ msgstr "Peak Time"
 
 #: src/components/plotNFT/PlotNFTState.tsx:43
 msgid "Pending"
 msgstr "待处理"
 
+#: src/components/offers/utils.ts:160
+msgid "Pending Accept"
+msgstr ""
+
 #: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:24
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:573
 #~ msgid "Pending Balance"
-#~ msgstr "待处理的余额"
+#~ msgstr "Pending Balance"
+
+#: src/components/offers/utils.ts:164
+msgid "Pending Cancel"
+msgstr ""
 
 #: src/components/_wallet_old/card/WalletCardPendingChange.tsx:24
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:578
 #~ msgid "Pending Change"
-#~ msgstr "待处理的找回"
+#~ msgstr "Pending Change"
+
+#: src/components/offers/utils.ts:162
+msgid "Pending Confirm"
+msgstr ""
 
 #: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:27
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:568
 #~ msgid "Pending Total Balance"
-#~ msgstr "待处理总余额"
+#~ msgstr "Pending Total Balance"
+
+#: src/components/nfts/NFTPreview.tsx:104
+msgid "Pending Transfer"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:144
 #: src/hooks/useAbsorbRewards.tsx:43
@@ -1751,107 +2246,123 @@ msgstr "请确认"
 
 #: src/components/trading/CreateOffer.jsx:101
 #~ msgid "Please add a trade pair"
-#~ msgstr "请添加一个交易对"
+#~ msgstr "Please add a trade pair"
+
+#: src/hooks/useOpenUnsafeLink.tsx:50
+msgid "Please check the following link to verify the site you are going to visit. Proceed at your own risk."
+msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:668
 #~ msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-#~ msgstr "请输入费用数字0。正费用目前在RL上还不支持。"
+#~ msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
 
 #: src/components/_wallet_old/did/WalletDID.tsx:927
 #~ msgid "Please enter a coin"
-#~ msgstr ""
+#~ msgstr "Please enter a coin"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:526
 #: src/components/_wallet_old/did/WalletDID.tsx:917
 #~ msgid "Please enter a filename"
-#~ msgstr "请输入文件名"
+#~ msgstr "Please enter a filename"
 
-#: src/components/app/AppPassPrompt.tsx:52
-#: src/components/settings/SetPassphrasePrompt.tsx:51
+#: src/components/app/AppPassPrompt.tsx:60
+#: src/components/settings/SetPassphrasePrompt.tsx:58
 msgid "Please enter a passphrase"
-msgstr ""
+msgstr "请输入密钥密码"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:937
 #~ msgid "Please enter a pubkey"
-#~ msgstr "请输入公钥"
+#~ msgstr "Please enter a pubkey"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:947
 #~ msgid "Please enter a puzzlehash"
-#~ msgstr "请输入谜题哈希"
+#~ msgstr "Please enter a puzzlehash"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:140
 #~ msgid "Please enter a valid initial coin amount"
-#~ msgstr "请输入一个有效的初始币数量"
+#~ msgstr "Please enter a valid initial coin amount"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:777
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:76
 #~ msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-#~ msgstr "请输入一个大于或者等于 0 的整数，用于恢复所需的备份ID。"
+#~ msgstr "Please enter an integer value of 0 or greater for the number of Backup IDs needed for recovery."
 
 #: src/components/_wallet_old/create/createNewColouredCoin.jsx:69
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:639
 #: src/components/_wallet_old/standard/WalletStandard.tsx:430
 #~ msgid "Please enter a valid numeric amount"
-#~ msgstr "请输入一个正确的数目"
+#~ msgstr "Please enter a valid numeric amount"
 
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:50
 #~ msgid "Please enter a valid numeric amount."
-#~ msgstr "请输入有效的数字金额。"
+#~ msgstr "Please enter a numeric amount."
 
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:70
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:79
-#: src/components/_wallet_old/create/createRLAdmin.jsx:150
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:649
-#: src/components/_wallet_old/standard/WalletStandard.tsx:440
-#~ msgid "Please enter a valid numeric fee"
-#~ msgstr "请输入一个正确的费用"
+#: src/components/settings/ProfileAdd.tsx:69
+msgid "Please enter a valid numeric fee"
+msgstr "Please enter a valid numeric fee"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:100
 #~ msgid "Please enter a valid numeric interval length"
-#~ msgstr "请输入一个有效的长度数字"
+#~ msgstr "Please enter a valid numeric interval length"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:115
 #~ msgid "Please enter a valid numeric spendable amount"
-#~ msgstr "请输入一个有效的支出数目"
+#~ msgstr "Please enter a valid numeric spendable amount"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:125
 #~ msgid "Please enter a valid pubkey"
-#~ msgstr "请输入一个正确的公钥"
+#~ msgstr "Please enter a valid pubkey"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:73
+#: src/components/offers/NFTOfferEditor.tsx:305
+msgid "Please enter an NFT identifier"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:311
+msgid "Please enter an amount"
+msgstr ""
+
+#: src/components/offers/OfferEditor.tsx:136
+msgid "Please enter an amount for each row"
+msgstr ""
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:81
 msgid "Please enter your current passphrase, and a new passphrase"
-msgstr ""
+msgstr "请输入您的当前私钥密码和新建私钥密码"
 
-#: src/components/app/AppPassPrompt.tsx:79
-#: src/components/app/AppPassPrompt.tsx:95
-#: src/components/settings/RemovePassphrasePrompt.tsx:50
+#: src/components/app/AppPassPrompt.tsx:97
+#: src/components/app/AppPassPrompt.tsx:113
+#: src/components/settings/RemovePassphrasePrompt.tsx:58
 msgid "Please enter your passphrase"
-msgstr ""
+msgstr "请输入您的密钥密码"
 
-#: src/components/app/AppPassPrompt.tsx:89
+#: src/components/app/AppPassPrompt.tsx:107
 msgid "Please enter your passphrase to proceed"
-msgstr ""
+msgstr "请输入您的私钥密码"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:623
 #: src/components/_wallet_old/standard/WalletStandard.tsx:420
 #~ msgid "Please finish syncing before making a transaction"
-#~ msgstr "同步完成后才能发起交易。"
+#~ msgstr "Please finish syncing before making a transaction"
 
 #: src/components/trading/CreateOffer.jsx:67
 #~ msgid "Please select amount"
-#~ msgstr "请选择金额"
+#~ msgstr "Please select amount"
+
+#: src/components/offers/OfferEditor.tsx:134
+msgid "Please select an asset for each row"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:55
 #~ msgid "Please select backup file first"
-#~ msgstr "请先选择备份文件"
+#~ msgstr "Please select the backup file first"
 
 #: src/components/trading/CreateOffer.jsx:77
 #~ msgid "Please select buy or sell"
-#~ msgstr "请选择买或卖"
+#~ msgstr "Please select buy or sell"
 
 #: src/components/trading/CreateOffer.jsx:57
 #~ msgid "Please select coin colour"
-#~ msgstr "请选择币的色彩"
+#~ msgstr "Please select coin color"
 
 #: src/components/trading/CreateOffer.jsx:63
 #~ msgid "Please select coin type"
@@ -1877,7 +2388,7 @@ msgstr "请等待钱包同步"
 
 #: src/components/plot/Plot.tsx:28
 #~ msgid "Plot"
-#~ msgstr "农田"
+#~ msgstr "Plot"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:11
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
@@ -1888,13 +2399,13 @@ msgstr "农田数"
 msgid "Plot Id"
 msgstr "农田ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:75
+#: src/components/plot/PlotHarvesterPlots.tsx:46
 msgid "Plot Key"
 msgstr "农田密钥"
 
 #: src/components/pool/PoolOverview.tsx:38
 #~ msgid "Plot NFT"
-#~ msgstr "农田NFT"
+#~ msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
@@ -1921,7 +2432,7 @@ msgstr "农田大小"
 msgid "Plot in Parallel"
 msgstr "并发开垦"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#: src/components/plot/PlotHarvesterPlots.tsx:23
 msgid "Plot is duplicate of {0}"
 msgstr "农田与 {0} 重复"
 
@@ -1934,24 +2445,42 @@ msgid "PlotNFT is transitioning to (target state). This can take a while. Please
 msgstr "农田NFT正在过渡到（目标状态）。这可能需要一段时间。请在完成之前不要关闭应用程序。"
 
 #: src/components/dashboard/DashboardSideBar.tsx:83
+#: src/components/plot/PlotHarvester.tsx:93
 msgid "Plots"
 msgstr "农田"
+
+#: src/components/plot/card/PlotCardPlotsFailedToOpen.tsx:13
+msgid "Plots Failed To Open"
+msgstr "农田打开失败"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:20
 msgid "Plots Passed Filter"
 msgstr "通过初筛的农田"
 
+#: src/components/plot/card/PlotCardNotFound.tsx:11
+msgid "Plots With Missing Keys"
+msgstr "缺少密钥的农田"
+
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
-msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
+#~ msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
+#~ msgstr ""
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:33
+msgid "Plots are allocated space on your hard drive used to farm and earn Chia.<0>Learn more</0>"
 msgstr "农田就是在你的硬盘上分配的一块空间，用来收获奇亚币。<0>了解更多</0>"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:103
 msgid "Plotter"
-msgstr ""
+msgstr "开垦机"
 
+#: src/components/plot/PlotPlotting.tsx:49
 #: src/components/plot/queue/PlotQueueIndicator.tsx:34
 msgid "Plotting"
 msgstr "正在开垦"
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
+msgid "Plotting Manager"
+msgstr "开垦管理器"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:58
 msgid "Plotting in parallel can save time. Otherwise, add plot(s) to the queue."
@@ -1966,30 +2495,30 @@ msgstr "在开垦农田时启用位域会减少约30%的磁盘写入，而且大
 #~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:173
-#: src/components/plotNFT/PlotNFTCard.tsx:213
+#: src/components/plotNFT/PlotNFTCard.tsx:212
 msgid "Points Found Since Start"
 msgstr "从开始以来获取的积点"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:184
-#: src/components/plotNFT/PlotNFTCard.tsx:224
+#: src/components/plotNFT/PlotNFTCard.tsx:223
 msgid "Points Found in Last 24 Hours"
 msgstr "最近24小时获取的积点"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:193
-#: src/components/plotNFT/PlotNFTCard.tsx:233
+#: src/components/plotNFT/PlotNFTCard.tsx:232
 msgid "Points Successful in Last 24 Hours"
 msgstr "最近24小时成功获取的积点"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 #: src/components/pool/Pool.tsx:17
 #~ msgid "Pool"
-#~ msgstr "农业合作社"
+#~ msgstr "Pool"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:100
+#: src/components/plot/PlotHarvesterPlots.tsx:65
 msgid "Pool Contract Address"
 msgstr "农业合作社合约地址"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:81
+#: src/components/plot/PlotHarvesterPlots.tsx:52
 msgid "Pool Key"
 msgstr "池密钥"
 
@@ -2035,26 +2564,26 @@ msgstr "池奖励金额"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
 msgid "Pool does not provide relativeLockHeight."
-msgstr ""
+msgstr "耕作池未提供 relativeLockHeight。"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 #~ msgid "Pool does not provide relative_lock_height."
-#~ msgstr "农业合作社未提供 relative_lock_height。"
+#~ msgstr "Pool does not provide relative_lock_height."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
 msgid "Pool does not provide targetPuzzleHash."
-msgstr ""
+msgstr "耕作池未提供 targetPuzzleHash。"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 #~ msgid "Pool does not provide target_puzzle_hash."
-#~ msgstr "农业合作社未提供 target_puzzle_hash。"
+#~ msgstr "Pool does not provide target_puzzle_hash."
 
 #: src/_middleware_old/middleware_api.jsx:255
 #~ msgid "Pool public key:"
-#~ msgstr "奖励池公钥："
+#~ msgstr "Pool public key:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
-#: src/components/plotNFT/PlotNFTCard.tsx:324
+#: src/components/plotNFT/PlotNFTCard.tsx:323
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:65
 msgid "Pool:"
 msgstr "农业合作社："
@@ -2082,6 +2611,10 @@ msgstr "正在准备农田NFT"
 msgid "Preparing standard wallet"
 msgstr "正在准备标准钱包"
 
+#: src/components/nfts/NFTPreview.tsx:124
+msgid "Preview URL is not valid"
+msgstr ""
+
 #: src/components/block/Block.jsx:325
 msgid "Previous"
 msgstr "上一个"
@@ -2098,21 +2631,25 @@ msgstr "上个区块的头部哈希"
 #~ msgid "Previous Sub Block Hash"
 #~ msgstr "Previous Sub Block Hash"
 
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:52
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:54
+msgid "Price"
+msgstr ""
+
 #: src/components/_selectKey_old/SelectKey.tsx:207
 #~ msgid "Private key with public fingerprint {fingerprint}"
-#~ msgstr "公共指纹为 {fingerprint} 的私钥"
+#~ msgstr "Private key with public fingerprint {fingerprint}"
 
 #: src/_middleware_old/middleware_api.jsx:221
 #~ msgid "Private key {0}"
-#~ msgstr "私钥 {0}"
+#~ msgstr "Private key {0}"
 
 #: src/_middleware_old/middleware_api.jsx:231
 #~ msgid "Private key:"
-#~ msgstr "私钥:"
+#~ msgstr "Private key:"
 
-#: src/components/settings/Settings.tsx:271
-#: src/components/settings/SettingsIdentity.tsx:18
-#: src/components/settings/SettingsProfiles.tsx:58
+#: src/components/settings/Settings.tsx:273
+#: src/components/settings/SettingsProfiles.tsx:56
 msgid "Profiles"
 msgstr ""
 
@@ -2124,6 +2661,11 @@ msgstr "空间证明的大小"
 msgid "Proofs Found"
 msgstr "已找到证明"
 
+#: src/components/nfts/NFTProperties.tsx:67
+#: src/components/nfts/detail/NFTDetailV2.tsx:150
+msgid "Properties"
+msgstr ""
+
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
 msgstr "协议版本"
@@ -2131,23 +2673,32 @@ msgstr "协议版本"
 #: src/components/_wallet_old/create/createRLAdmin.jsx:297
 #: src/components/_wallet_old/did/WalletDID.tsx:996
 #~ msgid "Pubkey"
-#~ msgstr "公钥"
+#~ msgstr "Pubkey"
 
 #: src/_middleware_old/middleware_api.jsx:239
 #~ msgid "Public key:"
-#~ msgstr "公钥："
+#~ msgstr "Public key:"
+
+#: src/components/offers/NFTOfferViewer.tsx:421
+msgid "Purchase Summary"
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:258
+msgid "Puzzle Hash"
+msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1005
 #~ msgid "Puzzlehash"
-#~ msgstr "谜题哈希"
+#~ msgstr "Puzzlehash"
 
+#: src/components/plot/PlotPlotting.tsx:24
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:204
 msgid "Queue Name"
 msgstr "队列名"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:69
-msgid "Queue name"
-msgstr "队列名"
+#~ msgid "Queue name"
+#~ msgstr "Queue Name"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:35
 msgid "Queued"
@@ -2169,41 +2720,49 @@ msgstr "内存最大使用量"
 #~ msgid "RLListItems.title"
 #~ msgstr ""
 
+#: src/components/nfts/NFTRankings.tsx:81
+msgid "Rankings"
+msgstr ""
+
 #: src/components/_wallet_old/create/WalletCreateList.tsx:42
 #~ msgid "Rate Limited"
-#~ msgstr "费用限定"
+#~ msgstr "Rate Limited"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:391
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:438
 #~ msgid "Rate Limited Info"
-#~ msgstr "费用限制信息"
+#~ msgstr "Rate Limited Info"
 
 #: src/components/_wallet_old/create/WalletCreate.jsx:176
 #~ msgid "Rate Limited Options"
-#~ msgstr "费用限定型选项"
+#~ msgstr "Rate Limited Options"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:273
 #~ msgid "Rate Limited User Wallet Setup"
-#~ msgstr "费用限定型用户钱包设置"
+#~ msgstr "Rate Limited User Wallet Setup"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:650
 #: src/components/_wallet_old/standard/WalletStandard.tsx:569
 #~ msgid "Receive Address"
-#~ msgstr "接收地址"
+#~ msgstr "Receive Address"
 
 #: src/components/app/AppSelectMode.tsx:116
 msgid "Recommended"
+msgstr "推荐"
+
+#: src/components/settings/ProfileAdd.tsx:123
+msgid "Recommended: 0.000005 XCH"
 msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:464
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
 #~ msgid "Recover"
-#~ msgstr "恢复"
+#~ msgstr "Recover"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:340
 #: src/components/_wallet_old/did/WalletDID.tsx:480
 #~ msgid "Recover DID Wallet"
-#~ msgstr "恢复去中心化标识钱包"
+#~ msgstr "Recover DID Wallet"
 
 #: src/components/wallet/create/WalletCreate.jsx:296
 #~ msgid "Recover DID wallet"
@@ -2211,14 +2770,15 @@ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:84
 #~ msgid "Recover Distributed Identity Wallet"
-#~ msgstr "恢复分布式身份钱包"
+#~ msgstr "Recover Distributed Identity Wallet"
 
 #: src/components/_wallet_old/did/WalletDIDSelect.tsx:39
 #~ msgid "Recover Wallet"
-#~ msgstr "恢复钱包"
+#~ msgstr "Recover Wallet"
 
 #: src/components/plot/PlotHeader.tsx:75
-#: src/components/plot/overview/PlotOverviewHero.tsx:60
+#: src/components/plot/overview/PlotOverviewHero.tsx:59
+#: src/components/plot/overview/PlotOverviewPlots.tsx:68
 msgid "Refresh Plots"
 msgstr "刷新农田列表"
 
@@ -2226,20 +2786,24 @@ msgstr "刷新农田列表"
 msgid "Relative Lock Height"
 msgstr "相对锁高度"
 
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:524
 msgid "Release Notes"
 msgstr "版本发布说明"
 
-#: src/components/settings/RemovePassphrasePrompt.tsx:98
-#: src/components/settings/RemovePassphrasePrompt.tsx:143
-#: src/components/settings/Settings.tsx:200
+#: src/components/plot/PlotHarvester.tsx:56
+msgid "Remote"
+msgstr "远端"
+
+#: src/components/settings/RemovePassphrasePrompt.tsx:117
+#: src/components/settings/RemovePassphrasePrompt.tsx:175
+#: src/components/settings/Settings.tsx:194
 #: src/components/settings/SettingsPanel.tsx:196
 msgid "Remove Passphrase"
-msgstr ""
+msgstr "删除密钥密码"
 
-#: src/components/app/AppKeyringMigrator.tsx:195
+#: src/components/app/AppKeyringMigrator.tsx:244
 msgid "Remove keys from old keyring upon successful migration"
-msgstr ""
+msgstr "成功迁移后从旧密钥串中删除密钥"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:36
 msgid "Removing"
@@ -2247,11 +2811,24 @@ msgstr "删除中"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:265
 #~ msgid "Rename"
-#~ msgstr "重命名"
+#~ msgstr "Rename"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:543
 msgid "Report an Issue..."
 msgstr "报告问题"
+
+#: src/components/offers/OfferManager.tsx:393
+msgid "Requested"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:187
+#: src/components/offers/OfferEditor.tsx:213
+msgid "Reset"
+msgstr ""
+
+#: src/electron/main.tsx:224
+msgid "Response too large"
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:159
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
@@ -2263,7 +2840,7 @@ msgstr "从备份中恢复染色币与智能钱包的元信息"
 
 #: src/components/app/AppSelectMode.tsx:152
 msgid "Runs the full node"
-msgstr ""
+msgstr "运行全节点"
 
 #: src/components/fullNode/FullNode.jsx:57
 #: src/components/fullNode/FullNodeConnections.jsx:107
@@ -2280,11 +2857,15 @@ msgstr "可安全跳过此步骤"
 msgid "Save"
 msgstr "保存"
 
-#: src/components/app/AppKeyringMigrator.tsx:177
-#: src/components/settings/ChangePassphrasePrompt.tsx:206
-#: src/components/settings/SetPassphrasePrompt.tsx:188
-msgid "Save passphrase"
+#: src/components/offers/OfferManager.tsx:481
+msgid "Save Offer File"
 msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:226
+#: src/components/settings/ChangePassphrasePrompt.tsx:268
+#: src/components/settings/SetPassphrasePrompt.tsx:235
+msgid "Save passphrase"
+msgstr "保存私钥密码"
 
 #: src/components/fullNode/FullNode.jsx:338
 #~ msgid "Search"
@@ -2294,22 +2875,31 @@ msgstr ""
 msgid "Search block by header hash"
 msgstr "按头部哈希搜索区块"
 
+#: src/components/offers/OfferSummaryRow.tsx:186
+#: src/components/offers/OfferSummaryRow.tsx:264
+msgid "Search on Tail Database"
+msgstr ""
+
+#: src/components/nfts/gallery/NFTGallery.tsx:87
+msgid "Search..."
+msgstr ""
+
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
 msgid "Second temporary folder location"
 msgstr "第二临时文件夹位置"
 
-#: src/components/settings/Settings.tsx:132
+#: src/components/settings/Settings.tsx:124
 #: src/components/settings/SettingsPanel.tsx:134
 msgid "Secure your keychain using a strong passphrase"
-msgstr ""
+msgstr "使用加强私钥密码保护您的钥匙链"
 
 #: src/components/_selectKey_old/SelectKey.tsx:216
 #~ msgid "See private key"
-#~ msgstr "查看私钥："
+#~ msgstr "See private key"
 
 #: src/_middleware_old/middleware_api.jsx:265
 #~ msgid "Seed:"
-#~ msgstr "种子："
+#~ msgstr "Seed:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2321,11 +2911,15 @@ msgstr "选择最终输出文件夹"
 
 #: src/components/_selectKey_old/SelectKey.tsx:175
 #~ msgid "Select Key"
-#~ msgstr "选择密钥"
+#~ msgstr "Select Key"
 
 #: src/components/trading/ViewOffer.jsx:37
 #~ msgid "Select Offer"
-#~ msgstr "选择出价"
+#~ msgstr "Select Offer"
+
+#: src/components/offers/OfferImport.tsx:162
+msgid "Select Offer File"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 msgid "Select Temporary Directory"
@@ -2333,11 +2927,11 @@ msgstr "选择临时文件夹"
 
 #: src/components/_wallet_old/create/WalletCreateList.tsx:21
 #~ msgid "Select Wallet Type"
-#~ msgstr "选择钱包类别"
+#~ msgstr "Select Wallet Type"
 
 #: src/components/app/AppSelectMode.tsx:65
 msgid "Select Your Client Mode"
-msgstr ""
+msgstr "选择客户端模式"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
@@ -2349,7 +2943,7 @@ msgstr "选择您希望保存农田文件的最终输出文件夹。我们建议
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:54
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
-msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
+msgstr "选择您希望保存农田文件的临时输出文件夹。我们建议您使用速度快的驱动器。"
 
 #: src/components/plot/add/PlotAddNFT.tsx:86
 msgid "Select your Plot NFT"
@@ -2367,7 +2961,7 @@ msgstr "已选择"
 
 #: src/components/_wallet_old/did/WalletDIDRecovery.tsx:91
 #~ msgid "Selected recovery file:"
-#~ msgstr "选择恢复文件："
+#~ msgstr "Selected recovery file:"
 
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
@@ -2382,49 +2976,99 @@ msgstr "自耕种。一旦发现新区块，你将得到全部XCH区块奖励。
 #: src/components/trading/TradesTable.tsx:46
 #: src/components/trading/TradingOverview.jsx:287
 #~ msgid "Sell"
-#~ msgstr "卖出"
+#~ msgstr "Sell"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:620
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:748
 #: src/components/_wallet_old/standard/WalletStandard.tsx:535
 #~ msgid "Send"
-#~ msgstr "发送"
+#~ msgstr "Send"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-#~ msgstr "把这段信息发给你的费用限定型钱包用户, 以便他/她可以完成自己的钱包设置:"
+#~ msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 
-#: src/components/nfts/NFTTransferAction.tsx:289
+#: src/components/nfts/NFTTransferAction.tsx:233
 msgid "Send to Address"
 msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:279
 #~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
-#~ msgstr "将你的公钥发送到你的费用限定型管理者钱包:"
+#~ msgstr "Send your pubkey to your Rate Limited Wallet admin:"
 
-#: src/components/settings/SetPassphrasePrompt.tsx:135
-#: src/components/settings/SetPassphrasePrompt.tsx:211
-#: src/components/settings/Settings.tsx:211
+#: src/components/nfts/NFTSummary.tsx:69
+msgid "Series #"
+msgstr ""
+
+#: src/components/nfts/detail/NFTDetail.tsx:179
+msgid "Series Number"
+msgstr ""
+
+#: src/components/settings/SetPassphrasePrompt.tsx:154
+#: src/components/settings/SetPassphrasePrompt.tsx:258
+#: src/components/settings/Settings.tsx:205
 #: src/components/settings/SettingsPanel.tsx:205
 msgid "Set Passphrase"
-msgstr ""
+msgstr "设置私钥密码"
 
 #: src/components/app/AppPassPrompt.tsx:75
 #~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-#~ msgstr ""
+#~ msgstr "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 
 #: src/components/dashboard/DashboardSideBar.tsx:110
-#: src/components/settings/Settings.tsx:261
+#: src/components/settings/Settings.tsx:257
 msgid "Settings"
-msgstr ""
+msgstr "设置"
 
 #: src/components/app/AppSelectMode.tsx:171
 #~ msgid "Settings are located at the upper right corner"
-#~ msgstr ""
+#~ msgstr "Settings are located at the upper right corner"
+
+#: src/components/offers/OfferManager.tsx:427
+#: src/components/offers/OfferShareDialog.tsx:1092
+#: src/components/offers/OfferShareDialog.tsx:1265
+msgid "Share"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1388
+msgid "Share Offer"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:752
+msgid "Share Privately"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:574
+msgid "Share on Dexie"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:839
+msgid "Share on Hashgreen DEX"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1035
+msgid "Share on Keybase"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:655
+msgid "Share on MintGarden"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:737
+msgid "Share on OfferBin"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1162
+msgid "Share on offerpool"
+msgstr ""
 
 #: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
 #~ msgid "Show Advanced Options"
-#~ msgstr "显示高级选项"
+#~ msgstr "Show Advanced Options"
+
+#: src/components/offers/OfferManager.tsx:452
+msgid "Show Details"
+msgstr ""
 
 #: src/electron-starter.js:79
 #~ msgid "Show app"
@@ -2433,24 +3077,24 @@ msgstr ""
 #: src/components/trading/CreateOffer.jsx:154
 #: src/components/trading/TradesTable.tsx:15
 #~ msgid "Side"
-#~ msgstr "边"
+#~ msgstr "Side"
 
 #: src/components/_selectKey_old/SelectKey.tsx:180
 #~ msgid "Sign In"
-#~ msgstr "登录"
+#~ msgstr "Sign In"
 
-#: src/components/app/AppKeyringMigrator.tsx:57
-#: src/components/app/AppKeyringMigrator.tsx:218
+#: src/components/app/AppKeyringMigrator.tsx:64
+#: src/components/app/AppKeyringMigrator.tsx:267
 msgid "Skip"
-msgstr ""
+msgstr "跳过"
 
-#: src/components/app/AppKeyringMigrator.tsx:56
+#: src/components/app/AppKeyringMigrator.tsx:63
 msgid "Skip Keyring Migration"
-msgstr ""
+msgstr "跳过密钥串迁移"
 
 #: src/components/app/AppPassPrompt.tsx:73
 #~ msgid "Skip Passphrase Protection"
-#~ msgstr ""
+#~ msgstr "Skip Passphrase Protection"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
 #~ msgid "Skips adding [final dir] to harvester for farming"
@@ -2466,47 +3110,47 @@ msgstr "加入农业合作社来稳定XCH耕作收益。"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
 #~ msgid "Something went wrong"
-#~ msgstr "出错了"
+#~ msgstr "Something went wrong"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 msgid "Specify a value of 0 to use all available threads"
-msgstr ""
+msgstr "输 0 即使用所有可用线程"
 
-#: src/electron/main.tsx:561
+#: src/electron/main.tsx:620
 msgid "Speech"
 msgstr "演说"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:230
 #~ msgid "Spendable Amount"
-#~ msgstr "可用金额"
+#~ msgstr "Spendable Amount"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:202
 #~ msgid "Spendable Amount Per Interval"
-#~ msgstr "每次迭代的支出数目"
+#~ msgstr "Spendable Amount per Interval"
 
 #: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:24
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:384
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:548
 #~ msgid "Spendable Balance"
-#~ msgstr "可用余额"
+#~ msgstr "Spendable Balance"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:396
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:443
 #~ msgid "Spending Interval (number of blocks): {interval}"
-#~ msgstr "支出迭代(区块数){interval}"
+#~ msgstr "Spending Interval (number of blocks): {interval}"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:197
 #~ msgid "Spending Interval Length (number of blocks)"
-#~ msgstr "支出迭代长度(区块数)"
+#~ msgstr "Spending Interval Length (number of blocks)"
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:401
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:448
 #~ msgid "Spending Limit (chia per interval): {0}"
-#~ msgstr "消费限额（单位时间可消费的奇亚币）：{0}"
+#~ msgstr "Spending Limit (chia per interval): {0}"
 
 #: src/components/app/AppState.tsx:172
 msgid "Starting services"
-msgstr ""
+msgstr "正在启动服务..."
 
 #: src/components/fullNode/FullNode.jsx:95
 msgid "State"
@@ -2514,15 +3158,20 @@ msgstr "状态"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:62
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:70
-#: src/components/plot/overview/PlotOverviewPlots.tsx:110
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:39
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:41
+#: src/components/offers/OfferManager.tsx:347
+#: src/components/offers/OfferViewer.tsx:148
+#: src/components/plot/PlotHarvesterPlots.tsx:75
+#: src/components/plot/PlotPlotting.tsx:28
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
-#: src/components/plotNFT/PlotNFTCard.tsx:142
+#: src/components/plotNFT/PlotNFTCard.tsx:143
 msgid "Status"
 msgstr "状态"
 
 #: src/components/trading/TradingOverview.jsx:178
 #~ msgid "Status:"
-#~ msgstr "状态："
+#~ msgstr "Status:"
 
 #: src/components/wallet/Wallets.tsx:119
 #~ msgid "StatusCard.connections"
@@ -2542,7 +3191,7 @@ msgstr "状态"
 
 #: src/components/app/AppSelectMode.tsx:89
 msgid "Store and Send XCH"
-msgstr ""
+msgstr "存储并发送 XCH"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 #~ msgid "Stripe Size"
@@ -2556,13 +3205,21 @@ msgstr ""
 #~ msgid "Sub Block at height {0} in the Chia blockchain"
 #~ msgstr "Sub Block at height {0} in the Chia blockchain"
 
-#: src/components/app/AppPassPrompt.tsx:96
+#: src/components/app/AppPassPrompt.tsx:114
 msgid "Submit"
 msgstr "提交"
 
 #: src/components/wallet/EnterPassphrasePrompt.tsx:146
 #~ msgid "Submit Passphrase"
-#~ msgstr ""
+#~ msgstr "Submit Passphrase"
+
+#: src/hooks/useAcceptOfferHook.tsx:61
+msgid "Success"
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:295
+msgid "Summary"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:49
 msgid "Synced"
@@ -2614,19 +3271,19 @@ msgstr "目标迷题哈希"
 msgid "Temporary folder location"
 msgstr "临时文件夹位置"
 
-#: src/components/nfts/NFTTransferDemo.tsx:46
+#: src/components/nfts/NFTContextualActions.tsx:116
 msgid "The NFT transfer failed: {error}"
 msgstr ""
 
-#: src/components/nfts/NFTTransferDemo.tsx:36
+#: src/components/nfts/NFTContextualActions.tsx:106
 msgid "The NFT transfer transaction has been successfully submitted to the blockchain."
 msgstr ""
 
 #: src/components/app/AppTimeBomb.tsx:28
 #~ msgid "The application will stop working at block height 193536."
-#~ msgstr "这个版本会在区块高度达到193536时停止工作。"
+#~ msgstr "The application will stop working at block height 193536."
 
-#: src/components/farm/FarmFullNodeConnections.tsx:94
+#: src/components/farm/FarmFullNodeConnections.tsx:95
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 msgstr "你的农场连接的全节点如下.<0>了解更多</0>"
 
@@ -2647,7 +3304,7 @@ msgstr "节点正在同步中, 也就是说它正在从其他节点下载区块,
 #: src/components/_wallet_old/did/WalletDID.tsx:790
 #: src/components/_wallet_old/did/WalletDIDCreate.tsx:89
 #~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-#~ msgstr ""
+#~ msgstr "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 
 #: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2675,15 +3332,19 @@ msgstr "切换农业合作社操作已被取消。请重新尝试切换农业合
 
 #: src/components/app/AppPassPrompt.tsx:37
 #~ msgid "The provided passphrase and confirmation do not match"
-#~ msgstr ""
+#~ msgstr "The provided passphrase and confirmation do not match"
 
 #: src/components/block/Block.jsx:280
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
 msgstr "密语用于创建农田。农田是与农场池的公钥与农田的公钥相关联的。"
 
 #: src/components/block/Block.jsx:206
-msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
 msgstr "截至该子区块为止全链已完成的VDF(延迟验证函数) 或时间证明的迭代次数."
+
+#: src/components/block/Block.jsx:206
+#~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
+#~ msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 
 #: src/components/block/Block.jsx:222
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
@@ -2697,7 +3358,7 @@ msgstr "本区块上奖励给农民的全部交易费用。"
 msgid "These are the instructions for how the farmer wants to get paid. By default this will be an XCH address, but it can be set to any string with a size of less than 1024 characters, so it can represent another blockchain or payment system identifier."
 msgstr "这是农民耕种奖励的支付方式。默认情况下，这将是一个XCH钱包地址，但是你可以设置任意长度小于1024的字符串，也就是说，你可以指定其它区块链或者支付系统标识。"
 
-#: src/components/plot/PlotsFailed.tsx:36
+#: src/components/plot/card/PlotCardPlotsFailedToOpen.tsx:15
 msgid "These plots are invalid, you might want to delete them."
 msgstr "这些农田无效，你可能想要删除它们。"
 
@@ -2706,7 +3367,7 @@ msgid "This allows you to add a directory that has plots in it. If you have not 
 msgstr "在这里可以把事先准备好的农田文件添加进来。如果还没有的话，就去开垦几块农田吧。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:129
-#: src/components/plotNFT/PlotNFTCard.tsx:169
+#: src/components/plotNFT/PlotNFTCard.tsx:168
 msgid "This difficulty is an artifically lower difficulty than on the real network, and is used when farming, in order to find more proofs and send them to the pool. The more plots you have, the higher difficulty you will have. However, the difficulty does not affect rewards."
 msgstr "此难度是比实际网络难度人为降低的难度，它将被用于耕作中，用来发现尽量多的验证数据并发送给农业合作社。你的农田越多，你的难度就会越高。这个难度不会影响你的耕作奖励。"
 
@@ -2716,19 +3377,19 @@ msgstr "此功能只在图形界面中提供。"
 
 #: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:26
 #~ msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-#~ msgstr "这是你目前可以交易的奇亚币数额。该数额不包含处理中的农场奖励、收入交易，以及未经区块链确认的支付交易。"
+#~ msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
 #: src/components/_wallet_old/card/WalletCardPendingChange.tsx:26
 #~ msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-#~ msgstr "处理中的找零钱, 是你发送支出的找回, 但是没有被链上确认."
+#~ msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
 #: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:26
 #~ msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-#~ msgstr "待处理的收入与支出总和(还未上链). 不包括农场耕种奖励."
+#~ msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 #~ msgid "This is the time of the latest peak sub block."
-#~ msgstr "最新的子块时间."
+#~ msgstr "This is the time of the latest peak sub block."
 
 #: src/components/block/Block.jsx:172
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
@@ -2736,23 +3397,23 @@ msgstr "此时间是该区块被农民创建的时间，因此，此时间会早
 
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the timestamp of the most recent transaction block."
-msgstr ""
+msgstr "这是最近交易块的时间戳。"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
 #~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-#~ msgstr "这里是你的私钥所控制的, 到目前最新子块高度为止的全部奇亚数. 包含被冻结的耕种奖励, 但不包含待处理的收入与支出."
+#~ msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
 #: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:29
 #~ msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-#~ msgstr "目前结余+待处理的结余: 在链上确认完成后就是你的最终总结余."
+#~ msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:148
-#: src/components/plotNFT/PlotNFTCard.tsx:188
+#: src/components/plotNFT/PlotNFTCard.tsx:187
 msgid "This is the total number of points this plotNFT has with this pool, since the last payout. The pool will reset the points after making a payout."
 msgstr "这是此农田NFT自从上次支付奖励后在当前农业合作社中持有的总积点数。在农业合作社支付奖励后，此积点数会归零。"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:165
-#: src/components/plotNFT/PlotNFTCard.tsx:205
+#: src/components/plotNFT/PlotNFTCard.tsx:204
 msgid "This is the total number of points your farmer has found for this plot NFT. Each k32 plot will get around 10 points per day, so if you have 10TiB, should should expect around 1000 points per day, or 41 points per hour."
 msgstr "这是你的农民在这个农田NFT对应的农田中找到的总积点数。一个k32的农田每天大约会得到10个积点。也就是说，如果你拥有10TiB的农田，你每天大约会获得1000积点，也就是每小时41积点。"
 
@@ -2760,37 +3421,59 @@ msgstr "这是你的农民在这个农田NFT对应的农田中找到的总积点
 msgid "This node is fully caught up and validating the network"
 msgstr "本节点已完成同步，并已开始参与网络验证"
 
+#: src/components/offers/OfferViewer.tsx:182
+msgid "This number reflects the number of nodes that the accepted SpendBundle has been sent to"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:296
+#: src/components/offers/OfferSummary.tsx:206
+msgid "This offer has a fee included to help expedite the transaction when the offer is accepted."
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:290
+#: src/components/offers/OfferSummary.tsx:200
+msgid "This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small."
+msgstr ""
+
+#: src/components/offers/OfferHeader.tsx:53
+msgid "This offer has completed successfully"
+msgstr ""
+
+#: src/components/offers/OfferHeader.tsx:45
+msgid "This offer is no longer valid"
+msgstr ""
+
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:307
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "此农田NFT绑定了其它密钥。你仍然可以用此农田NFT开垦农田，但是你无法进行任何更改。"
 
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
 #~ msgid "This plot NFT is not connected to pool"
-#~ msgstr "此农田NFT尚未连接到农业合作社。"
+#~ msgstr "This plot NFT is not connected to a pool"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:39
 #~ msgid "This table shows you the last time your farm attempted to win a block challenge."
 #~ msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:46
+#: src/components/farm/FarmLastAttemptedProof.tsx:47
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr "这个表格里面显示的是你的农场尝试过的区块挑战. <0>了解更多</0>"
 
 #: src/components/trading/TradingOverview.jsx:188
 #~ msgid "This trade was created at this time"
-#~ msgstr "本交易创建于"
+#~ msgstr "This trade was created at this time"
 
 #: src/components/trading/TradingOverview.jsx:204
 #~ msgid "This trade was included on blockchain at this block height"
-#~ msgstr "该交易在链上的区块高度"
+#~ msgstr "This trade was included on blockchain at this block height"
 
 #: src/components/app/AppTimeBombAlert.tsx:19
 #~ msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-#~ msgstr "此版本的奇亚客户端与区块链已经不再兼容，无法安全地种植。"
+#~ msgstr "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
 msgid "Thread Multiplier for Phase 2"
-msgstr ""
+msgstr "第 2 阶段的线程倍数"
 
 #: src/components/fullNode/FullNode.jsx:87
 msgid "Time Created"
@@ -2804,27 +3487,44 @@ msgstr "创建时间"
 msgid "Timestamp"
 msgstr "时间戳"
 
+#: src/components/nfts/NFTCard.tsx:77
+#: src/components/nfts/NFTSummary.tsx:186
+#: src/components/nfts/detail/NFTDetail.tsx:127
+#: src/components/nfts/detail/NFTDetailV2.tsx:138
+msgid "Title Not Available"
+msgstr ""
+
 #: src/components/_wallet_old/WalletHistory.tsx:42
 #~ msgid "To"
-#~ msgstr "目标地址"
+#~ msgstr "To"
 
-#: src/components/settings/ProfileView.tsx:38
+#: src/components/offers/OfferManager.tsx:616
+msgid "Token Offer"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:103
 msgid "Token Standard"
 msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:68
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:70
 msgid "Tokens"
-msgstr ""
+msgstr "令牌"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:543
 #~ msgid "Total Balance"
-#~ msgstr "总余额"
+#~ msgstr "Total Balance"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "总共收获的奇亚"
+
+#: src/components/plot/card/PlotCardTotalHarvesters.tsx:11
+msgid "Total Harvesters"
+msgstr "总收获数"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -2835,7 +3535,15 @@ msgid "Total Network Space"
 msgstr "全网占用空间"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:146
-msgid "Total Plot Size:"
+#~ msgid "Total Plot Size:"
+#~ msgstr ""
+
+#: src/components/plot/card/PlotCardTotalPlots.tsx:11
+msgid "Total Plots"
+msgstr "总农田"
+
+#: src/components/plot/card/PlotCardTotalPlotsSize.tsx:11
+msgid "Total Plots Size"
 msgstr "总农田大小："
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:11
@@ -2856,64 +3564,75 @@ msgstr "自区块开始以来的迭代数"
 
 #: src/components/trading/TradingOverview.jsx:349
 #~ msgid "Trade Details"
-#~ msgstr "交易详情"
+#~ msgstr "Trade Details"
 
 #: src/components/trading/TradingOverview.jsx:124
 #~ msgid "Trade ID"
-#~ msgstr "交易ID"
+#~ msgstr "Trade ID"
 
 #: src/components/trading/TradingOverview.jsx:171
 #~ msgid "Trade ID:"
-#~ msgstr "交易ID："
+#~ msgstr "Trade ID:"
 
 #: src/components/trading/TradeManager.tsx:34
 #~ msgid "Trade Overview"
-#~ msgstr "交易概况"
+#~ msgstr "Trade Overview"
 
 #: src/components/app/AppSelectMode.tsx:101
 msgid "Trade tokens"
-msgstr ""
+msgstr "交易令牌"
 
 #: src/components/trading/TradingOverview.jsx:152
 #~ msgid "Trades will show up here"
-#~ msgstr "交易会在这里显示"
+#~ msgstr "Trades will show up here"
 
 #: src/components/trading/TradeManager.tsx:23
 #~ msgid "Trading"
-#~ msgstr "交易"
+#~ msgstr "Trading"
 
 #: src/components/trading/TradingOverview.jsx:421
 #~ msgid "Trading History"
-#~ msgstr "交易历史"
+#~ msgstr "Trading History"
 
 #: src/components/block/Block.jsx:287
 msgid "Transactions Filter Hash"
 msgstr "交易过滤器哈希"
 
-#: src/components/nfts/NFTTransferAction.tsx:77
-#: src/components/nfts/NFTTransferAction.tsx:318
+#: src/components/nfts/NFTTransferAction.tsx:78
+#: src/components/nfts/NFTTransferAction.tsx:262
 msgid "Transfer"
 msgstr ""
 
 #: src/components/settings/ProfileView.tsx:51
-msgid "Transfer Identity"
-msgstr ""
+#~ msgid "Transfer Identity"
+#~ msgstr ""
 
-#: src/components/nfts/NFTContextualActions.tsx:139
-#: src/components/nfts/NFTTransferAction.tsx:366
-#: src/components/nfts/NFTTransferDemo.tsx:97
+#: src/components/nfts/NFTContextualActions.tsx:141
+#: src/components/nfts/NFTTransferAction.tsx:310
 msgid "Transfer NFT"
 msgstr ""
 
 #: src/components/_wallet_old/WalletHistory.tsx:25
 #~ msgid "Type"
-#~ msgstr "类别"
+#~ msgstr "Type"
+
+#: src/hooks/useOpenUnsafeLink.tsx:56
+msgid "URL"
+msgstr ""
 
 #: src/components/plot/add/PlotAdd.tsx:132
 #~ msgid "Unable to create plot NFT"
-#~ msgstr "无法创建农田NFT"
+#~ msgstr "Unable to create plot NFT"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:147
+#: src/components/offers/OfferShareDialog.tsx:966
+msgid "Unable to open Keybase. Install Keybase from https://keybase.io"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:873
+msgid "Unable to open browser. Install Keybase from https://keybase.io"
+msgstr ""
+
+#: src/components/plotNFT/PlotNFTCard.tsx:148
 msgid "Unclaimed Rewards"
 msgstr "未申领奖励"
 
@@ -2923,32 +3642,43 @@ msgstr "未完成"
 
 #: src/components/trading/TradingOverview.jsx:174
 #~ msgid "Unique identifier"
-#~ msgstr "唯一识别码"
+#~ msgstr "Unique identifier"
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
-#~ msgid "Unknown"
-#~ msgstr "未知"
+#: src/components/offers/utils.ts:172
+msgid "Unknown"
+msgstr "Unknown"
 
-#: src/components/app/AppPassPrompt.tsx:82
+#: src/components/offers/OfferManager.tsx:237
+#: src/components/offers/OfferSummaryRow.tsx:147
+#: src/components/offers/OfferSummaryRow.tsx:148
+#: src/components/offers/OfferSummaryRow.tsx:226
+msgid "Unknown CAT"
+msgstr ""
+
+#: src/components/app/AppPassPrompt.tsx:100
 msgid "Unlock Keyring"
+msgstr "解锁钥匙串"
+
+#: src/components/offers/NFTOfferViewer.tsx:124
+msgid "Unrecognized asset"
 msgstr ""
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:25
 #~ msgid "Unsaved Changes"
-#~ msgstr "未保存的更改"
+#~ msgstr "Unsaved Changes"
 
 #: src/components/_wallet_old/create/createRLAdmin.jsx:281
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:293
 #~ msgid "User Pubkey"
-#~ msgstr "用户公钥"
+#~ msgstr "User Pubkey"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
-msgstr ""
+msgstr "交易费用"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-#~ msgstr ""
+#~ msgstr "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
 
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
 msgid "VDF Sub Slot Iterations"
@@ -2960,13 +3690,13 @@ msgstr "VDF子项迭代数"
 
 #: src/components/core/components/Fee/Fee.tsx:28
 #~ msgid "Value seems high"
-#~ msgstr "值似乎过高"
+#~ msgstr "Value seems high"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
 msgstr "验证农业合作社详情"
 
-#: src/electron/main.tsx:380
+#: src/electron/main.tsx:439
 msgid "View"
 msgstr "查看"
 
@@ -2977,24 +3707,62 @@ msgstr "查看日志"
 
 #: src/components/trading/TradeManager.tsx:54
 #~ msgid "View Offer"
-#~ msgstr "查看出价"
+#~ msgstr "View Offer"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:256
 #: src/components/plotNFT/PlotNFTCard.tsx:298
 #~ msgid "View Payout Instructions"
 #~ msgstr "View Payout Instructions"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:283
+#: src/components/plotNFT/PlotNFTCard.tsx:282
 msgid "View Pool Login Link"
 msgstr "查看农业合作社登录地址"
 
+#: src/components/offers/OfferImport.tsx:179
+#: src/components/offers/OfferManager.tsx:639
+msgid "View an Offer"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:555
+msgid "View on Dexie"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:820
+msgid "View on Hashgreen DEX"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:311
+#: src/components/offers/OfferShareDialog.tsx:636
+msgid "View on MintGarden"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:718
+msgid "View on OfferBin"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:318
+msgid "View on Spacescan.io"
+msgstr ""
+
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:562
 #~ msgid "View pending balances"
-#~ msgstr "查看处理中的余额"
+#~ msgstr "View pending balances"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:393
 #~ msgid "View pending balances..."
-#~ msgstr "查看处理中的余额…"
+#~ msgstr "View pending balances..."
+
+#: src/components/offers/OfferViewerTitle.tsx:31
+msgid "Viewing offer"
+msgstr ""
+
+#: src/components/offers/OfferViewerTitle.tsx:26
+msgid "Viewing offer created at {0}"
+msgstr ""
+
+#: src/components/offers/OfferViewerTitle.tsx:24
+msgid "Viewing offer: {offerFileName}"
+msgstr ""
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:25
 #: src/components/plot/PlotStatus.tsx:26
@@ -3018,19 +3786,19 @@ msgstr "正在等待交易确认"
 #: src/components/app/AppSelectMode.tsx:81
 #: src/components/app/AppSelectMode.tsx:133
 msgid "Wallet Mode"
-msgstr ""
+msgstr "钱包模式"
 
 #: src/components/pool/PoolOverview.tsx:181
 #~ msgid "Wallet Status:"
-#~ msgstr "钱包状态："
+#~ msgstr ""
 
 #: src/components/_wallet_old/did/WalletDID.tsx:1121
 #~ msgid "Wallet does not exists"
-#~ msgstr "钱包不存在"
+#~ msgstr "Wallet does not exist"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:72
 msgid "Wallet is not defined"
-msgstr ""
+msgstr "钱包未定义"
 
 #: src/components/wallet/Wallets.tsx:34
 #~ msgid "WalletItem.ccWallet"
@@ -3062,7 +3830,7 @@ msgstr ""
 
 #: src/components/dashboard/DashboardSideBar.tsx:36
 #~ msgid "Wallets"
-#~ msgstr "钱包"
+#~ msgstr "Wallets"
 
 #: src/components/wallet/Wallets.tsx:131
 #~ msgid "Wallets.title"
@@ -3073,8 +3841,8 @@ msgid "Want to Join a Pool? Create a Plot NFT"
 msgstr "想要加入农业合作社？创建一个农田NFT"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:139
-msgid "Want to earn more Chia? Add more plots to your farm."
-msgstr "想要获得更多奇亚币？ 给你的农场多开垦一些农田吧。"
+#~ msgid "Want to earn more Chia? Add more plots to your farm."
+#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:87
 msgid "Want to have a delay before the next plot starts?"
@@ -3082,42 +3850,62 @@ msgstr "想要在开垦下一块农田前等待一会？"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 msgid "Warm start"
+msgstr "热启动"
+
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:34
+msgid "Warning"
 msgstr ""
 
 #: src/components/_selectKey_old/SelectKey.tsx:88
 #: src/components/_selectKey_old/SelectKey.tsx:119
 #~ msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-#~ msgstr "警告：此密钥用于可能有余额的钱包。删除此密钥可能会无法访问此钱包。"
+#~ msgstr "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
 
 #: src/components/_selectKey_old/SelectKey.tsx:81
 #~ msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-#~ msgstr "警告：此密钥用于耕作奖励地址。删除此密钥后可能会无法提取将来的耕作奖励。"
+#~ msgstr "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
 
 #: src/components/_selectKey_old/SelectKey.tsx:94
 #~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-#~ msgstr "警告：此密钥用于池奖励地址。删除此密钥可能会无法获得将来的池奖励。"
+#~ msgstr "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+
+#: src/components/offers/OfferSummary.tsx:148
+msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
+msgstr ""
+
+#: src/hooks/useOpenUnsafeLink.tsx:42
+msgid "Warning: You're about to visit a website"
+msgstr ""
 
 #: src/components/block/Block.jsx:183
 msgid "Weight"
 msgstr "权重"
 
 #: src/components/block/Block.jsx:186
-msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-msgstr "权重是施加给所有子块包括目前这块的额外的困难度."
+msgid "Weight is the total added difficulty of all blocks up to and including this one"
+msgstr "权重是施加给所有块包括目前这块的额外的困难度."
+
+#: src/components/block/Block.jsx:186
+#~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
+#~ msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
 
 #: src/components/_selectKey_old/SelectKey.tsx:183
 #~ msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-#~ msgstr "欢迎来到奇亚。请用已有的密钥登录，或者创建一个新的密钥。"
+#~ msgstr "Welcome to Chia. Please log in with an existing key, or create a new key."
 
 #: src/components/_wallet_old/WalletAdd.tsx:66
 #~ msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-#~ msgstr "欢迎使用奇亚! 下面的词语列表是你的钱包密语, 请务必严格完整的把它们记下来(保持顺序). 没有这段密语的话, 你就没办法找回钱包里的币. 千万也不要透露给别人."
+#~ msgstr "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:22
+msgid "When creating an offer, any assets that are being offered will be locked and unavailable until the offer is accepted or cancelled, resulting in your spendable balance changing."
+msgstr ""
 
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:316
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-#~ msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下面以便完成费用限定型钱包设置:"
+#~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:431
+#: src/electron/main.tsx:490
 msgid "Window"
 msgstr "窗口"
 
@@ -3125,14 +3913,26 @@ msgstr "窗口"
 msgid "Without fees"
 msgstr "不含交易费"
 
+#: src/components/nfts/NFTTransferAction.tsx:317
+msgid "Would you like to transfer the specified NFT to a new owner?"
+msgstr ""
+
 #: src/components/nfts/NFTTransferAction.tsx:373
-msgid "Would you like to transfer the specified NFT to a new owner? It is recommended that you include a fee to ensure that the transaction is completed in a timely manner."
+#~ msgid "Would you like to transfer the specified NFT to a new owner? It is recommended that you include a fee to ensure that the transaction is completed in a timely manner."
+#~ msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:145
+msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:264
+#: src/electron/main.tsx:323
 msgid "Yes"
 msgstr "是"
+
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:24
+msgid "Yes, Accept Offer"
+msgstr ""
 
 #: src/hooks/useAbsorbRewards.tsx:27
 #: src/hooks/useJoinPool.tsx:36
@@ -3145,15 +3945,19 @@ msgstr "你目前没有自耕种"
 
 #: src/components/app/AppSelectMode.tsx:167
 msgid "You can always change your mode later in the settings"
-msgstr ""
+msgstr "您可以随时在模式中更改您的设置。"
 
-#: src/components/plotNFT/PlotNFTCard.tsx:421
+#: src/components/plotNFT/PlotNFTCard.tsx:420
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 msgstr "你现在可以使用这个农田NFT开垦新农田，但是在同步完成前，你不能进行任何更改。"
 
+#: src/components/offers/OfferHeader.tsx:37
+msgid "You created this offer"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-msgstr ""
+msgstr "不需要同步或者连接到网络节点就可以开垦农田。在开垦过程中产生的临时文件尺寸会大于最终的农田大小。请确认你有足够的存储空间。<0>了解更多</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:56
 #~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
@@ -3161,17 +3965,17 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:63
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr "不需要同步或者连接到网络节点就可以开垦农田。在开垦过程中产生的临时文件尺寸会大于最终的农田大小。请确认你有足够的存储空间。<0>了解更多</0>"
+#~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
 #: src/components/core/components/FormBackButton/FormBackButton.tsx:29
 #~ msgid "You have made changes. Do you want to discard them?"
-#~ msgstr "你已经做了一些更改。你确定要放弃这些修改吗？"
+#~ msgstr "You have made changes. Do you want to discard them?"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
 #~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
 #~ msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:54
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:58
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 msgstr "您在网络上拥有{0}%的空间，因此收割一个区块所花费的时间在数学期望上是{expectedTimeToWin}。实际耗时可能比这个期望值长3到4倍。"
 
@@ -3195,9 +3999,18 @@ msgstr "你需要先领取你的奖励。"
 msgid "You need {currencyCode} to join a pool."
 msgstr "必须持有 {currencyCode} 才有加入农业合作社。"
 
+#: src/components/offers/OfferEditorConditionsPanel.tsx:340
+msgid "You will offer"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:426
+#: src/components/offers/OfferViewer.tsx:309
+msgid "You will receive"
+msgstr ""
+
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
 #~ msgid "You will recieve <0/> to {0}"
-#~ msgstr "你将会收到 <0/> 至 {0}"
+#~ msgstr "You will receive <0/> to {0}"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
@@ -3206,9 +4019,9 @@ msgstr "你将会收到 <0/> 至 {address}"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:328
 #~ msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-#~ msgstr ""
+#~ msgstr "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
 
-#: src/components/farm/overview/FarmOverview.tsx:33
+#: src/components/farm/FarmHeader.tsx:25
 msgid "Your Farm Overview"
 msgstr "农场概览"
 
@@ -3224,45 +4037,53 @@ msgstr "你的收割网络"
 msgid "Your Pool Overview"
 msgstr "你的农业合作社概览"
 
-#: src/components/app/AppPassPrompt.tsx:78
+#: src/components/app/AppPassPrompt.tsx:96
 msgid "Your keyring is locked"
-msgstr ""
+msgstr "您的钥匙串已锁定"
 
-#: src/components/app/AppKeyringMigrator.tsx:62
+#: src/components/app/AppKeyringMigrator.tsx:69
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
-msgstr ""
+msgstr "您的密钥尚未迁移到新的密钥串中。在迁移完成之前，您将无法创建新密钥或删除现有密钥。 您确定要跳过密钥迁移吗？"
 
 #: src/components/_selectKey_old/SelectKey.tsx:141
 #~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-#~ msgstr ""
+#~ msgstr "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 
-#: src/components/app/AppKeyringMigrator.tsx:105
+#: src/components/app/AppKeyringMigrator.tsx:112
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
-msgstr ""
+msgstr "您的密钥需要迁移到一个新的密钥串，该密钥串可以选择由主私钥密码进行保护。"
 
-#: src/components/app/AppKeyringMigrator.tsx:111
+#: src/components/app/AppKeyringMigrator.tsx:118
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
+msgstr "您的密钥需要迁移到由私钥密码保护的新密钥串中。"
+
+#: src/components/offers/OfferShareDialog.tsx:1010
+msgid "Your offer has been successfully posted to Keybase."
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:180
-#: src/components/settings/ChangePassphrasePrompt.tsx:209
-#: src/components/settings/SetPassphrasePrompt.tsx:191
+#: src/components/offers/OfferShareDialog.tsx:1236
+msgid "Your offer:"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:229
+#: src/components/settings/ChangePassphrasePrompt.tsx:271
+#: src/components/settings/SetPassphrasePrompt.tsx:238
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
-msgstr ""
+msgstr "您的私钥密码可以存储在系统的安全凭据中。Chia将能够访问您的密钥，而无需提示输入您的私钥密码。"
 
-#: src/components/settings/Settings.tsx:91
+#: src/components/settings/Settings.tsx:77
 #: src/components/settings/SettingsPanel.tsx:91
 msgid "Your passphrase has been set"
-msgstr ""
+msgstr "您的私钥密码已经设置"
 
-#: src/components/settings/Settings.tsx:80
+#: src/components/settings/Settings.tsx:68
 #: src/components/settings/SettingsPanel.tsx:80
 msgid "Your passphrase has been updated"
-msgstr ""
+msgstr "你的密码已被更新"
 
 #: src/components/settings/ProfileView.tsx:33
-msgid "[*Coin ID*]"
-msgstr ""
+#~ msgid "[*Coin ID*]"
+#~ msgstr ""
 
 #: src/util/getDescriptiveError.ts:5
 msgid "[Error 13] Permission denied. You are trying to access a file/directory without having the necessary permissions. Most likely one of the plot folders in your config.yaml has an issue."
@@ -3275,39 +4096,39 @@ msgstr "[错误 22] 文件未找到。农田文件夹中的 config.yaml 文件�
 #: src/components/_wallet_old/WalletStatusCard.tsx:41
 #: src/components/_wallet_old/Wallets.tsx:75
 #~ msgid "connections:"
-#~ msgstr "连接："
+#~ msgstr "connections:"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:33
 #: src/components/_wallet_old/Wallets.tsx:67
 #~ msgid "height:"
-#~ msgstr "高度："
+#~ msgstr "height:"
 
 #: src/components/_wallet_old/Wallets.tsx:61
 #~ msgid "not synced"
-#~ msgstr "未同步"
+#~ msgstr "not synced"
 
-#: src/components/plot/add/PlotAddForm.tsx:123
+#: src/components/plot/add/PlotAddForm.tsx:132
 msgid "p2SingletonPuzzleHash is not defined"
-msgstr ""
+msgstr "p2SingletonPuzzleHash 未定义"
 
 #: src/components/plot/add/PlotAdd.tsx:136
 #~ msgid "p2_singleton_puzzle_hash is not defined"
-#~ msgstr "p2_singleton_puzzle_hash 未定义"
+#~ msgstr "p2_singleton_puzzle_hash is not defined"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:27
 #: src/components/_wallet_old/Wallets.tsx:55
 #~ msgid "status:"
-#~ msgstr "状态："
+#~ msgstr "status:"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:29
 #: src/components/_wallet_old/Wallets.tsx:60
 #~ msgid "synced"
-#~ msgstr "已同步"
+#~ msgstr "synced"
 
 #: src/components/_wallet_old/WalletStatusCard.tsx:29
 #: src/components/_wallet_old/Wallets.tsx:59
 #~ msgid "syncing"
-#~ msgstr "同步中"
+#~ msgstr "syncing"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:89
 #~ msgid "thirdparty.plotter.disclaimer"
@@ -3315,10 +4136,14 @@ msgstr ""
 
 #: src/components/app/AppPassPrompt.tsx:48
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-#~ msgstr ""
+#~ msgstr "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 
-#: src/components/nfts/NFTTransferAction.tsx:128
+#: src/components/nfts/NFTTransferAction.tsx:129
 msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1135
+msgid "{0}"
 msgstr ""
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:16
@@ -3332,6 +4157,10 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
+msgstr "推荐{0} 个bucket"
+
+#: src/components/nfts/detail/NFTDetail.tsx:183
+msgid "{0} of {1}"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
@@ -3340,20 +4169,34 @@ msgstr "{0} 积点 {1} - {2} 小时前"
 
 #: src/components/farm/card/FarmCardBlockRewards.tsx:35
 #~ msgid "{currencyCode} Block Rewards"
-#~ msgstr "{currencyCode} 区块奖励"
+#~ msgstr "{currencyCode} Block Rewards"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
 #~ msgid "{currencyCode} Total Chia Farmed"
-#~ msgstr "{currencyCode} 收获的奇亚币总计"
+#~ msgstr "{currencyCode} Total Chia Farmed"
 
 #: src/components/farm/card/FarmCardUserFees.tsx:28
 #~ msgid "{currencyCode} User Transaction Fees"
-#~ msgstr "{currencyCode} 用户交易费用"
+#~ msgstr "{currencyCode} User Transaction Fees"
+
+#: src/components/offers/NFTOfferViewer.tsx:286
+#: src/components/offers/OfferSummary.tsx:196
+msgid "{makerFee, plural, one {mojo} other {mojos}}"
+msgstr ""
 
 #: src/components/core/components/Amount/Amount.tsx:82
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
 #~ msgstr "{mojo, plural, one {mojo} other {mojos}}"
 
+#: src/components/offers/OfferSummaryRow.tsx:46
+#: src/components/offers/OfferViewer.tsx:65
+msgid "{mojos, plural, one {mojo} other {mojos}}"
+msgstr ""
+
+#: src/components/nfts/NFTRankings.tsx:52
+msgid "{value} of {max_value}"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
-msgstr ""
+msgstr "{warning}"

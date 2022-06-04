@@ -91,6 +91,7 @@ export default function FarmYourHarvesterNetwork() {
     <Card
       gap={1}
       title={<Trans>Your Harvester Network</Trans>}
+      titleVariant="h6"
       tooltip={
         <Trans>
           A harvester is a service running on a machine where plot(s) are

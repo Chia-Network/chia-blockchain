@@ -8,15 +8,15 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2021-09-17 17:39\n"
+"PO-Revision-Date: 2022-05-26 15:59\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Crowdin-Project: chia-blockchain\n"
 "X-Crowdin-Project-ID: 440660\n"
 "X-Crowdin-Language: en\n"
-"X-Crowdin-File: /[Chia-Network.chia-blockchain-gui] main/src/locales/en-US/messages.po\n"
-"X-Crowdin-File-ID: 118\n"
+"X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
+"X-Crowdin-File-ID: 1886\n"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:74
 #~ msgid "(Not Installed)"
@@ -499,7 +499,7 @@ msgstr "Connected"
 #~ msgid "Contribute on GitHub"
 #~ msgstr "Contribute on GitHub"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:37
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
 msgid "Copied"
 msgstr "Copied"
 
@@ -510,7 +510,7 @@ msgstr "Copied"
 #~ msgid "Copy"
 #~ msgstr "Copy"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:39
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
 msgid "Copy to Clipboard"
 msgstr "Copy to Clipboard"
 
@@ -829,6 +829,10 @@ msgstr "Discard"
 #: src/hooks/useShowError.tsx:11
 msgid "Error"
 msgstr "Error"
+
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:78
+msgid "Error:"
+msgstr "Error:"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -1266,8 +1270,8 @@ msgstr "Loading list of the keys"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:122
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
 msgid "Log Out"
 msgstr "Log Out"
 
@@ -1275,8 +1279,7 @@ msgstr "Log Out"
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:121
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:141
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Logout"
 msgstr "Logout"
 
@@ -2105,6 +2108,10 @@ msgstr "Public key:"
 #~ msgid "Release Notes"
 #~ msgstr "Release Notes"
 
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:91
+msgid "Reload Application"
+msgstr "Reload Application"
+
 #: src/components/settings/RemovePassphrasePrompt.tsx:100
 #: src/components/settings/RemovePassphrasePrompt.tsx:147
 #: src/components/settings/Settings.tsx:194
@@ -2122,6 +2129,10 @@ msgstr "Public key:"
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:265
 #~ msgid "Rename"
 #~ msgstr "Rename"
+
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:87
+msgid "Report an Issue"
+msgstr "Report an Issue"
 
 #: src/electron/main.tsx:404
 #~ msgid "Report an Issue..."
@@ -2307,7 +2318,7 @@ msgstr "Sign In"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:47
 msgid "Skip"
-msgstr ""
+msgstr "Skip"
 
 #: src/components/app/AppKeyringMigrator.tsx:57
 #~ msgid "Skip Keyring Migration"
@@ -2329,9 +2340,9 @@ msgstr "Skip Passphrase Protection"
 #~ msgid "Smooth out your XCH farming rewards by joining a pool."
 #~ msgstr "Smooth out your XCH farming rewards by joining a pool."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
-#~ msgid "Something went wrong"
-#~ msgstr "Something went wrong"
+#: src/components/ErrorBoundary/ErrorBoundary.tsx:73
+msgid "Something went wrong"
+msgstr "Something went wrong"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 #~ msgid "Specify a value of 0 to use all available threads"
@@ -2739,7 +2750,7 @@ msgstr "Transaction has not been sent to node yet"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
-msgstr "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
+msgstr "Transaction has been sent to a full node and is pending inclusion into the mempool. {0}"
 
 #: src/utils/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
@@ -2869,7 +2880,7 @@ msgstr "Value seems high"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Waiting for the transaction to be confirmed"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:93
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:97
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr "Wallet"
