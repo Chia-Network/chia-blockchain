@@ -1,6 +1,9 @@
 # flake8: noqa
 
 import os
+import subprocess
+import sys
+import sysconfig
 from typing import Callable, Any
 from pathlib import Path
 from chia.util.streamable import Streamable, streamable
@@ -10,8 +13,10 @@ from chia.util.ints import uint32
 version = "1.0"
 
 
+tests_dir = Path(__file__).resolve().parent
+
+
 def get_network_protocol_filename() -> Path:
-    tests_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     return tests_dir / Path("protocol_messages_bytes-v" + version)
 
 
@@ -245,15 +250,22 @@ def test_protocol_json() -> None:
 
 
 if __name__ == "__main__":
-    tests_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-    with open(get_network_protocol_filename(), "wb") as f:
-        f.write(get_protocol_bytes())
+    get_network_protocol_filename().write_bytes(get_protocol_bytes())
 
-    with open(tests_dir / Path("test_network_protocol_files.py"), "w") as f2:
-        f2.write(build_protocol_test())
+    name_to_function = {
+        "test_network_protocol_files.py": build_protocol_test,
+        "protocol_messages_json.py": get_protocol_json,
+        "test_network_protocol_json.py": build_json_test,
+    }
 
-    with open(tests_dir / Path("protocol_messages_json.py"), "w") as f2:
-        f2.write(get_protocol_json())
+    scripts_path = Path(sysconfig.get_path("scripts"))
 
-    with open(tests_dir / Path("test_network_protocol_json.py"), "w") as f2:
-        f2.write(build_json_test())
+    for name, function in name_to_function.items():
+        path = tests_dir.joinpath(name)
+        path.write_text(function())
+        # black seems to have trouble when run as a module so not using `python -m black`
+        subprocess.run(
+            [scripts_path.joinpath("black"), os.fspath(path.relative_to(tests_dir))],
+            check=True,
+            cwd=tests_dir,
+        )
