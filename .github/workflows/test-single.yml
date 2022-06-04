@@ -187,7 +187,7 @@ jobs:
         run: |
           ./Install.ps1 -d
 
-      - uses: chia-network/actions/activate-venv@add_activate_venv
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Install timelord
         if: matrix.configuration.install_timelord
