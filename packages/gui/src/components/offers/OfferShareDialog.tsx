@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans, t } from '@lingui/macro';
 import { useLocalStorage } from '@rehooks/local-storage';
 import {
@@ -11,7 +11,7 @@ import {
   useShowError,
   useOpenExternal,
 } from '@chia/core';
-import { OfferTradeRecord } from '@chia/api';
+import { OfferTradeRecord, toBech32m } from '@chia/api';
 import {
   Button,
   Checkbox,
@@ -38,6 +38,28 @@ import child_process from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+/* ========================================================================== */
+
+enum OfferSharingService {
+  Dexie = 'Dexie',
+  Hashgreen = 'Hashgreen',
+  MintGarden = 'MintGarden',
+  OfferBin = 'OfferBin',
+  Offerpool = 'Offerpool',
+  Keybase = 'Keybase',
+}
+
+enum OfferSharingCapability {
+  Token = 'Token',
+  NFT = 'NFT',
+}
+
+interface OfferSharingProvider {
+  service: OfferSharingService;
+  name: string;
+  capabilities: OfferSharingCapability[];
+}
+
 type CommonOfferProps = {
   offerRecord: OfferTradeRecord;
   offerData: string;
@@ -49,14 +71,47 @@ type CommonDialogProps = {
   onClose: (value: boolean) => void;
 };
 
-type OfferShareDexieDialogProps = CommonOfferProps & CommonDialogProps;
-type OfferShareOfferBinDialogProps = CommonOfferProps & CommonDialogProps;
-type OfferShareHashgreenDialogProps = CommonOfferProps & CommonDialogProps;
-type OfferShareKeybaseDialogProps = CommonOfferProps & CommonDialogProps;
-type OfferShareOfferpoolDialogProps = CommonOfferProps & CommonDialogProps;
+type OfferShareServiceDialogProps = CommonOfferProps & CommonDialogProps;
 
 const testnetDummyHost = 'file-acceptor.chia.net';
 const testnetDummyEndpoint = '/';
+
+const OfferSharingProviders: {
+  [key in OfferSharingService]: OfferSharingProvider;
+} = {
+  [OfferSharingService.Dexie]: {
+    service: OfferSharingService.Dexie,
+    name: 'Dexie',
+    capabilities: [OfferSharingCapability.Token, OfferSharingCapability.NFT],
+  },
+  [OfferSharingService.Hashgreen]: {
+    service: OfferSharingService.Hashgreen,
+    name: 'Hashgreen DEX',
+    capabilities: [OfferSharingCapability.Token],
+  },
+  [OfferSharingService.MintGarden]: {
+    service: OfferSharingService.MintGarden,
+    name: 'MintGarden',
+    capabilities: [OfferSharingCapability.NFT],
+  },
+  [OfferSharingService.OfferBin]: {
+    service: OfferSharingService.OfferBin,
+    name: 'OfferBin',
+    capabilities: [OfferSharingCapability.Token, OfferSharingCapability.NFT],
+  },
+  [OfferSharingService.Offerpool]: {
+    service: OfferSharingService.Offerpool,
+    name: 'offerpool.io',
+    capabilities: [OfferSharingCapability.Token, OfferSharingCapability.NFT],
+  },
+  [OfferSharingService.Keybase]: {
+    service: OfferSharingService.Keybase,
+    name: 'Keybase',
+    capabilities: [OfferSharingCapability.Token, OfferSharingCapability.NFT],
+  },
+};
+
+/* ========================================================================== */
 
 async function writeTempOfferFile(
   offerData: string,
@@ -109,6 +164,47 @@ async function postToDexie(
   const { id } = JSON.parse(responseBody);
 
   return `https://${testnet ? 'testnet.' : ''}dexie.space/offers/${id}`;
+}
+
+async function postToMintGarden(
+  offerData: string,
+  testnet: boolean,
+): Promise<string> {
+  const ipcRenderer = (window as any).ipcRenderer;
+  const requestOptions = {
+    method: 'POST',
+    protocol: 'https:',
+    hostname: testnet ? 'api.testnet.mintgarden.io' : 'api.mintgarden.io',
+    port: 443,
+    path: '/offer',
+  };
+  const requestHeaders = {
+    'Content-Type': 'application/json',
+  };
+  const requestData = JSON.stringify({ offer: offerData });
+  const { err, statusCode, statusMessage, responseBody } =
+    await ipcRenderer.invoke(
+      'fetchTextResponse',
+      requestOptions,
+      requestHeaders,
+      requestData,
+    );
+
+  if (err || (statusCode !== 200 && statusCode !== 400)) {
+    const error = new Error(
+      `MintGarden upload failed: ${err}, statusCode=${statusCode}, statusMessage=${statusMessage}, response=${responseBody}`,
+    );
+    throw error;
+  }
+
+  console.log('MintGarden upload completed');
+
+  const {
+    offer: { nft_id },
+  } = JSON.parse(responseBody);
+  const nftId = toBech32m(nft_id, 'nft');
+
+  return `https://${testnet ? 'testnet.' : ''}mintgarden.io/nfts/${nftId}`;
 }
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
@@ -407,7 +503,7 @@ async function postToOfferpool(
 
 /* ========================================================================== */
 
-function OfferShareDexieDialog(props: OfferShareDexieDialogProps) {
+function OfferShareDexieDialog(props: OfferShareServiceDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const [sharedURL, setSharedURL] = React.useState('');
@@ -483,7 +579,93 @@ function OfferShareDexieDialog(props: OfferShareDexieDialogProps) {
   );
 }
 
-function OfferShareOfferBinDialog(props: OfferShareOfferBinDialogProps) {
+OfferShareDexieDialog.defaultProps = {
+  open: false,
+  onClose: () => {},
+};
+
+function OfferShareMintGardenDialog(props: OfferShareServiceDialogProps) {
+  const { offerRecord, offerData, testnet, onClose, open } = props;
+  const openExternal = useOpenExternal();
+  const [sharedURL, setSharedURL] = React.useState('');
+
+  function handleClose() {
+    onClose(false);
+  }
+
+  async function handleConfirm() {
+    const url = await postToMintGarden(offerData, testnet);
+    console.log(`MintGarden URL: ${url}`);
+    setSharedURL(url);
+  }
+
+  if (sharedURL) {
+    return (
+      <Dialog
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        maxWidth="xs"
+        open={open}
+        onClose={handleClose}
+        fullWidth
+      >
+        <DialogTitle>
+          <Trans>Offer Shared</Trans>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Flex flexDirection="column" gap={3}>
+            <TextField
+              label={<Trans>MintGarden URL</Trans>}
+              value={sharedURL}
+              variant="filled"
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <CopyToClipboard value={sharedURL} />
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+            />
+            <Flex>
+              <Button
+                variant="outlined"
+                onClick={() => openExternal(sharedURL)}
+              >
+                <Trans>View on MintGarden</Trans>
+              </Button>
+            </Flex>
+          </Flex>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary" variant="contained">
+            <Trans>Close</Trans>
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  return (
+    <OfferShareConfirmationDialog
+      offerRecord={offerRecord}
+      offerData={offerData}
+      testnet={testnet}
+      title={<Trans>Share on MintGarden</Trans>}
+      onConfirm={handleConfirm}
+      open={open}
+      onClose={onClose}
+    />
+  );
+}
+
+OfferShareMintGardenDialog.defaultProps = {
+  open: false,
+  onClose: () => {},
+};
+
+function OfferShareOfferBinDialog(props: OfferShareServiceDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const [sharePrivately, setSharePrivately] = React.useState(false);
@@ -586,7 +768,7 @@ OfferShareOfferBinDialog.defaultProps = {
   onClose: () => {},
 };
 
-function OfferShareHashgreenDialog(props: OfferShareHashgreenDialogProps) {
+function OfferShareHashgreenDialog(props: OfferShareServiceDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const [sharedURL, setSharedURL] = React.useState('');
@@ -667,7 +849,7 @@ OfferShareHashgreenDialog.defaultProps = {
   onClose: () => {},
 };
 
-function OfferShareKeybaseDialog(props: OfferShareKeybaseDialogProps) {
+function OfferShareKeybaseDialog(props: OfferShareServiceDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const { lookupByAssetId } = useAssetIdName();
   const showError = useShowError();
@@ -919,7 +1101,7 @@ OfferShareKeybaseDialog.defaultProps = {
   onClose: () => {},
 };
 
-function OfferShareOfferpoolDialog(props: OfferShareOfferpoolDialogProps) {
+function OfferShareOfferpoolDialog(props: OfferShareServiceDialogProps) {
   const { offerRecord, offerData, testnet, onClose, open } = props;
   const openExternal = useOpenExternal();
   const [offerResponse, setOfferResponse] =
@@ -1095,6 +1277,11 @@ type OfferShareDialogProps = CommonOfferProps &
     exportOffer?: () => void;
   };
 
+interface OfferShareDialogProvider extends OfferSharingProvider {
+  dialogComponent: React.FunctionComponent<OfferShareServiceDialogProps>;
+  props: {};
+}
+
 export default function OfferShareDialog(props: OfferShareDialogProps) {
   const {
     offerRecord,
@@ -1108,57 +1295,79 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
   const openDialog = useOpenDialog();
   const [suppressShareOnCreate, setSuppressShareOnCreate] =
     useLocalStorage<boolean>(OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE);
+  const isNFTOffer = offerContainsAssetOfType(offerRecord.summary, 'singleton');
+
+  const shareOptions: OfferShareDialogProvider[] = useMemo(() => {
+    const capabilities = isNFTOffer
+      ? [OfferSharingCapability.NFT]
+      : [OfferSharingCapability.Token];
+
+    const dialogComponents: {
+      [key in OfferSharingService]: {
+        component: React.FunctionComponent<OfferShareServiceDialogProps>;
+        props: any;
+      };
+    } = {
+      [OfferSharingService.Dexie]: {
+        component: OfferShareDexieDialog,
+        props: {},
+      },
+      [OfferSharingService.Hashgreen]: {
+        component: OfferShareHashgreenDialog,
+        props: {},
+      },
+      [OfferSharingService.MintGarden]: {
+        component: OfferShareMintGardenDialog,
+        props: {},
+      },
+      [OfferSharingService.OfferBin]: {
+        component: OfferShareOfferBinDialog,
+        props: {},
+      },
+      [OfferSharingService.Offerpool]: {
+        component: OfferShareOfferpoolDialog,
+        props: {},
+      },
+      [OfferSharingService.Keybase]: {
+        component: OfferShareKeybaseDialog,
+        props: {},
+      },
+    };
+
+    const options = Object.keys(OfferSharingService)
+      .filter((key) => OfferSharingProviders.hasOwnProperty(key))
+      .filter((key) =>
+        OfferSharingProviders[key as OfferSharingService].capabilities.some(
+          (cap) => capabilities.includes(cap),
+        ),
+      )
+      .map((key) => {
+        const { component, props } =
+          dialogComponents[key as OfferSharingService];
+        return {
+          ...OfferSharingProviders[key as OfferSharingService],
+          dialogComponent: component,
+          dialogProps: props,
+        };
+      });
+
+    return options;
+  }, [isNFTOffer]);
 
   function handleClose() {
     onClose(false);
   }
 
-  async function handleDexie() {
-    await openDialog(
-      <OfferShareDexieDialog
-        offerRecord={offerRecord}
-        offerData={offerData}
-        testnet={testnet}
-      />,
-    );
-  }
+  async function handleShare(dialogProvider: OfferShareDialogProvider) {
+    const DialogComponent = dialogProvider.dialogComponent;
+    const props = dialogProvider.props;
 
-  async function handleOfferBin() {
     await openDialog(
-      <OfferShareOfferBinDialog
+      <DialogComponent
         offerRecord={offerRecord}
         offerData={offerData}
         testnet={testnet}
-      />,
-    );
-  }
-
-  async function handleHashgreen() {
-    await openDialog(
-      <OfferShareHashgreenDialog
-        offerRecord={offerRecord}
-        offerData={offerData}
-        testnet={testnet}
-      />,
-    );
-  }
-
-  async function handleKeybase() {
-    await openDialog(
-      <OfferShareKeybaseDialog
-        offerRecord={offerRecord}
-        offerData={offerData}
-        testnet={testnet}
-      />,
-    );
-  }
-
-  async function handleOfferpool() {
-    await openDialog(
-      <OfferShareOfferpoolDialog
-        offerRecord={offerRecord}
-        offerData={offerData}
-        testnet={testnet}
+        {...props}
       />,
     );
   }
@@ -1186,21 +1395,17 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
               Where would you like to share your offer?
             </Typography>
             <Flex flexDirection="column" gap={3}>
-              <Button variant="outlined" onClick={handleDexie}>
-                Dexie
-              </Button>
-              <Button variant="outlined" onClick={handleOfferBin}>
-                OfferBin
-              </Button>
-              <Button variant="outlined" onClick={handleHashgreen}>
-                Hashgreen DEX
-              </Button>
-              <Button variant="outlined" onClick={handleOfferpool}>
-                <Flex flexDirection="column">offerpool</Flex>
-              </Button>
-              <Button variant="outlined" onClick={handleKeybase}>
-                <Flex flexDirection="column">Keybase</Flex>
-              </Button>
+              {shareOptions.map((dialogProvider, index) => {
+                return (
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleShare(dialogProvider)}
+                    key={index}
+                  >
+                    {dialogProvider.name}
+                  </Button>
+                );
+              })}
               {exportOffer !== undefined && (
                 <Button
                   variant="outlined"
