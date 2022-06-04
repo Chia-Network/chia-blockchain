@@ -21,7 +21,7 @@ export default function OfferAcceptConfirmationDialog(
   return (
     <ConfirmDialog
       title={<Trans>Accept Offer</Trans>}
-      confirmTitle={<Trans>Accept Offer</Trans>}
+      confirmTitle={<Trans>Yes, Accept Offer</Trans>}
       confirmColor="primary"
       cancelTitle={<Trans>Cancel</Trans>}
       {...rest}

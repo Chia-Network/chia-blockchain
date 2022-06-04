@@ -98,6 +98,17 @@ export function OfferSummaryNFTRow(
                 <Flex flexDirection="column" gap={0}>
                   <Flex>
                     <Box flexGrow={1}>
+                      <StyledTitle>NFT ID</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{nftId}</StyledValue>
+                    <CopyToClipboard value={nftId} fontSize="small" />
+                  </Flex>
+                </Flex>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
                       <StyledTitle>Launcher ID</StyledTitle>
                     </Box>
                   </Flex>
