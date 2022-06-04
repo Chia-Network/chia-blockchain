@@ -1,23 +1,19 @@
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.consensus.block_record import BlockRecord
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.full_block import FullBlock
 from chia.util.config import load_config
 from chia.util.path import path_from_root
 
 
-def db_backup_func(
-    root_path: Path,
-    backup_db_file: Path,
-) -> None:
+def db_backup_func(root_path: Path, backup_db_file: Optional[Path] = None) -> None:
     config: Dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
     selected_network: str = config["selected_network"]
     db_pattern: str = config["database_path"]
     db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)
     source_db = path_from_root(root_path, db_path_replaced)
+    if backup_db_file is None:
+        db_path_replaced_backup = db_path_replaced.replace("blockchain_", "vacuumed_blockchain_")
+        backup_db_file = path_from_root(root_path, db_path_replaced_backup)
 
     backup_db(source_db, backup_db_file)
 
@@ -39,4 +35,3 @@ def backup_db(source_db: Path, backup_db: Path) -> None:
             in_db.execute("VACUUM INTO ?", [str(backup_db)])
         except sqlite3.OperationalError:
             raise RuntimeError("Database backup not finished successfully")
-
