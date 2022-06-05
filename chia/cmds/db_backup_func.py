@@ -41,7 +41,7 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
                 in_db.execute("ATTACH DATABASE ? AS backup", (str(backup_db),))
                 in_db.execute("pragma backup.journal_mode=OFF")
                 in_db.execute("pragma backup.synchronous=OFF")
-                # Use writable_schema=0 to allow create table using internal sqlite names like sqlite_stat1
+                # Use writable_schema=1 to allow create table using internal sqlite names like sqlite_stat1
                 in_db.execute("pragma backup.writable_schema=1")
                 cursor = in_db.cursor()
                 for row in cursor.execute(
