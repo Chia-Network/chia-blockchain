@@ -4,7 +4,7 @@ from typing import List, Optional
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -23,10 +23,10 @@ class NFTInfo(Streamable):
     nft_coin_id: bytes32
     """Current NFT coin ID"""
 
-    did_owner: str
+    did_owner: Optional[bytes32]
     """Owner DID"""
 
-    royalty: uint64
+    royalty: Optional[uint16]
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
 
     data_uris: List[str]
@@ -79,4 +79,4 @@ class NFTCoinInfo(Streamable):
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     my_nft_coins: List[NFTCoinInfo]
-    did_wallet_id: Optional[uint32] = None
+    did_id: Optional[bytes32] = None
