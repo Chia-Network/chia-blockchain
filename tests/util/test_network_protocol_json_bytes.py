@@ -8,7 +8,7 @@ from _pytest.fixtures import SubRequest
 
 from chia.util.streamable import Streamable
 from tests.util.build_network_protocol_files import get_network_protocol_filename
-from tests.util.network_protocol_data2 import name_to_instance
+from tests.util.network_protocol_data import name_to_instance
 
 
 # TODO: CAMPid 09431708598989839831480984342780971034
@@ -24,13 +24,13 @@ def name_and_instance_fixture(request: SubRequest) -> Tuple[str, Streamable]:
 @pytest.fixture(name="name")
 def name_fixture(name_and_instance: Tuple[str, Streamable]) -> str:
     name, instance = name_and_instance
-    return name  # type: ignore[no-any-return]
+    return name
 
 
 @pytest.fixture(name="instance")
 def instance_fixture(name_and_instance: Tuple[str, Streamable]) -> Streamable:
     name, instance = name_and_instance
-    return instance  # type: ignore[no-any-return]
+    return instance
 
 
 @pytest.fixture(name="input_bytes")
