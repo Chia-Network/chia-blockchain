@@ -66,13 +66,15 @@ def db_validate_cmd(ctx: click.Context, validate_blocks: bool, **kwargs) -> None
 
 @db_cmd.command("backup", short_help="backup the blockchain database using VACUUM INTO command")
 @click.option("--backup_file", default=None, type=click.Path(), help="Specifies the backup file")
+@click.option("--no_indexes", default=False, is_flag=True, help="Create backup without indexes")
 @click.pass_context
-def db_backup_cmd(ctx: click.Context, **kwargs) -> None:
+def db_backup_cmd(ctx: click.Context, no_indexes: bool, **kwargs) -> None:
     try:
         db_backup_file = kwargs.get("backup_file")
         db_backup_func(
             Path(ctx.obj["root_path"]),
             None if db_backup_file is None else Path(db_backup_file),
+            no_indexes=no_indexes,
         )
     except RuntimeError as e:
         print(f"FAILED: {e}")

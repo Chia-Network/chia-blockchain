@@ -5,7 +5,7 @@ from chia.util.config import load_config
 from chia.util.path import path_from_root
 
 
-def db_backup_func(root_path: Path, backup_db_file: Optional[Path] = None) -> None:
+def db_backup_func(root_path: Path, backup_db_file: Optional[Path] = None, *, no_indexes: bool,) -> None:
     config: Dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
     selected_network: str = config["selected_network"]
     db_pattern: str = config["database_path"]
@@ -15,12 +15,12 @@ def db_backup_func(root_path: Path, backup_db_file: Optional[Path] = None) -> No
         db_path_replaced_backup = db_path_replaced.replace("blockchain_", "vacuumed_blockchain_")
         backup_db_file = path_from_root(root_path, db_path_replaced_backup)
 
-    backup_db(source_db, backup_db_file)
+    backup_db(source_db, backup_db_file, no_indexes=no_indexes)
 
     print(f"\n\nDatabase backup finished : {backup_db_file}\n")
 
 
-def backup_db(source_db: Path, backup_db: Path) -> None:
+def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
     import sqlite3
     from contextlib import closing
 
@@ -31,7 +31,26 @@ def backup_db(source_db: Path, backup_db: Path) -> None:
     print(f"reading from blockchain database: {source_db}")
     print(f"writing to backup file: {backup_db}")
     with closing(sqlite3.connect(source_db)) as in_db:
-        try:
-            in_db.execute("VACUUM INTO ?", [str(backup_db)])
-        except sqlite3.OperationalError:
-            raise RuntimeError("Database backup not finished successfully")
+        if no_indexes:
+            try:
+                in_db.execute("ATTACH DATABASE ? AS backup", (str(backup_db),))
+                in_db.execute("pragma backup.journal_mode=OFF")
+                in_db.execute("pragma backup.synchronous=OFF")
+                # Use writable_schema=0 to allow create table using internal sqlite names like sqlite_stat1
+                in_db.execute("pragma backup.writable_schema=1")
+                cursor = in_db.cursor()
+                for row in cursor.execute("select replace(sql,'CREATE TABLE ', 'CREATE TABLE backup.') from sqlite_master where upper(type)='TABLE'"):
+                    in_db.execute(row[0])
+
+                in_db.execute("BEGIN TRANSACTION")
+                for row in cursor.execute("select 'INSERT INTO backup.'||name||' SELECT * FROM main.'||name from sqlite_master where upper(type)='TABLE'"):
+                    in_db.execute(row[0])
+                in_db.execute("COMMIT")
+
+            except sqlite3.OperationalError as e:
+                raise
+        else:
+            try:
+                in_db.execute("VACUUM INTO ?", [str(backup_db)])
+            except sqlite3.OperationalError as e:
+                raise
