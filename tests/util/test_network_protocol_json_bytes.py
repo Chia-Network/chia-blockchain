@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, Tuple
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia.util.streamable import Streamable
+from tests.util.build_network_protocol_files import get_network_protocol_filename
 from tests.util.network_protocol_data2 import name_to_instance
 
 
@@ -31,6 +33,13 @@ def instance_fixture(name_and_instance: Tuple[str, Streamable]) -> Streamable:
     return instance  # type: ignore[no-any-return]
 
 
+@pytest.fixture(name="input_bytes")
+def input_bytes_fixture() -> Dict[str, Any]:
+    input_bytes_hex = json.loads(get_network_protocol_filename().read_text())
+    input_bytes = {key: bytes.fromhex(value) for key, value in input_bytes_hex.items()}
+    return input_bytes
+
+
 def test_protocol_json_to_dict_str_matches(
     protocol_messages: Dict[str, Dict[str, Any]],
     name: str,
@@ -45,3 +54,16 @@ def test_protocol_json_from_json_instance_matches(
     instance: Streamable,
 ) -> None:
     assert type(instance).from_json_dict(protocol_messages[name]) == instance
+
+
+def test_protocol_from_bytes_matches_instance(name: str, instance: Streamable, input_bytes: Dict[str, bytes]) -> None:
+    message_bytes = input_bytes[name]
+    message = type(instance).from_bytes(message_bytes)
+    assert message == instance
+
+
+def test_protocol_to_bytes_matches(name: str, instance: Streamable, input_bytes: Dict[str, bytes]) -> None:
+    message_bytes = input_bytes[name]
+    message = type(instance).from_bytes(message_bytes)
+    assert bytes(message) == bytes(instance)
+    # TODO: what about assert message_bytes == bytes(instance)?
