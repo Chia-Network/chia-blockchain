@@ -5,7 +5,12 @@ from chia.util.config import load_config
 from chia.util.path import path_from_root
 
 
-def db_backup_func(root_path: Path, backup_db_file: Optional[Path] = None, *, no_indexes: bool,) -> None:
+def db_backup_func(
+    root_path: Path,
+    backup_db_file: Optional[Path] = None,
+    *,
+    no_indexes: bool,
+) -> None:
     config: Dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
     selected_network: str = config["selected_network"]
     db_pattern: str = config["database_path"]
@@ -39,18 +44,24 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
                 # Use writable_schema=0 to allow create table using internal sqlite names like sqlite_stat1
                 in_db.execute("pragma backup.writable_schema=1")
                 cursor = in_db.cursor()
-                for row in cursor.execute("select replace(sql,'CREATE TABLE ', 'CREATE TABLE backup.') from sqlite_master where upper(type)='TABLE'"):
+                for row in cursor.execute(
+                    "select replace(sql,'CREATE TABLE ', 'CREATE TABLE backup.') from sqlite_master "
+                    "where upper(type)='TABLE'"
+                ):
                     in_db.execute(row[0])
 
                 in_db.execute("BEGIN TRANSACTION")
-                for row in cursor.execute("select 'INSERT INTO backup.'||name||' SELECT * FROM main.'||name from sqlite_master where upper(type)='TABLE'"):
+                for row in cursor.execute(
+                    "select 'INSERT INTO backup.'||name||' SELECT * FROM main.'||name from sqlite_master "
+                    "where upper(type)='TABLE'"
+                ):
                     in_db.execute(row[0])
                 in_db.execute("COMMIT")
 
-            except sqlite3.OperationalError as e:
+            except sqlite3.OperationalError:
                 raise
         else:
             try:
                 in_db.execute("VACUUM INTO ?", [str(backup_db)])
-            except sqlite3.OperationalError as e:
+            except sqlite3.OperationalError:
                 raise
