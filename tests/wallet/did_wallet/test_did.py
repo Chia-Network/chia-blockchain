@@ -513,6 +513,7 @@ class TestDIDWallet:
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         attest_data = (await did_wallet.create_attestment(coin.name(), new_ph, pubkey))[1]
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
