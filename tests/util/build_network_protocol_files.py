@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import sys
 import sysconfig
 from typing import Callable, Any
 from pathlib import Path
