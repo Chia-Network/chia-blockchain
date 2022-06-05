@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { type NFTInfo } from '@chia/api';
-import useVefifyURIHash from './useVefifyURIHash';
+import useVerifyURIHash from './useVerifyURIHash';
 import getRemoteFileContent from '../util/getRemoteFileContent';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -13,7 +13,11 @@ export default function useNFTMetadata(nft: NFTInfo) {
   const [errorContent, setErrorContent] = useState<Error | undefined>();
   const [metadata, setMetadata] = useState<any>();
 
-  const { isValid, isLoading: isLoadingHash, error: errorHash } = useVefifyURIHash(uri, metadataHash);
+  const {
+    isValid,
+    isLoading: isLoadingHash,
+    error: errorHash,
+  } = useVerifyURIHash(uri, metadataHash);
 
   const getMetadata = useCallback(async (uri) => {
     try {
