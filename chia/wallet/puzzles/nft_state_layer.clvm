@@ -3,7 +3,7 @@
     METADATA
     METADATA_UPDATER_PUZZLE_HASH
     INNER_PUZZLE
-    solution  ; either to inner puzzle or metadata updater
+    solution
     my_amount
   )
 
@@ -27,31 +27,21 @@
     )
   )
 
-  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions) my_amount new_create_coin_condition)
+
+  ; this function does two thins - it wraps the odd value create coins, and it also filters out all negative conditions
+  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions) my_amount)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
         (if (logand (f (r (r (f conditions)))) ONE)
-          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount (f conditions))
-          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition))
+          (c (c CREATE_COIN (c (nft_state_layer_puzzle_hash NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH (f (r (f conditions)))) (c my_amount (r (r (r (f conditions))))))) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount))
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount))
         )
         (if (> (f (f conditions)) 0)
-          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition))
-          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount new_create_coin_condition)
+          (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount))
+          (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) (r conditions)) my_amount)
         )
       )
-      (if new_create_coin_condition
-        (list (c CREATE_COIN
-          (c (nft_state_layer_puzzle_hash
-               NFT_STATE_LAYER_MOD_HASH METADATA
-               METADATA_UPDATER_PUZZLE_HASH
-               (f (r new_create_coin_condition)))
-            (c my_amount
-              (r (r (r new_create_coin_condition)))
-            )
-          )
-        ))
-        (x)
-      )
+      ()
     )
   )
 
