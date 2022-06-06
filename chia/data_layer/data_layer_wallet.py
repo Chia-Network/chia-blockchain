@@ -767,7 +767,8 @@ class DataLayerWallet:
         relevant_dl_txs: List[TransactionRecord] = []
         for singleton in unconfirmed_singletons:
             parent_name = singleton.lineage_proof.parent_name
-            assert parent_name is not None
+            if parent_name is None:
+                continue
 
             tx = await self.wallet_state_manager.tx_store.get_transaction_record(parent_name)
             if tx is not None:
