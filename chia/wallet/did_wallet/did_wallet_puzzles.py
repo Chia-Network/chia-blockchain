@@ -177,7 +177,6 @@ def match_did_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
                 return True, curried_args.as_iter()
     except Exception:
         import traceback
-
         print(f"exception: {traceback.format_exc()}")
         return False, iter(())
     return False, iter(())
