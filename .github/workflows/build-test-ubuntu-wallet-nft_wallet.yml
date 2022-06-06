@@ -95,6 +95,7 @@ jobs:
       run: |
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/wallet/nft_wallet/test_nft_clvm.py tests/wallet/nft_wallet/test_nft_offers.py tests/wallet/nft_wallet/test_nft_puzzles.py tests/wallet/nft_wallet/test_nft_wallet.py tests/wallet/nft_wallet/test_ownership_outer_puzzle.py
+
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
