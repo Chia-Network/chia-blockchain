@@ -109,6 +109,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uncurried_nft.owner_did,
         uncurried_nft.owner_pubkey,
         uncurried_nft.trade_price_percentage,
+        uncurried_nft.royalty_address,
         data_uris,
         uncurried_nft.data_hash.as_python(),
         meta_uris,
