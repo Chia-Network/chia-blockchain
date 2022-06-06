@@ -82,33 +82,23 @@ class DBWrapper2:
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
-
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            try:
-                yield self._write_connection
-            except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
-                raise
-            finally:
-                # rollback to a savepoint doesn't cancel the transaction, it
-                # just rolls back the state. We need to cancel it regardless
-                await self._write_connection.execute(f"RELEASE {name}")
+            # but we only use a single transaction at the outer-most lock of the
+            # writer thread
+            yield self._write_connection
             return
 
         async with self._lock:
 
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
+            await self._write_connection.execute("BEGIN TRANSACTION")
             try:
                 self._current_writer = task
                 yield self._write_connection
             except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
+                await self._write_connection.execute("ROLLBACK")
                 raise
             finally:
                 self._current_writer = None
-                await self._write_connection.execute(f"RELEASE {name}")
+                await self._write_connection.commit()
 
     @contextlib.asynccontextmanager
     async def read_db(self) -> AsyncIterator[aiosqlite.Connection]:

@@ -101,33 +101,6 @@ async def test_writers_nests() -> None:
 
 
 @pytest.mark.asyncio
-async def test_partial_failure() -> None:
-    values = []
-    async with DBConnection(2) as db_wrapper:
-        await setup_table(db_wrapper)
-        async with db_wrapper.write_db() as conn1:
-            await conn1.execute("UPDATE counter SET value = 42")
-            async with conn1.execute("SELECT value FROM counter") as cursor:
-                values.append(await get_value(cursor))
-            try:
-                async with db_wrapper.write_db() as conn2:
-                    await conn2.execute("UPDATE counter SET value = 1337")
-                    async with conn1.execute("SELECT value FROM counter") as cursor:
-                        values.append(await get_value(cursor))
-                    # this simulates a failure, which will cause a rollback of the
-                    # write we just made, back to 42
-                    raise RuntimeError("failure within a sub-transaction")
-            except RuntimeError:
-                # we expect to get here
-                values.append(1)
-            async with conn1.execute("SELECT value FROM counter") as cursor:
-                values.append(await get_value(cursor))
-
-    # the write of 1337 failed, and was restored to 42
-    assert values == [42, 1337, 1, 42]
-
-
-@pytest.mark.asyncio
 async def test_readers_nests() -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
