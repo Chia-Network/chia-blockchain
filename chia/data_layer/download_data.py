@@ -95,8 +95,7 @@ async def insert_from_delta_file(
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as resp:
-                    if resp.status != 200:
-                        raise RuntimeError("Didn't get 200 response status.")
+                    resp.raise_for_status()
 
                     target_filename = os.path.join(client_foldername, filename)
                     with open(target_filename, "wb") as writer:
