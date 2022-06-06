@@ -81,11 +81,13 @@ export default function NFTGallery() {
             flexGrow={1}
             gap={1}
           >
+            {/*
             <Search
               onChange={setSearch}
               value={search}
               placeholder={t(defineMessage({ message: `Search...` }))}
             />
+            */}
             {/*
             <NFTContextualActions selection={selection} />
             */}
