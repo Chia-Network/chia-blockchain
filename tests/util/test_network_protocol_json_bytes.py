@@ -11,7 +11,6 @@ from tests.util.build_network_protocol_files import get_network_protocol_filenam
 from tests.util.network_protocol_data import module_to_name_to_instance
 
 
-# TODO: CAMPid 09431708598989839831480984342780971034
 @pytest.fixture(
     name="name_and_instance",
     params=[
