@@ -94,18 +94,30 @@ def all_protocol_serializations_fixture() -> SerializedProtocolData:
     )
 
 
-def test_all_sources_match_module_names(
+# TODO: this doesn't check the contents are proper, just the group names
+def test_serializations_match_module_names(
     all_protocol_modules: ModuleProtocolData,
-    all_protocol_instances: InstanceProtocolData,
     all_protocol_serializations: SerializedProtocolData,
 ) -> None:
     module_names = sorted(module.__name__.rpartition(".")[2] for module in all_protocol_modules)
     # TODO: handle shared_protocol instead of ignoring it
     module_names.remove("shared_protocol")
-    instance_group_names = sorted(all_protocol_instances.keys())
     serializations_group_names = sorted(all_protocol_serializations.keys())
 
-    assert module_names == instance_group_names == serializations_group_names
+    assert module_names == serializations_group_names
+
+
+# TODO: this doesn't check the contents are proper, just the group names
+def test_instances_match_module_names(
+    all_protocol_modules: ModuleProtocolData,
+    all_protocol_instances: InstanceProtocolData,
+) -> None:
+    module_names = sorted(module.__name__.rpartition(".")[2] for module in all_protocol_modules)
+    # TODO: handle shared_protocol instead of ignoring it
+    module_names.remove("shared_protocol")
+    instance_group_names = sorted(all_protocol_instances.keys())
+
+    assert module_names == instance_group_names
 
 
 # TODO: deal with todos inside and remove the xfail
@@ -138,3 +150,15 @@ def test_all_sources_match_message_names(
 
 # TODO: provide testing of state machine messages
 # https://github.com/Chia-Network/chia-blockchain/blob/8665e21fd71a4d0a15fae2f9f9c94f395597bc64/tests/util/test_network_protocol_test.py#L29-L40
+
+
+def test_message_types_match_serializations(all_protocol_serializations: SerializedProtocolData) -> None:
+    from chia.protocols.protocol_message_types import ProtocolMessageTypes
+
+    serialization_message_names = sorted(
+        name
+        for group_name, name_to_serialization in all_protocol_serializations.items()
+        for name in name_to_serialization.keys()
+    )
+
+    assert serialization_message_names == sorted(type.name for type in ProtocolMessageTypes)
