@@ -572,7 +572,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         try:
             uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-        except Exception:
+        except Exception as e:
             # This is not a NFT coin, skip NFT handling
             pass
         else:

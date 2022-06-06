@@ -123,6 +123,7 @@ class NFTWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+        self.did_id = self.nft_wallet_info.did_id
         return self
 
     @classmethod
@@ -476,6 +477,7 @@ class NFTWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(full_spend).items()),
         )
+        self.log.info("Minting NFT with hint:%s", nft_record.memos)
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
 
@@ -532,7 +534,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = [],
     ) -> TransactionRecord:
         # Update NFT status
-        await self.update_coin_status(nft_coin_info.coin.name(), True)
+
         coin = nft_coin_info.coin
         amount = coin.amount
         if not additional_bundles:
@@ -596,6 +598,7 @@ class NFTWallet:
         inner_solution = Program.to([solution_for_conditions(condition_list), 1])
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, [puzzle_hash], fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
@@ -622,6 +625,7 @@ class NFTWallet:
             fee,
         )
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_transferred", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
