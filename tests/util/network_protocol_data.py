@@ -677,7 +677,7 @@ module_to_name_to_instance: Dict[str, Dict[str, Streamable]] = {
     },
     "harvester_protocol": {
         "pool_difficulty": pool_difficulty,
-        "harvester_handhsake": harvester_protocol.HarvesterHandshake(
+        "harvester_handshake": harvester_protocol.HarvesterHandshake(
             [
                 G1Element(
                     bytes.fromhex(

@@ -1813,7 +1813,7 @@
         "sub_slot_iters": 12852879676624401630,
         "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886"
     },
-    "harvester_handhsake": {
+    "harvester_handshake": {
         "farmer_public_keys": [
             "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ],
