@@ -45,8 +45,6 @@ from tests.util.socket import find_available_listen_port
 from tests.wallet_tools import WalletTool
 
 
-
-
 @pytest.fixture(scope="session")
 def get_keychain():
     with TempKeyring() as keychain:
@@ -644,5 +642,5 @@ async def setup_node_rpc(
 
 
 @pytest.fixture(scope="module")
-def wallet_a(bt):
+def wallet_a(bt) -> WalletTool:
     return bt.get_pool_wallet_tool()
