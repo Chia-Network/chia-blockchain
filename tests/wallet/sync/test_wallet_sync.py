@@ -118,6 +118,18 @@ class TestWalletSync:
         )
         assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
+    @pytest.mark.parametrize(
+        "two_wallet_nodes",
+        [
+            dict(
+                disable_capabilities=[Capability.BLOCK_HEADERS],
+            ),
+            dict(
+                disable_capabilities=[Capability.BASE],
+            ),
+        ],
+        indirect=True,
+    )
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets = two_wallet_nodes
