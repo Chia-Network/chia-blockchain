@@ -71,6 +71,4 @@ def test_protocol_from_bytes_matches_instance(name: str, instance: Streamable, i
 
 def test_protocol_to_bytes_matches(name: str, instance: Streamable, input_bytes: Dict[str, bytes]) -> None:
     message_bytes = input_bytes[name]
-    message = type(instance).from_bytes(message_bytes)
-    assert bytes(message) == bytes(instance)
-    # TODO: what about assert message_bytes == bytes(instance)?
+    assert message_bytes == bytes(instance)
