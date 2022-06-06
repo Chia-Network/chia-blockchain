@@ -258,7 +258,7 @@ class DataLayer:
         root = await self.data_store.get_tree_root(tree_id=store_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
-            self.log.error(f"No singletor record found for {store_id}.")
+            self.log.error(f"No singleton record found for: {store_id}")
             return
         max_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
