@@ -96,18 +96,18 @@ class TestWalletSync:
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), False)
         )
-        assert msg is None
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(10), uint32(8), True)
         )
-        assert msg is None
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
         # test for 128 blocks to fetch at once limit
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(10), uint32(140), True)
         )
-        assert msg is None
+        assert msg.type == ProtocolMessageTypes.reject_block_headers.value
 
         msg = await full_node_api.request_block_headers(
             wallet_protocol.RequestBlockHeaders(uint32(90), uint32(160), False)
