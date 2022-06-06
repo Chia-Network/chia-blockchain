@@ -90,6 +90,7 @@ class WalletPuzzleStore:
         try:
             sql_records = []
             for record in records:
+                log.debug("Adding derivation record: %s", record)
                 self.all_puzzle_hashes.add(record.puzzle_hash)
                 if record.hardened:
                     hardened = 1

@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
 from typing import Any, Callable, List, Optional, Tuple
@@ -22,7 +22,7 @@ from chia.server.start_service import Service
 from chia.server.ws_connection import ProtocolMessageTypes
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint8, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
@@ -390,7 +390,9 @@ async def test_sync_invalid(environment: Environment) -> None:
     for i in range(len(env.harvesters)):
         env.expected[i].add_valid([env.dir_invalid.plot_info_list()[0]])
         env.expected[i].remove_invalid([env.dir_invalid.path_list()[0]])
-        env.harvesters[i].plot_manager.refresh_parameter.retry_invalid_seconds = 0
+        env.harvesters[i].plot_manager.refresh_parameter = replace(
+            env.harvesters[i].plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+        )
     await env.run_sync_test()
     for i in [0, 1]:
         remove_plot_directory(env.harvesters[i].root_path, str(env.dir_invalid.path))

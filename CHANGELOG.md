@@ -263,6 +263,7 @@ This release also includes several important performance improvements as a resul
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
 
+
 ## 1.2.10 Chia blockchain 2021-10-25
 
 We have some great improvements in this release: We launched our migration of keys to a common encrypted keyring.yaml file, and we secure this with an optional passphrase in both GUI and CLI. We've added a passphrase hint in case you forget your passphrase. More info on our [wiki](https://github.com/Chia-Network/chia-blockchain/wiki/Passphrase-Protected-Chia-Keys-and-Key-Storage-Migration). We also launched a new Chialisp compiler in clvm_tools_rs which substantially improves compile time for Chialisp developers. We also addressed a widely reported issue in which a system failure, such as a power outage, would require some farmers to sync their full node from zero. This release also includes several other improvements and fixes.
