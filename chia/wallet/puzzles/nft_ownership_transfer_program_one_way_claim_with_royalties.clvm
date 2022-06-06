@@ -16,9 +16,8 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
-  (defconstant NEW_OWNER -10)
-  (defconstant MAGIC_AGGSIG -25)
   (defconstant TEN_THOUSAND 10000)
+  (defconstant ANNOUNCEMENT_SUFFIX 0x3eb26bfb4417ad22)  ; LAst 8 bytes of (sha256 "nft ownership transfer program w/ royalties")
 
   (defun sha256tree1
          (TREE)
@@ -27,6 +26,15 @@
              (sha256 ONE TREE)
          )
   )
+
+  (defmacro and ARGS
+   (if ARGS
+       (qq (if (unquote (f ARGS))
+           (unquote (c and (r ARGS)))
+           ()
+           ))
+       1)
+   )
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
@@ -97,11 +105,19 @@
     (defun loop_through_conditions (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions odd_create_coin new_owner_condition)
       (if conditions
         (if (= (f (f conditions)) CREATE_COIN)
-          (if (logand (f (r (r (f conditions)))) ONE)
-            (check_found_values Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f conditions) new_owner_condition)
-            (c (f conditions) (loop_through_conditions P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (r conditions) odd_create_coin new_owner_condition))
-          )
-          (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin new_owner_condition)
+            (if (logand (f (r (r (f conditions)))) ONE)
+              (check_found_values Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f conditions) new_owner_condition)
+              (c (f conditions) (loop_through_conditions P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (r conditions) odd_create_coin new_owner_condition))
+            )
+            (if (and
+                  ; check for a banned announcement
+                  (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+                  (strlen (f (r (f conditions))) 40)
+                  (= (logior (f (r (f conditions))) ANNOUNCEMENT_SUFFIX) (f (r (f conditions))))
+                )
+                (x)
+                (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin new_owner_condition)
+            )
         )
         (x "no create coins")
       )
@@ -109,6 +125,11 @@
 
     ; main
 
-    (list new_owner 0 (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions 0 (list new_owner trade_price new_pk tp_solution)))
+    (list new_owner 0
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT (concat (sha256tree1 (list new_owner trade_price new_pk)) ANNOUNCEMENT_SUFFIX))
+        (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions 0 (list new_owner trade_price new_pk tp_solution))
+      )
+    )
 
 )
