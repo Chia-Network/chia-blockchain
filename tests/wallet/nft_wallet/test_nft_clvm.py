@@ -148,16 +148,17 @@ def test_transfer_program() -> None:
     assert res.first().as_atom() == new_owner
     assert res.rest().first().as_int() == 0
     conditions = res.rest().rest().first()
-    assert conditions.first().first().as_int() == 51
-    assert conditions.first().rest().rest().first().as_int() == 1
-    assert conditions.rest().rest().first().first().as_int() == 63
+    assert conditions.rest().first().first().as_int() == 51
+    assert conditions.rest().first().rest().rest().first().as_int() == 1
+    assert conditions.rest().rest().rest().first().first().as_int() == 63
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (new_owner, LAUNCHER_PUZZLE_HASH)))
     new_owner_coin_puzhash = SINGLETON_MOD.curry(SINGLETON_STRUCT, "new_owner_inner").get_tree_hash()
     assert (
-        conditions.rest().rest().first().rest().first().as_atom() == Announcement(new_owner_coin_puzhash, nft_id).name()
+        conditions.rest().rest().rest().first().rest().first().as_atom()
+        == Announcement(new_owner_coin_puzhash, nft_id).name()
     )
-    assert conditions.rest().rest().rest().first().first().as_int() == 51
-    assert conditions.rest().rest().rest().first().rest().rest().first().as_int() == 40
+    assert conditions.rest().rest().rest().rest().first().first().as_int() == 51
+    assert conditions.rest().rest().rest().rest().first().rest().rest().first().as_int() == 40
 
     conditions = NFT_GRAFTROOT_TRANSFER.curry(
         Program.to([[60, bytes32([0] * 32)]]),
@@ -169,6 +170,7 @@ def test_transfer_program() -> None:
     assert res.rest().first().as_int() == 0
 
     # TODO: check for the announcement.  This is broken currently.
+    # TODO: Add a test where the inner puzzle tries to create a banned announcement
 
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
@@ -207,8 +209,8 @@ def test_ownership_layer() -> None:
     ]
     solution = Program.to([solution_for_conditions(condition_list)])
     cost, res = curried_ownership_layer.run_with_cost(INFINITE_COST, solution)
-    assert res.first().first().as_int() == 51
-    assert res.first().rest().rest().first().as_int() == 1
+    assert res.rest().first().first().as_int() == 51
+    assert res.rest().first().rest().rest().first().as_int() == 1
     curried_inner = STANDARD_PUZZLE_MOD.curry(destination)
     curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
@@ -216,10 +218,10 @@ def test_ownership_layer() -> None:
         curried_tp,
         curried_inner,
     )
-    assert res.first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
-    assert res.first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
-    assert res.rest().rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().rest().first().rest().rest().first().as_int() == 40
+    assert res.rest().first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
+    assert res.rest().first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
+    assert res.rest().rest().rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().rest().rest().first().rest().rest().first().as_int() == 40
 
 
 def test_full_stack() -> None:
@@ -277,8 +279,8 @@ def test_full_stack() -> None:
         ]
     )
     cost, res = curried_state_layer.run_with_cost(INFINITE_COST, solution)
-    assert res.rest().first().first().as_int() == 51
-    assert res.rest().first().rest().rest().first().as_int() == 1
+    assert res.rest().rest().first().first().as_int() == 51
+    assert res.rest().rest().first().rest().rest().first().as_int() == 1
     curried_inner = STANDARD_PUZZLE_MOD.curry(destination)
     curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
         NFT_OWNERSHIP_LAYER.get_tree_hash(),
@@ -292,5 +294,5 @@ def test_full_stack() -> None:
         NFT_METADATA_UPDATER_UPDATEABLE.get_tree_hash(),
         curried_ownership_layer,
     )
-    assert res.rest().first().rest().first().as_atom() == curried_state_layer.get_tree_hash()
-    assert res.rest().first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
+    assert res.rest().rest().first().rest().first().as_atom() == curried_state_layer.get_tree_hash()
+    assert res.rest().rest().first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
