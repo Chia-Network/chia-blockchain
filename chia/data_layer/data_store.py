@@ -3,7 +3,7 @@ import aiosqlite
 import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Any
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
