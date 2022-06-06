@@ -4,8 +4,8 @@ from clvm_tools.binutils import assemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, get_inner_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.nft_wallet.ownership_outer_puzzle import puzzle_for_ownership_layer
+from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, get_inner_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 
