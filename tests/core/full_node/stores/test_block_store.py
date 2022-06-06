@@ -328,10 +328,10 @@ async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
 
         if db_version < 2:
             with pytest.raises(AssertionError):
-                full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 9)
+                await store_2.get_block_bytes_in_range(0, 9)
         else:
             full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 9)
             assert full_blocks_by_height == [bytes(b) for b in blocks]
 
             with pytest.raises(ValueError):
-                full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 10)
+                await store_2.get_block_bytes_in_range(0, 10)
