@@ -1,4 +1,5 @@
 import logging
+import sqlite3
 from typing import Dict, List, Optional, Tuple, Any
 
 import zstd
@@ -548,7 +549,10 @@ class BlockStore:
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
                 (start, stop),
             ) as cursor:
-                return [maybe_decompress_blob(row[0]) for row in await cursor.fetchall()]
+                rows: List[sqlite3.Row] = list(await cursor.fetchall())
+                if len(rows) != (stop - start) + 1:
+                    raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
+                return [maybe_decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 

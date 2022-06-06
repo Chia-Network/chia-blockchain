@@ -305,3 +305,33 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
 
         with pytest.raises(AssertionError):
             await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * 1000)
+
+
+@pytest.mark.asyncio
+async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
+    assert sqlite3.threadsafety == 1
+    blocks = bt.get_consecutive_blocks(10)
+
+    async with DBConnection(db_version) as db_wrapper_2:
+
+        # Use a different file for the blockchain
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
+
+        await BlockStore.create(db_wrapper_2)
+
+        # Save/get block
+        for block in blocks:
+            await _validate_and_add_block(bc, block)
+
+        if db_version < 2:
+            with pytest.raises(AssertionError):
+                full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 9)
+        else:
+            full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 9)
+            assert full_blocks_by_height == [bytes(b) for b in blocks]
+
+            with pytest.raises(ValueError):
+                full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 10)
