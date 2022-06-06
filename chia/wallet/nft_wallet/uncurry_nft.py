@@ -64,10 +64,17 @@ class UncurriedNFT:
 
     p2_puzzle: Program
     """p2 puzzle of the owner, either for ownership layer or standard"""
+
     # ownership layer fields
     owner_did: Optional[bytes32]
     """Owner's DID"""
+
+    supports_did: bool
+    """If the inner puzzle support the DID"""
+
     owner_pubkey: Optional[G1Element]
+    """Owner's Pubkey in the P2 puzzle"""
+
     nft_inner_puzzle_hash: Optional[bytes32]
     """Puzzle hash of the ownership layer inner puzzle """
 
@@ -141,15 +148,21 @@ class UncurriedNFT:
             royalty_percentage = None
             nft_inner_puzzle_mod = None
             mod, ol_args = inner_puzzle.uncurry()
+            supports_did = False
             if mod == NFT_OWNERSHIP_LAYER:
+                supports_did = True
                 log.debug("Parsing ownership layer")
                 _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
                 _, p2_args = p2_puzzle.uncurry()
                 (pubkey_sexp,) = p2_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, _, royalty_address, royalty_percentage, _, _ = transfer_program_args.as_iter()
+                _, _, royalty_address_p, royalty_percentage, _, _ = transfer_program_args.as_iter()
                 royalty_percentage = uint16(royalty_percentage.as_int())
+                royalty_address = royalty_address_p.atom
                 current_did = current_did.atom
+                if current_did == b"":
+                    # For unassigned NFT, set owner DID to None
+                    current_did = None
                 pubkey = pubkey_sexp.atom
             else:
                 log.debug("Creating a standard NFT puzzle")
@@ -175,8 +188,8 @@ class UncurriedNFT:
             series_number=series_number,
             series_total=series_total,
             inner_puzzle=inner_puzzle,
-            # TODO: Set/Remove following fields after NFT1 implemented
             owner_did=current_did,
+            supports_did=supports_did,
             owner_pubkey=pubkey,
             transfer_program=transfer_program,
             transfer_program_curry_params=transfer_program_args,
