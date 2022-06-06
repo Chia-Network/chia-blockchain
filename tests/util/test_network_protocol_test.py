@@ -1,5 +1,5 @@
-# flake8: noqa
-from typing import Any, List, Set
+from types import ModuleType
+from typing import List, Set
 
 from chia.protocols import (
     farmer_protocol,
@@ -16,7 +16,7 @@ from chia.protocols import (
 # stays up to date. It's a test for the test
 
 
-def types_in_module(mod: Any) -> Set[str]:
+def types_in_module(mod: ModuleType) -> Set[str]:
     ret: List[str] = []
     mod_name = mod.__name__
     for sym in dir(mod):
@@ -32,12 +32,15 @@ def test_missing_messages_state_machine() -> None:
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
-    assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 10
-    ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
-    assert (
-        len(NO_REPLY_EXPECTED) == 7
-    ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
+    assert len(VALID_REPLY_MESSAGE_MAP) == 10, (
+        "A message was added to the protocol state machine."
+        " Make sure to update the protocol message regression test to include the new message."
+    )
+
+    assert len(NO_REPLY_EXPECTED) == 7, (
+        "A message was added to the protocol state machine."
+        " Make sure to update the protocol message regression test to include the new message."
+    )
 
 
 def test_missing_messages() -> None:
@@ -165,34 +168,42 @@ def test_missing_messages() -> None:
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
-    assert (
-        types_in_module(wallet_protocol) == wallet_msgs
-    ), "message types were added or removed from wallet_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(wallet_protocol) == wallet_msgs, (
+        "Message types were added or removed from wallet_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(farmer_protocol) == farmer_msgs
-    ), "message types were added or removed from farmer_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(farmer_protocol) == farmer_msgs, (
+        "Message types were added or removed from farmer_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(full_node_protocol) == full_node_msgs
-    ), "message types were added or removed from full_node_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(full_node_protocol) == full_node_msgs, (
+        "Message types were added or removed from full_node_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(harvester_protocol) == harvester_msgs
-    ), "message types were added or removed from harvester_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(harvester_protocol) == harvester_msgs, (
+        "Message types were added or removed from harvester_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(introducer_protocol) == introducer_msgs
-    ), "message types were added or removed from introducer_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(introducer_protocol) == introducer_msgs, (
+        "Message types were added or removed from introducer_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(pool_protocol) == pool_msgs
-    ), "message types were added or removed from pool_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(pool_protocol) == pool_msgs, (
+        "Message types were added or removed from pool_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(timelord_protocol) == timelord_msgs
-    ), "message types were added or removed from timelord_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(timelord_protocol) == timelord_msgs, (
+        "Message types were added or removed from timelord_protocol. "
+        "Make sure to update the protocol message regression test to include the new message"
+    )
 
-    assert (
-        types_in_module(shared_protocol) == shared_msgs
-    ), "message types were added or removed from shared_protocol. Make sure to update the protocol message regression test to include the new message"
+    assert types_in_module(shared_protocol) == shared_msgs, (
+        "Message types were added or removed from shared_protocol."
+        " Make sure to update the protocol message regression test to include the new message"
+    )

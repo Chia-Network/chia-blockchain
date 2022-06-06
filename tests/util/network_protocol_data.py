@@ -1,5 +1,3 @@
-# flake8: noqa
-
 from typing import Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -384,7 +382,7 @@ sub_epoch_summary = SubEpochSummary(
 
 
 name_to_instance: Dict[str, Streamable] = {
-    ### FARMER PROTOCOL
+    # FARMER PROTOCOL
     "new_signage_point": farmer_protocol.NewSignagePoint(
         bytes32(bytes.fromhex("34b2a753b0dc864e7218f8facf23ca0e2b636351df5289b76f5845d9a78b7026")),
         bytes32(bytes.fromhex("9dc8b9d685c79acdf8780d994416dfcfb118e0adc99769ecfa94e1f40aa5bbe5")),
@@ -443,7 +441,7 @@ name_to_instance: Dict[str, Streamable] = {
             )
         ),
     ),
-    ### FULL NODE PROTOCOL.
+    # FULL NODE PROTOCOL.
     "new_peak": full_node_protocol.NewPeak(
         bytes32(bytes.fromhex("8a346e8dc02e9b44c0571caa74fd99f163d4c5d7deae9f8ddb00528721493f7a")),
         uint32(2653549198),
@@ -540,7 +538,7 @@ name_to_instance: Dict[str, Streamable] = {
     ),
     "request_peers": full_node_protocol.RequestPeers(),
     "respond_peers": full_node_protocol.RespondPeers([timestamped_peer_info]),
-    ## WALLET PROTOCOL
+    # WALLET PROTOCOL
     "request_puzzle_solution": wallet_protocol.RequestPuzzleSolution(
         bytes32(bytes.fromhex("6edddb46bd154f50566b49c95812e0f1131a0a7162630349fc8d1d696e463e47")),
         uint32(3905474497),
@@ -674,7 +672,7 @@ name_to_instance: Dict[str, Streamable] = {
         [bytes32(bytes.fromhex("b61cb91773995e99cb8259609c0985f915a5734a1706aeab9342a2d1c5abf71b"))],
         [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
     ),
-    ### HARVESTER PROTOCOL
+    # HARVESTER PROTOCOL
     "pool_difficulty": pool_difficulty,
     "harvester_handhsake": harvester_protocol.HarvesterHandshake(
         [
@@ -736,7 +734,7 @@ name_to_instance: Dict[str, Streamable] = {
         ["str"],
         ["str"],
     ),
-    ### INTRODUCER PROTOCOL
+    # INTRODUCER PROTOCOL
     "request_peers_introducer": introducer_protocol.RequestPeersIntroducer(),
     "respond_peers_introducer": introducer_protocol.RespondPeersIntroducer(
         [
@@ -747,7 +745,7 @@ name_to_instance: Dict[str, Streamable] = {
             )
         ]
     ),
-    ### POOL PROTOCOL
+    # POOL PROTOCOL
     "authentication_payload": pool_protocol.AuthenticationPayload(
         "method",
         bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
@@ -805,7 +803,7 @@ name_to_instance: Dict[str, Streamable] = {
         uint16(47018),
         "err",
     ),
-    ### TIMELORD PROTOCOL
+    # TIMELORD PROTOCOL
     "new_peak_timelord": timelord_protocol.NewPeakTimelord(
         reward_chain_block,
         uint64(7661623532867338566),
