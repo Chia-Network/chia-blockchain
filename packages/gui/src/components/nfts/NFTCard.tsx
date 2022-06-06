@@ -56,12 +56,6 @@ export default function NFTCard(props: NFTCardProps) {
     navigate(`/dashboard/nfts/${nft.$nftId}`);
   }
 
-  const transferPending = nft.pendingTransaction;
-  const unavailableActions = transferPending
-    ? NFTContextualActionTypes.CreateOffer | NFTContextualActionTypes.Transfer
-    : NFTContextualActionTypes.None;
-  const actions = availableActions & ~unavailableActions;
-
   return (
     <Card>
       {isLoading ? (
@@ -96,7 +90,7 @@ export default function NFTCard(props: NFTCardProps) {
               {availableActions !== NFTContextualActionTypes.None && (
                 <NFTContextualActions
                   selection={{ items: [nft] }}
-                  availableActions={actions}
+                  availableActions={availableActions}
                   toggle={
                     <IconButton>
                       <MoreVert />

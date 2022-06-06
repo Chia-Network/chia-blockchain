@@ -52,7 +52,8 @@ function NFTCreateOfferContextualAction(
   const { onClose, selection } = props;
   const navigate = useNavigate();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
-  const disabled = (selection?.items.length ?? 0) !== 1;
+  const disabled =
+    (selection?.items.length ?? 0) !== 1 || selectedNft?.pendingTransaction;
 
   function handleCreateOffer() {
     if (!selectedNft) {
@@ -96,7 +97,10 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   const openDialog = useOpenDialog();
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
-  const disabled = (selection?.items.length ?? 0) !== 1;
+  const disabled =
+    (selection?.items.length ?? 0) !== 1 ||
+    !!selectedNft?.ownerDid ||
+    selectedNft?.pendingTransaction;
 
   function handleComplete(result?: NFTTransferResult) {
     if (result) {

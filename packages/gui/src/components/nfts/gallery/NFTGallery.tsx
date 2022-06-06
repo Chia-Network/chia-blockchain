@@ -38,8 +38,6 @@ export default function NFTGallery() {
     }
 
     return nfts.filter((nft) => {
-      const { walletId } = nft;
-
       if (walletId !== undefined && nft.walletId !== walletId) {
         return false;
       }
