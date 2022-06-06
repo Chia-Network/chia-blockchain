@@ -2,8 +2,10 @@ import json
 import os
 import subprocess
 import sysconfig
-from typing import Callable
+from typing import Any, Callable, Dict
 from pathlib import Path
+
+from typing_extensions import TypedDict
 
 from chia.util.streamable import Streamable
 from tests.util.network_protocol_data import module_to_name_to_instance
@@ -12,6 +14,14 @@ version = "1.0"
 
 
 tests_dir = Path(__file__).resolve().parent
+
+
+class MessageDict(TypedDict):
+    bytes: str
+    json: Dict[str, Any]
+
+
+SerializedProtocolData = Dict[str, Dict[str, MessageDict]]
 
 
 def get_network_protocol_filename() -> Path:
@@ -25,7 +35,7 @@ def visit_all_messages(visitor: Callable[[Streamable, str], None]) -> None:
 
 
 def get_protocol_data() -> str:
-    hexed = {
+    hexed: SerializedProtocolData = {
         module: {
             name: {"bytes": bytes(instance).hex(), "json": instance.to_json_dict()}
             for name, instance in name_to_instance.items()

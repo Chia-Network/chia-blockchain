@@ -381,7 +381,9 @@ sub_epoch_summary = SubEpochSummary(
 )
 
 
-module_to_name_to_instance: Dict[str, Dict[str, Streamable]] = {
+InstanceProtocolData = Dict[str, Dict[str, Streamable]]
+
+module_to_name_to_instance: InstanceProtocolData = {
     "farmer_protocol": {
         "new_signage_point": farmer_protocol.NewSignagePoint(
             bytes32(bytes.fromhex("34b2a753b0dc864e7218f8facf23ca0e2b636351df5289b76f5845d9a78b7026")),
