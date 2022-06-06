@@ -63,15 +63,6 @@ export default function NFTDetail() {
       //   label: <Trans>Token Standard</Trans>,
       //   value: nft.version,
       // },
-      nft.dataHash && {
-        key: 'dataHash',
-        label: <Trans>Data Hash</Trans>,
-        value: (
-          <Truncate tooltip copyToClipboard>
-            {nft.dataHash}
-          </Truncate>
-        ),
-      },
 
       // Moved below Description
       // metadata?.collection_name && {
@@ -95,11 +86,33 @@ export default function NFTDetail() {
       });
     }
 
-    if (nft.licenseHash) {
+    if (nft.dataHash) {
       rows.push({
-        key: 'licenseHash',
-        label: <Trans>License Hash</Trans>,
-        value: <Truncate>{nft.licenseHash}</Truncate>,
+        key: 'dataHash',
+        label: <Trans>Data Hash</Trans>,
+        value: (
+          <Truncate tooltip copyToClipboard>
+            {nft.dataHash}
+          </Truncate>
+        ),
+      });
+    }
+
+    if (nft?.metadataUris?.length) {
+      nft?.metadataUris.forEach((uri, index) => {
+        rows.push({
+          key: `metadataUris-${index}`,
+          label: <Trans>Metadata URL {index + 1}</Trans>,
+          value: uri,
+        });
+      });
+    }
+
+    if (nft.metadataHash) {
+      rows.push({
+        key: 'metadataHash',
+        label: <Trans>Metadata Hash</Trans>,
+        value: <Truncate>{nft.metadataHash}</Truncate>,
       });
     }
 
@@ -110,6 +123,14 @@ export default function NFTDetail() {
           label: <Trans>License URL {index + 1}</Trans>,
           value: uri,
         });
+      });
+    }
+
+    if (nft.licenseHash) {
+      rows.push({
+        key: 'licenseHash',
+        label: <Trans>License Hash</Trans>,
+        value: <Truncate>{nft.licenseHash}</Truncate>,
       });
     }
 

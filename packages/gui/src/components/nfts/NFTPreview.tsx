@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { Trans } from '@lingui/macro';
 import { Box } from '@mui/material';
 import { Error, NotInterested } from '@mui/icons-material';
-import { IconMessage, Loading, Flex } from '@chia/core';
+import { IconMessage, Loading, Flex, SandboxedIframe } from '@chia/core';
 import styled from 'styled-components';
 import useNFTHash from '../../hooks/useNFTHash';
 import { type NFTInfo } from '@chia/api';
@@ -108,8 +108,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
     return [undefined, false];
   }, [nft, isValid, error]);
 
-  function handleLoad() {
-    setLoaded(true);
+  function handleLoadedChange(loadedValue) {
+    setLoaded(loadedValue);
   }
 
   return (
@@ -148,13 +148,11 @@ export default function NFTPreview(props: NFTPreviewProps) {
               </Loading>
             </Flex>
           )}
-          <StyledIframe
+          <SandboxedIframe
             srcDoc={srcDoc}
-            sandbox=""
             height={height}
-            frameBorder="0"
-            onLoad={handleLoad}
-            isVisible={loaded}
+            onLoadedChange={handleLoadedChange}
+            hideUntilLoaded
           />
         </>
       )}
