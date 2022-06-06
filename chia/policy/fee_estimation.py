@@ -1,4 +1,3 @@
-
 class FeeMempoolInfo:
     """
     Information from Mempool and MempoolItems needed to estimate fees.
@@ -14,6 +13,7 @@ class FeeBlockInfo:
     """
     Information from Blockchain needed to estimate fees.
     """
+
     pass
 
 
@@ -21,8 +21,5 @@ class FeeRate:
     """
     Represents Fee in XCH per CLVM Cost. Performs XCH/mojo conversion
     """
+
     pass
-
-
-
-
