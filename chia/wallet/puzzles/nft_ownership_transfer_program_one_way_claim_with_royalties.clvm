@@ -68,11 +68,17 @@
 
   ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
   (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id)
-      (if trade_prices_list
+      (if (all trade_prices_list ROYALTY_ADDRESS)
           (c
-              (if (r (f trade_prices_list))
-                  (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH) (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))))))
-                  (list CREATE_COIN ROYALTY_ADDRESS (round_down_to_even (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))
+              (list
+                ASSERT_PUZZLE_ANNOUNCEMENT
+                (sha256
+                  (if (r (f trade_prices_list))
+                      (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH)
+                      SETTLEMENT_MOD_HASH
+                  )
+                  (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))))
+                )
               )
               (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
           )
