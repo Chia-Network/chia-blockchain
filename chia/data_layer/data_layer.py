@@ -188,13 +188,13 @@ class DataLayer:
             await self.data_store.create_tree(tree_id=tree_id)
         for ip, port in zip(subscription.ip, subscription.port):
             root = await self.data_store.get_tree_root(tree_id=tree_id)
-            if root.generation > int(singleton_record.generation):
+            if root.generation > singleton_record.generation:
                 self.log.info(
-                    f"Fetch data: local DL store is ahead of chain generation for {tree_id}. "
-                    "Most likely waiting for our batch update to be confirmed on chain."
+                    "Fetch data: local DL store is ahead of chain generation. "
+                    f"Most likely waiting for our batch update to be confirmed on chain. Tree ID: {tree_id}"
                 )
                 break
-            if root.generation == int(singleton_record.generation):
+            if root.generation == singleton_record.generation:
                 self.log.info(f"Fetch data: wallet generation matching on-chain generation: {tree_id}.")
                 break
 
@@ -241,7 +241,7 @@ class DataLayer:
         if singleton_record is None:
             return
         root = await self.data_store.get_tree_root(tree_id=tree_id)
-        publish_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
+        publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
@@ -260,7 +260,7 @@ class DataLayer:
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
             return
-        max_generation = min(int(singleton_record.generation), 0 if root is None else root.generation)
+        max_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         server_files_location = foldername if foldername is not None else self.server_files_location
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)

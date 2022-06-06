@@ -121,6 +121,18 @@ class DataStore:
 
         return self
 
+    async def insert_root(
+        self,
+        tree_id: bytes32,
+        node_hash: Optional[bytes32],
+        status: Status,
+        generation: Optional[int] = None,
+        *,
+        lock: bool = True,
+    ) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self._insert_root(tree_id, node_hash, status, generation)
+
     async def _insert_root(
         self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation: Optional[int] = None
     ) -> None:
@@ -886,10 +898,11 @@ class DataStore:
                         await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=False)
                     else:
                         await self.autoinsert(key, value, tree_id, hint_keys_values, lock=False)
-                else:
-                    assert change["action"] == "delete"
+                elif change["action"] == "delete":
                     key = change["key"]
                     await self.delete(key, tree_id, hint_keys_values, lock=False)
+                else:
+                    raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             root = await self.get_tree_root(tree_id, lock=False)
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
@@ -897,8 +910,15 @@ class DataStore:
             await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=status)
             await self.build_ancestor_table_from_root(tree_id, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
-            assert new_root.node_hash == root.node_hash
-            assert new_root.generation == old_root.generation + 1
+            if new_root.node_hash != root.node_hash:
+                raise RuntimeError(
+                    f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
+                )
+            if new_root.generation != old_root.generation + 1:
+                raise RuntimeError(
+                    "Didn't get the expected generation after batch update: "
+                    f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
+                )
 
     async def _get_one_ancestor(
         self,
@@ -1092,9 +1112,10 @@ class DataStore:
             await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, filename, lock=lock)
             await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, filename, lock=lock)
             to_write = bytes(SerializedNode(False, bytes(node.left_hash), bytes(node.right_hash)))
-        else:
-            assert isinstance(node, TerminalNode)
+        elif isinstance(node, TerminalNode):
             to_write = bytes(SerializedNode(True, node.key, node.value))
+        else:
+            raise Exception(f"Node is neither InternalNode nor TerminalNode: {node}")
 
         with open(filename, "ab") as writer:
             writer.write(len(to_write).to_bytes(4, byteorder="big"))

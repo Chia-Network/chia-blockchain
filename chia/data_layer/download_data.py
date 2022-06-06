@@ -34,13 +34,10 @@ async def insert_into_data_store_from_file(
             serialize_nodes_bytes = reader.read(size)
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
-            if serialized_node.is_terminal:
-                await data_store.insert_node(NodeType.TERMINAL, serialized_node.value1, serialized_node.value2)
-            else:
-                await data_store.insert_node(NodeType.INTERNAL, serialized_node.value1, serialized_node.value2)
+            node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
 
-    async with data_store.db_wrapper.locked_transaction(lock=True):
-        await data_store._insert_root(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
+    await data_store.insert_root(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
     await data_store.build_ancestor_table_from_root(tree_id)
 
 

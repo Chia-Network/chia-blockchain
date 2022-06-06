@@ -46,15 +46,11 @@ class DataLayerServer:
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
         file_path = os.path.join(self.server_dir, filename)
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as reader:
-                content = reader.read()
-            if content:
-                response = web.Response(
-                    content_type="application/octet-stream",
-                    headers={"Content-Disposition": "attachment;filename={}".format(filename)},
-                    body=content,
-                )
-                return response
-
-        raise RuntimeError("Couldn't find the file.")
+        with open(file_path, "rb") as reader:
+            content = reader.read()
+        response = web.Response(
+            content_type="application/octet-stream",
+            headers={"Content-Disposition": "attachment;filename={}".format(filename)},
+            body=content,
+        )
+        return response
