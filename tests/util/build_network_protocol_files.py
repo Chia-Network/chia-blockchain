@@ -2,7 +2,7 @@ import json
 import os
 import subprocess
 import sysconfig
-from typing import Callable, Any
+from typing import Callable
 from pathlib import Path
 
 from chia.util.streamable import Streamable
@@ -24,30 +24,21 @@ def visit_all_messages(visitor: Callable[[Streamable, str], None]) -> None:
             visitor(instance, name)
 
 
-def get_protocol_bytes() -> str:
+def get_protocol_data() -> str:
     hexed = {
-        module: {name: bytes(instance).hex() for name, instance in name_to_instance.items()}
+        module: {
+            name: {"bytes": bytes(instance).hex(), "json": instance.to_json_dict()}
+            for name, instance in name_to_instance.items()
+        }
         for module, name_to_instance in module_to_name_to_instance.items()
     }
 
     return json.dumps(hexed, indent=4) + "\n"
 
 
-def get_protocol_json() -> str:
-    elements = {}
-
-    def visitor(obj: Any, name: str) -> None:
-        elements[name] = obj.to_json_dict()
-
-    visit_all_messages(visitor)
-
-    return json.dumps(elements, indent=4) + "\n"
-
-
 if __name__ == "__main__":
     name_to_function = {
-        os.fspath(get_network_protocol_filename()): get_protocol_bytes,
-        "network_protocol_messages.json": get_protocol_json,
+        os.fspath(get_network_protocol_filename()): get_protocol_data,
     }
 
     scripts_path = Path(sysconfig.get_path("scripts"))
