@@ -9,6 +9,7 @@ import { Offers as OffersIcon } from '@chia/icons';
 import { ListItemIcon, MenuItem, Typography } from '@mui/material';
 import {
   ArrowForward as TransferIcon,
+  Fingerprint as FingerprintIcon,
   Link as LinkIcon,
   OpenInBrowser,
 } from '@mui/icons-material';
@@ -26,19 +27,65 @@ import isURL from 'validator/lib/isURL';
 
 export enum NFTContextualActionTypes {
   None = 0,
-  CreateOffer = 1 << 0, // 1
-  Transfer = 1 << 1, // 2
-  ViewOnExplorer = 1 << 2, // 4
-  OpenInBrowser = 1 << 3, // 8
-  CopyURL = 1 << 4, // 16
+  CopyNFTId = 1 << 0, // 1
+  CreateOffer = 1 << 1, // 2
+  Transfer = 1 << 2, // 4
+  ViewOnExplorer = 1 << 3, // 8
+  OpenInBrowser = 1 << 4, // 16
+  CopyURL = 1 << 5, // 32
 
-  All = CreateOffer | Transfer | ViewOnExplorer | OpenInBrowser | CopyURL,
+  All = CopyNFTId |
+    CreateOffer |
+    Transfer |
+    ViewOnExplorer |
+    OpenInBrowser |
+    CopyURL,
 }
 
 type NFTContextualActionProps = {
   onClose: () => void;
   selection?: NFTSelection;
 };
+
+/* ========================================================================== */
+/*                             Copy NFT ID Action                             */
+/* ========================================================================== */
+
+type NFTCopyNFTIdContextualActionProps = NFTContextualActionProps;
+
+function NFTCopyNFTIdContextualAction(
+  props: NFTCopyNFTIdContextualActionProps,
+) {
+  const { onClose, selection } = props;
+  const [, copyToClipboard] = useCopyToClipboard();
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled = (selection?.items.length ?? 0) !== 1;
+
+  function handleCopy() {
+    if (!selectedNft) {
+      throw new Error('No NFT selected');
+    }
+
+    copyToClipboard(selectedNft.$nftId);
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleCopy();
+      }}
+      disabled={disabled}
+    >
+      <ListItemIcon>
+        <FingerprintIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Copy NFT ID</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
 
 /* ========================================================================== */
 /*                             Create Offer Action                            */
@@ -300,6 +347,10 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
 
   const actions = useMemo(() => {
     const actionComponents = {
+      [NFTContextualActionTypes.CopyNFTId]: {
+        action: NFTCopyNFTIdContextualAction,
+        props: {},
+      },
       [NFTContextualActionTypes.CreateOffer]: {
         action: NFTCreateOfferContextualAction,
         props: {},
