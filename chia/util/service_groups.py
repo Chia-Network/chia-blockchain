@@ -5,7 +5,7 @@ SERVICES_FOR_GROUP = {
         "chia_harvester chia_timelord_launcher chia_timelord chia_farmer chia_full_node chia_wallet chia_data_layer"
     ).split(),
     # TODO: should this be `data_layer`?
-    "data": "chia_data_layer".split(),
+    "data": "chia_wallet chia_data_layer".split(),
     "node": "chia_full_node".split(),
     "harvester": "chia_harvester".split(),
     "farmer": "chia_harvester chia_farmer chia_full_node chia_wallet".split(),
