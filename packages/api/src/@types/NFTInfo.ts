@@ -1,19 +1,23 @@
 type NFTInfo = {
+  chainInfo: string;
+  dataHash: string;
+  dataUris: string[];
   launcherId: string;
   launcherPuzhash: string;
-  nftCoinId: string;
-  didOwner: string;
-  royalty: number;
-  dataUris: string[];
-  dataHash: string;
-  metadataUris: string[];
-  metadataHash: string;
-  licenseUris: string[];
   licenseHash: string;
+  licenseUris: string[];
+  metadataHash: string;
+  metadataUris: string[];
+  mintHeight: number;
+  nftCoinId: string;
+  ownerDid: string;
+  ownerPubkey: string;
   pendingTransaction: number;
+  royaltyPercentage: number; // e.g. 1750 == 1.75%
+  royaltyPuzzleHash: string;
   seriesNumber: number;
   seriesTotal: number;
-  chainInfo: string;
+  supportsDid: boolean;
   updaterPuzhash: string;
 
   // Properties added by the frontend
