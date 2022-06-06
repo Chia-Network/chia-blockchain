@@ -5,7 +5,8 @@ import sysconfig
 from typing import Callable, Any
 from pathlib import Path
 
-from tests.util.network_protocol_data import name_to_instance
+from chia.util.streamable import Streamable
+from tests.util.network_protocol_data import module_to_name_to_instance
 
 version = "1.0"
 
@@ -17,22 +18,19 @@ def get_network_protocol_filename() -> Path:
     return tests_dir / Path(f"protocol_messages_bytes-v{version}.json")
 
 
-def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
-    for name, instance in name_to_instance.items():
-        visitor(instance, name)
+def visit_all_messages(visitor: Callable[[Streamable, str], None]) -> None:
+    for module, name_to_instance in module_to_name_to_instance.items():
+        for name, instance in name_to_instance.items():
+            visitor(instance, name)
 
 
 def get_protocol_bytes() -> str:
+    hexed = {
+        module: {name: bytes(instance).hex() for name, instance in name_to_instance.items()}
+        for module, name_to_instance in module_to_name_to_instance.items()
+    }
 
-    result = {}
-
-    def visitor(obj: Any, name: str) -> None:
-        nonlocal result
-        result[name] = bytes(obj).hex()
-
-    visit_all_messages(visitor)
-
-    return json.dumps(result, indent=4) + "\n"
+    return json.dumps(hexed, indent=4) + "\n"
 
 
 def get_protocol_json() -> str:

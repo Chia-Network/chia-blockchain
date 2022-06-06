@@ -8,14 +8,18 @@ from _pytest.fixtures import SubRequest
 
 from chia.util.streamable import Streamable
 from tests.util.build_network_protocol_files import get_network_protocol_filename
-from tests.util.network_protocol_data import name_to_instance
+from tests.util.network_protocol_data import module_to_name_to_instance
 
 
 # TODO: CAMPid 09431708598989839831480984342780971034
 @pytest.fixture(
     name="name_and_instance",
-    params=[(name, instance) for name, instance in name_to_instance.items()],
-    ids=list(name_to_instance.keys()),
+    params=[
+        (name, instance)
+        for module, name_to_instance in module_to_name_to_instance.items()
+        for name, instance in name_to_instance.items()
+    ],
+    ids=lambda param: param[0],  # type: ignore[no-any-return]
 )
 def name_and_instance_fixture(request: SubRequest) -> Tuple[str, Streamable]:
     return request.param  # type: ignore[no-any-return]
@@ -36,7 +40,11 @@ def instance_fixture(name_and_instance: Tuple[str, Streamable]) -> Streamable:
 @pytest.fixture(name="input_bytes")
 def input_bytes_fixture() -> Dict[str, Any]:
     input_bytes_hex = json.loads(get_network_protocol_filename().read_text())
-    input_bytes = {key: bytes.fromhex(value) for key, value in input_bytes_hex.items()}
+    input_bytes = {
+        name: bytes.fromhex(instance)
+        for module, name_to_instance in input_bytes_hex.items()
+        for name, instance in name_to_instance.items()
+    }
     return input_bytes
 
 
