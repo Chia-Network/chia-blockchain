@@ -157,8 +157,7 @@ def test_transfer_program() -> None:
         conditions.rest().rest().rest().first().rest().first().as_atom()
         == Announcement(new_owner_coin_puzhash, nft_id).name()
     )
-    assert conditions.rest().rest().rest().rest().first().first().as_int() == 51
-    assert conditions.rest().rest().rest().rest().first().rest().rest().first().as_int() == 40
+    assert conditions.rest().rest().rest().rest().first().first().as_int() == 63
 
     conditions = NFT_GRAFTROOT_TRANSFER.curry(
         Program.to([[60, bytes32([0] * 32)]]),
@@ -220,8 +219,7 @@ def test_ownership_layer() -> None:
     )
     assert res.rest().first().rest().first().as_atom() == curried_ownership_layer.get_tree_hash()
     assert res.rest().first().rest().rest().rest().first().first().as_atom() == curried_inner.get_tree_hash()
-    assert res.rest().rest().rest().rest().first().first().as_int() == 51
-    assert res.rest().rest().rest().rest().first().rest().rest().first().as_int() == 40
+    assert res.rest().rest().rest().rest().first().first().as_int() == 63
 
 
 def test_full_stack() -> None:
