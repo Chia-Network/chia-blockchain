@@ -477,6 +477,7 @@ class NFTWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(full_spend).items()),
         )
+        self.log.info("Minting NFT with hint:%s", nft_record.memos)
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
 
