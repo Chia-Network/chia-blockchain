@@ -215,7 +215,8 @@ class NFTWallet:
         derivation_record: Optional[
             DerivationRecord
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-        if derivation_record:
+
+        if derivation_record and not uncurried_nft.supports_did:
             p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         else:
             # we don't have this puzhash in puzzle store
@@ -251,7 +252,8 @@ class NFTWallet:
             if new_coin.puzzle_hash == child_puzzle.get_tree_hash():
                 child_coin = new_coin
                 break
-
+        else:
+            raise ValueError("Not a valid NFT")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id]
         )
@@ -422,13 +424,11 @@ class NFTWallet:
 
         bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
 
-        if not target_puzzle_hash:
-            target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
         if did_id is not None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                p2_inner_puzzle.get_tree_hash()
+                target_puzzle_hash
             )
             self.log.debug("Got back a pubkey record: %s", record)
             if not record:
@@ -477,7 +477,6 @@ class NFTWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(full_spend).items()),
         )
-        self.log.info("Minting NFT with hint:%s", nft_record.memos)
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
 
@@ -723,6 +722,7 @@ class NFTWallet:
         return await cls.create_new_nft_wallet(
             wallet_state_manager,
             wallet,
+            None,
             name,
             in_transaction,
         )

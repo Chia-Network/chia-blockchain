@@ -12,7 +12,9 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions, \
+    puzzle_for_public_key_and_hidden_puzzle_hash, puzzle_for_pk, calculate_synthetic_public_key, \
+    DEFAULT_HIDDEN_PUZZLE_HASH
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -227,7 +229,8 @@ def create_ownership_layer_transfer_solution(
         str(trade_prices_list),
         new_pubkey,
     )
-    puzhash = STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()
+    synthetic_pk: bytes = bytes(calculate_synthetic_public_key(new_pubkey, DEFAULT_HIDDEN_PUZZLE_HASH))
+    puzhash = STANDARD_PUZZLE_MOD.curry(synthetic_pk).get_tree_hash()
     condition_list = [
         [
             51,
@@ -235,7 +238,7 @@ def create_ownership_layer_transfer_solution(
             1,
             [puzhash],
         ],
-        [-10, new_did, trade_prices_list, new_pubkey, [new_did_inner_hash]],
+        [-10, new_did, trade_prices_list, synthetic_pk, [new_did_inner_hash]],
     ]
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to(

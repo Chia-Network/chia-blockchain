@@ -608,9 +608,15 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     )
     assert resp.get("success")
     sb = resp["spend_bundle"]
-
+    memos = compute_memos(sb)
+    assert memos
+    puzhashes = []
+    [puzhashes.extend(list(x)) for x in memos.values()]
+    assert len(puzhashes) > 0
+    for puzhash in puzhashes:
+        assert wallet_0.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
     # ensure hints are generated
-    assert compute_memos(sb)
+
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
