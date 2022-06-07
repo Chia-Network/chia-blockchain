@@ -668,6 +668,18 @@ async def did_set_wallet_name(args: Dict, wallet_client: WalletRpcClient, finger
         print(f"Failed to set DID wallet name: {e}")
 
 
+async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_wallet_id: int = args["did_wallet_id"]
+    try:
+        response = await wallet_client.get_did_id(did_wallet_id)
+        my_did = response["my_did"]
+        coin_id = response["coin_id"]
+        print(f"{'DID:'.ljust(23)} {my_did}")
+        print(f"{'Coin ID:'.ljust(23)} {coin_id}")
+    except Exception as e:
+        print(f"Failed to get DID: {e}")
+
+
 async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     try:
         response = await wallet_client.create_new_nft_wallet(None)
