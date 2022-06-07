@@ -487,11 +487,15 @@ def nft_cmd():
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
-def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+@click.option("-di", "--did-id", help="DID Id to use", type=str)
+@click.option("-n", "--name", help="Set the NFT wallet name", type=str)
+def nft_wallet_create_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, did_id: Optional[str], name: Optional[str]
+) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, create_nft_wallet
 
-    extra_params: Dict[str, Any] = {}
+    extra_params: Dict[str, Any] = {"did_id": did_id, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
 
 
