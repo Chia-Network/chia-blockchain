@@ -28,6 +28,7 @@ class DataLayerServer:
         self.port = self.config["host_port"]
 
         # Setup UPnP for the data_layer_service port
+        # hinting being addressed in https://github.com/Chia-Network/chia-blockchain/pull/11816
         self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
         self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
 
@@ -41,6 +42,7 @@ class DataLayerServer:
 
     async def stop(self) -> None:
 
+        # hinting being addressed in https://github.com/Chia-Network/chia-blockchain/pull/11816
         self.upnp.release(self.port)  # type: ignore[no-untyped-call]
         # this is a blocking call, waiting for the UPnP thread to exit
         self.upnp.shutdown()  # type: ignore[no-untyped-call]
