@@ -22,7 +22,7 @@ async def insert_into_data_store_from_file(
     data_store: DataStore,
     tree_id: bytes32,
     root_hash: Optional[bytes32],
-    filename: str,
+    filename: Path,
 ) -> None:
     with open(filename, "rb") as reader:
         while True:
@@ -94,7 +94,7 @@ async def insert_from_delta_file(
                 async with session.get(url) as resp:
                     resp.raise_for_status()
 
-                    target_filename = os.path.join(client_foldername, filename)
+                    target_filename = client_foldername.joinpath(filename)
                     with open(target_filename, "wb") as writer:
                         text = await resp.read()
                         writer.write(text)
@@ -106,7 +106,8 @@ async def insert_from_delta_file(
                 # It's possible the wallet record to be created by a proof of inclusion, not a batch update,
                 # hence the delta file might be missing.
                 log.info(f"Already seen {root_hash} for {tree_id}. Writing an empty delta file.")
-                open(filename, "ab").close()
+                target_filename = client_foldername.joinpath(filename)
+                open(target_filename, "ab").close()
             else:
                 raise
 
@@ -116,14 +117,16 @@ async def insert_from_delta_file(
                 data_store,
                 tree_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
-                os.path.join(client_foldername, filename),
+                client_foldername.joinpath(filename),
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
                 f"Generation: {existing_generation}. Tree id: {tree_id}."
             )
 
-            filename_full_tree = get_full_tree_filename(tree_id, root_hash, existing_generation)
+            filename_full_tree = client_foldername.joinpath(
+                get_full_tree_filename(tree_id, root_hash, existing_generation)
+            )
             root = await data_store.get_tree_root(tree_id=tree_id)
             await data_store.write_tree_to_file(root, root_hash, tree_id, False, filename_full_tree)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")

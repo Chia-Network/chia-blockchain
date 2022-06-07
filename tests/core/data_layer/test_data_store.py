@@ -1,4 +1,3 @@
-import os
 import itertools
 from pathlib import Path
 import statistics
@@ -1167,7 +1166,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             else:
                 filename = get_delta_filename(tree_id, root.node_hash, generation)
             await insert_into_data_store_from_file(
-                data_store, tree_id, root.node_hash, os.path.join(foldername, filename)
+                data_store, tree_id, root.node_hash, Path(foldername).joinpath(filename)
             )
             current_root = await data_store.get_tree_root(tree_id=tree_id)
             assert current_root.node_hash == root.node_hash

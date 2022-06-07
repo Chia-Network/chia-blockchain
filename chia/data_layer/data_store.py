@@ -3,6 +3,7 @@ import aiosqlite
 import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 from chia.data_layer.data_layer_errors import (
@@ -1093,7 +1094,7 @@ class DataStore:
         node_hash: bytes32,
         tree_id: bytes32,
         deltas_only: bool,
-        filename: str,
+        filename: Path,
         *,
         lock: bool = True,
     ) -> None:
