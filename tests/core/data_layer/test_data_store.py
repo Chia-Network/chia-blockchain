@@ -2,7 +2,6 @@ import itertools
 from pathlib import Path
 import statistics
 import logging
-import tempfile
 import aiosqlite
 
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set, Any
@@ -340,57 +339,56 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
     "use_optimized",
     [True, False],
 )
-async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool) -> None:
+async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimized: bool, tmpdir: Path) -> None:
     num_batches = 10
     num_ops_per_batch = 100 if use_optimized else 10
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
-    with tempfile.TemporaryDirectory() as temp_directory:
-        temp_directory_path = Path(temp_directory)
-        db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+    temp_directory_path = Path(tmpdir)
+    db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
 
-        connection = await aiosqlite.connect(db_path)
-        db_wrapper = DBWrapper(connection)
-        single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
+    connection = await aiosqlite.connect(db_path)
+    db_wrapper = DBWrapper(connection)
+    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
 
-        await single_op_data_store.create_tree(tree_id)
-        random = Random()
-        random.seed(100, version=2)
+    await single_op_data_store.create_tree(tree_id)
+    random = Random()
+    random.seed(100, version=2)
 
-        batch: List[Dict[str, Any]] = []
-        keys: List[bytes] = []
-        hint_keys_values: Dict[bytes, bytes] = {}
-        for operation in range(num_batches * num_ops_per_batch):
-            if random.randint(0, 4) > 0 or len(keys) == 0:
-                key = operation.to_bytes(4, byteorder="big")
-                value = (2 * operation).to_bytes(4, byteorder="big")
-                if use_optimized:
-                    await single_op_data_store.autoinsert(
-                        key=key,
-                        value=value,
-                        tree_id=tree_id,
-                        hint_keys_values=hint_keys_values,
-                    )
-                else:
-                    await single_op_data_store.autoinsert(key=key, value=value, tree_id=tree_id, use_optimized=False)
-                batch.append({"action": "insert", "key": key, "value": value})
-                keys.append(key)
+    batch: List[Dict[str, Any]] = []
+    keys: List[bytes] = []
+    hint_keys_values: Dict[bytes, bytes] = {}
+    for operation in range(num_batches * num_ops_per_batch):
+        if random.randint(0, 4) > 0 or len(keys) == 0:
+            key = operation.to_bytes(4, byteorder="big")
+            value = (2 * operation).to_bytes(4, byteorder="big")
+            if use_optimized:
+                await single_op_data_store.autoinsert(
+                    key=key,
+                    value=value,
+                    tree_id=tree_id,
+                    hint_keys_values=hint_keys_values,
+                )
             else:
-                key = random.choice(keys)
-                keys.remove(key)
-                if use_optimized:
-                    await single_op_data_store.delete(key=key, tree_id=tree_id, hint_keys_values=hint_keys_values)
-                else:
-                    await single_op_data_store.delete(key=key, tree_id=tree_id, use_optimized=False)
-                batch.append({"action": "delete", "key": key})
-            if (operation + 1) % num_ops_per_batch == 0:
-                saved_batches.append(batch)
-                batch = []
-                root = await single_op_data_store.get_tree_root(tree_id=tree_id)
-                saved_roots.append(root)
+                await single_op_data_store.autoinsert(key=key, value=value, tree_id=tree_id, use_optimized=False)
+            batch.append({"action": "insert", "key": key, "value": value})
+            keys.append(key)
+        else:
+            key = random.choice(keys)
+            keys.remove(key)
+            if use_optimized:
+                await single_op_data_store.delete(key=key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+            else:
+                await single_op_data_store.delete(key=key, tree_id=tree_id, use_optimized=False)
+            batch.append({"action": "delete", "key": key})
+        if (operation + 1) % num_ops_per_batch == 0:
+            saved_batches.append(batch)
+            batch = []
+            root = await single_op_data_store.get_tree_root(tree_id=tree_id)
+            saved_roots.append(root)
 
-        await connection.close()
+    await connection.close()
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -1119,57 +1117,53 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_delta: bool) -> None:
+async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_delta: bool, tmpdir: Path) -> None:
     roots: List[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
 
-    with tempfile.TemporaryDirectory() as foldername:
-        with tempfile.TemporaryDirectory() as temp_directory:
-            temp_directory_path = Path(temp_directory)
-            db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+    temp_directory_path = Path(tmpdir)
+    db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
 
-            connection = await aiosqlite.connect(db_path)
-            db_wrapper = DBWrapper(connection)
-            data_store_server = await DataStore.create(db_wrapper=db_wrapper)
-            await data_store_server.create_tree(tree_id)
-            random = Random()
-            random.seed(100, version=2)
+    connection = await aiosqlite.connect(db_path)
+    db_wrapper = DBWrapper(connection)
+    data_store_server = await DataStore.create(db_wrapper=db_wrapper)
+    await data_store_server.create_tree(tree_id)
+    random = Random()
+    random.seed(100, version=2)
 
-            keys: List[bytes] = []
-            counter = 0
+    keys: List[bytes] = []
+    counter = 0
 
-            for batch in range(num_batches):
-                changelist: List[Dict[str, Any]] = []
-                for operation in range(num_ops_per_batch):
-                    if random.randint(0, 4) > 0 or len(keys) == 0:
-                        key = counter.to_bytes(4, byteorder="big")
-                        value = (2 * counter).to_bytes(4, byteorder="big")
-                        keys.append(key)
-                        changelist.append({"action": "insert", "key": key, "value": value})
-                    else:
-                        key = random.choice(keys)
-                        keys.remove(key)
-                        changelist.append({"action": "delete", "key": key})
-                    counter += 1
-                await data_store_server.insert_batch(tree_id, changelist)
-                root = await data_store_server.get_tree_root(tree_id)
-                await write_files_for_root(data_store_server, tree_id, root, Path(foldername))
-                roots.append(root)
-            await connection.close()
-
-        generation = 1
-        assert len(roots) == num_batches
-        for root in roots:
-            assert root.node_hash is not None
-            if not test_delta:
-                filename = get_full_tree_filename(tree_id, root.node_hash, generation)
+    for batch in range(num_batches):
+        changelist: List[Dict[str, Any]] = []
+        for operation in range(num_ops_per_batch):
+            if random.randint(0, 4) > 0 or len(keys) == 0:
+                key = counter.to_bytes(4, byteorder="big")
+                value = (2 * counter).to_bytes(4, byteorder="big")
+                keys.append(key)
+                changelist.append({"action": "insert", "key": key, "value": value})
             else:
-                filename = get_delta_filename(tree_id, root.node_hash, generation)
-            assert is_filename_valid(filename)
-            await insert_into_data_store_from_file(
-                data_store, tree_id, root.node_hash, Path(foldername).joinpath(filename)
-            )
-            current_root = await data_store.get_tree_root(tree_id=tree_id)
-            assert current_root.node_hash == root.node_hash
-            generation += 1
+                key = random.choice(keys)
+                keys.remove(key)
+                changelist.append({"action": "delete", "key": key})
+            counter += 1
+        await data_store_server.insert_batch(tree_id, changelist)
+        root = await data_store_server.get_tree_root(tree_id)
+        await write_files_for_root(data_store_server, tree_id, root, Path(tmpdir))
+        roots.append(root)
+    await connection.close()
+
+    generation = 1
+    assert len(roots) == num_batches
+    for root in roots:
+        assert root.node_hash is not None
+        if not test_delta:
+            filename = get_full_tree_filename(tree_id, root.node_hash, generation)
+        else:
+            filename = get_delta_filename(tree_id, root.node_hash, generation)
+        assert is_filename_valid(filename)
+        await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, Path(tmpdir).joinpath(filename))
+        current_root = await data_store.get_tree_root(tree_id=tree_id)
+        assert current_root.node_hash == root.node_hash
+        generation += 1
