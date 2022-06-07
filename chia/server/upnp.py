@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
 import logging
 import threading
+from dataclasses import dataclass, field
 from queue import Queue
 from typing import Optional, Tuple, Union
 
