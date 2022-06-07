@@ -11,6 +11,7 @@ from chia.data_layer.download_data import (
     write_files_for_root,
     get_full_tree_filename,
     get_delta_filename,
+    is_filename_valid,
 )
 
 from random import Random
@@ -1165,6 +1166,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 filename = get_full_tree_filename(tree_id, root.node_hash, generation)
             else:
                 filename = get_delta_filename(tree_id, root.node_hash, generation)
+            assert is_filename_valid(filename)
             await insert_into_data_store_from_file(
                 data_store, tree_id, root.node_hash, Path(foldername).joinpath(filename)
             )

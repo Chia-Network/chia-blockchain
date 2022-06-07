@@ -18,6 +18,29 @@ def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) ->
     return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
 
 
+def is_filename_valid(filename: str) -> bool:
+    try:
+        if not filename.endswith("-v1.0.dat"):
+            return False
+        filename = filename[:-9]
+        tree_id_bytes = bytes.fromhex(filename[:64])
+        if len(tree_id_bytes) != 32:
+            return False
+        filename = filename[65:]
+        node_hash_bytes = bytes.fromhex(filename[:64])
+        if len(node_hash_bytes) != 32:
+            return False
+        filename = filename[65:]
+        if filename.startswith("delta"):
+            filename = filename[6:]
+        generation = int(filename)
+        if generation < 0 or generation > 1000000000:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 async def insert_into_data_store_from_file(
     data_store: DataStore,
     tree_id: bytes32,

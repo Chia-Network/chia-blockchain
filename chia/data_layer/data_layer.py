@@ -239,6 +239,7 @@ class DataLayer:
     async def upload_files(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
+            self.log.info(f"Upload files: no on-chain record for {tree_id}.")
             return
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)

@@ -1,10 +1,10 @@
-import os
 import logging
 from typing import Any, Dict
 from pathlib import Path
 from aiohttp import web
 from dataclasses import dataclass
 from chia.server.upnp import UPnP
+from chia.data_layer.download_data import is_filename_valid
 from chia.util.path import path_from_root
 
 
@@ -45,7 +45,9 @@ class DataLayerServer:
 
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
-        file_path = os.path.join(self.server_dir, filename)
+        if is_filename_valid(filename):
+            raise Exception("Invalid file format requested.")
+        file_path = self.server_dir.joinpath(filename)
         with open(file_path, "rb") as reader:
             content = reader.read()
         response = web.Response(
