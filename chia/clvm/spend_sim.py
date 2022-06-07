@@ -398,7 +398,7 @@ class SimClient:
         return list(self.service.mempool_manager.mempool.spends.keys())
 
     async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
-        spends: Dict[bytes32, MempoolItem] = {}
+        spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id] = item
         return spends
