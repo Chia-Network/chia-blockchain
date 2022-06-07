@@ -561,3 +561,7 @@ class WalletRpcClient(RpcClient):
 
         response = await self.fetch("dl_history", request)
         return [SingletonRecord.from_json_dict(single) for single in response["history"]]
+
+    async def dl_owned_singletons(self) -> List[SingletonRecord]:
+        response = await self.fetch(path="dl_owned_singletons", request_json={})
+        return [SingletonRecord.from_json_dict(singleton) for singleton in response["singletons"]]

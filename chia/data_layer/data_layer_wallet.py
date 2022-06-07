@@ -639,6 +639,26 @@ class DataLayerWallet:
 
         return singleton_record, parent_lineage
 
+    async def get_owned_singletons(self) -> List[SingletonRecord]:
+        launcher_ids = await self.wallet_state_manager.dl_store.get_all_launchers()
+
+        collected = []
+
+        for launcher_id in launcher_ids:
+            # TODO: only confirmed?
+            singleton_record = await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id=launcher_id)
+            assert singleton_record is not None
+
+            inner_puzzle_derivation: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                singleton_record.inner_puzzle_hash
+            )
+            if inner_puzzle_derivation is not None:
+                collected.append(singleton_record)
+
+        return collected
+
     ###########
     # SYNCING #
     ###########
