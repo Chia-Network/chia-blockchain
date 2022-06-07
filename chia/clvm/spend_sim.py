@@ -124,7 +124,7 @@ class SpendSim:
                 self.block_height = store_data.block_height
                 self.block_records = store_data.block_records
                 self.blocks = store_data.blocks
-                # Created a protocol to make BlockRecord and SimBlockRecord interchangeable.
+                # Create a protocol to make BlockRecord and SimBlockRecord interchangeable.
                 self.mempool_manager.peak = self.block_records[-1]  # type: ignore[assignment]
             else:
                 self.timestamp = uint64(1)
@@ -145,7 +145,7 @@ class SpendSim:
         await self.db_wrapper.close()
 
     async def new_peak(self) -> None:
-        # Created a protocol to make BlockRecord and SimBlockRecord interchangeable.
+        # Create a protocol to make BlockRecord and SimBlockRecord interchangeable.
         await self.mempool_manager.new_peak(self.block_records[-1], None)  # type: ignore[arg-type]
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
