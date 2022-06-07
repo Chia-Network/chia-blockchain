@@ -253,7 +253,7 @@ class NFTWallet:
                 child_coin = new_coin
                 break
         else:
-            raise ValueError("Not a valid NFT")
+            raise ValueError(f"Rebuild NFT doesn't match the actual puzzle hash: {child_puzzle}")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id]
         )
@@ -477,7 +477,6 @@ class NFTWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(full_spend).items()),
         )
-        self.log.info("Minting NFT with hint:%s", nft_record.memos)
         await self.standard_wallet.push_transaction(nft_record)
         return nft_record.spend_bundle
 
