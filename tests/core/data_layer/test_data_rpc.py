@@ -123,7 +123,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: B
         unknown_key = b"b"
         changelist = [{"action": "delete", "key": unknown_key.hex()}]
         with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
-            res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+            await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
         # test delete
         changelist = [{"action": "delete", "key": key.hex()}]
@@ -144,12 +144,11 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: B
         # test empty changelist
         changelist = []
         with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
-            res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+            await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
 
 @pytest.mark.asyncio
 async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) -> None:
-    root_path = bt.root_path
     wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
