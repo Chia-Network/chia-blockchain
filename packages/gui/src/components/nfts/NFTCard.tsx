@@ -66,6 +66,8 @@ export default function NFTCard(props: NFTCardProps) {
         <>
           <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
             <NFTPreview nft={nft} fit="contain" />
+          </CardActionArea>
+          <CardActionArea onClick={() => canExpandDetails && handleClick()}>
             <StyledCardContent>
               <Flex justifyContent="space-between" alignItems="center">
                 <Flex gap={1} alignItems="center">

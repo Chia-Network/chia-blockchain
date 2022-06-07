@@ -1,26 +1,42 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import moment from 'moment';
 import {
   Back,
   Flex,
   LayoutDashboardSub,
   Loading,
-  Table,
-  mojoToChia,
-  FormatLargeNumber,
   CardKeyValue,
+  CopyToClipboard,
+  Tooltip,
   Truncate,
+  truncateValue,
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
-import { Box, Grid, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
+import { stripHexPrefix } from '../../../util/utils';
+import { didToDIDId } from '../../../util/dids';
+import { convertRoyaltyToPercentage } from '../../../util/nfts';
 import NFTRankings from '../NFTRankings';
 import NFTProperties from '../NFTProperties';
+import styled from 'styled-components';
+
+/* ========================================================================== */
+
+const StyledTitle = styled(Box)`
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
+`;
+
+/* ========================================================================== */
 
 export default function NFTDetail() {
   const { nftId } = useParams();
@@ -37,7 +53,13 @@ export default function NFTDetail() {
     return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
 
+  console.log('nft info:');
+  console.log(nft);
+
   const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
+
+  console.log('metadata:');
+  console.log(metadata);
 
   const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 
@@ -50,38 +72,106 @@ export default function NFTDetail() {
 
     const rows = [
       {
-        key: 'id',
-        label: <Trans>Launcher ID</Trans>,
+        key: 'nftId',
+        label: <Trans>NFT ID</Trans>,
         value: (
-          <Truncate tooltip copyToClipboard>
-            {nft.launcherId}
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
+            {nft.$nftId}
           </Truncate>
         ),
       },
-      // {
-      //   key: 'tokenStandard',
-      //   label: <Trans>Token Standard</Trans>,
-      //   value: nft.version,
-      // },
-
-      // Moved below Description
-      // metadata?.collection_name && {
-      //   key: 'collectionName',
-      //   label: <Trans>Collection Name</Trans>,
-      //   value: (
-      //     <Truncate tooltip copyToClipboard>
-      //       {metadata?.collection_name}
-      //     </Truncate>
-      //   ),
-      // },
+      {
+        key: 'id',
+        label: <Trans>Launcher ID</Trans>,
+        value: (
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
+            {stripHexPrefix(nft.launcherId)}
+          </Truncate>
+        ),
+      },
     ].filter(Boolean);
+
+    if (nft.ownerDid) {
+      const hexDIDId = stripHexPrefix(nft.ownerDid);
+      const didId = didToDIDId(hexDIDId);
+      const truncatedDID = truncateValue(didId, {});
+
+      rows.push({
+        key: 'ownerDid',
+        label: <Trans>Owner DID</Trans>,
+        value: (
+          <Tooltip
+            title={
+              <Flex flexDirection="column" gap={1}>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
+                      <StyledTitle>DID ID</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{didId}</StyledValue>
+                    <CopyToClipboard value={didId} fontSize="small" />
+                  </Flex>
+                </Flex>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
+                      <StyledTitle>DID ID (Hex)</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{hexDIDId}</StyledValue>
+                    <CopyToClipboard value={hexDIDId} fontSize="small" />
+                  </Flex>
+                </Flex>
+              </Flex>
+            }
+          >
+            <Typography variant="body2">{truncatedDID}</Typography>
+          </Tooltip>
+        ),
+      });
+    }
+
+    if (nft.ownerPubkey) {
+      rows.push({
+        key: 'ownerPubkey',
+        label: <Trans>Owner Public Key</Trans>,
+        value: (
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
+            {stripHexPrefix(nft.ownerPubkey)}
+          </Truncate>
+        ),
+      });
+    }
+
+    if (nft.royaltyPercentage) {
+      rows.push({
+        key: 'royaltyPercentage',
+        label: <Trans>Royalty Percentage</Trans>,
+        value: <>{`${convertRoyaltyToPercentage(nft.royaltyPercentage)}%`}</>,
+      });
+    }
+
+    if (nft.mintHeight) {
+      rows.push({
+        key: 'mintHeight',
+        label: <Trans>Minted at Block Height</Trans>,
+        value: nft.mintHeight,
+      });
+    }
 
     if (dataUris?.length) {
       dataUris.forEach((uri, index) => {
         rows.push({
           key: `dataUri-${index}`,
           label: <Trans>Data URL {index + 1}</Trans>,
-          value: uri,
+          value: (
+            <Tooltip title={uri} copyToClipboard>
+              <Typography variant="body2">{uri}</Typography>
+            </Tooltip>
+          ),
         });
       });
     }
@@ -91,7 +181,7 @@ export default function NFTDetail() {
         key: 'dataHash',
         label: <Trans>Data Hash</Trans>,
         value: (
-          <Truncate tooltip copyToClipboard>
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
             {nft.dataHash}
           </Truncate>
         ),
@@ -103,7 +193,11 @@ export default function NFTDetail() {
         rows.push({
           key: `metadataUris-${index}`,
           label: <Trans>Metadata URL {index + 1}</Trans>,
-          value: uri,
+          value: (
+            <Tooltip title={uri} copyToClipboard>
+              <Typography variant="body2">{uri}</Typography>
+            </Tooltip>
+          ),
         });
       });
     }
@@ -112,7 +206,11 @@ export default function NFTDetail() {
       rows.push({
         key: 'metadataHash',
         label: <Trans>Metadata Hash</Trans>,
-        value: <Truncate>{nft.metadataHash}</Truncate>,
+        value: (
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
+            {nft.metadataHash}
+          </Truncate>
+        ),
       });
     }
 
@@ -121,7 +219,11 @@ export default function NFTDetail() {
         rows.push({
           key: `licenseUris-${index}`,
           label: <Trans>License URL {index + 1}</Trans>,
-          value: uri,
+          value: (
+            <Tooltip title={uri} copyToClipboard>
+              <Typography variant="body2">{uri}</Typography>
+            </Tooltip>
+          ),
         });
       });
     }
@@ -130,7 +232,11 @@ export default function NFTDetail() {
       rows.push({
         key: 'licenseHash',
         label: <Trans>License Hash</Trans>,
-        value: <Truncate>{nft.licenseHash}</Truncate>,
+        value: (
+          <Truncate ValueProps={{ variant: 'body2' }} tooltip copyToClipboard>
+            {nft.licenseHash}
+          </Truncate>
+        ),
       });
     }
 
@@ -183,14 +289,14 @@ export default function NFTDetail() {
                   {metadata?.description ?? <Trans>Not Available</Trans>}
                 </Typography>
               </Flex>
-              {metadata?.collection_name && (
+              {metadata?.collection?.name && (
                 <Flex flexDirection="column" gap={1}>
                   <Typography variant="h6">
                     <Trans>Collection</Trans>
                   </Typography>
 
                   <Typography>
-                    {metadata?.collection_name ?? <Trans>Not Available</Trans>}
+                    {metadata?.collection?.name ?? <Trans>Not Available</Trans>}
                   </Typography>
                 </Flex>
               )}

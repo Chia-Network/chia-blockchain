@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import {
+  CopyToClipboard,
   Flex,
   Suspender,
-  Truncate,
+  Tooltip,
+  truncateValue,
 } from '@chia/core';
-import {
-  Card,
-  Typography,
-} from '@mui/material';
+import { Box, Card, TextField, Typography } from '@mui/material';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import {
@@ -16,13 +15,26 @@ import {
   useGetDIDNameQuery,
   useSetDIDNameMutation,
 } from '@chia/api-react';
+import { stripHexPrefix } from '../../util/utils';
+import { didToDIDId } from '../../util/dids';
 
-const StyledCard = styled(Card)(({ theme }) => `
+const StyledCard = styled(Card)(
+  ({ theme }) => `
   width: 100%;
   padding: ${theme.spacing(3)};
   border-radius: ${theme.spacing(1)};
   background-color: ${theme.palette.background.paper};
-`);
+`,
+);
+
+const StyledTitle = styled(Box)`
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
+`;
 
 const InlineEdit = ({ text, walletId }) => {
   const [editedText, setEditedText] = useState(text);
@@ -35,34 +47,27 @@ const InlineEdit = ({ text, walletId }) => {
   const handleChange = (event) => setEditedText(event.target.value);
 
   const handleKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === "Escape") {
+    if (event.key === 'Enter' || event.key === 'Escape') {
       event.target.blur();
     }
-  }
+  };
 
   const handleBlur = (event) => {
-    if (event.target.value.trim() === "") {
+    if (event.target.value.trim() === '') {
       setEditedText(text);
     } else {
-      setDid({ walletId: walletId, name: event.target.value});
+      setDid({ walletId: walletId, name: event.target.value });
     }
-  }
+  };
 
   return (
-    <input
-      type="text"
-      style={{
-          width: "100%",
-          paddingLeft: "8px",
-          paddingTop: "6px",
-          paddingBottom: "6px",
-          fontSize: "20px",
-          fontWeight: "bold",
-        }}
+    <TextField
+      label={<Trans>Profile Name</Trans>}
       value={editedText || ''}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       onBlur={handleBlur}
+      fullWidth
     />
   );
 };
@@ -71,47 +76,70 @@ export default function ProfileView() {
   const { walletId } = useParams();
   const { data: did, isLoading } = useGetDIDQuery({ walletId: walletId });
   const { data: didName, loading } = useGetDIDNameQuery({ walletId: walletId });
-  let myDidText: JSX.Element | null = null;
-  let nameText: JSX.Element | null = null;
 
   if (isLoading || loading) {
-    return (
-      <Suspender />
-    );
+    return <Suspender />;
   }
 
   if (did && didName) {
     const nameText = didName.name;
-    const myDidText = did.myDid;
+    const hexDID = stripHexPrefix(did.myDid);
+    const didID = didToDIDId(hexDID);
+    const truncatedDID = truncateValue(didID, {});
 
     return (
-      <div style={{width:"100%"}}>
+      <div style={{ width: '100%' }}>
         <StyledCard>
           <Flex flexDirection="column" gap={2.5} paddingBottom={3}>
-            <InlineEdit text={nameText} walletId={walletId}/>
+            <InlineEdit text={nameText} walletId={walletId} />
           </Flex>
           <Flex flexDirection="row" paddingBottom={1}>
             <Flex flexGrow={1}>
               <Trans>My DID</Trans>
             </Flex>
             <Flex>
-              <Truncate tooltip copyToClipboard>{myDidText}</Truncate>
+              <Tooltip
+                title={
+                  <Flex flexDirection="column" gap={1}>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>DID ID</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{didID}</StyledValue>
+                        <CopyToClipboard value={didID} fontSize="small" />
+                      </Flex>
+                    </Flex>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>DID ID (Hex)</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{hexDID}</StyledValue>
+                        <CopyToClipboard value={hexDID} fontSize="small" />
+                      </Flex>
+                    </Flex>
+                  </Flex>
+                }
+              >
+                <Typography variant="body2">{truncatedDID}</Typography>
+              </Tooltip>
             </Flex>
           </Flex>
           <Flex flexDirection="row" paddingBottom={1}>
             <Flex flexGrow={1}>
               <Trans>Token Standard</Trans>
             </Flex>
-            <Flex>
-              DID1
-            </Flex>
+            <Flex>DID1</Flex>
           </Flex>
         </StyledCard>
       </div>
     );
   } else {
-    return (
-      null
-    )
+    return null;
   }
 }

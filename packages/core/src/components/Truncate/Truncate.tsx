@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography } from '@mui/material';
+import { Typography, TypographyProps } from '@mui/material';
 import Tooltip from '../Tooltip';
 
 /* ========================================================================== */
@@ -21,7 +21,7 @@ export function truncateValue(
     leftLength = 4,
     rightLength = 4,
     splitSeparator = ':',
-    prefixes = ['nft1', 'nft0', 'txch', 'xch', '0x'],
+    prefixes = ['nft1', 'txch1', 'xch1', 'did:chia:1', '0x'],
   } = opts;
 
   if (!children) {
@@ -68,19 +68,26 @@ export type TruncateProps = TruncateValueOptions & {
   children: string;
   tooltip?: boolean;
   copyToClipboard?: boolean;
+  ValueProps?: TypographyProps;
 };
 
 export default function Truncate(props: TruncateProps) {
-  const { tooltip, children, copyToClipboard = false, ...rest } = props;
+  const {
+    tooltip,
+    children,
+    copyToClipboard = false,
+    ValueProps,
+    ...rest
+  } = props;
   const value = truncateValue(children, rest);
 
   if (tooltip) {
     return (
       <Tooltip title={children} copyToClipboard={copyToClipboard}>
-        <Typography>{value}</Typography>
+        <Typography {...ValueProps}>{value}</Typography>
       </Tooltip>
     );
   }
 
-  return value;
+  return <Typography {...ValueProps}>{value}</Typography>;
 }

@@ -21,7 +21,7 @@ const StyledPreviewContainer = styled(Flex)`
 
 const StyledCard = styled(Card)`
   width: 300px;
-  height: 406px;
+  height: 362px;
   display: flex;
 `;
 
@@ -34,14 +34,7 @@ type NFTOfferPreviewProps = {
 export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
   const { nftId } = props;
   const launcherId = launcherIdFromNFTId(nftId ?? '');
-  const borderStyle = launcherId
-    ? 'none' //'2px solid #E0E0E0'
-    : '2px dashed #E0E0E0';
-  const {
-    data: nft,
-    isLoading,
-    error,
-  } = useGetNFTInfoQuery({ coinId: launcherId });
+  const { data: nft } = useGetNFTInfoQuery({ coinId: launcherId });
   const viewOnExplorer = useViewNFTOnExplorer();
 
   return (
@@ -66,6 +59,8 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
               nft={nft}
               canExpandDetails={false}
               availableActions={
+                NFTContextualActionTypes.CopyNFTId |
+                NFTContextualActionTypes.ViewOnExplorer |
                 NFTContextualActionTypes.OpenInBrowser |
                 NFTContextualActionTypes.CopyURL
               }

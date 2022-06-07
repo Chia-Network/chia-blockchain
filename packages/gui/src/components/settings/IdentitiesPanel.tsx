@@ -1,27 +1,13 @@
-import React, { useMemo, type ReactNode } from 'react';
-import { Trans } from '@lingui/macro';
-import { type Shell } from 'electron';
+import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import {
-  CardListItem,
-  Flex,
-  Truncate,
-} from '@chia/core';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-} from '@mui/material';
+import { CardListItem, Flex, Truncate } from '@chia/core';
+import { Box, Card, CardContent, Typography } from '@mui/material';
 import styled from 'styled-components';
 import { orderBy } from 'lodash';
 
-import {
-  useGetDIDQuery,
-  useGetDIDNameQuery,
-  useGetWalletsQuery,
-} from '@chia/api-react';
-import { WalletType, type Wallet } from '@chia/api';
+import { useGetDIDQuery, useGetWalletsQuery } from '@chia/api-react';
+import { WalletType } from '@chia/api';
+import { didToDIDId } from '../../util/dids';
 
 const StyledRoot = styled(Box)`
   min-width: 390px;
@@ -51,34 +37,38 @@ const StyledContent = styled(Box)`
   min-height: ${({ theme }) => theme.spacing(5)};
 `;
 
-const StyledCard = styled(Card)(({ theme }) => `
+const StyledCard = styled(Card)(
+  ({ theme }) => `
   width: 100%;
   border-radius: ${theme.spacing(1)};
   border: 1px dashed ${theme.palette.divider};
   background-color: ${theme.palette.background.paper};
   margin-bottom: ${theme.spacing(1)};
-`);
+`,
+);
 
-const StyledCardContent = styled(CardContent)(({ theme }) => `
+const StyledCardContent = styled(CardContent)(
+  ({ theme }) => `
   padding-bottom: ${theme.spacing(2)} !important;
-`);
+`,
+);
 
 function DisplayDid(wallet) {
   const id = wallet.wallet.id;
   const { data: did, isLoading } = useGetDIDQuery({ walletId: id });
 
   if (did) {
-    const myDidText = did.myDid;
+    const myDidText = didToDIDId(did.myDid);
 
     return (
       <div>
-        <Truncate tooltip copyToClipboard>{myDidText}</Truncate>
+        <Truncate tooltip copyToClipboard>
+          {myDidText}
+        </Truncate>
       </div>
-    )
+    );
   } else {
-    return (
-      null
-    )
+    return null;
   }
 }
 
@@ -105,7 +95,7 @@ export default function IdentitiesPanel() {
       return [];
     }
 
-    let didLength = dids.length
+    let didLength = dids.length;
 
     if (didLength == 0) {
       return (
@@ -116,12 +106,12 @@ export default function IdentitiesPanel() {
             </Flex>
           </StyledCardContent>
         </StyledCard>
-      )
+      );
     } else {
       const orderedProfiles = orderBy(wallets, ['id'], ['asc']);
 
       return orderedProfiles
-        .filter(wallet => [WalletType.DISTRIBUTED_ID].includes(wallet.type))
+        .filter((wallet) => [WalletType.DISTRIBUTED_ID].includes(wallet.type))
         .map((wallet) => {
           const primaryTitle = wallet.name;
 
@@ -130,10 +120,16 @@ export default function IdentitiesPanel() {
           }
 
           return (
-            <CardListItem onSelect={handleSelect} key={wallet.id} selected={wallet.id === Number(walletId)}>
+            <CardListItem
+              onSelect={handleSelect}
+              key={wallet.id}
+              selected={wallet.id === Number(walletId)}
+            >
               <Flex gap={0.5} flexDirection="column" height="100%" width="100%">
                 <Flex>
-                  <Typography><strong>{primaryTitle}</strong></Typography>
+                  <Typography>
+                    <strong>{primaryTitle}</strong>
+                  </Typography>
                 </Flex>
                 <Flex>
                   <DisplayDid wallet={wallet} />

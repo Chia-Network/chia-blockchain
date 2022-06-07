@@ -19,13 +19,18 @@ import {
   Form,
   TextField,
   chiaToMojo,
+  useCurrencyCode,
   useOpenDialog,
   useShowError,
 } from '@chia/core';
 import { Divider, Grid, Tabs, Tab, Typography } from '@mui/material';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
-import { isValidNFTId, launcherIdFromNFTId } from '../../util/nfts';
+import {
+  convertRoyaltyToPercentage,
+  isValidNFTId,
+  launcherIdFromNFTId,
+} from '../../util/nfts';
 import NFTOfferPreview from './NFTOfferPreview';
 
 /* ========================================================================== */
@@ -51,10 +56,19 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
   const { defaultValues, isProcessing } = props;
   const disabled = isProcessing;
   const methods = useFormContext();
+  const currencyCode = useCurrencyCode();
   const [amountFocused, setAmountFocused] = useState<boolean>(false);
 
   const tab = methods.watch('exchangeType');
   const amount = methods.watch('xchAmount');
+  const nftId = methods.watch('nftId');
+  const launcherId = launcherIdFromNFTId(nftId ?? '');
+  const {
+    data: nft,
+    isLoading,
+    error,
+  } = useGetNFTInfoQuery({ coinId: launcherId });
+
   // HACK: manually determine the value for the amount field's shrink input prop.
   // Without this, toggling between the two tabs with an amount specified will cause
   // the textfield's label and value to overlap.
@@ -64,6 +78,21 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
     }
     return true;
   }, [amount, amountFocused]);
+  const [royaltyPercentage, royaltyAmount] = useMemo(() => {
+    const royaltyPercentage: number | undefined = nft?.royaltyPercentage
+      ? convertRoyaltyToPercentage(nft.royaltyPercentage)
+      : undefined;
+    const royaltyAmount: number | undefined =
+      royaltyPercentage !== undefined
+        ? (royaltyPercentage / 100) * amount
+        : undefined;
+    const royaltyAmountString =
+      royaltyAmount !== undefined
+        ? royaltyAmount.toFixed(5).toString().replace(/0+$/, '')
+        : undefined;
+
+    return [royaltyPercentage, royaltyAmountString];
+  }, [amount, nft]);
 
   const nftElem = (
     <Grid item>
@@ -157,6 +186,16 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
             {takerElem}
           </Flex>
           <Divider />
+          {nft?.royaltyPercentage && (
+            <Flex flexDirection="column" gap={1}>
+              <Typography variant="body1" color="textSecondary">
+                <Trans>Creator Fee ({`${royaltyPercentage})%`}</Trans>
+              </Typography>
+              {amount && (
+                <Typography variant="subtitle1">{`${royaltyAmount} ${currencyCode}`}</Typography>
+              )}
+            </Flex>
+          )}
           <Grid item>
             <Fee
               id="fee"

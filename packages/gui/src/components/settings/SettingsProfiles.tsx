@@ -1,24 +1,15 @@
 import React, { useEffect, useMemo } from 'react';
 import { Trans } from '@lingui/macro';
-import {
-  IconButton,
-  Typography,
-} from "@mui/material";
-import {
-  Flex,
-} from '@chia/core';
-import {
-  Route,
-  Routes,
-  useNavigate,
-} from 'react-router-dom';
+import { IconButton, Typography } from '@mui/material';
+import { Flex } from '@chia/core';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 import IdentitiesPanel from './IdentitiesPanel';
 import { LayoutDashboardSub } from '@chia/core';
 import ProfileView from './ProfileView';
 import ProfileAdd from './ProfileAdd';
 import { Add } from '@mui/icons-material';
 import { useGetWalletsQuery } from '@chia/api-react';
-import { WalletType, type Wallet } from '@chia/api';
+import { WalletType } from '@chia/api';
 
 export default function SettingsProfiles() {
   const navigate = useNavigate();
@@ -50,7 +41,7 @@ export default function SettingsProfiles() {
 
   return (
     <div>
-      <Flex flexDirection="row" style={{width:"350px"}}>
+      <Flex flexDirection="row" style={{ width: '350px' }}>
         <Flex flexGrow={1}>
           <Typography variant="h4">
             <Trans>Profiles</Trans>
@@ -63,7 +54,9 @@ export default function SettingsProfiles() {
         </Flex>
       </Flex>
       <Routes>
-        <Route element={<LayoutDashboardSub sidebar={<IdentitiesPanel />} outlet />}>
+        <Route
+          element={<LayoutDashboardSub sidebar={<IdentitiesPanel />} outlet />}
+        >
           <Route path=":walletId" element={<ProfileView />} />
           <Route path="add" element={<ProfileAdd />} />
         </Route>
