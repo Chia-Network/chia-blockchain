@@ -1396,7 +1396,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         for wallet in self.service.wallet_state_manager.wallets.values():
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
-                return {"wallet_id": wallet.wallet_id, "wallet_info": wallet.wallet_info, "success": True}
+                return {"wallet_id": wallet.wallet_id, "success": True}
         return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
 
     async def nft_transfer_nft(self, request):
