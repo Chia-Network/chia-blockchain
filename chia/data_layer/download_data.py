@@ -78,7 +78,7 @@ async def write_files_for_root(
     filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
     written = False
-    if override and os.path.exists(filename_full_tree):
+    if override and filename_full_tree.exists():
         os.remove(filename_full_tree)
     if not os.path.exists(filename_full_tree):
         await data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
