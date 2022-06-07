@@ -108,9 +108,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        old_root = await self.data_store.get_tree_root(tree_id=tree_id)
-        rollback_generation = 0 if old_root is None else old_root.generation
-        try:
+        async with self.db_wrapper.locked_transaction(lock=True):
             t1 = time.time()
             await self.data_store.insert_batch(tree_id, changelist)
             t2 = time.time()
@@ -126,9 +124,6 @@ class DataLayer:
             # todo register callback to change status in data store
             # await self.data_store.change_root_status(root, Status.COMMITTED)
             return transaction_record
-        except Exception:
-            await self.data_store.rollback_to_generation(tree_id, rollback_generation)
-            raise
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
