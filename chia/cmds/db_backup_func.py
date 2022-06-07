@@ -57,6 +57,7 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
                 ):
                     in_db.execute(row[0])
                 in_db.execute("COMMIT")
+                in_db.execute("DETACH DATABASE backup")
 
             except sqlite3.OperationalError:
                 raise
