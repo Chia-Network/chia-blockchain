@@ -783,7 +783,8 @@ class DataStore:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             else:
                 if bytes(key) not in hint_keys_values:
-                    raise Exception(f"Key not found: {key.hex()}")
+                    log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
+                    return
                 value = hint_keys_values[bytes(key)]
                 node_hash = Program.to((key, value)).get_tree_hash()
                 node = TerminalNode(node_hash, key, value)

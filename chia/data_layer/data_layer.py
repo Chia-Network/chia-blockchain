@@ -103,6 +103,7 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         hint_keys_values = await self.data_store.get_keys_values_dict(tree_id)
+        old_root = await self.data_store.get_tree_root(tree_id)
         for change in changelist:
             if change["action"] == "insert":
                 key = change["key"]
@@ -117,11 +118,12 @@ class DataLayer:
                 key = change["key"]
                 await self.data_store.delete(key, tree_id, hint_keys_values)
 
-        await self.data_store.get_tree_root(tree_id)
-        root = await self.data_store.get_tree_root(tree_id)
+        new_root = await self.data_store.get_tree_root(tree_id)
+        if old_root == new_root:  # does this comparison work?
+            raise ValueError("Changelist resulted in no change to tree data")
         # todo return empty node hash from get_tree_root
-        if root.node_hash is not None:
-            node_hash = root.node_hash
+        if new_root.node_hash is not None:
+            node_hash = new_root.node_hash
         else:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
