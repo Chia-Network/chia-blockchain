@@ -80,12 +80,12 @@ async def write_files_for_root(
     written = False
     if override and filename_full_tree.exists():
         os.remove(filename_full_tree)
-    if not os.path.exists(filename_full_tree):
+    if not filename_full_tree.exists():
         await data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
         written = True
-    if override and os.path.exists(filename_diff_tree):
+    if override and filename_diff_tree.exists():
         os.remove(filename_diff_tree)
-    if not os.path.exists(filename_diff_tree):
+    if not filename_diff_tree.exists():
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
             tree_id, root.node_hash, max_generation=root.generation
         )
@@ -118,9 +118,8 @@ async def insert_from_delta_file(
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
-                    with open(target_filename, "wb") as writer:
-                        text = await resp.read()
-                        writer.write(text)
+                    text = await resp.read()
+                    target_filename.write_bytes(text)
         except asyncio.CancelledError:
             raise
         except Exception:
