@@ -54,7 +54,7 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":  # type: ignore[type-arg]
         return cls(
@@ -100,9 +100,8 @@ class ProofOfInclusion:
         )
         sibling_hashes = [layer.other_hash for layer in self.layers]
 
-        # TODO: Remove ignore when done.
-        #       https://github.com/Chia-Network/clvm/pull/102
-        #       https://github.com/Chia-Network/clvm/pull/106
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
 
@@ -117,7 +116,7 @@ class InternalNode:
     atom: None = None
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "InternalNode":  # type: ignore[type-arg]
         return cls(
@@ -154,7 +153,7 @@ class Root:
     status: Status
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "Root":  # type: ignore[type-arg]
         raw_node_hash = row["node_hash"]
