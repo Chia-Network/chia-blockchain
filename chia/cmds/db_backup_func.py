@@ -32,9 +32,9 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
     # VACUUM INTO is only avaiable starting with SQLite version 3.27.0
     if not no_indexes and sqlite3.sqlite_version_info < (3, 27, 0):
         raise RuntimeError(
-           f"SQLite {sqlite3.sqlite_version} not supported. Version needed is 3.27.0"
-           f"\n\tuse '--no_indexes' option to create a backup without indexes instead."
-           f"\n\tIn case of a restore, the missing indexes will be recreated during full node startup."
+            f"SQLite {sqlite3.sqlite_version} not supported. Version needed is 3.27.0"
+            f"\n\tuse '--no_indexes' option to create a backup without indexes instead."
+            f"\n\tIn case of a restore, the missing indexes will be recreated during full node startup."
         )
 
     if not backup_db.parent.exists():
