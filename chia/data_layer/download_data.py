@@ -52,8 +52,8 @@ async def write_files_for_root(
         node_hash = root.node_hash
     else:
         node_hash = bytes32([0] * 32)  # todo change
-    filename_full_tree = os.path.join(foldername, get_full_tree_filename(tree_id, node_hash, root.generation))
-    filename_diff_tree = os.path.join(foldername, get_delta_filename(tree_id, node_hash, root.generation))
+    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
+    filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
     written = False
     if override and os.path.exists(filename_full_tree):
         os.remove(filename_full_tree)
