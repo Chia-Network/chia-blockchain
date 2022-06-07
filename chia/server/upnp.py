@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import logging
 import threading
 from queue import Queue
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from typing_extensions import Literal
 
@@ -18,7 +18,9 @@ log = logging.getLogger(__name__)
 @dataclass
 class UPnP:
     thread: Optional[threading.Thread] = None
-    queue: Queue[Tuple[Literal["remap", "release", "shutdown"], int]] = field(default_factory=Queue)
+    queue: Queue[Union[Tuple[Literal["remap", "release"], int], Tuple[Literal["shutdown"]]]] = field(
+        default_factory=Queue,
+    )
     upnp: Optional[miniupnpc.UPnP] = None
 
     def __post_init__(self) -> None:
@@ -66,7 +68,7 @@ class UPnP:
     def shutdown(self) -> None:
         if self.thread is None:
             return
-        self.queue.put(("shutdown", 0))
+        self.queue.put(("shutdown",))
         log.info("UPnP, shutting down thread")
         self.thread.join(5)
         self.thread = None
