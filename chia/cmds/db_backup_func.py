@@ -29,6 +29,14 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
     import sqlite3
     from contextlib import closing
 
+    # VACUUM INTO is only avaiable starting with SQLite version 3.27.0
+    if not no_indexes and sqlite3.sqlite_version_info < (3, 27, 0):
+        raise RuntimeError(
+           f"SQLite {sqlite3.sqlite_version} not supported. Version needed is 3.27.0"
+           f"\n\tuse '--no_indexes' option to create a backup without indexes instead."
+           f"\n\tIn case of a restore, the missing indexes will be recreated during full node startup."
+        )
+
     if not backup_db.parent.exists():
         print(f"backup destination path doesn't exist. {backup_db.parent}")
         raise RuntimeError(f"can't find {backup_db}")
@@ -36,8 +44,8 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
     print(f"reading from blockchain database: {source_db}")
     print(f"writing to backup file: {backup_db}")
     with closing(sqlite3.connect(source_db)) as in_db:
-        if no_indexes:
-            try:
+        try:
+            if no_indexes:
                 in_db.execute("ATTACH DATABASE ? AS backup", (str(backup_db),))
                 in_db.execute("pragma backup.journal_mode=OFF")
                 in_db.execute("pragma backup.synchronous=OFF")
@@ -58,11 +66,10 @@ def backup_db(source_db: Path, backup_db: Path, *, no_indexes: bool) -> None:
                     in_db.execute(row[0])
                 in_db.execute("COMMIT")
                 in_db.execute("DETACH DATABASE backup")
-
-            except sqlite3.OperationalError:
-                raise
-        else:
-            try:
+            else:
                 in_db.execute("VACUUM INTO ?", [str(backup_db)])
-            except sqlite3.OperationalError:
-                raise
+        except sqlite3.OperationalError as e:
+            raise RuntimeError(
+                f"backup failed with error: '{e}'"
+                f"\n\tYour backup file {backup_db} is probably left over in an insconsistent state."
+            )
