@@ -50,11 +50,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
-STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
-
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
-
-OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 class NFTWallet:
