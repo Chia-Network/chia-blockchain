@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from typing import Any
 
 import pytest
@@ -20,9 +19,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
-
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-logging.getLogger("chia.wallet.wallet_puzzle_store").setLevel(logging.INFO)  # Too much logging on debug level
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
