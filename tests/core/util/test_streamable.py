@@ -96,7 +96,7 @@ def test_plain_class_not_supported() -> None:
 
 @streamable
 @dataclass(frozen=True)
-class TestDataclassFromDict1(Streamable):
+class StreamableFromDict1(Streamable):
     a: uint8
     b: str
     c: G1Element
@@ -104,9 +104,9 @@ class TestDataclassFromDict1(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class TestDataclassFromDict2(Streamable):
-    a: TestDataclassFromDict1
-    b: TestDataclassFromDict1
+class StreamableFromDict2(Streamable):
+    a: StreamableFromDict1
+    b: StreamableFromDict1
     c: uint64
 
 
@@ -248,16 +248,16 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [
-        [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
-        [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, TypeError],
-        [TestDataclassFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
+        [StreamableFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict1, {"a": 1, "b": "2"}, KeyError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
+        [StreamableFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, TypeError],
+        [StreamableFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, TypeError],
+        [StreamableFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
+        [StreamableFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
     ],
 )
 def test_streamable_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
