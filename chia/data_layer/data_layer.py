@@ -125,7 +125,6 @@ class DataLayer:
         else:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-        assert transaction_record
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
         return transaction_record
