@@ -581,7 +581,8 @@ class WeightProofHandler:
         log.info("validate weight proof recent blocks")
         if not _validate_recent_blocks(constants, wp_recent_chain_bytes, summary_bytes):
             return False, uint32(0)
-        return True, self.get_fork_point(summaries)
+        fork_point, _ = self.get_fork_point(summaries)
+        return True, fork_point
 
     def get_fork_point_no_validations(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         log.debug("get fork point skip validations")
@@ -593,7 +594,8 @@ class WeightProofHandler:
         if summaries is None:
             log.warning("weight proof failed to validate sub epoch summaries")
             return False, uint32(0)
-        return True, self.get_fork_point(summaries)
+        fork_height, _ = self.get_fork_point(summaries)
+        return True, fork_height
 
     async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
         assert self.blockchain is not None
@@ -623,6 +625,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), []
 
+        fork_point, ses_fork_idx = self.get_fork_point(summaries)
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
         with ProcessPoolExecutor(
@@ -653,7 +656,7 @@ class WeightProofHandler:
 
                 # timing reference: 2 second
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes
+                    constants, rng, wp_segment_bytes, summary_bytes, ses_fork_idx
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 if not segments_validated:
@@ -691,9 +694,9 @@ class WeightProofHandler:
             log.error("failed validating weight proof recent blocks")
             return False, uint32(0), []
 
-        return True, self.get_fork_point(summaries), summaries
+        return True, fork_point, summaries
 
-    def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
+    def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> Tuple[uint32, int]:
         # iterate through sub epoch summaries to find fork point
         fork_point_index = 0
         ses_heights = self.blockchain.get_ses_heights()
@@ -707,14 +710,12 @@ class WeightProofHandler:
                 break
             fork_point_index = idx
 
-        if fork_point_index > 2:
+        if fork_point_index <= 2:
             # Two summeries can have different blocks and still be identical
             # This gets resolved after one full sub epoch
-            height = ses_heights[fork_point_index - 2]
-        else:
-            height = uint32(0)
+            return uint32(0), 0
 
-        return height
+        return ses_heights[fork_point_index - 2], fork_point_index
 
 
 def _get_weights_for_sampling(
@@ -999,6 +1000,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
+    validate_from: int = 0,
 ):
     constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     sub_epoch_segments: SubEpochSegments = SubEpochSegments.from_bytes(weight_proof_bytes)
@@ -1023,6 +1025,11 @@ def _validate_sub_epoch_segments(
         if not summaries[sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
             log.error(f"failed reward_chain_hash validation sub_epoch {sub_epoch_n}")
             return False
+
+        # skip validation up to fork height
+        if sub_epoch_n < validate_from:
+            continue
+
         for idx, segment in enumerate(segments):
             valid_segment, ip_iters, slot_iters, slots, vdf_list = _validate_segment(
                 constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
