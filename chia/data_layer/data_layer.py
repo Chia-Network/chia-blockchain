@@ -109,9 +109,9 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         async with self.db_wrapper.locked_transaction(lock=True):
-            t1 = time.time()
+            t1 = time.monotonic()
             await self.data_store.insert_batch(tree_id, changelist, lock=False)
-            t2 = time.time()
+            t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
             root = await self.data_store.get_tree_root(tree_id=tree_id, lock=False)
             # todo return empty node hash from get_tree_root

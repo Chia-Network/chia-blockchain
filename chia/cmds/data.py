@@ -237,7 +237,7 @@ def get_root_history(
 
 
 @data_cmd.command("add_missing_files", short_help="")
-@click.option("-ids", "--ids", help="", type=str, required=False)
+@click.option("-i", "--ids", help="", type=str, required=False)
 @click.option("-o", "--override", is_flag=True, type=bool, default=False)
 @click.option("-f", "--foldername", type=str, required=False)
 @create_rpc_port_option()
