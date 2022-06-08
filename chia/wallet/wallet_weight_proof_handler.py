@@ -182,9 +182,7 @@ def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProo
             break
 
         count = idx + 1
-        overflow = new_wp.sub_epochs[idx+1].num_blocks_overflow
-
-
+        overflow = new_wp.sub_epochs[idx + 1].num_blocks_overflow
 
     if new_wp.recent_chain_data[0].height < old_wp.recent_chain_data[-1].height:
         # Try to find an exact fork point
