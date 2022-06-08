@@ -324,16 +324,12 @@ class NFTWallet:
         provenance_puzzle = Program.to([NFT_STATE_LAYER_MOD_HASH, inner_puzzle])
         return provenance_puzzle
 
-    async def get_did_approval_info(
-        self, nft_id: bytes32, did_id: Optional[bytes32] = None
-    ) -> Tuple[bytes32, SpendBundle]:
+    async def get_did_approval_info(self, nft_id: bytes32, did_id: bytes32) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
 
         We also store `did_id` and then iterate to find the did wallet as we'd otherwise have to subscribe to
         any changes to DID wallet and storing wallet_id is not guaranteed to be consistent on wallet crash/reset.
         """
-        if did_id is None:
-            did_id = self.did_id
         self.log.info("Getting DID approval for DID: %s", did_id)
         for _, wallet in self.wallet_state_manager.wallets.items():
             self.log.debug("Checking wallet type %s", wallet.type())
@@ -434,7 +430,11 @@ class NFTWallet:
             if not record:
                 record = await self.wallet_state_manager.get_unused_derivation_record(self.id(), False)
             assert record
-            did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
+            if did_id:
+                did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name(), bytes32(did_id))
+            else:
+                did_inner_hash = int_to_bytes(0)
+                did_bundle = None
             pubkey = record.pubkey
             self.log.debug("Going to use this pubkey for NFT mint: %s", pubkey)
             innersol = create_ownership_layer_mint_solution(did_id, did_inner_hash, [], pubkey)
