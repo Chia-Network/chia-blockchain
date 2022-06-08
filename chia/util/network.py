@@ -92,8 +92,7 @@ def select_port(root_path: Path, addresses: List[Any]) -> uint16:
     global_config = load_config(root_path, "config.yaml")
     prefer_ipv6 = global_config.get("prefer_ipv6", False)
     selected_port: uint16
-    for x in addresses:
-        address_string, port = x[0], x[1]
+    for address_string, port, *_ in addresses:
         address = ip_address(address_string)
         if address.version == 6 and prefer_ipv6:
             selected_port = port
