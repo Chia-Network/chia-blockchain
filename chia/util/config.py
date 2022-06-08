@@ -16,8 +16,6 @@ import yaml
 from filelock import FileLock
 from typing_extensions import Literal
 
-from chia.util.path import mkdir
-
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
 
@@ -33,7 +31,7 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
         tmp_path: Path = path.with_suffix("." + str(os.getpid()))
-        mkdir(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
         with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
         try:
