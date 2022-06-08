@@ -107,11 +107,32 @@ class Offer:
             if asset_id is not None and asset_id not in self.driver_dict:
                 raise ValueError("Offer does not have enough driver information about the requested payments")
 
+    def additions(self) -> List[Coin]:
+        final_list: List[Coin] = []
+        for cs in self.bundle.coin_spends:
+            try:
+                final_list.extend(cs.additions())
+            except Exception:
+                pass
+        return final_list
+
+    def removals(self) -> List[Coin]:
+        return self.bundle.removals()
+
+    def incomplete_spends(self) -> List[CoinSpend]:
+        final_list: List[CoinSpend] = []
+        for cs in self.bundle.coin_spends:
+            try:
+                cs.additions()
+            except Exception:
+                final_list.append(cs)
+        return final_list
+
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
-        for addition in self.bundle.additions():
+        for addition in self.additions():
             # Get the parent puzzle
             parent_puzzle: Program = list(
                 filter(lambda cs: cs.coin.name() == addition.parent_coin_info, self.bundle.coin_spends)
@@ -132,6 +153,18 @@ class Offer:
                     offered_coins[asset_id].append(addition)
                 else:
                     offered_coins[asset_id] = [addition]
+
+        for spend in self.incomplete_spends():
+            puzzle_driver = match_puzzle(spend.puzzle_reveal.to_program())
+            if puzzle_driver is not None:
+                asset_id = create_asset_id(puzzle_driver)
+            else:
+                asset_id = None
+
+            if asset_id in offered_coins:
+                offered_coins[asset_id].append(addition)
+            else:
+                offered_coins[asset_id] = [addition]
 
         return offered_coins
 
@@ -166,8 +199,8 @@ class Offer:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], int]) -> Dict[str, int]:
-            new_dic: Dict[str, int] = {}
+        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
+            new_dic: Dict[str, Any] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]
@@ -184,8 +217,8 @@ class Offer:
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends
     def get_pending_amounts(self) -> Dict[str, int]:
-        all_additions: List[Coin] = self.bundle.additions()
-        all_removals: List[Coin] = self.bundle.removals()
+        all_additions: List[Coin] = self.additions()
+        all_removals: List[Coin] = self.removals()
         non_ephemeral_removals: List[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
 
         pending_dict: Dict[str, int] = {}
@@ -209,13 +242,13 @@ class Offer:
 
     # This method returns all of the coins that are being used in the offer (without which it would be invalid)
     def get_involved_coins(self) -> List[Coin]:
-        additions = self.bundle.additions()
-        return list(filter(lambda c: c not in additions, self.bundle.removals()))
+        additions = self.additions()
+        return list(filter(lambda c: c not in additions, self.removals()))
 
     # This returns the non-ephemeral removal that is an ancestor of the specified coin
     # This should maybe move to the SpendBundle object at some point
     def get_root_removal(self, coin: Coin) -> Coin:
-        all_removals: Set[Coin] = set(self.bundle.removals())
+        all_removals: Set[Coin] = set(self.removals())
         all_removal_ids: Set[bytes32] = {c.name() for c in all_removals}
         non_ephemeral_removals: Set[Coin] = {
             c for c in all_removals if c.parent_coin_info not in {r.name() for r in all_removals}
