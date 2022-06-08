@@ -12,6 +12,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -593,21 +594,36 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     assert res.get("success")
     nft_wallet_p2_puzzle = res["wallet_id"]
     assert nft_wallet_p2_puzzle != nft_wallet_0_id
+
+    res = await api_0.nft_get_by_did({"did_id": hex_did_id})
+    assert nft_wallet_0_id == res["wallet_id"]
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
     await time_out_assert(10, wallet_0.get_confirmed_balance, 5999999999999)
     # Create a NFT with DID
+    nft_ph: bytes32 = await wallet_0.get_new_puzzlehash()
     resp = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_0_id,
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "target_address": encode_puzzle_hash(nft_ph, "txch"),
         }
     )
     assert resp.get("success")
     sb = resp["spend_bundle"]
+    # ensure hints are generated correctly
+    memos = compute_memos(sb)
+    assert memos
+    puzhashes = []
+    for x in memos.values():
+        puzhashes.extend(list(x))
+    assert len(puzhashes) > 0
+    matched = 0
+    for puzhash in puzhashes:
+        if puzhash.hex() == nft_ph.hex():
+            matched += 1
+    assert matched > 0
 
-    # ensure hints are generated
-    assert compute_memos(sb)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
