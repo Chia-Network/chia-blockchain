@@ -593,6 +593,9 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     assert res.get("success")
     nft_wallet_p2_puzzle = res["wallet_id"]
     assert nft_wallet_p2_puzzle != nft_wallet_0_id
+
+    res = await api_0.nft_get_by_did({"did_id": hex_did_id})
+    assert nft_wallet_0_id == res["wallet_id"]
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
     await time_out_assert(10, wallet_0.get_confirmed_balance, 5999999999999)
     # Create a NFT with DID
@@ -605,9 +608,16 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     )
     assert resp.get("success")
     sb = resp["spend_bundle"]
-
+    memos = compute_memos(sb)
+    assert memos
+    puzhashes = []
+    for x in memos.values():
+        puzhashes.extend(list(x))
+    assert len(puzhashes) > 0
+    for puzhash in puzhashes:
+        assert wallet_0.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
     # ensure hints are generated
-    assert compute_memos(sb)
+
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
