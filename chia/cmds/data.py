@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Coroutine, Dict, Optional, TypeVar
+from typing import Any, Coroutine, Dict, List, Optional, TypeVar
 from pathlib import Path
 
 import click
@@ -184,18 +184,16 @@ def get_root(
 
 @data_cmd.command("subscribe", short_help="")
 @create_data_store_id_option()
-@click.option("-ip", "--ip", help="", type=str)
-@click.option("-port", "--port", help="", type=str)
+@click.option("-u", "--urls", help="", type=str, multiple=True)
 @create_rpc_port_option()
 def subscribe(
     id: str,
-    ip: str,
-    port: str,
+    urls: List[str],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import subscribe_cmd
 
-    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, ip=json.loads(ip), port=json.loads(port)))
+    run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
 @data_cmd.command("unsubscribe", short_help="")

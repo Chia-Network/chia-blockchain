@@ -7,7 +7,6 @@ from typing import List, Optional
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, Root
-from chia.util.ints import uint16
 
 
 def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
@@ -102,15 +101,13 @@ async def insert_from_delta_file(
     tree_id: bytes32,
     existing_generation: int,
     root_hashes: List[bytes32],
-    ip: str,
-    port: uint16,
+    url: str,
     client_foldername: Path,
     log: logging.Logger,
 ) -> bool:
     for root_hash in root_hashes:
         existing_generation += 1
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
-        url = f"http://{ip}:{port}/{filename}"
 
         try:
             async with aiohttp.ClientSession() as session:

@@ -108,8 +108,7 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    servers_ip TEXT NOT NULL,
-                    servers_port TEXT NOT NULL,
+                    urls TEXT NOT NULL,
                     PRIMARY KEY(tree_id)
                 )
                 """
@@ -1134,31 +1133,21 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            servers_ip = json.dumps(subscription.ip)
-            servers_port = json.dumps(subscription.port)
             await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, servers_ip, servers_port) "
-                "VALUES (:tree_id, :servers_ip, :servers_port)",
+                "INSERT INTO subscriptions(tree_id, urls) VALUES (:tree_id, :urls)",
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "servers_ip": servers_ip,
-                    "servers_port": servers_port,
+                    "urls": json.dumps(subscription.urls),
                 },
             )
 
     async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            servers_ip = json.dumps(subscription.ip)
-            servers_port = json.dumps(subscription.port)
             await self.db.execute(
-                """
-                UPDATE subscriptions SET servers_ip = :servers_ip, servers_port = :servers_port
-                WHERE tree_id == :tree_id
-                """,
+                "UPDATE subscriptions SET urls = :urls WHERE tree_id == :tree_id",
                 {
                     "tree_id": subscription.tree_id.hex(),
-                    "servers_ip": servers_ip,
-                    "servers_port": servers_port,
+                    "urls": json.dumps(subscription.urls),
                 },
             )
 
@@ -1189,9 +1178,8 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                servers_ip = json.loads(row["servers_ip"])
-                servers_port = json.loads(row["servers_port"])
-                subscriptions.append(Subscription(tree_id, servers_ip, servers_port))
+                urls = json.loads(row["urls"])
+                subscriptions.append(Subscription(tree_id, urls))
 
         return subscriptions
 

@@ -13,7 +13,7 @@ from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.util.path import mkdir, path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
@@ -181,7 +181,7 @@ class DataLayer:
 
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
-        for ip, port in zip(subscription.ip, subscription.port):
+        for url in subscription.urls:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -197,7 +197,7 @@ class DataLayer:
                 f"Downloading files {subscription.tree_id}. "
                 f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
-                f"Server used: {ip}:{port}."
+                f"Server used: {url}."
             )
 
             to_download = await self.wallet_rpc.dl_history(
@@ -212,8 +212,7 @@ class DataLayer:
                     subscription.tree_id,
                     root.generation,
                     [record.root for record in reversed(to_download)],
-                    ip,
-                    port,
+                    url,
                     self.server_files_location,
                     self.log,
                 )
@@ -227,7 +226,7 @@ class DataLayer:
             except asyncio.CancelledError:
                 raise
             except aiohttp.client_exceptions.ClientConnectorError:
-                self.log.warning(f"Server {ip}:{port} unavailable for {tree_id}.")
+                self.log.warning(f"Server {url} unavailable for {tree_id}.")
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
@@ -262,8 +261,8 @@ class DataLayer:
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
             await write_files_for_root(self.data_store, store_id, root, server_files_location, override)
 
-    async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> None:
-        subscription = Subscription(store_id, ip, port)
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
+        subscription = Subscription(store_id, urls)
         subscriptions = await self.get_subscriptions()
         if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
             await self.data_store.update_existing_subscription(subscription)
@@ -325,7 +324,7 @@ class DataLayer:
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:
-                        await self.subscribe(local_id, [], [])
+                        await self.subscribe(local_id, [])
                     except asyncio.CancelledError:
                         return
                     except Exception as e:

@@ -7,7 +7,6 @@ import aiosqlite as aiosqlite
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
 
 
@@ -180,8 +179,7 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 @dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    ip: List[str]
-    port: List[uint16]
+    urls: List[str]
 
 
 @dataclass(frozen=True)

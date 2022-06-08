@@ -204,9 +204,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        ips = request["ip"]
-        ports = request["port"]
-        await self.service.subscribe(store_id=store_id_bytes, ip=ips, port=ports)
+        urls = request["urls"]
+        await self.service.subscribe(store_id=store_id_bytes, urls=urls)
         return {}
 
     async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:

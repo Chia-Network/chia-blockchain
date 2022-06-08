@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):
@@ -49,8 +49,8 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def subscribe(self, store_id: bytes32, ip: List[str], port: List[uint16]) -> Dict[str, Any]:
-        response = await self.fetch("subscribe", {"id": store_id.hex(), "ip": ip, "port": port})
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Dict[str, Any]:
+        response = await self.fetch("subscribe", {"id": store_id.hex(), "urls": urls})
         return response  # type: ignore[no-any-return]
 
     async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
