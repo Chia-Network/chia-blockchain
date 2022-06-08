@@ -92,7 +92,6 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
     await raw_data_store.create_tree(tree_id=tree_id)
 
 
-@pytest.mark.xfail(strict=True)
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.asyncio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
@@ -100,6 +99,7 @@ async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, leng
 
     # TODO: require a more specific exception
     with pytest.raises(Exception):
+        # type ignore since we are trying to intentionally pass a bad argument
         await raw_data_store.create_tree(tree_id=bad_tree_id)  # type: ignore[arg-type]
 
 
@@ -222,9 +222,9 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
-    create_example: Callable[[DataStore, bytes32], Example],
+    create_example: Callable[[DataStore, bytes32], Awaitable[Example]],
 ) -> None:
-    example = await create_example(data_store=data_store, tree_id=tree_id)  # type: ignore
+    example = await create_example(data_store, tree_id)
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)

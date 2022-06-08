@@ -137,6 +137,10 @@ class DataStore:
     async def _insert_root(
         self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation: Optional[int] = None
     ) -> None:
+        # This should be replaced by an SQLite schema level check.
+        # https://github.com/Chia-Network/chia-blockchain/pull/9284
+        tree_id = bytes32(tree_id)
+
         if generation is None:
             existing_generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
 
@@ -219,7 +223,10 @@ class DataStore:
                 await self._insert_node(node_hash.hex(), node_type, None, None, value1.hex(), value2.hex())
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
-        node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+        # forcing type hint here for:
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
+        node_hash: bytes32 = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
 
         await self._insert_node(
             node_hash=node_hash.hex(),
@@ -230,7 +237,7 @@ class DataStore:
             value=None,
         )
 
-        return node_hash  # type: ignore[no-any-return]
+        return node_hash
 
     async def _insert_ancestor_table(
         self,
@@ -270,7 +277,10 @@ class DataStore:
                     )
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
-        node_hash = Program.to((key, value)).get_tree_hash()
+        # forcing type hint here for:
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
+        node_hash: bytes32 = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
             node_hash=node_hash.hex(),
@@ -281,7 +291,7 @@ class DataStore:
             value=value.hex(),
         )
 
-        return node_hash  # type: ignore[no-any-return]
+        return node_hash
 
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=True):

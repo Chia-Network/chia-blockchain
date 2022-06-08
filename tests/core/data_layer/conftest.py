@@ -79,6 +79,7 @@ def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None, scripts_path: path
 
 @pytest.fixture(name="create_example", params=[add_0123_example, add_01234567_example])
 def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32], Awaitable[Example]]:
+    # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
 
 

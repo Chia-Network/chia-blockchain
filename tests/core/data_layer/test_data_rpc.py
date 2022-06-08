@@ -37,6 +37,8 @@ async def init_data_layer(wallet_rpc_port: int, bt: BlockTools) -> AsyncIterator
     config["data_layer"]["wallet_peer"]["port"] = wallet_rpc_port
     # TODO: running the data server causes the RPC tests to hang at the end
     config["data_layer"]["run_server"] = False
+    config["data_layer"]["port"] = 0
+    config["data_layer"]["rpc_port"] = 0
     save_config(bt.root_path, "config.yaml", config)
     kwargs = service_kwargs_for_data_layer(root_path=bt.root_path, config=config)
     kwargs.update(parse_cli_args=False)
