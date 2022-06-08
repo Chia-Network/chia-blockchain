@@ -547,7 +547,7 @@ def nft_mint_cmd(
     series_total: Optional[int],
     series_number: Optional[int],
     fee: str,
-    royalty_percentage: int,
+    royalty_percentage_fraction: int,
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, mint_nft
@@ -575,7 +575,7 @@ def nft_mint_cmd(
         "series_total": series_total,
         "series_number": series_number,
         "fee": fee,
-        "royalty_percentage": royalty_percentage,
+        "royalty_percentage": royalty_percentage_fraction,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
 
