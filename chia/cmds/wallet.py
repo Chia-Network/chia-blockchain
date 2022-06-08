@@ -508,8 +508,8 @@ def nft_wallet_create_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> N
 )
 @click.option(
     "-rp",
-    "--royalty-percentage",
-    help="NFT royalty percentage in basis points. Example: 1750 would represent 1.75%",
+    "--royalty-percentage-fraction",
+    help="NFT royalty percentage fraction in basis points. Example: 175 would represent 1.75%",
     type=int,
     default=0,
     show_default=True,
