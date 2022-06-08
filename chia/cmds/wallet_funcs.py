@@ -703,6 +703,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     series_total = args["series_total"]
     series_number = args["series_number"]
     fee = args["fee"]
+    royalty_percentage = args["royalty_percentage"]
     try:
         response = await wallet_client.mint_nft(
             wallet_id,
@@ -717,6 +718,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             series_total,
             series_number,
             fee,
+            royalty_percentage,
         )
         spend_bundle = response["spend_bundle"]
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
