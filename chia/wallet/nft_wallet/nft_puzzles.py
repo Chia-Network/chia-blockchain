@@ -249,12 +249,7 @@ def create_ownership_layer_transfer_solution(
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
-    full_solution: Program = Program.from_bytes(bytes(solution))
-    delegated_puz_solution: Program = Program.from_bytes(bytes(solution)).rest().rest().first().first()
-    if delegated_puz_solution.rest().as_python() == b"":
-        conditions = puzzle.run(full_solution)
-    else:
-        conditions = delegated_puz_solution.rest().first().rest()
+    conditions: Program = unft.inner_puzzle.run(solution)
     metadata = unft.metadata
     puzhash_for_derivation: Optional[bytes32] = None
     for condition in conditions.as_iter():
