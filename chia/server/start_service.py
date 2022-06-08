@@ -157,6 +157,7 @@ class Service:
         for port in self._upnp_ports:
             if self.upnp is None:
                 self.upnp = UPnP()
+                self.upnp.setup()
 
             self.upnp.remap(port)
 

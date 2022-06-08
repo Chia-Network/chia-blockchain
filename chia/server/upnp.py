@@ -25,11 +25,11 @@ class UPnP:
     )
     upnp: Optional[miniupnpc.UPnP] = None
 
-    def __post_init__(self) -> None:
-        self.thread = threading.Thread(target=self.run)
+    def setup(self) -> None:
+        self.thread = threading.Thread(target=self._run)
         self.thread.start()
 
-    def run(self) -> None:
+    def _run(self) -> None:
         try:
             self.upnp = miniupnpc.UPnP()
             self.upnp.discoverdelay = 30
