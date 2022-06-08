@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import G1Element
-from clvm.casts import int_from_bytes
+from clvm.casts import int_from_bytes, int_to_bytes
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -218,7 +218,7 @@ def create_ownership_layer_puzzle(
     return nft_ownership_layer_puzzle
 
 
-def create_ownership_layer_transfer_solution(
+def create_ownership_layer_mint_solution(
     new_did: bytes,
     new_did_inner_hash: bytes32,
     trade_prices_list: List[List[int]],
@@ -226,13 +226,15 @@ def create_ownership_layer_transfer_solution(
 ) -> Program:
     log.debug(
         "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s pubkey:%s",
-        new_did.hex(),
-        new_did_inner_hash.hex(),
+        new_did,
+        new_did_inner_hash,
         str(trade_prices_list),
         new_pubkey,
     )
     synthetic_pk: bytes = bytes(calculate_synthetic_public_key(new_pubkey, DEFAULT_HIDDEN_PUZZLE_HASH))
+    log.debug("Using synthetic PK: %s", synthetic_pk.hex())
     puzhash: bytes32 = STANDARD_PUZZLE_MOD.curry(synthetic_pk).get_tree_hash()
+    log.debug("Got puzhash for %s: %s", synthetic_pk.hex(), puzhash.hex())
     condition_list = [
         [
             51,
@@ -250,6 +252,43 @@ def create_ownership_layer_transfer_solution(
         ]
     )
     log.debug("Generated transfer solution: %s", solution)
+    return solution
+
+
+def create_ownership_layer_update_solution(
+    new_did: bytes,
+    new_did_inner_hash: Optional[bytes32],
+    pubkey: G1Element,
+) -> Program:
+    log.debug(
+        "Creating a transfer solution with: DID:%s Inner_puzhash:%s pubkey:%s",
+        new_did,
+        new_did_inner_hash,
+        pubkey,
+    )
+    if not new_did_inner_hash:
+        new_did_inner_hash = int_to_bytes(0)
+    if not new_did:
+        new_did = int_to_bytes(0)
+    puzhash: bytes32 = STANDARD_PUZZLE_MOD.curry(pubkey).get_tree_hash()
+    log.debug("Got puzhash for %s: %s", pubkey.hex(), puzhash.hex())
+    condition_list = [
+        [
+            51,
+            puzhash,
+            1,
+            [puzhash],
+        ],
+        [-10, new_did, [], pubkey, [new_did_inner_hash]],
+    ]
+    log.debug("Condition list raw: %r", condition_list)
+    solution = Program.to(
+        [
+            [solution_for_conditions(condition_list)],
+            1,
+        ]
+    )
+    log.debug("Generated update solution: %s", disassemble(solution))
     return solution
 
 

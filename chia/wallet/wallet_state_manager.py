@@ -716,8 +716,14 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        did_id = uncurried_nft.owner_did
-        self.log.debug("Handling NFT: %s， DID: %s", coin_spend, did_id)
+        did_id = None
+        if uncurried_nft.supports_did:
+            # extract the latest did_id from solution
+            solution = coin_spend.solution.to_program()
+            did_id = solution.at("rrfffrfrrfrf").atom
+            if not did_id:
+                did_id = None
+        self.log.debug("Handling NFT: %s， DID: %s", uncurried_nft.singleton_launcher_id, did_id)
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
             if nft_wallet_info.did_id == did_id:

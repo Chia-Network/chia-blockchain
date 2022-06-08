@@ -1399,6 +1399,20 @@ class WalletRpcApi:
                 return {"wallet_id": wallet.wallet_id, "wallet_info": wallet.wallet_info, "success": True}
         return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
 
+    async def nft_set_nft_did(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            did_id = bytes32.fromhex(request["did_id"])
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            fee = uint64(request.get("fee", 0))
+            spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        except Exception as e:
+            log.exception(f"Failed to set DID on NFT: {e}")
+            return {"success": False, "error": str(e)}
+
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
