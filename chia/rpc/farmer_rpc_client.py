@@ -1,7 +1,9 @@
 from typing import Dict, List, Optional, Any
 
+from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.misc import dataclass_to_json_dict
 
 
 class FarmerRpcClient(RpcClient):
@@ -51,6 +53,21 @@ class FarmerRpcClient(RpcClient):
 
     async def get_harvesters(self) -> Dict[str, Any]:
         return await self.fetch("get_harvesters", {})
+
+    async def get_harvesters_summary(self) -> Dict[str, object]:
+        return await self.fetch("get_harvesters_summary", {})
+
+    async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_valid", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_invalid(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_invalid", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_keys_missing(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_keys_missing", dataclass_to_json_dict(request))
+
+    async def get_harvester_plots_duplicates(self, request: PlotPathRequestData) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_plots_duplicates", dataclass_to_json_dict(request))
 
     async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:
         try:
