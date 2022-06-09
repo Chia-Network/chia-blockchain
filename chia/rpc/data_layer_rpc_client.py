@@ -17,7 +17,7 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def update_data_store(
-        self, store_id: bytes32, changelist: Dict[str, str], fee: Optional[uint64]
+        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64]
     ) -> Dict[str, Any]:
         response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
         # TODO: better hinting for .fetch() (probably a TypedDict)
