@@ -1,6 +1,7 @@
 import asyncio
 import itertools
-from typing import Collection, List, Optional, Set
+import time
+from typing import Collection, Iterator, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -18,6 +19,24 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 
 
+def backoff_times(
+    initial: float = 0.001,
+    final: float = 0.100,
+    time_to_final: float = 0.5,
+    clock=time.monotonic,
+) -> Iterator[float]:
+    # initially implemented as a simple linear backoff
+
+    start = clock()
+    delta = 0
+
+    result_range = final - initial
+
+    while True:
+        yield min(final, initial + ((delta / time_to_final) * result_range))
+        delta = clock() - start
+
+
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
     """Wait until all of the specified coins are simultaneously reported as spendable
     by the wallet.
@@ -26,7 +45,7 @@ async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
         coins: The coins expected to be received.
         wallet: The wallet expected to receive the coins.
     """
-    while True:
+    for backoff in backoff_times():
         spendable_wallet_coin_records = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(
             wallet_id=wallet.id()
         )
@@ -35,7 +54,7 @@ async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
         if coins.issubset(spendable_wallet_coins):
             return
 
-        await asyncio.sleep(0.050)
+        await asyncio.sleep(backoff)
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -282,7 +301,7 @@ class FullNodeSimulator(FullNodeAPI):
 
             ids_to_check.add(record.spend_bundle.name())
 
-        while True:
+        for backoff in backoff_times():
             found = set()
             for spend_bundle_name in ids_to_check:
                 tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
@@ -293,7 +312,7 @@ class FullNodeSimulator(FullNodeAPI):
             if len(ids_to_check) == 0:
                 return
 
-            await asyncio.sleep(0.050)
+            await asyncio.sleep(backoff)
 
     async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
         """Process the specified transaction records and wait until they have been

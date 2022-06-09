@@ -1,13 +1,45 @@
-from typing import List, Tuple
+from typing import Iterator, List, Tuple
 
 import pytest
 
 from chia.cmds.units import units
 from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
+
+
+def test_backoff_yields_initial_first() -> None:
+    backoff = backoff_times(initial=3, final=10)
+    assert next(backoff) == 3
+
+
+def test_backoff_yields_final_at_end() -> None:
+    def clock(times: Iterator[int] = iter([0, 1])) -> float:
+        return next(times)
+
+    backoff = backoff_times(initial=2, final=7, time_to_final=1, clock=clock)
+    next(backoff)
+    assert next(backoff) == 7
+
+
+def test_backoff_yields_half_at_halfway() -> None:
+    def clock(times: Iterator[int] = iter([0, 1])) -> float:
+        return next(times)
+
+    backoff = backoff_times(initial=4, final=6, time_to_final=2, clock=clock)
+    next(backoff)
+    assert next(backoff) == 5
+
+
+def test_backoff_saturates_at_final() -> None:
+    def clock(times: Iterator[int] = iter([0, 2])) -> float:
+        return next(times)
+
+    backoff = backoff_times(initial=1, final=3, time_to_final=1, clock=clock)
+    next(backoff)
+    assert next(backoff) == 3
 
 
 @pytest.mark.asyncio
@@ -231,7 +263,7 @@ async def test_create_coins_with_invalid_amounts_raises(
 
     await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
-    # Avoiding an attribute hint issue below.
+    # Avoiding an attribute hint issue below.backoff_times
     assert wallet_node.wallet_state_manager is not None
 
     wallet = wallet_node.wallet_state_manager.main_wallet
