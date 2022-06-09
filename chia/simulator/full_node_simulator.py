@@ -198,15 +198,13 @@ class FullNodeSimulator(FullNodeAPI):
             height = uint32(block.height)
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
-        while True:
-            peak_height = self.full_node.blockchain.get_peak_height()
-            if peak_height is None:
-                raise RuntimeError("Peak height still None after processing at least one block")
+        peak_height = self.full_node.blockchain.get_peak_height()
 
-            if peak_height >= height:
-                break
+        if peak_height is None:
+            raise RuntimeError("Peak height still None after processing at least one block")
 
-            await asyncio.sleep(0.050)
+        if peak_height < height:
+            raise RuntimeError(f"Peak height lower than expected: {peak_height} < {height}")
 
         return rewards
 
