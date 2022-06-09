@@ -301,6 +301,44 @@ def parse_str(f: BinaryIO) -> str:
     return bytes.decode(str_read_bytes, "utf-8")
 
 
+def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
+    """
+    This function returns a function taking one argument `f: BinaryIO` that parses
+    and returns a value of the given type.
+    """
+    inner_type: Type[Any]
+    if f_type is bool:
+        return parse_bool
+    if is_type_SpecificOptional(f_type):
+        inner_type = get_args(f_type)[0]
+        parse_inner_type_f = function_to_parse_one_item(inner_type)
+        return lambda f: parse_optional(f, parse_inner_type_f)
+    if hasattr(f_type, "parse_rust"):
+        return lambda f: parse_rust(f, f_type)
+    if hasattr(f_type, "parse"):
+        # Ignoring for now as the proper solution isn't obvious
+        return f_type.parse  # type: ignore[no-any-return]
+    if f_type == bytes:
+        return parse_bytes
+    if is_type_List(f_type):
+        inner_type = get_args(f_type)[0]
+        parse_inner_type_f = function_to_parse_one_item(inner_type)
+        return lambda f: parse_list(f, parse_inner_type_f)
+    if is_type_Tuple(f_type):
+        inner_types = get_args(f_type)
+        list_parse_inner_type_f = [function_to_parse_one_item(_) for _ in inner_types]
+        return lambda f: parse_tuple(f, list_parse_inner_type_f)
+    if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
+        bytes_to_read = size_hints[f_type.__name__]
+        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
+    if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
+        bytes_to_read = size_hints[f_type.__name__]
+        return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
+    if f_type is str:
+        return parse_str
+    raise NotImplementedError(f"Type {f_type} does not have parse")
+
+
 def stream_optional(stream_inner_type_func: StreamFunctionType, item: Any, f: BinaryIO) -> None:
     if item is None:
         f.write(bytes([0]))
@@ -388,7 +426,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     for field in fields:
         stream_functions.append(cls.function_to_stream_one_item(field.type))
-        parse_functions.append(cls.function_to_parse_one_item(field.type))
+        parse_functions.append(function_to_parse_one_item(field.type))
         convert_functions.append(function_to_convert_one_item(field.type))
 
     STREAM_FUNCTIONS_FOR_STREAMABLE_CLASS[cls] = stream_functions
@@ -500,44 +538,6 @@ class Streamable:
             except TypeError:
                 # Throws a TypeError because we cannot call isinstance for subscripted generics like Optional[int]
                 object.__setattr__(self, field.name, self.post_init_parse(data[field.name], field.name, field.type))
-
-    @classmethod
-    def function_to_parse_one_item(cls, f_type: Type[Any]) -> ParseFunctionType:
-        """
-        This function returns a function taking one argument `f: BinaryIO` that parses
-        and returns a value of the given type.
-        """
-        inner_type: Type[Any]
-        if f_type is bool:
-            return parse_bool
-        if is_type_SpecificOptional(f_type):
-            inner_type = get_args(f_type)[0]
-            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
-            return lambda f: parse_optional(f, parse_inner_type_f)
-        if hasattr(f_type, "parse_rust"):
-            return lambda f: parse_rust(f, f_type)
-        if hasattr(f_type, "parse"):
-            # Ignoring for now as the proper solution isn't obvious
-            return f_type.parse  # type: ignore[no-any-return]
-        if f_type == bytes:
-            return parse_bytes
-        if is_type_List(f_type):
-            inner_type = get_args(f_type)[0]
-            parse_inner_type_f = cls.function_to_parse_one_item(inner_type)
-            return lambda f: parse_list(f, parse_inner_type_f)
-        if is_type_Tuple(f_type):
-            inner_types = get_args(f_type)
-            list_parse_inner_type_f = [cls.function_to_parse_one_item(_) for _ in inner_types]
-            return lambda f: parse_tuple(f, list_parse_inner_type_f)
-        if hasattr(f_type, "from_bytes_unchecked") and f_type.__name__ in size_hints:
-            bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=True)
-        if hasattr(f_type, "from_bytes") and f_type.__name__ in size_hints:
-            bytes_to_read = size_hints[f_type.__name__]
-            return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
-        if f_type is str:
-            return parse_str
-        raise NotImplementedError(f"Type {f_type} does not have parse")
 
     @classmethod
     def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
