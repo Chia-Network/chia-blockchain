@@ -124,7 +124,7 @@ async def write_files_for_root(
             with open(filename_diff_tree, mode) as writer:
                 await data_store.write_tree_to_file(root, node_hash, tree_id, True, writer)
         else:
-            open(filename_diff_tree, "wb").close()
+            open(filename_diff_tree, mode).close()
         written = True
     except FileExistsError:
         pass
