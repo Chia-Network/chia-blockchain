@@ -145,18 +145,8 @@ async def insert_from_delta_file(
                     target_filename = client_foldername.joinpath(filename)
                     text = await resp.read()
                     target_filename.write_bytes(text)
-        except asyncio.CancelledError:
-            raise
         except Exception:
-            if await data_store.get_last_tree_root_by_hash(tree_id, root_hash) is not None:
-                # If we don't have the delta file, but we have the tree in the past, create an empty delta file.
-                # It's possible the wallet record to be created by a proof of inclusion, not a batch update,
-                # hence the delta file might be missing.
-                log.info(f"Already seen {root_hash} for {tree_id}. Writing an empty delta file.")
-                target_filename = client_foldername.joinpath(filename)
-                open(target_filename, "wb").close()
-            else:
-                raise
+            raise
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
