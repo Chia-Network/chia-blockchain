@@ -170,6 +170,7 @@ def test_transfer_program() -> None:
     # TODO: check for the announcement.  This is broken currently.
     # TODO: Add a test where the inner puzzle tries to create a banned announcement
 
+
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)

@@ -42,10 +42,12 @@ def test_ownership_outer_puzzle() -> None:
     assert create_asset_id(ownership_driver) == None
 
     # Set up for solve
-    inner_solution = Program.to([
-        [51, ACS.get_tree_hash(), 1],
-        [-10],
-    ])
+    inner_solution = Program.to(
+        [
+            [51, ACS.get_tree_hash(), 1],
+            [-10],
+        ]
+    )
     solution: Program = solve_puzzle(
         ownership_driver,
         Solver({}),
