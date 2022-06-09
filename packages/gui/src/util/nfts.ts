@@ -21,5 +21,5 @@ export function launcherIdFromNFTId(nftId: string): string | undefined {
 }
 
 export function convertRoyaltyToPercentage(royalty: number): number {
-  return royalty / 1000;
+  return royalty / 100;
 }

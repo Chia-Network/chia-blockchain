@@ -57,7 +57,7 @@ export default function NFTCard(props: NFTCardProps) {
   }
 
   return (
-    <Card>
+    <Card sx={{ borderRadius: '8px' }}>
       {isLoading ? (
         <CardContent>
           <Loading center />
@@ -65,7 +65,7 @@ export default function NFTCard(props: NFTCardProps) {
       ) : (
         <>
           <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
-            <NFTPreview nft={nft} fit="contain" />
+            <NFTPreview nft={nft} fit="cover" />
           </CardActionArea>
           <CardActionArea onClick={() => canExpandDetails && handleClick()}>
             <StyledCardContent>

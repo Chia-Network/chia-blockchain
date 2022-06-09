@@ -1,6 +1,7 @@
 import React, { type ReactNode, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { Box, IconButton, InputBase } from '@mui/material';
+import { WalletType } from '@chia/api';
 import {
   Button,
   useColorModeValue,
@@ -126,7 +127,10 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   const t = useTrans();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const { list, hide, show, isLoading } = useWalletsList(search);
+  const { list, hide, show, isLoading } = useWalletsList(search, [
+    WalletType.STANDARD_WALLET,
+    WalletType.CAT,
+  ]);
 
   function handleAddToken(event) {
     event.preventDefault();
