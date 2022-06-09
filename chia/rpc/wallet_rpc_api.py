@@ -136,6 +136,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
+            "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
@@ -1398,6 +1399,32 @@ class WalletRpcApi:
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
                 return {"wallet_id": wallet.wallet_id, "success": True}
         return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
+
+    async def nft_get_wallets_with_dids(self, request) -> Dict:
+        assert self.service.wallet_state_manager is not None
+        all_wallets = self.service.wallet_state_manager.wallets.values()
+        did_wallets_by_did_id: Dict[bytes32, uint32] = {
+            wallet.did_info.origin_coin.name(): wallet.id()
+            for wallet in all_wallets
+            if isinstance(wallet, DIDWallet) and wallet.did_info.origin_coin is not None
+        }
+        did_nft_wallets: List[Dict] = []
+        for wallet in all_wallets:
+            if isinstance(wallet, NFTWallet):
+                nft_wallet_did: Optional[bytes32] = wallet.get_did()
+                if nft_wallet_did is not None:
+                    did_wallet_id: uint32 = did_wallets_by_did_id.get(nft_wallet_did, uint32(0))
+                    if did_wallet_id == 0:
+                        log.warning(f"NFT wallet {wallet.id()} has DID {nft_wallet_did.hex()} but no DID wallet")
+                    else:
+                        did_nft_wallets.append(
+                            {
+                                "wallet_id": wallet.id(),
+                                "did_id": nft_wallet_did.hex(),
+                                "did_wallet_id": did_wallet_id,
+                            }
+                        )
+        return {"success": True, "nft_wallets": did_nft_wallets}
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
