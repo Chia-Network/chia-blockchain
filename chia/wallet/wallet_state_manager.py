@@ -43,7 +43,7 @@ from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.outer_puzzles import AssetType, match_puzzle
+from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
@@ -1303,9 +1303,8 @@ class WalletStateManager:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
             elif wallet.type() == WalletType.NFT:
-                for nft_coin in wallet.nft_wallet_info.my_nft_coins:
-                    nft_info = match_puzzle(nft_coin.full_puzzle)
-                    if nft_info.info["launcher_id"] == "0x" + asset_id:  # type: ignore
+                for nft_coin in wallet.my_nft_coins:
+                    if nft_coin.nft_id.hex() == asset_id:
                         return wallet
         return None
 
