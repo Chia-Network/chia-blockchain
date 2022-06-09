@@ -382,6 +382,36 @@ def stream_byte_convertible(item: object, f: BinaryIO) -> None:
     f.write(getattr(item, "__bytes__")())
 
 
+def function_to_stream_one_item(f_type: Type[Any]) -> StreamFunctionType:
+    inner_type: Type[Any]
+    if is_type_SpecificOptional(f_type):
+        inner_type = get_args(f_type)[0]
+        stream_inner_type_func = function_to_stream_one_item(inner_type)
+        return lambda item, f: stream_optional(stream_inner_type_func, item, f)
+    elif f_type == bytes:
+        return stream_bytes
+    elif hasattr(f_type, "stream"):
+        return stream_streamable
+    elif hasattr(f_type, "__bytes__"):
+        return stream_byte_convertible
+    elif is_type_List(f_type):
+        inner_type = get_args(f_type)[0]
+        stream_inner_type_func = function_to_stream_one_item(inner_type)
+        return lambda item, f: stream_list(stream_inner_type_func, item, f)
+    elif is_type_Tuple(f_type):
+        inner_types = get_args(f_type)
+        stream_inner_type_funcs = []
+        for i in range(len(inner_types)):
+            stream_inner_type_funcs.append(function_to_stream_one_item(inner_types[i]))
+        return lambda item, f: stream_tuple(stream_inner_type_funcs, item, f)
+    elif f_type is str:
+        return stream_str
+    elif f_type is bool:
+        return stream_bool
+    else:
+        raise NotImplementedError(f"can't stream {f_type}")
+
+
 def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     """
     This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
@@ -425,7 +455,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     FIELDS_FOR_STREAMABLE_CLASS[cls] = fields
 
     for field in fields:
-        stream_functions.append(cls.function_to_stream_one_item(field.type))
+        stream_functions.append(function_to_stream_one_item(field.type))
         parse_functions.append(function_to_parse_one_item(field.type))
         convert_functions.append(function_to_convert_one_item(field.type))
 
@@ -554,36 +584,6 @@ class Streamable:
         if next(values, -1) != -1:
             raise ValueError("Failed to parse unknown data in Streamable object")
         return obj
-
-    @classmethod
-    def function_to_stream_one_item(cls, f_type: Type[Any]) -> StreamFunctionType:
-        inner_type: Type[Any]
-        if is_type_SpecificOptional(f_type):
-            inner_type = get_args(f_type)[0]
-            stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
-            return lambda item, f: stream_optional(stream_inner_type_func, item, f)
-        elif f_type == bytes:
-            return stream_bytes
-        elif hasattr(f_type, "stream"):
-            return stream_streamable
-        elif hasattr(f_type, "__bytes__"):
-            return stream_byte_convertible
-        elif is_type_List(f_type):
-            inner_type = get_args(f_type)[0]
-            stream_inner_type_func = cls.function_to_stream_one_item(inner_type)
-            return lambda item, f: stream_list(stream_inner_type_func, item, f)
-        elif is_type_Tuple(f_type):
-            inner_types = get_args(f_type)
-            stream_inner_type_funcs = []
-            for i in range(len(inner_types)):
-                stream_inner_type_funcs.append(cls.function_to_stream_one_item(inner_types[i]))
-            return lambda item, f: stream_tuple(stream_inner_type_funcs, item, f)
-        elif f_type is str:
-            return stream_str
-        elif f_type is bool:
-            return stream_bool
-        else:
-            raise NotImplementedError(f"can't stream {f_type}")
 
     def stream(self, f: BinaryIO) -> None:
         self_type = type(self)
