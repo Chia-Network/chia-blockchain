@@ -111,7 +111,8 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        async with self.db_wrapper.locked_transaction(lock=True):
+        batch_update_db_wrapper = DBWrapper(self.connection)
+        async with batch_update_db_wrapper.locked_transaction(lock=True):
             t1 = time.monotonic()
             await self.data_store.insert_batch(tree_id, changelist, lock=False)
             t2 = time.monotonic()
