@@ -19,23 +19,34 @@ def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) ->
 
 def is_filename_valid(filename: str) -> bool:
     try:
+        if len(filename) > 200:
+            return False
         if not filename.endswith("-v1.0.dat"):
             return False
         filename = filename[:-9]
         tree_id_bytes = bytes.fromhex(filename[:64])
         if len(tree_id_bytes) != 32:
             return False
-        filename = filename[65:]
+        filename = filename[64:]
+        if filename[0] != "-":
+            return False
+        filename = filename[1:]
         node_hash_bytes = bytes.fromhex(filename[:64])
         if len(node_hash_bytes) != 32:
             return False
-        filename = filename[65:]
+        filename = filename[64:]
+        if filename[0] != "-":
+            return False
+        filename = filename[1:]
         if filename.startswith("delta"):
-            filename = filename[6:]
-        elif filename.startswith("full"):
             filename = filename[5:]
+        elif filename.startswith("full"):
+            filename = filename[4:]
         else:
             return False
+        if filename[0] != "-":
+            return False
+        filename = filename[1:]
         generation = int(filename)
         if generation < 0 or generation > 1000000000:
             return False
@@ -83,7 +94,8 @@ async def write_files_for_root(
     if override and filename_full_tree.exists():
         os.remove(filename_full_tree)
     if not filename_full_tree.exists():
-        await data_store.write_tree_to_file(root, node_hash, tree_id, False, filename_full_tree)
+        with open(filename_full_tree, "wb") as writer:
+            await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
         written = True
     if override and filename_diff_tree.exists():
         os.remove(filename_diff_tree)
@@ -92,9 +104,10 @@ async def write_files_for_root(
             tree_id, root.node_hash, max_generation=root.generation
         )
         if last_seen_generation is None:
-            await data_store.write_tree_to_file(root, node_hash, tree_id, True, filename_diff_tree)
+            with open(filename_diff_tree, "wb") as writer:
+                await data_store.write_tree_to_file(root, node_hash, tree_id, True, writer)
         else:
-            open(filename_diff_tree, "ab").close()
+            open(filename_diff_tree, "wb").close()
         written = True
     return written
 
@@ -129,7 +142,7 @@ async def insert_from_delta_file(
                 # hence the delta file might be missing.
                 log.info(f"Already seen {root_hash} for {tree_id}. Writing an empty delta file.")
                 target_filename = client_foldername.joinpath(filename)
-                open(target_filename, "ab").close()
+                open(target_filename, "wb").close()
             else:
                 raise
 
@@ -150,7 +163,8 @@ async def insert_from_delta_file(
                 get_full_tree_filename(tree_id, root_hash, existing_generation)
             )
             root = await data_store.get_tree_root(tree_id=tree_id)
-            await data_store.write_tree_to_file(root, root_hash, tree_id, False, filename_full_tree)
+            with open(filename_full_tree, "wb") as writer:
+                await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
         except asyncio.CancelledError:
             raise

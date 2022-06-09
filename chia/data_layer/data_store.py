@@ -3,8 +3,7 @@ import aiosqlite
 import json
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
 
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
@@ -1095,12 +1094,11 @@ class DataStore:
         node_hash: bytes32,
         tree_id: bytes32,
         deltas_only: bool,
-        filename: Path,
+        writer: BinaryIO,
         *,
         lock: bool = True,
     ) -> None:
         if node_hash == bytes32([0] * 32):
-            open(filename, "ab").close()
             return
 
         if deltas_only:
@@ -1111,17 +1109,16 @@ class DataStore:
         node = await self.get_node(node_hash, lock=lock)
         to_write = b""
         if isinstance(node, InternalNode):
-            await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, filename, lock=lock)
-            await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, filename, lock=lock)
+            await self.write_tree_to_file(root, node.left_hash, tree_id, deltas_only, writer, lock=lock)
+            await self.write_tree_to_file(root, node.right_hash, tree_id, deltas_only, writer, lock=lock)
             to_write = bytes(SerializedNode(False, bytes(node.left_hash), bytes(node.right_hash)))
         elif isinstance(node, TerminalNode):
             to_write = bytes(SerializedNode(True, node.key, node.value))
         else:
             raise Exception(f"Node is neither InternalNode nor TerminalNode: {node}")
 
-        with open(filename, "ab") as writer:
-            writer.write(len(to_write).to_bytes(4, byteorder="big"))
-            writer.write(to_write)
+        writer.write(len(to_write).to_bytes(4, byteorder="big"))
+        writer.write(to_write)
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
