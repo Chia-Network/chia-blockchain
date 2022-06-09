@@ -65,7 +65,8 @@ async def insert_into_data_store_from_file(
         while True:
             chunk = b""
             while len(chunk) < 4:
-                cur_chunk = reader.read(4)
+                size_to_read = 4 - len(chunk)
+                cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
                     break
                 chunk += cur_chunk
@@ -75,7 +76,8 @@ async def insert_into_data_store_from_file(
             size = int.from_bytes(chunk, byteorder="big")
             serialize_nodes_bytes = b""
             while len(serialize_nodes_bytes) < size:
-                cur_chunk = reader.read(size)
+                size_to_read = size - len(serialize_nodes_bytes)
+                cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
                     break
                 serialize_nodes_bytes += cur_chunk
