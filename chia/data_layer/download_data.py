@@ -63,8 +63,11 @@ async def insert_into_data_store_from_file(
 ) -> None:
     with open(filename, "rb") as reader:
         while True:
-            chunk = reader.read(4)
-            if chunk is None or chunk == b"":
+            chunk = b""
+            while len(chunk) < 4:
+                cur_chunk = reader.read(4)
+                chunk += cur_chunk
+            if chunk == b"":
                 break
 
             size = int.from_bytes(chunk, byteorder="big")
