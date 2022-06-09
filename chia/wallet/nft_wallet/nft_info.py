@@ -10,6 +10,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
+IN_TRANSACTION_STATUS = "IN_TRANSACTION"
+DEFAULT_STATUS = "DEFAULT"
 
 
 @streamable
@@ -80,6 +82,7 @@ class NFTInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
+    nft_id: bytes32
     coin: Coin
     lineage_proof: Optional[LineageProof]
     full_puzzle: Program
@@ -90,5 +93,4 @@ class NFTCoinInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
-    my_nft_coins: List[NFTCoinInfo]
     did_id: Optional[bytes32] = None

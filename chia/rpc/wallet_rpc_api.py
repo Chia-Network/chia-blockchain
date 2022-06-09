@@ -1500,7 +1500,13 @@ class WalletRpcApi:
                     "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
                 }
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
-                NFTCoinInfo(coin_state.coin, None, full_puzzle, launcher_coin[0].spent_height)
+                NFTCoinInfo(
+                    uncurried_nft.singleton_launcher_id,
+                    coin_state.coin,
+                    None,
+                    full_puzzle,
+                    launcher_coin[0].spent_height,
+                )
             )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
