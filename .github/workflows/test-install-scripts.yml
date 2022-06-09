@@ -253,7 +253,9 @@ jobs:
       run: sh install.sh -a
 
     - name: Run install timelord script
-      run: sh install-timelord.sh
+      run: |
+        . ./activate
+        sh install-timelord.sh
 
     - name: Run chia --help
       run: |
