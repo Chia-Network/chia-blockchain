@@ -12,11 +12,11 @@ from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
-from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
+from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
