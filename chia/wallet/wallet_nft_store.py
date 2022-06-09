@@ -38,7 +38,7 @@ class WalletNftStore:
                 " lineage_proof text,"
                 " mint_height bigint,"
                 " status text,"
-                " full_puzzle text)"
+                " full_puzzle blob)"
             )
         )
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS nft_coin_id on users_nfts(nft_coin_id)")
@@ -82,7 +82,7 @@ class WalletNftStore:
                     else None,
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
-                    bytes(nft_coin_info.full_puzzle).hex(),
+                    bytes(nft_coin_info.full_puzzle),
                 ),
             )
             await cursor.close()
@@ -110,7 +110,7 @@ class WalletNftStore:
                     bytes32.from_hexstr(row[0]),
                     Coin.from_json_dict(json.loads(row[4])),
                     None if row[5] is None else LineageProof.from_json_dict(json.loads(row[5])),
-                    Program.from_bytes(bytes.fromhex(row[8])),
+                    Program.from_bytes(row[8]),
                     uint32(row[6]),
                     row[7] == IN_TRANSACTION_STATUS,
                 )
