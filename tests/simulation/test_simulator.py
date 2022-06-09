@@ -127,7 +127,7 @@ async def test_wait_transaction_records_entered_mempool(
 
     # generate some coins for repetitive testing
     await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
-    coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+    coins = await full_node_api.create_coins_with_amounts(amounts=[uint64(tx_amount)] * repeats, wallet=wallet)
     assert len(coins) == repeats
 
     # repeating just to try to expose any flakiness
@@ -163,7 +163,7 @@ async def test_process_transaction_records(
 
     # generate some coins for repetitive testing
     await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
-    coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+    coins = await full_node_api.create_coins_with_amounts(amounts=[uint64(tx_amount)] * repeats, wallet=wallet)
     assert len(coins) == repeats
 
     # repeating just to try to expose any flakiness
@@ -184,12 +184,15 @@ async def test_process_transaction_records(
 @pytest.mark.parametrize(
     argnames="amounts",
     argvalues=[
-        *[pytest.param([1] * n, id=f"1 mojo x {n}") for n in [0, 1, 10, 49, 51, 103]],
-        *[pytest.param(list(range(1, n + 1)), id=f"incrementing x {n}") for n in [1, 10, 49, 51, 103]],
+        *[pytest.param([uint64(1)] * n, id=f"1 mojo x {n}") for n in [0, 1, 10, 49, 51, 103]],
+        *[
+            pytest.param(list(uint64(x) for x in range(1, n + 1)), id=f"incrementing x {n}")
+            for n in [1, 10, 49, 51, 103]
+        ],
     ],
 )
 async def test_create_coins_with_amounts(
-    amounts: List[int],
+    amounts: List[uint64],
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
 ) -> None:
     [[full_node_api], [[wallet_node, wallet_server]]] = simulator_and_wallet
@@ -234,4 +237,9 @@ async def test_create_coins_with_invalid_amounts_raises(
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     with pytest.raises(Exception, match="Coins must have a positive value"):
-        await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+        # Passing integers since the point is to test invalid values including
+        # negatives that will not fit in a uint64.
+        await full_node_api.create_coins_with_amounts(
+            amounts=amounts,  # type: ignore[arg-type]
+            wallet=wallet,
+        )

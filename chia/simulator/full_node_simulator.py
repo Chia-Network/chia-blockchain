@@ -331,7 +331,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def create_coins_with_amounts(
         self,
-        amounts: List[int],
+        amounts: List[uint64],
         wallet: Wallet,
         per_transaction_record_group: int = 50,
     ) -> Set[Coin]:
