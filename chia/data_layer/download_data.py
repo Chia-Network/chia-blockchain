@@ -10,7 +10,7 @@ from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, R
 
 
 def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
-    return f"{tree_id}-{node_hash}-{generation}-v1.0.dat"
+    return f"{tree_id}-{node_hash}-full-{generation}-v1.0.dat"
 
 
 def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
@@ -32,6 +32,10 @@ def is_filename_valid(filename: str) -> bool:
         filename = filename[65:]
         if filename.startswith("delta"):
             filename = filename[6:]
+        elif filename.startswith("full"):
+            filename = filename[5:]
+        else:
+            return False
         generation = int(filename)
         if generation < 0 or generation > 1000000000:
             return False
