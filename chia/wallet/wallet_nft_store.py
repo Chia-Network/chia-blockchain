@@ -52,7 +52,7 @@ class WalletNftStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def delete_nft(self, nft_id: bytes32, in_transaction: bool) -> None:
+    async def delete_nft(self, nft_id: bytes32, in_transaction: bool = False) -> None:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
@@ -64,7 +64,7 @@ class WalletNftStore:
                 self.db_wrapper.lock.release()
 
     async def save_nft(
-        self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo, in_transaction: bool
+        self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo, in_transaction: bool = False
     ) -> None:
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
@@ -91,8 +91,10 @@ class WalletNftStore:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
-    async def get_nft_list(self, wallet_id: Optional[uint32], did_id: Optional[bytes32]) -> List[NFTCoinInfo]:
-        sql: str = "SELECT * from users_wallets"
+    async def get_nft_list(
+        self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
+    ) -> List[NFTCoinInfo]:
+        sql: str = "SELECT * from users_nfts"
         if wallet_id is not None and did_id is None:
             sql += f" where wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
@@ -129,7 +131,10 @@ class WalletNftStore:
             bytes32.from_hexstr(row[0]),
             Coin.from_json_dict(json.loads(row[4])),
             None if row[5] is None else LineageProof.from_json_dict(json.loads(row[5])),
-            Program.from_bytes(bytes.fromhex(row[8])),
+            Program.from_bytes(row[8]),
             uint32(row[6]),
             row[7] == IN_TRANSACTION_STATUS,
         )
+
+    async def close(self) -> None:
+        await self.db_connection.close()
