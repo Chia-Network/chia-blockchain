@@ -809,6 +809,6 @@ async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: i
     try:
         response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee)
         spend_bundle = response["spend_bundle"]
-        print(f"DID set on NFT successfully with spend bundle: {spend_bundle}")
+        print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
     except Exception as e:
         print(f"Failed to set DID on NFT: {e}")
