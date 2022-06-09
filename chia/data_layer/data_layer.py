@@ -90,7 +90,10 @@ class DataLayer:
             await self.connection.close()
         if self.config.get("run_server", False):
             await self.data_layer_server.stop()
-        self.periodically_manage_data_task.cancel()
+        try:
+            self.periodically_manage_data_task.cancel()
+        except asyncio.CancelledError:
+            pass
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
@@ -301,7 +304,7 @@ class DataLayer:
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
                 except asyncio.CancelledError:
-                    return
+                    raise
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
@@ -312,7 +315,7 @@ class DataLayer:
                 try:
                     await asyncio.sleep(0.1)
                 except asyncio.CancelledError:
-                    return
+                    raise
 
         while not self._shut_down:
             async with self.subscription_lock:
@@ -326,7 +329,7 @@ class DataLayer:
                     try:
                         await self.subscribe(local_id, [])
                     except asyncio.CancelledError:
-                        return
+                        raise
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
@@ -338,10 +341,10 @@ class DataLayer:
                         await self.fetch_and_validate(subscription)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
-                        return
+                        raise
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
             try:
                 await asyncio.sleep(manage_data_interval)
             except asyncio.CancelledError:
-                return
+                raise
