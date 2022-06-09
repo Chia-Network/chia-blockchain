@@ -252,6 +252,9 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: sh install.sh -a
 
+    - name: Run install timelord script
+      run: sh install-timelord.sh
+
     - name: Run chia --help
       run: |
         . ./activate
