@@ -9,6 +9,7 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
+    ClassVar,
     Collection,
     Dict,
     List,
@@ -72,11 +73,10 @@ class Field:
     post_init_function: ConvertFunctionType
 
 
-# Caches to store the fields and (de)serialization methods for all available streamable classes.
-FIELDS_FOR_STREAMABLE_CLASS: Dict[Type[object], Tuple[Field, ...]] = {}
+StreamableFields = Tuple[Field, ...]
 
 
-def create_fields(cls: Type[object]) -> Tuple[Field, ...]:
+def create_fields(cls: Type[object]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
@@ -186,7 +186,7 @@ def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable
     if not isinstance(item, dict):
         raise TypeError(f"expected: dict, actual: {type(item).__name__}")
 
-    fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
+    fields = klass.streamable_fields()
     try:
         return klass(**{field.name: field.convert_function(item[field.name]) for field in fields if field.name in item})
     except TypeError as e:
@@ -527,7 +527,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     if not issubclass(cls, Streamable):
         raise DefinitionError(f"Streamable inheritance required. {correct_usage_string}")
 
-    FIELDS_FOR_STREAMABLE_CLASS[cls] = create_fields(cls)
+    cls._streamable_fields = create_fields(cls)
 
     return cls
 
@@ -577,9 +577,15 @@ class Streamable:
     Make sure to use the streamable decorator when inheriting from the Streamable class to prepare the streaming caches.
     """
 
+    _streamable_fields: ClassVar[StreamableFields]
+
+    @classmethod
+    def streamable_fields(cls) -> StreamableFields:
+        return cls._streamable_fields
+
     def __post_init__(self) -> None:
         data = self.__dict__
-        for field in FIELDS_FOR_STREAMABLE_CLASS[type(self)]:
+        for field in self._streamable_fields:
             if field.name not in data:
                 raise ValueError(f"Field {field.name} not present")
             object.__setattr__(self, field.name, field.post_init_function(data[field.name]))
@@ -588,12 +594,12 @@ class Streamable:
     def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
         obj: _T_Streamable = object.__new__(cls)
-        for field in FIELDS_FOR_STREAMABLE_CLASS[cls]:
+        for field in cls._streamable_fields:
             object.__setattr__(obj, field.name, field.parse_function(f))
         return obj
 
     def stream(self, f: BinaryIO) -> None:
-        for field in FIELDS_FOR_STREAMABLE_CLASS[type(self)]:
+        for field in self._streamable_fields:
             field.stream_function(getattr(self, field.name), f)
 
     def get_hash(self) -> bytes32:
