@@ -678,3 +678,44 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
 
     extra_params = {"wallet_id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_nfts))
+
+
+@nft_cmd.command("set_did", short_help="Set a DID on an NFT")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+@click.option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
+@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def nft_set_did_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    did_id: str,
+    nft_coin_id: str,
+    fee: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, set_nft_did
+
+    extra_params = {
+        "wallet_id": id,
+        "did_id": did_id,
+        "nft_coin_id": nft_coin_id,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, set_nft_did))
