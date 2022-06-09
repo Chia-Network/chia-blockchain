@@ -26,9 +26,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
     RequestHeaderBlocks,
-    RequestSESInfo,
     RespondBlockHeader,
-    RespondSESInfo,
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
@@ -44,7 +42,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import SubEpochData, WeightProof
+from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
@@ -1384,7 +1382,7 @@ class WalletNode:
                 ses_start_height = next_ses_height
 
         if end == 0:
-            self.log.error(f"Error finding sub epoch")
+            self.log.error("Error finding sub epoch")
             return False
         all_peers = self.server.get_full_node_connections()
         blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
