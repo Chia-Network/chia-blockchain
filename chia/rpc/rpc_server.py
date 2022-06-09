@@ -14,6 +14,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
+from chia.util.network import select_port
 from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -329,7 +330,13 @@ async def start_rpc_server(
 
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
         await site.start()
-        rpc_port = runner.addresses[0][1]
+
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if rpc_port == 0:
+            rpc_port = select_port(root_path, runner.addresses)
 
         async def cleanup():
             await rpc_server.stop()

@@ -123,6 +123,7 @@ class NFTWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+        self.did_id = self.nft_wallet_info.did_id
         return self
 
     @classmethod
@@ -214,7 +215,8 @@ class NFTWallet:
         derivation_record: Optional[
             DerivationRecord
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-        if derivation_record:
+
+        if derivation_record and not uncurried_nft.supports_did:
             p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         else:
             # we don't have this puzhash in puzzle store
@@ -250,7 +252,8 @@ class NFTWallet:
             if new_coin.puzzle_hash == child_puzzle.get_tree_hash():
                 child_coin = new_coin
                 break
-
+        else:
+            raise ValueError(f"Rebuild NFT doesn't match the actual puzzle hash: {child_puzzle}")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id]
         )
@@ -421,13 +424,11 @@ class NFTWallet:
 
         bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
 
-        if not target_puzzle_hash:
-            target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
         if did_id is not None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                p2_inner_puzzle.get_tree_hash()
+                target_puzzle_hash
             )
             self.log.debug("Got back a pubkey record: %s", record)
             if not record:
@@ -532,7 +533,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = [],
     ) -> TransactionRecord:
         # Update NFT status
-        await self.update_coin_status(nft_coin_info.coin.name(), True)
+
         coin = nft_coin_info.coin
         amount = coin.amount
         if not additional_bundles:
@@ -596,6 +597,7 @@ class NFTWallet:
         inner_solution = Program.to([solution_for_conditions(condition_list), 1])
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, [puzzle_hash], fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
@@ -622,6 +624,7 @@ class NFTWallet:
             fee,
         )
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_transferred", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
@@ -719,6 +722,7 @@ class NFTWallet:
         return await cls.create_new_nft_wallet(
             wallet_state_manager,
             wallet,
+            None,
             name,
             in_transaction,
         )
