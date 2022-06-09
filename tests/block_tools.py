@@ -76,13 +76,12 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, save_config
+from chia.util.config import load_config, lock_config, save_config, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert_custom_interval
 from tests.wallet_tools import WalletTool
@@ -142,6 +141,7 @@ class BlockTools:
         root_path: Optional[Path] = None,
         const_dict=None,
         keychain: Optional[Keychain] = None,
+        config_overrides: Optional[Dict] = None,
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -171,6 +171,7 @@ class BlockTools:
 
         # some tests start the daemon, make sure it's on a free port
         self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+        self._config = override_config(self._config, config_overrides)
 
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
@@ -180,11 +181,10 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
         self.plot_dir: Path = get_plot_dir()
         self.temp_dir: Path = get_plot_tmp_dir()
-        mkdir(self.plot_dir)
-        mkdir(self.temp_dir)
+        self.plot_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
         self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
@@ -199,7 +199,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
@@ -209,7 +209,9 @@ class BlockTools:
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
-            self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
+            self.root_path,
+            refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
+            refresh_callback=test_callback,
         )
 
     async def setup_keys(self):
@@ -287,7 +289,7 @@ class BlockTools:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
-            mkdir(final_dir)
+            final_dir.mkdir(parents=True, exist_ok=True)
         if tmp_dir is None:
             tmp_dir = self.temp_dir
         args = Namespace()
@@ -349,8 +351,8 @@ class BlockTools:
             sys.exit(1)
 
     async def refresh_plots(self):
-        self.plot_manager.refresh_parameter.batch_size = (
-            4 if len(self.expected_plots) % 3 == 0 else 3
+        self.plot_manager.refresh_parameter = replace(
+            self.plot_manager.refresh_parameter, batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3)
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
@@ -1399,7 +1401,7 @@ def get_plot_dir() -> Path:
     if ci is not None and not cache_path.exists():
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
-    mkdir(cache_path)
+    cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 
@@ -2031,16 +2033,12 @@ async def create_block_tools_async(
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
+    config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(
-        constants,
-        root_path,
-        const_dict,
-        keychain,
-    )
+    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2052,11 +2050,12 @@ def create_block_tools(
     root_path: Optional[Path] = None,
     const_dict=None,
     keychain: Optional[Keychain] = None,
+    config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain)
+    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())

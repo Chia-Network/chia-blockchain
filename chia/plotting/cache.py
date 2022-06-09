@@ -12,7 +12,7 @@ from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
-from chia.util.path import mkdir
+from chia.util.misc import VersionedBlob
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -30,13 +30,6 @@ class DiskCacheEntry(Streamable):
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     last_use: uint64
-
-
-@streamable
-@dataclass(frozen=True)
-class DiskCache(Streamable):
-    version: uint16
-    data: bytes
 
 
 @streamable
@@ -93,7 +86,7 @@ class Cache:
     expiry_seconds: int = 7 * 24 * 60 * 60  # Keep the cache entries alive for 7 days after its last access
 
     def __post_init__(self) -> None:
-        mkdir(self._path.parent)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
 
     def __len__(self) -> int:
         return len(self._data)
@@ -124,7 +117,7 @@ class Cache:
             cache_data: CacheDataV1 = CacheDataV1(
                 [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
             )
-            disk_cache: DiskCache = DiskCache(uint16(CURRENT_VERSION), bytes(cache_data))
+            disk_cache: VersionedBlob = VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))
             serialized: bytes = bytes(disk_cache)
             self._path.write_bytes(serialized)
             self._changed = False
@@ -136,9 +129,9 @@ class Cache:
         try:
             serialized = self._path.read_bytes()
             log.info(f"Loaded {len(serialized)} bytes of cached data")
-            stored_cache: DiskCache = DiskCache.from_bytes(serialized)
+            stored_cache: VersionedBlob = VersionedBlob.from_bytes(serialized)
             if stored_cache.version == CURRENT_VERSION:
-                cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.data)
+                cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
                 self._data = {
                     Path(path): CacheEntry(
                         DiskProver.from_bytes(cache_entry.prover_data),

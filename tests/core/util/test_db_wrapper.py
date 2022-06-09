@@ -213,6 +213,7 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
             for index in range(concurrent_task_count):
                 if index == 100:
                     task = asyncio.create_task(increment_counter(db_wrapper))
+                    tasks.append(task)
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 

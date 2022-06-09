@@ -6,14 +6,14 @@ import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 from logging.handlers import SysLogHandler
 
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):
     log_path = path_from_root(root_path, logging_config.get("log_filename", "log/debug.log"))
     log_date_format = "%Y-%m-%dT%H:%M:%S"
 
-    mkdir(str(log_path.parent))
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     file_name_length = 33 - len(service_name)
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()

@@ -1,6 +1,5 @@
 import logging
 import pathlib
-import time
 
 import pytest
 from clvm_tools import binutils
@@ -13,6 +12,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import test_constants
+from tests.util.misc import assert_runtime
 
 from .make_block_generator import make_block_generator
 
@@ -191,27 +191,23 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_tx_generator_speed(self, softfork_height):
+    async def test_tx_generator_speed(self, request, softfork_height):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
-        start_time = time.time()
-        generator = BlockGenerator(program, [], [])
-        npc_result = get_name_puzzle_conditions(
-            generator,
-            test_constants.MAX_BLOCK_COST_CLVM,
-            cost_per_byte=test_constants.COST_PER_BYTE,
-            mempool_mode=False,
-            height=softfork_height,
-        )
-        end_time = time.time()
-        duration = end_time - start_time
+        with assert_runtime(seconds=0.5, label=request.node.name):
+            generator = BlockGenerator(program, [], [])
+            npc_result = get_name_puzzle_conditions(
+                generator,
+                test_constants.MAX_BLOCK_COST_CLVM,
+                cost_per_byte=test_constants.COST_PER_BYTE,
+                mempool_mode=False,
+                height=softfork_height,
+            )
+
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
-        log.info(f"Time spent: {duration}")
-
-        assert duration < 0.5
 
     @pytest.mark.asyncio
     async def test_clvm_max_cost(self, softfork_height):
@@ -251,7 +247,7 @@ class TestCostCalculation:
 
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_standard_tx(self):
+    async def test_standard_tx(self, request: pytest.FixtureRequest):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
@@ -265,14 +261,8 @@ class TestCostCalculation:
             p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         )
 
-        time_start = time.time()
-        total_cost = 0
-        for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
-            total_cost += cost
-
-        time_end = time.time()
-        duration = time_end - time_start
-
-        log.info(f"Time spent: {duration}")
-        assert duration < 0.1
+        with assert_runtime(seconds=0.1, label=request.node.name):
+            total_cost = 0
+            for i in range(0, 1000):
+                cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+                total_cost += cost
