@@ -111,6 +111,8 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        if self.connection is None:
+            raise Exception("No connection opened to the DB yet.")
         batch_update_db_wrapper = DBWrapper(self.connection)
         async with batch_update_db_wrapper.locked_transaction(lock=True):
             t1 = time.monotonic()
