@@ -6,4 +6,7 @@ from chia.protocols import *  # noqa: F401,E402,F403
 after = set(globals().keys())
 new = after - before - {"before"}
 
-all_protocols = [globals()[name] for name in sorted(new) if name.endswith("_protocol")]
+# TODO: reconsider the exclusion of the simulator protocol
+all_protocols = [
+    globals()[name] for name in sorted(new) if name.endswith("_protocol") and not name.startswith("simulator")
+]

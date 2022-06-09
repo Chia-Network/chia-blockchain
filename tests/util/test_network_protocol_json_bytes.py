@@ -9,6 +9,11 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 import tests.util
+
+# farmer_protocol,; full_node_protocol,; harvester_protocol,; introducer_protocol,; timelord_protocol,; wallet_protocol,
+from chia.protocols import pool_protocol, shared_protocol
+from chia.protocols.all_protocols import all_protocols
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable
 from tests.util.build_network_protocol_files import SerializedProtocolData, get_network_protocol_filename
 from tests.util.network_protocol_data import InstanceProtocolData, module_to_name_to_instance
@@ -73,9 +78,12 @@ ModuleProtocolData = List[types.ModuleType]
 
 @pytest.fixture(name="all_protocol_modules")
 def all_protocol_modules_fixture() -> ModuleProtocolData:
-    from chia.protocols.all_protocols import all_protocols
+    # TODO: handle these instead of ignoring
+    exclusions = {pool_protocol, shared_protocol}
 
-    return all_protocols
+    filtered_protocols = [module for module in all_protocols if module not in exclusions]
+
+    return filtered_protocols
 
 
 @pytest.fixture(name="all_protocol_instances")
@@ -95,29 +103,25 @@ def all_protocol_serializations_fixture() -> SerializedProtocolData:
 
 
 # TODO: this doesn't check the contents are proper, just the group names
-def test_serializations_match_module_names(
-    all_protocol_modules: ModuleProtocolData,
-    all_protocol_serializations: SerializedProtocolData,
-) -> None:
-    module_names = sorted(module.__name__.rpartition(".")[2] for module in all_protocol_modules)
-    # TODO: handle shared_protocol instead of ignoring it
-    module_names.remove("shared_protocol")
-    serializations_group_names = sorted(all_protocol_serializations.keys())
-
-    assert module_names == serializations_group_names
-
-
-# TODO: this doesn't check the contents are proper, just the group names
 def test_instances_match_module_names(
     all_protocol_modules: ModuleProtocolData,
     all_protocol_instances: InstanceProtocolData,
 ) -> None:
     module_names = sorted(module.__name__.rpartition(".")[2] for module in all_protocol_modules)
-    # TODO: handle shared_protocol instead of ignoring it
-    module_names.remove("shared_protocol")
     instance_group_names = sorted(all_protocol_instances.keys())
 
     assert module_names == instance_group_names
+
+
+# TODO: this doesn't check the contents are proper, just the group names
+def test_serializations_match_module_names(
+    all_protocol_modules: ModuleProtocolData,
+    all_protocol_serializations: SerializedProtocolData,
+) -> None:
+    module_names = sorted(module.__name__.rpartition(".")[2] for module in all_protocol_modules)
+    serializations_group_names = sorted(all_protocol_serializations.keys())
+
+    assert module_names == serializations_group_names
 
 
 # TODO: deal with todos inside and remove the xfail
@@ -152,13 +156,44 @@ def test_all_sources_match_message_names(
 # https://github.com/Chia-Network/chia-blockchain/blob/8665e21fd71a4d0a15fae2f9f9c94f395597bc64/tests/util/test_network_protocol_test.py#L29-L40
 
 
-def test_message_types_match_serializations(all_protocol_serializations: SerializedProtocolData) -> None:
-    from chia.protocols.protocol_message_types import ProtocolMessageTypes
+@pytest.fixture(name="all_protocol_message_enumerators")
+def all_protocol_message_enumerators_fixture() -> List[ProtocolMessageTypes]:
+    # TODO: review and presumably handle exclusions
+    exclusions = {
+        ProtocolMessageTypes.farm_new_block,
+        ProtocolMessageTypes.handshake,
+        ProtocolMessageTypes.plot_sync_start,
+        ProtocolMessageTypes.plot_sync_loaded,
+        ProtocolMessageTypes.plot_sync_removed,
+        ProtocolMessageTypes.plot_sync_invalid,
+        ProtocolMessageTypes.plot_sync_keys_missing,
+        ProtocolMessageTypes.plot_sync_duplicates,
+        ProtocolMessageTypes.plot_sync_done,
+        ProtocolMessageTypes.plot_sync_response,
+    }
 
+    return [type for type in ProtocolMessageTypes if type not in exclusions]
+
+
+def test_message_types_match_instances(
+    all_protocol_instances: SerializedProtocolData,
+    all_protocol_message_enumerators: List[ProtocolMessageTypes],
+) -> None:
+    serialization_message_names = sorted(
+        name for group_name, name_to_instance in all_protocol_instances.items() for name in name_to_instance.keys()
+    )
+
+    assert serialization_message_names == sorted(enumerator.name for enumerator in all_protocol_message_enumerators)
+
+
+def test_message_types_match_serializations(
+    all_protocol_serializations: SerializedProtocolData,
+    all_protocol_message_enumerators: List[ProtocolMessageTypes],
+) -> None:
     serialization_message_names = sorted(
         name
         for group_name, name_to_serialization in all_protocol_serializations.items()
         for name in name_to_serialization.keys()
     )
 
-    assert serialization_message_names == sorted(type.name for type in ProtocolMessageTypes)
+    assert serialization_message_names == sorted(enumerator.name for enumerator in all_protocol_message_enumerators)
