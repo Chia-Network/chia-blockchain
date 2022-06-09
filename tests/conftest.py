@@ -11,14 +11,17 @@ from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_no
 from pathlib import Path
 from typing import AsyncIterator, List, Tuple
 from chia.server.start_service import Service
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
+from chia.server.server import ChiaServer
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import (
@@ -288,6 +291,12 @@ async def wallet_node_sim_and_wallet():
 @pytest_asyncio.fixture(scope="function")
 async def wallet_node_100_pk():
     async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def simulator_and_wallet() -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]]:
+    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
         yield _
 
 
