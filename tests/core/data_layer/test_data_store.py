@@ -344,8 +344,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     saved_roots: List[Root] = []
     saved_batches: List[List[Dict[str, Any]]] = []
 
-    temp_directory_path = Path(tmpdir)
-    db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+    db_path = tmpdir.joinpath("dl_server_util.sqlite")
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
@@ -1121,8 +1120,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     num_batches = 10
     num_ops_per_batch = 100
 
-    temp_directory_path = Path(tmpdir)
-    db_path = temp_directory_path.joinpath("dl_server_util.sqlite")
+    db_path = tmpdir.joinpath("dl_server_util.sqlite")
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
@@ -1149,7 +1147,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
             counter += 1
         await data_store_server.insert_batch(tree_id, changelist)
         root = await data_store_server.get_tree_root(tree_id)
-        await write_files_for_root(data_store_server, tree_id, root, Path(tmpdir))
+        await write_files_for_root(data_store_server, tree_id, root, tmpdir)
         roots.append(root)
     await connection.close()
 
@@ -1162,7 +1160,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         else:
             filename = get_delta_filename(tree_id, root.node_hash, generation)
         assert is_filename_valid(filename)
-        await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, Path(tmpdir).joinpath(filename))
+        await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmpdir.joinpath(filename))
         current_root = await data_store.get_tree_root(tree_id=tree_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
