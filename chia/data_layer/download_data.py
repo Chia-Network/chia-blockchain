@@ -63,8 +63,7 @@ async def insert_into_data_store_from_file(
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
             await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
 
-    await data_store.insert_root(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
-    await data_store.build_ancestor_table_from_root(tree_id)
+    await data_store.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
 
 
 async def write_files_for_root(
