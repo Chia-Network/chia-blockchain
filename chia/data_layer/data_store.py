@@ -902,12 +902,14 @@ class DataStore:
                 if change["action"] == "insert":
                     key = change["key"]
                     value = change["value"]
-                    reference_node_hash = change.get("reference_node_hash")
-                    side = change.get("side")
-                    if reference_node_hash or side:
-                        await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=False)
-                    else:
+                    reference_node_hash = change.get("reference_node_hash", None)
+                    side = change.get("side", None)
+                    if reference_node_hash is None and side is None:
                         await self.autoinsert(key, value, tree_id, hint_keys_values, lock=False)
+                    else:
+                        if reference_node_hash is None or side is None:
+                            raise Exception("Provide both reference_node_hash and side or neither.")
+                        await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=False)
                 elif change["action"] == "delete":
                     key = change["key"]
                     await self.delete(key, tree_id, hint_keys_values, lock=False)
