@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import is_in_network, is_localhost, select_port
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -263,13 +263,23 @@ class ChiaServer:
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
+        # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
+        # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            port=self._port,
+            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
+            port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if self._port == 0:
+            self._port = select_port(self.root_path, self.runner.addresses)
+
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -781,6 +791,9 @@ class ChiaServer:
         if not peer.is_valid():
             return None
         return peer
+
+    def get_port(self) -> uint16:
+        return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:

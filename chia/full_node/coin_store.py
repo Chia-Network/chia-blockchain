@@ -6,15 +6,15 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
 from chia.util.chunks import chunks
 import time
 import logging
 
-log = logging.getLogger(__name__)
+from chia.util.lru_cache import LRUCache
 
-MAX_SQLITE_PARAMETERS = 900
+log = logging.getLogger(__name__)
 
 
 class CoinStore:
@@ -23,12 +23,14 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
+    coins_added_at_height_cache: LRUCache
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
         self.db_wrapper = db_wrapper
+        self.coins_added_at_height_cache = LRUCache(capacity=100)
 
         async with self.db_wrapper.write_db() as conn:
 
@@ -173,12 +175,9 @@ class CoinStore:
 
         coins: List[CoinRecord] = []
 
-        if len(names) == 0:
-            return coins
-
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
-            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+            for names_chunk in chunks(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
@@ -202,6 +201,10 @@ class CoinStore:
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
+        if coins_added is not None:
+            return coins_added
+
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -213,6 +216,7 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -346,7 +350,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for puzzles in chunks(puzzle_hashes, MAX_SQLITE_PARAMETERS):
+            for puzzles in chunks(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     puzzle_hashes_db = tuple(puzzles)
@@ -378,7 +382,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(parent_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     parent_ids_db = tuple(ids)
@@ -409,7 +413,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(coin_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     coin_ids_db = tuple(ids)
@@ -466,6 +470,7 @@ class CoinStore:
                 await conn.execute(
                     "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,)
                 )
+        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
@@ -519,6 +524,10 @@ class CoinStore:
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
         assert len(coin_names) == 0 or index > 0
+
+        if len(coin_names) == 0:
+            return
+
         updates = []
         for coin_name in coin_names:
             updates.append((index, self.maybe_to_hex(coin_name)))

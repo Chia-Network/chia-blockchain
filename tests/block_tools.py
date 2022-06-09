@@ -82,7 +82,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert_custom_interval
 from tests.wallet_tools import WalletTool
@@ -182,11 +181,10 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.refresh_parameter: PlotsRefreshParameter = PlotsRefreshParameter(batch_size=2)
         self.plot_dir: Path = get_plot_dir()
         self.temp_dir: Path = get_plot_tmp_dir()
-        mkdir(self.plot_dir)
-        mkdir(self.temp_dir)
+        self.plot_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
         self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
@@ -201,7 +199,7 @@ class BlockTools:
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
                 assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
-                assert len(update_result.loaded) <= self.refresh_parameter.batch_size
+                assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
                 assert self.total_result.loaded == update_result.loaded
@@ -211,7 +209,9 @@ class BlockTools:
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
         self.plot_manager: PlotManager = PlotManager(
-            self.root_path, refresh_parameter=self.refresh_parameter, refresh_callback=test_callback
+            self.root_path,
+            refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
+            refresh_callback=test_callback,
         )
 
     async def setup_keys(self):
@@ -289,7 +289,7 @@ class BlockTools:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
-            mkdir(final_dir)
+            final_dir.mkdir(parents=True, exist_ok=True)
         if tmp_dir is None:
             tmp_dir = self.temp_dir
         args = Namespace()
@@ -351,8 +351,8 @@ class BlockTools:
             sys.exit(1)
 
     async def refresh_plots(self):
-        self.plot_manager.refresh_parameter.batch_size = (
-            4 if len(self.expected_plots) % 3 == 0 else 3
+        self.plot_manager.refresh_parameter = replace(
+            self.plot_manager.refresh_parameter, batch_size=uint32(4 if len(self.expected_plots) % 3 == 0 else 3)
         )  # Make sure we have at least some batches + a remainder
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
@@ -1401,7 +1401,7 @@ def get_plot_dir() -> Path:
     if ci is not None and not cache_path.exists():
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
-    mkdir(cache_path)
+    cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 

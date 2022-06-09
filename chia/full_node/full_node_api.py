@@ -1113,26 +1113,11 @@ class FullNodeAPI:
         if header_hash is None:
             raise ValueError(f"Block at height {request.height} not found")
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
-
-        # We lock so that the coin store does not get modified
-        if (
-            block is None
-            or block.is_transaction_block() is False
-            or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
-        ):
-            reject = wallet_protocol.RejectAdditionsRequest(request.height, header_hash)
-
-            msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-            return msg
-
-        assert block is not None and block.foliage_transaction_block is not None
-
         # Note: this might return bad data if there is a reorg in this time
-        additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
 
-        if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
-            raise ValueError(f"Block {block.header_hash} no longer in chain")
+        if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
+            raise ValueError(f"Block {header_hash} no longer in chain, or invalid header_hash")
 
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin_record in additions:
@@ -1147,7 +1132,7 @@ class FullNodeAPI:
         if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
-            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, None)
+            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
         else:
             # Create addition Merkle set
             addition_merkle_set = MerkleSet()
@@ -1156,12 +1141,13 @@ class FullNodeAPI:
                 addition_merkle_set.add_already_hashed(puzzle)
                 addition_merkle_set.add_already_hashed(hash_coin_ids([c.name() for c in coins]))
 
-            assert addition_merkle_set.get_root() == block.foliage_transaction_block.additions_root
             for puzzle_hash in request.puzzle_hashes:
+                # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
                 result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
                 if puzzle_hash in puzzlehash_coins_map:
                     coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
                     hash_coin_str = hash_coin_ids([c.name() for c in puzzlehash_coins_map[puzzle_hash]])
+                    # This is a proof of inclusion of all coin ids that have this ph
                     result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
                     assert result
                     assert result_2
@@ -1170,9 +1156,8 @@ class FullNodeAPI:
                     coins_map.append((puzzle_hash, []))
                     assert not result
                     proofs_map.append((puzzle_hash, proof, None))
-            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, proofs_map)
-        msg = make_msg(ProtocolMessageTypes.respond_additions, response)
-        return msg
+            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
+        return make_msg(ProtocolMessageTypes.respond_additions, response)
 
     @api_request
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:

@@ -283,9 +283,9 @@ class TestWalletSimulator:
         funds -= 10
 
         # Full node height 17, wallet height 15
-        await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(5, wallet_1.get_confirmed_balance, 10)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet_1.get_confirmed_balance, 10)
 
         tx_amount = 5
         tx = await wallet_1.generate_signed_transaction(
@@ -301,9 +301,9 @@ class TestWalletSimulator:
         await wallet_0.get_unconfirmed_balance()
         await wallet_1.get_confirmed_balance()
 
-        await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds)
-        await time_out_assert(5, wallet_1.get_confirmed_balance, 5)
+        await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet_1.get_confirmed_balance, 5)
 
     # @pytest.mark.asyncio
     # async def test_wallet_finds_full_node(self):
@@ -532,7 +532,7 @@ class TestWalletSimulator:
 
         funds = await full_node_1.farm_blocks(count=num_blocks, wallet=wallet)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds

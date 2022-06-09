@@ -1,9 +1,9 @@
 import asyncio
 import functools
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -22,20 +22,13 @@ from chia.server.start_service import Service
 from chia.server.ws_connection import ProtocolMessageTypes
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint8, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
-from tests.plotting.test_plot_manager import MockPlotInfo, TestDirectory
+from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert
-
-
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt: BlockTools, tmp_path: Path) -> AsyncIterator[Service]:
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
@@ -117,13 +110,13 @@ class Environment:
     farmer_service: Service
     harvesters: List[Harvester]
     farmer: Farmer
-    dir_1: TestDirectory
-    dir_2: TestDirectory
-    dir_3: TestDirectory
-    dir_4: TestDirectory
-    dir_invalid: TestDirectory
-    dir_keys_missing: TestDirectory
-    dir_duplicates: TestDirectory
+    dir_1: Directory
+    dir_2: Directory
+    dir_3: Directory
+    dir_4: Directory
+    dir_invalid: Directory
+    dir_keys_missing: Directory
+    dir_duplicates: Directory
     expected: List[ExpectedResult]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
@@ -133,8 +126,11 @@ class Environment:
                 return harvester
         return None
 
-    def add_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.loaded) -> None:
-        add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
+    def add_directory(self, harvester_index: int, directory: Directory, state: State = State.loaded) -> None:
+        try:
+            add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
+        except ValueError:
+            pass
         if state == State.loaded:
             self.expected[harvester_index].add_valid(directory.plot_info_list())
         elif state == State.invalid:
@@ -146,7 +142,7 @@ class Environment:
         else:
             assert False, "Invalid state"
 
-    def remove_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.removed) -> None:
+    def remove_directory(self, harvester_index: int, directory: Directory, state: State = State.removed) -> None:
         remove_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
         if state == State.removed:
             self.expected[harvester_index].remove_valid(directory.path_list())
@@ -179,7 +175,9 @@ class Environment:
         self.remove_directory(harvester_index, self.dir_invalid, State.invalid)
         self.remove_directory(harvester_index, self.dir_duplicates, State.duplicates)
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta) -> None:
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+        if delta is None:
+            return
         harvester: Optional[Harvester] = self.get_harvester(peer_id)
         assert harvester is not None
         expected = self.expected[self.harvesters.index(harvester)]
@@ -272,25 +270,25 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    bt: BlockTools, tmp_path: Path, farmer_two_harvester: Tuple[List[Service], Service]
+    bt: BlockTools, tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service]
 ) -> Environment:
-    def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
-        return TestDirectory(tmp_path / "plots" / name, plot_list)
+    def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
+        return Directory(tmp_path / "plots" / name, plot_list)
 
     plots: List[Path] = get_test_plots()
     plots_invalid: List[Path] = get_test_plots()[0:3]
     plots_keys_missing: List[Path] = get_test_plots("not_in_keychain")
     # Create 4 directories where: dir_n contains n plots
-    directories: List[TestDirectory] = []
+    directories: List[Directory] = []
     offset: int = 0
     while len(directories) < 4:
         dir_number = len(directories) + 1
         directories.append(new_test_dir(f"{dir_number}", plots[offset : offset + dir_number]))
         offset += dir_number
 
-    dir_invalid: TestDirectory = new_test_dir("invalid", plots_invalid)
-    dir_keys_missing: TestDirectory = new_test_dir("keys_missing", plots_keys_missing)
-    dir_duplicates: TestDirectory = new_test_dir("duplicates", directories[3].plots)
+    dir_invalid: Directory = new_test_dir("invalid", plots_invalid)
+    dir_keys_missing: Directory = new_test_dir("keys_missing", plots_keys_missing)
+    dir_duplicates: Directory = new_test_dir("duplicates", directories[3].plots)
     create_default_chia_config(tmp_path)
 
     # Invalidate the plots in `dir_invalid`
@@ -300,8 +298,9 @@ async def environment(
 
     harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service = farmer_two_harvester
+    harvester_services, farmer_service = farmer_two_harvester_not_started
     farmer: Farmer = farmer_service._node
+    await farmer_service.start()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
         # Remove default plot directory for this tests
@@ -391,7 +390,9 @@ async def test_sync_invalid(environment: Environment) -> None:
     for i in range(len(env.harvesters)):
         env.expected[i].add_valid([env.dir_invalid.plot_info_list()[0]])
         env.expected[i].remove_invalid([env.dir_invalid.path_list()[0]])
-        env.harvesters[i].plot_manager.refresh_parameter.retry_invalid_seconds = 0
+        env.harvesters[i].plot_manager.refresh_parameter = replace(
+            env.harvesters[i].plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+        )
     await env.run_sync_test()
     for i in [0, 1]:
         remove_plot_directory(env.harvesters[i].root_path, str(env.dir_invalid.path))
@@ -554,9 +555,10 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    harvester_farmer_simulation: Tuple[Service, Service]
+    farmer_one_harvester: Tuple[List[Service], Service]
 ) -> None:
-    harvester_service, farmer_service = harvester_farmer_simulation
+    harvesters, farmer_service = farmer_one_harvester
+    harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer: Farmer = farmer_service._node
     Constants.message_timeout = 3

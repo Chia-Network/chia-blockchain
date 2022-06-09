@@ -128,7 +128,7 @@ class Timelord:
         self.vdf_server = await asyncio.start_server(
             self._handle_client,
             self.config["vdf_server"]["host"],
-            self.config["vdf_server"]["port"],
+            int(self.config["vdf_server"]["port"]),
         )
         self.last_state: LastState = LastState(self.constants)
         slow_bluebox = self.config.get("slow_bluebox", False)
@@ -149,7 +149,12 @@ class Timelord:
                 )
             else:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
-        log.info("Started timelord.")
+        log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
+
+    def get_vdf_server_port(self) -> Optional[uint16]:
+        if self.vdf_server is not None:
+            return self.vdf_server.sockets[0].getsockname()[1]
+        return None
 
     def _close(self):
         self._shut_down = True
