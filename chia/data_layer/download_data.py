@@ -100,27 +100,37 @@ async def write_files_for_root(
         node_hash = root.node_hash
     else:
         node_hash = bytes32([0] * 32)  # todo change
+
     filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
+
     written = False
-    if override and filename_full_tree.exists():
-        os.remove(filename_full_tree)
-    if not filename_full_tree.exists():
-        with open(filename_full_tree, "wb") as writer:
+    mode = "wb" if override else "xb"
+
+    try:
+        with open(filename_full_tree, mode) as writer:
             await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
         written = True
-    if override and filename_diff_tree.exists():
-        os.remove(filename_diff_tree)
-    if not filename_diff_tree.exists():
+    except FileExistsError:
+        pass
+    except Exception:
+        raise
+
+    try:
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
             tree_id, root.node_hash, max_generation=root.generation
         )
         if last_seen_generation is None:
-            with open(filename_diff_tree, "wb") as writer:
+            with open(filename_diff_tree, mode) as writer:
                 await data_store.write_tree_to_file(root, node_hash, tree_id, True, writer)
         else:
             open(filename_diff_tree, "wb").close()
         written = True
+    except FileExistsError:
+        pass
+    except Exception:
+        raise
+
     return written
 
 
