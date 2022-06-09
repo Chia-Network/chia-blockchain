@@ -885,3 +885,49 @@ class NFTWallet:
         unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
 
         return (unsigned_spend_bundle, chia_tx)
+
+    @classmethod
+    async def make_nft1_offer(
+        self,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        fee: uint64,
+    ) -> Offer:
+        if len(offer_dict) != 2 or (offer_dict.values()[0] > 0 == offer_dict.values()[1] > 0):
+            raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
+
+        nft: bool = driver_dict[offer_dict.items()[0][0]].check_type(
+            [
+                AssetType.SINGLETON.value,
+                AssetType.METADATA.value,
+                AssetType.OWNERSHIP.value,
+            ]
+        )
+        offered: bool = offer_dict.items()[0][1] < 0
+
+        if nft and offered:
+            pass
+        else:
+            pass
+
+    @classmethod
+    async def take_nft1_offer(self, offer: Offer, fee: uint64) -> Offer:
+        offered_coin: Dict[Optional[bytes32], List[Coin]] = offer.get_offered_coins()
+        nft_offered: bool = offer.driver_dict[offered_coin.items()[0][0]].check_type(
+            [
+                AssetType.SINGLETON.value,
+                AssetType.METADATA.value,
+                AssetType.OWNERSHIP.value,
+            ]
+        )
+        if (
+            len(offered_coin) > 1
+            or (nft_offered and len(offered_coin.items()[0][1]) > 1)
+            or (not nft_offered and len(offer.requested_payments) > 1)
+        ):
+            raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
+
+        if nft_offered:
+            pass
+        else:
+            pass

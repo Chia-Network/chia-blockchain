@@ -333,6 +333,7 @@ class TradeManager:
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
+            offer_dict_no_ints: Dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
                 if amount > 0:
                     if isinstance(id, int):
@@ -376,6 +377,8 @@ class TradeManager:
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
+                offer_dict_no_ints[asset_id] = amount
+
                 if asset_id is not None and wallet is not None:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
@@ -387,6 +390,14 @@ class TradeManager:
                             driver_dict[asset_id] = puzzle_driver
                     else:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
+
+            potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
+                offer_dict_no_ints,
+                driver_dict,
+                fee,
+            )
+            if potential_special_offer is None:
+                return True, potential_special_offer, None
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
@@ -557,34 +568,40 @@ class TradeManager:
         return txs
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        take_offer_dict: Dict[Union[bytes32, int], int] = {}
-        arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
-        for asset_id, amount in arbitrage.items():
-            if asset_id is None:
-                wallet = self.wallet_state_manager.main_wallet
-                key: Union[bytes32, int] = int(wallet.id())
-            else:
-                # ATTENTION: new wallets
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                if wallet is None and amount < 0:
-                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                elif wallet is None or wallet.type() == WalletType.NFT:
-                    key = asset_id
+        if offer.incomplete_spends() != []:
+            complete_offer = await self.check_for_special_offer_making(offer, fee=fee)
+            if complete_offer is None:
+                raise ValueError("Could not take the specified special offer")
+        else:
+            take_offer_dict: Dict[Union[bytes32, int], int] = {}
+            arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
+            for asset_id, amount in arbitrage.items():
+                if asset_id is None:
+                    wallet = self.wallet_state_manager.main_wallet
+                    key: Union[bytes32, int] = int(wallet.id())
                 else:
-                    key = int(wallet.id())
-            take_offer_dict[key] = amount
+                    # ATTENTION: new wallets
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                    if wallet is None and amount < 0:
+                        return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
+                    elif wallet is None or wallet.type() == WalletType.NFT:
+                        key = asset_id
+                    else:
+                        key = int(wallet.id())
+                take_offer_dict[key] = amount
 
-        # First we validate that all of the coins in this offer exist
-        valid: bool = await self.check_offer_validity(offer)
-        if not valid:
-            return False, None, "This offer is no longer valid"
+            # First we validate that all of the coins in this offer exist
+            valid: bool = await self.check_offer_validity(offer)
+            if not valid:
+                return False, None, "This offer is no longer valid"
 
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
-        if not success or take_offer is None:
-            return False, None, error
+            success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
+            if not success or take_offer is None:
+                return False, None, error
 
-        complete_offer = Offer.aggregate([offer, take_offer])
-        assert complete_offer.is_valid()
+            complete_offer = Offer.aggregate([offer, take_offer])
+            assert complete_offer.is_valid()
+
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
 
         await self.maybe_create_wallets_for_offer(complete_offer)
@@ -631,3 +648,48 @@ class TradeManager:
             await self.wallet_state_manager.add_transaction(tx)
 
         return True, trade_record, None
+
+    async def check_for_special_offer_making(
+        self,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        fee: uint64 = uint64(0),
+    ) -> Optional[Offer]:
+        for puzzle_info in driver_dict.values():
+            if puzzle_info.check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            ):
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(create_asset_id(puzzle_info))
+                if wallet is None:
+                    for w in self.wallet_state_manager.wallets.values():
+                        if w.type() == WalletType.NFT:
+                            wallet = w
+                            break
+                    else:
+                        raise ValueError("No wallet could be found to handle special offer")
+                offer: Offer = await wallet.make_nft1_offer(offer_dict, driver_dict, fee)
+        return None
+
+    async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:
+        for puzzle_info in driver_dict.values():
+            if puzzle_info.check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            ):
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(create_asset_id(puzzle_info))
+                if wallet is None:
+                    for w in self.wallet_state_manager.wallets.values():
+                        if w.type() == WalletType.NFT:
+                            wallet = w
+                            break
+                    else:
+                        raise ValueError("No wallet could be found to handle special offer")
+                offer: Offer = await wallet.take_nft1_offer(offer, fee)
+        return None

@@ -57,6 +57,19 @@ class PuzzleInfo:
         else:
             return None
 
+    def check_type(types: List[str]) -> bool:
+        if types == []:
+            if self.also() is None:
+                return True
+            else:
+                return False
+        else:
+            if self.type() == types[0]:
+                types.pop()
+                return self.check_type(types)
+            else:
+                return False
+
 
 @dataclass(frozen=True)
 class Solver:
