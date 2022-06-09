@@ -25,6 +25,7 @@ class DataLayer:
     data_store: DataStore
     data_layer_server: DataLayerServer
     db_wrapper: DBWrapper
+    batch_update_db_wrapper: DBWrapper
     db_path: Path
     connection: Optional[aiosqlite.Connection]
     config: Dict[str, Any]
@@ -72,6 +73,7 @@ class DataLayer:
     async def _start(self) -> bool:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
+        self.batch_update_db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
@@ -111,10 +113,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        if self.connection is None:
-            raise Exception("No connection opened to the DB yet.")
-        batch_update_db_wrapper = DBWrapper(self.connection)
-        async with batch_update_db_wrapper.locked_transaction(lock=True):
+        async with self.batch_update_db_wrapper.locked_transaction(lock=True):
             t1 = time.monotonic()
             await self.data_store.insert_batch(tree_id, changelist, lock=False)
             t2 = time.monotonic()
