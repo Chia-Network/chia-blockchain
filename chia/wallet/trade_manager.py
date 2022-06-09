@@ -12,6 +12,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.puzzles.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
@@ -569,7 +571,7 @@ class TradeManager:
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         if offer.incomplete_spends() != []:
-            complete_offer = await self.check_for_special_offer_making(offer, fee=fee)
+            complete_offer = await self.check_for_special_offer_taking(offer, fee=fee)
             if complete_offer is None:
                 raise ValueError("Could not take the specified special offer")
         else:
@@ -663,19 +665,11 @@ class TradeManager:
                     AssetType.OWNERSHIP.value,
                 ]
             ):
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(create_asset_id(puzzle_info))
-                if wallet is None:
-                    for w in self.wallet_state_manager.wallets.values():
-                        if w.type() == WalletType.NFT:
-                            wallet = w
-                            break
-                    else:
-                        raise ValueError("No wallet could be found to handle special offer")
-                offer: Offer = await wallet.make_nft1_offer(offer_dict, driver_dict, fee)
+                return await NFTWallet.make_nft1_offer(offer_dict, driver_dict, fee)
         return None
 
     async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:
-        for puzzle_info in driver_dict.values():
+        for puzzle_info in offer.driver_dict.values():
             if puzzle_info.check_type(
                 [
                     AssetType.SINGLETON.value,
@@ -683,13 +677,5 @@ class TradeManager:
                     AssetType.OWNERSHIP.value,
                 ]
             ):
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(create_asset_id(puzzle_info))
-                if wallet is None:
-                    for w in self.wallet_state_manager.wallets.values():
-                        if w.type() == WalletType.NFT:
-                            wallet = w
-                            break
-                    else:
-                        raise ValueError("No wallet could be found to handle special offer")
-                offer: Offer = await wallet.take_nft1_offer(offer, fee)
+                return await NFTWallet.take_nft1_offer(offer, fee)
         return None

@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 
@@ -46,7 +44,7 @@ class OwnershipOuterPuzzle:
             constructor_dict = {
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
-                "transfer_program": disassemble(transfer_program),
+                "transfer_program": disassemble(transfer_program),  # type: ignore
             }
             next_constructor = self._match(inner_puzzle)
             if next_constructor is not None:

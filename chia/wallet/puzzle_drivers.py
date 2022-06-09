@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
@@ -57,7 +57,7 @@ class PuzzleInfo:
         else:
             return None
 
-    def check_type(types: List[str]) -> bool:
+    def check_type(self, types: List[str]) -> bool:
         if types == []:
             if self.also() is None:
                 return True

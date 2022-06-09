@@ -42,6 +42,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
@@ -887,23 +888,29 @@ class NFTWallet:
         return (unsigned_spend_bundle, chia_tx)
 
     @classmethod
-    async def make_nft1_offer(
+    async def make_nft1_offer(  # type: ignore
         self,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
         fee: uint64,
     ) -> Offer:
-        if len(offer_dict) != 2 or (offer_dict.values()[0] > 0 == offer_dict.values()[1] > 0):
+        amounts = list(offer_dict.values())
+        if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
             raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
 
-        nft: bool = driver_dict[offer_dict.items()[0][0]].check_type(
-            [
-                AssetType.SINGLETON.value,
-                AssetType.METADATA.value,
-                AssetType.OWNERSHIP.value,
-            ]
-        )
-        offered: bool = offer_dict.items()[0][1] < 0
+        offered_asset_id = list(offer_dict.items())[0][0]
+        if offered_asset_id is None:
+            nft: bool = False
+        else:
+            nft = driver_dict[offered_asset_id].check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            )
+
+        offered: bool = list(offer_dict.items())[0][1] < 0
 
         if nft and offered:
             pass
@@ -911,18 +918,22 @@ class NFTWallet:
             pass
 
     @classmethod
-    async def take_nft1_offer(self, offer: Offer, fee: uint64) -> Offer:
+    async def take_nft1_offer(self, offer: Offer, fee: uint64) -> Offer:  # type: ignore
         offered_coin: Dict[Optional[bytes32], List[Coin]] = offer.get_offered_coins()
-        nft_offered: bool = offer.driver_dict[offered_coin.items()[0][0]].check_type(
-            [
-                AssetType.SINGLETON.value,
-                AssetType.METADATA.value,
-                AssetType.OWNERSHIP.value,
-            ]
-        )
+        offered_asset_id: Optional[bytes32] = list(offered_coin.items())[0][0]
+        if offered_asset_id is None:
+            nft_offered: bool = False
+        else:
+            nft_offered = offer.driver_dict[offered_asset_id].check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            )
         if (
             len(offered_coin) > 1
-            or (nft_offered and len(offered_coin.items()[0][1]) > 1)
+            or (nft_offered and len(list(offered_coin.items())[0][1]) > 1)
             or (not nft_offered and len(offer.requested_payments) > 1)
         ):
             raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
