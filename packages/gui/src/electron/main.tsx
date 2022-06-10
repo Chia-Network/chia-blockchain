@@ -204,7 +204,9 @@ if (!handleSquirrelEvent()) {
         let error: Error | undefined;
         let statusCode: number | undefined;
         let statusMessage: string | undefined;
-        let data: string;
+        let contentType: string | undefined;
+        let encoding = 'binary';
+        let data: string | undefined;
 
         const buffers: Buffer[] = [];
         let totalLength = 0;
@@ -214,6 +216,24 @@ if (!handleSquirrelEvent()) {
             request.on('response', (response: IncomingMessage) => {
               statusCode = response.statusCode;
               statusMessage = response.statusMessage;
+
+              const rawContentType = response.headers['content-type'];
+              if (rawContentType) {
+                if (Array.isArray(rawContentType)) {
+                  contentType = rawContentType[0];
+                }
+                else {
+                  contentType = rawContentType;
+                }
+
+                if (contentType) {
+                  // extract charset from contentType
+                  const charsetMatch = contentType.match(/charset=([^;]+)/);
+                  if (charsetMatch) {
+                    encoding = charsetMatch[1];
+                  }
+                }
+              }
 
               response.on('data', (chunk) => {
                 buffers.push(chunk);
@@ -227,7 +247,7 @@ if (!handleSquirrelEvent()) {
               });
 
               response.on('end', () => {
-                resolve(Buffer.concat(buffers).toString('latin1'));
+                resolve(Buffer.concat(buffers).toString(encoding as BufferEncoding));
               });
 
               response.on('error', (e: string) => {
@@ -249,7 +269,7 @@ if (!handleSquirrelEvent()) {
           error = e;
         }
 
-        return { error, statusCode, statusMessage, data };
+        return { error, statusCode, statusMessage, encoding, data };
       });
 
       ipcMain.handle('showMessageBox', async (_event, options) => {

@@ -8,7 +8,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const cache = new Map<string, boolean>();
 
-export default function useVerifyURIHash(uri: string, hash: string): {
+export default function useVerifyURIHash(
+  uri: string,
+  hash: string,
+): {
   isValid: boolean;
   isLoading: boolean;
   error?: Error;
@@ -34,8 +37,11 @@ export default function useVerifyURIHash(uri: string, hash: string): {
         }
 
         if (uri) {
-          const content = await getRemoteFileContent(uri, MAX_FILE_SIZE);
-          const isHashValid = isContentHashValid(content, hash);
+          const { data: content, encoding } = await getRemoteFileContent(
+            uri,
+            MAX_FILE_SIZE,
+          );
+          const isHashValid = isContentHashValid(content, hash, encoding);
           if (!isHashValid) {
             throw new Error(`Hash mismatch`);
           }
