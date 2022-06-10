@@ -398,7 +398,7 @@ class TradeManager:
                 driver_dict,
                 fee,
             )
-            if potential_special_offer is None:
+            if potential_special_offer is not None:
                 return True, potential_special_offer, None
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
