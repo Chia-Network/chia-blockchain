@@ -496,13 +496,13 @@ module_to_name_to_instance: InstanceProtocolData = {
             bytes32(bytes.fromhex("8b5e5a59f33bb89e1bfd5aca79409352864e70aa7765c331d641875f83d59d1d")),
         ),
         "respond_unfinished_block": full_node_protocol.RespondUnfinishedBlock(unfinished_block),
-        "new_signage_point_or_end_of_subslot": full_node_protocol.NewSignagePointOrEndOfSubSlot(
+        "new_signage_point_or_end_of_sub_slot": full_node_protocol.NewSignagePointOrEndOfSubSlot(
             bytes32(bytes.fromhex("f945510ccea927f832635e56bc20315c92943e108d2b458ac91a290a82e02997")),
             bytes32(bytes.fromhex("27a16b348971e5dfb258e7a01f0b300acbecf8339476afd144e8520f1981833b")),
             uint8(102),
             bytes32(bytes.fromhex("a619471c0ba0b8b8b92b7b2cb1241c2fbb2324c4f1a20a01eb7dcc0027393a56")),
         ),
-        "request_signage_point_or_end_of_subslot": full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+        "request_signage_point_or_end_of_sub_slot": full_node_protocol.RequestSignagePointOrEndOfSubSlot(
             bytes32(bytes.fromhex("edd45b516bf1dc3754c30a99e289639e05f967dc1b590df8a377652bee4f463c")),
             uint8(217),
             bytes32(bytes.fromhex("b574062b42a5b3d76ea141d3b89a4a1096f7797bafe625770047380448622420")),
@@ -514,10 +514,10 @@ module_to_name_to_instance: InstanceProtocolData = {
             vdf_info,
             vdf_proof,
         ),
-        "respond_end_of_subslot": full_node_protocol.RespondEndOfSubSlot(
+        "respond_end_of_sub_slot": full_node_protocol.RespondEndOfSubSlot(
             end_of_subslot_bundle,
         ),
-        "request_mempool_transaction": full_node_protocol.RequestMempoolTransactions(
+        "request_mempool_transactions": full_node_protocol.RequestMempoolTransactions(
             bytes([0] * 32),
         ),
         "new_compact_vdf": full_node_protocol.NewCompactVDF(
@@ -547,7 +547,6 @@ module_to_name_to_instance: InstanceProtocolData = {
             bytes32(bytes.fromhex("6edddb46bd154f50566b49c95812e0f1131a0a7162630349fc8d1d696e463e47")),
             uint32(3905474497),
         ),
-        "puzzle_solution_response": puzzle_solution_response,
         "respond_puzzle_solution": wallet_protocol.RespondPuzzleSolution(
             puzzle_solution_response,
         ),
@@ -572,7 +571,7 @@ module_to_name_to_instance: InstanceProtocolData = {
         "request_block_header": wallet_protocol.RequestBlockHeader(
             uint32(3562957314),
         ),
-        "respond_header_block": wallet_protocol.RespondBlockHeader(
+        "respond_block_header": wallet_protocol.RespondBlockHeader(
             header_block,
         ),
         "reject_header_request": wallet_protocol.RejectHeaderRequest(
@@ -620,7 +619,7 @@ module_to_name_to_instance: InstanceProtocolData = {
                 )
             ],
         ),
-        "reject_additions": wallet_protocol.RejectAdditionsRequest(
+        "reject_additions_request": wallet_protocol.RejectAdditionsRequest(
             uint32(3457211200),
             bytes32(bytes.fromhex("4eb659e6dd727bc22191795692aae576922e56ae309871c352eede0c9dd8bb12")),
         ),
@@ -637,21 +636,20 @@ module_to_name_to_instance: InstanceProtocolData = {
             uint32(17664086),
             [header_block],
         ),
-        "coin_state": coin_state,
-        "register_for_ph_updates": wallet_protocol.RegisterForPhUpdates(
+        "register_interest_in_puzzle_hash": wallet_protocol.RegisterForPhUpdates(
             [bytes32(bytes.fromhex("df24b7dc1d5ffa12f112e198cd26385b5ab302b5c2e5f9d589e5cd3f7b900510"))],
             uint32(874269130),
         ),
-        "respond_to_ph_updates": wallet_protocol.RespondToPhUpdates(
+        "respond_to_ph_update": wallet_protocol.RespondToPhUpdates(
             [bytes32(bytes.fromhex("1be3bdc54b84901554e4e843966cfa3be3380054c968bebc41cc6be4aa65322f"))],
             uint32(3664709982),
             [coin_state],
         ),
-        "register_for_coin_updates": wallet_protocol.RegisterForCoinUpdates(
+        "register_interest_in_coin": wallet_protocol.RegisterForCoinUpdates(
             [bytes32(bytes.fromhex("1d7748531ece395e8bb8468b112d4ccdd1cea027359abd03c0b015edf666eec8"))],
             uint32(3566185528),
         ),
-        "respond_to_coin_updates": wallet_protocol.RespondToCoinUpdates(
+        "respond_to_coin_update": wallet_protocol.RespondToCoinUpdates(
             [bytes32(bytes.fromhex("db8bad6bd9de34d4884380176135f31a655dca18e9a5fadfb567145b81b6a9e0"))],
             uint32(3818814774),
             [coin_state],
@@ -668,17 +666,16 @@ module_to_name_to_instance: InstanceProtocolData = {
         "respond_children": wallet_protocol.RespondChildren(
             [coin_state],
         ),
-        "request_ses_info": wallet_protocol.RequestSESInfo(
+        "request_ses_hashes": wallet_protocol.RequestSESInfo(
             uint32(2704205398),
             uint32(2050258406),
         ),
-        "respond_ses_info": wallet_protocol.RespondSESInfo(
+        "respond_ses_hashes": wallet_protocol.RespondSESInfo(
             [bytes32(bytes.fromhex("b61cb91773995e99cb8259609c0985f915a5734a1706aeab9342a2d1c5abf71b"))],
             [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
         ),
     },
     "harvester_protocol": {
-        "pool_difficulty": pool_difficulty,
         "harvester_handshake": harvester_protocol.HarvesterHandshake(
             [
                 G1Element(
@@ -732,7 +729,6 @@ module_to_name_to_instance: InstanceProtocolData = {
             ),
             [(bytes32(bytes.fromhex("c32fd5310f5e8623697561930dca73cb9da5b3ddb903f52818724bb3bdd9349c")), g2_element)],
         ),
-        "plot": plot,
         "request_plots": harvester_protocol.RequestPlots(),
         "respond_plots": harvester_protocol.RespondPlots(
             [plot],
@@ -752,65 +748,63 @@ module_to_name_to_instance: InstanceProtocolData = {
             ]
         ),
     },
-    "pool_protocol": {
-        "authentication_payload": pool_protocol.AuthenticationPayload(
-            "method",
-            bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
-            bytes32(bytes.fromhex("9de241b508b5e9e2073b7645291cfaa9458d33935340399a861acf2ee1770440")),
-            uint64(4676522834655707230),
-        ),
-        "get_pool_info_response": pool_protocol.GetPoolInfoResponse(
-            "pool_name",
-            "pool_name",
-            uint64(7020711482626732214),
-            uint32(3407308703),
-            uint8(129),
-            "fee",
-            "pool description.",
-            bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
-            uint8(76),
-        ),
-        "post_partial_payload": post_partial_payload,
-        "post_partial_request": pool_protocol.PostPartialRequest(
-            post_partial_payload,
-            g2_element,
-        ),
-        "post_partial_response": pool_protocol.PostPartialResponse(
-            uint64(5956480724816802941),
-        ),
-        "get_farmer_response": pool_protocol.GetFarmerResponse(
-            G1Element(
-                bytes.fromhex(
-                    "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
-                ),
-            ),
-            "instructions",
-            uint64(8362834206591090467),
-            uint64(14310455844127802841),
-        ),
-        "post_farmer_payload": post_farmer_payload,
-        "post_farmer_request": pool_protocol.PostFarmerRequest(
-            post_farmer_payload,
-            g2_element,
-        ),
-        "post_farmer_response": pool_protocol.PostFarmerResponse(
-            "welcome",
-        ),
-        "put_farmer_payload": put_farmer_payload,
-        "put_farmer_request": pool_protocol.PutFarmerRequest(
-            put_farmer_payload,
-            g2_element,
-        ),
-        "put_farmer_response": pool_protocol.PutFarmerResponse(
-            False,
-            False,
-            True,
-        ),
-        "error_response": pool_protocol.ErrorResponse(
-            uint16(47018),
-            "err",
-        ),
-    },
+    # TODO: stop ignoring this and handle properly
+    # "pool_protocol": {
+    #     "authentication_payload": pool_protocol.AuthenticationPayload(
+    #         "method",
+    #         bytes32(bytes.fromhex("0251e3b3a1aacc689091b6b085be7a8d319bd9d1a015faae969cb76d8a45607c")),
+    #         bytes32(bytes.fromhex("9de241b508b5e9e2073b7645291cfaa9458d33935340399a861acf2ee1770440")),
+    #         uint64(4676522834655707230),
+    #     ),
+    #     "get_pool_info_response": pool_protocol.GetPoolInfoResponse(
+    #         "pool_name",
+    #         "pool_name",
+    #         uint64(7020711482626732214),
+    #         uint32(3407308703),
+    #         uint8(129),
+    #         "fee",
+    #         "pool description.",
+    #         bytes32(bytes.fromhex("f6b5120ff1ab7ba661e3b2c91c8b373a8aceea8e4eb6ce3f085f3e80a8655b36")),
+    #         uint8(76),
+    #     ),
+    #     "post_partial_request": pool_protocol.PostPartialRequest(
+    #         post_partial_payload,
+    #         g2_element,
+    #     ),
+    #     "post_partial_response": pool_protocol.PostPartialResponse(
+    #         uint64(5956480724816802941),
+    #     ),
+    #     "get_farmer_response": pool_protocol.GetFarmerResponse(
+    #         G1Element(
+    #             bytes.fromhex(
+    #                 "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
+    #             ),
+    #         ),
+    #         "instructions",
+    #         uint64(8362834206591090467),
+    #         uint64(14310455844127802841),
+    #     ),
+    #     "post_farmer_request": pool_protocol.PostFarmerRequest(
+    #         post_farmer_payload,
+    #         g2_element,
+    #     ),
+    #     "post_farmer_response": pool_protocol.PostFarmerResponse(
+    #         "welcome",
+    #     ),
+    #     "put_farmer_request": pool_protocol.PutFarmerRequest(
+    #         put_farmer_payload,
+    #         g2_element,
+    #     ),
+    #     "put_farmer_response": pool_protocol.PutFarmerResponse(
+    #         False,
+    #         False,
+    #         True,
+    #     ),
+    #     "error_response": pool_protocol.ErrorResponse(
+    #         uint16(47018),
+    #         "err",
+    #     ),
+    # },
     "timelord_protocol": {
         "new_peak_timelord": timelord_protocol.NewPeakTimelord(
             reward_chain_block,
@@ -851,7 +845,7 @@ module_to_name_to_instance: InstanceProtocolData = {
             vdf_info,
             vdf_proof,
         ),
-        "new_end_of_sub_slot_bundle": timelord_protocol.NewEndOfSubSlotVDF(
+        "new_end_of_sub_slot_vdf": timelord_protocol.NewEndOfSubSlotVDF(
             end_of_subslot_bundle,
         ),
         "request_compact_proof_of_time": timelord_protocol.RequestCompactProofOfTime(
