@@ -42,6 +42,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
+from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -742,8 +743,26 @@ class WalletStateManager:
                         found_did = True
                         break
                 if not found_did:
-                    self.log.info("This DID %s is not belong to us, skip creating a NFT wallet for it.", did_id.hex())
-                    return wallet_id, wallet_type
+                    self.log.info(
+                        "Cannot find a profile for DID:%s NFT:%s, checking the inner puzzle ...",
+                        did_id.hex(),
+                        uncurried_nft.singleton_launcher_id.hex(),
+                    )
+                    metadata, p2_puzzle_hash = get_metadata_and_phs(
+                        uncurried_nft,
+                        Program.from_bytes(bytes(coin_spend.puzzle_reveal)),
+                        Program.from_bytes(bytes(coin_spend.solution)),
+                    )
+                    derivation_record: Optional[
+                        DerivationRecord
+                    ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
+                    if derivation_record is None:
+                        self.log.info(
+                            "Cannot find a P2 puzzle hash for DID:%s NFT:%s, this NFT belongs to others.",
+                            did_id.hex(),
+                            uncurried_nft.singleton_launcher_id.hex(),
+                        )
+                        return wallet_id, wallet_type
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
