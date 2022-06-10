@@ -37,6 +37,7 @@ from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puz
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -733,6 +734,16 @@ class WalletStateManager:
                 wallet_type = WalletType.NFT
 
         if wallet_id is None:
+            if did_id is not None:
+                found_did: bool = False
+                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DISTRIBUTED_ID):
+                    did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
+                    if did_info.origin_coin.name() == did_id:
+                        found_did = True
+                        break
+                if not found_did:
+                    self.log.info("This DID %s is not belong to us, skip creating a NFT wallet for it.", did_id.hex())
+                    return wallet_id, wallet_type
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
