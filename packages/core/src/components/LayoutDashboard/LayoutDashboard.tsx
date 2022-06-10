@@ -91,42 +91,46 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
               drawer
             >
               <StyledToolbar>
-                <Flex alignItems="center" width="100%">
-                  <Box flexGrow={1}>
-                    <Typography variant="h4">
-                      <Trans>Wallet</Trans>
-                      &nbsp;
-                      {fingerprint && (
-                        <StyledInlineTypography
-                          color="textSecondary"
-                          variant="h5"
-                        >
-                          {fingerprint}
-                        </StyledInlineTypography>
-                      )}
-                    </Typography>
-                  </Box>
-                  <Flex gap={4}>
-                    {actions}
-                    {/*
-                      <DropdownIconButton
-                        icon={<Notifications />}
-                        title={t`Notifications`}
-                      >
-                        {({ onClose }) => (
-                          <MenuItem onClick={onClose}>
-                            CAT Wallet TEST is now available
-                          </MenuItem>
+                <Flex width="100%" alignItems="center" justifyContent="space-between" gap={3}>
+                  <Flex alignItems="center" flexGrow={1} justifyContent="space-between" flexWrap="wrap" gap={1}>
+                    <Box>
+                      <Typography variant="h4">
+                        <Trans>Wallet</Trans>
+                        &nbsp;
+                        {fingerprint && (
+                          <StyledInlineTypography
+                            color="textSecondary"
+                            variant="h5"
+                          >
+                            {fingerprint}
+                          </StyledInlineTypography>
                         )}
-                      </DropdownIconButton>
-                      &nbsp;
-                      */}
-                    <Tooltip title={<Trans>Log Out</Trans>}>
-                      <IconButton onClick={handleLogout}>
-                        <ExitToAppIcon />
-                      </IconButton>
-                    </Tooltip>
+                      </Typography>
+                    </Box>
+                    <Flex alignItems="center" gap={1}>
+                      {actions}
+                    </Flex>
                   </Flex>
+                  <Box>
+                                        {/*
+                        <DropdownIconButton
+                          icon={<Notifications />}
+                          title={t`Notifications`}
+                        >
+                          {({ onClose }) => (
+                            <MenuItem onClick={onClose}>
+                              CAT Wallet TEST is now available
+                            </MenuItem>
+                          )}
+                        </DropdownIconButton>
+                        &nbsp;
+                        */}
+                      <Tooltip title={<Trans>Log Out</Trans>}>
+                        <IconButton onClick={handleLogout}>
+                          <ExitToAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                  </Box>
                 </Flex>
               </StyledToolbar>
             </StyledAppBar>
