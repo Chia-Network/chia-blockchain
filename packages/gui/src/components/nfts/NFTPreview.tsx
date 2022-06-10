@@ -20,19 +20,12 @@ const StyledCardPreview = styled(Box)`
   overflow: hidden;
 `;
 
-const StyledIframe = styled('iframe')`
-  position: relative;
-  pointer-events: none;
-  width: 100%;
-  height: 100%;
-  opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
-`;
-
 export type NFTPreviewProps = {
   nft: NFTInfo;
   height?: number | string;
   width?: number | string;
   fit?: 'cover' | 'contain' | 'fill';
+  elevate?: boolean;
 };
 
 export default function NFTPreview(props: NFTPreviewProps) {

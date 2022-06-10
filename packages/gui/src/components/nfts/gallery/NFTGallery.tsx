@@ -65,11 +65,9 @@ export default function NFTGallery() {
     });
   }
 
-  /*
   if (isLoading) {
     return <Loading center />;
   }
-  */
 
   return (
     <LayoutDashboardSub

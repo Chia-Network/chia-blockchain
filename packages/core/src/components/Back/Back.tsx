@@ -1,29 +1,24 @@
 import React, { ReactNode } from 'react';
-import { Typography } from '@mui/material';
+import { Typography, IconButton } from '@mui/material';
 import { Trans } from '@lingui/macro';
-import { ArrowBackIos as ArrowBackIosIcon } from '@mui/icons-material';
+import { ArrowBackIosNew } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
 import { useFormContext } from 'react-hook-form';
 import useOpenDialog from '../../hooks/useOpenDialog';
 import Flex from '../Flex';
 import ConfirmDialog from '../ConfirmDialog';
-
-const BackIcon = styled(ArrowBackIosIcon)`
-  cursor: pointer;
-`;
 
 export type BackProps = {
   children?: ReactNode;
   goBack?: boolean;
   to?: string;
   variant?: string;
-  fontSize?: string;
   form?: boolean;
+  iconStyle?: any;
 };
 
 export default function Back(props: BackProps) {
-  const { children, variant, to, goBack, fontSize, form = false } = props;
+  const { children, variant, to, goBack, form = false, iconStyle } = props;
   const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const formContext = useFormContext();
@@ -61,7 +56,10 @@ export default function Back(props: BackProps) {
 
   return (
     <Flex gap={1} alignItems="center">
-      <BackIcon onClick={handleGoBack} fontSize={fontSize} />
+      <IconButton onClick={handleGoBack} sx={iconStyle}>
+        <ArrowBackIosNew />
+      </IconButton>
+
       <Typography variant={variant}>{children}</Typography>
     </Flex>
   );
@@ -72,5 +70,4 @@ Back.defaultProps = {
   variant: "body2",
   goBack: true,
   to: undefined,
-  fontSize: "medium",
 };
