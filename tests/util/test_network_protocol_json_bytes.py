@@ -73,7 +73,7 @@ ModuleProtocolData = List[types.ModuleType]
 
 @pytest.fixture(name="all_protocol_modules")
 def all_protocol_modules_fixture() -> ModuleProtocolData:
-    from chia.protocols.all_protocols import all_protocols
+    from tests.util.all_protocols import all_protocols
 
     return all_protocols
 
