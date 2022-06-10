@@ -738,7 +738,7 @@ class WalletStateManager:
                 found_did: bool = False
                 for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DISTRIBUTED_ID):
                     did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
-                    if did_info.origin_coin.name() == did_id:
+                    if did_info.origin_coin is not None and did_info.origin_coin.name() == did_id:
                         found_did = True
                         break
                 if not found_did:
