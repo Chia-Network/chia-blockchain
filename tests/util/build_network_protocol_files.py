@@ -1,7 +1,5 @@
 import json
-import os
-import subprocess
-import sysconfig
+import sys
 from typing import Any, Callable, Dict
 from pathlib import Path
 
@@ -46,20 +44,9 @@ def get_protocol_data() -> str:
     return json.dumps(hexed, indent=4) + "\n"
 
 
+def main():
+    get_network_protocol_filename().write_text(get_protocol_data())
+
+
 if __name__ == "__main__":
-    name_to_function = {
-        os.fspath(get_network_protocol_filename()): get_protocol_data,
-    }
-
-    scripts_path = Path(sysconfig.get_path("scripts"))
-
-    for name, function in name_to_function.items():
-        path = tests_dir.joinpath(name)
-        path.write_text(function())
-        if path.suffix == ".py":
-            # black seems to have trouble when run as a module so not using `python -m black`
-            subprocess.run(
-                [scripts_path.joinpath("black"), os.fspath(path.relative_to(tests_dir))],
-                check=True,
-                cwd=tests_dir,
-            )
+    sys.exit(main())
