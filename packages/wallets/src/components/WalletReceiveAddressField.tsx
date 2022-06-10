@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
+import { t, Trans } from '@lingui/macro';
 import { CopyToClipboard } from '@chia/core';
 import { useGetCurrentAddressQuery, useGetNextAddressMutation } from '@chia/api-react';
 import {
@@ -13,14 +13,12 @@ export type WalletReceiveAddressProps = {
   walletId?: number;
 };
 
-export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
+export default function WalletReceiveAddressField(props: WalletReceiveAddressProps) {
   const { walletId = 1, ...rest } = props;
   const { data: address = '' } = useGetCurrentAddressQuery({
     walletId,
   });
   const [newAddress] = useGetNextAddressMutation();
-
-  const finallAddress = address;
 
   async function handleNewAddress() {
     await newAddress({
@@ -32,8 +30,8 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
   return (
     <TextField
       label={<Trans>Receive Address</Trans>}
-      value={finallAddress}
-      placeholder="Loading..."
+      value={address}
+      placeholder={t`Loading...`}
       variant="filled"
       InputProps={{
         readOnly: true,

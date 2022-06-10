@@ -8,7 +8,7 @@ import { useTimeout } from 'react-use-timeout';
 import { styled } from '@mui/system';
 
 const StyledAssignmentIcon = styled(AssignmentIcon)(({ theme, invertColor }) => `
-  color: ${invertColor ? theme.palette.common.white : theme.palette.text.primary};
+  color: ${invertColor ? theme.palette.common.white : theme.palette.text.secondary};
 `);
 
 export type CopyToClipboardProps = {
