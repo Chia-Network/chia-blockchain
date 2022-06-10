@@ -41,7 +41,7 @@ unhashable_types = [
     "SerializedProgram",
 ]
 
-_T_Streamable = TypeVar("_T_Streamable", bound="Streamable")
+T_Streamable = TypeVar("T_Streamable", bound="Streamable")
 
 ParseFunctionType = Callable[[BinaryIO], object]
 StreamFunctionType = Callable[[object, BinaryIO], None]
@@ -412,7 +412,7 @@ def function_to_stream_one_item(f_type: Type[Any]) -> StreamFunctionType:
         raise NotImplementedError(f"can't stream {f_type}")
 
 
-def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
+def streamable(cls: Type[T_Streamable]) -> Type[T_Streamable]:
     """
     This decorator forces correct streamable protocol syntax/usage and populates the caches for types hints and
     (de)serialization methods for all members of the class. The correct usage is:
@@ -570,9 +570,9 @@ class Streamable:
                 object.__setattr__(self, field.name, self.post_init_parse(data[field.name], field.name, field.type))
 
     @classmethod
-    def parse(cls: Type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
+    def parse(cls: Type[T_Streamable], f: BinaryIO) -> T_Streamable:
         # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: _T_Streamable = object.__new__(cls)
+        obj: T_Streamable = object.__new__(cls)
         fields = iter(FIELDS_FOR_STREAMABLE_CLASS.get(cls, {}))
         values: Iterator[object] = (parse_f(f) for parse_f in PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS[cls])
         for field, value in zip(fields, values):

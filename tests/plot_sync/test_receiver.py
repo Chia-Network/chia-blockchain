@@ -24,7 +24,7 @@ from chia.server.ws_connection import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len
-from chia.util.streamable import _T_Streamable
+from chia.util.streamable import T_Streamable
 from tests.plot_sync.util import get_dummy_connection
 
 log = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class SyncStepData:
     args: Any
 
     def __init__(
-        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
+        self, state: State, function: Callable[[T_Streamable], Any], payload_type: Type[T_Streamable], *args: Any
     ) -> None:
         self.state = state
         self.function = function

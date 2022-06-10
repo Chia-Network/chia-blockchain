@@ -23,7 +23,7 @@ from chia.server.ws_connection import ProtocolMessageTypes
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.streamable import _T_Streamable
+from chia.util.streamable import T_Streamable
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
@@ -567,7 +567,7 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
         return harvester.server.node_id in farmer.plot_sync_receivers
 
     async def disconnecting_process(
-        self: Receiver, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
+        self: Receiver, method: Callable[[T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
     ) -> None:
         if self.current_sync().state == State.loaded:
             harvester.plot_manager.trigger_refresh()
