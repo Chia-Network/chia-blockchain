@@ -94,7 +94,7 @@ class WalletNftStore:
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:
-        sql: str = "SELECT * from users_nfts"
+        sql: str = "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts"
         if wallet_id is not None and did_id is None:
             sql += f" where wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
@@ -110,17 +110,20 @@ class WalletNftStore:
             result.append(
                 NFTCoinInfo(
                     bytes32.from_hexstr(row[0]),
-                    Coin.from_json_dict(json.loads(row[4])),
-                    None if row[5] is None else LineageProof.from_json_dict(json.loads(row[5])),
-                    Program.from_bytes(row[8]),
-                    uint32(row[6]),
-                    row[7] == IN_TRANSACTION_STATUS,
+                    Coin.from_json_dict(json.loads(row[1])),
+                    None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+                    Program.from_bytes(row[5]),
+                    uint32(row[3]),
+                    row[4] == IN_TRANSACTION_STATUS,
                 )
             )
         return result
 
     async def get_nft_by_id(self, nft_id: bytes32) -> Optional[NFTCoinInfo]:
-        cursor = await self.db_connection.execute("SELECT * from users_nfts WHERE nft_id=?", (nft_id.hex(),))
+        cursor = await self.db_connection.execute(
+            "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts WHERE nft_id=?",
+            (nft_id.hex(),),
+        )
         row = await cursor.fetchone()
         await cursor.close()
 
@@ -129,11 +132,11 @@ class WalletNftStore:
 
         return NFTCoinInfo(
             bytes32.from_hexstr(row[0]),
-            Coin.from_json_dict(json.loads(row[4])),
-            None if row[5] is None else LineageProof.from_json_dict(json.loads(row[5])),
-            Program.from_bytes(row[8]),
-            uint32(row[6]),
-            row[7] == IN_TRANSACTION_STATUS,
+            Coin.from_json_dict(json.loads(row[1])),
+            None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+            Program.from_bytes(row[5]),
+            uint32(row[3]),
+            row[4] == IN_TRANSACTION_STATUS,
         )
 
     async def close(self) -> None:
