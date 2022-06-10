@@ -2,10 +2,12 @@
 import copy
 import dataclasses
 import functools
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
+
+compose_rate_limits_cache: Dict[Tuple[int, int], Dict[str, Any]] = {}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -21,7 +23,11 @@ def get_rate_limits_to_use(our_capabilities: List[Capability], peer_capabilities
 
     if Capability.RATE_LIMITS_V2 in our_capabilities and Capability.RATE_LIMITS_V2 in peer_capabilities:
         # Use V2 rate limits
-        return compose_rate_limits(rate_limits[1], rate_limits[2])
+        if (1, 2) in compose_rate_limits_cache:
+            return compose_rate_limits_cache[(1, 2)]
+        composed = compose_rate_limits(rate_limits[1], rate_limits[2])
+        compose_rate_limits_cache[(1, 2)] = composed
+        return composed
     else:
         # Use V1 rate limits
         return rate_limits[1]
