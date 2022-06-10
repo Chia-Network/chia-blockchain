@@ -110,7 +110,7 @@
     (defun check_found_values (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH odd_create_coin new_owner_condition conditions)
       ; check create coin uses same key as is signing trade_prices
       (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r (r new_owner_condition))))))
-        (c (list AGG_SIG_UNSAFE (f (r (r new_owner_condition))) (concat (f (r SINGLETON_STRUCT)) (sha256tree1 (f (r (r (r new_owner_condition))))))) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner new_owner_condition conditions))
+        (c (list AGG_SIG_UNSAFE (f (r (r new_owner_condition))) (concat (f (r SINGLETON_STRUCT)) (sha256tree1 (f (r new_owner_condition))))) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner new_owner_condition conditions))
         (x "check found values")
       )
     )
