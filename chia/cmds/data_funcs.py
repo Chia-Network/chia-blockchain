@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional, Tuple, List, Dict, Type
+from typing import List, Optional, Tuple, Dict, Type
 from types import TracebackType
 from pathlib import Path
 
@@ -77,7 +77,7 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> Non
 async def update_data_store_cmd(
     rpc_port: Optional[int],
     store_id: str,
-    changelist: Dict[str, str],
+    changelist: List[Dict[str, str]],
     fee: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
