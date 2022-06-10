@@ -6,7 +6,7 @@ import pytest
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import make_msg
-from chia.server.rate_limit_numbers import get_rate_limits_to_use
+from chia.server.rate_limit_numbers import get_rate_limits_to_use, rate_limits as rl_numbers, compose_rate_limits
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -332,3 +332,26 @@ class TestRateLimits:
         test_different_versions_results.append(total_tx_msg_count)
         if len(test_different_versions_results) >= 4:
             assert len(set(test_different_versions_results)) >= 2
+
+    @pytest.mark.asyncio
+    async def test_compose(self):
+        rl_1 = rl_numbers[1]
+        rl_2 = rl_numbers[2]
+        assert ProtocolMessageTypes.respond_children in rl_1["rate_limits_other"]
+        assert ProtocolMessageTypes.respond_children not in rl_1["rate_limits_tx"]
+        assert ProtocolMessageTypes.respond_children not in rl_2["rate_limits_other"]
+        assert ProtocolMessageTypes.respond_children in rl_2["rate_limits_tx"]
+
+        assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
+        assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
+        assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_other"]
+        assert ProtocolMessageTypes.request_block not in rl_2["rate_limits_tx"]
+
+        comps = compose_rate_limits(rl_1, rl_2)
+        # v2 limits are used if present
+        assert ProtocolMessageTypes.respond_children not in comps["rate_limits_other"]
+        assert ProtocolMessageTypes.respond_children in comps["rate_limits_tx"]
+
+        # Otherwise, fall back to v1
+        assert ProtocolMessageTypes.request_block in rl_1["rate_limits_other"]
+        assert ProtocolMessageTypes.request_block not in rl_1["rate_limits_tx"]
