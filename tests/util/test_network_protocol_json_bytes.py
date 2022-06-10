@@ -150,15 +150,3 @@ def test_all_sources_match_message_names(
 
 # TODO: provide testing of state machine messages
 # https://github.com/Chia-Network/chia-blockchain/blob/8665e21fd71a4d0a15fae2f9f9c94f395597bc64/tests/util/test_network_protocol_test.py#L29-L40
-
-
-def test_message_types_match_serializations(all_protocol_serializations: SerializedProtocolData) -> None:
-    from chia.protocols.protocol_message_types import ProtocolMessageTypes
-
-    serialization_message_names = sorted(
-        name
-        for group_name, name_to_serialization in all_protocol_serializations.items()
-        for name in name_to_serialization.keys()
-    )
-
-    assert serialization_message_names == sorted(type.name for type in ProtocolMessageTypes)
