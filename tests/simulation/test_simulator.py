@@ -79,7 +79,7 @@ async def test_simulation_farm_blocks(
     # Starting at the beginning.
     assert full_node_api.full_node.blockchain.get_peak_height() is None
 
-    rewards = await full_node_api.farm_blocks(count=count, wallet=wallet)
+    rewards = await full_node_api.farm_blocks_to_wallet(count=count, wallet=wallet)
 
     # The expected rewards have been received and confirmed.
     unconfirmed_balance = await wallet.get_unconfirmed_balance()
@@ -228,7 +228,7 @@ async def test_create_coins_with_amounts(
     await full_node_api.farm_rewards(amount=sum(amounts), wallet=wallet)
     # Get some more coins.  The creator helper doesn't get you all the coins you
     # need yet.
-    await full_node_api.farm_blocks(count=2, wallet=wallet)
+    await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
     coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
 
     assert sorted(coin.amount for coin in coins) == sorted(amounts)

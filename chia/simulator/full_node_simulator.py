@@ -234,7 +234,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         return rewards
 
-    async def farm_blocks(self, count: int, wallet: Wallet) -> int:
+    async def farm_blocks_to_wallet(self, count: int, wallet: Wallet) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
         process additional blocks as needed to process the reward transactions
         and also wait for the rewards to be present in the wallet.
@@ -311,7 +311,7 @@ class FullNodeSimulator(FullNodeAPI):
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
             if rewards >= amount:
-                await self.farm_blocks(count=count, wallet=wallet)
+                await self.farm_blocks_to_wallet(count=count, wallet=wallet)
                 return rewards
 
         raise Exception("internal error")

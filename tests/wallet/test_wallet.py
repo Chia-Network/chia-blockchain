@@ -48,7 +48,7 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        funds = await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         wsm: WalletStateManager = wallet_node.wallet_state_manager
         all_txs = await wsm.get_all_transactions(1)
@@ -98,7 +98,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         tx_amount = 10
 
@@ -113,7 +113,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds - tx_amount
 
-        funds += await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
+        funds += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         funds -= tx_amount
 
         assert await wallet.get_confirmed_balance() == funds
@@ -146,11 +146,11 @@ class TestWalletSimulator:
         permanent_blocks = 3
         extra_blocks = 2
 
-        permanent_funds = await full_node_api.farm_blocks(count=permanent_blocks, wallet=wallet)
+        permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_blocks, wallet=wallet)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         permanent_height = peak.height
-        await full_node_api.farm_blocks(count=extra_blocks, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=extra_blocks, wallet=wallet)
 
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(uint32(permanent_height), uint32(permanent_height + extra_blocks + 6), bytes32(32 * b"0"))
@@ -200,7 +200,7 @@ class TestWalletSimulator:
         # wallet0 <-> sever0
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
-        await full_node_api_0.farm_blocks(count=num_blocks, wallet=wallet_0.wallet_state_manager.main_wallet)
+        await full_node_api_0.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0.wallet_state_manager.main_wallet)
 
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
@@ -260,7 +260,7 @@ class TestWalletSimulator:
 
         await wallet_1_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
 
-        funds = await full_node_api_0.farm_blocks(count=num_blocks, wallet=wallet_0)
+        funds = await full_node_api_0.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
 
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds
@@ -373,7 +373,7 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
-        funds = await full_node_1.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
@@ -437,7 +437,7 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
-        funds = await full_node_1.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
@@ -526,7 +526,7 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
         await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
 
-        funds = await full_node_1.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
@@ -614,7 +614,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        funds = await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         # Waits a few seconds to receive rewards
         all_blocks = await full_node_api.get_all_full_blocks()
@@ -757,7 +757,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
-        funds = await full_node_api.farm_blocks(count=num_blocks, wallet=wallet)
+        funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
