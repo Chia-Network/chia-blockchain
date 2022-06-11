@@ -134,7 +134,7 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     @api_request
-    async def farm_new_block(self, request: FarmNewBlockProtocol):
+    async def farm_new_block(self, request: FarmNewBlockProtocol) -> FullBlock:
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -170,6 +170,7 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr: RespondBlock = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
+        return more[-1]
 
     @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
@@ -193,7 +194,9 @@ class FullNodeSimulator(FullNodeAPI):
         for block in more_blocks:
             await self.full_node.respond_block(RespondBlock(block))
 
-    async def process_blocks(self, count: int, farm_to: bytes32 = bytes32([0] * 32)) -> int:
+    async def process_blocks(
+        self, count: int, farm_to: bytes32 = bytes32([0] * 32), guarantee_transaction_blocks: bool = False
+    ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
         hash. Note that the rewards for the last block will not have been processed.
         Consider `.farm_blocks()` or `.farm_rewards()` if the goal is to receive XCH at
@@ -213,7 +216,11 @@ class FullNodeSimulator(FullNodeAPI):
             return rewards
 
         for _ in range(count):
-            block: FullBlock = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
+            block: FullBlock
+            if guarantee_transaction_blocks:
+                block = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
+            else:
+                block = await self.farm_new_block(FarmNewBlockProtocol(farm_to))
             height = uint32(block.height)
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
@@ -242,15 +249,37 @@ class FullNodeSimulator(FullNodeAPI):
         if count == 0:
             return 0
 
-        rewards = await self.process_blocks(count=count, farm_to=await wallet.get_new_puzzlehash())
-        await self.process_blocks(count=1)
+        target_puzzlehash = await wallet.get_new_puzzlehash()
+        rewards = 0
 
-        peak_height = self.full_node.blockchain.get_peak_height()
-        if peak_height is None:
-            raise RuntimeError("Peak height still None after processing at least one block")
+        block_reward_coins = set()
+        expected_reward_coin_count = 2 * count
 
-        coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
-        block_reward_coins = {record.coin for record in coin_records}
+        # TODO: why 2 and not 1?
+        for index in range(count + 2):
+            if index < count:
+                rewards += await self.process_blocks(
+                    count=1, farm_to=target_puzzlehash, guarantee_transaction_blocks=False
+                )
+            else:
+                await self.process_blocks(count=1, guarantee_transaction_blocks=True)
+
+            peak_height = self.full_node.blockchain.get_peak_height()
+            if peak_height is None:
+                raise RuntimeError("Peak height still None after processing at least one block")
+
+            coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
+            for record in coin_records:
+                if record.coin.puzzle_hash == target_puzzlehash and record.coinbase:
+                    block_reward_coins.add(record.coin)
+
+            if len(block_reward_coins) >= expected_reward_coin_count:
+                break
+        else:
+            raise RuntimeError("Not all reward coins identified")
+
+        if len(block_reward_coins) != expected_reward_coin_count:
+            raise RuntimeError(f"Expected {expected_reward_coin_count} reward coins, got: {len(block_reward_coins)}")
 
         await wait_for_coins_in_wallet(coins=block_reward_coins, wallet=wallet)
 

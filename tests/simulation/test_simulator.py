@@ -6,7 +6,7 @@ from chia.cmds.units import units
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16, uint64
 from chia.wallet.wallet_node import WalletNode
 
 
@@ -42,6 +42,7 @@ def test_backoff_saturates_at_final() -> None:
     assert next(backoff) == 3
 
 
+# TODO: add another test for transactions=True
 @pytest.mark.asyncio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 async def test_simulation_process_blocks(
@@ -79,18 +80,6 @@ async def test_simulation_farm_blocks(
     assert full_node_api.full_node.blockchain.get_peak_height() is None
 
     rewards = await full_node_api.farm_blocks(count=count, wallet=wallet)
-
-    # The requested number of blocks had been processed plus 1 to handle the final reward
-    # transactions in the case of a non-zero count.
-    expected_height = count
-    if count > 0:
-        expected_height += 1
-
-    peak_height = full_node_api.full_node.blockchain.get_peak_height()
-    if peak_height is None:
-        peak_height = uint32(0)
-
-    assert peak_height == expected_height
 
     # The expected rewards have been received and confirmed.
     unconfirmed_balance = await wallet.get_unconfirmed_balance()
