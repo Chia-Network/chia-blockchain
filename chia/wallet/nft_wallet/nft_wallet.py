@@ -122,7 +122,6 @@ class NFTWallet:
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-        self.did_id = self.nft_wallet_info.did_id
         return self
 
     @classmethod
