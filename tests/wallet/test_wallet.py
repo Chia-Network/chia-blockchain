@@ -6,7 +6,7 @@ import pytest
 
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator, wait_for_coins_in_wallet
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -20,7 +20,6 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.time_out_assert import time_out_assert
-from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
 class TestWalletSimulator:
@@ -450,12 +449,9 @@ class TestWalletSimulator:
         assert tx_split_coins.spend_bundle is not None
 
         await wallet.push_transaction(tx_split_coins)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_1.full_node.mempool_manager, tx_split_coins.spend_bundle.name()
-        )
-        funds = await full_node_1.process_blocks(count=num_blocks)
+        await full_node_1.process_transaction_records(records=[tx_split_coins])
+        await wait_for_coins_in_wallet(coins=set(tx_split_coins.additions), wallet=wallet)
 
-        await time_out_assert(90, wallet.get_confirmed_balance, funds)
         max_sent_amount = await wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
