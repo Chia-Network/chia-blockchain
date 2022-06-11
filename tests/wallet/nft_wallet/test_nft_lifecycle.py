@@ -9,10 +9,12 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.util.errors import Err
 from chia.wallet.nft_wallet.nft_puzzles import (
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
     NFT_METADATA_UPDATER,
+    NFT_OWNERSHIP_LAYER,
 )
 
 ACS = Program.to(1)
@@ -125,5 +127,67 @@ async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updat
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
+    finally:
+        await sim.close()  # type: ignore
+
+
+@pytest.mark.asyncio()
+async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
+    sim, sim_client = setup_sim
+
+    try:
+        TARGET_OWNER = bytes32([0] * 32)
+        TARGET_TP = Program.to([])
+        # (c 19 (c 43 (c 5 ()))) or (mod (_ _ (new_owner new_tp)) (list new_owner new_tp ()))
+        transfer_program = Program.to([4, 19, [4, 43, [4, [], []]]])
+
+        ownership_puzzle: Program = NFT_OWNERSHIP_LAYER.curry(
+            NFT_OWNERSHIP_LAYER.get_tree_hash(),
+            None,
+            transfer_program,
+            ACS,
+        )
+        ownership_ph: bytes32 = ownership_puzzle.get_tree_hash()
+        await sim.farm_block(ownership_ph)
+        ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
+            0
+        ].coin
+
+        skip_tp_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1]]]),
+        )
+        skip_tp_bundle = SpendBundle([skip_tp_spend], G2Element())
+
+        result = await sim_client.push_tx(skip_tp_bundle)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        with pytest.raises(ValueError, match="clvm raise"):
+            skip_tp_spend.puzzle_reveal.to_program().run(skip_tp_spend.solution.to_program())
+
+        update_everything_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to(
+                [
+                    [
+                        [51, ACS_PH, 1],
+                        [-10, TARGET_OWNER, TARGET_TP],
+                    ]
+                ]
+            ),
+        )
+        update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
+        result = await sim_client.push_tx(update_everything_bundle)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        assert (await sim_client.get_coin_records_by_parent_ids([ownership_coin.name()], include_spent_coins=False))[
+            0
+        ].coin.puzzle_hash == NFT_OWNERSHIP_LAYER.curry(
+            NFT_OWNERSHIP_LAYER.get_tree_hash(),
+            TARGET_OWNER,
+            TARGET_TP,
+            ACS,
+        ).get_tree_hash()
     finally:
         await sim.close()  # type: ignore
