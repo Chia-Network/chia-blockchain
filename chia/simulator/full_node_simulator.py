@@ -285,7 +285,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         return rewards
 
-    async def farm_rewards(self, amount: int, wallet: Wallet) -> int:
+    async def farm_rewards_to_wallet(self, amount: int, wallet: Wallet) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
         The rewards will be present in the wall before returning.

@@ -114,7 +114,7 @@ async def test_simulation_farm_rewards(
 
     wallet = wallet_node.wallet_state_manager.main_wallet
 
-    rewards = await full_node_api.farm_rewards(amount=amount, wallet=wallet)
+    rewards = await full_node_api.farm_rewards_to_wallet(amount=amount, wallet=wallet)
 
     # At least the requested amount was farmed.
     assert rewards >= amount
@@ -147,7 +147,7 @@ async def test_wait_transaction_records_entered_mempool(
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     # generate some coins for repetitive testing
-    await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+    await full_node_api.farm_rewards_to_wallet(amount=repeats * tx_amount, wallet=wallet)
     coins = await full_node_api.create_coins_with_amounts(amounts=[uint64(tx_amount)] * repeats, wallet=wallet)
     assert len(coins) == repeats
 
@@ -183,7 +183,7 @@ async def test_process_transaction_records(
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     # generate some coins for repetitive testing
-    await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+    await full_node_api.farm_rewards_to_wallet(amount=repeats * tx_amount, wallet=wallet)
     coins = await full_node_api.create_coins_with_amounts(amounts=[uint64(tx_amount)] * repeats, wallet=wallet)
     assert len(coins) == repeats
 
@@ -225,7 +225,7 @@ async def test_create_coins_with_amounts(
 
     wallet = wallet_node.wallet_state_manager.main_wallet
 
-    await full_node_api.farm_rewards(amount=sum(amounts), wallet=wallet)
+    await full_node_api.farm_rewards_to_wallet(amount=sum(amounts), wallet=wallet)
     # Get some more coins.  The creator helper doesn't get you all the coins you
     # need yet.
     await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
