@@ -75,3 +75,16 @@ jobs:
       concurrency_name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       runs-on: windows-latest
+
+  all:
+    name: All
+    runs-on: ubuntu-latest
+    needs:
+      - macos
+      - ubuntu
+      - windows
+    steps:
+      - name: This
+        shell: python
+        run: |
+          import this
