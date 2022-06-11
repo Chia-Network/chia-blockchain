@@ -681,8 +681,10 @@ async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
 
 
 async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_id = args["did_id"]
+    name = args["name"]
     try:
-        response = await wallet_client.create_new_nft_wallet(None)
+        response = await wallet_client.create_new_nft_wallet(did_id, name)
         wallet_id = response["wallet_id"]
         print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
