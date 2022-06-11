@@ -625,17 +625,11 @@ class TestWalletSimulator:
         tx = await wallet.generate_signed_transaction(uint64(1000), ph2, coins={coin})
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
-        await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
-        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await full_node_api.process_blocks(count=2)
-        peak = full_node_api.full_node.blockchain.get_peak()
-        assert peak is not None
-        expected_height = peak.height
+        await full_node_api.process_transaction_records(records=[tx])
+        await wait_for_coins_in_wallet(coins={x for x in tx.additions if x.puzzle_hash == ph2}, wallet=wallet_2)
         await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
         funds -= 1000
 
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, expected_height)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
