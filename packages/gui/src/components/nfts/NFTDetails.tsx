@@ -156,20 +156,24 @@ export default function NFTDetails(props: NFTDetailsProps) {
     }
 
     if (nft?.metadataUris?.length) {
-      nft?.metadataUris.forEach((uri, index) => {
-        rows.push({
-          key: `metadataUris-${index}`,
-          label: <Trans>Metadata URL {index + 1}</Trans>,
-          value: (
-            <Tooltip title={uri} copyToClipboard>
-              <Typography variant="body2">{uri}</Typography>
-            </Tooltip>
-          ),
-        });
+      let index = 0;
+      nft?.metadataUris.forEach((uri: string) => {
+        if (uri) {
+          rows.push({
+            key: `metadataUris-${index}`,
+            label: <Trans>Metadata URL {index + 1}</Trans>,
+            value: (
+              <Tooltip title={uri} copyToClipboard>
+                <Typography variant="body2">{uri}</Typography>
+              </Tooltip>
+            ),
+          });
+          index++;
+        }
       });
     }
 
-    if (nft.metadataHash) {
+    if (nft.metadataHash && nft.metadataHash !== '0x') {
       rows.push({
         key: 'metadataHash',
         label: <Trans>Metadata Hash</Trans>,
@@ -182,20 +186,24 @@ export default function NFTDetails(props: NFTDetailsProps) {
     }
 
     if (nft?.licenseUris?.length) {
-      nft?.licenseUris.forEach((uri, index) => {
-        rows.push({
-          key: `licenseUris-${index}`,
-          label: <Trans>License URL {index + 1}</Trans>,
-          value: (
-            <Tooltip title={uri} copyToClipboard>
-              <Typography variant="body2">{uri}</Typography>
-            </Tooltip>
-          ),
-        });
+      let index = 0;
+      nft?.licenseUris.forEach((uri: string) => {
+        if (uri) {
+          rows.push({
+            key: `licenseUris-${index}`,
+            label: <Trans>License URL {index + 1}</Trans>,
+            value: (
+              <Tooltip title={uri} copyToClipboard>
+                <Typography variant="body2">{uri}</Typography>
+              </Tooltip>
+            ),
+          });
+          index++;
+        }
       });
     }
 
-    if (nft.licenseHash) {
+    if (nft.licenseHash && nft.licenseHash !== '0x') {
       rows.push({
         key: 'licenseHash',
         label: <Trans>License Hash</Trans>,
@@ -209,7 +217,6 @@ export default function NFTDetails(props: NFTDetailsProps) {
 
     return rows;
   }, [metadata, nft]);
-
 
   return (
     <Flex flexDirection="column" gap={1}>

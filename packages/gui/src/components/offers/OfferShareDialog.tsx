@@ -73,8 +73,7 @@ type CommonDialogProps = {
 
 type OfferShareServiceDialogProps = CommonOfferProps & CommonDialogProps;
 
-const testnetDummyHost = 'file-acceptor.chia.net';
-const testnetDummyEndpoint = '/';
+const testnetDummyHost = 'offers-api-sim.chia.net';
 
 const OfferSharingProviders: {
   [key in OfferSharingService]: OfferSharingProvider;
@@ -220,7 +219,7 @@ async function postToOfferBin(
     hostname: testnet ? testnetDummyHost : 'api.offerbin.io',
     port: 443,
     path: testnet
-      ? testnetDummyEndpoint
+      ? '/offerbin' + (sharePrivately ? '?private=true' : '')
       : '/upload' + (sharePrivately ? '?private=true' : ''),
   };
   const requestHeaders = {
@@ -243,6 +242,11 @@ async function postToOfferBin(
   }
 
   console.log('OfferBin upload completed');
+
+  if (testnet) {
+    return 'https://www.chia.net/offers';
+  }
+
   const { hash } = JSON.parse(responseBody);
 
   return `https://offerbin.io/offer/${hash}`;
@@ -265,7 +269,7 @@ async function postToHashgreen(
     protocol: 'https:',
     hostname: testnet ? testnetDummyHost : 'hash.green',
     port: 443,
-    path: testnet ? testnetDummyEndpoint : '/api/v1/orders',
+    path: testnet ? '/hashgreen' : '/api/v1/orders',
   };
   const requestHeaders = {
     accept: 'application/json',
@@ -289,6 +293,11 @@ async function postToHashgreen(
 
   if (statusCode === 200) {
     console.log('Hashgreen upload completed');
+
+    if (testnet) {
+      return 'https://www.chia.net/offers';
+    }
+
     const jsonObj = JSON.parse(responseBody);
     const { data } = jsonObj;
     const id = data?.id;
@@ -476,7 +485,7 @@ async function postToOfferpool(
     protocol: 'https:',
     hostname: testnet ? testnetDummyHost : 'offerpool.io',
     port: 443,
-    path: testnet ? testnetDummyEndpoint : '/api/v1/offers',
+    path: testnet ? '/offerpool' : '/api/v1/offers',
   };
   const requestHeaders = {
     'Content-Type': 'application/json',
@@ -498,6 +507,11 @@ async function postToOfferpool(
   }
 
   console.log('offerpool upload completed');
+
+  if (testnet) {
+    return { success: true };
+  }
+
   return JSON.parse(responseBody);
 }
 

@@ -29,19 +29,19 @@ import isURL from 'validator/lib/isURL';
 
 export enum NFTContextualActionTypes {
   None = 0,
-  CopyNFTId = 1 << 0, // 1
-  CreateOffer = 1 << 1, // 2
-  Transfer = 1 << 2, // 4
-  ViewOnExplorer = 1 << 3, // 8
-  OpenInBrowser = 1 << 4, // 16
-  CopyURL = 1 << 5, // 32
+  CreateOffer = 1 << 0, // 1
+  Transfer = 1 << 1, // 2
+  CopyNFTId = 1 << 2, // 4
+  CopyURL = 1 << 3, // 8
+  ViewOnExplorer = 1 << 4, // 16
+  OpenInBrowser = 1 << 5, // 32
 
-  All = CopyNFTId |
-    CreateOffer |
+  All = CreateOffer |
     Transfer |
+    CopyNFTId |
+    CopyURL |
     ViewOnExplorer |
-    OpenInBrowser |
-    CopyURL,
+    OpenInBrowser,
 }
 
 type NFTContextualActionProps = {
@@ -186,6 +186,7 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
         handleTransferNFT();
       }}
       disabled={disabled}
+      divider={true}
     >
       <ListItemIcon>
         <TransferIcon />
@@ -240,7 +241,7 @@ function NFTOpenInBrowserContextualAction(
         <LinkSmallIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
-        <Trans>Open in Web Browser</Trans>
+        <Trans>Open in Browser</Trans>
       </Typography>
     </MenuItem>
   );
@@ -275,12 +276,13 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
         handleCopy();
       }}
       disabled={disabled}
+      divider={true}
     >
       <ListItemIcon>
         <LinkIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
-        <Trans>Copy URL</Trans>
+        <Trans>Copy Media URL</Trans>
       </Typography>
     </MenuItem>
   );
@@ -367,6 +369,13 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
           props: {
             title: <Trans>View on MintGarden</Trans>,
             explorer: NFTExplorer.MintGarden,
+          },
+        },
+        {
+          action: NFTViewOnExplorerContextualAction,
+          props: {
+            title: <Trans>View on SkyNFT</Trans>,
+            explorer: NFTExplorer.SkyNFT,
           },
         },
         {

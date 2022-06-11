@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import { useGetNFTInfoQuery } from '@chia/api-react';
 import { Button, Flex, Loading, TooltipIcon } from '@chia/core';
 import { Card, Typography } from '@mui/material';
@@ -23,6 +23,7 @@ const StyledCard = styled(Card)`
   width: 300px;
   height: 362px;
   display: flex;
+  border-radius: 8px;
 `;
 
 /* ========================================================================== */
@@ -37,9 +38,16 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
   const {
     data: nft,
     isLoading: isLoadingNFT,
-    error,
-  } = useGetNFTInfoQuery({ coinId: launcherId });
+    error: rawError,
+  } = useGetNFTInfoQuery({ coinId: launcherId ?? '' });
   const viewOnExplorer = useViewNFTOnExplorer();
+  let error = rawError?.message ?? '';
+
+  if (error) {
+    if (error.startsWith('The coin is not a NFT.')) {
+      error = t`NFT identifier does not reference a valid NFT coin.`;
+    }
+  }
 
   const cardContentElem = (function () {
     if (isLoadingNFT) {
@@ -72,7 +80,22 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
           }
         />
       );
-    } else if (error) {
+    } else if (launcherId && error) {
+      return (
+        <Flex
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          flexGrow={1}
+          gap={1}
+          padding={3}
+        >
+          <Typography variant="body1" color="error">
+            {error}
+          </Typography>
+        </Flex>
+      );
+    } else {
       return (
         <Flex
           flexDirection="column"
@@ -84,26 +107,11 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
             wordBreak: 'break-all',
           }}
         >
-          <Typography variant="body1" color="error">
-            {error.message}
+          <Typography variant="h6">
+            <Trans>NFT not specified</Trans>
           </Typography>
         </Flex>
       );
-    } else {
-      <Flex
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        flexGrow={1}
-        gap={1}
-        style={{
-          wordBreak: 'break-all',
-        }}
-      >
-        <Typography variant="h6">
-          <Trans>NFT not specified</Trans>
-        </Typography>
-      </Flex>;
     }
   })();
 
@@ -159,6 +167,16 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
           >
             <Typography variant="caption" color="secondary">
               <Trans>Check Provenance on MintGarden</Trans>
+            </Typography>
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => viewOnExplorer(nft, NFTExplorer.SkyNFT)}
+            style={{ width: '100%' }}
+          >
+            <Typography variant="caption" color="secondary">
+              <Trans>Check Provenance on SkyNFT</Trans>
             </Typography>
           </Button>
           <Button
