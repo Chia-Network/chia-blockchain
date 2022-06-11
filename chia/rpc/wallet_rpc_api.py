@@ -1406,7 +1406,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {
             wallet.did_info.origin_coin.name(): wallet.id()
             for wallet in all_wallets
-            if isinstance(wallet, DIDWallet) and wallet.did_info.origin_coin is not None
+            if wallet.type() == uint8(WalletType.DISTRIBUTED_ID) and wallet.did_info.origin_coin is not None
         }
         did_nft_wallets: List[Dict] = []
         for wallet in all_wallets:
