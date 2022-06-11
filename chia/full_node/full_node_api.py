@@ -21,6 +21,7 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     PuzzleSolutionResponse,
+    RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
     CoinState,
@@ -42,6 +43,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1296,13 +1298,61 @@ class FullNodeAPI:
         return response_msg
 
     @api_request
+    async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
+        """Returns header blocks by directly streaming bytes into Message
+
+        This method should be used instead of RequestHeaderBlocks
+        """
+        reject = RejectBlockHeaders(request.start_height, request.end_height)
+
+        if request.end_height < request.start_height or request.end_height - request.start_height > 128:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        if self.full_node.block_store.db_wrapper.db_version == 2:
+            try:
+                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+                    request.start_height, request.end_height
+                )
+            except ValueError:
+                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+
+        else:
+            height_to_hash = self.full_node.blockchain.height_to_hash
+            header_hashes: List[bytes32] = []
+            for i in range(request.start_height, request.end_height + 1):
+                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
+                if header_hash is None:
+                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
+                header_hashes.append(header_hash)
+
+            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
+        if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        return_filter = request.return_filter
+        header_blocks_bytes: List[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
+
+        # we're building the RespondHeaderBlocks manually to avoid cost of
+        # dynamic serialization
+        # ---
+        # we start building RespondBlockHeaders response (start_height, end_height)
+        # and then need to define size of list object
+        respond_header_blocks_manually_streamed: bytes = (
+            bytes(uint32(request.start_height))
+            + bytes(uint32(request.end_height))
+            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
+        )
+        # and now stream the whole list in bytes
+        respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
+        return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
+
+    @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        """DEPRECATED: please use RequestBlockHeaders"""
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
-
+        height_to_hash = self.full_node.blockchain.height_to_hash
         header_hashes: List[bytes32] = []
         for i in range(request.start_height, request.end_height + 1):
-            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+            header_hash: Optional[bytes32] = height_to_hash(uint32(i))
             if header_hash is None:
                 reject = RejectHeaderBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
@@ -1312,8 +1362,11 @@ class FullNodeAPI:
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
-            added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
-            removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(block.height)
+            removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records, removed_coins_records = await asyncio.gather(
+                added_coins_records_coroutine, removed_coins_records_coroutine
+            )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)

@@ -214,9 +214,19 @@ def test_protocol_bytes() -> None:
     assert bytes(message) == bytes(request_block_header)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
+    message = type(request_block_headers).from_bytes(message_bytes)
+    assert message == request_block_headers
+    assert bytes(message) == bytes(request_block_headers)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
     message = type(respond_header_block).from_bytes(message_bytes)
     assert message == respond_header_block
     assert bytes(message) == bytes(respond_header_block)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = type(respond_block_headers).from_bytes(message_bytes)
+    assert message == respond_block_headers
+    assert bytes(message) == bytes(respond_block_headers)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = type(reject_header_request).from_bytes(message_bytes)
@@ -277,6 +287,11 @@ def test_protocol_bytes() -> None:
     message = type(register_for_ph_updates).from_bytes(message_bytes)
     assert message == register_for_ph_updates
     assert bytes(message) == bytes(register_for_ph_updates)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message = type(reject_block_headers).from_bytes(message_bytes)
+    assert message == reject_block_headers
+    assert bytes(message) == bytes(reject_block_headers)
 
     message_bytes, input_bytes = parse_blob(input_bytes)
     message = type(respond_to_ph_updates).from_bytes(message_bytes)
