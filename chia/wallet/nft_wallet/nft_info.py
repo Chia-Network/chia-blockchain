@@ -11,6 +11,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 
+NFT_HRP = "nft"
+
 
 @streamable
 @dataclass(frozen=True)
