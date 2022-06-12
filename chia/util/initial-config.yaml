@@ -485,9 +485,6 @@ wallet:
 
   connect_to_unknown_peers: True
 
-  # The minimum height that we care about for our transactions. Set to zero
-  # If we are restoring from private key and don't know the height.
-  num_sync_batches: 50
   initial_num_public_keys: 100
 
   dns_servers:
