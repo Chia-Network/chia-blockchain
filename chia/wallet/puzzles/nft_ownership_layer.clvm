@@ -10,6 +10,7 @@
    (include curry-and-treehash.clinc)
 
    (defconstant NEW_OWNER_CONDITION -10)
+   (defconstant ANNOUNCEMENT_PREFIX 0xad4cd55cf7ad6414)  ; first 8 bytes of (sha256 "Ownership Layer")
 
    (defun sha256tree1
           (TREE)
@@ -35,39 +36,44 @@
       )
    )
 
-   (defun process_found_conditions (NFT_OWNERSHIP_LAYER_MOD_HASH odd_args tp_output)
-     (c
-       (c
-         CREATE_COIN
-         (c
-           (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH (f tp_output) (f (r tp_output)) (f odd_args))
-           (r odd_args)
-          )
-        )
-        (f (r (r tp_output)))
-     )
-   )
-
-   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_seen magic_seen odd_args tp_args)
+   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_seen magic_seen odd_args tp_output)
      (if conditions
        (if (= (f (f conditions)) CREATE_COIN)
          (if (= (logand (f (r (r (f conditions))))) ONE)
-            (assert (= odd_seen 0)
+            (assert (not odd_seen)
               ; then
-              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) 1 magic_seen (r (f conditions)) tp_args)
+              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) 1 magic_seen (r (f conditions)) tp_output)
             )
-            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_args))
+            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
          )
          (if (= (f (f conditions)) NEW_OWNER_CONDITION)
-            (assert (= magic_seen 0)
-              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen 1 odd_args (r (f conditions)))
+            (assert (not magic_seen)
+              (c
+                (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree1 (r (f conditions)))))
+                (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen 1 odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
+              )
             )
-            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_args))
+            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+                (assert (all (not (= (substr (f (r (f conditions))) 0 8) ANNOUNCEMENT_PREFIX)) (= 40 (strlen (f (r (f conditions))))))
+                  ; then
+                  (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
+                )
+                (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
+            )
          )
        )
        (assert odd_seen magic_seen
          ; then
-         (process_found_conditions NFT_OWNERSHIP_LAYER_MOD_HASH odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions tp_args)))
+         (c
+           (c
+             CREATE_COIN
+             (c
+               (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH (f tp_output) (f (r tp_output)) (f odd_args))
+               (r odd_args)
+              )
+            )
+            (f (r (r tp_output)))
+         )
        )
      )
    )

@@ -181,6 +181,19 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     return metadata_to_program(new_metadata)
 
 
+def construct_ownership_layer(
+    current_owner: Optional[bytes32],
+    transfer_program: Program,
+    inner_puzzle: Program,
+) -> Program:
+    return NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        current_owner,
+        transfer_program,
+        inner_puzzle,
+    )
+
+
 def create_ownership_layer_puzzle(
     nft_id: bytes32,
     did_id: bytes,

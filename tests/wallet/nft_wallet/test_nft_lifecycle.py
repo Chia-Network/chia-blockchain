@@ -4,6 +4,7 @@ from blspy import G2Element
 from typing import List, Tuple
 
 from chia.clvm.spend_sim import SpendSim, SimClient
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
@@ -14,7 +15,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
     NFT_METADATA_UPDATER,
-    NFT_OWNERSHIP_LAYER,
+    construct_ownership_layer,
 )
 
 ACS = Program.to(1)
@@ -141,8 +142,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         # (c 19 (c 43 (c 5 ()))) or (mod (_ _ (new_owner new_tp)) (list new_owner new_tp ()))
         transfer_program = Program.to([4, 19, [4, 43, [4, [], []]]])
 
-        ownership_puzzle: Program = NFT_OWNERSHIP_LAYER.curry(
-            NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        ownership_puzzle: Program = construct_ownership_layer(
             None,
             transfer_program,
             ACS,
@@ -165,7 +165,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         with pytest.raises(ValueError, match="clvm raise"):
             skip_tp_spend.puzzle_reveal.to_program().run(skip_tp_spend.solution.to_program())
 
-        update_everything_spend = CoinSpend(
+        make_bad_announcement_spend = CoinSpend(
             ownership_coin,
             ownership_puzzle,
             Program.to(
@@ -173,9 +173,28 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                     [
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
+                        [62, b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + bytes32([0] * 32)],
                     ]
                 ]
             ),
+        )
+        make_bad_announcement_bundle = SpendBundle([make_bad_announcement_spend], G2Element())
+
+        result = await sim_client.push_tx(make_bad_announcement_bundle)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        with pytest.raises(ValueError, match="clvm raise"):
+            make_bad_announcement_spend.puzzle_reveal.to_program().run(
+                make_bad_announcement_spend.solution.to_program()
+            )
+
+        expected_announcement = Announcement(
+            ownership_puzzle.get_tree_hash(),
+            b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
+        )
+        update_everything_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1], [-10, TARGET_OWNER, TARGET_TP], [63, expected_announcement.name()]]]),
         )
         update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
         result = await sim_client.push_tx(update_everything_bundle)
@@ -183,8 +202,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         await sim.farm_block()
         assert (await sim_client.get_coin_records_by_parent_ids([ownership_coin.name()], include_spent_coins=False))[
             0
-        ].coin.puzzle_hash == NFT_OWNERSHIP_LAYER.curry(
-            NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        ].coin.puzzle_hash == construct_ownership_layer(
             TARGET_OWNER,
             TARGET_TP,
             ACS,
