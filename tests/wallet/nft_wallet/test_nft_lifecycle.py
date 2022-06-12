@@ -1,3 +1,4 @@
+import itertools
 import pytest
 
 from blspy import G2Element
@@ -15,6 +16,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     create_nft_layer_puzzle_with_curry_params,
     metadata_to_program,
     NFT_METADATA_UPDATER,
+    NFT_TRANSFER_PROGRAM_DEFAULT,
     construct_ownership_layer,
 )
 
@@ -207,5 +209,128 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             TARGET_TP,
             ACS,
         ).get_tree_hash()
+    finally:
+        await sim.close()  # type: ignore
+
+
+@pytest.mark.asyncio()
+async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -> None:
+    sim, sim_client = setup_sim
+
+    try:
+        # Now make the ownership coin
+        FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
+        FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
+        FAKE_LAUNCHER_ID = bytes32([0] * 32)
+        FAKE_TAIL = bytes32([2] * 32)
+        FAKE_SINGLETON_STRUCT = Program.to((FAKE_SINGLETON_MOD.get_tree_hash(), (FAKE_LAUNCHER_ID, FAKE_LAUNCHER_ID)))
+        FAKE_SINGLETON = FAKE_SINGLETON_MOD.curry(FAKE_SINGLETON_STRUCT, ACS)
+        FAKE_CAT = FAKE_CAT_MOD.curry(FAKE_CAT_MOD.get_tree_hash(), FAKE_TAIL, ACS)
+
+        ROYALTY_ADDRESS = bytes32([1] * 32)
+        TRADE_PRICE_PERCENTAGE = 5000  # 50%
+        transfer_program: Program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
+            FAKE_SINGLETON_STRUCT,
+            ROYALTY_ADDRESS,
+            TRADE_PRICE_PERCENTAGE,
+            ACS.get_tree_hash(),
+            FAKE_CAT_MOD.get_tree_hash(),
+        )
+        ownership_puzzle: Program = construct_ownership_layer(
+            None,
+            transfer_program,
+            ACS,
+        )
+        ownership_ph: bytes32 = ownership_puzzle.get_tree_hash()
+        await sim.farm_block(ownership_ph)
+        ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
+            0
+        ].coin
+
+        BLOCK_HEIGHT = sim.block_height
+
+        # Try a spend, no royalties, no owner update
+        generic_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
+        )
+        generic_bundle = SpendBundle([generic_spend], G2Element())
+        result = await sim_client.push_tx(generic_bundle)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        await sim.rewind(BLOCK_HEIGHT)
+
+        # Now try an owner update plus royalties
+        await sim.farm_block(FAKE_SINGLETON.get_tree_hash())
+        await sim.farm_block(FAKE_CAT.get_tree_hash())
+        await sim.farm_block(ACS_PH)
+        singleton_coin = (
+            await sim_client.get_coin_records_by_puzzle_hash(FAKE_SINGLETON.get_tree_hash(), include_spent_coins=False)
+        )[0].coin
+        cat_coin = (
+            await sim_client.get_coin_records_by_puzzle_hash(FAKE_CAT.get_tree_hash(), include_spent_coins=False)
+        )[0].coin
+        xch_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH, include_spent_coins=False))[0].coin
+
+        ownership_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100], [100, FAKE_TAIL]], ACS_PH]]]),
+        )
+
+        did_announcement_spend = CoinSpend(
+            singleton_coin,
+            FAKE_SINGLETON,
+            Program.to([[[62, FAKE_LAUNCHER_ID]]]),
+        )
+
+        expected_announcement_data = Program.to(
+            (FAKE_LAUNCHER_ID, [[ROYALTY_ADDRESS, 50, [ROYALTY_ADDRESS]]])
+        ).get_tree_hash()
+        xch_announcement_spend = CoinSpend(
+            xch_coin,
+            ACS,
+            Program.to([[62, expected_announcement_data]]),
+        )
+
+        cat_announcement_spend = CoinSpend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
+
+        # Make sure every combo except all of them work
+        for i in range(1, 3):
+            for announcement_combo in itertools.combinations(
+                [did_announcement_spend, xch_announcement_spend, cat_announcement_spend], i
+            ):
+                result = await sim_client.push_tx(SpendBundle([ownership_spend, *announcement_combo], G2Element()))
+                assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
+
+        # Make sure all of them together pass
+        full_bundle = SpendBundle(
+            [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+        )
+        result = await sim_client.push_tx(full_bundle)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # Finally, make sure we can just clear the DID label off
+        new_ownership_puzzle: Program = construct_ownership_layer(
+            FAKE_LAUNCHER_ID,
+            transfer_program,
+            ACS,
+        )
+        new_ownership_ph: bytes32 = new_ownership_puzzle.get_tree_hash()
+        await sim.farm_block(new_ownership_ph)
+        new_ownership_coin = (
+            await sim_client.get_coin_records_by_puzzle_hash(new_ownership_ph, include_spent_coins=False)
+        )[0].coin
+
+        empty_spend = CoinSpend(
+            new_ownership_coin,
+            new_ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
+        )
+        empty_bundle = SpendBundle([empty_spend], G2Element())
+        result = await sim_client.push_tx(empty_bundle)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
     finally:
         await sim.close()  # type: ignore
