@@ -75,3 +75,8 @@ jobs:
       concurrency_name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       runs-on: windows-latest
+  check:
+    uses: ./.github/workflows/check.yml
+  upload:
+    uses: ./.github/workflows/upload-pypi-sources.yml
+    needs: check

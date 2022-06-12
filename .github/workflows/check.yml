@@ -1,0 +1,80 @@
+name: check
+
+on:
+  workflow_call:
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-check-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.check.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - name: black
+            command: black --check --diff .
+          - name: Flake8
+            command: flake8 benchmarks build_scripts chia tests tools *.py
+          - name: mypy
+            command: mypy
+        os:
+          - emoji: 🐧
+            matrix: ubuntu
+            name: Ubuntu
+            concurrency_name: ubuntu
+            configuration: ${{ needs.configure.outputs.configuration }}
+            runs-on: ubuntu-latest
+        python:
+          - name: '3.9'
+            file_name: '3.9'
+            action: '3.9'
+            apt: '3.9'
+            install_sh: '3.9'
+            matrix: '3.9'
+
+    steps:
+      - name: Configure git
+        run: |
+          git config --global core.autocrlf false
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python environment
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          # Note that new runners may break this https://github.com/actions/cache/issues/292
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Run install script
+        env:
+          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+        run: |
+          sh install.sh -d
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: ${{ matrix.check.name }}
+        run: |
+          ${{ matrix.check.command }}
