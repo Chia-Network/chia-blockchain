@@ -1116,7 +1116,7 @@ class WalletStateManager:
                 return None
 
         self.log.debug(
-            f"Adding record to state manager coin: %s at %s wallet_id: %s and type: %s",
+            "Adding record to state manager coin: %s at %s wallet_id: %s and type: %s",
             coin,
             height,
             wallet_id,
