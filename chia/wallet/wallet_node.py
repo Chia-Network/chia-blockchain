@@ -1243,6 +1243,7 @@ class WalletNode:
         assert state_block.foliage_transaction_block is not None
         validate_additions_result = await request_and_validate_additions(
             peer,
+            peer_request_cache,
             state_block.height,
             state_block.header_hash,
             coin_state.coin.puzzle_hash,
