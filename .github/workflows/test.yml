@@ -79,12 +79,16 @@ jobs:
   all:
     name: All
     runs-on: ubuntu-latest
+    if: always()
     needs:
       - macos
       - ubuntu
       - windows
     steps:
-      - name: This
-        shell: python
-        run: |
-          import this
+      - name: debug
+        env:
+          V: ${{ needs }}
+        run: echo "${V}"
+      - name: Fail the job if result is not success
+        if: ${{ needs.macos.result != 'success' or needs.ubuntu.result != 'success' or needs.windows.result != 'success' }}
+        run: exit 1
