@@ -1,3 +1,5 @@
+import pytest
+
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.wallet.puzzles.cat_loader import CAT_MOD
@@ -22,7 +24,7 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
 NFT_METADATA_UPDATER_UPDATEABLE = load_clvm("nft_metadata_updater_updateable.clvm")
 
-
+@pytest.mark.skip
 def test_new_nft_state_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
@@ -56,7 +58,7 @@ def test_new_nft_state_layer() -> None:
         ).get_tree_hash()
     )
 
-
+@pytest.mark.skip
 def test_update_metadata() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
@@ -107,7 +109,7 @@ def test_update_metadata() -> None:
         ).get_tree_hash()
     )
 
-
+@pytest.mark.skip
 def test_transfer_program() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
@@ -158,7 +160,7 @@ def test_transfer_program() -> None:
     assert conditions.rest().rest().rest().first().first().as_int() == 51
     assert conditions.rest().rest().rest().first().rest().rest().first().as_int() == 40
 
-
+@pytest.mark.skip
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
@@ -210,7 +212,7 @@ def test_ownership_layer() -> None:
     assert res.rest().rest().rest().first().first().as_int() == 51
     assert res.rest().rest().rest().first().rest().rest().first().as_int() == 40
 
-
+@pytest.mark.skip
 def test_full_stack() -> None:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
