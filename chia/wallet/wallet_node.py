@@ -1482,8 +1482,8 @@ class WalletNode:
 
         return CoinSpend(
             coin,
-            solution_response.response.puzzle.to_serialized_program(),
-            solution_response.response.solution.to_serialized_program(),
+            solution_response.response.puzzle,
+            solution_response.response.solution,
         )
 
     async def get_coin_state(
