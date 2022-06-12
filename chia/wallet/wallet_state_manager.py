@@ -585,6 +585,19 @@ class WalletStateManager:
 
         return None, None
 
+    async def is_not_standard_spam(self, coin_state: CoinState) -> bool:
+        return True
+        wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
+            coin_state.coin.puzzle_hash
+        )
+        # self.log.warning(
+        #     f"Wallet info 1: {wallet_info} {WalletType.STANDARD_WALLET} {wallet_info is not None} {wallet_info[1] == WalletType.STANDARD_WALLET} {coin_state.coin.amount < 1000000}"
+        # )
+        if wallet_info is not None and wallet_info[1] == WalletType.STANDARD_WALLET:
+            if coin_state.coin.amount < 1000000:
+                return False
+        return True
+
     async def handle_cat(
         self,
         curried_args: Iterator[Program],

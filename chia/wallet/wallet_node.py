@@ -657,7 +657,12 @@ class WalletNode:
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
-        items = sorted(items_input, key=last_change_height_cs)
+
+        items_input_2 = list(sorted(items_input, key=last_change_height_cs))
+        self.log.info(f"Filtering spam, total items: {len(items_input_2)}")
+        items = [item for item in items_input_2 if (await self.wallet_state_manager.is_not_standard_spam(item))]
+        # items = list(filter(self.wallet_state_manager.is_not_standard_spam, items))
+        self.log.info(f"Filtered spam. Total left: {len(items)}")
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
             assert self.wallet_state_manager is not None
