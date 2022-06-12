@@ -80,3 +80,5 @@ jobs:
   upload:
     uses: ./.github/workflows/upload-pypi-source.yml
     needs: check
+  install-scripts:
+    uses: ./.github/workflows/test-install-scripts.yml
