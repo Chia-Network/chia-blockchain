@@ -144,15 +144,12 @@ async def setup_wallet_node(
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
-    starting_height=None,
     initial_num_public_keys=5,
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config["wallet"]
         config["port"] = 0
         config["rpc_port"] = 0
-        if starting_height is not None:
-            config["starting_height"] = starting_height
         config["initial_num_public_keys"] = initial_num_public_keys
 
         entropy = token_bytes(32)

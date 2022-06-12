@@ -225,8 +225,6 @@ class WalletNode:
 
         assert self.wallet_state_manager is not None
 
-        self.config["starting_height"] = 0
-
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
 

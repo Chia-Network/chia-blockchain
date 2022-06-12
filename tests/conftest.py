@@ -378,12 +378,6 @@ async def wallet_nodes_perf(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_starting_height(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mainnet(bt, db_version):
     async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, db_version=db_version)
     nodes, wallets = await async_gen.__anext__()

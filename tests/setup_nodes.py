@@ -113,7 +113,6 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 async def setup_node_and_wallet(
     consensus_constants: ConsensusConstants,
     self_hostname: str,
-    starting_height=None,
     key_seed=None,
     db_version=1,
     disable_capabilities=None,
@@ -135,7 +134,6 @@ async def setup_node_and_wallet(
                 consensus_constants,
                 btools,
                 None,
-                starting_height=starting_height,
                 key_seed=key_seed,
             ),
         ]
@@ -153,7 +151,6 @@ async def setup_simulators_and_wallets(
     wallet_count: int,
     dic: Dict,
     *,
-    starting_height=None,
     key_seed=None,
     initial_num_public_keys=5,
     db_version=1,
@@ -197,7 +194,6 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 None,
                 key_seed=seed,
-                starting_height=starting_height,
                 initial_num_public_keys=initial_num_public_keys,
             )
             wallets.append(await wlt.__anext__())
