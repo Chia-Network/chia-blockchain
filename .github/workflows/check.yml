@@ -19,10 +19,15 @@ jobs:
         check:
           - name: black
             command: black --check --diff .
+            matrix: black
           - name: Flake8
             command: flake8 benchmarks build_scripts chia tests tools *.py
+            matrix: flake8
           - name: mypy
             command: mypy
+            matrix: mypy
+          - name: pre-commit
+            matrix: pre-commit
         os:
           - emoji: 🐧
             matrix: ubuntu
@@ -76,5 +81,10 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: ${{ matrix.check.name }}
+        if: matrix.check.matrix != 'pre-commit'
         run: |
           ${{ matrix.check.command }}
+
+      - name: pre-commit
+        if: matrix.check.matrix == 'pre-commit'
+        uses: pre-commit/action@v2.0.3
