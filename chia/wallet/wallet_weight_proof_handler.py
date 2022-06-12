@@ -103,16 +103,14 @@ class WalletWeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, [], []
 
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self._constants, summaries, weight_proof
-        )
+        summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
         vdf_tasks: List[asyncio.Future] = []
         recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
             self._executor,
             _validate_recent_blocks_and_get_records,
-            constants,
+            self._constants,
             wp_recent_chain_bytes,
             summary_bytes,
             pathlib.Path(self._executor_shutdown_tempfile.name),
@@ -120,7 +118,7 @@ class WalletWeightProofHandler:
         try:
             if not skip_segment_validation:
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes, validate_from
+                    self._constants, rng, wp_segment_bytes, summary_bytes, validate_from
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
@@ -136,7 +134,7 @@ class WalletWeightProofHandler:
                     vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
                         self._executor,
                         _validate_vdf_batch,
-                        constants,
+                        self._constants,
                         byte_chunks,
                         pathlib.Path(self._executor_shutdown_tempfile.name),
                     )
