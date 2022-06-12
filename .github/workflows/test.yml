@@ -85,10 +85,14 @@ jobs:
       - ubuntu
       - windows
     steps:
-      - name: debug
+      - name: Require all successes
+        shell: python
         env:
-          V: ${{ needs }}
-        run: echo "${V}"
-      - name: Fail the job if result is not success
-        if: ${{ needs.macos.result != 'success' || needs.ubuntu.result != 'success' || needs.windows.result != 'success' }}
-        run: exit 1
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          import json
+          import os
+          import sys
+
+          results = json.loads(os.environ["RESULTS"])
+          sys.exit(0 if all(result == "success" for result in results) else 1)
