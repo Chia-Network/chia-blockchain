@@ -78,5 +78,5 @@ jobs:
   check:
     uses: ./.github/workflows/check.yml
   upload:
-    uses: ./.github/workflows/upload-pypi-sources.yml
+    uses: ./.github/workflows/upload-pypi-source.yml
     needs: check
