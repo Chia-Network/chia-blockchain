@@ -45,8 +45,6 @@ wallet_program_files = set(
         "chia/wallet/puzzles/nft_metadata_updater_updateable.clvm",
         "chia/wallet/puzzles/nft_state_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_layer.clvm",
-        "chia/wallet/puzzles/nft_graftroot_transfer.clvm",
-        "chia/wallet/puzzles/nft_graftroot_request.clvm",
         "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
     ]
 )
