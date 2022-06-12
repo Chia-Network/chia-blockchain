@@ -727,20 +727,21 @@ class TestWalletSimulator:
 
         # Ensure that we use a coin that we will not reorg out
         coin = list(all_blocks[-3].get_included_reward_coins())[0]
-        await asyncio.sleep(5)
+
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
         tx = await wallet.generate_signed_transaction(uint64(1000), ph2, coins={coin})
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
-        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-        await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
+        await time_out_assert(20, wallet_2.get_confirmed_balance, 1000)
         funds -= 1000
 
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -758,8 +759,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
-        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         for i in range(0, num_blocks):
@@ -767,7 +768,7 @@ class TestWalletSimulator:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
         # By this point, the transaction should be confirmed
-        await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - 1000)
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
