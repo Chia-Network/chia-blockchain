@@ -546,8 +546,9 @@ class WalletStateManager:
     async def determine_coin_type(
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
-        if self.is_pool_reward(coin_state.created_height, coin_state.coin) or self.is_farmer_reward(
-            coin_state.created_height, coin_state.coin
+        if coin_state.created_height is not None and (
+            self.is_pool_reward(coin_state.created_height, coin_state.coin)
+            or self.is_farmer_reward(coin_state.created_height, coin_state.coin)
         ):
             return None, None
 
@@ -829,7 +830,8 @@ class WalletStateManager:
                 if coin_name in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
-                if local_record is None:
+                record = local_record
+                if record is None:
                     farmer_reward = False
                     pool_reward = False
                     tx_type: int
@@ -1059,7 +1061,7 @@ class WalletStateManager:
             try_height = created_height - i
             if try_height < 0:
                 break
-            calculated = pool_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
+            calculated = pool_parent_id(uint32(try_height), self.constants.GENESIS_CHALLENGE)
             if calculated == coin.parent_coin_info:
                 return True
         return False
@@ -1072,7 +1074,7 @@ class WalletStateManager:
             try_height = created_height - i
             if try_height < 0:
                 break
-            calculated = farmer_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
+            calculated = farmer_parent_id(uint32(try_height), self.constants.GENESIS_CHALLENGE)
             if calculated == coin.parent_coin_info:
                 return True
         return False
