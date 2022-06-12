@@ -90,5 +90,5 @@ jobs:
           V: ${{ needs }}
         run: echo "${V}"
       - name: Fail the job if result is not success
-        if: ${{ needs.macos.result != 'success' or needs.ubuntu.result != 'success' or needs.windows.result != 'success' }}
+        if: ${{ needs.macos.result != 'success' || needs.ubuntu.result != 'success' || needs.windows.result != 'success' }}
         run: exit 1
