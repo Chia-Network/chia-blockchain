@@ -82,3 +82,5 @@ jobs:
     needs: check
   install-scripts:
     uses: ./.github/workflows/test-install-scripts.yml
+  dependency-artifacts:
+    uses: ./.github/workflows/check_wheel_availability.yml
