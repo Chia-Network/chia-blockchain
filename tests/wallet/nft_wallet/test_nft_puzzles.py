@@ -1,7 +1,6 @@
 from typing import Tuple
 
 from clvm.casts import int_from_bytes
-from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,7 +36,6 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     p2_puzzle = puzzle_for_pk(destination)
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
-    print(f"NEW DID: {new_did.hex()} {puzhash.hex()}")
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list = [[200]]
 
@@ -86,12 +84,10 @@ def make_a_new_nft_puzzle(curried_ownership_layer: Program, metadata: Program) -
 def get_updated_nft_puzzle(puzzle: Program, solution: Program) -> bytes32:
     result = puzzle.run(solution)
     for condition in result.as_iter():
-        print("Condition: %s" % disassemble(condition))
         code = int_from_bytes(condition.first().atom)
         if code == 51:
             if int_from_bytes(condition.rest().rest().first().atom) == 1:
                 # this is our new puzzle hash
-                print("Found new coin: %s" % disassemble(condition))
                 return bytes32(condition.rest().first().atom)
     raise ValueError("No create coin condition found")
 

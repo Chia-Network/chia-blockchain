@@ -218,7 +218,9 @@ def create_ownership_layer_puzzle(
     )
     nft_inner_puzzle = p2_puzzle
 
-    nft_ownership_layer_puzzle = construct_ownership_layer(bytes32(did_id), transfer_program, nft_inner_puzzle)
+    nft_ownership_layer_puzzle = construct_ownership_layer(
+        bytes32(did_id) if did_id else None, transfer_program, nft_inner_puzzle
+    )
     return nft_ownership_layer_puzzle
 
 
