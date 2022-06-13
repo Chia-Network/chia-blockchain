@@ -817,7 +817,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
 )
 @pytest.mark.asyncio
 async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 3
+    num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -869,6 +869,8 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     assert isinstance(res, dict)
     assert res.get("success")
     nft_wallet_0_id = res["wallet_id"]
+
+    await time_out_assert(5, did_wallet.get_confirmed_balance, 1)
 
     # Create a NFT with DID
     resp = await api_0.nft_mint_nft(
@@ -942,7 +944,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
 )
 @pytest.mark.asyncio
 async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 3
+    num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -992,6 +994,8 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     assert isinstance(res, dict)
     assert res.get("success")
     nft_wallet_0_id = res["wallet_id"]
+
+    await time_out_assert(5, did_wallet.get_confirmed_balance, 1)
 
     # Create a NFT with DID
     resp = await api_0.nft_mint_nft(
