@@ -1,10 +1,10 @@
 import itertools
-import pytest
-
-from blspy import G2Element
 from typing import List, Tuple
 
-from chia.clvm.spend_sim import SpendSim, SimClient
+import pytest
+from blspy import G2Element
+
+from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,11 +13,11 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.wallet.nft_wallet.nft_puzzles import (
-    create_nft_layer_puzzle_with_curry_params,
-    metadata_to_program,
     NFT_METADATA_UPDATER,
     NFT_TRANSFER_PROGRAM_DEFAULT,
     construct_ownership_layer,
+    create_nft_layer_puzzle_with_curry_params,
+    metadata_to_program,
 )
 
 ACS = Program.to(1)
@@ -140,7 +140,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
 
     try:
         TARGET_OWNER = bytes32([0] * 32)
-        TARGET_TP = Program.to([])
+        TARGET_TP = Program.to([8])  # (x)
         # (c 19 (c 43 (c 5 ()))) or (mod (_ _ (new_owner new_tp)) (list new_owner new_tp ()))
         transfer_program = Program.to([4, 19, [4, 43, [4, [], []]]])
 
@@ -151,6 +151,19 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         )
         ownership_ph: bytes32 = ownership_puzzle.get_tree_hash()
         await sim.farm_block(ownership_ph)
+        ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
+            0
+        ].coin
+
+        generic_spend = CoinSpend(
+            ownership_coin,
+            ownership_puzzle,
+            Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
+        )
+        generic_bundle = SpendBundle([generic_spend], G2Element())
+        result = await sim_client.push_tx(generic_bundle)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
         ownership_coin = (await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False))[
             0
         ].coin

@@ -682,8 +682,10 @@ async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
 
 
 async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_id = args["did_id"]
+    name = args["name"]
     try:
-        response = await wallet_client.create_new_nft_wallet(None)
+        response = await wallet_client.create_new_nft_wallet(did_id, name)
         wallet_id = response["wallet_id"]
         print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
@@ -703,6 +705,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     series_total = args["series_total"]
     series_number = args["series_number"]
     fee = args["fee"]
+    royalty_percentage = args["royalty_percentage"]
     try:
         response = await wallet_client.mint_nft(
             wallet_id,
@@ -717,6 +720,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             series_total,
             series_number,
             fee,
+            royalty_percentage,
         )
         spend_bundle = response["spend_bundle"]
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
@@ -763,13 +767,17 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
 
             for n in nft_list:
                 nft = NFTInfo.from_json_dict(n)
+                if nft.owner_pubkey is None:
+                    owner_pubkey = None
+                else:
+                    owner_pubkey = nft.owner_pubkey.hex()
                 print()
                 print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
                 print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
                 print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
                 print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
                 print(f"{'Owner DID:'.ljust(26)} {nft.owner_did}")
-                print(f"{'Owner pubkey:'.ljust(26)} {nft.owner_pubkey}")
+                print(f"{'Owner pubkey:'.ljust(26)} {owner_pubkey}")
                 print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
                 print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
                 print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
@@ -797,3 +805,16 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
             print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
         print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
+
+
+async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    did_id = args["did_id"]
+    nft_coin_id = args["nft_coin_id"]
+    fee = args["fee"]
+    try:
+        response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to set DID on NFT: {e}")

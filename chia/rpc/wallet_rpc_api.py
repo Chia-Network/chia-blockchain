@@ -135,6 +135,7 @@ class WalletRpcApi:
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
+            "/nft_get_by_did": self.nft_get_by_did,
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
@@ -1387,6 +1388,16 @@ class WalletRpcApi:
         for nft in nfts:
             nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
+
+    async def nft_get_by_did(self, request) -> Dict:
+        did_id: Optional[bytes32] = None
+        if "did_id" in request:
+            did_id = bytes32.from_hexstr(request["did_id"])
+        assert self.service.wallet_state_manager is not None
+        for wallet in self.service.wallet_state_manager.wallets.values():
+            if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
+                return {"wallet_id": wallet.wallet_id, "success": True}
+        return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
