@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 import aiosqlite
 from blspy import G1Element, PrivateKey
 
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
@@ -32,6 +33,7 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.lru_cache import LRUCache
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -259,6 +261,7 @@ class WalletStateManager:
                 unused = uint32(0)
 
         to_generate = self.config["initial_num_public_keys"]
+        new_paths: bool = False
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
@@ -292,6 +295,7 @@ class WalletStateManager:
                         break
                     puzzlehash: bytes32 = puzzle.get_tree_hash()
                     self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
+                    new_paths = True
                     derivation_paths.append(
                         DerivationRecord(
                             uint32(index), puzzlehash, pubkey, target_wallet.type(), uint32(target_wallet.id()), True
@@ -324,7 +328,7 @@ class WalletStateManager:
                 [record.wallet_id for record in derivation_paths],
                 in_transaction,
             )
-        if unused > 0:
+        if unused > 0 and new_paths:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
 
     async def update_wallet_puzzle_hashes(self, wallet_id, in_transaction=False):
@@ -542,8 +546,9 @@ class WalletStateManager:
     async def determine_coin_type(
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
-        if self.is_pool_reward(coin_state.created_height, coin_state.coin.parent_coin_info) or self.is_farmer_reward(
-            coin_state.created_height, coin_state.coin.parent_coin_info
+        if coin_state.created_height is not None and (
+            self.is_pool_reward(coin_state.created_height, coin_state.coin)
+            or self.is_farmer_reward(coin_state.created_height, coin_state.coin)
         ):
             return None, None
 
@@ -603,8 +608,6 @@ class WalletStateManager:
         wallet_id = None
         wallet_type = None
         mod_hash, tail_hash, inner_puzzle = curried_args
-        inner_puzzle_hash = inner_puzzle.get_tree_hash()
-        self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hint_list = compute_coin_hints(coin_spend)
         derivation_record = None
@@ -758,6 +761,8 @@ class WalletStateManager:
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
+        used_up_to = -1
+        ph_to_index_cache: LRUCache = LRUCache(100)
 
         for coin_state_idx, coin_state in enumerate(coin_states):
             coin_name: bytes32 = coin_state.coin.name()
@@ -789,12 +794,18 @@ class WalletStateManager:
                 wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
 
             if wallet_id is None or wallet_type is None:
-                self.log.info(f"No wallet for coin state: {coin_state}")
+                self.log.debug(f"No wallet for coin state: {coin_state}")
                 continue
 
-            derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
+            # Update the DB to signal that we used puzzle hashes up to this one
+            derivation_index = ph_to_index_cache.get(coin_state.coin.puzzle_hash)
+            if derivation_index is None:
+                derivation_index = await self.puzzle_store.index_for_puzzle_hash(coin_state.coin.puzzle_hash)
             if derivation_index is not None:
-                await self.puzzle_store.set_used_up_to(derivation_index, True)
+                ph_to_index_cache.put(coin_state.coin.puzzle_hash, derivation_index)
+                if derivation_index > used_up_to:
+                    await self.puzzle_store.set_used_up_to(derivation_index, True)
+                    used_up_to = max(used_up_to, derivation_index)
 
             if coin_state.created_height is None:
                 # TODO implements this coin got reorged
@@ -802,31 +813,32 @@ class WalletStateManager:
                 pass
             # if the new coin has not been spent (i.e not ephemeral)
             elif coin_state.created_height is not None and coin_state.spent_height is None:
-                await self.coin_added(
-                    coin_state.coin,
-                    coin_state.created_height,
-                    all_unconfirmed,
-                    wallet_id,
-                    wallet_type,
-                    coin_name,
-                    skip_lookup=local_record is None,
-                )
+                if local_record is None:
+                    await self.coin_added(
+                        coin_state.coin,
+                        coin_state.created_height,
+                        all_unconfirmed,
+                        wallet_id,
+                        wallet_type,
+                        coin_name,
+                        skip_lookup=True,
+                    )
 
             # if the coin has been spent
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
                 self.log.info(f"Coin Removed: {coin_state}")
-                record = await self.coin_store.get_coin_record(coin_name)
-                if coin_state.coin.name() in trade_removals:
+                if coin_name in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
+                record = local_record
                 if record is None:
                     farmer_reward = False
                     pool_reward = False
                     tx_type: int
-                    if self.is_farmer_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
+                    if self.is_farmer_reward(coin_state.created_height, coin_state.coin):
                         farmer_reward = True
                         tx_type = TransactionType.FEE_REWARD.value
-                    elif self.is_pool_reward(coin_state.created_height, coin_state.coin.parent_coin_info):
+                    elif self.is_pool_reward(coin_state.created_height, coin_state.coin):
                         pool_reward = True
                         tx_type = TransactionType.COINBASE_REWARD.value
                     else:
@@ -872,7 +884,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, True)
 
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
+                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
@@ -927,7 +939,7 @@ class WalletStateManager:
 
                             await self.tx_store.add_transaction_record(tx_record, True)
                 else:
-                    await self.coin_store.set_spent(coin_state.coin.name(), coin_state.spent_height)
+                    await self.coin_store.set_spent(coin_name, coin_state.spent_height)
                     rem_tx_records: List[TransactionRecord] = []
                     for out_tx_record in all_unconfirmed:
                         for rem_coin in out_tx_record.removals:
@@ -980,7 +992,7 @@ class WalletStateManager:
 
                 # Check if a child is a singleton launcher
                 if children is None:
-                    children = await self.wallet_node.fetch_children(peer, coin_state.coin.name(), fork_height)
+                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
                 assert children is not None
                 for child in children:
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
@@ -1039,23 +1051,31 @@ class WalletStateManager:
                 return True
         return False
 
-    def is_pool_reward(self, created_height, parent_id):
+    def is_pool_reward(self, created_height: uint32, coin: Coin) -> bool:
+        if coin.amount != calculate_pool_reward(created_height) and coin.amount != calculate_pool_reward(
+            uint32(max(0, created_height - 128))
+        ):
+            # Optimization to avoid the computation below. Any coin that has a different amount is not a pool reward
+            return False
         for i in range(0, 30):
             try_height = created_height - i
             if try_height < 0:
                 break
-            calculated = pool_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
-            if calculated == parent_id:
+            calculated = pool_parent_id(uint32(try_height), self.constants.GENESIS_CHALLENGE)
+            if calculated == coin.parent_coin_info:
                 return True
         return False
 
-    def is_farmer_reward(self, created_height, parent_id):
+    def is_farmer_reward(self, created_height: uint32, coin: Coin) -> bool:
+        if coin.amount < calculate_base_farmer_reward(created_height):
+            # Optimization to avoid the computation below. Any coin less than this base amount cannot be farmer reward
+            return False
         for i in range(0, 30):
             try_height = created_height - i
             if try_height < 0:
                 break
-            calculated = farmer_parent_id(try_height, self.constants.GENESIS_CHALLENGE)
-            if calculated == parent_id:
+            calculated = farmer_parent_id(uint32(try_height), self.constants.GENESIS_CHALLENGE)
+            if calculated == coin.parent_coin_info:
                 return True
         return False
 
@@ -1095,14 +1115,18 @@ class WalletStateManager:
             if existing is not None:
                 return None
 
-        self.log.info(
-            f"Adding record to state manager coin: {coin} at {height} wallet_id:{wallet_id} and type: {wallet_type}"
+        self.log.debug(
+            "Adding record to state manager coin: %s at %s wallet_id: %s and type: %s",
+            coin,
+            height,
+            wallet_id,
+            wallet_type,
         )
         farmer_reward = False
         pool_reward = False
-        if self.is_farmer_reward(height, coin.parent_coin_info):
+        if self.is_farmer_reward(height, coin):
             farmer_reward = True
-        elif self.is_pool_reward(height, coin.parent_coin_info):
+        elif self.is_pool_reward(height, coin):
             pool_reward = True
 
         farm_reward = False
@@ -1176,7 +1200,7 @@ class WalletStateManager:
         coin_record_1: WalletCoinRecord = WalletCoinRecord(
             coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
-        await self.coin_store.add_coin_record(coin_record_1)
+        await self.coin_store.add_coin_record(coin_record_1, coin_name)
 
         if wallet_type == WalletType.CAT or wallet_type == WalletType.DISTRIBUTED_ID:
             wallet = self.wallets[wallet_id]
