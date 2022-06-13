@@ -6,13 +6,11 @@ from colorlog import getLogger
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import wallet_protocol
+from chia.full_node.weight_proof import WeightProofHandler
+from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
-from chia.protocols.wallet_protocol import RespondBlockHeaders
-from chia.full_node.weight_proof import WeightProofHandler
-from chia.protocols import full_node_protocol
-from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, SendTransaction
+from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
 from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
