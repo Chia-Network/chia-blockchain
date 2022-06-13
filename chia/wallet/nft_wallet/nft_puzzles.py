@@ -257,10 +257,10 @@ def create_ownership_layer_transfer_solution(
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
-    full_solution: Program = Program.from_bytes(bytes(solution))
-    delegated_puz_solution: Program = Program.from_bytes(bytes(solution)).rest().rest().first().first()
+    delegated_puz_solution: Program = solution.to_program().rest().rest().first().first()
+    log.debug("Solution to parse: %s", disassemble(delegated_puz_solution))
     if delegated_puz_solution.rest().as_python() == b"":
-        conditions = puzzle.run(full_solution)
+        conditions = unft.p2_puzzle.run(delegated_puz_solution.first())
     else:
         conditions = delegated_puz_solution.rest().first().rest()
     metadata = unft.metadata
@@ -269,7 +269,7 @@ def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: Serializ
         if condition.list_len() < 2:
             # invalid condition
             continue
-        condition_code = int_from_bytes(condition.first().atom)
+        condition_code = condition.first().as_int()
         log.debug("Checking condition code: %r", condition_code)
         if condition_code == -24:
             # metadata update
