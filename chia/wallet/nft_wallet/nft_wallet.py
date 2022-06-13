@@ -207,7 +207,7 @@ class NFTWallet:
         )
         singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, puzzle, coin_spend.solution.to_program())
+        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, puzzle, coin_spend.solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         self.log.debug("Got back updated metadata: %s", metadata)
         derivation_record: Optional[
@@ -245,7 +245,7 @@ class NFTWallet:
                 child_coin = new_coin
                 break
         else:
-            raise ValueError(f"Rebuild NFT doesn't match the actual puzzle hash: {child_puzzle}")
+            raise ValueError("Couldn't generate child puzzle for NFT")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id]
         )
@@ -565,16 +565,26 @@ class NFTWallet:
 
         uncurried_nft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
 
-        puzzle_hash = uncurried_nft.inner_puzzle.get_tree_hash()
-        condition_list = [
-            make_create_coin_condition(puzzle_hash, coin.amount, [puzzle_hash]),
-            [int_to_bytes(-24), NFT_METADATA_UPDATER, (key, uri)],
-        ]
+        puzzle_hash = uncurried_nft.p2_puzzle.get_tree_hash()
 
+        if uncurried_nft.supports_did:
+            condition_list = [
+                [51, puzzle_hash, coin.amount, [puzzle_hash]],
+                [-24, NFT_METADATA_UPDATER, (key, uri)],
+                [-10, [], [], []],
+            ]
+            inner_solution = Program.to([[solution_for_conditions(condition_list)]])
+        else:
+            condition_list = [
+                [51, puzzle_hash, coin.amount, [puzzle_hash]],
+                [-24, NFT_METADATA_UPDATER, (key, uri)],
+            ]
+            inner_solution = Program.to([solution_for_conditions(condition_list)])
         self.log.info(
-            "Attempting to add urls to NFT coin %s in the metadata: %s", nft_coin_info, uncurried_nft.metadata
+            "Attempting to add urls to NFT coin %s in the metadata: %s",
+            nft_coin_info.coin.name(),
+            uncurried_nft.metadata,
         )
-        inner_solution = Program.to([solution_for_conditions(condition_list)])
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, [puzzle_hash], fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
         await self.update_coin_status(nft_coin_info.coin.name(), True)
@@ -599,7 +609,7 @@ class NFTWallet:
             inner_solution = create_ownership_layer_transfer_solution(int_to_bytes(0), int_to_bytes(0), [], puzzle_hash)
         else:
             condition_list = [make_create_coin_condition(puzzle_hash, amount, [puzzle_hash])]
-            inner_solution = Program.to([solution_for_conditions(condition_list), amount])
+            inner_solution = Program.to([solution_for_conditions(condition_list)])
         self.log.debug("Solution for new coin: %r", disassemble(inner_solution))
         nft_tx_record = await self._make_nft_transaction(
             nft_coin_info,

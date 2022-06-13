@@ -141,8 +141,9 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
     try:
         TARGET_OWNER = bytes32([0] * 32)
         TARGET_TP = Program.to([8])  # (x)
-        # (c 19 (c 43 (c 5 ()))) or (mod (_ _ (new_owner new_tp)) (list new_owner new_tp ()))
-        transfer_program = Program.to([4, 19, [4, 43, [4, [], []]]])
+        # (a (i 11 (q 4 19 (c 43 (q ()))) (q 8)) 1) or
+        # (mod (_ _ solution) (if solution (list (f solution) (f (r solution)) ()) (x)))
+        transfer_program = Program.to([2, [3, 11, [1, 4, 19, [4, 43, [1, []]]], [1, 8]], 1])
 
         ownership_puzzle: Program = construct_ownership_layer(
             None,
@@ -266,12 +267,13 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
         generic_spend = CoinSpend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
+            Program.to([[[51, ACS_PH, 1]]]),
         )
         generic_bundle = SpendBundle([generic_spend], G2Element())
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
+        assert len(await sim_client.get_coin_records_by_puzzle_hash(ownership_ph, include_spent_coins=False)) > 0
         await sim.rewind(BLOCK_HEIGHT)
 
         # Now try an owner update plus royalties

@@ -11,11 +11,7 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
-    solution_for_conditions,
-)
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -261,14 +257,14 @@ def create_ownership_layer_transfer_solution(
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
-    conditions: Program = puzzle.run(solution)
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution.to_program()))
     metadata = unft.metadata
     puzhash_for_derivation: Optional[bytes32] = None
     for condition in conditions.as_iter():
         if condition.list_len() < 2:
             # invalid condition
             continue
-        condition_code = int_from_bytes(condition.first().atom)
+        condition_code = condition.first().as_int()
         log.debug("Checking condition code: %r", condition_code)
         if condition_code == -24:
             # metadata update

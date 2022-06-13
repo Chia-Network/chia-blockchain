@@ -24,6 +24,7 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
 NFT_METADATA_UPDATER_UPDATEABLE = load_clvm("nft_metadata_updater_updateable.clvm")
 
+
 @pytest.mark.skip
 def test_new_nft_state_layer() -> None:
     pubkey = int_to_public_key(1)
@@ -57,6 +58,7 @@ def test_new_nft_state_layer() -> None:
             NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
         ).get_tree_hash()
     )
+
 
 @pytest.mark.skip
 def test_update_metadata() -> None:
@@ -108,6 +110,7 @@ def test_update_metadata() -> None:
             NFT_STATE_LAYER_MOD_HASH, metadata, NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), destination
         ).get_tree_hash()
     )
+
 
 @pytest.mark.skip
 def test_transfer_program() -> None:
@@ -171,6 +174,7 @@ def test_transfer_program() -> None:
     # TODO: check for the announcement.  This is broken currently.
     # TODO: Add a test where the inner puzzle tries to create a banned announcement
 
+
 @pytest.mark.skip
 def test_ownership_layer() -> None:
     pubkey = int_to_public_key(1)
@@ -226,6 +230,7 @@ def test_ownership_layer() -> None:
         res.rest().rest().rest().rest().rest().first().rest().rest().rest().first().first().as_atom()
         == curried_inner.get_tree_hash()
     )
+
 
 @pytest.mark.skip
 def test_full_stack() -> None:

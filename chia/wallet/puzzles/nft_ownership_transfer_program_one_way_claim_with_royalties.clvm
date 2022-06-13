@@ -8,7 +8,7 @@
     CAT_MOD_HASH
     Current_Owner  ; Truth
     conditions  ; Truth
-    (new_owner trade_prices_list new_did_inner_hash)  ; solution - created from the NFT's inner puzzle
+    solution  ; created from the NFT's inner puzzle - solution is (new_owner trade_prices_list new_did_inner_hash)
   )
 
   ; This is a transfer program - which must return (new_owner, Optional[new_transfer_program], conditions)
@@ -91,21 +91,27 @@
 
   ; main
   ; Returning (new_owner new_transfer_program conditions)
-  (list
-    new_owner
-    0
-    (if (all new_owner (not (= new_owner Current_Owner)))
-      (c
-        (list
-          ASSERT_PUZZLE_ANNOUNCEMENT
-          (sha256
-            (calculate_full_puzzle_hash (get_singleton_struct SINGLETON_STRUCT new_owner) new_did_inner_hash)
-            (f (r SINGLETON_STRUCT))
+  ; solution is (new_owner trade_prices_list new_did_inner_hash)
+  (if solution
+      (list
+        (f solution)
+        0
+        (if (all (f solution) (not (= (f solution) Current_Owner)))
+          (c
+            (list
+              ASSERT_PUZZLE_ANNOUNCEMENT
+              (sha256
+                (calculate_full_puzzle_hash (get_singleton_struct SINGLETON_STRUCT (f solution)) (f (r (r solution))))
+                (f (r SINGLETON_STRUCT))
+              )
+            )
+            (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f (r solution)) (f (r SINGLETON_STRUCT)))
           )
+          (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f (r solution)) (f (r SINGLETON_STRUCT)))
         )
       )
-      (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list (f (r SINGLETON_STRUCT)))
-    )
+      (list Current_Owner () ())
   )
+
 
 )
