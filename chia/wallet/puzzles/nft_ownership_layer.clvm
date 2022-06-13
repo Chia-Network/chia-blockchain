@@ -36,6 +36,19 @@
       )
    )
 
+   (defun construct_end_conditions (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args (new_owner new_tp conditions))
+     (c
+       (c
+         CREATE_COIN
+         (c
+           (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (if new_tp new_tp TRANSFER_PROGRAM) (f odd_args))
+           (r odd_args)
+          )
+        )
+        conditions
+     )
+   )
+
    (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_args tp_output)
      (if conditions
        (if (= (f (f conditions)) CREATE_COIN)
@@ -65,17 +78,13 @@
             )
          )
        )
-       (assert odd_args tp_output
+       (assert odd_args
          ; then
-         (c
-           (c
-             CREATE_COIN
-             (c
-               (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH (f tp_output) (if (f (r tp_output)) (f (r tp_output)) TRANSFER_PROGRAM) (f odd_args))
-               (r odd_args)
-              )
+         (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
+            (if tp_output
+                tp_output
+                (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
             )
-            (f (r (r tp_output)))
          )
        )
      )
