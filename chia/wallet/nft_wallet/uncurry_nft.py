@@ -191,6 +191,6 @@ class UncurriedNFT:
     def get_innermost_solution(self, solution: Program) -> Program:
         state_layer_inner_solution: Program = solution.at("rrff")
         if self.supports_did:
-            return state_layer_inner_solution.first()
+            return state_layer_inner_solution.first()  # type: ignore
         else:
             return state_layer_inner_solution
