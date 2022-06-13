@@ -599,6 +599,13 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     assert nft_wallet_0_id == res["wallet_id"]
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 5999999999999)
     await time_out_assert(10, wallet_0.get_confirmed_balance, 5999999999999)
+
+    res = await api_0.nft_get_wallets_with_dids({})
+    assert res.get("success")
+    assert res.get("nft_wallets") == [
+        {"wallet_id": nft_wallet_0_id, "did_id": hex_did_id, "did_wallet_id": did_wallet.id()}
+    ]
+
     # Create a NFT with DID
     nft_ph: bytes32 = await wallet_0.get_new_puzzlehash()
     resp = await api_0.nft_mint_nft(
