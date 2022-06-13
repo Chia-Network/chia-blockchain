@@ -71,7 +71,7 @@
            (c
              CREATE_COIN
              (c
-               (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH (f tp_output) (f (r tp_output)) (f odd_args))
+               (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH (f tp_output) (if (f (r tp_output)) (f (r tp_output)) TRANSFER_PROGRAM) (f odd_args))
                (r odd_args)
               )
             )

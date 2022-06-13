@@ -7,6 +7,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzles import (
+    construct_ownership_layer,
     create_full_puzzle,
     create_nft_layer_puzzle_with_curry_params,
     recurry_nft_puzzle,
@@ -22,7 +23,6 @@ DID_MOD = load_clvm("did_innerpuz.clvm")
 NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
-STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -32,30 +32,30 @@ LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
 NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
 
 
-def make_a_new_solution() -> Tuple[bytes, Program]:
+def make_a_new_solution() -> Tuple[Program, Program]:
     destination = int_to_public_key(2)
+    p2_puzzle = puzzle_for_pk(destination)
+    puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
+    print(f"NEW DID: {new_did.hex()} {puzhash.hex()}")
     new_did_inner_hash = Program.to("fake").get_tree_hash()
     trade_prices_list = [[200]]
-    my_amount = 1
 
     condition_list = [
         [
             51,
-            STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash(),
+            puzhash,
             1,
-            [STANDARD_PUZZLE_MOD.curry(destination).get_tree_hash()],
+            [puzhash],
         ],
-        [-10, new_did, trade_prices_list, destination, [new_did_inner_hash]],
+        [-10, new_did, trade_prices_list, new_did_inner_hash],
     ]
     solution = Program.to(
         [
             [solution_for_conditions(condition_list)],
-            my_amount,
         ]
     )
-    print(disassemble(solution))
-    return destination, solution
+    return p2_puzzle, solution
 
 
 def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
@@ -65,20 +65,14 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
     nft_id = Program.to("nft_id")
     SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     curried_tp = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        STANDARD_PUZZLE_MOD.get_tree_hash(),
         SINGLETON_STRUCT,
         innerpuz.get_tree_hash(),
         2000,
         OFFER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
     )
-    curried_inner = STANDARD_PUZZLE_MOD.curry(pubkey)
-    curried_ownership_layer = NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER.get_tree_hash(),
-        old_did,
-        curried_tp,
-        curried_inner,
-    )
+    curried_inner = innerpuz
+    curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner)
     return innerpuz, curried_ownership_layer
 
 
@@ -107,10 +101,11 @@ def test_transfer_puzzle_builder() -> None:
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
     ]
-    destination, solution = make_a_new_solution()
+    sp2_puzzle, solution = make_a_new_solution()
     p2_puzzle, ownership_puzzle = make_a_new_ownership_layer_puzzle()
-    clvm_nft_puzzle = make_a_new_nft_puzzle(ownership_puzzle, Program.to(metadata))
-    print("NFT state layer: %r" % clvm_nft_puzzle.get_tree_hash())
+    clvm_nft_puzzle = create_nft_layer_puzzle_with_curry_params(
+        Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ownership_puzzle
+    )
     puzzle = create_full_puzzle(
         Program.to(["singleton_id"]).get_tree_hash(),
         Program.to(metadata),
@@ -119,10 +114,11 @@ def test_transfer_puzzle_builder() -> None:
     )
     clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution)
     unft = uncurry_nft.UncurriedNFT.uncurry(puzzle)
+    assert unft.nft_state_layer == clvm_nft_puzzle
     assert unft.inner_puzzle == ownership_puzzle
-
-    ol_puzzle = recurry_nft_puzzle(unft, solution.first())
-    py_puzzle = create_nft_layer_puzzle_with_curry_params(
+    assert unft.p2_puzzle == p2_puzzle
+    ol_puzzle = recurry_nft_puzzle(unft, solution.first(), sp2_puzzle)
+    nft_puzzle = create_nft_layer_puzzle_with_curry_params(
         Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ol_puzzle
     )
-    assert clvm_puzzle_hash == py_puzzle.get_tree_hash()
+    assert clvm_puzzle_hash == nft_puzzle.get_tree_hash()
