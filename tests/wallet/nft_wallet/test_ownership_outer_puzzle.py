@@ -4,7 +4,9 @@ from clvm_tools.binutils import assemble
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint16
 from chia.wallet.nft_wallet.ownership_outer_puzzle import puzzle_for_ownership_layer
+from chia.wallet.nft_wallet.transfer_program_puzzle import puzzle_for_transfer_program
 from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, get_inner_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
@@ -21,19 +23,31 @@ def test_ownership_outer_puzzle() -> None:
         (c 2 (c () (c 5 ())))
         """
     )
+    transfer_program_default: Program = puzzle_for_transfer_program(bytes32([1] * 32), bytes32([2] * 32), uint16(5000))
     ownership_puzzle: Program = puzzle_for_ownership_layer(owner, transfer_program, ACS)
     ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, transfer_program, ACS)
+    ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
     ownership_driver: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle)
     ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle_empty)
+    ownership_driver_default: Optional[PuzzleInfo] = match_puzzle(ownership_puzzle_default)
+    transfer_program_driver: Optional[PuzzleInfo] = match_puzzle(transfer_program_default)
 
     assert ownership_driver is not None
     assert ownership_driver_empty is not None
+    assert ownership_driver_default is not None
+    assert transfer_program_driver is not None
     assert ownership_driver.type() == "ownership"
     assert ownership_driver["owner"] == owner
     assert ownership_driver_empty["owner"] == NIL
     assert ownership_driver["transfer_program"] == transfer_program
+    assert ownership_driver_default["transfer_program"] == transfer_program_driver
+    assert transfer_program_driver.type() == "royalty transfer program"
+    assert transfer_program_driver["launcher_id"] == bytes32([1] * 32)
+    assert transfer_program_driver["royalty_address"] == bytes32([2] * 32)
+    assert transfer_program_driver["royalty_percentage"] == 5000
     assert construct_puzzle(ownership_driver, ACS) == ownership_puzzle
     assert construct_puzzle(ownership_driver_empty, ACS) == ownership_puzzle_empty
+    assert construct_puzzle(ownership_driver_default, ACS) == ownership_puzzle_default
     assert get_inner_puzzle(ownership_driver, ownership_puzzle) == ACS
     assert create_asset_id(ownership_driver) is None
 

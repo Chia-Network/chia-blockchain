@@ -7,6 +7,7 @@ from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
 from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle
 from chia.wallet.nft_wallet.ownership_outer_puzzle import OwnershipOuterPuzzle
 from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
+from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 """
@@ -34,6 +35,7 @@ class AssetType(Enum):
     SINGLETON = "singleton"
     METADATA = "metadata"
     OWNERSHIP = "ownership"
+    ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
 
 
 def match_puzzle(puzzle: Program) -> Optional[PuzzleInfo]:
@@ -69,4 +71,5 @@ driver_lookup: Dict[AssetType, Any] = {
     AssetType.SINGLETON: SingletonOuterPuzzle(*function_args),
     AssetType.METADATA: MetadataOuterPuzzle(*function_args),
     AssetType.OWNERSHIP: OwnershipOuterPuzzle(*function_args),
+    AssetType.ROYALTY_TRANSFER_PROGRAM: TransferProgramPuzzle(*function_args),
 }

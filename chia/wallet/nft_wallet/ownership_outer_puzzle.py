@@ -41,10 +41,13 @@ class OwnershipOuterPuzzle:
         if matched:
             _, current_owner, transfer_program, inner_puzzle = curried_args
             owner_bytes: bytes = current_owner.as_python()
+            tp_match: Optional[PuzzleInfo] = self._match(transfer_program)
             constructor_dict = {
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
-                "transfer_program": disassemble(transfer_program),  # type: ignore
+                "transfer_program": (
+                    disassemble(transfer_program) if tp_match is None else tp_match.info  # type: ignore
+                ),
             }
             next_constructor = self._match(inner_puzzle)
             if next_constructor is not None:
@@ -59,7 +62,12 @@ class OwnershipOuterPuzzle:
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
         if constructor.also() is not None:
             inner_puzzle = self._construct(constructor.also(), inner_puzzle)
-        return puzzle_for_ownership_layer(constructor["owner"], constructor["transfer_program"], inner_puzzle)
+        transfer_program_info: Union[PuzzleInfo, Program] = constructor["transfer_program"]
+        if isinstance(transfer_program_info, Program):
+            transfer_program: Program = transfer_program_info
+        else:
+            transfer_program = self._construct(transfer_program_info, inner_puzzle)
+        return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
