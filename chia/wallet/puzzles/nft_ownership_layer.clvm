@@ -36,21 +36,21 @@
       )
    )
 
-   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_seen magic_seen odd_args tp_output)
+   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_args tp_output)
      (if conditions
        (if (= (f (f conditions)) CREATE_COIN)
          (if (= (logand (f (r (r (f conditions))))) ONE)
-            (assert (not odd_seen)
+            (assert (not odd_args)
               ; then
-              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) 1 magic_seen (r (f conditions)) tp_output)
+              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) (r (f conditions)) tp_output)
             )
-            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
+            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
          )
          (if (= (f (f conditions)) NEW_OWNER_CONDITION)
-            (assert (not magic_seen)
+            (assert (not tp_output)
               (c
                 (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree1 (r (f conditions)))))
-                (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen 1 odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
+                (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
               )
             )
             (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
@@ -59,13 +59,13 @@
                           (= 40 (strlen (f (r (f conditions)))))
                         )
                   ; then
-                  (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
+                  (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
                 )
-                (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_seen magic_seen odd_args tp_output))
+                (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
             )
          )
        )
-       (assert odd_seen magic_seen
+       (assert odd_args tp_output
          ; then
          (c
            (c

@@ -37,14 +37,14 @@
   ; this function does two things - it wraps the odd value create coins, and it also filters out all negative conditions
   ; odd_coin_params is (puzhash amount ...)
   ; new_metadata_info is ((METADATA METADATA_UPDATER_PUZZLE_HASH) conditions)
-  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH conditions odd_coin_params new_metadata_info metadata_seen odd_seen)
+  (defun wrap_odd_create_coins (NFT_STATE_LAYER_MOD_HASH conditions odd_coin_params new_metadata_info metadata_seen)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
           (if (logand (f (r (r (f conditions)))) ONE)
-              (assert (not odd_seen)
-                (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) (r (f conditions)) new_metadata_info metadata_seen 1)
+              (assert (not odd_coin_params)
+                (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) (r (f conditions)) new_metadata_info metadata_seen)
               )
-              (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params new_metadata_info metadata_seen odd_seen))
+              (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params new_metadata_info metadata_seen))
           )
           (if (= (f (f conditions)) -24)
               (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params
@@ -56,9 +56,8 @@
                     (a (f (r (f conditions))) (list (f (f new_metadata_info)) (f (r (f new_metadata_info))) (f (r (r (f conditions))))))
                 )
                 1  ; the metadata update has been seen now
-                odd_seen
               )
-              (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params new_metadata_info metadata_seen odd_seen))
+              (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params new_metadata_info metadata_seen))
           )
       )
       (c
@@ -84,7 +83,6 @@
     (a INNER_PUZZLE inner_solution)
     ()
     (list (list METADATA METADATA_UPDATER_PUZZLE_HASH) 0)  ; if the magic condition is never seen, this is the information we us to recurry
-    ()
     ()
   )
 )
