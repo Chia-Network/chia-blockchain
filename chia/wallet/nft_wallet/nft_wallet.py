@@ -64,7 +64,10 @@ class NFTWallet:
     nft_wallet_info: NFTWalletInfo
     standard_wallet: Wallet
     wallet_id: int
-    did_id: Optional[bytes32]
+
+    @property
+    def did_id(self):
+        return self.nft_wallet_info.did_id
 
     @classmethod
     async def create_new_nft_wallet(
@@ -72,7 +75,7 @@ class NFTWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         did_id: Optional[bytes32] = None,
-        name: str = "",
+        name: Optional[str] = None,
         in_transaction: bool = False,
     ) -> _T_NFTWallet:
         """
@@ -80,12 +83,14 @@ class NFTWallet:
         """
         self = cls()
         self.standard_wallet = wallet
+        if name is None:
+            name = "NFT Wallet"
         self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo([], did_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
         wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "NFT Wallet" if not name else name,
+            name,
             uint32(WalletType.NFT.value),
             info_as_string,
             in_transaction=in_transaction,
@@ -99,12 +104,6 @@ class NFTWallet:
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
         self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
-        if not did_id:
-            # default profile wallet
-            self.log.debug("Standard NFT wallet created")
-            self.did_id = None
-        else:
-            self.did_id = did_id
         return self
 
     @classmethod
@@ -244,7 +243,8 @@ class NFTWallet:
             if new_coin.puzzle_hash == child_puzzle.get_tree_hash():
                 child_coin = new_coin
                 break
-
+        else:
+            raise ValueError(f"Rebuild NFT doesn't match the actual puzzle hash: {child_puzzle}")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id]
         )
@@ -412,8 +412,6 @@ class NFTWallet:
 
         bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
 
-        if not target_puzzle_hash:
-            target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
         if did_id is not None:
@@ -514,7 +512,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = [],
     ) -> TransactionRecord:
         # Update NFT status
-        await self.update_coin_status(nft_coin_info.coin.name(), True)
+
         coin = nft_coin_info.coin
         amount = coin.amount
         if not additional_bundles:
@@ -578,6 +576,7 @@ class NFTWallet:
         inner_solution = Program.to([solution_for_conditions(condition_list)])
         nft_tx_record = await self._make_nft_transaction(nft_coin_info, inner_solution, [puzzle_hash], fee)
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
@@ -608,6 +607,7 @@ class NFTWallet:
             fee,
         )
         await self.standard_wallet.push_transaction(nft_tx_record)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_transferred", self.wallet_info.id)
         return nft_tx_record.spend_bundle
 
@@ -705,6 +705,7 @@ class NFTWallet:
         return await cls.create_new_nft_wallet(
             wallet_state_manager,
             wallet,
+            None,
             name,
             in_transaction,
         )
