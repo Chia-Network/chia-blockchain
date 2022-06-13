@@ -184,7 +184,7 @@ def get_root(
 
 @data_cmd.command("subscribe", short_help="")
 @create_data_store_id_option()
-@click.option("-u", "--urls", help="", type=str, multiple=True)
+@click.option("-u", "--url", help="", type=str, multiple=True)
 @create_rpc_port_option()
 def subscribe(
     id: str,
