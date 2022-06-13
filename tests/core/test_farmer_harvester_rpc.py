@@ -95,6 +95,12 @@ async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
     harvester_rpc_client = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
 
     async def have_connections():
+        # try:
+        #     connections = await farmer_rpc_client.get_connections()
+        # except aiohttp.ClientResponseError:
+        #     return False
+        #
+        # return len(connections) > 0
         return len(await farmer_rpc_client.get_connections()) > 0
 
     await time_out_assert(15, have_connections, True)
@@ -452,6 +458,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     reverse: bool,
     expected_plot_count: int,
 ) -> None:
+    logging.getLogger().error(f" ==== just entered test")
     (
         farmer_service,
         farmer_rpc_api,
