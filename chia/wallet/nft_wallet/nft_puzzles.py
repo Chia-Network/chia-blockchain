@@ -257,12 +257,7 @@ def create_ownership_layer_transfer_solution(
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
-    delegated_puz_solution: Program = solution.to_program().rest().rest().first().first()
-    log.debug("Solution to parse: %s", disassemble(delegated_puz_solution))
-    if delegated_puz_solution.rest().as_python() == b"":
-        conditions = unft.p2_puzzle.run(delegated_puz_solution.first())
-    else:
-        conditions = delegated_puz_solution.rest().first().rest()
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution.to_program()))
     metadata = unft.metadata
     puzhash_for_derivation: Optional[bytes32] = None
     for condition in conditions.as_iter():

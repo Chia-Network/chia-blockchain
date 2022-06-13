@@ -187,3 +187,10 @@ class UncurriedNFT:
             trade_price_percentage=royalty_percentage,
             nft_inner_puzzle_hash=nft_inner_puzzle_mod,
         )
+
+    def get_innermost_solution(self, solution: Program) -> Program:
+        state_layer_inner_solution: Program = solution.at("rrff")
+        if self.supports_did:
+            return state_layer_inner_solution.first()
+        else:
+            return state_layer_inner_solution
