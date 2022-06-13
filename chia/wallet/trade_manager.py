@@ -658,24 +658,32 @@ class TradeManager:
         fee: uint64 = uint64(0),
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
-            if puzzle_info.check_type(
-                [
-                    AssetType.SINGLETON.value,
-                    AssetType.METADATA.value,
-                    AssetType.OWNERSHIP.value,
-                ]
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                        AssetType.OWNERSHIP.value,
+                    ]
+                )
+                and isinstance(puzzle_info["transfer_program"], PuzzleInfo)
+                and puzzle_info["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM
             ):
                 return await NFTWallet.make_nft1_offer(offer_dict, driver_dict, fee)
         return None
 
     async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:
         for puzzle_info in offer.driver_dict.values():
-            if puzzle_info.check_type(
-                [
-                    AssetType.SINGLETON.value,
-                    AssetType.METADATA.value,
-                    AssetType.OWNERSHIP.value,
-                ]
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                        AssetType.OWNERSHIP.value,
+                    ]
+                )
+                and isinstance(puzzle_info["transfer_program"], PuzzleInfo)
+                and puzzle_info["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM
             ):
                 return await NFTWallet.take_nft1_offer(offer, fee)
         return None
