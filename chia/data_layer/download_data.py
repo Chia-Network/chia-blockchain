@@ -149,7 +149,7 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url + "/" + str(filename)) as resp:
+                async with session.get(url + "/" + filename) as resp:
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
@@ -181,7 +181,8 @@ async def insert_from_delta_file(
         except asyncio.CancelledError:
             raise
         except Exception:
-            os.remove(filename)
+            target_filename = client_foldername.joinpath(filename)
+            os.remove(target_filename)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 
