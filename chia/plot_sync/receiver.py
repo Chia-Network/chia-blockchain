@@ -24,12 +24,12 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncResponse,
     PlotSyncStart,
+    T_PlotSyncMessage,
 )
 from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint32, uint64
 from chia.util.misc import get_list_or_len
-from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class Receiver:
         return self._total_plot_size
 
     async def _process(
-        self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
+        self, method: Callable[[T_PlotSyncMessage], Any], message_type: ProtocolMessageTypes, message: T_PlotSyncMessage
     ) -> None:
         log.debug(
             f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
