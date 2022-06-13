@@ -84,7 +84,7 @@ class CATOuterPuzzle:
                     puzzle,
                     solution,
                     lineage_proof=LineageProof(
-                        parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent_coin.amount
+                        parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)
                     ),
                 )
             )

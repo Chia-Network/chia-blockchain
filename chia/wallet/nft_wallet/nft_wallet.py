@@ -280,7 +280,7 @@ class NFTWallet:
         await self.add_coin(
             child_coin,
             child_puzzle,
-            LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, parent_coin.amount),
+            LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, uint64(parent_coin.amount)),
             mint_height,
             in_transaction=in_transaction,
         )
