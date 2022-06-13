@@ -47,7 +47,7 @@ class DataLayerServer:
 
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
-        if is_filename_valid(filename):
+        if not is_filename_valid(filename):
             raise Exception("Invalid file format requested.")
         file_path = self.server_dir.joinpath(filename)
         with open(file_path, "rb") as reader:
