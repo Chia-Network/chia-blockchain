@@ -409,6 +409,12 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
     assert plot_matches_filter(dummy_plot("123"), filter_item) == match
 
 
+import logging
+
+for n in ['aiohttp.access', 'aiohttp.client', 'aiohttp.internal', 'aiohttp.server', 'aiohttp.web', 'aiohttp.websocket']:
+    logging.getLogger(n).setLevel(logging.INFO)
+
+
 @pytest.mark.parametrize(
     "endpoint, filtering, sort_key, reverse, expected_plot_count",
     [
@@ -454,10 +460,6 @@ async def test_farmer_get_harvester_plots_endpoints(
         harvester_rpc_api,
         harvester_rpc_client,
     ) = harvester_farmer_environment
-
-    import logging
-    for n in ['aiohttp.access', 'aiohttp.client', 'aiohttp.internal', 'aiohttp.server', 'aiohttp.web', 'aiohttp.websocket']:
-        logging.getLogger(n).setLevel(logging.INFO)
 
     harvester = harvester_service._node
     harvester_id = harvester_service._server.node_id
