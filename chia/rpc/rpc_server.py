@@ -322,10 +322,11 @@ async def start_rpc_server(
         app = web.Application(client_max_size=max_request_body_size)
         rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
+        routes = rpc_server.get_routes()
+        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in routes.items()])
         if connect_to_daemon:
             daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
-        runner = web.AppRunner(app, access_log=None)
+        runner = web.AppRunner(app)#, access_log=None)
         await runner.setup()
 
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
@@ -337,6 +338,7 @@ async def start_rpc_server(
         #
         if rpc_port == 0:
             rpc_port = select_port(root_path, runner.addresses)
+        log.error(f" ==== start_rpc_server() {rpc_port=} {routes=}")
 
         async def cleanup():
             await rpc_server.stop()

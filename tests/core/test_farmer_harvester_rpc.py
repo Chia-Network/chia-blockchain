@@ -67,6 +67,7 @@ async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
 
     farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
     harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
+    # logging.getLogger().error(f" ==== harvester_farmer_environment()\n{farmer_service._server._port=}\n{harvester_service._server._port}")
 
     rpc_cleanup, rpc_port_farmer = await start_rpc_server(
         farmer_rpc_api,
@@ -89,6 +90,7 @@ async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
         connect_to_daemon=False,
     )
 
+
     farmer_rpc_client = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
     harvester_rpc_client = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
 
@@ -96,7 +98,9 @@ async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
         return len(await farmer_rpc_client.get_connections()) > 0
 
     await time_out_assert(15, have_connections, True)
+    farmer_service
 
+    logging.getLogger().error(f" ==== harvester_farmer_environment()\n{rpc_port_farmer=}\n{rpc_port_harvester=}")
     yield farmer_service, farmer_rpc_api, farmer_rpc_client, harvester_service, harvester_rpc_api, harvester_rpc_client
 
     farmer_rpc_client.close()
@@ -450,6 +454,10 @@ async def test_farmer_get_harvester_plots_endpoints(
         harvester_rpc_api,
         harvester_rpc_client,
     ) = harvester_farmer_environment
+
+    import logging
+    for n in ['aiohttp.access', 'aiohttp.client', 'aiohttp.internal', 'aiohttp.server', 'aiohttp.web', 'aiohttp.websocket']:
+        logging.getLogger(n).setLevel(logging.INFO)
 
     harvester = harvester_service._node
     harvester_id = harvester_service._server.node_id
