@@ -589,18 +589,18 @@ class NFTWallet:
     ) -> Optional[SpendBundle]:
         self.log.info("Attempt to transfer a new NFT")
         coin = nft_coin_info.coin
-        self.log.error("Transferring NFT coin %r to puzhash: %s", nft_coin_info.coin, puzzle_hash)
+        self.log.debug("Transferring NFT coin %r to puzhash: %s", nft_coin_info.coin, puzzle_hash)
 
         amount = coin.amount
         unft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
         puzzle_hash_to_sign = unft.p2_puzzle.get_tree_hash()
         if unft.supports_did:
-            self.log.error("Transferring NFT with ownership layer")
+            self.log.debug("Transferring NFT with ownership layer")
             inner_solution = create_ownership_layer_transfer_solution(int_to_bytes(0), int_to_bytes(0), [], puzzle_hash)
         else:
             condition_list = [make_create_coin_condition(puzzle_hash, amount, [puzzle_hash])]
             inner_solution = Program.to([solution_for_conditions(condition_list), amount])
-        self.log.error("Solution for new coin: %r", disassemble(inner_solution))
+        self.log.debug("Solution for new coin: %r", disassemble(inner_solution))
         nft_tx_record = await self._make_nft_transaction(
             nft_coin_info,
             inner_solution,
