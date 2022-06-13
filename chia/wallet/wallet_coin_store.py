@@ -220,6 +220,12 @@ class WalletCoinStore:
         else:
             return set()
 
+    def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
+        all_unspent: Set[WalletCoinRecord] = set()
+        for _, wallet_coins in self.unspent_coin_wallet_cache.items():
+            all_unspent.update(wallet_coins.values())
+        return all_unspent
+
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
         """Returns set of all CoinRecords."""
         cursor = await self.db_connection.execute("SELECT * from coin_record")
