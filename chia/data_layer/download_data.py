@@ -149,7 +149,7 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as resp:
+                async with session.get(url + "/" + str(filename)) as resp:
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
