@@ -267,7 +267,7 @@ class DataLayer:
             await write_files_for_root(self.data_store, store_id, root, server_files_location, override)
 
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
-        parsed_urls = [url[:-1] if url.endswith("/") else url for url in urls]
+        parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, parsed_urls)
         subscriptions = await self.get_subscriptions()
         if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
