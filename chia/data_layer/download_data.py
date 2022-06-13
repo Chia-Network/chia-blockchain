@@ -18,41 +18,30 @@ def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) ->
 
 
 def is_filename_valid(filename: str) -> bool:
+    split = filename.split("-")
+
     try:
-        if len(filename) > 200:
-            return False
-        if not filename.endswith("-v1.0.dat"):
-            return False
-        filename = filename[:-9]
-        tree_id_bytes = bytes.fromhex(filename[:64])
-        if len(tree_id_bytes) != 32:
-            return False
-        filename = filename[64:]
-        if filename[0] != "-":
-            return False
-        filename = filename[1:]
-        node_hash_bytes = bytes.fromhex(filename[:64])
-        if len(node_hash_bytes) != 32:
-            return False
-        filename = filename[64:]
-        if filename[0] != "-":
-            return False
-        filename = filename[1:]
-        if filename.startswith("delta"):
-            filename = filename[5:]
-        elif filename.startswith("full"):
-            filename = filename[4:]
-        else:
-            return False
-        if filename[0] != "-":
-            return False
-        filename = filename[1:]
-        generation = int(filename)
-        if generation < 0 or generation > 1000000000:
-            return False
-        return True
-    except Exception:
+        raw_tree_id, raw_node_hash, file_type, raw_generation, raw_version, *rest = split
+        tree_id = bytes32(bytes.fromhex(raw_tree_id))
+        node_hash = bytes32(bytes.fromhex(raw_node_hash))
+        generation = int(raw_generation)
+    except ValueError:
         return False
+
+    if len(rest) > 0:
+        return False
+
+    # TODO: versions should probably be centrally defined
+    if raw_version != "v1.0.dat":
+        return False
+
+    if file_type not in {"delta", "full"}:
+        return False
+
+    generate_file_func = get_delta_filename if file_type == "delta" else get_full_tree_filename
+    reformatted = generate_file_func(tree_id=tree_id, node_hash=node_hash, generation=generation)
+
+    return reformatted == filename
 
 
 async def insert_into_data_store_from_file(
