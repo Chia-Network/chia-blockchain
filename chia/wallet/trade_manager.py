@@ -570,10 +570,9 @@ class TradeManager:
         return txs
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        if offer.incomplete_spends() != []:
-            complete_offer = await self.check_for_special_offer_taking(offer, fee=fee)
-            if complete_offer is None:
-                raise ValueError("Could not take the specified special offer")
+        potential_special_offer: Optional[Offer] = await self.check_for_special_offer_taking(offer, fee=fee)
+        if potential_special_offer is not None:
+            complete_offer: Offer = potential_special_offer
         else:
             take_offer_dict: Dict[Union[bytes32, int], int] = {}
             arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
