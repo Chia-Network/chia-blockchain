@@ -102,8 +102,6 @@ async def write_files_for_root(
         written = True
     except FileExistsError:
         pass
-    except Exception:
-        raise
 
     try:
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
