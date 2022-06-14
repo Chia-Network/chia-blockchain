@@ -539,6 +539,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
             spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            my_did: Optional[str] = None
             print()
             print(f"{summary['name']}:")
             print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
@@ -551,7 +552,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
             elif typ == WalletType.NFT:
                 get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
-                my_did: Optional[str] = get_did_response["did_id"]
+                my_did = get_did_response["did_id"]
                 if my_did is not None and len(my_did) > 0:
                     print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
             elif len(asset_id) > 0:
