@@ -673,21 +673,10 @@ class TradeManager:
                         AssetType.OWNERSHIP.value,
                     ]
                 )
-                # seems like we need to use puzzle_info.also().also() to drill into the transfer
-                # according to ownership_outer_puzzle this just goes in as a constructor dict
-                and isinstance(puzzle_info.also().also().info["transfer_program"], Dict)  # type: ignore
-                and puzzle_info.also().also().info["transfer_program"]["type"]  # type: ignore
-                == AssetType.ROYALTY_TRANSFER_PROGRAM.value
+                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)
+                and puzzle_info.also().also()["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
-
-                if list(offer_dict.items())[0][1] < 0:
-                    # in this case we're offering up an NFT (negative amount)
-                    asset_id = bytes32(hexstr_to_bytes(puzzle_info.info["launcher_id"]))
-                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                    return await wallet.make_nft1_offer(offer_dict, driver_dict, fee)
-                else:
-                    # otherwise we're requesting to buy NFT
-                    return await self.make_nft1_request_offer(offer_dict, driver_dict, fee)
+                return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
         return None
 
     async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:
@@ -705,85 +694,3 @@ class TradeManager:
             ):
                 return await NFTWallet.take_nft1_offer(offer, fee)
         return None
-
-    async def make_nft1_request_offer(
-        self,
-        offer_dict: Dict[Optional[bytes32], int],
-        driver_dict: Dict[bytes32, PuzzleInfo],
-        fee: uint64 = uint64(0),
-    ) -> Optional[Offer]:
-        amounts = list(offer_dict.values())
-        if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
-            raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
-        requested_asset_id: Optional[bytes32] = list(offer_dict.items())[0][0]
-        assert isinstance(requested_asset_id, bytes32)
-        requested_info = driver_dict[requested_asset_id]
-        transfer_info = requested_info.also().also()  # type: ignore
-        assert isinstance(transfer_info, PuzzleInfo)
-        royalty_percentage = uint16(transfer_info.info["transfer_program"]["royalty_percentage"])
-        royalty_address_hex = transfer_info.info["transfer_program"]["royalty_address"]
-        royalty_address = bytes32(hexstr_to_bytes(royalty_address_hex))
-        # breakpoint()
-        p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
-        requested_payments: Dict[Optional[bytes32], List[Payment]] = {
-            requested_asset_id: [Payment(p2_ph, uint64(offer_dict[requested_asset_id]), [p2_ph])]
-        }
-        offered_asset_id = list(offer_dict.items())[1][0]
-        offered_amount = uint64(abs(offer_dict[offered_asset_id]))
-        royalty_amount = uint64(offered_amount * royalty_percentage / 10000)
-        if offered_asset_id is None:
-            # std xch offer
-            wallet = self.wallet_state_manager.main_wallet
-        else:
-            # cat offer
-            wallet = await self.wallet_state_manager.get_wallet_for_asset_id(offered_asset_id)
-        pmt_coin = await wallet.get_coins_to_offer(offered_asset_id, offered_amount)
-        royalty_coin = await wallet.select_coins(royalty_amount, exclude=[pmt_coin])
-
-        all_coins: List[Coin] = [*list(pmt_coin), *list(royalty_coin)]
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-            requested_payments, all_coins
-        )
-        announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
-        fee_left_to_pay = fee
-        coins_to_offer = [[pmt_coin, offered_amount], [royalty_coin, royalty_amount]]
-        all_transactions = []
-        for coins, amount in coins_to_offer:
-            if wallet.type() == WalletType.STANDARD_WALLET:
-                tx = await wallet.generate_signed_transaction(
-                    amount,
-                    Offer.ph(),
-                    fee=fee_left_to_pay,
-                    coins=set(coins),
-                    puzzle_announcements_to_consume=announcements_to_assert,
-                )
-                all_transactions.append(tx)
-            else:
-                tx = await wallet.generate_signed_transaction(
-                    [amount],
-                    [Offer.ph()],
-                    fee=fee_left_to_pay,
-                    coins=set(coins),
-                    puzzle_announcements_to_consume=announcements_to_assert,
-                )
-                all_transactions.append(tx)
-            fee_left_to_pay = uint64(0)
-
-        txn_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
-        txn_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, txn_bundles)))
-        # Create a spend bundle for the royalty payout from OFFER MOD
-        for txn in txn_bundles:
-            for coin in txn.additions():  # type: ignore
-                if coin.amount == royalty_amount and coin.puzzle_hash == OFFER_MOD.get_tree_hash():
-                    royalty_coin = coin
-                    break
-
-        assert royalty_coin
-        # make the royalty payment solution
-        # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
-        royalty_sol = Program.to([[offered_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
-        royalty_spend = SpendBundle([CoinSpend(royalty_coin, OFFER_MOD, royalty_sol)], G2Element())
-
-        total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])
-        offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
-        return offer
