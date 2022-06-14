@@ -131,7 +131,7 @@ def convert_hex_string(item: str) -> bytes:
     try:
         return hexstr_to_bytes(item)
     except Exception as e:
-        raise TypeError(f'Can\'t convert the string "{item}" to bytes: {e}') from e
+        raise TypeError(f"Can't convert the string {item!r} to bytes: {e}") from e
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
