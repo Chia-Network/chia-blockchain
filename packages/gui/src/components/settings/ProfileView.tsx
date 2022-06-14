@@ -10,6 +10,7 @@ import {
 import { Box, Card, TextField, Typography } from '@mui/material';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
+import { fromBech32m } from '@chia/api';
 import {
   useGetDIDQuery,
   useGetDIDNameQuery,
@@ -83,8 +84,8 @@ export default function ProfileView() {
 
   if (did && didName) {
     const nameText = didName.name;
-    const hexDID = stripHexPrefix(did.myDid);
-    const didID = didToDIDId(hexDID);
+    const didID = didToDIDId(did.myDid);
+    const hexDID = stripHexPrefix(fromBech32m(didID));
     const truncatedDID = truncateValue(didID, {});
 
     return (

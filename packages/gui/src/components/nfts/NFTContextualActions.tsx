@@ -147,9 +147,7 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled =
-    (selection?.items.length ?? 0) !== 1 ||
-    !!selectedNft?.ownerDid ||
-    selectedNft?.pendingTransaction;
+    (selection?.items.length ?? 0) !== 1 || selectedNft?.pendingTransaction;
 
   function handleComplete(result?: NFTTransferResult) {
     if (result) {

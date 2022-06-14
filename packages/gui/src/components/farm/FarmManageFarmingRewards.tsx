@@ -2,8 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import styled from 'styled-components';
-import { Button, Flex, Form, TextField, Loading, fromBech32m } from '@chia/core';
-import { useSetRewardTargetsMutation, useGetRewardTargetsQuery } from '@chia/api-react';
+import { Button, Flex, Form, TextField, Loading } from '@chia/core';
+import { fromBech32m } from '@chia/api';
+import {
+  useSetRewardTargetsMutation,
+  useGetRewardTargetsQuery,
+} from '@chia/api-react';
 import {
   Alert,
   Dialog,
@@ -75,12 +79,10 @@ export default function FarmManageFarmingRewards(props: Props) {
     try {
       fromBech32m(stringToCheck);
       return true;
-    }
-    catch {
+    } catch {
       return false;
     }
   }
-
 
   async function handleSubmit(values: FormData) {
     const { farmerTarget, poolTarget } = values;
