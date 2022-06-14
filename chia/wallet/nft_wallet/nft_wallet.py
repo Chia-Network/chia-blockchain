@@ -852,7 +852,7 @@ class NFTWallet:
 
         return (unsigned_spend_bundle, chia_tx)
 
-    # @classmethod
+    # this was a classmethod - removed to make use of self to get offered nft
     async def make_nft1_offer(  # type: ignore
         self,
         offer_dict: Dict[Optional[bytes32], int],
@@ -879,26 +879,33 @@ class NFTWallet:
 
         if nft and offered:
             p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
-            offered_coins = await self.get_coins_to_offer(offered_asset_id, abs(offer_dict[offered_asset_id]))
+            offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
+            assert isinstance(offered_asset_id, bytes32)
+            offered_coins = await self.get_coins_to_offer(offered_asset_id, offered_amount)
             requested_asset = list(offer_dict.items())[1][0]
             requested_amount = list(offer_dict.items())[1][1]
+            if requested_asset is None:
+                trade_prices = Program.to([[uint64(requested_amount)]])
+            else:
+                trade_prices = Program.to([[uint64(requested_amount), requested_asset]])
             notarized_payments = Offer.notarize_payments(
-                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]},
-                list(offered_coins)
+                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, list(offered_coins)
             )
             announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
             txs = await self.generate_signed_transaction(
-                [abs(offer_dict[offered_asset_id])],
+                [offered_amount],
                 [Offer.ph()],
                 fee=fee,
                 coins=offered_coins,
-                puzzle_announcements_to_consume=announcements,
+                puzzle_announcements_to_consume=set(announcements),
+                trade_prices_list=trade_prices,
             )
             transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in txs]
             total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
+
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
 
-            pass
+            return offer
         else:
             pass
 
