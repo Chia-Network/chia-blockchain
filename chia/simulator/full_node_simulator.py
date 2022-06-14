@@ -248,9 +248,9 @@ class FullNodeSimulator(FullNodeAPI):
         block_reward_coins = set()
         expected_reward_coin_count = 2 * count
 
-        # TODO: why 2 and not 1?
-        for index in range(count + 2):
-            if index < count:
+        # TODO: why two final transaction blocks and not just one?
+        for to_wallet in [*([True] * count), False, False]:
+            if to_wallet:
                 rewards += await self.process_blocks(
                     count=1, farm_to=target_puzzlehash, guarantee_transaction_blocks=False
                 )
