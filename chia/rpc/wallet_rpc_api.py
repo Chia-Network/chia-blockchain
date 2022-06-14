@@ -1410,7 +1410,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if nft_wallet is not None:
-            if type(nft_wallet) != NFTWallet:
+            if nft_wallet.type() != WalletType.NFT.value:
                 return {"success": False, "error": f"Wallet {wallet_id} is not an NFT wallet"}
             did_bytes: Optional[bytes32] = nft_wallet.get_did()
             did_id = ""
