@@ -204,7 +204,7 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
                 f"{len(missing_fields)} field{'s' if len(missing_fields) > 1 else ''} missing for {klass.__name__}: "
                 + ", ".join(missing_fields)
             ) from e
-        raise e
+        raise
 
 
 def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
