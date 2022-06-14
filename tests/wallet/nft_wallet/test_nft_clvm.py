@@ -162,10 +162,10 @@ def test_transfer_program() -> None:
     )
     assert conditions.rest().rest().rest().first().first().as_int() == 63
 
-    conditions = NFT_GRAFTROOT_TRANSFER.curry(
-        Program.to((1, [[60, bytes([0] * 32)]])),
-        Program.to(trade_prices_list),
-    ).run(Program.to([new_pk, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1, Program.to([])]))
+    # conditions = NFT_GRAFTROOT_TRANSFER.curry(
+    #     Program.to((1, [[60, bytes([0] * 32)]])),
+    #     Program.to(trade_prices_list),
+    # ).run(Program.to([new_pk, STANDARD_PUZZLE_MOD.curry(new_pk).get_tree_hash(), 1, Program.to([])]))
     solution = Program.to([current_owner, conditions, [[], trade_prices_list, new_pk, []]])
     cost, res = curried_tp.run_with_cost(INFINITE_COST, solution)
     assert res.first().as_int() == 0

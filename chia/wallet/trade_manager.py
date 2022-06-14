@@ -4,18 +4,14 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G2Element
-
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -673,8 +669,9 @@ class TradeManager:
                         AssetType.OWNERSHIP.value,
                     ]
                 )
-                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)
-                and puzzle_info.also().also()["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM.value
+                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore
+                and puzzle_info.also().also()["transfer_program"].type()  # type: ignore
+                == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
         return None

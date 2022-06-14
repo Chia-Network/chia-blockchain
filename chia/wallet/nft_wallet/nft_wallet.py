@@ -41,7 +41,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import match_singleton_puzzle
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
@@ -878,6 +878,7 @@ class NFTWallet:
         offered: bool = list(offer_dict.items())[0][1] < 0
 
         if nft and offered:
+            assert offered_asset_id is not None  # hello mypy
             wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
             p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
             offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
@@ -889,7 +890,7 @@ class NFTWallet:
                 trade_prices = Program.to([[uint64(requested_amount)]])
             else:
                 trade_prices = Program.to([[uint64(requested_amount), requested_asset]])
-            notarized_payments = Offer.notarize_payments(
+            notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
             )
             announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
@@ -938,16 +939,14 @@ class NFTWallet:
                 coin_amount_needed = offered_amount + royalty_amount
             pmt_coins = list(await wallet.get_coins_to_offer(offered_asset_id, coin_amount_needed))
 
-            notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                requested_payments, pmt_coins
-            )
+            notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
             if wallet.type() == WalletType.STANDARD_WALLET:
                 tx = await wallet.generate_signed_transaction(
                     offered_amount,
                     Offer.ph(),
-                    primaries=[AmountWithPuzzlehash({"amount": royalty_amount, "puzzlehash": Offer.ph()})],
+                    primaries=[AmountWithPuzzlehash({"amount": royalty_amount, "puzzlehash": Offer.ph(), "memos": []})],
                     fee=fee,
                     coins=set(pmt_coins),
                     puzzle_announcements_to_consume=announcements_to_assert,
