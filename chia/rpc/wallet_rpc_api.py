@@ -152,6 +152,7 @@ class WalletRpcApi:
             "/dl_update_root": self.dl_update_root,
             "/dl_update_multiple": self.dl_update_multiple,
             "/dl_history": self.dl_history,
+            "/dl_owned_singletons": self.dl_owned_singletons,
         }
 
     async def _state_changed(self, *args) -> List[WsRpcMessage]:
@@ -1821,3 +1822,19 @@ class WalletRpcApi:
                 return {"history": history_json, "count": len(history_json)}
 
         raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_owned_singletons(self, request) -> Dict:
+        """Get all owned singleton records"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        singletons = await wallet.get_owned_singletons()
+        singletons_json = [singleton.to_json_dict() for singleton in singletons]
+
+        return {"singletons": singletons_json, "count": len(singletons_json)}
