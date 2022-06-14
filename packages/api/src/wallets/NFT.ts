@@ -13,6 +13,10 @@ export default class NFTWallet extends Wallet {
     });
   }
 
+  async getNftWalletsWithDids() {
+    return this.command('nft_get_wallets_with_dids');
+  }
+
   async transferNft(
     walletId: number,
     nftCoinId: string,

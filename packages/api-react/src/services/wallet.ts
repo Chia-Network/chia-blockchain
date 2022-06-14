@@ -34,6 +34,7 @@ const apiWithTag = api.enhanceEndpoints({
     'Keys',
     'LoggedInFingerprint',
     'NFTInfo',
+    'NFTWalletWithDID',
     'OfferCounts',
     'OfferTradeRecord',
     'PlotNFT',
@@ -1884,6 +1885,24 @@ export const walletApi = apiWithTag.injectEndpoints({
       ]),
     }),
 
+    getNFTWalletsWithDIDs: build.query<any, {}>({
+      query: () => ({
+        command: 'getNftWalletsWithDids',
+        service: NFT,
+        args: [],
+      }),
+      transformResponse: (response: any) => response?.nftWallets,
+      providesTags: (result, _error) =>
+        result
+          ? [
+              ...result.map(({ walletId }) => ({
+                NFTWalletWithDID: walletId,
+              })),
+              { NFTWalletWithDID: 'LIST' },
+            ]
+          : [{ type: 'NFTWalletWithDID', id: 'LIST' }],
+    }),
+
     getNFTInfo: build.query<any, { coinId: string }>({
       async queryFn(args, _queryApi, _extraOptions, fetchWithBQ) {
         try {
@@ -2039,6 +2058,7 @@ export const {
 
   // NFTs
   useGetNFTsQuery,
+  useGetNFTWalletsWithDIDsQuery,
   useGetNFTInfoQuery,
   useTransferNFTMutation,
   useReceiveNFTMutation,
