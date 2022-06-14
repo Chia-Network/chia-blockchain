@@ -131,7 +131,7 @@ def convert_hex_string(item: str) -> bytes:
     try:
         return hexstr_to_bytes(item)
     except Exception as e:
-        raise TypeError(f'Can\'t convert the string "{item}" to bytes: {e}')
+        raise TypeError(f'Can\'t convert the string "{item}" to bytes: {e}') from e
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
@@ -142,7 +142,7 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
     try:
         return f_type(item)
     except Exception as e:
-        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}")
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
@@ -156,7 +156,7 @@ def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
         else:
             return f_type.from_bytes(item)
     except Exception as e:
-        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}")
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
@@ -165,7 +165,7 @@ def convert_primitive(f_type: Type[Any], item: Any) -> Any:
     try:
         return f_type(item)
     except Exception as e:
-        raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}")
+        raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
