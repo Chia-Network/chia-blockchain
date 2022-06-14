@@ -9,6 +9,7 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -665,10 +666,12 @@ class TradeManager:
                         AssetType.OWNERSHIP.value,
                     ]
                 )
-                and isinstance(puzzle_info["transfer_program"], PuzzleInfo)
-                and puzzle_info["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM
+                and puzzle_info.also().also().info["transfer_program"]["type"] == "royalty transfer program"
             ):
-                return await NFTWallet.make_nft1_offer(offer_dict, driver_dict, fee)
+
+                asset_id = bytes32(hexstr_to_bytes(puzzle_info.info["launcher_id"]))
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                return await wallet.make_nft1_offer(offer_dict, driver_dict, fee)
         return None
 
     async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:

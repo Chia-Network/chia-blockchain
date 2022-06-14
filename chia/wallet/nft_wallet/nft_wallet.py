@@ -852,7 +852,7 @@ class NFTWallet:
 
         return (unsigned_spend_bundle, chia_tx)
 
-    @classmethod
+    # @classmethod
     async def make_nft1_offer(  # type: ignore
         self,
         offer_dict: Dict[Optional[bytes32], int],
@@ -878,6 +878,26 @@ class NFTWallet:
         offered: bool = list(offer_dict.items())[0][1] < 0
 
         if nft and offered:
+            p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            offered_coins = await self.get_coins_to_offer(offered_asset_id, abs(offer_dict[offered_asset_id]))
+            requested_asset = list(offer_dict.items())[1][0]
+            requested_amount = list(offer_dict.items())[1][1]
+            notarized_payments = Offer.notarize_payments(
+                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]},
+                list(offered_coins)
+            )
+            announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
+            txs = await self.generate_signed_transaction(
+                [abs(offer_dict[offered_asset_id])],
+                [Offer.ph()],
+                fee=fee,
+                coins=offered_coins,
+                puzzle_announcements_to_consume=announcements,
+            )
+            transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in txs]
+            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
+
             pass
         else:
             pass
