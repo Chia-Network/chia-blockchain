@@ -34,6 +34,8 @@ jobs:
   macos_intel:
     uses: ./.github/workflows/build-macos-installer.yml
     secrets:
+      APPLE_DEV_ID_APP: ${{ secrets.APPLE_DEV_ID_APP }}
+      APPLE_DEV_ID_APP_PASS: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
       GLUE_ACCESS_TOKEN: ${{ secrets.GLUE_ACCESS_TOKEN }}
       INSTALLER_UPLOAD_KEY: ${{ secrets.INSTALLER_UPLOAD_KEY }}
       INSTALLER_UPLOAD_SECRET: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
