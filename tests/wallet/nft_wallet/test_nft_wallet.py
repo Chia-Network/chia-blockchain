@@ -961,7 +961,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
         raise AssertionError("NFT not transferred")
 
     nft_wallet_1 = wallet_1.wallet_state_manager.wallets[2]
-    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
+    await time_out_assert(15, len, 1, nft_wallet_1.my_nft_coins)
 
 
 @pytest.mark.parametrize(

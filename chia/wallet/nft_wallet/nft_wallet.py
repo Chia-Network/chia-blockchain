@@ -792,7 +792,7 @@ class NFTWallet:
         elif len(payments) > 1:
             raise ValueError("NFTs can only be sent to one party")
         else:
-            nft_coin = [c for c in self.nft_wallet_info.my_nft_coins if c.coin in coins][0]
+            nft_coin = [c for c in self.my_nft_coins if c.coin in coins][0]
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}

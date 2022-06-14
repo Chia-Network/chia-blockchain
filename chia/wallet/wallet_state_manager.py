@@ -751,7 +751,7 @@ class WalletStateManager:
                     metadata, p2_puzzle_hash = get_metadata_and_phs(
                         uncurried_nft,
                         Program.from_bytes(bytes(coin_spend.puzzle_reveal)),
-                        Program.from_bytes(bytes(coin_spend.solution)),
+                        coin_spend.solution,
                     )
                     derivation_record: Optional[
                         DerivationRecord
