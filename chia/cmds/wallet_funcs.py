@@ -761,7 +761,8 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
         response = await wallet_client.list_nfts(wallet_id)
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
-            from chia.wallet.nft_wallet.nft_info import NFTInfo
+            from chia.wallet.did_wallet.did_info import DID_HRP
+            from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 
             indent: str = "   "
 
@@ -772,11 +773,12 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
                 else:
                     owner_pubkey = nft.owner_pubkey.hex()
                 print()
+                print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
                 print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
                 print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
                 print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
                 print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
-                print(f"{'Owner DID:'.ljust(26)} {nft.owner_did}")
+                print(f"{'Owner DID:'.ljust(26)} {encode_puzzle_hash(nft.owner_did, DID_HRP)}")
                 print(f"{'Owner pubkey:'.ljust(26)} {owner_pubkey}")
                 print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
                 print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
