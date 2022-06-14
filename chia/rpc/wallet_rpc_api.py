@@ -826,7 +826,7 @@ class WalletRpcApi:
                         self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                     await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
                 except Exception:
-                    self.log.exception("Exception while delete_unconfirmed_transactions")
+                    log.exception("Exception while delete_unconfirmed_transactions")
                     await self.service.wallet_state_manager.tx_store.db_wrapper.rollback_transaction()
                     raise
 
