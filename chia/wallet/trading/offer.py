@@ -12,7 +12,14 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.ints import uint64
-from chia.wallet.outer_puzzles import construct_puzzle, create_asset_id, match_puzzle, solve_puzzle
+from chia.wallet.outer_puzzles import (
+    construct_puzzle,
+    create_asset_id,
+    match_puzzle,
+    solve_puzzle,
+    get_inner_puzzle,
+    get_inner_solution,
+)
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -129,42 +136,48 @@ class Offer:
         return final_list
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
+    # It's also a little heuristic, but it should get most things
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
-        for addition in self.additions():
-            # Get the parent puzzle
-            parent_puzzle: Program = list(
-                filter(lambda cs: cs.coin.name() == addition.parent_coin_info, self.bundle.coin_spends)
-            )[0].puzzle_reveal.to_program()
+        OFFER_HASH: bytes32 = OFFER_MOD.get_tree_hash()
+        for parent_spend in self.bundle.coin_spends:
+            coins_for_this_spend: List[Coin] = []
 
-            # Determine it's TAIL (or lack of)
+            parent_puzzle: Program = parent_spend.puzzle_reveal.to_program()
+            parent_solution: Program = parent_spend.solution.to_program()
+            additions: List[Coin] = parent_spend.additions()
+
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
                 asset_id = create_asset_id(puzzle_driver)
-                offer_ph: bytes32 = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD).get_tree_hash()
+                inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
+                inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
+                assert inner_puzzle is not None and inner_solution is not None
+                conditions: Program = inner_puzzle.run(inner_solution)
+                for condition in conditions.as_iter():
+                    if condition.first() == 51 and condition.rest().first() == OFFER_HASH:
+                        additions_w_amount: List[Coin] = [
+                            a for a in additions if a.amount == condition.rest().rest().first().as_int()
+                        ]
+                        if len(additions_w_amount) == 1:
+                            coins_for_this_spend.append(additions_w_amount[0])
+                        else:
+                            additions_w_amount_and_puzhash: List[Coin] = [
+                                a
+                                for a in additions_w_amount
+                                if a.puzzle_hash
+                                == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash(OFFER_HASH)
+                            ]
+                            if len(additions_w_amount_and_puzhash) == 1:
+                                coins_for_this_spend.append(additions_w_amount_and_puzhash[0])
             else:
                 asset_id = None
-                offer_ph = OFFER_MOD.get_tree_hash()
+                coins_for_this_spend.extend([a for a in additions if a.puzzle_hash == OFFER_HASH])
 
-            # Check if the puzzle_hash matches the hypothetical `settlement_payments` puzzle hash
-            if addition.puzzle_hash == offer_ph:
-                if asset_id in offered_coins:
-                    offered_coins[asset_id].append(addition)
-                else:
-                    offered_coins[asset_id] = [addition]
-
-        for spend in self.incomplete_spends():
-            puzzle_driver = match_puzzle(spend.puzzle_reveal.to_program())
-            if puzzle_driver is not None:
-                asset_id = create_asset_id(puzzle_driver)
-            else:
-                asset_id = None
-
-            if asset_id in offered_coins:
-                offered_coins[asset_id].append(addition)
-            else:
-                offered_coins[asset_id] = [addition]
+            if coins_for_this_spend != []:
+                offered_coins.setdefault(asset_id, [])
+                offered_coins[asset_id].extend(coins_for_this_spend)
 
         return offered_coins
 
