@@ -6,7 +6,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_MOD_HASH, SINGLETON_LAUNCHER_HASH
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 
 CAT_MOD = load_clvm("cat.clvm")
 OFFER_MOD = load_clvm("settlement_payments.clvm")

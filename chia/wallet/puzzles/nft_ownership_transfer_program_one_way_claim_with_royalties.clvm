@@ -1,6 +1,5 @@
 (mod
   (
-    P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
     SINGLETON_STRUCT
     ROYALTY_ADDRESS
     TRADE_PRICE_PERCENTAGE
@@ -17,7 +16,6 @@
   (include curry-and-treehash.clinc)
 
   (defconstant TEN_THOUSAND 10000)
-  (defconstant ANNOUNCEMENT_SUFFIX 0x3eb26bfb4417ad22)  ; LAst 8 bytes of (sha256 "nft ownership transfer program w/ royalties")
 
   (defun sha256tree1
          (TREE)
@@ -26,22 +24,6 @@
              (sha256 ONE TREE)
          )
   )
-
-  (defmacro and ARGS
-   (if ARGS
-       (qq (if (unquote (f ARGS))
-           (unquote (c and (r ARGS)))
-           ()
-           ))
-       1)
-   )
-
-   (defmacro assert items
-       (if (r items)
-           (list if (f items) (c assert (r items)) (q . (x)))
-           (f items)
-       )
-   )
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
@@ -70,8 +52,8 @@
   )
 
   ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
-  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id conditions)
-      (if (all trade_prices_list ROYALTY_ADDRESS)
+  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id)
+      (if trade_prices_list
           (c
               (list
                 ASSERT_PUZZLE_ANNOUNCEMENT
@@ -83,9 +65,9 @@
                   (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE) (list ROYALTY_ADDRESS)))))
                 )
               )
-              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id conditions)
+              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
           )
-          conditions
+          ()
       )
   )
 
