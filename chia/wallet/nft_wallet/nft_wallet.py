@@ -881,7 +881,8 @@ class NFTWallet:
             p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
             offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
             assert isinstance(offered_asset_id, bytes32)
-            offered_coins = await self.get_coins_to_offer(offered_asset_id, offered_amount)
+            offered_coin_info = self.get_nft(offered_asset_id)
+            offered_coin: Coin = offered_coin_info.coin  # type: ignore
             requested_asset = list(offer_dict.items())[1][0]
             requested_amount = list(offer_dict.items())[1][1]
             if requested_asset is None:
@@ -889,14 +890,14 @@ class NFTWallet:
             else:
                 trade_prices = Program.to([[uint64(requested_amount), requested_asset]])
             notarized_payments = Offer.notarize_payments(
-                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, list(offered_coins)
+                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
             )
             announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
             txs = await self.generate_signed_transaction(
                 [offered_amount],
                 [Offer.ph()],
                 fee=fee,
-                coins=offered_coins,
+                coins=set([offered_coin]),
                 puzzle_announcements_to_consume=set(announcements),
                 trade_prices_list=trade_prices,
             )

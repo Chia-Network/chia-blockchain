@@ -47,7 +47,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
-async def test_nft_offer_with_did_wallet(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
