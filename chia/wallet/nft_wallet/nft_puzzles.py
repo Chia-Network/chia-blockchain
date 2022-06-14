@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from blspy import G1Element
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
@@ -12,11 +11,7 @@ from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
-    DEFAULT_HIDDEN_PUZZLE_HASH,
-    calculate_synthetic_public_key,
-    solution_for_conditions,
-)
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
@@ -28,7 +23,7 @@ NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties_new.clvm")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
 
@@ -111,7 +106,6 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
         uncurried_nft.owner_did,
-        uncurried_nft.owner_pubkey,
         uncurried_nft.trade_price_percentage,
         uncurried_nft.royalty_address,
         data_uris,
@@ -185,6 +179,19 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     return metadata_to_program(new_metadata)
 
 
+def construct_ownership_layer(
+    current_owner: Optional[bytes32],
+    transfer_program: Program,
+    inner_puzzle: Program,
+) -> Program:
+    return NFT_OWNERSHIP_LAYER.curry(
+        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        current_owner,
+        transfer_program,
+        inner_puzzle,
+    )
+
+
 def create_ownership_layer_puzzle(
     nft_id: bytes32,
     did_id: bytes,
@@ -195,7 +202,7 @@ def create_ownership_layer_puzzle(
     log.debug(
         "Creating ownership layer puzzle with NFT_ID: %s DID_ID: %s Royalty_Percentage: %d P2_puzzle: %s",
         nft_id.hex(),
-        did_id.hex(),
+        did_id,
         percentage,
         p2_puzzle,
     )
@@ -203,7 +210,6 @@ def create_ownership_layer_puzzle(
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
     transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        STANDARD_PUZZLE_MOD.get_tree_hash(),
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
@@ -212,8 +218,8 @@ def create_ownership_layer_puzzle(
     )
     nft_inner_puzzle = p2_puzzle
 
-    nft_ownership_layer_puzzle = NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER.get_tree_hash(), did_id, transfer_program, nft_inner_puzzle
+    nft_ownership_layer_puzzle = construct_ownership_layer(
+        bytes32(did_id) if did_id else None, transfer_program, nft_inner_puzzle
     )
     return nft_ownership_layer_puzzle
 
@@ -222,31 +228,28 @@ def create_ownership_layer_transfer_solution(
     new_did: bytes,
     new_did_inner_hash: bytes32,
     trade_prices_list: List[List[int]],
-    new_pubkey: G1Element,
+    new_puzhash: bytes32,
 ) -> Program:
     log.debug(
-        "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s pubkey:%s",
+        "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s puzhash:%s",
         new_did.hex(),
         new_did_inner_hash.hex(),
         str(trade_prices_list),
-        new_pubkey,
+        new_puzhash.hex(),
     )
-    synthetic_pk: bytes = bytes(calculate_synthetic_public_key(new_pubkey, DEFAULT_HIDDEN_PUZZLE_HASH))
-    puzhash: bytes32 = STANDARD_PUZZLE_MOD.curry(synthetic_pk).get_tree_hash()
     condition_list = [
         [
             51,
-            puzhash,
+            new_puzhash,
             1,
-            [puzhash],
+            [new_puzhash],
         ],
-        [-10, new_did, trade_prices_list, synthetic_pk, [new_did_inner_hash]],
+        [-10, new_did, trade_prices_list, new_did_inner_hash],
     ]
     log.debug("Condition list raw: %r", condition_list)
     solution = Program.to(
         [
             [solution_for_conditions(condition_list)],
-            1,
         ]
     )
     log.debug("Generated transfer solution: %s", solution)
@@ -254,19 +257,14 @@ def create_ownership_layer_transfer_solution(
 
 
 def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
-    full_solution: Program = Program.from_bytes(bytes(solution))
-    delegated_puz_solution: Program = Program.from_bytes(bytes(solution)).rest().rest().first().first()
-    if delegated_puz_solution.rest().as_python() == b"":
-        conditions = puzzle.run(full_solution)
-    else:
-        conditions = delegated_puz_solution.rest().first().rest()
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution.to_program()))
     metadata = unft.metadata
     puzhash_for_derivation: Optional[bytes32] = None
     for condition in conditions.as_iter():
         if condition.list_len() < 2:
             # invalid condition
             continue
-        condition_code = int_from_bytes(condition.first().atom)
+        condition_code = condition.first().as_int()
         log.debug("Checking condition code: %r", condition_code)
         if condition_code == -24:
             # metadata update
@@ -277,35 +275,26 @@ def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: Serializ
             if puzhash_for_derivation is not None:
                 # ignore duplicated create coin conditions
                 continue
-            puzhash = bytes32(condition.rest().first().atom)
             memo = bytes32(condition.as_python()[-1][0])
-            if memo != puzhash:
-                puzhash_for_derivation = memo
-            else:
-                puzhash_for_derivation = puzhash
+            puzhash_for_derivation = memo
             log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
     assert puzhash_for_derivation
     return metadata, puzhash_for_derivation
 
 
-def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:
-    log.debug("Generating NFT puzzle with ownership support: %s", solution)
+def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Program) -> Program:
+    log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
     conditions = solution.at("frfr").as_iter()
-    for change_did_condition in conditions:
-        if change_did_condition.first().as_int() == -10:
+    new_did_id = None
+    new_puzhash = None
+    for condition in conditions:
+        if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            break
-    else:
-        raise ValueError("Not a valid puzzle")
-    new_did_id = change_did_condition.at("rf").atom
-    # trade_list_price = change_did_condition.at("rrf").as_python()
-    # new_did_inner_hash = change_did_condition.at("rrrrf").atom
-    new_pub_key = G1Element.from_bytes(change_did_condition.at("rrrf").atom)
-    log.debug(f"Found NFT puzzle details: {new_did_id.hex()} ")
-    inner_puzzle = NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER.get_tree_hash(),
-        new_did_id,
-        unft.transfer_program,
-        STANDARD_PUZZLE_MOD.curry(new_pub_key),
-    )
+            new_did_id = condition.at("rf").atom
+        elif condition.first().as_int() == 51:
+            new_puzhash = condition.at("rf").atom
+    # assert new_puzhash and new_did_id
+    log.debug(f"Found NFT puzzle details: {new_did_id} {new_puzhash}")
+    assert unft.transfer_program
+    inner_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, sp2_puzzle)
     return inner_puzzle
