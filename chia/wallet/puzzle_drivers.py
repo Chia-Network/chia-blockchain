@@ -65,8 +65,11 @@ class PuzzleInfo:
                 return False
         else:
             if self.type() == types[0]:
-                types.pop()
-                return self.check_type(types)
+                types.pop(0)
+                if self.also():
+                    return self.also().check_type(types)  # type: ignore
+                else:
+                    return self.check_type(types)
             else:
                 return False
 
