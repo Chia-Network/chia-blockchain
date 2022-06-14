@@ -199,11 +199,10 @@ async function postToMintGarden(
   console.log('MintGarden upload completed');
 
   const {
-    offer: { nft_id },
+    offer: { id },
   } = JSON.parse(responseBody);
-  const nftId = toBech32m(nft_id, 'nft');
 
-  return `https://${testnet ? 'testnet.' : ''}mintgarden.io/nfts/${nftId}`;
+  return `https://${testnet ? 'testnet.' : ''}mintgarden.io/offers/${id}`;
 }
 
 // Posts the offer data to OfferBin and returns a URL to the offer.
