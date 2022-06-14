@@ -91,7 +91,7 @@ class FullNodeSimulator(FullNodeAPI):
         return blocks
 
     @api_request
-    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol) -> FullBlock:
+    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -131,10 +131,9 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
-        return more[-1]
 
     @api_request
-    async def farm_new_block(self, request: FarmNewBlockProtocol) -> FullBlock:
+    async def farm_new_block(self, request: FarmNewBlockProtocol):
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -170,7 +169,6 @@ class FullNodeSimulator(FullNodeAPI):
             )
             rr: RespondBlock = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
-        return more[-1]
 
     @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
@@ -210,27 +208,22 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos for the processed blocks.
         """
         rewards = 0
-        height = uint32(0)
 
         if count == 0:
             return rewards
 
         for _ in range(count):
-            block: FullBlock
             if guarantee_transaction_blocks:
-                block = await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
+                await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
             else:
-                block = await self.farm_new_block(FarmNewBlockProtocol(farm_to))
-            height = uint32(block.height)
+                await self.farm_new_block(FarmNewBlockProtocol(farm_to))
+            # hopefully there is no race between the
+            height = self.full_node.blockchain.get_peak_height()
+
+            if height is None:
+                raise RuntimeError("Peak height still None after processing at least one block")
+
             rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
-
-        peak_height = self.full_node.blockchain.get_peak_height()
-
-        if peak_height is None:
-            raise RuntimeError("Peak height still None after processing at least one block")
-
-        if peak_height < height:
-            raise RuntimeError(f"Peak height lower than expected: {peak_height} < {height}")
 
         return rewards
 
