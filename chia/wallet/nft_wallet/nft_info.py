@@ -13,6 +13,8 @@ LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
+NFT_HRP = "nft"
+
 
 @streamable
 @dataclass(frozen=True)
@@ -27,9 +29,6 @@ class NFTInfo(Streamable):
 
     owner_did: Optional[bytes32]
     """Owner DID"""
-
-    owner_pubkey: Optional[bytes]
-    """Pubkey of the NFT owner"""
 
     royalty_percentage: Optional[uint16]
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
