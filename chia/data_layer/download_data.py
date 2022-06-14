@@ -57,6 +57,8 @@ async def insert_into_data_store_from_file(
                 size_to_read = 4 - len(chunk)
                 cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
+                    if size_to_read < 4:
+                        raise RuntimeError("Incomplete read of length.")
                     break
                 chunk += cur_chunk
             if chunk == b"":
@@ -68,7 +70,7 @@ async def insert_into_data_store_from_file(
                 size_to_read = size - len(serialize_nodes_bytes)
                 cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
-                    break
+                    raise RuntimeError("Incomplete read of blob.")
                 serialize_nodes_bytes += cur_chunk
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
