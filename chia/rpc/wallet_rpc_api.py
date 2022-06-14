@@ -1439,7 +1439,6 @@ class WalletRpcApi:
                         did_nft_wallets.append(
                             {
                                 "wallet_id": wallet.id(),
-                                # "did_id": nft_wallet_did.hex(),
                                 "did_id": encode_puzzle_hash(nft_wallet_did, DID_HRP),
                                 "did_wallet_id": did_wallet_id,
                             }
