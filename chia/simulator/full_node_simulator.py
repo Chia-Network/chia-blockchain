@@ -192,7 +192,7 @@ class FullNodeSimulator(FullNodeAPI):
         for block in more_blocks:
             await self.full_node.respond_block(RespondBlock(block))
 
-    async def process_blocks(
+    async def farm_blocks_to_puzzlehash(
         self, count: int, farm_to: bytes32 = bytes32([0] * 32), guarantee_transaction_blocks: bool = False
     ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
@@ -251,11 +251,11 @@ class FullNodeSimulator(FullNodeAPI):
         # TODO: why two final transaction blocks and not just one?
         for to_wallet in [*([True] * count), False, False]:
             if to_wallet:
-                rewards += await self.process_blocks(
+                rewards += await self.farm_blocks_to_puzzlehash(
                     count=1, farm_to=target_puzzlehash, guarantee_transaction_blocks=False
                 )
             else:
-                await self.process_blocks(count=1, guarantee_transaction_blocks=True)
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
             peak_height = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
@@ -355,7 +355,7 @@ class FullNodeSimulator(FullNodeAPI):
         await self.wait_transaction_records_entered_mempool(records=records)
 
         while True:
-            await self.process_blocks(count=1)
+            await self.farm_blocks_to_puzzlehash(count=1)
 
             found: Set[Coin] = set()
             for coin in coins_to_wait_for:

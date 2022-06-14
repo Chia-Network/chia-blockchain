@@ -278,7 +278,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds - tx_amount
 
-        await full_node_api_0.process_blocks(count=4)
+        await full_node_api_0.farm_blocks_to_puzzlehash(count=4)
         funds -= 10
 
         # Full node height 17, wallet height 15
@@ -293,7 +293,7 @@ class TestWalletSimulator:
         await wallet_1.push_transaction(tx)
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
-        await full_node_api_0.process_blocks(count=4)
+        await full_node_api_0.farm_blocks_to_puzzlehash(count=4)
         funds += 5
 
         await wallet_0.get_confirmed_balance()
@@ -398,7 +398,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds - tx_amount - tx_fee
 
-        funds = await full_node_1.process_blocks(count=num_blocks)
+        funds = await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks)
         funds -= tx_amount + tx_fee
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -575,7 +575,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
 
-        await full_node_1.process_blocks(count=num_blocks)
+        await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks)
 
         # Funds have not decreased because stolen_tx was rejected
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -645,7 +645,7 @@ class TestWalletSimulator:
         await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, target_height_after_reorg)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
-        await full_node_api.process_blocks(count=num_blocks)
+        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
 
         # By this point, the transaction should be confirmed
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
@@ -705,25 +705,25 @@ class TestWalletSimulator:
         funds = 0
         gapped_funds = 0
 
-        funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[0])
-        gapped_funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[210])
-        gapped_funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[114])
+        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[0])
+        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[210])
+        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[114])
         # TODO: why 2?
-        await full_node_api.process_blocks(count=2, guarantee_transaction_blocks=True)
+        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
 
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
-        funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[50])
+        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[50])
         # TODO: why 2?
-        await full_node_api.process_blocks(count=2, guarantee_transaction_blocks=True)
+        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
         funds += gapped_funds
 
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
-        funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[113])
-        funds += await full_node_api.process_blocks(count=1, farm_to=puzzle_hashes[209])
+        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
+        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[209])
         # TODO: why 2?
-        await full_node_api.process_blocks(count=2, guarantee_transaction_blocks=True)
+        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.parametrize(
@@ -782,7 +782,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
         await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
-        await full_node_api.process_blocks(count=num_blocks)
+        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
         funds -= AMOUNT_TO_SEND
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)

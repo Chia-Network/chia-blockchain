@@ -54,7 +54,7 @@ async def test_simulation_process_blocks(
     # Starting at the beginning.
     assert full_node_api.full_node.blockchain.get_peak_height() is None
 
-    await full_node_api.process_blocks(count=count)
+    await full_node_api.farm_blocks_to_puzzlehash(count=count)
 
     # The requested number of blocks had been processed.
     expected_height = None if count == 0 else count
