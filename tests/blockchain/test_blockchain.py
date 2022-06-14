@@ -1,13 +1,9 @@
-# flake8: noqa: F811, F401
-import asyncio
-import dataclasses
 import logging
 import multiprocessing
 import time
 from dataclasses import replace
 from secrets import token_bytes
 from typing import List
-from chia.util.block_cache import BlockCache
 
 import pytest
 from blspy import AugSchemeMPL, G2Element
@@ -15,7 +11,7 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import ReceiveBlockResult, Blockchain
+from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
@@ -46,7 +42,6 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
     _validate_and_add_block_multi_result,
-    check_block_store_invariant,
     _validate_and_add_block_no_error,
 )
 from tests.wallet_tools import WalletTool
@@ -297,7 +292,6 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain, bt):
-        blockchain = empty_blockchain
         for block in bt.get_consecutive_blocks(2, skip_slots=3):
             await _validate_and_add_block(empty_blockchain, block)
 
@@ -1721,7 +1715,7 @@ class TestPreValidation:
                 assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _, _ = await empty_blockchain.receive_block(block, res[n])
+                result, err, _ = await empty_blockchain.receive_block(block, res[n])
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -1775,9 +1769,6 @@ class TestBodyValidation:
             10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         coin1: Coin = tx1.additions()[0]
-        secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
-        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-        public_key = synthetic_secret_key.get_g1()
 
         if opcode == ConditionOpcode.ASSERT_MY_AMOUNT:
             args = [int_to_bytes(coin1.amount)]
@@ -1799,7 +1790,6 @@ class TestBodyValidation:
 
         tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
-        coin2: Coin = tx2.additions()[0]
 
         bundles = SpendBundle.aggregate([tx1, tx2])
         blocks = bt.get_consecutive_blocks(
@@ -1814,8 +1804,11 @@ class TestBodyValidation:
             [blocks[-1]], {}, validate_signatures=False
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
-        repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == (ReceiveBlockResult.NEW_PEAK, None, 2)
+        repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        code, err, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert code == ReceiveBlockResult.NEW_PEAK
+        assert err is None
+        assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
@@ -1855,7 +1848,6 @@ class TestBodyValidation:
 
         tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
-        coin2: Coin = tx2.additions()[0]
 
         bundles = SpendBundle.aggregate([tx1, tx2])
         blocks = bt.get_consecutive_blocks(
@@ -1870,8 +1862,9 @@ class TestBodyValidation:
             [blocks[-1]], {}, validate_signatures=False
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
-        repl_preval_results = dataclasses.replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        assert (await b.receive_block(blocks[-1], repl_preval_results))[0:-1] == expected
+        repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
+        res, error, state_change = await b.receive_block(blocks[-1], repl_preval_results)
+        assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -1954,7 +1947,6 @@ class TestBodyValidation:
     @pytest.mark.asyncio
     async def test_not_tx_block_but_has_data(self, empty_blockchain, bt):
         # 1
-        b = empty_blockchain
         blocks = bt.get_consecutive_blocks(1)
         while blocks[-1].foliage_transaction_block is not None:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -2001,12 +1993,10 @@ class TestBodyValidation:
             "transactions_info",
             None,
         )
-        try:
+        with pytest.raises(AssertionError):
             await _validate_and_add_block_multi_error(
                 b, block, [Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, Err.INVALID_FOLIAGE_BLOCK_PRESENCE]
             )
-        except AssertionError:
-            return None
 
     @pytest.mark.asyncio
     async def test_invalid_transactions_info_hash(self, empty_blockchain, bt):
@@ -2367,7 +2357,7 @@ class TestBodyValidation:
             mempool_mode=False,
             height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2392,7 +2382,7 @@ class TestBodyValidation:
             mempool_mode=False,
             height=softfork_height,
         )
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2418,7 +2408,7 @@ class TestBodyValidation:
             height=softfork_height,
         )
 
-        result, err, _, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
+        result, err, _ = await b.receive_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
 
         # when the CLVM program exceeds cost during execution, it will fail with
@@ -2476,7 +2466,6 @@ class TestBodyValidation:
     @pytest.mark.asyncio
     async def test_invalid_merkle_roots(self, empty_blockchain, bt):
         # 11
-        b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
             guarantee_transaction_block=True,
@@ -2892,7 +2881,6 @@ class TestReorgs:
         b = empty_blockchain
         num_blocks_chain_1 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 10
         num_blocks_chain_2_start = test_constants.EPOCH_BLOCKS - 20
-        num_blocks_chain_2 = 3 * test_constants.EPOCH_BLOCKS + test_constants.MAX_SUB_SLOT_BLOCKS + 8
 
         assert num_blocks_chain_1 < 10000
         blocks = default_1500_blocks[:num_blocks_chain_1]
@@ -2940,8 +2928,6 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain, bt):
         b = empty_blockchain
-        WALLET_A = WalletTool(b.constants)
-        WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 
         blocks = bt.get_consecutive_blocks(15)
 
@@ -3161,7 +3147,6 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
         for coin in list(spend_block.get_included_reward_coins()):
             if coin.puzzle_hash == coinbase_puzzlehash:
                 all_coins.append(coin)
-    spend_bundle_0 = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
 
     # Make sure a ref back into the reorg chain itself works as expected
     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, all_coins.pop())
@@ -3239,10 +3224,8 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
     await b.coin_store.rollback_to_block(2)
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
-    try:
+    with pytest.raises(ValueError):
         await _validate_and_add_block(b, blocks_reorg_chain[-1])
-    except ValueError:
-        pass
 
     assert b.get_peak().height == 19
 
@@ -3345,12 +3328,12 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block1], {}, validate_signatures=False
         )
-        result, err, _, _ = await b.receive_block(block1, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.receive_block(block1, preval[0], fork_point_with_peak=fork_height)
         assert not err
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block2], {}, validate_signatures=False
         )
-        result, err, _, _ = await b.receive_block(block2, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.receive_block(block2, preval[0], fork_point_with_peak=fork_height)
         assert not err
 
     assert b.get_peak().height == 39

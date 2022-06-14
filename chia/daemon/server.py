@@ -34,7 +34,6 @@ from chia.util.keychain import (
     supports_keyring_passphrase,
     supports_os_passphrase_storage,
 )
-from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -142,6 +141,7 @@ class WebSocketServer:
         self.plots_queue: List[Dict] = []
         self.connections: Dict[str, List[WebSocketResponse]] = dict()  # service_name : [WebSocket]
         self.remote_address_map: Dict[WebSocketResponse, str] = dict()  # socket: service_name
+        self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
@@ -205,6 +205,7 @@ class WebSocketServer:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
     async def stop(self) -> Dict[str, Any]:
+        self.cancel_task_safe(self.ping_job)
         jobs = []
         for service_name in self.services.keys():
             jobs.append(kill_service(self.root_path, self.services, service_name))
@@ -269,6 +270,28 @@ class WebSocketServer:
                 else:
                     after_removal.append(connection)
             self.connections[service_name] = after_removal
+
+    async def ping_task(self) -> None:
+        restart = True
+        await asyncio.sleep(30)
+        for remote_address, service_name in self.remote_address_map.items():
+            if service_name in self.connections:
+                sockets = self.connections[service_name]
+                for socket in sockets:
+                    try:
+                        self.log.debug(f"About to ping: {service_name}")
+                        await socket.ping()
+                    except asyncio.CancelledError:
+                        self.log.warning("Ping task received Cancel")
+                        restart = False
+                        break
+                    except Exception:
+                        self.log.exception("Ping error")
+                        self.log.error("Ping failed, connection closed.")
+                        self.remove_connection(socket)
+                        await socket.close()
+        if restart is True:
+            self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
@@ -613,7 +636,7 @@ class WebSocketServer:
 
         response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -672,7 +695,7 @@ class WebSocketServer:
 
         response = create_payload("state_changed", message, service, "wallet_ui")
 
-        for websocket in websockets:
+        for websocket in websockets.copy():
             try:
                 await websocket.send_str(response)
             except Exception as e:
@@ -868,7 +891,10 @@ class WebSocketServer:
         exclude_final_dir: bool = job["exclude_final_dir"]
         log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
         if not exclude_final_dir:
-            add_plot_directory(self.root_path, final_dir)
+            try:
+                add_plot_directory(self.root_path, final_dir)
+            except ValueError as e:
+                log.warning(f"_post_process_plotting_job: {e}")
 
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
@@ -1147,6 +1173,8 @@ class WebSocketServer:
             }
         else:
             self.remote_address_map[websocket] = service
+            if self.ping_job is None:
+                self.ping_job = asyncio.create_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response
@@ -1205,7 +1233,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         if plotter_path.exists():
             plotter_path.unlink()
     else:
-        mkdir(plotter_path.parent)
+        plotter_path.parent.mkdir(parents=True, exist_ok=True)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
     process = subprocess.Popen(
@@ -1219,7 +1247,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
-        mkdir(pid_path.parent)
+        pid_path.parent.mkdir(parents=True, exist_ok=True)
         with open(pid_path, "w") as f:
             f.write(f"{process.pid}\n")
     except Exception:
@@ -1266,7 +1294,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
-        mkdir(pid_path.parent)
+        pid_path.parent.mkdir(parents=True, exist_ok=True)
         with open(pid_path, "w") as f:
             f.write(f"{process.pid}\n")
     except Exception:
@@ -1332,7 +1360,7 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     """
 
     if not lockfile.parent.exists():
-        mkdir(lockfile.parent)
+        lockfile.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         if has_fcntl:
@@ -1401,13 +1429,13 @@ def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
     return result
 
 
-def main(argv) -> int:
+def main() -> int:
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.keychain import Keychain
 
-    wait_for_unlock = "--wait-for-unlock" in argv and Keychain.is_keyring_locked()
+    wait_for_unlock = "--wait-for-unlock" in sys.argv[1:] and Keychain.is_keyring_locked()
     return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

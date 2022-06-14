@@ -2,22 +2,16 @@ import logging
 import threading
 import time
 import traceback
+from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
-from concurrent.futures.thread import ThreadPoolExecutor
 
 from blspy import G1Element
 from chiapos import DiskProver
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import (
-    PlotInfo,
-    PlotRefreshResult,
-    PlotsRefreshParameter,
-    PlotRefreshEvents,
-    get_plot_filenames,
-)
+from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
 from chia.util.generator_tools import list_to_batches
 
 log = logging.getLogger(__name__)
@@ -99,11 +93,11 @@ class PlotManager:
     def public_keys_available(self):
         return len(self.farmer_public_keys) and len(self.pool_public_keys)
 
-    def plot_count(self):
+    def plot_count(self) -> int:
         with self:
             return len(self.plots)
 
-    def get_duplicates(self):
+    def get_duplicates(self) -> List[Path]:
         result = []
         for plot_filename, paths_entry in self.plot_filename_paths.items():
             _, duplicated_paths = paths_entry
@@ -121,13 +115,13 @@ class PlotManager:
             self._refresh_thread = threading.Thread(target=self._refresh_task, args=(sleep_interval_ms,))
             self._refresh_thread.start()
 
-    def stop_refreshing(self):
+    def stop_refreshing(self) -> None:
         self._refreshing_enabled = False
         if self._refresh_thread is not None and self._refresh_thread.is_alive():
             self._refresh_thread.join()
             self._refresh_thread = None
 
-    def trigger_refresh(self):
+    def trigger_refresh(self) -> None:
         log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
@@ -184,7 +178,7 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(list(plot_paths), self.refresh_parameter.batch_size):
+                for remaining, batch in list_to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
