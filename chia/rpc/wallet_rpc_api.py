@@ -137,6 +137,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
+            "/nft_get_wallet_did": self.nft_get_wallet_did,
             "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
@@ -1404,6 +1405,20 @@ class WalletRpcApi:
                 return {"wallet_id": wallet.wallet_id, "success": True}
         return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
 
+    async def nft_get_wallet_did(self, request) -> Dict:
+        wallet_id = uint32(request["wallet_id"])
+        assert self.service.wallet_state_manager is not None
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if nft_wallet is not None:
+            if type(nft_wallet) != NFTWallet:
+               return {"success": False, "error": f"Wallet {wallet_id} is not an NFT wallet"}
+            did_bytes: Optional[bytes32] = nft_wallet.get_did()
+            did_id = ""
+            if did_bytes is not None:
+                did_id = encode_puzzle_hash(did_bytes, DID_HRP)
+            return {"success": True, "did_id": None if len(did_id) == 0 else did_id}
+        return {"success": False, "error": f"Wallet {wallet_id} not found"}
+
     async def nft_get_wallets_with_dids(self, request) -> Dict:
         assert self.service.wallet_state_manager is not None
         all_wallets = self.service.wallet_state_manager.wallets.values()
@@ -1424,7 +1439,8 @@ class WalletRpcApi:
                         did_nft_wallets.append(
                             {
                                 "wallet_id": wallet.id(),
-                                "did_id": nft_wallet_did.hex(),
+                                # "did_id": nft_wallet_did.hex(),
+                                "did_id": encode_puzzle_hash(nft_wallet_did, DID_HRP),
                                 "did_wallet_id": did_wallet_id,
                             }
                         )
