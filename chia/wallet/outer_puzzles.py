@@ -60,11 +60,15 @@ def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optiona
     return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)  # type: ignore
 
 
+def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+    return driver_lookup[AssetType(constructor.type())].get_inner_solution(constructor, solution)  # type: ignore
+
+
 def create_asset_id(constructor: PuzzleInfo) -> bytes32:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)  # type: ignore
 
 
-function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle]
+function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution]
 
 driver_lookup: Dict[AssetType, Any] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),

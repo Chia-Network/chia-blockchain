@@ -48,6 +48,7 @@ class TransferProgramPuzzle:
     _construct: Any
     _solve: Any
     _get_inner_puzzle: Any
+    _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_transfer_program_puzzle(puzzle)
@@ -72,6 +73,9 @@ class TransferProgramPuzzle:
         )
 
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+        return None
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:

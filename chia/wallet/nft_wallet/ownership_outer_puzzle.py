@@ -35,6 +35,7 @@ class OwnershipOuterPuzzle:
     _construct: Any
     _solve: Any
     _get_inner_puzzle: Any
+    _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle)
@@ -80,6 +81,14 @@ class OwnershipOuterPuzzle:
                 return inner_puzzle
         else:
             raise ValueError("This driver is not for the specified puzzle reveal")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        my_inner_solution: Program = solution.first()
+        if constructor.also():
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+            return deep_inner_solution
+        else:
+            return my_inner_solution
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         if constructor.also() is not None:

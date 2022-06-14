@@ -24,6 +24,7 @@ class CATOuterPuzzle:
     _construct: Any
     _solve: Any
     _get_inner_puzzle: Any
+    _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_cat_puzzle(puzzle)
@@ -51,6 +52,14 @@ class CATOuterPuzzle:
                 return inner_puzzle
         else:
             raise ValueError("This driver is not for the specified puzzle reveal")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        my_inner_solution: Program = solution.first()
+        if constructor.also():
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+            return deep_inner_solution
+        else:
+            return my_inner_solution
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
         return bytes32(constructor["tail"])
