@@ -207,10 +207,24 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             ownership_puzzle.get_tree_hash(),
             b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
+        harmless_announcement = Announcement(
+            ownership_puzzle.get_tree_hash(),
+            b"oy",
+        )
         update_everything_spend = CoinSpend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, TARGET_OWNER, TARGET_TP], [63, expected_announcement.name()]]]),
+            Program.to(
+                [
+                    [
+                        [51, ACS_PH, 1],
+                        [-10, TARGET_OWNER, TARGET_TP],
+                        [62, harmless_announcement.message],  # create a harmless puzzle announcement
+                        [63, expected_announcement.name()],
+                        [63, harmless_announcement.name()],
+                    ]
+                ]
+            ),
         )
         update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
         result = await sim_client.push_tx(update_everything_bundle)

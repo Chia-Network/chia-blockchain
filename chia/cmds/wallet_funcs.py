@@ -539,13 +539,23 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
             spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            my_did: Optional[str] = None
             print()
             print(f"{summary['name']}:")
             print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
             print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
-            if len(asset_id) > 0:
+            if typ == WalletType.DISTRIBUTED_ID:
+                get_did_response = await wallet_client.get_did_id(wallet_id)
+                my_did = get_did_response["my_did"]
+                print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif typ == WalletType.NFT:
+                get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
+                my_did = get_did_response["did_id"]
+                if my_did is not None and len(my_did) > 0:
+                    print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif len(asset_id) > 0:
                 print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
             print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
@@ -761,23 +771,20 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
         response = await wallet_client.list_nfts(wallet_id)
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
-            from chia.wallet.nft_wallet.nft_info import NFTInfo
+            from chia.wallet.did_wallet.did_info import DID_HRP
+            from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 
             indent: str = "   "
 
             for n in nft_list:
                 nft = NFTInfo.from_json_dict(n)
-                if nft.owner_pubkey is None:
-                    owner_pubkey = None
-                else:
-                    owner_pubkey = nft.owner_pubkey.hex()
                 print()
+                print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
                 print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
                 print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
                 print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
                 print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
-                print(f"{'Owner DID:'.ljust(26)} {nft.owner_did}")
-                print(f"{'Owner pubkey:'.ljust(26)} {owner_pubkey}")
+                print(f"{'Owner DID:'.ljust(26)} {encode_puzzle_hash(nft.owner_did, DID_HRP)}")
                 print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
                 print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
                 print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
