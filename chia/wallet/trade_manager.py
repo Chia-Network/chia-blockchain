@@ -540,13 +540,16 @@ class TradeManager:
                 removal_dict.setdefault(wallet_id, [])
                 removal_dict[wallet_id].append(removal)
 
+        all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
+
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
             to_puzzle_hash = bytes32([1] * 32)  # We use all zeros to be clear not to send here
             removal_tree_hash = Program.to([coin_as_list(rem) for rem in grouped_removals]).get_tree_hash()
             # We also need to calculate the sent amount
             removed: int = sum(c.amount for c in grouped_removals)
-            change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
+            potential_change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
+            change_coins: List[Coin] = [c for c in potential_change_coins if c.parent_coin_info in all_removals]
             change_amount: int = sum(c.amount for c in change_coins)
             sent_amount: int = removed - change_amount
             txs.append(
@@ -573,38 +576,34 @@ class TradeManager:
         return txs
 
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        potential_special_offer: Optional[Offer] = await self.check_for_special_offer_taking(offer, fee=fee)
-        if potential_special_offer is not None:
-            complete_offer: Offer = potential_special_offer
-        else:
-            take_offer_dict: Dict[Union[bytes32, int], int] = {}
-            arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
-            for asset_id, amount in arbitrage.items():
-                if asset_id is None:
-                    wallet = self.wallet_state_manager.main_wallet
-                    key: Union[bytes32, int] = int(wallet.id())
+        take_offer_dict: Dict[Union[bytes32, int], int] = {}
+        arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
+        for asset_id, amount in arbitrage.items():
+            if asset_id is None:
+                wallet = self.wallet_state_manager.main_wallet
+                key: Union[bytes32, int] = int(wallet.id())
+            else:
+                # ATTENTION: new wallets
+                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                if wallet is None and amount < 0:
+                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
+                elif wallet is None or wallet.type() == WalletType.NFT:
+                    key = asset_id
                 else:
-                    # ATTENTION: new wallets
-                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                    if wallet is None and amount < 0:
-                        return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                    elif wallet is None or wallet.type() == WalletType.NFT:
-                        key = asset_id
-                    else:
-                        key = int(wallet.id())
-                take_offer_dict[key] = amount
+                    key = int(wallet.id())
+            take_offer_dict[key] = amount
 
-            # First we validate that all of the coins in this offer exist
-            valid: bool = await self.check_offer_validity(offer)
-            if not valid:
-                return False, None, "This offer is no longer valid"
+        # First we validate that all of the coins in this offer exist
+        valid: bool = await self.check_offer_validity(offer)
+        if not valid:
+            return False, None, "This offer is no longer valid"
 
-            success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
-            if not success or take_offer is None:
-                return False, None, error
+        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
+        if not success or take_offer is None:
+            return False, None, error
 
-            complete_offer = Offer.aggregate([offer, take_offer])
-            assert complete_offer.is_valid()
+        complete_offer = Offer.aggregate([offer, take_offer])
+        assert complete_offer.is_valid()
 
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
 

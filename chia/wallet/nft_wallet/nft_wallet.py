@@ -863,11 +863,11 @@ class NFTWallet:
         if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
             raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
 
-        offered_asset_id = list(offer_dict.items())[0][0]
-        if offered_asset_id is None:
+        first_asset_id = list(offer_dict.items())[0][0]
+        if first_asset_id is None:
             nft: bool = False
         else:
-            nft = driver_dict[offered_asset_id].check_type(
+            nft = driver_dict[first_asset_id].check_type(
                 [
                     AssetType.SINGLETON.value,
                     AssetType.METADATA.value,
@@ -876,8 +876,14 @@ class NFTWallet:
             )
 
         offered: bool = list(offer_dict.items())[0][1] < 0
+        if offered:
+            offered_asset_id: Optional[bytes32] = first_asset_id
+            requested_asset_id: Optional[bytes32] = list(offer_dict.items())[1][0]
+        else:
+            offered_asset_id = list(offer_dict.items())[1][0]
+            requested_asset_id = first_asset_id
 
-        if nft and offered:
+        if nft == offered:
             assert offered_asset_id is not None  # hello mypy
             wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
             p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
@@ -905,12 +911,8 @@ class NFTWallet:
             transaction_bundles: List[SpendBundle] = [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
             total_spend_bundle = SpendBundle.aggregate(transaction_bundles)
 
-            # Clear the owner field in the driver dict
-            driver_dict[offered_asset_id].info["also"]["also"]["owner"] = "()"
-
             return Offer(notarized_payments, total_spend_bundle, driver_dict)
         else:
-            requested_asset_id: Optional[bytes32] = list(offer_dict.items())[0][0]
             assert isinstance(requested_asset_id, bytes32)
             requested_info = driver_dict[requested_asset_id]
             transfer_info = requested_info.also().also()  # type: ignore
@@ -921,7 +923,6 @@ class NFTWallet:
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {
                 requested_asset_id: [Payment(p2_ph, uint64(offer_dict[requested_asset_id]), [p2_ph])]
             }
-            offered_asset_id = list(offer_dict.items())[1][0]
             offered_amount = uint64(abs(offer_dict[offered_asset_id]))
             royalty_amount = uint64(offered_amount * royalty_percentage / 10000)
             if offered_amount == royalty_amount:
@@ -941,6 +942,17 @@ class NFTWallet:
 
             notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
+            # Calculate the royalty announcement separately
+            announcements_to_assert.extend(
+                Offer.calculate_announcements(
+                    {
+                        offered_asset_id: [
+                            NotarizedPayment(royalty_address, royalty_amount, [royalty_address], requested_asset_id)
+                        ]
+                    },
+                    driver_dict,
+                )
+            )
 
             if wallet.type() == WalletType.STANDARD_WALLET:
                 tx = await wallet.generate_signed_transaction(
@@ -973,7 +985,7 @@ class NFTWallet:
             assert royalty_coin
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
-            royalty_sol = Program.to([[offered_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
+            royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
             royalty_spend = SpendBundle([CoinSpend(royalty_coin, OFFER_MOD, royalty_sol)], G2Element())
 
             total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])

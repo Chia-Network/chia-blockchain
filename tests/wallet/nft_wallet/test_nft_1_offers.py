@@ -23,6 +23,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.trading.offer import Offer
 from chia.wallet.util.compute_memos import compute_memos
 
 # from chia.wallet.util.wallet_types import WalletType
@@ -145,7 +146,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
 
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
-    # trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
+    trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 1
@@ -169,6 +170,17 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     assert success is True
     assert error is None
     assert trade_make is not None
+
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(trade_make.offer), fee=uint64(1)
+    )
+    await asyncio.sleep(1)
+    assert error is None
+    assert success is True
+    assert trade_take is not None
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
 
 
 @pytest.mark.parametrize(
@@ -275,7 +287,7 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
-    # trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
+    trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
     coins_maker = nft_wallet_maker.nft_wallet_info.my_nft_coins
     assert len(coins_maker) == 0
@@ -299,3 +311,14 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     assert success is True
     assert error is None
     assert trade_make is not None
+
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(trade_make.offer), fee=uint64(1)
+    )
+    await asyncio.sleep(1)
+    assert error is None
+    assert success is True
+    assert trade_take is not None
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))

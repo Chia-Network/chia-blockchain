@@ -146,7 +146,7 @@ class Offer:
 
             parent_puzzle: Program = parent_spend.puzzle_reveal.to_program()
             parent_solution: Program = parent_spend.solution.to_program()
-            additions: List[Coin] = parent_spend.additions()
+            additions: List[Coin] = [a for a in parent_spend.additions() if a not in self.bundle.removals()]
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
@@ -167,7 +167,7 @@ class Offer:
                                 a
                                 for a in additions_w_amount
                                 if a.puzzle_hash
-                                == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash(OFFER_HASH)
+                                == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash(OFFER_HASH)  # type: ignore
                             ]
                             if len(additions_w_amount_and_puzhash) == 1:
                                 coins_for_this_spend.append(additions_w_amount_and_puzhash[0])
