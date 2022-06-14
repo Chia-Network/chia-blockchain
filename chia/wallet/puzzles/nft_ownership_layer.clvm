@@ -87,14 +87,12 @@
             )
          )
        )
-       (assert odd_args
-         ; then
-         (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
-            (if tp_output
-                tp_output
-                (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
-            )
-         )
+       ; odd_args is guaranteed to not be nil or else we'll have a path into atom error
+       (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
+          (if tp_output
+              tp_output
+              (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
+          )
        )
      )
    )
@@ -111,7 +109,7 @@
       CURRENT_OWNER
       conditions
       conditions
-      () () () () ()
+      () ()
     )
   )
 
