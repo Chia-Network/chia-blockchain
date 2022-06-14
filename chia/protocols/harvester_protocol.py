@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple
 
 from blspy import G1Element, G2Element
-from typing_extensions import Protocol
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -104,15 +103,6 @@ class PlotSyncIdentifier(Streamable):
     timestamp: uint64
     sync_id: uint64
     message_id: uint64
-
-
-class PlotSyncMessage(Protocol):
-    @property
-    def identifier(self) -> PlotSyncIdentifier:
-        pass
-
-
-T_PlotSyncMessage = TypeVar("T_PlotSyncMessage", bound=PlotSyncMessage)
 
 
 @streamable

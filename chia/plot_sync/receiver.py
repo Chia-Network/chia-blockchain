@@ -14,7 +14,7 @@ from chia.plot_sync.exceptions import (
     PlotSyncException,
     SyncIdsMatchError,
 )
-from chia.plot_sync.util import ErrorCodes, State
+from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
@@ -24,7 +24,6 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncResponse,
     PlotSyncStart,
-    T_PlotSyncMessage,
 )
 from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
 from chia.types.blockchain_format.sized_bytes import bytes32
