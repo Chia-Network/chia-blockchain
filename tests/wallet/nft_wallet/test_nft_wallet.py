@@ -112,6 +112,7 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 1
     nft_wallet_1: NFTWallet = wallet_node_1.wallet_state_manager.wallets[nft_wallets[0].id]
+    await time_out_assert(15, len, 0, nft_wallet_0.nft_wallet_info.my_nft_coins)
     await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
     coins = nft_wallet_0.nft_wallet_info.my_nft_coins
     assert len(coins) == 0
