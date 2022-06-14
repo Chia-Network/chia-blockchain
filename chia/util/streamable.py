@@ -114,13 +114,13 @@ def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
 def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Collection[Any]) -> Tuple[Any, ...]:
     if len(items) != len(convert_funcs):
         raise ValueError(f"Invalid size. Expected: {len(convert_funcs)}, got: {len(items)}")
-    if type(items) != tuple and type(items) != list:
+    if not isinstance(items, (list, tuple)):
         raise TypeError(f"expected: tuple or list, actual: {type(items).__name__}")
     return tuple(convert_func(item) for convert_func, item in zip(convert_funcs, items))
 
 
 def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
-    if type(items) != list:
+    if not isinstance(items, list):
         raise TypeError(f"expected: list, actual: {type(items).__name__}")
     return [convert_func(item) for item in items]
 
@@ -135,7 +135,7 @@ def convert_hex_string(item: str) -> bytes:
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
     if not isinstance(item, bytes):
         item = convert_hex_string(item)
@@ -146,7 +146,7 @@ def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
 
 
 def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
     if not isinstance(item, bytes):
         item = convert_hex_string(item)
@@ -160,7 +160,7 @@ def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
 
 
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
     try:
         return f_type(item)
@@ -173,9 +173,9 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
     """
-    if type(item) == klass:
+    if isinstance(item, klass):
         return item
-    if type(item) != dict:
+    if not isinstance(item, dict):
         raise TypeError(f"expected: dict, actual: {type(item).__name__}")
 
     if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
