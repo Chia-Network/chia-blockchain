@@ -645,9 +645,10 @@ class DataLayerWallet:
         collected = []
 
         for launcher_id in launcher_ids:
-            # TODO: only confirmed?
             singleton_record = await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id=launcher_id)
-            assert singleton_record is not None
+            if singleton_record is None:
+                # this is likely due to a race between getting the list and acquiring the extra data
+                continue
 
             inner_puzzle_derivation: Optional[
                 DerivationRecord
