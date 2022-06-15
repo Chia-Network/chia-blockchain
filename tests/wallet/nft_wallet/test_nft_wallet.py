@@ -102,7 +102,9 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     coins = nft_wallet_0.nft_wallet_info.my_nft_coins
     assert len(coins) == 1, "nft not generated"
 
-    txs = await nft_wallet_0.generate_signed_transaction([coins[0].coin.amount], [ph1], coins=set([coins[0].coin]))
+    txs = await nft_wallet_0.generate_signed_transaction(
+        [uint64(coins[0].coin.amount)], [ph1], coins=set([coins[0].coin])
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_0.wallet_state_manager.add_pending_transaction(txs[0])
@@ -219,7 +221,9 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
-    txs = await nft_wallet_0.generate_signed_transaction([coins[1].coin.amount], [ph1], coins=set([coins[1].coin]))
+    txs = await nft_wallet_0.generate_signed_transaction(
+        [uint64(coins[1].coin.amount)], [ph1], coins=set([coins[1].coin])
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_0.wallet_state_manager.add_pending_transaction(txs[0])
@@ -237,7 +241,9 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
     await time_out_assert(15, wallet_1.get_pending_change_balance, 0)
     # Send it back to original owner
-    txs = await nft_wallet_1.generate_signed_transaction([coins[0].coin.amount], [ph], coins=set([coins[0].coin]))
+    txs = await nft_wallet_1.generate_signed_transaction(
+        [uint64(coins[0].coin.amount)], [ph], coins=set([coins[0].coin])
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_1.wallet_state_manager.add_pending_transaction(txs[0])
