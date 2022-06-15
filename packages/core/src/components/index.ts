@@ -52,6 +52,7 @@ export { default as Logo } from './Logo';
 export { ModeProvider } from './Mode';
 export { default as ModalDialogs, ModalDialogsProvider } from './ModalDialogs';
 export { default as More } from './More';
+export { default as Persist } from './Persist';
 export { default as TextFieldNumber } from './TextFieldNumber';
 export { default as PrivateRoute } from './PrivateRoute';
 export { default as RadioGroup } from './RadioGroup';

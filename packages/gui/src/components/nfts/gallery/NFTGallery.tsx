@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, useTrans } from '@chia/core';
+import { Flex, LayoutDashboardSub, Loading, useTrans, usePersistState } from '@chia/core';
 import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
@@ -28,7 +28,11 @@ export default function NFTGallery() {
   );
   const isLoading = isLoadingWallets || isLoadingNFTs;
   const [search, setSearch] = useState<string>('');
-  const [walletId, setWalletId] = useState<number | undefined>();
+
+  const [walletId, setWalletId] = usePersistState<
+    number | undefined
+  >(undefined, 'nft-profile-dropdown');
+
   const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
@@ -74,7 +78,7 @@ export default function NFTGallery() {
       // sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
       header={
         <Flex gap={2} alignItems="center" flexWrap="wrap" justifyContent="space-between">
-          <NFTProfileDropdown onChange={setWalletId} />
+          <NFTProfileDropdown onChange={setWalletId} walletId={walletId} />
           <Flex
             justifyContent="flex-end"
             alignItems="center"

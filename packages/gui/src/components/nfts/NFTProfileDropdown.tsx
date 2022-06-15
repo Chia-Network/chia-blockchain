@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import type { Wallet } from '@chia/api';
-import { DropdownActions } from '@chia/core';
+import { DropdownActions, usePersistState } from '@chia/core';
 import {
   AutoAwesome as AutoAwesomeIcon,
   PermIdentity as PermIdentityIcon,
@@ -53,16 +53,14 @@ function useProfiles() {
 }
 
 export type NFTGallerySidebarProps = {
+  walletId?: number;
   onChange: (walletId?: number) => void;
 };
 
 export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
-  const { onChange } = props;
+  const { onChange, walletId } = props;
   const { isLoading: isLoadingProfiles, data: profiles } = useProfiles();
   const { wallets: nftWallets, isLoadingNFTWallets } = useGetNFTWallets();
-  const [selectedWalletId, setSelectedWalletId] = useState<
-    number | undefined
-  >();
 
   const inbox: Wallet | undefined = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets) {
@@ -74,7 +72,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
       profiles.map((profile) => profile.nftWalletId),
     );
     const inboxWalletId = nftWalletIds.find(
-      (walletId) => !profileWalletIds.has(walletId),
+      (nftWalletId) => !profileWalletIds.has(nftWalletId),
     );
     return nftWallets.find((wallet) => wallet.walletId === inboxWalletId);
   }, [profiles, nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
@@ -84,24 +82,25 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
       return 'Loading...';
     }
 
-    if (inbox && selectedWalletId === inbox) {
+    if (inbox && inbox.id === walletId) {
       return <Trans>NFT Inbox</Trans>;
     }
 
     const profile = profiles?.find(
-      (item: Profile) => item.nftWalletId === selectedWalletId,
+      (item: Profile) => item.nftWalletId === walletId,
     );
+
     return profile?.name || <Trans>All Profiles</Trans>;
   }, [
     profiles,
     nftWallets,
     isLoadingProfiles,
     isLoadingNFTWallets,
-    selectedWalletId,
+    walletId,
+    inbox,
   ]);
 
   function handleWalletChange(newWalletId?: number) {
-    setSelectedWalletId(newWalletId);
     onChange?.(newWalletId);
   }
 
@@ -121,7 +120,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
               onClose();
               handleWalletChange();
             }}
-            selected={selectedWalletId === undefined}
+            selected={walletId === undefined}
           >
             <ListItemIcon>
               <AutoAwesomeIcon />
@@ -135,7 +134,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
                 onClose();
                 handleWalletChange(inbox.id);
               }}
-              selected={selectedWalletId === inbox.id}
+              selected={walletId === inbox.id}
             >
               <ListItemIcon>
                 <NFTsSmallIcon />
@@ -150,7 +149,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
                 onClose();
                 handleWalletChange(profile.nftWalletId);
               }}
-              selected={profile.nftWalletId === selectedWalletId}
+              selected={profile.nftWalletId === walletId}
             >
               <ListItemIcon>
                 <PermIdentityIcon />

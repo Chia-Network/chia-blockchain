@@ -6,6 +6,8 @@ export { default as useLocalStorage } from './useLocalStorage';
 export { default as useMode } from './useMode';
 export { default as useOpenDialog } from './useOpenDialog';
 export { default as useOpenExternal } from './useOpenExternal';
+export { default as usePersist } from './usePersist';
+export { default as usePersistState } from './usePersistState';
 export { default as useShowSaveDialog } from './useShowSaveDialog';
 export { default as useShowDebugInformation } from './useShowDebugInformation';
 export { default as useShowError } from './useShowError';
