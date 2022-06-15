@@ -777,10 +777,6 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
 
             for n in nft_list:
                 nft = NFTInfo.from_json_dict(n)
-                if nft.owner_pubkey is None:
-                    owner_pubkey = None
-                else:
-                    owner_pubkey = nft.owner_pubkey.hex()
                 print()
                 print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
                 print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
@@ -788,7 +784,6 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
                 print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
                 print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
                 print(f"{'Owner DID:'.ljust(26)} {encode_puzzle_hash(nft.owner_did, DID_HRP)}")
-                print(f"{'Owner pubkey:'.ljust(26)} {owner_pubkey}")
                 print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
                 print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
                 print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
