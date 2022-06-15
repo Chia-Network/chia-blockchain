@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { t, Trans } from '@lingui/macro';
-import { CopyToClipboard } from '@chia/core';
+import { CopyToClipboard, Loading, Flex } from '@chia/core';
 import { useGetCurrentAddressQuery, useGetNextAddressMutation } from '@chia/api-react';
 import {
   TextField,
@@ -19,12 +19,18 @@ export default function WalletReceiveAddressField(props: WalletReceiveAddressPro
     walletId,
   });
   const [newAddress] = useGetNextAddressMutation();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   async function handleNewAddress() {
-    await newAddress({
-      walletId,
-      newAddress: true,
-    }).unwrap();
+    try {
+      setIsLoading(true);
+      await newAddress({
+        walletId,
+        newAddress: true,
+      }).unwrap();
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -37,9 +43,15 @@ export default function WalletReceiveAddressField(props: WalletReceiveAddressPro
         readOnly: true,
         startAdornment: (
           <InputAdornment position="start">
-            <IconButton onClick={handleNewAddress} size="small">
-              <Autorenew />
-            </IconButton>
+            <Flex justifyContent="center" minWidth={35}>
+              {isLoading ? (
+                <Loading size="1em" />
+              ) : (
+                <IconButton onClick={handleNewAddress} size="small">
+                  <Autorenew />
+                </IconButton>
+            )}
+            </Flex>
           </InputAdornment>
         ),
         endAdornment: (
