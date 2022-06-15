@@ -73,7 +73,6 @@ class DataLayer:
     async def _start(self) -> bool:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
-        self.batch_update_db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
@@ -113,22 +112,21 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        async with self.batch_update_db_wrapper.locked_transaction(lock=True):
-            t1 = time.monotonic()
-            await self.data_store.insert_batch(tree_id, changelist, lock=False)
-            t2 = time.monotonic()
-            self.log.info(f"Data store batch update process time: {t2 - t1}.")
-            root = await self.data_store.get_tree_root(tree_id=tree_id, lock=False)
-            # todo return empty node hash from get_tree_root
-            if root.node_hash is not None:
-                node_hash = root.node_hash
-            else:
-                node_hash = self.none_bytes  # todo change
-            transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-            assert transaction_record
-            # todo register callback to change status in data store
-            # await self.data_store.change_root_status(root, Status.COMMITTED)
-            return transaction_record
+        t1 = time.monotonic()
+        await self.data_store.insert_batch(tree_id, changelist, lock=True)
+        t2 = time.monotonic()
+        self.log.info(f"Data store batch update process time: {t2 - t1}.")
+        root = await self.data_store.get_tree_root(tree_id=tree_id, lock=True)
+        # todo return empty node hash from get_tree_root
+        if root.node_hash is not None:
+            node_hash = root.node_hash
+        else:
+            node_hash = self.none_bytes  # todo change
+        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
+        assert transaction_record
+        # todo register callback to change status in data store
+        # await self.data_store.change_root_status(root, Status.COMMITTED)
+        return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
