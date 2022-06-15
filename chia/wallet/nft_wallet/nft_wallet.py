@@ -220,7 +220,7 @@ class NFTWallet:
             return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, delegated_puz_solution, p2_puzzle)
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program())
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -913,6 +913,7 @@ class NFTWallet:
             return Offer(notarized_payments, total_spend_bundle, driver_dict)
         else:
             assert isinstance(requested_asset_id, bytes32)
+            driver_dict[requested_asset_id].info["also"]["also"]["owner"] = "()"
             requested_info = driver_dict[requested_asset_id]
             transfer_info = requested_info.also().also()  # type: ignore
             assert isinstance(transfer_info, PuzzleInfo)

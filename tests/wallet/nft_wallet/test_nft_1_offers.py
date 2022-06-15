@@ -86,6 +86,8 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
     await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(10, wallet_taker.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
 
@@ -135,7 +137,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
     await time_out_assert(10, len, 1, nft_wallet_maker.nft_wallet_info.my_nft_coins)
 
@@ -158,12 +160,11 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     xch_requested = 1000
     maker_fee = uint64(433)
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_to_offer_asset_id: nft_to_offer_info}
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_did_nft_for_xch, driver_dict, fee=maker_fee
+        offer_did_nft_for_xch, {}, fee=maker_fee
     )
 
     await asyncio.sleep(1)
@@ -181,6 +182,9 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+
+    await time_out_assert(5, len, 0, nft_wallet_maker.nft_wallet_info.my_nft_coins)
+    await time_out_assert(5, len, 1, nft_wallet_taker.nft_wallet_info.my_nft_coins)
 
 
 @pytest.mark.parametrize(

@@ -282,12 +282,12 @@ def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: Serializ
     return metadata, puzhash_for_derivation
 
 
-def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Program) -> Program:
+def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program) -> Program:
     log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
-    conditions = solution.at("frfr").as_iter()
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
     new_did_id = None
     new_puzhash = None
-    for condition in conditions:
+    for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom
@@ -296,5 +296,5 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Progra
     # assert new_puzhash and new_did_id
     log.debug(f"Found NFT puzzle details: {new_did_id} {new_puzhash}")
     assert unft.transfer_program
-    inner_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, sp2_puzzle)
+    inner_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, unft.p2_puzzle)
     return inner_puzzle
