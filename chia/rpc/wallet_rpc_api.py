@@ -1462,7 +1462,17 @@ class WalletRpcApi:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash, fee=fee)
+            txs = await nft_wallet.generate_signed_transaction(
+                [nft_coin_info.coin.amount],
+                [puzzle_hash],
+                coins=[nft_coin_info.coin],
+                fee=fee,
+            )
+            spend_bundle: Optional[SpendBundle] = None
+            for tx in txs:
+                if tx.spend_bundle is not None:
+                    spend_bundle = tx.spend_bundle
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
