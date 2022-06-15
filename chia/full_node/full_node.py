@@ -360,7 +360,6 @@ class FullNode:
             lasst_segment_exists = await self.weight_proof_handler_v2.check_prev_sub_epoch_segments()
             if not lasst_segment_exists:
                 return
-        self.log.info(f"v2 on  !!!!!!!!!!!!!!!!!")
         self.server.add_capabilities([(uint16(Capability.WP.value), "1")])
 
     def set_server(self, server: ChiaServer):
