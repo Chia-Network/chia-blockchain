@@ -711,7 +711,6 @@ class NFTWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        ignore_max_send_amount: bool = False,
         new_owner: Optional[bytes32] = None,
         new_did_inner_hash: Optional[bytes32] = None,
         trade_prices_list: Optional[Program] = None,
@@ -736,6 +735,9 @@ class NFTWallet:
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+            new_owner=new_owner,
+            new_did_inner_hash=new_did_inner_hash,
+            trade_prices_list=trade_prices_list,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
 

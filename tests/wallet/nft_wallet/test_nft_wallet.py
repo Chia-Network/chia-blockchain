@@ -19,6 +19,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -923,14 +924,15 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     while time_left > 0:
         coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
         if coins_response.get("nft_list"):
-            break
+            pass
         await asyncio.sleep(0.5)
         time_left -= 0.5
     assert coins_response["nft_list"], isinstance(coins_response, dict)
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     assert len(coins) == 1
-
+    coin = coins[0]
+    assert coin.owner_did.hex() == hex_did_id
     try:
         wallet_1.wallet_state_manager.wallets[2]
         raise AssertionError("NFT wallet shouldn't exist yet")
@@ -963,6 +965,9 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
 
     nft_wallet_1 = wallet_1.wallet_state_manager.wallets[2]
     await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
+    coin = nft_wallet_1.nft_wallet_info.my_nft_coins[0]
+    unft = UncurriedNFT.uncurry(coin.full_puzzle)
+    assert not unft.owner_did, "NFT DID was not reset on transfer"
 
 
 @pytest.mark.parametrize(
