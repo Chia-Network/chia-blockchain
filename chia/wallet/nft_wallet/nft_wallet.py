@@ -890,14 +890,13 @@ class NFTWallet:
             offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
             offered_coin_info = wallet.get_nft(offered_asset_id)
             offered_coin: Coin = offered_coin_info.coin
-            requested_asset = list(offer_dict.items())[1][0]
-            requested_amount = list(offer_dict.items())[1][1]
-            if requested_asset is None:
+            requested_amount = offer_dict[requested_asset_id]
+            if requested_asset_id is None:
                 trade_prices = Program.to([[uint64(requested_amount)]])
             else:
-                trade_prices = Program.to([[uint64(requested_amount), requested_asset]])
+                trade_prices = Program.to([[uint64(requested_amount), requested_asset_id]])
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
-                {requested_asset: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
+                {requested_asset_id: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
             )
             announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
             txs = await wallet.generate_signed_transaction(

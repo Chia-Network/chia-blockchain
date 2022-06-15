@@ -979,8 +979,8 @@ class WalletRpcApi:
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
-            for key, amount in offer:
-                if amount < 0:
+            for key, amount in offer.items():
+                if amount > 0:
                     try:
                         driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
                             {"type": AssetType.CAT.value, "tail": "0x" + key}
