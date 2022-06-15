@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { renderToString } from 'react-dom/server';
-import { Trans } from '@lingui/macro';
-import { Box } from '@mui/material';
+import { t, Trans } from '@lingui/macro';
+import { Box, Button } from '@mui/material';
 import { Error, NotInterested } from '@mui/icons-material';
 import { IconMessage, Loading, Flex, SandboxedIframe } from '@chia/core';
 import styled from 'styled-components';
@@ -44,6 +44,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
   };
   */
 
+  const [ignoreError, setIgnoreError] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const { isValid, isLoading, error } = useNFTHash(nft);
   const hasFile = dataUris?.length > 0;
@@ -51,7 +52,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   useEffect(() => {
     setLoaded(false);
-  }, [nft]);
+    setIgnoreError(false);
+  }, [file]);
 
   const isUrlValid = useMemo(() => {
     if (!file) {
@@ -86,7 +88,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           <style dangerouslySetInnerHTML={{ __html: style }} />
         </head>
         <body>
-          <img src={file} alt="Preview" width="100%" height="100%" />
+          <img src={file} alt={t`Preview`} width="100%" height="100%" />
         </body>
       </html>,
     );
@@ -105,6 +107,12 @@ export default function NFTPreview(props: NFTPreviewProps) {
     setLoaded(loadedValue);
   }
 
+  function handleIgnoreError(event) {
+    event.stopPropagation();
+
+    setIgnoreError(true);
+  }
+
   return (
     <StyledCardPreview height={height} width={width}>
       <NFTStatusBar statusText={statusText} showDropShadow={true} />
@@ -120,10 +128,15 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <Loading center>
           <Trans>Loading preview...</Trans>
         </Loading>
-      ) : error && !isStatusError ? (
-        <IconMessage icon={<Error fontSize="large" />}>
-          {error.message}
-        </IconMessage>
+      ) : error && !isStatusError && !ignoreError ? (
+        <Flex direction="column" gap={2}>
+          <IconMessage icon={<Error fontSize="large" />}>
+            {error.message}
+          </IconMessage>
+          <Button onClick={handleIgnoreError} variant="outlined" size="small" color="secondary">
+            <Trans>Show Preview</Trans>
+          </Button>
+        </Flex>
       ) : (
         <>
           {!loaded && (

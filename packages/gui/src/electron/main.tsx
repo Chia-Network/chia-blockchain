@@ -284,6 +284,10 @@ if (!handleSquirrelEvent()) {
         return await dialog.showSaveDialog(options);
       });
 
+      ipcMain.handle('download', async (_event, options) => {
+        return await mainWindow.webContents.downloadURL(options.url);
+      });
+
       decidedToClose = false;
       mainWindow = new BrowserWindow({
         width: 1200,

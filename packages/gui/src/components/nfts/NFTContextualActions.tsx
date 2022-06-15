@@ -14,6 +14,7 @@ import { ListItemIcon, MenuItem, Typography } from '@mui/material';
 import {
   ArrowForward as TransferIcon,
   Link as LinkIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTSelection from '../../types/NFTSelection';
@@ -22,6 +23,7 @@ import useViewNFTOnExplorer, {
   NFTExplorer,
 } from '../../hooks/useViewNFTOnExplorer';
 import isURL from 'validator/lib/isURL';
+import download from '../../util/download';
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -35,13 +37,15 @@ export enum NFTContextualActionTypes {
   CopyURL = 1 << 3, // 8
   ViewOnExplorer = 1 << 4, // 16
   OpenInBrowser = 1 << 5, // 32
+  Download = 1 << 6, // 64
 
   All = CreateOffer |
     Transfer |
     CopyNFTId |
     CopyURL |
     ViewOnExplorer |
-    OpenInBrowser,
+    OpenInBrowser |
+    Download,
 }
 
 type NFTContextualActionProps = {
@@ -328,6 +332,54 @@ function NFTViewOnExplorerContextualAction(
 }
 
 /* ========================================================================== */
+/*                          Download file                                     */
+/* ========================================================================== */
+
+type NFTDownloadContextualActionProps = NFTContextualActionProps;
+
+function NFTDownloadContextualAction(
+  props: NFTDownloadContextualActionProps,
+) {
+  const { onClose, selection } = props;
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled = !selectedNft;
+  const dataUrl = selectedNft?.dataUris?.[0];
+
+  function handleDownload() {
+    if (!selectedNft) {
+      return;
+    }
+
+    const dataUrl = selectedNft?.dataUris?.[0];
+    if (dataUrl) {
+      download(dataUrl);
+    }
+  }
+
+  if (!dataUrl) {
+    return null;
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleDownload();
+      }}
+      disabled={disabled}
+    >
+      <ListItemIcon>
+        <DownloadIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Download</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
+
+/* ========================================================================== */
 /*                             Contextual Actions                             */
 /* ========================================================================== */
 
@@ -390,6 +442,10 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
       },
       [NFTContextualActionTypes.CopyURL]: {
         action: NFTCopyURLContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.Download]: {
+        action: NFTDownloadContextualAction,
         props: {},
       },
     };

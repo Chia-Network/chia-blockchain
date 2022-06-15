@@ -8,7 +8,8 @@ import {
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
-import { Box, Grid, Typography } from '@mui/material';
+import { Box, Grid, Typography, IconButton } from '@mui/material';
+import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
 import NFTProperties from '../NFTProperties';
@@ -16,6 +17,7 @@ import NFTRankings from '../NFTRankings';
 import NFTDetails from '../NFTDetails';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
+import NFTContextualActions, { NFTContextualActionTypes } from '../NFTContextualActions';
 
 
 export default function NFTDetail() {
@@ -64,9 +66,20 @@ export default function NFTDetail() {
       </Flex>
       <LayoutDashboardSub>
         <Flex flexDirection="column" gap={2} maxWidth="1200px" width="100%" alignSelf="center" mb={3}>
-          <Typography variant="h4" overflow="hidden">
-            {metadata?.name ?? <Trans>Title Not Available</Trans>}
-          </Typography>
+          <Flex alignItems="center" justifyContent="space-between">
+            <Typography variant="h4" overflow="hidden">
+              {metadata?.name ?? <Trans>Title Not Available</Trans>}
+            </Typography>
+            <NFTContextualActions
+              selection={{ items: [nft] }}
+              availableActions={NFTContextualActionTypes.All}
+              toggle={(
+                <IconButton>
+                  <MoreVert />
+                </IconButton>
+              )}
+            />
+          </Flex>
 
           <Grid spacing={{ xs: 6, lg: 8 }} container>
             <Grid item xs={12} md={6}>

@@ -9,7 +9,7 @@ export default function NFTGalleryHero() {
   const { isDarkMode } = useDarkMode();
 
   return (
-    <Flex flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center" gap={1}>
+    <Flex flexDirection="column" flexGrow={1} alignItems="center" pt={5} gap={1}>
       <Typography variant="h3">
         <Trans>Go collect some gems</Trans>
       </Typography>
