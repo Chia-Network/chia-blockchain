@@ -11,7 +11,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -395,9 +394,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
             ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ("mu", []),
-            ("mh", hexstr_to_bytes("00")),
             ("lu", []),
-            ("lh", hexstr_to_bytes("00")),
             ("sn", uint64(1)),
             ("st", uint64(1)),
         ]
