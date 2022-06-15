@@ -8,6 +8,7 @@ import {
   Settings as SettingsIcon,
   Check as CheckIcon,
 } from '@mui/icons-material';
+import { Farming as FarmingIcon } from '@chia/icons';
 import { Box, Typography, Container, Grid } from '@mui/material';
 
 const StyledCheckIcon = styled(CheckIcon)`
@@ -75,7 +76,9 @@ export default function AppSelectMode() {
               <StyledCardContent>
                 <Flex flexDirection="column" gap={4} flexGrow={1} alignItems="center">
                   <Flex flexDirection="column" gap={1} alignItems="center">
-                    <StyledAccountBalanceWalletIcon />
+                    <Box minHeight="3.5rem">
+                      <StyledAccountBalanceWalletIcon />
+                    </Box>
 
                     <Typography variant="h5" align="center">
                       <Trans>Wallet Mode</Trans>
@@ -119,7 +122,9 @@ export default function AppSelectMode() {
               <StyledCardContent>
                 <Flex flexDirection="column" gap={4} alignItems="center">
                   <Flex flexDirection="column" gap={1} alignItems="center">
-                    <StyledEcoIcon />
+                    <Box minHeight="3.5rem">
+                      <FarmingIcon fontSize="extraLarge" />
+                    </Box>
 
                     <Typography variant="h5" align="center">
                       <Trans>Farming Mode</Trans>
