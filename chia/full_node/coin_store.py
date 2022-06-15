@@ -6,34 +6,31 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.ints import uint32, uint64
-from chia.util.lru_cache import LRUCache
 from chia.util.chunks import chunks
 import time
 import logging
 
-log = logging.getLogger(__name__)
+from chia.util.lru_cache import LRUCache
 
-MAX_SQLITE_PARAMETERS = 900
+log = logging.getLogger(__name__)
 
 
 class CoinStore:
     """
     This object handles CoinRecords in DB.
-    A cache is maintained for quicker access to recent coins.
     """
 
-    coin_record_cache: LRUCache
-    cache_size: uint32
     db_wrapper: DBWrapper2
+    coins_added_at_height_cache: LRUCache
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(60000)):
+    async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
-        self.cache_size = cache_size
         self.db_wrapper = db_wrapper
+        self.coins_added_at_height_cache = LRUCache(capacity=100)
 
         async with self.db_wrapper.write_db() as conn:
 
@@ -81,7 +78,6 @@ class CoinStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
 
-        self.coin_record_cache = LRUCache(cache_size)
         return self
 
     async def num_unspent(self) -> int:
@@ -161,10 +157,6 @@ class CoinStore:
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        cached = self.coin_record_cache.get(coin_name)
-        if cached is not None:
-            return cached
-
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -174,9 +166,7 @@ class CoinStore:
                 row = await cursor.fetchone()
                 if row is not None:
                     coin = self.row_to_coin(row)
-                    record = CoinRecord(coin, row[0], row[1], row[2], row[6])
-                    self.coin_record_cache.put(record.coin.name(), record)
-                    return record
+                    return CoinRecord(coin, row[0], row[1], row[2], row[6])
         return None
 
     async def get_coin_records(self, names: List[bytes32]) -> List[CoinRecord]:
@@ -184,21 +174,10 @@ class CoinStore:
             return []
 
         coins: List[CoinRecord] = []
-        new_names: List[bytes32] = []
-        for n in names:
-            cached = self.coin_record_cache.get(n)
-            if cached is not None:
-                coins.append(cached)
-            else:
-                new_names.append(n)
-        names = new_names
-
-        if len(names) == 0:
-            return coins
 
         async with self.db_wrapper.read_db() as conn:
             cursors: List[Cursor] = []
-            for names_chunk in chunks(names, MAX_SQLITE_PARAMETERS):
+            for names_chunk in chunks(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     names_db = tuple(names_chunk)
@@ -218,11 +197,14 @@ class CoinStore:
                     coin = self.row_to_coin(row)
                     record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                     coins.append(record)
-                    self.coin_record_cache.put(record.coin.name(), record)
 
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
+        if coins_added is not None:
+            return coins_added
+
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -234,6 +216,7 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -367,7 +350,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for puzzles in chunks(puzzle_hashes, MAX_SQLITE_PARAMETERS):
+            for puzzles in chunks(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     puzzle_hashes_db = tuple(puzzles)
@@ -399,7 +382,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(parent_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     parent_ids_db = tuple(ids)
@@ -430,7 +413,7 @@ class CoinStore:
 
         coins = set()
         async with self.db_wrapper.read_db() as conn:
-            for ids in chunks(coin_ids, MAX_SQLITE_PARAMETERS):
+            for ids in chunks(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
                     coin_ids_db = tuple(ids)
@@ -452,23 +435,6 @@ class CoinStore:
         Note that block_index can be negative, in which case everything is rolled back
         Returns the list of coin records that have been modified
         """
-        # Update memory cache
-        delete_queue: List[bytes32] = []
-        for coin_name, coin_record in list(self.coin_record_cache.cache.items()):
-            if int(coin_record.spent_block_index) > block_index:
-                new_record = CoinRecord(
-                    coin_record.coin,
-                    coin_record.confirmed_block_index,
-                    uint32(0),
-                    coin_record.coinbase,
-                    coin_record.timestamp,
-                )
-                self.coin_record_cache.put(coin_record.coin.name(), new_record)
-            if int(coin_record.confirmed_block_index) > block_index:
-                delete_queue.append(coin_name)
-
-        for coin_name in delete_queue:
-            self.coin_record_cache.remove(coin_name)
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
         # Add coins that are confirmed in the reverted blocks to the list of updated coins.
@@ -504,15 +470,15 @@ class CoinStore:
                 await conn.execute(
                     "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,)
                 )
+        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
-    # Store CoinRecord in DB and ram cache
+    # Store CoinRecord in DB
     async def _add_coin_records(self, records: List[CoinRecord]) -> None:
 
         if self.db_wrapper.db_version == 2:
             values2 = []
             for record in records:
-                self.coin_record_cache.put(record.coin.name(), record)
                 values2.append(
                     (
                         record.coin.name(),
@@ -521,7 +487,7 @@ class CoinStore:
                         int(record.coinbase),
                         record.coin.puzzle_hash,
                         record.coin.parent_coin_info,
-                        bytes(record.coin.amount),
+                        bytes(uint64(record.coin.amount)),
                         record.timestamp,
                     )
                 )
@@ -534,7 +500,6 @@ class CoinStore:
         else:
             values = []
             for record in records:
-                self.coin_record_cache.put(record.coin.name(), record)
                 values.append(
                     (
                         record.coin.name().hex(),
@@ -544,7 +509,7 @@ class CoinStore:
                         int(record.coinbase),
                         record.coin.puzzle_hash.hex(),
                         record.coin.parent_coin_info.hex(),
-                        bytes(record.coin.amount),
+                        bytes(uint64(record.coin.amount)),
                         record.timestamp,
                     )
                 )
@@ -559,20 +524,14 @@ class CoinStore:
     async def _set_spent(self, coin_names: List[bytes32], index: uint32):
 
         assert len(coin_names) == 0 or index > 0
-        # if this coin is in the cache, mark it as spent in there
+
+        if len(coin_names) == 0:
+            return
+
         updates = []
         for coin_name in coin_names:
-            r = self.coin_record_cache.get(coin_name)
-            if r is not None:
-                if r.spent_block_index != uint32(0):
-                    raise ValueError(f"Coin already spent in cache: {coin_name}")
-
-                self.coin_record_cache.put(
-                    r.name, CoinRecord(r.coin, r.confirmed_block_index, index, r.coinbase, r.timestamp)
-                )
             updates.append((index, self.maybe_to_hex(coin_name)))
 
-        assert len(updates) == len(coin_names)
         async with self.db_wrapper.write_db() as conn:
             if self.db_wrapper.db_version == 2:
                 ret: Cursor = await conn.executemany(
