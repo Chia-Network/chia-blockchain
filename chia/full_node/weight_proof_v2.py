@@ -483,23 +483,35 @@ class WeightProofHandlerV2:
         log.debug(f"slot end vdf start height {start_height}")
         curr = header_blocks[self.height_to_hash(start_height)]
         sub_slots_data: List[SubSlotDataV2] = []
-        tmp_sub_slots_data: List[SubSlotDataV2] = []
+        tmp_blocks: List[HeaderBlock] = []
         while not blocks[curr.header_hash].is_challenge_block(self.constants):
             if curr.first_in_sub_slot:
                 # add collected vdfs
-                sub_slots_data.extend(tmp_sub_slots_data)
+                slot = curr.finished_sub_slots[0]
+                for blk in tmp_blocks:
+                    sub_slots_data.append(
+                        handle_block_vdfs(executor, self.constants, blk, blocks, blue_boxed_end_of_slot(slot))
+                    )
+                tmp_blocks = []
+
                 for idx, sub_slot in enumerate(curr.finished_sub_slots):
                     sub_slots_data.append(handle_finished_slots(sub_slot))
-                tmp_sub_slots_data = []
+
             # if overflow block and challenge slot ended break
             # find input
-            tmp_sub_slots_data.append(handle_block_vdfs(executor, self.constants, curr, blocks))
+            tmp_blocks.append(curr)
             curr = header_blocks[self.height_to_hash(uint32(curr.height + 1))]
             if blocks[curr.header_hash].deficit == self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
                 break
 
-        if len(tmp_sub_slots_data) > 0:
-            sub_slots_data.extend(tmp_sub_slots_data)
+        normalized_eos = False
+        if len(tmp_blocks) > 0:
+            if curr.first_in_sub_slot:
+                slot = curr.finished_sub_slots[0]
+                normalized_eos = blue_boxed_end_of_slot(slot)
+            for blk in tmp_blocks:
+                sub_slots_data.append(handle_block_vdfs(executor, self.constants, blk, blocks, normalized_eos))
+
         log.debug(f"slot end vdf end height {curr.height} ")
         return sub_slots_data, curr.height
 
@@ -537,11 +549,30 @@ def handle_block_vdfs(
     constants: ConsensusConstants,
     header_block: HeaderBlock,
     blocks: Dict[bytes32, BlockRecord],
+    skip_proofs: bool = False,
 ) -> SubSlotDataV2:
     """
     returns a SubSlotDataV2 representing header_block
     uses B to replace ClassgroupElement for cc_sp, cc_ip, icc_ip
     """
+    if skip_proofs:
+        return SubSlotDataV2(
+            None,
+            None,
+            None,
+            header_block.reward_chain_block.signage_point_index,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            blocks[header_block.header_hash].ip_iters(constants),
+            header_block.total_iters,
+        )
     block_rec = blocks[header_block.header_hash]
     compressed_sp_output = None
     if header_block.challenge_chain_sp_proof is not None:
@@ -1272,6 +1303,9 @@ def _validate_sub_slot_data(
     """
     sub_slot_data = sub_slots[sub_slot_idx]
     prev_ssd = sub_slots[sub_slot_idx - 1]
+    if sub_slot_data.cc_infusion_point is None and sub_slot_data.cc_signage_point is None:
+        return
+
     # find next end of slot
     assert sub_slot_data.signage_point_index is not None
     sp_iters = calculate_sp_iters(constants, ssi, sub_slot_data.signage_point_index)

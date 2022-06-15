@@ -133,6 +133,17 @@ class SubSlotDataV2(Streamable):
             return True
         return False
 
+    def is_end_of_slot_normalized(self) -> bool:
+        assert self.cc_slot_end is not None
+        if self.cc_slot_end.normalized_to_identity is True:
+            if self.icc_slot_end is not None:
+                return self.icc_slot_end.normalized_to_identity
+            return True
+        return False
+
+    def has_proofs(self) -> bool:
+        return (self.cc_infusion_point is not None) and (self.cc_signage_point is not None)
+
 
 @streamable
 @dataclass(frozen=True)
