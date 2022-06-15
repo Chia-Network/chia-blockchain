@@ -218,7 +218,7 @@ class ChiaServer:
         return False
 
     def has_wp_v2_capability(self) -> bool:
-        return self.has_capability(Capability.WP, "v2")
+        return self.has_capability(Capability.WP, "1")
 
     async def garbage_collect_connections_task(self) -> None:
         """
@@ -335,9 +335,7 @@ class ChiaServer:
                 self._local_capabilities_for_handshake,
                 close_event,
             )
-            await connection.perform_handshake(
-                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
@@ -486,9 +484,7 @@ class ChiaServer:
                 self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(
-                self._network_id, protocol_version, self._port, self._local_type, self.capabilities
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

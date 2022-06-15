@@ -408,14 +408,14 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_4.full_node.on_connect
         )
         capabilties = full_node_1.server.get_capabilities()
-        assert (uint16(Capability.WP.value), "v2") in capabilties
+        assert (uint16(Capability.WP.value), "1") in capabilties
         capabilties = full_node_2.server.get_capabilities()
-        assert (uint16(Capability.WP.value), "v2") in capabilties
+        assert (uint16(Capability.WP.value), "1") in capabilties
 
         capabilties = full_node_3.server.get_capabilities()
-        assert (uint16(Capability.WP.value), "v2") not in capabilties
+        assert (uint16(Capability.WP.value), "1") not in capabilties
         capabilties = full_node_4.server.get_capabilities()
-        assert (uint16(Capability.WP.value), "v2") not in capabilties
+        assert (uint16(Capability.WP.value), "1") not in capabilties
 
         # All four nodes are synced
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, num_blocks - 1)

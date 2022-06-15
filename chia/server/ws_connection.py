@@ -3,7 +3,7 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -525,11 +525,11 @@ class WSChiaConnection:
             return info
 
     def has_capability(self, c: Capability, value: str) -> bool:
-        capabilities = self.capabilities
+        capabilities = self.local_capabilities
         if capabilities is not None and (c.value, value) in capabilities:
             self.log.debug("has new weight proof format capability")
             return True
         return False
 
     def has_wp_v2_capability(self) -> bool:
-        return self.has_capability(Capability.WP, "v2")
+        return Capability.WP in self.peer_capabilities
