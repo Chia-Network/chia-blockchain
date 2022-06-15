@@ -924,7 +924,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     while time_left > 0:
         coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
         if coins_response.get("nft_list"):
-            pass
+            break
         await asyncio.sleep(0.5)
         time_left -= 0.5
     assert coins_response["nft_list"], isinstance(coins_response, dict)
