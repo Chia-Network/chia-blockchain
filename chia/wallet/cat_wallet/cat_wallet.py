@@ -37,6 +37,8 @@ from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -205,6 +207,23 @@ class CATWallet:
         await self.wallet_state_manager.add_new_wallet(self, self.id(), in_transaction=in_transaction)
         return self
 
+    @classmethod
+    async def create_from_puzzle_info(
+        cls,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        puzzle_driver: PuzzleInfo,
+        name=None,
+        in_transaction=False,
+    ) -> CATWallet:
+        return await cls.create_wallet_for_cat(
+            wallet_state_manager,
+            wallet,
+            puzzle_driver["tail"].hex(),
+            name,
+            in_transaction,
+        )
+
     @staticmethod
     async def create(
         wallet_state_manager: Any,
@@ -317,7 +336,7 @@ class CATWallet:
         self.log.info(f"CAT wallet has been notified that {coin} was added")
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
-        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount)
+        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
         await self.add_lineage(coin.name(), lineage_proof, True)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
@@ -350,7 +369,7 @@ class CATWallet:
 
             await self.add_lineage(
                 coin_name,
-                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
+                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)),
                 True,
             )
         else:
@@ -432,7 +451,7 @@ class CATWallet:
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
-        spendable_amount: uint64 = uint64(await self.get_spendable_balance())
+        spendable_amount: uint128 = await self.get_spendable_balance()
         spendable_coins: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
 
         # Try to use coins from the store, if there isn't enough of "unused"
@@ -442,7 +461,7 @@ class CATWallet:
         )
 
         coins = await select_coins(
-            uint128(spendable_amount),
+            spendable_amount,
             self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
             spendable_coins,
             unconfirmed_removals,
@@ -451,7 +470,6 @@ class CATWallet:
             exclude,
             min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -714,7 +732,6 @@ class CATWallet:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
-
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -723,7 +740,6 @@ class CATWallet:
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
-
         # TODO add support for array in stored records
         tx_list = [
             TransactionRecord(
@@ -790,3 +806,19 @@ class CATWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+
+    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+        return (
+            AssetType(puzzle_driver.type()) == AssetType.CAT
+            and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())
+            and puzzle_driver.also() is None
+        )
+
+    def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
+        return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
+
+    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+        balance = await self.get_confirmed_balance()
+        if balance < amount:
+            raise Exception(f"insufficient funds in wallet {self.id()}")
+        return await self.select_coins(amount)

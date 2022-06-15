@@ -17,8 +17,15 @@ Note: When changing this file, also change protocol_message_types.py
 # These are passed in as uint16 into the Handshake
 class Capability(IntEnum):
     BASE = 1  # Base capability just means it supports the chia protocol at mainnet
-    WP = 2  # Supports new version of weight proofs
-
+    # introduces RequestBlockHeaders, which is a faster API for fetching header blocks
+    # !! the old API is *RequestHeaderBlock* !!
+    BLOCK_HEADERS = 2
+    # Specifies support for v1 and v2 versions of rate limits. Peers will ues the lowest shared capability:
+    # if peer A support v3 and peer B supports v2, they should send:
+    # (BASE, RATE_LIMITS_V2, RATE_LIMITS_V3), and (BASE, RATE_LIMITS_V2) respectively. They will use the V2 limits.
+    RATE_LIMITS_V2 = 3
+    # Supports new version of weight proofs
+    WP = 4
 
 @streamable
 @dataclass(frozen=True)

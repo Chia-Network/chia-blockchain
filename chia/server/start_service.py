@@ -9,6 +9,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
+from ..protocols.shared_protocol import capabilities
 
 try:
     import uvloop
@@ -55,6 +56,7 @@ class Service:
         running_new_process=True,
         service_name_prefix="",
         max_request_body_size: Optional[int] = None,
+        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -96,6 +98,9 @@ class Service:
         if node_type == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
+        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        if override_capabilities is not None:
+            capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -107,6 +112,7 @@ class Service:
             network_id,
             inbound_rlp,
             outbound_rlp,
+            capabilities_to_use,
             root_path,
             service_config,
             (private_ca_crt, private_ca_key),
@@ -161,6 +167,7 @@ class Service:
             self.upnp.remap(port)
 
         await self._server.start_server(self._on_connect_callback)
+        self._advertised_port = self._server.get_port()
 
         self._reconnect_tasks = [
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
@@ -182,6 +189,7 @@ class Service:
                     self.config,
                     self._connect_to_daemon,
                     max_request_body_size=self.max_request_body_size,
+                    name=self._service_name + "_rpc",
                 )
             )
 
@@ -249,7 +257,7 @@ class Service:
 
                 async def close_rpc_server() -> None:
                     if self._rpc_task:
-                        await (await self._rpc_task)()
+                        await (await self._rpc_task)[0]()
 
                 self._rpc_close_task = asyncio.create_task(close_rpc_server())
 

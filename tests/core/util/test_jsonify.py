@@ -1,9 +1,13 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+
+def dict_with_types(d: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: (v, type(v)) for k, v in d.items()}
 
 
 def test_primitives() -> None:
@@ -15,21 +19,42 @@ def test_primitives() -> None:
         c: str
         d: bytes
         e: bytes32
+        f: bool
 
-    t = PrimitivesTest(
+    t1 = PrimitivesTest(
         uint32(123),
         None,
         "foobar",
         b"\0\1\0\1",
         bytes32(range(32)),
+        True,
     )
 
-    assert t.to_json_dict() == {
-        "a": 123,
-        "b": None,
-        "c": "foobar",
-        "d": "0x00010001",
-        "e": "0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    assert dict_with_types(t1.to_json_dict()) == {
+        "a": (123, int),
+        "b": (None, type(None)),
+        "c": ("foobar", str),
+        "d": ("0x00010001", str),
+        "e": ("0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", str),
+        "f": (True, bool),
+    }
+
+    t2 = PrimitivesTest(
+        uint32(0),
+        "set optional",
+        "foobar",
+        b"\0\1",
+        bytes32([0] * 32),
+        False,
+    )
+
+    assert dict_with_types(t2.to_json_dict()) == {
+        "a": (0, int),
+        "b": ("set optional", str),
+        "c": ("foobar", str),
+        "d": ("0x0001", str),
+        "e": ("0x0000000000000000000000000000000000000000000000000000000000000000", str),
+        "f": (False, bool),
     }
 
 

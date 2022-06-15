@@ -75,7 +75,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
+                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -181,8 +181,8 @@ class Wallet:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
         return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
@@ -206,7 +206,7 @@ class Wallet:
         me=None,
         coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
-        puzzle_announcements: Optional[Set[bytes32]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         fee=0,
     ) -> Program:
@@ -274,7 +274,6 @@ class Wallet:
             exclude,
             min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -310,7 +309,7 @@ class Wallet:
             max_send = await self.get_max_send_amount()
             if total_amount > max_send:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
-
+            self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             coins = await self.select_coins(uint64(total_amount))
         assert len(coins) > 0
@@ -428,6 +427,7 @@ class Wallet:
         else:
             non_change_amount = uint64(amount + sum(p["amount"] for p in primaries))
 
+        self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
@@ -442,8 +442,7 @@ class Wallet:
             negative_change_allowed,
         )
         assert len(transaction) > 0
-
-        self.log.info("About to sign a transaction")
+        self.log.info("About to sign a transaction: %s", transaction)
         await self.hack_populate_secret_keys_for_coin_spends(transaction)
         spend_bundle: SpendBundle = await sign_coin_spends(
             transaction,
@@ -488,7 +487,7 @@ class Wallet:
         await self.wallet_state_manager.wallet_node.update_ui()
 
     # This is to be aggregated together with a CAT offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
+    async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin] = []) -> SpendBundle:
         list_of_solutions = []
         utxos = None
 
@@ -526,3 +525,11 @@ class Wallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
         return spend_bundle
+
+    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+        if asset_id is not None:
+            raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
+        balance = await self.get_confirmed_balance()
+        if balance < amount:
+            raise Exception(f"insufficient funds in wallet {self.id()}")
+        return await self.select_coins(amount)
