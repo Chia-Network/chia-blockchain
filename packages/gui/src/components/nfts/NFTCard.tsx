@@ -57,41 +57,43 @@ export default function NFTCard(props: NFTCardProps) {
   }
 
   return (
-    <Card sx={{ borderRadius: '8px' }}>
-      {isLoading ? (
-        <CardContent>
-          <Loading center />
-        </CardContent>
-      ) : (
-        <>
-          <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
-            <NFTPreview nft={nft} fit="cover" />
-          </CardActionArea>
-          <CardActionArea onClick={() => canExpandDetails && handleClick()}>
-            <StyledCardContent>
-              <Flex justifyContent="space-between" alignItems="center">
-                <Flex gap={1} alignItems="center">
-                  <Typography noWrap>
-                    {metadata?.name ?? <Trans>Title Not Available</Trans>}
-                  </Typography>
+    <Flex flexDirection="column" flexGrow={1}>
+      <Card sx={{ borderRadius: '8px' }}>
+        {isLoading ? (
+          <CardContent>
+            <Loading center />
+          </CardContent>
+        ) : (
+          <>
+            <CardActionArea onClick={handleClick} disabled={!canExpandDetails}>
+              <NFTPreview nft={nft} fit="cover" />
+            </CardActionArea>
+            <CardActionArea onClick={() => canExpandDetails && handleClick()}>
+              <StyledCardContent>
+                <Flex justifyContent="space-between" alignItems="center">
+                  <Flex gap={1} alignItems="center">
+                    <Typography noWrap>
+                      {metadata?.name ?? <Trans>Title Not Available</Trans>}
+                    </Typography>
+                  </Flex>
+                  {availableActions !== NFTContextualActionTypes.None && (
+                    <NFTContextualActions
+                      selection={{ items: [nft] }}
+                      availableActions={availableActions}
+                      toggle={
+                        <IconButton>
+                          <MoreVert />
+                        </IconButton>
+                      }
+                    />
+                  )}
                 </Flex>
-                {availableActions !== NFTContextualActionTypes.None && (
-                  <NFTContextualActions
-                    selection={{ items: [nft] }}
-                    availableActions={availableActions}
-                    toggle={
-                      <IconButton>
-                        <MoreVert />
-                      </IconButton>
-                    }
-                  />
-                )}
-              </Flex>
-            </StyledCardContent>
-          </CardActionArea>
-        </>
-      )}
-    </Card>
+              </StyledCardContent>
+            </CardActionArea>
+          </>
+        )}
+      </Card>
+    </Flex>
   );
 }
 

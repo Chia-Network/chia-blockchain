@@ -133,14 +133,21 @@ type OfferSummaryTokenRowProps = {
   assetId: string;
   amount: number;
   rowNumber?: number;
+  overrideNFTSellerAmount?: number;
 };
 
 export function OfferSummaryTokenRow(
   props: OfferSummaryTokenRowProps,
 ): React.ReactElement {
-  const { assetId, amount, rowNumber } = props;
+  const {
+    assetId,
+    amount: originalAmount,
+    rowNumber,
+    overrideNFTSellerAmount,
+  } = props;
   const { lookupByAssetId } = useAssetIdName();
   const assetIdInfo = lookupByAssetId(assetId);
+  const amount = overrideNFTSellerAmount ?? originalAmount;
   const displayAmount = assetIdInfo
     ? formatAmountForWalletType(amount as number, assetIdInfo.walletType)
     : mojoToCATLocaleString(amount);

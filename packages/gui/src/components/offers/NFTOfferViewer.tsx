@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import BigNumber from 'bignumber.js';
 import { Plural, Trans } from '@lingui/macro';
 import {
   useCheckOfferValidityMutation,
+  useGetNFTInfoQuery,
   useGetNFTWallets,
 } from '@chia/api-react';
 import type { NFTInfo, Wallet } from '@chia/api';
@@ -17,27 +19,43 @@ import {
   Form,
   FormatLargeNumber,
   StateColor,
+  Tooltip,
   TooltipIcon,
+  chiaToMojo,
+  mojoToChia,
+  useCurrencyCode,
   useShowError,
 } from '@chia/core';
 import { Box, Divider, Grid, Typography } from '@mui/material';
+import { Warning as WarningIcon } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import useAcceptOfferHook from '../../hooks/useAcceptOfferHook';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import useFetchNFTs from '../../hooks/useFetchNFTs';
-import { launcherIdToNFTId } from '../../util/nfts';
-import { offerAssetTypeForAssetId } from './utils';
+import { convertRoyaltyToPercentage, launcherIdToNFTId } from '../../util/nfts';
+import {
+  calculateNFTRoyalties,
+  determineNFTOfferExchangeType,
+  getNFTPriceWithoutRoyalties,
+  offerAssetTypeForAssetId,
+} from './utils';
 import OfferAsset from './OfferAsset';
 import OfferHeader from './OfferHeader';
 import OfferState from './OfferState';
 import { OfferSummaryNFTRow, OfferSummaryTokenRow } from './OfferSummaryRow';
 import OfferViewerTitle from './OfferViewerTitle';
+import NFTOfferExchangeType from './NFTOfferExchangeType';
 import NFTOfferPreview from './NFTOfferPreview';
 import styled from 'styled-components';
+import { nthArg } from 'lodash';
 
 /* ========================================================================== */
 
 const StyledWarningText = styled(Typography)`
+  color: ${StateColor.WARNING};
+`;
+
+const StyledWarningIcon = styled(WarningIcon)`
   color: ${StateColor.WARNING};
 `;
 
@@ -50,6 +68,7 @@ type NFTOfferSummaryRowProps = {
   unknownAssets?: string[];
   rowIndentation: number;
   showNFTPreview: boolean;
+  overrideNFTSellerAmount?: number;
 };
 
 function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
@@ -60,6 +79,7 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
     unknownAssets,
     rowIndentation = 0,
     showNFTPreview = false,
+    overrideNFTSellerAmount,
   } = props;
   const theme = useTheme();
   const horizontalPadding = `${theme.spacing(rowIndentation)}`; // logic borrowed from Flex's gap computation
@@ -106,6 +126,7 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
           <OfferSummaryTokenRow
             assetId={assetId}
             amount={summaryData[assetId]}
+            overrideNFTSellerAmount={overrideNFTSellerAmount}
           />
         );
       case OfferAsset.NFT:
@@ -161,6 +182,55 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
 }
 
 /* ========================================================================== */
+/*                             NFT Offer Maker Fee                            */
+/* ========================================================================== */
+
+type NFTOfferMakerFeeProps = {
+  makerFee: number;
+  imported: boolean;
+};
+
+function NFTOfferMakerFee(props: NFTOfferMakerFeeProps) {
+  const { makerFee, imported } = props;
+
+  if (!makerFee) {
+    return null;
+  }
+
+  return (
+    <Flex flexDirection="row" alignItems="center" gap={1}>
+      <Typography
+        variant="body1"
+        color="secondary"
+        style={{ fontWeight: 'bold' }}
+      >
+        <Trans>Fees included in offer:</Trans>
+      </Typography>
+      <Typography color="primary">
+        <FormatLargeNumber value={makerFee} />
+      </Typography>
+      <Typography>
+        <Plural value={makerFee} one="mojo" other="mojos" />
+      </Typography>
+      <TooltipIcon>
+        {imported ? (
+          <Trans>
+            This offer has a fee included to help expedite the transaction when
+            the offer is accepted. You may specify an additional fee if you feel
+            that the included fee is too small.
+          </Trans>
+        ) : (
+          <Trans>
+            This offer has a fee included to help expedite the transaction when
+            the offer is accepted.
+          </Trans>
+        )}
+      </TooltipIcon>
+    </Flex>
+  );
+}
+
+/* ========================================================================== */
 /*                              NFT Offer Summary                             */
 /* ========================================================================== */
 
@@ -173,7 +243,9 @@ type NFTOfferSummaryProps = {
   takerTitle: React.ReactElement | string;
   rowIndentation: number;
   setIsMissingRequestedAsset?: (isMissing: boolean) => void;
-  showNFTPreview: boolean;
+  showNFTPreview?: boolean;
+  showMakerFee?: boolean;
+  overrideNFTSellerAmount?: number;
 };
 
 export function NFTOfferSummary(props: NFTOfferSummaryProps) {
@@ -187,6 +259,8 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
     rowIndentation = 0,
     setIsMissingRequestedAsset,
     showNFTPreview = false,
+    showMakerFee = true,
+    overrideNFTSellerAmount,
   } = props;
   const { lookupByAssetId } = useAssetIdName();
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
@@ -232,6 +306,7 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
       unknownAssets={isMyOffer ? undefined : takerUnknownAssets}
       rowIndentation={rowIndentation}
       showNFTPreview={showNFTPreview}
+      overrideNFTSellerAmount={overrideNFTSellerAmount}
     />
   );
   const takerSummary: React.ReactElement = (
@@ -242,6 +317,7 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
       unknownAssets={isMyOffer ? undefined : makerUnknownAssets}
       rowIndentation={rowIndentation}
       showNFTPreview={showNFTPreview}
+      overrideNFTSellerAmount={overrideNFTSellerAmount}
     />
   );
   const makerFee: number = summary.fees;
@@ -268,38 +344,10 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
           {index !== summaries.length - 1 && <Divider />}
         </Flex>
       ))}
-      {makerFee > 0 && (
+      {showMakerFee && (
         <Flex flexDirection="column" gap={2}>
           <Divider />
-          <Flex flexDirection="row" alignItems="center" gap={1}>
-            <Typography
-              variant="body1"
-              color="secondary"
-              style={{ fontWeight: 'bold' }}
-            >
-              <Trans>Fees included in offer:</Trans>
-            </Typography>
-            <Typography color="primary">
-              <FormatLargeNumber value={makerFee} />
-            </Typography>
-            <Typography>
-              <Plural value={makerFee} one="mojo" other="mojos" />
-            </Typography>
-            <TooltipIcon>
-              {imported ? (
-                <Trans>
-                  This offer has a fee included to help expedite the transaction
-                  when the offer is accepted. You may specify an additional fee
-                  if you feel that the included fee is too small.
-                </Trans>
-              ) : (
-                <Trans>
-                  This offer has a fee included to help expedite the transaction
-                  when the offer is accepted.
-                </Trans>
-              )}
-            </TooltipIcon>
-          </Flex>
+          <NFTOfferMakerFee makerFee={makerFee} imported={imported} />
         </Flex>
       )}
     </Flex>
@@ -320,10 +368,23 @@ type NFTOfferDetailsProps = {
 function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const { tradeRecord, offerData, offerSummary, imported } = props;
   const summary = tradeRecord?.summary || offerSummary;
+  // // TODO: Remove -- just for testing
+  // const originalSummary = tradeRecord?.summary || offerSummary;
+  // const offered = originalSummary.offered;
+  // const requested = originalSummary.requested;
+  // const summary = {
+  //   ...originalSummary,
+  //   offered: requested,
+  //   requested: offered,
+  // };
+  // // TODO: end remove
+  const exchangeType = determineNFTOfferExchangeType(summary);
+  const makerFee: number = summary.fees;
   const isMyOffer = !!tradeRecord?.isMyOffer;
   const showError = useShowError();
   const methods = useForm({ defaultValues: { fee: '' } });
   const navigate = useNavigate();
+  const currencyCode = useCurrencyCode();
   const [acceptOffer] = useAcceptOfferHook();
   const [isAccepting, setIsAccepting] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
@@ -338,6 +399,58 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const nftId: string | undefined = launcherId
     ? launcherIdToNFTId(launcherId)
     : undefined;
+  const {
+    data: nft,
+    isLoading,
+    error,
+  } = useGetNFTInfoQuery({ coinId: launcherId });
+  const amount = getNFTPriceWithoutRoyalties(summary);
+
+  console.log('amount without royalties');
+  console.log(amount);
+  const nftSaleInfo = useMemo(() => {
+    console.log('royaltyPercentage:');
+    console.log(nft?.royaltyPercentage);
+    if (
+      !exchangeType ||
+      amount === undefined ||
+      !nft ||
+      nft.royaltyPercentage === undefined
+    ) {
+      return undefined;
+    }
+
+    const royaltyPercentage = convertRoyaltyToPercentage(nft.royaltyPercentage);
+    const xchMakerFee = mojoToChia(makerFee);
+
+    return {
+      ...calculateNFTRoyalties(
+        amount,
+        parseFloat(xchMakerFee),
+        convertRoyaltyToPercentage(nft.royaltyPercentage),
+        exchangeType,
+      ),
+      royaltyPercentage,
+    };
+  }, [nft]);
+  const showRoyaltyWarning = (nftSaleInfo?.royaltyPercentage ?? 0) >= 20;
+  const royaltyPercentageColor = showRoyaltyWarning
+    ? StateColor.WARNING
+    : 'textSecondary';
+  const showNegativeAmountWarning = (nftSaleInfo?.nftSellerNetAmount ?? 0) < 0;
+  const overrideNFTSellerAmount =
+    exchangeType === NFTOfferExchangeType.XCHForNFT
+      ? chiaToMojo(nftSaleInfo?.nftSellerNetAmount ?? 0)
+      : undefined;
+
+  console.log('nftSaleInfo:');
+  console.log(nftSaleInfo);
+
+  console.log('exchangeType:');
+  console.log(exchangeType);
+
+  console.log('overrideNFTSellerAmount:');
+  console.log(overrideNFTSellerAmount);
 
   useMemo(async () => {
     if (!offerData) {
@@ -436,16 +549,169 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                 }
                 rowIndentation={0}
                 showNFTPreview={false}
+                showMakerFee={false}
+                overrideNFTSellerAmount={overrideNFTSellerAmount}
               />
               <Divider />
-              {imported && (
-                <Flex
-                  flexDirection="column"
-                  flexGrow={1}
-                  justifyContent="space-between"
-                  gap={3}
-                >
-                  {isValid && (
+              <Flex flexDirection="column" gap={2}>
+                {nftSaleInfo && (
+                  <>
+                    <Flex flexDirection="column" gap={1}>
+                      <Typography variant="body1" color="textSecondary">
+                        <Trans>NFT Purchase Price</Trans>
+                      </Typography>
+                      <Typography variant="body1">
+                        {exchangeType === NFTOfferExchangeType.NFTForXCH
+                          ? `${nftSaleInfo?.nftSellerNetAmount} ${currencyCode}`
+                          : `${amount} ${currencyCode}`}
+                      </Typography>
+                    </Flex>
+                    <Flex flexDirection="column" gap={1}>
+                      <Flex flexDirection="row" alignItems="center" gap={1}>
+                        <Typography
+                          variant="body1"
+                          color={royaltyPercentageColor}
+                        >
+                          <Trans>
+                            Creator Fee ({`${nftSaleInfo?.royaltyPercentage}%)`}
+                          </Trans>
+                        </Typography>
+                        {showRoyaltyWarning && (
+                          <Tooltip
+                            title={
+                              <Trans>
+                                Creator royalty percentage seems high
+                              </Trans>
+                            }
+                            interactive
+                          >
+                            <StyledWarningIcon fontSize="small" />
+                          </Tooltip>
+                        )}
+                      </Flex>
+                      <Typography variant="subtitle1">
+                        <FormatLargeNumber
+                          value={
+                            new BigNumber(nftSaleInfo?.royaltyAmountString ?? 0)
+                          }
+                        />{' '}
+                        {currencyCode}
+                      </Typography>
+                    </Flex>
+                  </>
+                )}
+                <NFTOfferMakerFee makerFee={makerFee} imported={!!imported} />
+              </Flex>
+              {/* {imported && isValid && (
+                <Flex flexDirection="column" gap={1}>
+                  <Typography variant="body1" color="textSecondary">
+                    <Trans>Network Fee (Optional)</Trans>
+                  </Typography>
+                  <Grid
+                    direction="column"
+                    xs={5}
+                    sm={5}
+                    md={5}
+                    lg={5}
+                    container
+                  >
+                    <Fee
+                      id="filled-secondary"
+                      variant="filled"
+                      name="fee"
+                      color="secondary"
+                      label={<Trans>Fee</Trans>}
+                      defaultValue={1}
+                      disabled={isAccepting}
+                    />
+                  </Grid>
+                </Flex>
+              )} */}
+              {nftSaleInfo && (
+                <>
+                  <Divider />
+                  <Flex flexDirection="column" gap={0.5}>
+                    <Flex flexDirection="row" alignItems="center" gap={1}>
+                      <Typography variant="h6">
+                        {exchangeType === NFTOfferExchangeType.NFTForXCH ? (
+                          <Trans>Total Amount Requested</Trans>
+                        ) : (
+                          <Trans>Total Amount Offered</Trans>
+                        )}
+                      </Typography>
+                      <Flex justifyContent="center">
+                        <TooltipIcon>
+                          {exchangeType === NFTOfferExchangeType.NFTForXCH ? (
+                            <Trans>
+                              The total amount requested includes the asking
+                              price, plus the associated creator fees (if the
+                              NFT has royalty payments enabled).
+                              {!!imported ? (
+                                <>
+                                  <p />
+                                  The optional network fee is not included in
+                                  this total.
+                                </>
+                              ) : null}
+                            </Trans>
+                          ) : (
+                            <Trans>
+                              The total amount offered includes the offered
+                              purchase price, plus the optional offer creation
+                              fee.
+                              <p />
+                              If the NFT has royalty payments enabled, those
+                              creator fees will be paid from the offered
+                              purchase price.
+                            </Trans>
+                          )}
+                        </TooltipIcon>
+                      </Flex>
+                    </Flex>
+                    <Typography variant="h5" fontWeight="bold">
+                      <FormatLargeNumber
+                        value={
+                          new BigNumber(nftSaleInfo?.totalAmountString ?? 0)
+                        }
+                      />{' '}
+                      {currencyCode}
+                    </Typography>
+                  </Flex>
+                  {exchangeType === NFTOfferExchangeType.XCHForNFT && (
+                    <Flex flexDirection="column" gap={0.5}>
+                      <Flex flexDirection="row" alignItems="center" gap={1}>
+                        <Typography variant="h6">
+                          <Trans>Net Proceeds</Trans>
+                        </Typography>
+                        <Flex justifyContent="center">
+                          <TooltipIcon>
+                            <Trans>
+                              The net proceeds include the asking price, minus
+                              any associated creator fees (if the NFT has
+                              royalty payments enabled).
+                            </Trans>
+                          </TooltipIcon>
+                        </Flex>
+                      </Flex>
+                      <Typography variant="h5" fontWeight="bold">
+                        <FormatLargeNumber
+                          value={
+                            new BigNumber(nftSaleInfo?.nftSellerNetAmount ?? 0)
+                          }
+                        />{' '}
+                        {currencyCode}
+                      </Typography>
+                    </Flex>
+                  )}
+                </>
+              )}
+              {imported && isValid && (
+                <Flex flexDirection="column" gap={2}>
+                  <Divider />
+                  <Flex flexDirection="column" gap={1}>
+                    <Typography variant="body1" color="textSecondary">
+                      <Trans>Network Fee (Optional)</Trans>
+                    </Typography>
                     <Grid
                       direction="column"
                       xs={5}
@@ -464,32 +730,34 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                         disabled={isAccepting}
                       />
                     </Grid>
-                  )}
-                  <Flex
-                    flexDirection="column"
-                    flexGrow={1}
-                    alignItems="flex-end"
-                    justifyContent="flex-end"
-                    style={{ paddingBottom: '1em' }}
-                  >
-                    <Flex justifyContent="flex-end" gap={2}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => navigate(-1)}
-                        disabled={isAccepting}
-                      >
-                        <Trans>Back</Trans>
-                      </Button>
-                      <ButtonLoading
-                        variant="contained"
-                        color="primary"
-                        type="submit"
-                        disabled={!isValid || isMissingRequestedAsset}
-                        loading={isAccepting}
-                      >
-                        <Trans>Accept Offer</Trans>
-                      </ButtonLoading>
-                    </Flex>
+                  </Flex>
+                </Flex>
+              )}
+              {imported && (
+                <Flex
+                  flexDirection="column"
+                  flexGrow={1}
+                  alignItems="flex-end"
+                  justifyContent="flex-end"
+                  style={{ paddingBottom: '1em' }}
+                >
+                  <Flex justifyContent="flex-end" gap={2}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => navigate(-1)}
+                      disabled={isAccepting}
+                    >
+                      <Trans>Back</Trans>
+                    </Button>
+                    <ButtonLoading
+                      variant="contained"
+                      color="primary"
+                      type="submit"
+                      disabled={!isValid || isMissingRequestedAsset}
+                      loading={isAccepting}
+                    >
+                      <Trans>Accept Offer</Trans>
+                    </ButtonLoading>
                   </Flex>
                 </Flex>
               )}

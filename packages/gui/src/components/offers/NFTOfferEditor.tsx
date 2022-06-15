@@ -11,6 +11,7 @@ import {
 } from '@chia/api-react';
 import {
   Amount,
+  AmountProps,
   Back,
   Button,
   ButtonLoading,
@@ -36,7 +37,9 @@ import {
   isValidNFTId,
   launcherIdFromNFTId,
 } from '../../util/nfts';
+import { calculateNFTRoyalties } from './utils';
 import NFTOfferPreview from './NFTOfferPreview';
+import NFTOfferExchangeType from './NFTOfferExchangeType';
 import styled from 'styled-components';
 
 /* ========================================================================== */
@@ -50,62 +53,49 @@ const StyledWarningIcon = styled(WarningIcon)`
 
 /* ========================================================================== */
 
-enum NFTOfferEditorExchangeType {
-  NFTForXCH = 'nft_for_xch',
-  XCHForNFT = 'xch_for_nft',
+type NFTOfferCreationFeeProps = AmountProps & {
+  disabled?: boolean;
+  onChange?: (fee: string) => void;
+  defaultValue?: string;
+};
+
+function NFTOfferCreationFee(props: NFTOfferCreationFeeProps) {
+  const { disabled = true, onChange, defaultValue = '', ...rest } = props;
+
+  return (
+    <Flex flexDirection="column" gap={1}>
+      <Flex flexDirection="row" alignItems="center" gap={1}>
+        <Typography variant="body1" color="textSecondary">
+          <Trans>Offer Creation Fee (Optional)</Trans>
+        </Typography>
+        <TooltipIcon>
+          <Trans>
+            Including a fee in the offer can help expedite the transaction when
+            the offer is accepted. The recommended minimum fee is 0.000005 XCH
+            (5,000,000 mojos)
+          </Trans>
+        </TooltipIcon>
+      </Flex>
+      <Grid item>
+        <Flex flexDirection="row" gap={1}>
+          <Fee
+            id="fee"
+            variant="filled"
+            name="fee"
+            color="secondary"
+            disabled={disabled}
+            onChange={onChange}
+            defaultValue={defaultValue}
+            label={<Trans>Fee</Trans>}
+            {...rest}
+          />
+        </Flex>
+      </Grid>
+    </Flex>
+  );
 }
 
 /* ========================================================================== */
-
-type CalculateRoyaltiesResult = {
-  royaltyAmount: number;
-  royaltyAmountString: string;
-  nftSellerNetAmount: number;
-  totalAmount: number;
-  totalAmountString: string;
-};
-
-function calculateRoyalties(
-  amount: number,
-  makerFee: number,
-  royaltyPercentage: number,
-  exchangeType: NFTOfferEditorExchangeType,
-): CalculateRoyaltiesResult {
-  const royaltyAmount: number = royaltyPercentage
-    ? (royaltyPercentage / 100) * amount
-    : 0;
-  const royaltyAmountString: string = formatAmount(royaltyAmount);
-  const nftSellerNetAmount: number =
-    exchangeType === NFTOfferEditorExchangeType.NFTForXCH
-      ? amount
-      : parseFloat((amount - parseFloat(royaltyAmountString)).toFixed(12));
-  // : parseFloat(
-  //     (amount - parseFloat(royaltyAmountString) - makerFee).toFixed(12),
-  //   );
-  const totalAmount: number =
-    exchangeType === NFTOfferEditorExchangeType.NFTForXCH
-      ? // ? amount + royaltyAmount + makerFee
-        amount + royaltyAmount
-      : amount + makerFee;
-  // : amount;
-  const totalAmountString: string = formatAmount(totalAmount);
-
-  return {
-    royaltyAmount,
-    royaltyAmountString,
-    nftSellerNetAmount,
-    totalAmount,
-    totalAmountString,
-  };
-}
-
-function formatAmount(amount: number): string {
-  let s = amount.toFixed(12).replace(/0+$/, '');
-  if (s.endsWith('.')) {
-    s = s.slice(0, -1);
-  }
-  return s;
-}
 
 type NFTOfferConditionalsPanelProps = {
   defaultValues: NFTOfferEditorFormData;
@@ -118,6 +108,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
   const methods = useFormContext();
   const currencyCode = useCurrencyCode();
   const [amountFocused, setAmountFocused] = useState<boolean>(false);
+  const [makerFeeFocused, setMakerFeeFocused] = useState<boolean>(false);
 
   const tab = methods.watch('exchangeType');
   const amount = methods.watch('xchAmount');
@@ -133,12 +124,18 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
   // HACK: manually determine the value for the amount field's shrink input prop.
   // Without this, toggling between the two tabs with an amount specified will cause
   // the textfield's label and value to overlap.
-  const shrink = useMemo(() => {
+  const shrinkAmount = useMemo(() => {
     if (!amountFocused && (amount === undefined || amount.length === 0)) {
       return false;
     }
     return true;
   }, [amount, amountFocused]);
+  const shrinkMakerFee = useMemo(() => {
+    if (!makerFeeFocused && (makerFee === undefined || makerFee.length === 0)) {
+      return false;
+    }
+    return true;
+  }, [makerFee, makerFeeFocused]);
   const result = useMemo(() => {
     if (!nft || nft.royaltyPercentage === undefined) {
       return undefined;
@@ -147,7 +144,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
     const royaltyPercentage = convertRoyaltyToPercentage(nft.royaltyPercentage);
 
     return {
-      ...calculateRoyalties(
+      ...calculateNFTRoyalties(
         parseFloat(amount ? amount : '0'),
         parseFloat(makerFee ? makerFee : '0'),
         convertRoyaltyToPercentage(nft.royaltyPercentage),
@@ -199,15 +196,15 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
         onFocus={() => setAmountFocused(true)}
         onBlur={() => setAmountFocused(false)}
         showAmountInMojos={true}
-        InputLabelProps={{ shrink }}
+        InputLabelProps={{ shrink: shrinkAmount }}
         required
       />
     </Grid>
   );
   const offerElem =
-    tab === NFTOfferEditorExchangeType.NFTForXCH ? nftElem : amountElem;
+    tab === NFTOfferExchangeType.NFTForXCH ? nftElem : amountElem;
   const takerElem =
-    tab === NFTOfferEditorExchangeType.NFTForXCH ? amountElem : nftElem;
+    tab === NFTOfferExchangeType.NFTForXCH ? amountElem : nftElem;
   const showRoyaltyWarning = (royaltyPercentage ?? 0) >= 20;
   const royaltyPercentageColor = showRoyaltyWarning
     ? StateColor.WARNING
@@ -226,6 +223,17 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
     methods.reset(defaultValues);
   }
 
+  const makerFeeElem = (
+    <NFTOfferCreationFee
+      disabled={disabled}
+      onChange={handleFeeChange}
+      defaultValue={defaultValues.fee}
+      onFocus={() => setMakerFeeFocused(true)}
+      onBlur={() => setMakerFeeFocused(false)}
+      InputLabelProps={{ shrink: shrinkMakerFee }}
+    />
+  );
+
   return (
     <Flex
       flexDirection="column"
@@ -242,12 +250,12 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
         indicatorColor="primary"
       >
         <Tab
-          value={NFTOfferEditorExchangeType.NFTForXCH}
+          value={NFTOfferExchangeType.NFTForXCH}
           label={<Trans>NFT for XCH</Trans>}
           disabled={disabled}
         />
         <Tab
-          value={NFTOfferEditorExchangeType.XCHForNFT}
+          value={NFTOfferExchangeType.XCHForNFT}
           label={<Trans>XCH for NFT</Trans>}
           disabled={disabled}
         />
@@ -290,40 +298,19 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                 )}
               </Flex>
             </Flex>
-          ) : (
-            <Divider />
-          )}
-          <Grid item>
-            <Flex flexDirection="row" gap={1}>
-              <Fee
-                id="fee"
-                variant="filled"
-                name="fee"
-                color="secondary"
-                disabled={disabled}
-                onChange={handleFeeChange}
-                defaultValue={defaultValues.fee}
-                label={<Trans>Fee</Trans>}
-              />
-              <Flex justifyContent="center">
-                <Box style={{ position: 'relative', top: '20px' }}>
-                  <TooltipIcon>
-                    <Trans>
-                      Including a fee in the offer can help expedite the
-                      transaction when the offer is accepted. The recommended
-                      minimum fee is 0.000005 XCH (5,000,000 mojos)
-                    </Trans>
-                  </TooltipIcon>
-                </Box>
-              </Flex>
+          ) : null}
+          {tab === NFTOfferExchangeType.XCHForNFT && (
+            <Flex flexDirection="column" gap={2}>
+              {!nft?.royaltyPercentage && <Divider />}
+              {makerFeeElem}
             </Flex>
-          </Grid>
+          )}
           {nft?.royaltyPercentage && amount ? (
             <Flex flexDirection="column" gap={2}>
               <>
                 <Flex flexDirection="column" gap={0.5}>
                   <Typography variant="body1" color="textSecondary">
-                    {tab === NFTOfferEditorExchangeType.NFTForXCH ? (
+                    {tab === NFTOfferExchangeType.NFTForXCH ? (
                       <Trans>You will receive</Trans>
                     ) : (
                       <Trans>They will receive</Trans>
@@ -341,7 +328,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                     {currencyCode}
                   </Typography>
                   {showNegativeAmountWarning && (
-                    <Typography variant="body2" color={StateColor.WARNING}>
+                    <Typography variant="body2" color={StateColor.ERROR}>
                       <Trans>
                         Unable to create an offer where the net amount is
                         negative
@@ -351,13 +338,43 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                 </Flex>
                 <Divider />
                 <Flex flexDirection="column" gap={0.5}>
-                  <Typography variant="h6">
-                    {tab === NFTOfferEditorExchangeType.NFTForXCH ? (
-                      <Trans>Total Amount Requested</Trans>
-                    ) : (
-                      <Trans>Total Amount Offered</Trans>
-                    )}
-                  </Typography>
+                  <Flex flexDirection="row" alignItems="center" gap={1}>
+                    <Typography variant="h6">
+                      {tab === NFTOfferExchangeType.NFTForXCH ? (
+                        <Trans>Total Amount Requested</Trans>
+                      ) : (
+                        <Trans>Total Amount Offered</Trans>
+                      )}
+                    </Typography>
+                    <Flex justifyContent="center">
+                      <TooltipIcon>
+                        {tab === NFTOfferExchangeType.NFTForXCH ? (
+                          <Trans>
+                            The total amount requested includes the asking
+                            price, plus the associated creator fees (if the NFT
+                            has royalty payments enabled). Creator fees will be
+                            paid by the party that accepts the offer.
+                            <p />
+                            The optional offer creation fee is not included in
+                            this total, and will be deducted from your spendable
+                            balance upon offer creation.
+                          </Trans>
+                        ) : (
+                          <Trans>
+                            The total amount offered includes the price you're
+                            willing to pay for the NFT, plus the optional offer
+                            creation fee. One or more coins totalling at least
+                            the amount shown below will be deducted from your
+                            spendable balance upon offer creation.
+                            <p />
+                            If the NFT has royalty payments enabled, those
+                            creator fees will be paid by the party that accepts
+                            the offer.
+                          </Trans>
+                        )}
+                      </TooltipIcon>
+                    </Flex>
+                  </Flex>
                   <Typography variant="h5" fontWeight="bold">
                     <FormatLargeNumber
                       value={new BigNumber(totalAmountString ?? 0)}
@@ -368,6 +385,12 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
               </>
             </Flex>
           ) : null}
+          {tab === NFTOfferExchangeType.NFTForXCH && (
+            <Flex flexDirection="column" gap={2}>
+              <Divider />
+              {makerFeeElem}
+            </Flex>
+          )}
         </Flex>
       </Grid>
       <Flex
@@ -409,14 +432,14 @@ NFTOfferConditionalsPanel.defaultProps = {
 /* ========================================================================== */
 
 type NFTOfferEditorFormData = {
-  exchangeType: NFTOfferEditorExchangeType;
+  exchangeType: NFTOfferExchangeType;
   nftId?: string;
   xchAmount: string;
   fee: string;
 };
 
 type NFTOfferEditorValidatedFormData = {
-  exchangeType: NFTOfferEditorExchangeType;
+  exchangeType: NFTOfferExchangeType;
   launcherId: string;
   xchAmount: string;
   fee: string;
@@ -428,7 +451,7 @@ type NFTOfferEditorProps = {
 };
 
 function buildOfferRequest(
-  exchangeType: NFTOfferEditorExchangeType,
+  exchangeType: NFTOfferExchangeType,
   nft: NFTInfo,
   nftLauncherId: string,
   xchAmount: string,
@@ -436,23 +459,36 @@ function buildOfferRequest(
 ) {
   const baseMojoAmount: BigNumber = chiaToMojo(xchAmount);
   const mojoAmount =
-    exchangeType === NFTOfferEditorExchangeType.NFTForXCH
+    exchangeType === NFTOfferExchangeType.NFTForXCH
       ? baseMojoAmount
       : baseMojoAmount.negated();
   const feeMojoAmount = chiaToMojo(fee);
-  const nftAmount =
-    exchangeType === NFTOfferEditorExchangeType.NFTForXCH ? -1 : 1;
+  const nftAmount = exchangeType === NFTOfferExchangeType.NFTForXCH ? -1 : 1;
   const xchWalletId = 1;
+  const innerAlsoDict = nft.supportsDid
+    ? {
+        type: 'ownership',
+        owner: '()',
+        transfer_program: {
+          type: 'royalty transfer program',
+          launcher_id: `0x${nftLauncherId}`,
+          royalty_address: nft.royaltyPuzzleHash,
+          royalty_percentage: nft.royaltyPercentage,
+        },
+      }
+    : undefined;
+  const outerAlsoDict = {
+    type: 'metadata',
+    metadata: nft.chainInfo,
+    updater_hash: nft.updaterPuzhash,
+    ...(innerAlsoDict ? { also: innerAlsoDict } : undefined),
+  };
   const driverDict = {
     [nftLauncherId]: {
       type: 'singleton',
       launcher_id: `0x${nftLauncherId}`,
       launcher_ph: nft.launcherPuzhash,
-      also: {
-        type: 'metadata',
-        metadata: nft.chainInfo,
-        updater_hash: nft.updaterPuzhash,
-      },
+      also: outerAlsoDict,
     },
   };
 
@@ -461,7 +497,8 @@ function buildOfferRequest(
       [nftLauncherId]: nftAmount,
       [xchWalletId]: mojoAmount,
     },
-    driverDict,
+    exchangeType === NFTOfferExchangeType.XCHForNFT ? driverDict : undefined,
+    // driverDict,
     feeMojoAmount,
   ];
 }
@@ -477,7 +514,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
   );
   const defaultValues: NFTOfferEditorFormData = {
-    exchangeType: NFTOfferEditorExchangeType.NFTForXCH,
+    exchangeType: NFTOfferExchangeType.NFTForXCH,
     nftId: nft?.$nftId ?? '',
     xchAmount: '',
     fee: '',
@@ -558,6 +595,13 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
       xchAmount,
       fee,
     );
+
+    console.log('offer');
+    console.log(offer);
+    console.log('driverDict');
+    console.log(driverDict);
+    console.log('feeInMojos');
+    console.log(feeInMojos);
 
     const confirmedCreation = await openDialog(
       <OfferEditorConfirmationDialog />,

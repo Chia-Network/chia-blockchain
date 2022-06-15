@@ -6,12 +6,16 @@ import type {
   OfferSummaryInfos,
   OfferSummaryRecord,
 } from '@chia/api';
-import { mojoToChiaLocaleString, mojoToCATLocaleString } from '@chia/core';
+import {
+  mojoToChia,
+  mojoToChiaLocaleString,
+  mojoToCATLocaleString,
+} from '@chia/core';
+import NFTOfferExchangeType from './NFTOfferExchangeType';
 import OfferState from './OfferState';
 import OfferAsset from './OfferAsset';
 import { AssetIdMapEntry } from '../../hooks/useAssetIdName';
 import { launcherIdToNFTId } from '../../util/nfts';
-import { lookup } from 'dns';
 
 let filenameCounter = 0;
 
@@ -253,4 +257,118 @@ export function offerAssetTypeForAssetId(
   }
 
   return assetType;
+}
+
+export function offerAssetIdForAssetType(
+  assetType: OfferAsset,
+  offerSummary: OfferSummaryRecord,
+): string | undefined {
+  const assetId = Object.keys(offerSummary.infos).find(
+    (assetId) => offerAssetTypeForAssetId(assetId, offerSummary) === assetType,
+  );
+
+  return assetId;
+}
+
+export function offerAssetAmountForAssetId(
+  assetId: string,
+  offerSummary: OfferSummaryRecord,
+): number | undefined {
+  let amount = offerSummary.offered.hasOwnProperty(assetId)
+    ? offerSummary.offered[assetId]
+    : undefined;
+
+  if (amount === undefined) {
+    amount = offerSummary.requested.hasOwnProperty(assetId)
+      ? offerSummary.requested[assetId]
+      : undefined;
+  }
+  return amount;
+}
+
+/* ========================================================================== */
+
+export function determineNFTOfferExchangeType(
+  summary: OfferSummaryRecord,
+): NFTOfferExchangeType | undefined {
+  const nftOffered = Object.keys(summary.offered).find(
+    (assetId) => offerAssetTypeForAssetId(assetId, summary) === OfferAsset.NFT,
+  );
+  const nftRequested = Object.keys(summary.requested).find(
+    (assetId) => offerAssetTypeForAssetId(assetId, summary) === OfferAsset.NFT,
+  );
+
+  if (nftOffered === nftRequested) {
+    // NFT for NFT currently unsupported. Non-NFT for non-NFT is a separate type of offer...
+    return undefined;
+  }
+
+  return nftOffered
+    ? NFTOfferExchangeType.NFTForXCH
+    : NFTOfferExchangeType.XCHForNFT;
+}
+
+/* ========================================================================== */
+
+export function getNFTPriceWithoutRoyalties(
+  summary: OfferSummaryRecord,
+): number | undefined {
+  // NFTs can only be exchanged for XCH currently
+  const amountInMojos = offerAssetAmountForAssetId('xch', summary);
+  if (amountInMojos === undefined) {
+    return undefined;
+  }
+  return mojoToChia(amountInMojos).toNumber();
+}
+
+/* ========================================================================== */
+
+export type CalculateNFTRoyaltiesResult = {
+  royaltyAmount: number;
+  royaltyAmountString: string;
+  nftSellerNetAmount: number;
+  totalAmount: number;
+  totalAmountString: string;
+};
+
+export function calculateNFTRoyalties(
+  amount: number,
+  makerFee: number,
+  royaltyPercentage: number,
+  exchangeType: NFTOfferExchangeType,
+): CalculateNFTRoyaltiesResult {
+  const royaltyAmount: number = royaltyPercentage
+    ? (royaltyPercentage / 100) * amount
+    : 0;
+  const royaltyAmountString: string = formatAmount(royaltyAmount);
+  const nftSellerNetAmount: number =
+    exchangeType === NFTOfferExchangeType.NFTForXCH
+      ? amount
+      : parseFloat((amount - parseFloat(royaltyAmountString)).toFixed(12));
+  // : parseFloat(
+  //     (amount - parseFloat(royaltyAmountString) - makerFee).toFixed(12),
+  //   );
+  const totalAmount: number =
+    exchangeType === NFTOfferExchangeType.NFTForXCH
+      ? // ? amount + royaltyAmount + makerFee
+        amount + royaltyAmount
+      : amount + makerFee;
+  // : amount;
+  const totalAmountString: string = formatAmount(totalAmount);
+
+  return {
+    royaltyAmount,
+    royaltyAmountString,
+    nftSellerNetAmount,
+    totalAmount,
+    totalAmountString,
+  };
+}
+
+export function formatAmount(amount: number): string {
+  let s = amount.toFixed(12).replace(/0+$/, '');
+  if (s.endsWith('.')) {
+    s = s.slice(0, -1);
+  }
+  return s;
 }
