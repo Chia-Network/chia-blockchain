@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { WalletType } from '@chia/api';
 import { Flex } from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
-import { Typography, ListItemIcon, MenuItem } from '@mui/material';
+import { Box, Typography, ListItemIcon, MenuItem } from '@mui/material';
 import WalletHistory from '../WalletHistory';
 import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
@@ -58,16 +58,18 @@ export default function StandardWallet(props: StandardWalletProps) {
         )}
       />
 
-      {selectedTab === 'summary' && (
+      <Box display={selectedTab === 'summary' ? 'block' : 'none'}>
         <Flex flexDirection="column" gap={4}>
           <WalletStandardCards walletId={walletId} />
           <WalletHistory walletId={walletId} />
         </Flex>
-      )}
-      {selectedTab === 'send' && <WalletSend walletId={walletId} />}
-      {selectedTab === 'receive' && (
+      </Box>
+      <Box display={selectedTab === 'send' ? 'block' : 'none'}>
+        <WalletSend walletId={walletId} />
+      </Box>
+      <Box display={selectedTab === 'receive' ? 'block' : 'none'}>
         <WalletReceiveAddress walletId={walletId} />
-      )}
+      </Box>
 
       {/*
       {showDebugInformation && (

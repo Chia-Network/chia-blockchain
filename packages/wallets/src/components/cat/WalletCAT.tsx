@@ -7,7 +7,7 @@ import {
   Edit as RenameIcon,
   Fingerprint as FingerprintIcon,
 } from '@mui/icons-material';
-import { ListItemIcon, MenuItem } from '@mui/material';
+import { Box, ListItemIcon, MenuItem } from '@mui/material';
 import { WalletType } from '@chia/api';
 import { useSetCATNameMutation, useGetCatListQuery } from '@chia/api-react';
 import { Offers as OffersIcon } from '@chia/icons';
@@ -132,16 +132,19 @@ export default function WalletCAT(props: Props) {
           </>
         )}
       />
-      {selectedTab === 'summary' && (
+
+      <Box display={selectedTab === 'summary' ? 'block' : 'none'}>
         <Flex flexDirection="column" gap={4}>
           <WalletCards walletId={walletId} />
           <WalletHistory walletId={walletId} />
         </Flex>
-      )}
-      {selectedTab === 'send' && <WalletCATSend walletId={walletId} />}
-      {selectedTab === 'receive' && (
+      </Box>
+      <Box display={selectedTab === 'send' ? 'block' : 'none'}>
+        <WalletCATSend walletId={walletId} />
+      </Box>
+      <Box display={selectedTab === 'receive' ? 'block' : 'none'}>
         <WalletReceiveAddress walletId={walletId} />
-      )}
+      </Box>
     </Flex>
   );
 }
