@@ -192,7 +192,7 @@ class NFTWallet:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        delegated_puz_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
+        delegated_puz_solution: Program = coin_spend.solution.to_program().rest().rest().first().first()
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
@@ -202,7 +202,7 @@ class NFTWallet:
         )
         singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, puzzle, coin_spend.solution)
+        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         self.log.debug("Got back updated metadata: %s", metadata)
         derivation_record: Optional[
@@ -415,10 +415,11 @@ class NFTWallet:
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
         if did_id is not None:
-            did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
+            did_inner_hash = b""
+            if did_id != b"":
+                did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
+                bundles_to_agg.append(did_bundle)
             innersol = create_ownership_layer_transfer_solution(did_id, did_inner_hash, [], target_puzzle_hash)
-            bundles_to_agg.append(did_bundle)
-
             self.log.debug("Created an inner DID NFT solution: %s", disassemble(innersol))
         else:
             condition_list = [make_create_coin_condition(target_puzzle_hash, amount, [target_puzzle_hash])]
@@ -705,9 +706,8 @@ class NFTWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        ignore_max_send_amount: bool = False,
-        new_owner: Optional[bytes32] = None,
-        new_did_inner_hash: Optional[bytes32] = None,
+        new_owner: Optional[bytes] = None,
+        new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
         additional_bundles: List[SpendBundle] = [],
     ) -> List[TransactionRecord]:
@@ -735,8 +735,9 @@ class NFTWallet:
             new_did_inner_hash=new_did_inner_hash,
             trade_prices_list=trade_prices_list,
         )
+
         spend_bundle = await self.sign(unsigned_spend_bundle)
-        spend_bundle.aggregate(additional_bundles)
+        spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
         tx_list = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -789,8 +790,8 @@ class NFTWallet:
         coins: Set[Coin] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        new_owner: Optional[bytes32] = None,
-        new_did_inner_hash: Optional[bytes32] = None,
+        new_owner: Optional[bytes] = None,
+        new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coins is None or len(coins) > 1:
@@ -847,10 +848,12 @@ class NFTWallet:
 
         unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
 
-        return (unsigned_spend_bundle, chia_tx)
+        return unsigned_spend_bundle, chia_tx
 
-    async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes32, fee: uint64 = uint64(0)) -> SpendBundle:
-        self.log.info("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
+    async def set_nft_did(
+        self, nft_coin_info: NFTCoinInfo, did_id: Optional[bytes32], fee: uint64 = uint64(0)
+    ) -> SpendBundle:
+        self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
         nft_id = unft.singleton_launcher_id
         puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
@@ -861,7 +864,13 @@ class NFTWallet:
             did_inner_hash = None
             additional_bundles = []
         nft_tx_record = await self.generate_signed_transaction(
-            [nft_coin_info.coin.amount], puzzle_hashes_to_sign, fee, {nft_coin_info.coin},  new_owner=did_id, new_did_inner_hash=did_inner_hash, additional_bundles=additional_bundles
+            [nft_coin_info.coin.amount],
+            puzzle_hashes_to_sign,
+            fee,
+            {nft_coin_info.coin},
+            new_owner=did_id if did_id else b"",
+            new_did_inner_hash=did_inner_hash if did_inner_hash else b"",
+            additional_bundles=additional_bundles,
         )
         spend_bundle: Optional[SpendBundle] = None
         for tx in nft_tx_record:
@@ -875,4 +884,3 @@ class NFTWallet:
             return spend_bundle
         else:
             raise ValueError("Couldn't set DID on given NFT")
-

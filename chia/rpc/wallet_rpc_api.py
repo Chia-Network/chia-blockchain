@@ -1405,7 +1405,9 @@ class WalletRpcApi:
             assert self.service.wallet_state_manager is not None
             wallet_id = uint32(request["wallet_id"])
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            did_id = decode_puzzle_hash(request["did_id"])
+            did_id: Optional[bytes32] = None
+            if "did_id" in request:
+                did_id = decode_puzzle_hash(request["did_id"])
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
@@ -1484,7 +1486,7 @@ class WalletRpcApi:
             txs = await nft_wallet.generate_signed_transaction(
                 [nft_coin_info.coin.amount],
                 [puzzle_hash],
-                coins=[nft_coin_info.coin],
+                coins={nft_coin_info.coin},
                 fee=fee,
             )
             spend_bundle: Optional[SpendBundle] = None
