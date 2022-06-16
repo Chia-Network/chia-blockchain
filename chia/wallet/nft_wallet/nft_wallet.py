@@ -864,7 +864,7 @@ class NFTWallet:
             did_inner_hash = None
             additional_bundles = []
         nft_tx_record = await self.generate_signed_transaction(
-            [nft_coin_info.coin.amount],
+            [uint64(nft_coin_info.coin.amount)],
             puzzle_hashes_to_sign,
             fee,
             {nft_coin_info.coin},
