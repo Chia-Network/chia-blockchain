@@ -1362,18 +1362,19 @@ class WalletRpcApi:
             return {"success": False, "error": "Metadata URIs must be a list"}
         if not isinstance(request.get("license_uris", []), list):
             return {"success": False, "error": "License URIs must be a list"}
-        metadata = Program.to(
-            [
-                ("u", request["uris"]),
-                ("h", hexstr_to_bytes(request["hash"])),
-                ("mu", request.get("meta_uris", [])),
-                ("mh", hexstr_to_bytes(request.get("meta_hash", "00"))),
-                ("lu", request.get("license_uris", [])),
-                ("lh", hexstr_to_bytes(request.get("license_hash", "00"))),
-                ("sn", uint64(request.get("series_number", 1))),
-                ("st", uint64(request.get("series_total", 1))),
-            ]
-        )
+        metadata_list = [
+            ("u", request["uris"]),
+            ("h", hexstr_to_bytes(request["hash"])),
+            ("mu", request.get("meta_uris", [])),
+            ("lu", request.get("license_uris", [])),
+            ("sn", uint64(request.get("series_number", 1))),
+            ("st", uint64(request.get("series_total", 1))),
+        ]
+        if "meta_hash" in request and len(request["meta_hash"]) > 0:
+            metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
+        if "license_hash" in request and len(request["license_hash"]) > 0:
+            metadata_list.append(("lh", hexstr_to_bytes(request["license_hash"])))
+        metadata = Program.to(metadata_list)
         fee = uint64(request.get("fee", 0))
         did_id = request.get("did_id", None)
         if did_id is not None:
