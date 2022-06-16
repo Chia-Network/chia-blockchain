@@ -1,16 +1,13 @@
 from typing import Any, Callable, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
-from clvm_rs import COND_CANON_INTS, NO_NEG_DIV
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -411,8 +408,8 @@ class FullNodeRpcApi:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
         full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-        if full_block is None:
-            raise ValueError(f"Block {header_hash.hex()} not found")
+        if full_block is None or full_block.transactions_generator is None:
+            raise ValueError(f"Block {header_hash.hex()} not found or invalid block generator")
 
         spends: List[CoinSpend] = []
         block_generator = await self.service.blockchain.get_block_generator(full_block)
