@@ -297,10 +297,10 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     return new_ownership_puzzle
 
 
-def get_new_owner_did(solution: Program) -> Optional[bytes32]:
-    conditions = solution.at("rrfffrfr").as_iter()
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
     new_did_id = None
-    for condition in conditions:
+    for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom
