@@ -138,6 +138,7 @@ class WalletRpcApi:
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
             "/nft_set_nft_did": self.nft_set_nft_did,
+            "/nft_set_nft_status": self.nft_set_nft_status,
             "/nft_get_wallet_did": self.nft_get_wallet_did,
             "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
@@ -1465,6 +1466,20 @@ class WalletRpcApi:
                             }
                         )
         return {"success": True, "nft_wallets": did_nft_wallets}
+
+    async def nft_set_nft_status(self, request) -> Dict:
+        try:
+            wallet_id: uint32 = uint32(request["wallet_id"])
+            coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
+            status: bool = request["in_transaction"]
+            assert self.service.wallet_state_manager is not None
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            if nft_wallet is not None:
+                await nft_wallet.update_coin_status(coin_id, status)
+                return {"success": True}
+            return {"success": False, "error": "NFT wallet doesn't exist."}
+        except Exception as e:
+            return {"success": False, "error": f"Cannot change the status of the NFT.{e}"}
 
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
