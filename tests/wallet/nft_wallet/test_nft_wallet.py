@@ -1407,7 +1407,9 @@ async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
     assert not coins[0].pending_transaction
     nft_coin_id = coins[0].nft_coin_id
     # Set status
-    resp = await api_0.nft_set_nft_status(dict(wallet_id=nft_wallet_0_id, coin_id=nft_coin_id.hex(), in_transaction=True))
+    resp = await api_0.nft_set_nft_status(
+        dict(wallet_id=nft_wallet_0_id, coin_id=nft_coin_id.hex(), in_transaction=True)
+    )
     assert resp.get("success")
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert coins_response["nft_list"], isinstance(coins_response, dict)

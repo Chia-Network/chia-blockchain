@@ -704,7 +704,12 @@ class WalletStateManager:
                 return None, None
             launch_coin: CoinState = response[0]
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
-                self, self.main_wallet, launch_coin.coin, did_puzzle, coin_spend, f"DID {encode_puzzle_hash(launch_id, DID_HRP)}"
+                self,
+                self.main_wallet,
+                launch_coin.coin,
+                did_puzzle,
+                coin_spend,
+                f"DID {encode_puzzle_hash(launch_id, DID_HRP)}",
             )
             wallet_id = did_wallet.id()
             wallet_type = WalletType(did_wallet.type())
