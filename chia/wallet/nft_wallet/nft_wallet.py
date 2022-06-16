@@ -1037,29 +1037,3 @@ class NFTWallet:
             return spend_bundle
         else:
             raise ValueError("Couldn't set DID on given NFT")
-
-    @classmethod
-    async def take_nft1_offer(self, offer: Offer, fee: uint64) -> Offer:  # type: ignore
-        offered_coin: Dict[Optional[bytes32], List[Coin]] = offer.get_offered_coins()
-        offered_asset_id: Optional[bytes32] = list(offered_coin.items())[0][0]
-        if offered_asset_id is None:
-            nft_offered: bool = False
-        else:
-            nft_offered = offer.driver_dict[offered_asset_id].check_type(
-                [
-                    AssetType.SINGLETON.value,
-                    AssetType.METADATA.value,
-                    AssetType.OWNERSHIP.value,
-                ]
-            )
-        if (
-            len(offered_coin) > 1
-            or (nft_offered and len(list(offered_coin.items())[0][1]) > 1)
-            or (not nft_offered and len(offer.requested_payments) > 1)
-        ):
-            raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
-
-        if nft_offered:
-            pass
-        else:
-            pass

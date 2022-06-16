@@ -679,22 +679,6 @@ class TradeManager:
                 return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
         return None
 
-    async def check_for_special_offer_taking(self, offer: Offer, fee: uint64) -> Optional[Offer]:
-        for puzzle_info in offer.driver_dict.values():
-            if (
-                puzzle_info.check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                        AssetType.OWNERSHIP.value,
-                    ]
-                )
-                and isinstance(puzzle_info["transfer_program"], PuzzleInfo)
-                and puzzle_info["transfer_program"].type() == AssetType.ROYALTY_TRANSFER_PROGRAM
-            ):
-                return await NFTWallet.take_nft1_offer(offer, fee)
-        return None
-
     async def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
         if puzzle_info.check_type(
             [
