@@ -29,7 +29,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     get_metadata_and_phs,
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.outer_puzzles import AssetType, match_puzzle
+from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -39,7 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from chia.wallet.trading.offer import NotarizedPayment, Offer, OFFER_MOD
+from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
@@ -894,7 +894,14 @@ class NFTWallet:
             if requested_asset_id is None:
                 trade_prices = Program.to([[uint64(requested_amount), OFFER_MOD.get_tree_hash()]])
             else:
-                trade_prices = Program.to([[uint64(requested_amount), construct_puzzle(driver_dict[requested_asset_id], OFFER_MOD).get_tree_hash()]])
+                trade_prices = Program.to(
+                    [
+                        [
+                            uint64(requested_amount),
+                            construct_puzzle(driver_dict[requested_asset_id], OFFER_MOD).get_tree_hash(),
+                        ]
+                    ]
+                )
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 {requested_asset_id: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
             )
@@ -990,7 +997,7 @@ class NFTWallet:
                 offer_puzzle: Program = OFFER_MOD
             else:
                 offer_puzzle = construct_puzzle(driver_dict[offered_asset_id], OFFER_MOD)
-            royalty_spend = SpendBundle([CoinSpend(royalty_coin, OFFER_MOD, royalty_sol)], G2Element())
+            royalty_spend = SpendBundle([CoinSpend(royalty_coin, offer_puzzle, royalty_sol)], G2Element())
 
             total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
