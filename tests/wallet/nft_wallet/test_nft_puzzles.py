@@ -12,8 +12,6 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     create_nft_layer_puzzle_with_curry_params,
     recurry_nft_puzzle,
 )
-from chia.wallet.outer_puzzles import match_puzzle
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 from tests.core.make_block_generator import int_to_public_key
@@ -53,8 +51,6 @@ def test_nft_transfer_puzzle_hashes():
         SINGLETON_STRUCT,
         maker_p2_ph,
         royalty_pc,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
 
     ownership_puz = NFT_OWNERSHIP_LAYER.curry(
@@ -111,7 +107,7 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list = [[200]]
+    trade_prices_list = [[200, OFFER_MOD.get_tree_hash()]]
 
     condition_list = [
         [
@@ -140,8 +136,6 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
         SINGLETON_STRUCT,
         innerpuz.get_tree_hash(),
         2000,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
     curried_inner = innerpuz
     curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner)

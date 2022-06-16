@@ -9,7 +9,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 
@@ -20,7 +19,6 @@ NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-OFFER_MOD = load_clvm("settlement_payments.clvm")
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
@@ -213,8 +211,6 @@ def create_ownership_layer_puzzle(
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
     nft_inner_puzzle = p2_puzzle
 
