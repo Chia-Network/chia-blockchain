@@ -98,8 +98,8 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    await time_out_assert(15, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+    await time_out_assert(15, len, 1, nft_wallet_0.my_nft_coins)
+    coins = nft_wallet_0.my_nft_coins
     assert len(coins) == 1, "nft not generated"
 
     txs = await nft_wallet_0.generate_signed_transaction([coins[0].coin.amount], [ph1], coins=set([coins[0].coin]))
@@ -116,10 +116,12 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 1
     nft_wallet_1: NFTWallet = wallet_node_1.wallet_state_manager.wallets[nft_wallets[0].id]
-    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+
+    await time_out_assert(15, len, 0, nft_wallet_0.my_nft_coins)
+    await time_out_assert(15, len, 1, nft_wallet_1.my_nft_coins)
+    coins = nft_wallet_0.my_nft_coins
     assert len(coins) == 0
-    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
+    coins = nft_wallet_1.my_nft_coins
     assert len(coins) == 1
 
 
@@ -192,7 +194,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await time_out_assert(10, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
+    await time_out_assert(10, len, 1, nft_wallet_0.my_nft_coins)
     metadata = Program.to(
         [
             ("u", ["https://www.test.net/logo.svg"]),
@@ -211,8 +213,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
-    coins = nft_wallet_0.nft_wallet_info.my_nft_coins
+    await time_out_assert(15, len, 2, nft_wallet_0.my_nft_coins)
+    coins = nft_wallet_0.my_nft_coins
     assert len(coins) == 2, "nft not generated"
 
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
@@ -230,9 +232,9 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 1, nft_wallet_0.nft_wallet_info.my_nft_coins)
-    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
-    coins = nft_wallet_1.nft_wallet_info.my_nft_coins
+    await time_out_assert(15, len, 1, nft_wallet_0.my_nft_coins)
+    await time_out_assert(15, len, 1, nft_wallet_1.my_nft_coins)
+    coins = nft_wallet_1.my_nft_coins
     assert len(coins) == 1
 
     await time_out_assert(15, wallet_1.get_pending_change_balance, 0)
@@ -252,8 +254,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
-    await time_out_assert(15, len, 2, nft_wallet_0.nft_wallet_info.my_nft_coins)
-    await time_out_assert(15, len, 0, nft_wallet_1.nft_wallet_info.my_nft_coins)
+    await time_out_assert(15, len, 2, nft_wallet_0.my_nft_coins)
+    await time_out_assert(15, len, 0, nft_wallet_1.my_nft_coins)
 
 
 @pytest.mark.parametrize(
@@ -961,7 +963,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
         raise AssertionError("NFT not transferred")
 
     nft_wallet_1 = wallet_1.wallet_state_manager.wallets[2]
-    await time_out_assert(15, len, 1, nft_wallet_1.nft_wallet_info.my_nft_coins)
+    await time_out_assert(15, len, 1, nft_wallet_1.my_nft_coins)
 
 
 @pytest.mark.parametrize(
