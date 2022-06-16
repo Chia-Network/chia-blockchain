@@ -34,8 +34,8 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RLInfo(Streamable):
     type: str
     admin_pubkey: Optional[bytes]
@@ -512,11 +512,11 @@ class RLWallet:
         solution = solution_for_rl(
             coin.parent_coin_info,
             puzzle_hash,
-            coin.amount,
+            uint64(coin.amount),
             to_puzzlehash,
             amount,
             rl_parent.parent_coin_info,
-            rl_parent.amount,
+            uint64(rl_parent.amount),
             self.rl_info.interval,
             self.rl_info.limit,
             fee,

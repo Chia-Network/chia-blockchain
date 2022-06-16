@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import copy
 import logging
 import os
 import shutil
@@ -14,8 +15,6 @@ import pkg_resources
 import yaml
 from filelock import FileLock
 from typing_extensions import Literal
-
-from chia.util.path import mkdir
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
@@ -32,7 +31,7 @@ def create_default_chia_config(root_path: Path, filenames=["config.yaml"]) -> No
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
         tmp_path: Path = path.with_suffix("." + str(os.getpid()))
-        mkdir(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
         with open(tmp_path, "w") as f:
             f.write(default_config_file_data)
         try:
@@ -262,3 +261,12 @@ def process_config_start_method(
     log.info(f"Selected multiprocessing start method: {choice}")
 
     return processed_method
+
+
+def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str, Any]]):
+    new_config = copy.deepcopy(config)
+    if config_overrides is None:
+        return new_config
+    for k, v in config_overrides.items():
+        add_property(new_config, k, v)
+    return new_config

@@ -1,7 +1,6 @@
 import logging
-
 from typing import Dict, Optional
-from clvm_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
+from chia_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.cost_calculator import NPCResult
@@ -59,8 +58,8 @@ def get_name_puzzle_conditions(
             return NPCResult(uint16(err), None, uint64(0))
         else:
             return NPCResult(None, result, uint64(result.cost + size_cost))
-    except BaseException as e:
-        log.debug(f"get_name_puzzle_condition failed: {e}")
+    except BaseException:
+        log.exception("get_name_puzzle_condition failed")
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
 
 
@@ -95,7 +94,7 @@ def mempool_check_time_locks(
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
     for spend in bundle_conds.spends:
-        unspent = removal_coin_records[spend.coin_id]
+        unspent = removal_coin_records[bytes32(spend.coin_id)]
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED

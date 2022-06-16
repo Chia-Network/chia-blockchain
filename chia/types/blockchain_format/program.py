@@ -1,17 +1,17 @@
 import io
-from typing import List, Set, Tuple, Optional
+from typing import List, Set, Tuple, Optional, Any
 
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator2
-from clvm_tools.curry import curry, uncurry
+from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator
+from clvm_tools.curry import uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 
 from .tree_hash import sha256_treehash
 
@@ -88,9 +88,27 @@ class Program(SExp):
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
+    # Replicates the curry function from clvm_tools, taking advantage of *args
+    # being a list.  We iterate through args in reverse building the code to
+    # create a clvm list.
+    #
+    # Given arguments to a function addressable by the '1' reference in clvm
+    #
+    # fixed_args = 1
+    #
+    # Each arg is prepended as fixed_args = (c (q . arg) fixed_args)
+    #
+    # The resulting argument list is interpreted with apply (2)
+    #
+    # (2 (1 . self) rest)
+    #
+    # Resulting in a function which places its own arguments after those
+    # curried in in the form of a proper list.
     def curry(self, *args) -> "Program":
-        cost, r = curry(self, list(args))
-        return Program.to(r)
+        fixed_args: Any = 1
+        for arg in reversed(args):
+            fixed_args = [4, (1, arg), fixed_args]
+        return Program.to([2, (1, self), fixed_args])
 
     def uncurry(self) -> Tuple["Program", "Program"]:
         r = uncurry(self)
@@ -222,7 +240,7 @@ class SerializedProgram:
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)
 
-    # returns an optional error code and an optional SpendBundleConditions
+    # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
     # exactly one of those will hold a value
     def run_as_generator(
         self, max_cost: int, flags: int, *args
@@ -238,7 +256,7 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        err, conds = run_generator2(
+        err, ret = run_generator(
             self._buf,
             serialized_args,
             max_cost,
@@ -247,19 +265,6 @@ class SerializedProgram:
         if err is not None:
             assert err != 0
             return err, None
-
-        # for now, we need to copy this data into python objects, in order to
-        # support streamable. This will become simpler and faster once we can
-        # implement streamable in rust
-        spends = []
-        for s in conds.spends:
-            spends.append(
-                Spend(s.coin_id, s.puzzle_hash, s.height_relative, s.seconds_relative, s.create_coin, s.agg_sig_me)
-            )
-
-        ret = SpendBundleConditions(
-            spends, conds.reserve_fee, conds.height_absolute, conds.seconds_absolute, conds.agg_sig_unsafe, conds.cost
-        )
 
         assert ret is not None
         return None, ret
