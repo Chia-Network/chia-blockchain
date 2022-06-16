@@ -39,7 +39,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
-from chia.wallet.trading.offer import NotarizedPayment, Offer
+from chia.wallet.trading.offer import NotarizedPayment, Offer, OFFER_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble

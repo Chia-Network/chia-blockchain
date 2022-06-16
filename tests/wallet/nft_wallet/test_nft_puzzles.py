@@ -12,6 +12,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     create_nft_layer_puzzle_with_curry_params,
     recurry_nft_puzzle,
 )
+from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 from tests.core.make_block_generator import int_to_public_key
