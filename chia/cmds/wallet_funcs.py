@@ -657,7 +657,7 @@ async def execute_with_wallet(
 
 async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     amount = args["amount"]
-    fee = args["fee"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
     name = args["name"]
     try:
         response = await wallet_client.create_new_did_wallet(amount, fee, name)
@@ -714,7 +714,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     license_uris = args["license_uris"]
     series_total = args["series_total"]
     series_number = args["series_number"]
-    fee = args["fee"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
         response = await wallet_client.mint_nft(
@@ -743,7 +743,7 @@ async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         uri = args["uri"]
-        fee = args["fee"]
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
         key = args.get("meta_uri", "u")
         response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri, fee)
         spend_bundle = response["spend_bundle"]
@@ -757,7 +757,7 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         target_address = args["target_address"]
-        fee = args["fee"]
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
@@ -819,7 +819,7 @@ async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: i
     wallet_id = args["wallet_id"]
     did_id = args["did_id"]
     nft_coin_id = args["nft_coin_id"]
-    fee = args["fee"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
     try:
         response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee)
         spend_bundle = response["spend_bundle"]
