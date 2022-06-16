@@ -92,13 +92,17 @@ def test_nft_transfer_puzzle_hashes():
     # get the new NFT puzhash
     for cond in conds.as_iter():
         if cond.first().as_int() == 51:
-            calc_ph = bytes32(cond.at("rf").atom)
+            expected_ph = bytes32(cond.at("rf").atom)
 
     # recreate the puzzle for new_puzhash
-    new_puz = recurry_nft_puzzle(unft, nft_sol)
-    exp_ph = new_puz.get_tree_hash()
-    # breakpoint()
-    assert calc_ph == exp_ph
+    new_ownership_puz = NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), None, transfer_puz, taker_p2_puz)
+    new_metadata_puz = NFT_STATE_LAYER_MOD.curry(
+        NFT_STATE_LAYER_MOD.get_tree_hash(), metadata, metadata_updater_hash, new_ownership_puz
+    )
+    new_nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, new_metadata_puz)
+    calculated_ph = new_nft_puz.get_tree_hash()
+
+    assert expected_ph == calculated_ph
 
 
 def make_a_new_solution() -> Tuple[Program, Program]:
