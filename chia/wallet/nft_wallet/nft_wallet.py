@@ -886,6 +886,7 @@ class NFTWallet:
 
         if nft == offered:
             assert offered_asset_id is not None  # hello mypy
+            driver_dict[offered_asset_id].info["also"]["also"]["owner"] = "()"
             wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
             p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
             offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
