@@ -32,6 +32,7 @@ import { useTheme } from '@mui/material/styles';
 import useAcceptOfferHook from '../../hooks/useAcceptOfferHook';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import useFetchNFTs from '../../hooks/useFetchNFTs';
+import { stripHexPrefix } from '../../util/utils';
 import { convertRoyaltyToPercentage, launcherIdToNFTId } from '../../util/nfts';
 import {
   calculateNFTRoyalties,
@@ -47,7 +48,6 @@ import OfferViewerTitle from './OfferViewerTitle';
 import NFTOfferExchangeType from './NFTOfferExchangeType';
 import NFTOfferPreview from './NFTOfferPreview';
 import styled from 'styled-components';
-import { nthArg } from 'lodash';
 
 /* ========================================================================== */
 
@@ -172,8 +172,10 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
       {unknownAssets !== undefined && unknownAssets.length > 0 && (
         <Flex flexDirection="row" gap={1}>
           <StyledWarningText variant="caption">
-            Offer cannot be accepted because you don't possess the requested
-            assets
+            <Trans>
+              Offer cannot be accepted because you don&apos;t possess the
+              requested assets
+            </Trans>
           </StyledWarningText>
         </Flex>
       )}
@@ -274,13 +276,11 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
     if (isMyOffer || isLoadingNFTs) {
       return [];
     }
-    const takerUnknownAssets = makerEntries
-      .filter(
-        ([assetId, _]) =>
-          offerAssetTypeForAssetId(assetId, summary) !== OfferAsset.NFT &&
-          lookupByAssetId(assetId) === undefined,
-      )
-      .map(([assetId, _]) => assetId);
+    const takerUnknownAssets = makerEntries.filter(
+      ([assetId, _]) =>
+        offerAssetTypeForAssetId(assetId, summary) !== OfferAsset.NFT &&
+        lookupByAssetId(assetId) === undefined,
+    );
 
     const makerUnknownAssets = takerEntries
       .filter(([assetId, _]) => {
@@ -288,7 +288,9 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
         if (assetType === OfferAsset.NFT) {
           return (
             nfts.find(
-              (nft) => nft.launcherId.toLowerCase() === assetId.toLowerCase(),
+              (nft) =>
+                stripHexPrefix(nft.launcherId.toLowerCase()) ===
+                assetId.toLowerCase(),
             ) === undefined
           );
         }
@@ -297,7 +299,15 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
       .map(([assetId, _]) => assetId);
 
     return [takerUnknownAssets, makerUnknownAssets];
-  }, [summary, isLoadingNFTs]);
+  }, [
+    isMyOffer,
+    isLoadingNFTs,
+    makerEntries,
+    takerEntries,
+    summary,
+    lookupByAssetId,
+    nfts,
+  ]);
   const makerSummary: React.ReactElement = (
     <NFTOfferSummaryRow
       title={makerTitle}
@@ -406,11 +416,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   } = useGetNFTInfoQuery({ coinId: launcherId });
   const amount = getNFTPriceWithoutRoyalties(summary);
 
-  console.log('amount without royalties');
-  console.log(amount);
   const nftSaleInfo = useMemo(() => {
-    console.log('royaltyPercentage:');
-    console.log(nft?.royaltyPercentage);
     if (
       !exchangeType ||
       amount === undefined ||
@@ -442,15 +448,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
     exchangeType === NFTOfferExchangeType.XCHForNFT
       ? chiaToMojo(nftSaleInfo?.nftSellerNetAmount ?? 0)
       : undefined;
-
-  console.log('nftSaleInfo:');
-  console.log(nftSaleInfo);
-
-  console.log('exchangeType:');
-  console.log(exchangeType);
-
-  console.log('overrideNFTSellerAmount:');
-  console.log(overrideNFTSellerAmount);
 
   useMemo(async () => {
     if (!offerData) {
@@ -602,31 +599,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                 )}
                 <NFTOfferMakerFee makerFee={makerFee} imported={!!imported} />
               </Flex>
-              {/* {imported && isValid && (
-                <Flex flexDirection="column" gap={1}>
-                  <Typography variant="body1" color="textSecondary">
-                    <Trans>Network Fee (Optional)</Trans>
-                  </Typography>
-                  <Grid
-                    direction="column"
-                    xs={5}
-                    sm={5}
-                    md={5}
-                    lg={5}
-                    container
-                  >
-                    <Fee
-                      id="filled-secondary"
-                      variant="filled"
-                      name="fee"
-                      color="secondary"
-                      label={<Trans>Fee</Trans>}
-                      defaultValue={1}
-                      disabled={isAccepting}
-                    />
-                  </Grid>
-                </Flex>
-              )} */}
               {nftSaleInfo && (
                 <>
                   <Divider />
