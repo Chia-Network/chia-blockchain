@@ -717,7 +717,7 @@ class DataLayerWallet:
                     ),
                     generation=uint32(singleton_record.generation + 1),
                 ),
-                True,
+                in_transaction,
             )
             await self.wallet_state_manager.coin_store.add_coin_record(
                 WalletCoinRecord(
