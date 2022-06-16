@@ -417,9 +417,7 @@ class FullNodeRpcApi:
             return {"block_spends": spends}
 
         args = create_generator_args(block_generator.generator_refs).first()
-        _, block_result = block_generator.program.run_with_cost(
-            self.service.constants.MAX_BLOCK_COST_CLVM, 0, args
-        )
+        _, block_result = block_generator.program.run_with_cost(self.service.constants.MAX_BLOCK_COST_CLVM, 0, args)
 
         coin_spends = block_result.first()
 

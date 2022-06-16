@@ -186,19 +186,23 @@ class TestRpc:
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, blocks[-1].height + 1)) == 2
             assert len(await client.get_coin_records_by_puzzle_hash(ph, True, 0, 1)) == 0
 
-            coin_records = (await client.get_coin_records_by_puzzle_hash(ph, False))
+            coin_records = await client.get_coin_records_by_puzzle_hash(ph, False)
 
             coin_spends = []
 
             # Spend 3 coins using standard transaction
             for i in range(3):
-                spend_bundle = wallet.generate_signed_transaction(coin_records[i].coin.amount, ph_receiver, coin_records[i].coin)
+                spend_bundle = wallet.generate_signed_transaction(
+                    coin_records[i].coin.amount, ph_receiver, coin_records[i].coin
+                )
                 await client.push_tx(spend_bundle)
                 coin_spends = coin_spends + spend_bundle.coin_spends
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            assert len((await full_node_api_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0 # compression has occured
+            assert (
+                len((await full_node_api_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+            )  # compression has occured
 
             block_spends = await client.get_block_spends((await full_node_api_1.get_all_full_blocks())[-1].header_hash)
 
