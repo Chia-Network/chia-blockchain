@@ -126,7 +126,7 @@ def make_a_new_solution() -> Tuple[Program, Program]:
             [
                 [solution_for_conditions(condition_list)],
             ],
-        ]
+        ],
     )
     return p2_puzzle, solution
 
@@ -181,12 +181,12 @@ def test_transfer_puzzle_builder() -> None:
         NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(),
         ownership_puzzle,
     )
-    clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution)
+    clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution.at("rrf"))
     unft = uncurry_nft.UncurriedNFT.uncurry(puzzle)
     assert unft.nft_state_layer == clvm_nft_puzzle
     assert unft.inner_puzzle == ownership_puzzle
     assert unft.p2_puzzle == p2_puzzle
-    ol_puzzle = recurry_nft_puzzle(unft, solution, p2_puzzle)
+    ol_puzzle = recurry_nft_puzzle(unft, solution, sp2_puzzle)
     nft_puzzle = create_nft_layer_puzzle_with_curry_params(
         Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ol_puzzle
     )
