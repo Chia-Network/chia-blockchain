@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 # from secrets import token_bytes
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pytest
 
@@ -326,3 +326,6 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+
+    await time_out_assert(5, len, 1, nft_wallet_maker.nft_wallet_info.my_nft_coins)
+    await time_out_assert(5, len, 0, nft_wallet_taker.nft_wallet_info.my_nft_coins)
