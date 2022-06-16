@@ -8,8 +8,6 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 
-CAT_MOD = load_clvm("cat.clvm")
-OFFER_MOD = load_clvm("settlement_payments.clvm")
 TRANSFER_PROGRAM_MOD = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
 
 
@@ -26,8 +24,6 @@ def puzzle_for_transfer_program(launcher_id: bytes32, royalty_puzzle_hash: bytes
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
 
 
@@ -53,7 +49,7 @@ class TransferProgramPuzzle:
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_transfer_program_puzzle(puzzle)
         if matched:
-            singleton_struct, royalty_puzzle_hash, percentage, _, _ = curried_args
+            singleton_struct, royalty_puzzle_hash, percentage = curried_args
             constructor_dict = {
                 "type": "royalty transfer program",
                 "launcher_id": "0x" + singleton_struct.rest().first().as_python().hex(),

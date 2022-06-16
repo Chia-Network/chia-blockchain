@@ -885,9 +885,9 @@ class NFTWallet:
             offered_coin: Coin = offered_coin_info.coin
             requested_amount = offer_dict[requested_asset_id]
             if requested_asset_id is None:
-                trade_prices = Program.to([[uint64(requested_amount)]])
+                trade_prices = Program.to([[uint64(requested_amount), OFFER_MOD.get_tree_hash()]])
             else:
-                trade_prices = Program.to([[uint64(requested_amount), requested_asset_id]])
+                trade_prices = Program.to([[uint64(requested_amount), construct_puzzle(driver_dict[requested_asset_id], OFFER_MOD).get_tree_hash()]])
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 {requested_asset_id: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
             )
@@ -979,6 +979,10 @@ class NFTWallet:
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
             royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
+            if offered_asset_id is None:
+                offer_puzzle: Program = OFFER_MOD
+            else:
+                offer_puzzle = construct_puzzle(driver_dict[offered_asset_id], OFFER_MOD)
             royalty_spend = SpendBundle([CoinSpend(royalty_coin, OFFER_MOD, royalty_sol)], G2Element())
 
             total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])

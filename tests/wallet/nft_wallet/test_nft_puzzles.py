@@ -120,9 +120,9 @@ def make_a_new_solution() -> Tuple[Program, Program]:
         [-10, new_did, trade_prices_list, new_did_inner_hash],
     ]
     solution = Program.to(
-        [
+        [[], [], [
             [solution_for_conditions(condition_list)],
-        ]
+        ]]
     )
     return p2_puzzle, solution
 
