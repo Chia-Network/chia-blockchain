@@ -226,7 +226,7 @@ def create_ownership_layer_puzzle(
 
 def create_ownership_layer_transfer_solution(
     new_did: bytes,
-    new_did_inner_hash: bytes32,
+    new_did_inner_hash: bytes,
     trade_prices_list: List[List[int]],
     new_puzhash: bytes32,
 ) -> Program:
@@ -256,7 +256,7 @@ def create_ownership_layer_transfer_solution(
     return solution
 
 
-def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: SerializedProgram) -> Tuple[Program, bytes32]:
+def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tuple[Program, bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution.to_program()))
     metadata = unft.metadata
     puzhash_for_derivation: Optional[bytes32] = None
@@ -285,7 +285,7 @@ def get_metadata_and_phs(unft: UncurriedNFT, puzzle: Program, solution: Serializ
 def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Program) -> Program:
     log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
     conditions = solution.at("frfr").as_iter()
-    new_did_id = None
+    new_did_id = unft.owner_did
     new_puzhash = None
     for condition in conditions:
         if condition.first().as_int() == -10:
@@ -298,3 +298,13 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Progra
     assert unft.transfer_program
     inner_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, sp2_puzzle)
     return inner_puzzle
+
+
+def get_new_owner_did(solution: Program) -> Optional[bytes32]:
+    conditions = solution.at("rrfffrfr").as_iter()
+    new_did_id = None
+    for condition in conditions:
+        if condition.first().as_int() == -10:
+            # this is the change owner magic condition
+            new_did_id = condition.at("rf").atom
+    return new_did_id
