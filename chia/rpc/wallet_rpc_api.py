@@ -436,13 +436,17 @@ class WalletRpcApi:
 
     async def get_wallets(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-
+        include_data: bool = request.get("include_data", True)
         wallet_type: Optional[WalletType] = None
         if "type" in request:
             wallet_type = WalletType(request["type"])
 
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
-
+        if not include_data:
+            result: List[WalletInfo] = []
+            for wallet in wallets:
+                result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
+            wallets = result
         return {"wallets": wallets}
 
     async def create_new_wallet(self, request: Dict):
@@ -1561,7 +1565,13 @@ class WalletRpcApi:
                     "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
                 }
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
-                NFTCoinInfo(coin_state.coin, None, full_puzzle, launcher_coin[0].spent_height)
+                NFTCoinInfo(
+                    uncurried_nft.singleton_launcher_id,
+                    coin_state.coin,
+                    None,
+                    full_puzzle,
+                    launcher_coin[0].spent_height,
+                )
             )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
