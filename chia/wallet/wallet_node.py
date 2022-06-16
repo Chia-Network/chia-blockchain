@@ -85,7 +85,6 @@ class WalletNode:
     future_block_hashes: Dict = dataclasses.field(default_factory=dict)
 
     # Sync data
-    _shut_down: bool = False
     proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[Callable] = None
     wallet_state_manager: Optional[WalletStateManager] = None
@@ -106,9 +105,6 @@ class WalletNode:
     # in Untrusted mode wallet might get the state update before receiving the block
     race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
     race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
-    _process_new_subscriptions_task: Optional[asyncio.Task] = None
-    _primary_peer_sync_task: Optional[asyncio.Task] = None
-    _secondary_peer_sync_task: Optional[asyncio.Task] = None
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]] = dataclasses.field(default_factory=dict)
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
@@ -118,6 +114,11 @@ class WalletNode:
     wallet_tx_resend_timeout_secs: int = 1800
     new_peak_queue: NewPeakQueue = dataclasses.field(default_factory=lambda: NewPeakQueue(asyncio.PriorityQueue()))
     full_node_peer: Optional[PeerInfo] = None
+
+    _shut_down: bool = False
+    _process_new_subscriptions_task: Optional[asyncio.Task] = None
+    _primary_peer_sync_task: Optional[asyncio.Task] = None
+    _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
