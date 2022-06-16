@@ -285,7 +285,7 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
 def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Program) -> Program:
     log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
     conditions = solution.at("frfr").as_iter()
-    new_did_id = None
+    new_did_id = unft.owner_did
     new_puzhash = None
     for condition in conditions:
         if condition.first().as_int() == -10:

@@ -1001,7 +1001,13 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     nft_wallet_1_id = coins_response.get("wallet_id")
     assert nft_wallet_1_id
     # Check NFT DID
-    resp = await api_1.nft_get_nfts(dict(wallet_id=nft_wallet_1_id))
+    time_left = 15.0
+    while time_left > 0:
+        resp = await api_1.nft_get_nfts(dict(wallet_id=nft_wallet_1_id))
+        if coins_response.get("nft_list"):
+            break
+        await asyncio.sleep(0.5)
+        time_left -= 0.5
     assert resp.get("success")
     coins = resp["nft_list"]
     assert len(coins) == 1
@@ -1116,7 +1122,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     # check that new URI was added
-    time_left = 5.0
+    time_left = 10.0
     while time_left > 0:
         coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
         try:

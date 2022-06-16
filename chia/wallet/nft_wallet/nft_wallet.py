@@ -571,7 +571,6 @@ class NFTWallet:
             condition_list = [
                 [51, puzzle_hash, coin.amount, [puzzle_hash]],
                 [-24, NFT_METADATA_UPDATER, (key, uri)],
-                [-10, [], [], []],
             ]
             inner_solution = Program.to([[solution_for_conditions(condition_list)]])
         else:
@@ -706,6 +705,7 @@ class NFTWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        ignore_max_send_amount: bool = False,
         new_owner: Optional[bytes] = None,
         new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,

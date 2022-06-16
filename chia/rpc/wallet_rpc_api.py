@@ -1414,7 +1414,7 @@ class WalletRpcApi:
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to set DID on NFT: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": f"Failed to set DID on NFT: {e}"}
 
     async def nft_get_by_did(self, request) -> Dict:
         did_id: Optional[bytes32] = None
