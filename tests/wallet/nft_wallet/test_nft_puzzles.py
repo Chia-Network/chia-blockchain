@@ -37,7 +37,7 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     puzhash = p2_puzzle.get_tree_hash()
     new_did = Program.to("test").get_tree_hash()
     new_did_inner_hash = Program.to("fake").get_tree_hash()
-    trade_prices_list = [[200]]
+    trade_prices_list = [[200, OFFER_MOD.get_tree_hash()]]
 
     condition_list = [
         [
@@ -66,8 +66,6 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
         SINGLETON_STRUCT,
         innerpuz.get_tree_hash(),
         2000,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
     curried_inner = innerpuz
     curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner)

@@ -213,8 +213,6 @@ def create_ownership_layer_puzzle(
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
     nft_inner_puzzle = p2_puzzle
 
