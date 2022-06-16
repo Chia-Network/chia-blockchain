@@ -724,7 +724,7 @@ class WalletStateManager:
         did_id = None
         if uncurried_nft.supports_did:
             # Try to get the latest owner DID
-            did_id = get_new_owner_did(coin_spend.solution.to_program())
+            did_id = get_new_owner_did(uncurried_nft, coin_spend.solution.to_program())
         if did_id is None:
             # No DID owner update, use the original DID
             did_id = uncurried_nft.owner_did

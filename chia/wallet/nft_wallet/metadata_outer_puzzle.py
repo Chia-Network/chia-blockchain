@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 
 from clvm_tools.binutils import disassemble
 
@@ -14,11 +14,11 @@ NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
 
-def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, Union[List[Any], Program]]:
+def match_metadata_layer_puzzle(puzzle: Program) -> Tuple[bool, List[Program]]:
     mod, meta_args = puzzle.uncurry()
     if mod == NFT_STATE_LAYER_MOD:
         return True, list(meta_args.as_iter())
-    return False, Program.to([])
+    return False, []
 
 
 def puzzle_for_metadata_layer(metadata: Program, updater_hash: bytes32, inner_puzzle: Program) -> Program:
@@ -35,6 +35,8 @@ class MetadataOuterPuzzle:
     _asset_id: Any
     _construct: Any
     _solve: Any
+    _get_inner_puzzle: Any
+    _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_metadata_layer_puzzle(puzzle)
@@ -60,6 +62,26 @@ class MetadataOuterPuzzle:
         if constructor.also() is not None:
             inner_puzzle = self._construct(constructor.also(), inner_puzzle)
         return puzzle_for_metadata_layer(constructor["metadata"], constructor["updater_hash"], inner_puzzle)
+
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+        matched, curried_args = match_metadata_layer_puzzle(puzzle_reveal)
+        if matched:
+            _, _, _, inner_puzzle = curried_args
+            if constructor.also() is not None:
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
+                return deep_inner_puzzle
+            else:
+                return inner_puzzle
+        else:
+            raise ValueError("This driver is not for the specified puzzle reveal")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        my_inner_solution: Program = solution.first()
+        if constructor.also():
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+            return deep_inner_solution
+        else:
+            return my_inner_solution
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         coin_bytes: bytes = solver["coin"]

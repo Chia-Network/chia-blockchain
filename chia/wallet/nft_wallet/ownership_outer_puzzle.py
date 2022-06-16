@@ -1,23 +1,35 @@
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple, Union
 
-from chia.types.blockchain_format.coin import Coin
+from clvm_tools.binutils import disassemble
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint64
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
-    SINGLETON_LAUNCHER_HASH,
-    match_singleton_puzzle,
-    puzzle_for_singleton,
-    solution_for_singleton,
-)
+from chia.wallet.puzzles.load_clvm import load_clvm
+
+OWNERSHIP_LAYER_MOD = load_clvm("nft_ownership_layer.clvm")
+
+
+def match_ownership_layer_puzzle(puzzle: Program) -> Tuple[bool, List[Program]]:
+    mod, args = puzzle.uncurry()
+    if mod == OWNERSHIP_LAYER_MOD:
+        return True, list(args.as_iter())
+    return False, []
+
+
+def puzzle_for_ownership_layer(
+    current_owner: Union[Program, bytes], transfer_program: Program, inner_puzzle: Program
+) -> Program:
+    return OWNERSHIP_LAYER_MOD.curry(OWNERSHIP_LAYER_MOD.get_tree_hash(), current_owner, transfer_program, inner_puzzle)
+
+
+def solution_for_ownership_layer(inner_solution: Program) -> Program:
+    return Program.to([inner_solution])  # type: ignore
 
 
 @dataclass(frozen=True)
-class SingletonOuterPuzzle:
+class OwnershipOuterPuzzle:
     _match: Any
     _asset_id: Any
     _construct: Any
@@ -26,13 +38,17 @@ class SingletonOuterPuzzle:
     _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
-        matched, curried_args = match_singleton_puzzle(puzzle)
+        matched, curried_args = match_ownership_layer_puzzle(puzzle)
         if matched:
-            singleton_struct, inner_puzzle = curried_args
+            _, current_owner, transfer_program, inner_puzzle = curried_args
+            owner_bytes: bytes = current_owner.as_python()
+            tp_match: Optional[PuzzleInfo] = self._match(transfer_program)
             constructor_dict = {
-                "type": "singleton",
-                "launcher_id": "0x" + singleton_struct.as_python()[1].hex(),
-                "launcher_ph": "0x" + singleton_struct.as_python()[2].hex(),
+                "type": "ownership",
+                "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
+                "transfer_program": (
+                    disassemble(transfer_program) if tp_match is None else tp_match.info  # type: ignore
+                ),
             }
             next_constructor = self._match(inner_puzzle)
             if next_constructor is not None:
@@ -42,18 +58,22 @@ class SingletonOuterPuzzle:
             return None
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
-        return bytes32(constructor["launcher_id"])
+        return None
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
         if constructor.also() is not None:
             inner_puzzle = self._construct(constructor.also(), inner_puzzle)
-        launcher_hash = constructor["launcher_ph"] if "launcher_ph" in constructor else SINGLETON_LAUNCHER_HASH
-        return puzzle_for_singleton(constructor["launcher_id"], inner_puzzle, launcher_hash)
+        transfer_program_info: Union[PuzzleInfo, Program] = constructor["transfer_program"]
+        if isinstance(transfer_program_info, Program):
+            transfer_program: Program = transfer_program_info
+        else:
+            transfer_program = self._construct(transfer_program_info, inner_puzzle)
+        return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
     def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-        matched, curried_args = match_singleton_puzzle(puzzle_reveal)
+        matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
         if matched:
-            _, inner_puzzle = curried_args
+            _, _, _, inner_puzzle = curried_args
             if constructor.also() is not None:
                 deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
                 return deep_inner_puzzle
@@ -63,7 +83,7 @@ class SingletonOuterPuzzle:
             raise ValueError("This driver is not for the specified puzzle reveal")
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
-        my_inner_solution: Program = solution.at("rrf")
+        my_inner_solution: Program = solution.first()
         if constructor.also():
             deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
             return deep_inner_solution
@@ -71,17 +91,6 @@ class SingletonOuterPuzzle:
             return my_inner_solution
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        coin_bytes: bytes = solver["coin"]
-        coin: Coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
-        parent_spend: CoinSpend = CoinSpend.from_bytes(solver["parent_spend"])
-        parent_coin: Coin = parent_spend.coin
         if constructor.also() is not None:
             inner_solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
-        matched, curried_args = match_singleton_puzzle(parent_spend.puzzle_reveal.to_program())
-        assert matched
-        _, parent_inner_puzzle = curried_args
-        return solution_for_singleton(
-            LineageProof(parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent_coin.amount),
-            coin.amount,
-            inner_solution,
-        )
+        return solution_for_ownership_layer(inner_solution)
