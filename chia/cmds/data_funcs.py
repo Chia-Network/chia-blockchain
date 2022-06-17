@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import List, Optional, Tuple, Dict, Type
 from types import TracebackType
+from pathlib import Path
 
 import aiohttp
 
@@ -129,13 +130,12 @@ async def get_root_cmd(
 async def subscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
-    ip: str,
-    port: int,
+    urls: List[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.subscribe(store_id=store_id_bytes, ip=ip, port=uint16(port))
+            await client.subscribe(store_id=store_id_bytes, urls=urls)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -185,6 +185,22 @@ async def get_root_history_cmd(
         async with get_client(rpc_port) as (client, rpc_port):
             res = await client.get_root_history(store_id=store_id_bytes)
             print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def add_missing_files_cmd(
+    rpc_port: Optional[int], ids: Optional[List[str]], override: bool, foldername: Optional[Path]
+) -> None:
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.add_missing_files(
+                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
+                override=override,
+                foldername=foldername,
+            )
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:

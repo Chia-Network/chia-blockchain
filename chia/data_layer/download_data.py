@@ -1,166 +1,177 @@
 import aiohttp
-import json
-from typing import List, Tuple, Dict, Any
+import asyncio
+import os
+import logging
+from pathlib import Path
+from typing import List, Optional
+from typing_extensions import Literal
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_types import NodeType, Status, Subscription, Side, DownloadMode
-from chia.types.blockchain_format.program import Program
-from chia.util.byte_types import hexstr_to_bytes
+from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, Root
 
 
-async def download_data_latest(
-    data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
+def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
+    return f"{tree_id}-{node_hash}-full-{generation}-v1.0.dat"
+
+
+def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
+    return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
+
+
+def is_filename_valid(filename: str) -> bool:
+    split = filename.split("-")
+
+    try:
+        raw_tree_id, raw_node_hash, file_type, raw_generation, raw_version, *rest = split
+        tree_id = bytes32(bytes.fromhex(raw_tree_id))
+        node_hash = bytes32(bytes.fromhex(raw_node_hash))
+        generation = int(raw_generation)
+    except ValueError:
+        return False
+
+    if len(rest) > 0:
+        return False
+
+    # TODO: versions should probably be centrally defined
+    if raw_version != "v1.0.dat":
+        return False
+
+    if file_type not in {"delta", "full"}:
+        return False
+
+    generate_file_func = get_delta_filename if file_type == "delta" else get_full_tree_filename
+    reformatted = generate_file_func(tree_id=tree_id, node_hash=node_hash, generation=generation)
+
+    return reformatted == filename
+
+
+async def insert_into_data_store_from_file(
+    data_store: DataStore,
+    tree_id: bytes32,
+    root_hash: Optional[bytes32],
+    filename: Path,
+) -> None:
+    with open(filename, "rb") as reader:
+        while True:
+            chunk = b""
+            while len(chunk) < 4:
+                size_to_read = 4 - len(chunk)
+                cur_chunk = reader.read(size_to_read)
+                if cur_chunk is None or cur_chunk == b"":
+                    if size_to_read < 4:
+                        raise Exception("Incomplete read of length.")
+                    break
+                chunk += cur_chunk
+            if chunk == b"":
+                break
+
+            size = int.from_bytes(chunk, byteorder="big")
+            serialize_nodes_bytes = b""
+            while len(serialize_nodes_bytes) < size:
+                size_to_read = size - len(serialize_nodes_bytes)
+                cur_chunk = reader.read(size_to_read)
+                if cur_chunk is None or cur_chunk == b"":
+                    raise Exception("Incomplete read of blob.")
+                serialize_nodes_bytes += cur_chunk
+            serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+
+            node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+
+    await data_store.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
+
+
+async def write_files_for_root(
+    data_store: DataStore,
+    tree_id: bytes32,
+    root: Root,
+    foldername: Path,
+    override: bool = False,
 ) -> bool:
-    insert_batch: List[Tuple[NodeType, str, str]] = []
+    if root.node_hash is not None:
+        node_hash = root.node_hash
+    else:
+        node_hash = bytes32([0] * 32)  # todo change
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
-            request = {
-                "type": "request_root",
-                "tree_id": tree_id.hex(),
-                "node_hash": target_hash.hex(),
-            }
-            await ws.send_str(json.dumps(request))
-            msg = await ws.receive()
-            root_json = json.loads(msg.data)
-            node = root_json["node_hash"]
-            stack: List[str] = []
-            add_to_db_cache: Dict[str, Any] = {}
+    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
+    filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
 
-            # TODO: Add back pagination. This needs historical ancestors.
-            request = {
-                "type": "request_nodes",
-                "tree_id": tree_id.hex(),
-                "node_hash": node,
-            }
-            await ws.send_str(json.dumps(request))
-            msg = await ws.receive()
-            msg_json = json.loads(msg.data)
-            answer = msg_json["answer"]
-            for row in answer:
-                if row["is_terminal"]:
-                    key = row["key"]
-                    value = row["value"]
-                    hash = Program.to((hexstr_to_bytes(key), hexstr_to_bytes(value))).get_tree_hash()
-                    if hash.hex() == node:
-                        insert_batch.append((NodeType.TERMINAL, key, value))
-                        right_hash = hash.hex()
-                        while right_hash in add_to_db_cache:
-                            node, left_hash = add_to_db_cache[right_hash]
-                            del add_to_db_cache[right_hash]
-                            insert_batch.append((NodeType.INTERNAL, left_hash, right_hash))
-                            right_hash = node
-                    else:
-                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
-                    if len(stack) > 0:
-                        node = stack.pop()
-                    else:
-                        node = None
-                else:
-                    left_hash = row["left"]
-                    right_hash = row["right"]
-                    left_hash_bytes = bytes32.from_hexstr(left_hash)
-                    right_hash_bytes = bytes32.from_hexstr(right_hash)
-                    hash = Program.to((left_hash_bytes, right_hash_bytes)).get_tree_hash(
-                        left_hash_bytes, right_hash_bytes
-                    )
-                    if hash.hex() == node:
-                        add_to_db_cache[right_hash] = (node, left_hash)
-                        # At most max_height nodes will be pending to be added to DB.
-                        assert len(add_to_db_cache) <= 100
-                    else:
-                        raise RuntimeError(f"Did not received expected node. Expected: {node} Received: {hash.hex()}")
-                    stack.append(right_hash)
-                    node = left_hash
+    written = False
+    mode: Literal["wb", "xb"] = "wb" if override else "xb"
 
-            if node is not None:
-                raise RuntimeError("Did not download full data.")
-            await ws.send_str(json.dumps({"type": "close"}))
+    try:
+        with open(filename_full_tree, mode) as writer:
+            await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
+        written = True
+    except FileExistsError:
+        pass
 
-    await data_store.insert_batch_for_generation(
-        insert_batch, tree_id, bytes32.from_hexstr(root_json["node_hash"]), int(root_json["generation"]), lock=lock
-    )
+    try:
+        last_seen_generation = await data_store.get_last_tree_root_by_hash(
+            tree_id, root.node_hash, max_generation=root.generation
+        )
+        if last_seen_generation is None:
+            with open(filename_diff_tree, mode) as writer:
+                await data_store.write_tree_to_file(root, node_hash, tree_id, True, writer)
+        else:
+            open(filename_diff_tree, mode).close()
+        written = True
+    except FileExistsError:
+        pass
+
+    return written
+
+
+async def insert_from_delta_file(
+    data_store: DataStore,
+    tree_id: bytes32,
+    existing_generation: int,
+    root_hashes: List[bytes32],
+    url: str,
+    client_foldername: Path,
+    log: logging.Logger,
+) -> bool:
+    for root_hash in root_hashes:
+        existing_generation += 1
+        filename = get_delta_filename(tree_id, root_hash, existing_generation)
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url + "/" + filename) as resp:
+                    resp.raise_for_status()
+
+                    target_filename = client_foldername.joinpath(filename)
+                    text = await resp.read()
+                    target_filename.write_bytes(text)
+        except Exception:
+            raise
+
+        log.info(f"Successfully downloaded delta file {filename}.")
+        try:
+            await insert_into_data_store_from_file(
+                data_store,
+                tree_id,
+                None if root_hash == bytes32([0] * 32) else root_hash,
+                client_foldername.joinpath(filename),
+            )
+            log.info(
+                f"Successfully inserted hash {root_hash} from delta file. "
+                f"Generation: {existing_generation}. Tree id: {tree_id}."
+            )
+
+            filename_full_tree = client_foldername.joinpath(
+                get_full_tree_filename(tree_id, root_hash, existing_generation)
+            )
+            root = await data_store.get_tree_root(tree_id=tree_id)
+            with open(filename_full_tree, "wb") as writer:
+                await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
+            log.info(f"Successfully written full tree filename {filename_full_tree}.")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            target_filename = client_foldername.joinpath(filename)
+            os.remove(target_filename)
+            await data_store.rollback_to_generation(tree_id, existing_generation - 1)
+            raise
+
     return True
-
-
-async def download_data_history(
-    data_store: DataStore, tree_id: bytes32, target_hash: bytes32, URL: str, *, lock: bool = True
-) -> bool:
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(URL, timeout=180, heartbeat=60, max_msg_size=0) as ws:
-            request = {
-                "type": "request_root",
-                "tree_id": tree_id.hex(),
-                "node_hash": target_hash.hex(),
-            }
-            await ws.send_str(json.dumps(request))
-            msg = await ws.receive()
-            root_json = json.loads(msg.data)
-            generation = root_json["generation"]
-            root = await data_store.get_tree_root(tree_id=tree_id, lock=lock)
-            # We've downloaded too much, rollback.
-            if root.generation > generation:
-                await data_store.rollback_to_generation(tree_id=tree_id, target_generation=generation, lock=lock)
-                return True
-            existing_generation = root.generation + 1
-            while existing_generation <= generation:
-                request = {
-                    "type": "request_operations",
-                    "tree_id": tree_id.hex(),
-                    "generation": str(existing_generation),
-                    "max_generation": str(generation),
-                }
-                await ws.send_str(json.dumps(request))
-                msg = await ws.receive()
-                msg_json = json.loads(msg.data)
-
-                for row in msg_json:
-                    if row["is_insert"]:
-                        await data_store.insert(
-                            bytes.fromhex(row["key"]),
-                            bytes.fromhex(row["value"]),
-                            tree_id,
-                            None
-                            if row["reference_node_hash"] == "None"
-                            else (bytes32.from_hexstr(row["reference_node_hash"])),
-                            None if row["side"] == "None" else Side(row["side"]),
-                            status=Status(row["root_status"]),
-                            lock=lock,
-                        )
-                    else:
-                        await data_store.delete(
-                            bytes.fromhex(row["key"]),
-                            tree_id,
-                            status=Status(row["root_status"]),
-                            lock=lock,
-                        )
-                    current_root = await data_store.get_tree_root(tree_id, lock=lock)
-                    if current_root.node_hash is None:
-                        if row["hash"] != "None":
-                            return False
-                    else:
-                        if current_root.node_hash.hex() != row["hash"]:
-                            return False
-                    existing_generation += 1
-
-            await ws.send_str(json.dumps({"type": "close"}))
-
-    return True
-
-
-async def download_data(
-    data_store: DataStore, subscription: Subscription, target_hash: bytes32, *, lock: bool = True
-) -> bool:
-    tree_id = subscription.tree_id
-    ip = subscription.ip
-    port = int(subscription.port)
-    exists = await data_store.tree_id_exists(tree_id)
-    if not exists:
-        await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
-    URL = f"http://{ip}:{port}/ws"
-
-    if subscription.mode is DownloadMode.LATEST:
-        return await download_data_latest(data_store, tree_id, target_hash, URL, lock=lock)
-    elif subscription.mode is DownloadMode.HISTORY:
-        return await download_data_history(data_store, tree_id, target_hash, URL, lock=lock)
-    return False
