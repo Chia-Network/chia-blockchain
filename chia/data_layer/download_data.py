@@ -116,8 +116,6 @@ async def write_files_for_root(
         written = True
     except FileExistsError:
         pass
-    except Exception:
-        raise
 
     return written
 
