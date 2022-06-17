@@ -31,13 +31,6 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
     return True
 
 
-def assert_rpc_response(response: Dict, condition_func: Callable[[Dict[str, Any]], bool] = None) -> Dict:
-    assert isinstance(response, dict)
-    if condition_func:
-        assert condition_func(response)
-    return response
-
-
 async def wait_rpc_state_condition(
     timeout: int,
     coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
@@ -600,11 +593,11 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
 
     # this shouldn't work
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
-    assert_rpc_response(res, lambda x: x["wallet_id"] == nft_wallet_0_id)
+    assert res["wallet_id"] == nft_wallet_0_id
 
     # now create NFT wallet with P2 standard puzzle for inner puzzle
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 0"))
-    res = assert_rpc_response(res, lambda x: x["wallet_id"] != nft_wallet_0_id)
+    assert res["wallet_id"] != nft_wallet_0_id
     nft_wallet_p2_puzzle = res["wallet_id"]
 
     res = await api_0.nft_get_by_did({"did_id": hmr_did_id})
