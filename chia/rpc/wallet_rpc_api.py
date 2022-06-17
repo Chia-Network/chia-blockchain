@@ -437,13 +437,17 @@ class WalletRpcApi:
 
     async def get_wallets(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-
+        include_data: bool = request.get("include_data", True)
         wallet_type: Optional[WalletType] = None
         if "type" in request:
             wallet_type = WalletType(request["type"])
 
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
-
+        if not include_data:
+            result: List[WalletInfo] = []
+            for wallet in wallets:
+                result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
+            wallets = result
         return {"wallets": wallets}
 
     async def create_new_wallet(self, request: Dict):
@@ -1463,7 +1467,17 @@ class WalletRpcApi:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash, fee=fee)
+            txs = await nft_wallet.generate_signed_transaction(
+                [nft_coin_info.coin.amount],
+                [puzzle_hash],
+                coins=[nft_coin_info.coin],
+                fee=fee,
+            )
+            spend_bundle: Optional[SpendBundle] = None
+            for tx in txs:
+                if tx.spend_bundle is not None:
+                    spend_bundle = tx.spend_bundle
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
@@ -1552,7 +1566,13 @@ class WalletRpcApi:
                     "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
                 }
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
-                NFTCoinInfo(coin_state.coin, None, full_puzzle, launcher_coin[0].spent_height)
+                NFTCoinInfo(
+                    uncurried_nft.singleton_launcher_id,
+                    coin_state.coin,
+                    None,
+                    full_puzzle,
+                    launcher_coin[0].spent_height,
+                )
             )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
