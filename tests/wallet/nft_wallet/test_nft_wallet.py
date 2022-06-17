@@ -969,7 +969,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     resp = await api_1.nft_get_by_did(dict())
     assert resp.get("success")
     nft_wallet_id_1 = resp.get("wallet_id")
-    time_left = 10.0
+    time_left = 20.0
     while time_left > 0:
         coins_response = await api_1.nft_get_nfts(dict(wallet_id=nft_wallet_id_1))
         if len(coins_response["nft_list"]) == 0:
