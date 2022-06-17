@@ -1339,7 +1339,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        assert nft_wallet.type() == WalletType.NFT.value
+        if nft_wallet.type() != WalletType.NFT.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
