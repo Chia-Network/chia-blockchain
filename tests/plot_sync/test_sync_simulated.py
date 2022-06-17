@@ -110,7 +110,7 @@ class TestData:
 
         async def sync_done() -> bool:
             assert sync_id is not None
-            return self.plot_sync_receiver.last_sync_id() == self.plot_sync_sender._last_sync_id == sync_id
+            return self.plot_sync_receiver.last_sync().sync_id == self.plot_sync_sender._last_sync_id == sync_id
 
         await time_out_assert(60, sync_done)
 
@@ -415,7 +415,7 @@ async def test_sync_reset_cases(
 
     async def sync_done() -> bool:
         assert started_sync_id != 0
-        return test_data.plot_sync_receiver.last_sync_id() == sender._last_sync_id == started_sync_id
+        return test_data.plot_sync_receiver.last_sync().sync_id == sender._last_sync_id == started_sync_id
 
     # Send start and capture the sync_id
     sender.sync_start(len(plots), True)

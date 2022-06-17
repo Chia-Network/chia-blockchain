@@ -79,6 +79,15 @@ def install_madmax(plotters_root_path: Path):
                 [
                     "sudo",
                     "apt",
+                    "update",
+                    "-y",
+                ],
+                "Could not update get package information from apt",
+            )
+            run_command(
+                [
+                    "sudo",
+                    "apt",
                     "install",
                     "-y",
                     "libsodium-dev",

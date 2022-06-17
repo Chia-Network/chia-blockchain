@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -27,7 +27,7 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -53,9 +53,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.full_node.state_changed_callback = callback
 
     @property
     def server(self):
@@ -784,7 +781,7 @@ class FullNodeAPI:
             def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature
 
-            prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+            prev_b: Optional[BlockRecord] = peak
 
             # Finds the previous block from the signage point, ensuring that the reward chain VDF is correct
             if prev_b is not None:
@@ -1157,14 +1154,14 @@ class FullNodeAPI:
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
             for puzzle, coins in puzzlehash_coins_map.items():
                 addition_merkle_set.add_already_hashed(puzzle)
-                addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+                addition_merkle_set.add_already_hashed(hash_coin_ids([c.name() for c in coins]))
 
             assert addition_merkle_set.get_root() == block.foliage_transaction_block.additions_root
             for puzzle_hash in request.puzzle_hashes:
                 result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
                 if puzzle_hash in puzzlehash_coins_map:
                     coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
-                    hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
+                    hash_coin_str = hash_coin_ids([c.name() for c in puzzlehash_coins_map[puzzle_hash]])
                     result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
                     assert result
                     assert result_2

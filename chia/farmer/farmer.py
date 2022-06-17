@@ -2,15 +2,14 @@ import asyncio
 import json
 import logging
 import time
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
 import traceback
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
@@ -18,20 +17,20 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
-from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.delta import Delta
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, add_auth_key
+from chia.plot_sync.receiver import Receiver
+from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
+    AuthenticationPayload,
     ErrorResponse,
-    get_current_authentication_token,
     GetFarmerResponse,
     PoolErrorCode,
     PostFarmerPayload,
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
-    AuthenticationPayload,
+    get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -42,16 +41,16 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, lock_and_load_config, save_config, config_path_for_filename
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
-    master_sk_to_farmer_sk,
-    master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
     find_authentication_sk,
     find_owner_sk,
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    match_address_to_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
@@ -60,6 +59,7 @@ singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
+UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL: int = 120
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 """
@@ -256,11 +256,14 @@ class Farmer:
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
             del self.plot_sync_receivers[connection.peer_node_id]
+            self.state_changed("harvester_removed", {"node_id": connection.peer_node_id})
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta) -> None:
-        log.info(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
-        if not delta.empty():
-            self.state_changed("new_plots", await self.get_harvesters())
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+        log.debug(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
+        receiver: Receiver = self.plot_sync_receivers[peer_id]
+        harvester_updated: bool = delta is not None and not delta.empty()
+        if receiver.initial_sync() or harvester_updated:
+            self.state_changed("harvester_update", receiver.to_dict(True))
 
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
@@ -468,6 +471,8 @@ class Farmer:
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+                    else:
+                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
@@ -500,7 +505,7 @@ class Farmer:
                         farmer_info, error_code = await update_pool_farmer_info()
                         if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -524,7 +529,7 @@ class Farmer:
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         )
                         if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -547,25 +552,30 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
-    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict:
         if search_for_private_key:
             all_sks = await self.get_all_private_keys()
-            stop_searching_for_farmer, stop_searching_for_pool = False, False
-            for i in range(500):
-                if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
-                    break
-                for sk, _ in all_sks:
-                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
+            have_farmer_sk, have_pool_sk = False, False
+            search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
+            for sk, _ in all_sks:
+                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
 
-                    if ph == self.farmer_target:
-                        stop_searching_for_farmer = True
-                    if ph == self.pool_target:
-                        stop_searching_for_pool = True
+                if not have_farmer_sk and self.farmer_target in found_addresses:
+                    search_addresses.remove(self.farmer_target)
+                    have_farmer_sk = True
+
+                if not have_pool_sk and self.pool_target in found_addresses:
+                    search_addresses.remove(self.pool_target)
+                    have_pool_sk = True
+
+                if have_farmer_sk and have_pool_sk:
+                    break
+
             return {
                 "farmer_target": self.farmer_target_encoded,
                 "pool_target": self.pool_target_encoded,
-                "have_farmer_sk": stop_searching_for_farmer,
-                "have_pool_sk": stop_searching_for_pool,
+                "have_farmer_sk": have_farmer_sk,
+                "have_pool_sk": have_pool_sk,
             }
         return {
             "farmer_target": self.farmer_target_encoded,
@@ -629,19 +639,25 @@ class Farmer:
 
         return None
 
-    async def get_harvesters(self) -> Dict:
+    async def get_harvesters(self, counts_only: bool = False) -> Dict:
         harvesters: List = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
             receiver = self.plot_sync_receivers.get(connection.peer_node_id)
             if receiver is not None:
-                harvesters.append(receiver.to_dict())
+                harvesters.append(receiver.to_dict(counts_only))
             else:
                 self.log.debug(
                     f"get_harvesters invalid peer: {connection.peer_host}, node_id: {connection.peer_node_id}"
                 )
 
         return {"harvesters": harvesters}
+
+    def get_receiver(self, node_id: bytes32) -> Receiver:
+        receiver: Optional[Receiver] = self.plot_sync_receivers.get(node_id)
+        if receiver is None:
+            raise KeyError(f"Receiver missing for {node_id}")
+        return receiver
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)

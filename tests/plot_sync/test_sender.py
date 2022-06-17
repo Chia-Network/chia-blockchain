@@ -20,7 +20,6 @@ def test_default_values(bt: BlockTools) -> None:
     assert sender._last_sync_id == uint64(0)
     assert not sender._stop_requested
     assert sender._task is None
-    assert not sender._lock.locked()
     assert sender._response is None
 
 

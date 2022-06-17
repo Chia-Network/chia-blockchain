@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 from typing import List, Optional, Tuple, Union, Dict
+from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
@@ -20,7 +21,7 @@ from chia.protocols.wallet_protocol import (
     RequestHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import hash_coin_list, Coin
+from chia.types.blockchain_format.coin import hash_coin_ids, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -57,10 +58,10 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-    if all_coins_state is not None:
-        return all_coins_state.coin_states
-    return []
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=300)
+    if all_coins_state is None:
+        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
+    return all_coins_state.coin_states
 
 
 async def subscribe_to_coin_updates(
@@ -72,10 +73,11 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-    if all_coins_state is not None:
-        return all_coins_state.coin_states
-    return []
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg, timeout=300)
+
+    if all_coins_state is None:
+        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_coin")
+    return all_coins_state.coin_states
 
 
 def validate_additions(
@@ -85,14 +87,14 @@ def validate_additions(
 ):
     if proofs is None:
         # Verify root
-        additions_merkle_set = MerkleSet()
+        additions_merkle_items: List[bytes32] = []
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle_hash, coins_l in coins:
-            additions_merkle_set.add_already_hashed(puzzle_hash)
-            additions_merkle_set.add_already_hashed(hash_coin_list(coins_l))
+            additions_merkle_items.append(puzzle_hash)
+            additions_merkle_items.append(hash_coin_ids([c.name() for c in coins_l]))
 
-        additions_root = additions_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
         if root != additions_root:
             return False
     else:
@@ -117,7 +119,7 @@ def validate_additions(
                     assert coin_list_proof is not None
                     included = confirm_included_already_hashed(
                         root,
-                        hash_coin_list(coin_list_1),
+                        hash_coin_ids([c.name() for c in coin_list_1]),
                         coin_list_proof,
                     )
                     if included is False:

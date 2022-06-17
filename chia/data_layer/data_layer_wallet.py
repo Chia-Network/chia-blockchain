@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import json
 import time
 import dataclasses
 from operator import attrgetter
-from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar
+from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar, TYPE_CHECKING
 
 from blspy import G2Element
 
@@ -37,6 +39,9 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)
@@ -56,7 +61,7 @@ _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
 
 
 class DataLayerWallet:
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     wallet_id: uint8
@@ -68,7 +73,7 @@ class DataLayerWallet:
     @classmethod
     async def create(
         cls: Type[_T_DataLayerWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
@@ -92,7 +97,7 @@ class DataLayerWallet:
     @classmethod
     async def create_new_dl_wallet(
         cls: Type[_T_DataLayerWallet],
-        wallet_state_manager: Any,
+        wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         name: Optional[str] = "DataLayer Wallet",
         in_transaction: bool = False,
@@ -110,14 +115,16 @@ class DataLayerWallet:
             if wallet.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
 
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        assert name is not None
+        maybe_wallet_info = await wallet_state_manager.user_store.create_wallet(
             name,
             WalletType.DATA_LAYER.value,
             "",
             in_transaction=in_transaction,
         )
-        if self.wallet_info is None:
+        if maybe_wallet_info is None:
             raise ValueError("Internal Error")
+        self.wallet_info = maybe_wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
@@ -208,6 +215,7 @@ class DataLayerWallet:
 
     async def new_launcher_spend_response(self, response: PuzzleSolutionResponse, action_id: int) -> None:
         action = await self.wallet_state_manager.action_store.get_wallet_action(action_id)
+        assert action is not None
         coin_dict = json.loads(action.data)["data"]["action_data"]["launcher_coin"]
         launcher_coin = Coin(
             bytes32.from_hexstr(coin_dict["parent_id"]),
@@ -631,6 +639,27 @@ class DataLayerWallet:
 
         return singleton_record, parent_lineage
 
+    async def get_owned_singletons(self) -> List[SingletonRecord]:
+        launcher_ids = await self.wallet_state_manager.dl_store.get_all_launchers()
+
+        collected = []
+
+        for launcher_id in launcher_ids:
+            singleton_record = await self.wallet_state_manager.dl_store.get_latest_singleton(launcher_id=launcher_id)
+            if singleton_record is None:
+                # this is likely due to a race between getting the list and acquiring the extra data
+                continue
+
+            inner_puzzle_derivation: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                singleton_record.inner_puzzle_hash
+            )
+            if inner_puzzle_derivation is not None:
+                collected.append(singleton_record)
+
+        return collected
+
     ###########
     # SYNCING #
     ###########
@@ -748,9 +777,9 @@ class DataLayerWallet:
 
         # Now we have detected a fork so we should check whether the root changed at all
         self.log.info("Attempting automatic rebase")
-        parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(
-            unconfirmed_singletons[0].lineage_proof.parent_name
-        )
+        parent_name = unconfirmed_singletons[0].lineage_proof.parent_name
+        assert parent_name is not None
+        parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(parent_name)
         if parent_singleton is None or any(parent_singleton.root != s.root for s in full_branch if s.confirmed):
             root_changed: bool = True
         else:
@@ -758,10 +787,13 @@ class DataLayerWallet:
 
         # Regardless of whether the root changed or not, our old state is bad so let's eliminate it
         # First let's find all of our txs matching our unconfirmed singletons
-        unconfirmed_ids: Set[bytes32] = {s.lineage_proof.parent_name for s in unconfirmed_singletons}
         relevant_dl_txs: List[TransactionRecord] = []
-        for id in unconfirmed_ids:
-            tx = await self.wallet_state_manager.tx_store.get_transaction_record(id)
+        for singleton in unconfirmed_singletons:
+            parent_name = singleton.lineage_proof.parent_name
+            if parent_name is None:
+                continue
+
+            tx = await self.wallet_state_manager.tx_store.get_transaction_record(parent_name)
             if tx is not None:
                 relevant_dl_txs.append(tx)
         # Let's check our standard wallet for fee transactions related to these dl txs

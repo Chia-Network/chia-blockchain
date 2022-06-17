@@ -8,9 +8,30 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
-## 1.3.4 Chia blockchain 2022-4-19
+### What's Changed
 
-## What's Changed
+## 1.3.5 Chia blockchain 2022-5-11
+
+### Added
+
+- Added Support for Python 3.10
+- Performance improvements in harvesters during plot refresh. Large farmers likely no longer need to specify a very high plot refresh interval in config.yaml
+- Added CLI only `.rpm` and `.deb` packages to official release channels
+- Fixed an issue where some coins would be missing after a full sync
+- Enabled paginated plot loading and improved plot state reporting
+- Updated the farming GUI tab to fix several bugs
+- Fix infinite loop with timelord closing
+- Simplified install.sh ubuntu version tracking
+- Fixed memory leak on the farm page
+- Fixed list of plot files "in progress"
+- Various farmer rpc improvements
+- Improvements to the harvester `get_plots` RPC
+
+### Known Issues
+
+There is a known issue where harvesters will not reconnect to the farmer automatically unless you restart the harvester. This bug was introduced in 1.3.4 and we plan to patch it in a coming release.
+
+## 1.3.4 Chia blockchain 2022-4-19
 
 ### Added
 
@@ -241,6 +262,7 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
+
 
 ## 1.2.10 Chia blockchain 2021-10-25
 

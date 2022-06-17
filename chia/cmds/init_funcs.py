@@ -439,12 +439,9 @@ def chia_init(
     protected Keychain. When launching the daemon from the GUI, we want the GUI to
     handle unlocking the keychain.
     """
-    if os.environ.get("CHIA_ROOT", None) is not None:
-        print(
-            f"warning, your CHIA_ROOT is set to {os.environ['CHIA_ROOT']}. "
-            f"Please unset the environment variable and run chia init again\n"
-            f"or manually migrate config.yaml"
-        )
+    chia_root = os.environ.get("CHIA_ROOT", None)
+    if chia_root is not None:
+        print(f"CHIA_ROOT is set to {chia_root}")
 
     print(f"Chia directory {root_path}")
     if root_path.is_dir() and Path(root_path / "config" / "config.yaml").exists():

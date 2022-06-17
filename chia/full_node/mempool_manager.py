@@ -316,6 +316,7 @@ class MempoolManager:
         # build removal list
         removal_names: List[bytes32] = [spend.coin_id for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
+            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return None, MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
 
         additions = additions_for_npc(npc_result)
@@ -514,7 +515,7 @@ class MempoolManager:
         return None
 
     async def new_peak(
-        self, new_peak: Optional[BlockRecord], coin_changes: List[CoinRecord]
+        self, new_peak: Optional[BlockRecord], last_npc_result: Optional[NPCResult]
     ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
@@ -530,13 +531,14 @@ class MempoolManager:
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
 
-        if use_optimization:
+        if use_optimization and last_npc_result is not None:
             # We don't reinitialize a mempool, just kick removed items
-            for coin_record in coin_changes:
-                if coin_record.name in self.mempool.removals:
-                    item = self.mempool.removals[coin_record.name]
-                    self.mempool.remove_from_pool(item)
-                    self.remove_seen(item.spend_bundle_name)
+            if last_npc_result.conds is not None:
+                for spend in last_npc_result.conds.spends:
+                    if spend.coin_id in self.mempool.removals:
+                        item = self.mempool.removals[spend.coin_id]
+                        self.mempool.remove_from_pool(item)
+                        self.remove_seen(item.spend_bundle_name)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)

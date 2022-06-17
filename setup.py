@@ -1,17 +1,16 @@
 from setuptools import setup
 
 dependencies = [
-    "multidict==5.1.0",  # Avoid 5.2.0 due to Avast
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.9",  # Signature library
-    "chiavdf==1.0.5",  # timelord and vdf verification
+    "blspy==1.0.13",  # Signature library
+    "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
-    "chiapos==1.0.9",  # proof of space
+    "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.1",
-    "clvm-tools-rs==0.1.7",  # Rust implementation of clvm_tools
-    "aiohttp==3.7.4",  # HTTP server for full node rpc
+    "chia_rs==0.1.2",
+    "clvm-tools-rs==0.1.9",  # Rust implementation of clvm_tools
+    "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.4",  # Colorizes terminal output
@@ -24,8 +23,8 @@ dependencies = [
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     #  "keyrings.cryptfile==1.3.8",  # Secure storage for keys on Linux (Will be replaced)
     #  See https://github.com/frispete/keyrings.cryptfile/issues/15
-    "PyYAML==5.4.1",  # Used for config file format
-    "setproctitle==1.2.2",  # Gives the chia processes readable names
+    "PyYAML==6.0",  # Used for config file format
+    "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     # TODO: when moving to click 8 remove the pinning of black noted below
     "click==7.1.2",  # For the CLI
@@ -57,6 +56,7 @@ dev_dependencies = [
     "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
+    "pyinstaller==5.0",
     "types-aiofiles",
     "types-click~=7.1",
     "types-cryptography",
@@ -112,6 +112,7 @@ kwargs = dict(
         "chia.wallet.rl_wallet",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
+        "chia.wallet.nft_wallet",
         "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
@@ -121,6 +122,7 @@ kwargs = dict(
     entry_points={
         "console_scripts": [
             "chia = chia.cmds.chia:main",
+            "chia_daemon = chia.daemon.server:main",
             "chia_wallet = chia.server.start_wallet:main",
             "chia_full_node = chia.server.start_full_node:main",
             "chia_harvester = chia.server.start_harvester:main",

@@ -48,7 +48,7 @@ def ssl_context_for_server(
     if check_permissions:
         verify_ssl_certs_and_keys([ca_cert, private_cert_path], [ca_key, private_key_path], log)
 
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=str(ca_cert))
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_cert))
     ssl_context.check_hostname = False
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(
@@ -264,13 +264,17 @@ class ChiaServer:
                 self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
             )
 
+        # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
+        # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            port=self._port,
+            host="0.0.0.0",
+            port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
+        self._port = self.runner.addresses[0][1]
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -305,14 +309,13 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 close_event,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
 
-            assert handshake is True
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
                 connection.peer_host, self.exempt_peer_networks
@@ -459,13 +462,12 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 session=session,
             )
-            handshake = await connection.perform_handshake(
+            await connection.perform_handshake(
                 self._network_id,
                 protocol_version,
                 self._port,
                 self._local_type,
             )
-            assert handshake is True
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -784,6 +786,9 @@ class ChiaServer:
         if not peer.is_valid():
             return None
         return peer
+
+    def get_port(self) -> uint16:
+        return uint16(self._port)
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:

@@ -136,7 +136,7 @@ class BlockHeightMap:
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
-    async def maybe_flush(self):
+    async def maybe_flush(self) -> None:
         if self.__dirty < 1000:
             return
 
