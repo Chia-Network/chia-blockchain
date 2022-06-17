@@ -825,7 +825,7 @@ class WalletRpcApi:
                     if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                         self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                     await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
-                except Exception:
+                except BaseException:
                     log.exception("Exception while delete_unconfirmed_transactions")
                     await self.service.wallet_state_manager.tx_store.db_wrapper.rollback_transaction()
                     raise
