@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-06-05 17:56\n"
+"PO-Revision-Date: 2022-06-17 17:33\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -988,7 +988,7 @@ msgstr "Farmarit ansaitsevat lohkopalkkioita ja transaktioveloituksia varaamalla
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
-msgstr "Tuotetaan Farmissa"
+msgstr "Farmaroidaan"
 
 #: src/components/app/AppSelectMode.tsx:125
 msgid "Farming Mode"
@@ -1000,7 +1000,7 @@ msgstr "Farmaustila"
 #: src/components/farm/card/FarmCardStatus.tsx:45
 #: src/components/farm/card/FarmCardStatus.tsx:58
 msgid "Farming Status"
-msgstr "Farmituotannon Tila"
+msgstr "Farmaroinnin Tila"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:167
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
@@ -2550,7 +2550,7 @@ msgstr "Lähetä"
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:49
 msgid "Synced"
-msgstr "Synkrononissa"
+msgstr "Synkronissa"
 
 #: src/components/farm/FarmerStatus.tsx:19
 #: src/components/farm/card/FarmCardStatus.tsx:17
@@ -2973,7 +2973,7 @@ msgstr "Näytä Poolin Kirjautumislinkki"
 #: src/components/plot/PlotStatus.tsx:26
 #: src/components/plot/PlotStatus.tsx:27
 msgid "Wait for synchronization"
-msgstr "Odota synkroinointia"
+msgstr "Odota synkronointia"
 
 #: src/components/wallet/Wallets.tsx:104
 #~ msgid "Waiting for launch"
