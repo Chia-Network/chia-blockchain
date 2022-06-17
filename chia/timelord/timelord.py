@@ -122,6 +122,7 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
+        self.custom_get_connections: None = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()

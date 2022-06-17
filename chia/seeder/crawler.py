@@ -37,6 +37,7 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
+    custom_get_connections: None
 
     def __init__(
         self,
@@ -69,6 +70,7 @@ class Crawler:
         self.other_peers_port = config["other_peers_port"]
         self.versions: Dict[str, int] = defaultdict(lambda: 0)
         self.minimum_version_count = self.config.get("minimum_version_count", 100)
+        self.custom_get_connections = None
         if self.minimum_version_count < 1:
             self.log.warning(
                 f"Crawler configuration minimum_version_count expected to be greater than zero: "

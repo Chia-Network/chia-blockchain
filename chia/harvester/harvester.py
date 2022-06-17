@@ -36,6 +36,7 @@ class Harvester:
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
     server: Optional[ChiaServer]
+    custom_get_connections: None
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
@@ -64,6 +65,7 @@ class Harvester:
         self.cached_challenges = []
         self.state_changed_callback: Optional[Callable] = None
         self.parallel_read: bool = config.get("parallel_read", True)
+        self.custom_get_connections = None
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
