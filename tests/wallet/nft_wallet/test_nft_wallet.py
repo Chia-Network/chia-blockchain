@@ -45,9 +45,8 @@ async def wait_rpc_state_condition(
         if condition_func(resp):
             return resp
         await asyncio.sleep(0.5)
-    else:
-        # timed out
-        assert time.monotonic() - start < timeout, resp
+    # timed out
+    assert time.monotonic() - start < timeout, resp
     return {}
 
 
