@@ -3,8 +3,6 @@
     SINGLETON_STRUCT
     ROYALTY_ADDRESS
     TRADE_PRICE_PERCENTAGE
-    SETTLEMENT_MOD_HASH
-    CAT_MOD_HASH
     Current_Owner  ; Truth
     conditions  ; Truth
     solution  ; created from the NFT's inner puzzle - solution is (new_owner trade_prices_list new_did_inner_hash)
@@ -39,33 +37,22 @@
       (c (f SINGLETON_STRUCT) (c singleton_id (r (r SINGLETON_STRUCT))))
   )
 
-  (defun-inline cat_settlement_puzzle_hash (CAT_MOD_HASH tail_hash SETTLEMENT_MOD_HASH)
-      (puzzle-hash-of-curried-function CAT_MOD_HASH
-          SETTLEMENT_MOD_HASH
-          (sha256 ONE tail_hash)
-          (sha256 ONE CAT_MOD_HASH)
-      )
-  )
-
   (defun-inline calculate_percentage (amount percentage)
       (f (divmod (* amount percentage) TEN_THOUSAND))
   )
 
   ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
-  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id)
+  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE trade_prices_list my_nft_id)
       (if trade_prices_list
           (c
               (list
                 ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
-                  (if (r (f trade_prices_list))
-                      (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH)
-                      SETTLEMENT_MOD_HASH
-                  )
+                  (f (r (f trade_prices_list)))
                   (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE) (list ROYALTY_ADDRESS)))))
                 )
               )
-              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
+              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE (r trade_prices_list) my_nft_id)
           )
           ()
       )
@@ -87,9 +74,9 @@
                 (f (r SINGLETON_STRUCT))
               )
             )
-            (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f (r solution)) (f (r SINGLETON_STRUCT)))
+            (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE (f (r solution)) (f (r SINGLETON_STRUCT)))
           )
-          (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f (r solution)) (f (r SINGLETON_STRUCT)))
+          (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE (f (r solution)) (f (r SINGLETON_STRUCT)))
         )
       )
       (list Current_Owner () ())
