@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-06-17 17:33\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -943,7 +943,7 @@ msgstr "Farmarin julkinen avain:"
 
 #: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
-msgstr "Tuotetaan Farmissa"
+msgstr "Farmaroidaan"
 
 #: src/components/farm/card/FarmCardStatus.tsx:15
 #: src/components/farm/card/FarmCardStatus.tsx:26
