@@ -28,7 +28,7 @@ import {
   useOpenDialog,
   useShowError,
 } from '@chia/core';
-import { Box, Divider, Grid, Tabs, Tab, Typography } from '@mui/material';
+import { Divider, Grid, Tabs, Tab, Typography } from '@mui/material';
 import { Warning as WarningIcon } from '@mui/icons-material';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
@@ -115,11 +115,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
   const makerFee = methods.watch('fee');
   const nftId = methods.watch('nftId');
   const launcherId = launcherIdFromNFTId(nftId ?? '');
-  const {
-    data: nft,
-    isLoading,
-    error,
-  } = useGetNFTInfoQuery({ coinId: launcherId });
+  const { data: nft } = useGetNFTInfoQuery({ coinId: launcherId });
 
   // HACK: manually determine the value for the amount field's shrink input prop.
   // Without this, toggling between the two tabs with an amount specified will cause
@@ -156,10 +152,8 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
 
   const {
     royaltyPercentage,
-    royaltyAmount,
     royaltyAmountString,
     nftSellerNetAmount,
-    totalAmount,
     totalAmountString,
   } = result ?? {};
 
@@ -361,11 +355,12 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                           </Trans>
                         ) : (
                           <Trans>
-                            The total amount offered includes the price you're
-                            willing to pay for the NFT, plus the optional offer
-                            creation fee. One or more coins totalling at least
-                            the amount shown below will be deducted from your
-                            spendable balance upon offer creation.
+                            The total amount offered includes the price
+                            you&apos;re willing to pay for the NFT, plus the
+                            optional offer creation fee. One or more coins
+                            totalling at least the amount shown below will be
+                            deducted from your spendable balance upon offer
+                            creation.
                             <p />
                             If the NFT has royalty payments enabled, those
                             creator fees will be paid by the party that accepts
@@ -525,11 +520,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   });
   const nftId = methods.watch('nftId');
   const launcherId = launcherIdFromNFTId(nftId ?? '');
-  const {
-    data: queriedNFTInfo,
-    isLoading,
-    error,
-  } = useGetNFTInfoQuery({ coinId: launcherId });
+  const { data: queriedNFTInfo } = useGetNFTInfoQuery({ coinId: launcherId });
 
   function validateFormData(
     unvalidatedFormData: NFTOfferEditorFormData,

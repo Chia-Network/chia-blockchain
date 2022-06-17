@@ -20,12 +20,28 @@ export default class NFTWallet extends Wallet {
   async transferNft(
     walletId: number,
     nftCoinId: string,
-    targetAddress: string
+    targetAddress: string,
+    fee: string
   ) {
     return this.command('nft_transfer_nft', {
       walletId,
       nftCoinId,
       targetAddress,
+      fee,
+    });
+  }
+
+  async setNftDid(
+    walletId: number,
+    nftCoinId: string,
+    did: string,
+    fee: string
+  ) {
+    return this.command('nft_set_nft_did', {
+      walletId,
+      nftCoinId,
+      didId: did,
+      fee,
     });
   }
 

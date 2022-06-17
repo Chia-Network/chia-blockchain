@@ -145,6 +145,7 @@ export const {
   useUpdateDIDRecoveryIdsQuery,
   useGetDIDPubKeyQuery,
   useGetDIDQuery,
+  useGetDIDsQuery,
   useGetDIDNameQuery,
   useSetDIDNameMutation,
   useGetDIDRecoveryListQuery,
@@ -156,6 +157,7 @@ export const {
   useGetNFTWalletsWithDIDsQuery,
   useGetNFTInfoQuery,
   useTransferNFTMutation,
+  useSetNFTDIDMutation,
   useReceiveNFTMutation,
 } = wallet;
 

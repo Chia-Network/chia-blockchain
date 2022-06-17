@@ -182,6 +182,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
 
   async function handleSubmit(formData: NFTTransferFormData) {
     const { destination, fee } = formData;
+    const feeInMojos = chiaToMojo(fee || 0);
     let isValid = true;
     let confirmation = false;
 
@@ -199,6 +200,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
         nftCoinId: nft.nftCoinId,
         launcherId: nft.launcherId,
         targetAddress: destination,
+        fee: feeInMojos,
       });
       const success = response?.success ?? false;
       const errorMessage = error ?? undefined;

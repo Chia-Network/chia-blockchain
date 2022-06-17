@@ -15,8 +15,10 @@ import {
   ArrowForward as TransferIcon,
   Link as LinkIcon,
   Download as DownloadIcon,
+  PermIdentity as PermIdentityIcon,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
+import NFTMoveToProfileDialog from './NFTMoveToProfileDialog';
 import NFTSelection from '../../types/NFTSelection';
 import useOpenUnsafeLink from '../../hooks/useOpenUnsafeLink';
 import useViewNFTOnExplorer, {
@@ -33,14 +35,16 @@ export enum NFTContextualActionTypes {
   None = 0,
   CreateOffer = 1 << 0, // 1
   Transfer = 1 << 1, // 2
-  CopyNFTId = 1 << 2, // 4
-  CopyURL = 1 << 3, // 8
-  ViewOnExplorer = 1 << 4, // 16
-  OpenInBrowser = 1 << 5, // 32
-  Download = 1 << 6, // 64
+  MoveToProfile = 1 << 2, // 4
+  CopyNFTId = 1 << 3, // 8
+  CopyURL = 1 << 4, // 16
+  ViewOnExplorer = 1 << 5, // 32
+  OpenInBrowser = 1 << 6, // 64
+  Download = 1 << 7, // 128
 
   All = CreateOffer |
     Transfer |
+    MoveToProfile |
     CopyNFTId |
     CopyURL |
     ViewOnExplorer |
@@ -157,7 +161,7 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
     if (result) {
       if (result.success) {
         openDialog(
-          <AlertDialog title={<Trans>NFT Transfer Complete</Trans>}>
+          <AlertDialog title={<Trans>NFT Transfer Pending</Trans>}>
             <Trans>
               The NFT transfer transaction has been successfully submitted to
               the blockchain.
@@ -188,13 +192,77 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
         handleTransferNFT();
       }}
       disabled={disabled}
-      divider={true}
     >
       <ListItemIcon>
         <TransferIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
         <Trans>Transfer NFT</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
+/* ========================================================================== */
+/*                           Move to Profile Action                           */
+/* ========================================================================== */
+
+type NFTMoveToProfileContextualActionProps = NFTContextualActionProps;
+
+function NFTMoveToProfileContextualAction(
+  props: NFTMoveToProfileContextualActionProps,
+) {
+  const { onClose, selection } = props;
+  const openDialog = useOpenDialog();
+
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled =
+    (selection?.items.length ?? 0) !== 1 ||
+    selectedNft?.pendingTransaction ||
+    !selectedNft?.supportsDid;
+
+  function handleComplete(result?: NFTTransferResult) {
+    if (result) {
+      if (result.success) {
+        openDialog(
+          <AlertDialog title={<Trans>NFT Transfer Complete</Trans>}>
+            <Trans>
+              The NFT transfer transaction has been successfully submitted to
+              the blockchain.
+            </Trans>
+          </AlertDialog>,
+        );
+      } else {
+        const error = result.error || 'Unknown error';
+        openDialog(
+          <AlertDialog title={<Trans>NFT Transfer Failed</Trans>}>
+            <Trans>The NFT transfer failed: {error}</Trans>
+          </AlertDialog>,
+        );
+      }
+    }
+  }
+
+  function handleTransferNFT() {
+    openDialog(
+      <NFTMoveToProfileDialog nft={selectedNft} onComplete={handleComplete} />,
+    );
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleTransferNFT();
+      }}
+      disabled={disabled}
+      divider={true}
+    >
+      <ListItemIcon>
+        <PermIdentityIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Move to Profile</Trans>
       </Typography>
     </MenuItem>
   );
@@ -337,9 +405,7 @@ function NFTViewOnExplorerContextualAction(
 
 type NFTDownloadContextualActionProps = NFTContextualActionProps;
 
-function NFTDownloadContextualAction(
-  props: NFTDownloadContextualActionProps,
-) {
+function NFTDownloadContextualAction(props: NFTDownloadContextualActionProps) {
   const { onClose, selection } = props;
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = !selectedNft;
@@ -378,7 +444,6 @@ function NFTDownloadContextualAction(
   );
 }
 
-
 /* ========================================================================== */
 /*                             Contextual Actions                             */
 /* ========================================================================== */
@@ -411,6 +476,10 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
       },
       [NFTContextualActionTypes.Transfer]: {
         action: NFTTransferContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.MoveToProfile]: {
+        action: NFTMoveToProfileContextualAction,
         props: {},
       },
       [NFTContextualActionTypes.ViewOnExplorer]: [

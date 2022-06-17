@@ -1,8 +1,6 @@
-import React from 'react';
 import type { NFTInfo } from '@chia/api';
 import { useCurrencyCode } from '@chia/core';
 import useOpenExternal from './useOpenExternal';
-import { slice } from 'lodash';
 
 /* ========================================================================== */
 

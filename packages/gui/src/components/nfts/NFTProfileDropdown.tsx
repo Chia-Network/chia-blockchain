@@ -6,10 +6,9 @@ import {
   AutoAwesome as AutoAwesomeIcon,
   PermIdentity as PermIdentityIcon,
 } from '@mui/icons-material';
-import { Box, ListItemIcon, MenuItem, Typography } from '@mui/material';
-import { WalletType } from '@chia/api';
+import { ListItemIcon, MenuItem } from '@mui/material';
 import {
-  useGetWalletsQuery,
+  useGetDIDsQuery,
   useGetNFTWallets,
   useGetNFTWalletsWithDIDsQuery,
 } from '@chia/api-react';
@@ -21,32 +20,29 @@ type Profile = Wallet & {
 };
 
 function useProfiles() {
-  const { data: wallets, isLoading, error } = useGetWalletsQuery();
+  // const { data: wallets, isLoading, error } = useGetWalletsQuery();
+  const { data: dids, isLoading, error } = useGetDIDsQuery();
   const { data: nftWallets, isLoading: loadingNFTWallets } =
     useGetNFTWalletsWithDIDsQuery();
 
   const profiles: Profile[] = useMemo(() => {
-    if (!wallets || !nftWallets) {
+    if (!dids || !nftWallets) {
       return [];
     }
-    const didWallets = wallets.filter(
-      (wallet) => wallet.type === WalletType.DISTRIBUTED_ID,
-    );
-
-    const profiles = nftWallets.map((nftWallet) => {
+    const profiles = nftWallets.map((nftWallet: Wallet) => {
       return {
-        ...didWallets.find(
-          (didWallet) => didWallet.id === nftWallet.didWalletId,
+        ...dids.find(
+          (didWallet: Wallet) => didWallet.id === nftWallet.didWalletId,
         ),
         nftWalletId: nftWallet.walletId,
       };
     });
 
     return orderBy(profiles, ['name'], ['asc']);
-  }, [wallets, nftWallets]);
+  }, [dids, nftWallets]);
 
   return {
-    isLoading,
+    isLoading: isLoading || loadingNFTWallets,
     data: profiles,
     error,
   };
@@ -60,21 +56,22 @@ export type NFTGallerySidebarProps = {
 export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
   const { onChange, walletId } = props;
   const { isLoading: isLoadingProfiles, data: profiles } = useProfiles();
-  const { wallets: nftWallets, isLoadingNFTWallets } = useGetNFTWallets();
+  const { wallets: nftWallets, isLoading: isLoadingNFTWallets } =
+    useGetNFTWallets();
 
   const inbox: Wallet | undefined = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets) {
       return undefined;
     }
 
-    const nftWalletIds = nftWallets.map((nftWallet) => nftWallet.walletId);
+    const nftWalletIds = nftWallets.map((nftWallet) => nftWallet.id);
     const profileWalletIds = new Set(
       profiles.map((profile) => profile.nftWalletId),
     );
     const inboxWalletId = nftWalletIds.find(
       (nftWalletId) => !profileWalletIds.has(nftWalletId),
     );
-    return nftWallets.find((wallet) => wallet.walletId === inboxWalletId);
+    return nftWallets.find((wallet) => wallet.id === inboxWalletId);
   }, [profiles, nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
 
   const label = useMemo(() => {
@@ -91,14 +88,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
     );
 
     return profile?.name || <Trans>All Profiles</Trans>;
-  }, [
-    profiles,
-    nftWallets,
-    isLoadingProfiles,
-    isLoadingNFTWallets,
-    walletId,
-    inbox,
-  ]);
+  }, [profiles, isLoadingProfiles, isLoadingNFTWallets, walletId, inbox]);
 
   function handleWalletChange(newWalletId?: number) {
     onChange?.(newWalletId);

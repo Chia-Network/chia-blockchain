@@ -8,7 +8,7 @@ import {
   useGetNFTInfoQuery,
   useGetNFTWallets,
 } from '@chia/api-react';
-import type { NFTInfo, Wallet } from '@chia/api';
+import type { Wallet } from '@chia/api';
 import { OfferSummaryRecord, OfferTradeRecord } from '@chia/api';
 import {
   Back,
@@ -93,7 +93,7 @@ function NFTOfferSummaryRow(props: NFTOfferSummaryRowProps) {
 
         if (['xch', 'txch'].includes(key.toLowerCase())) {
           assetType = OfferAsset.CHIA;
-        } else if (!!infoDict?.type) {
+        } else if (infoDict?.type) {
           switch (infoDict.type.toLowerCase()) {
             case 'singleton':
               assetType = OfferAsset.NFT;
@@ -265,8 +265,7 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
     overrideNFTSellerAmount,
   } = props;
   const { lookupByAssetId } = useAssetIdName();
-  const { wallets: nftWallets, isLoading: isLoadingWallets } =
-    useGetNFTWallets();
+  const { wallets: nftWallets } = useGetNFTWallets();
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
@@ -378,16 +377,6 @@ type NFTOfferDetailsProps = {
 function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const { tradeRecord, offerData, offerSummary, imported } = props;
   const summary = tradeRecord?.summary || offerSummary;
-  // // TODO: Remove -- just for testing
-  // const originalSummary = tradeRecord?.summary || offerSummary;
-  // const offered = originalSummary.offered;
-  // const requested = originalSummary.requested;
-  // const summary = {
-  //   ...originalSummary,
-  //   offered: requested,
-  //   requested: offered,
-  // };
-  // // TODO: end remove
   const exchangeType = determineNFTOfferExchangeType(summary);
   const makerFee: number = summary.fees;
   const isMyOffer = !!tradeRecord?.isMyOffer;
@@ -409,11 +398,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const nftId: string | undefined = launcherId
     ? launcherIdToNFTId(launcherId)
     : undefined;
-  const {
-    data: nft,
-    isLoading,
-    error,
-  } = useGetNFTInfoQuery({ coinId: launcherId });
+  const { data: nft } = useGetNFTInfoQuery({ coinId: launcherId });
   const amount = getNFTPriceWithoutRoyalties(summary);
 
   const nftSaleInfo = useMemo(() => {
@@ -443,7 +428,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const royaltyPercentageColor = showRoyaltyWarning
     ? StateColor.WARNING
     : 'textSecondary';
-  const showNegativeAmountWarning = (nftSaleInfo?.nftSellerNetAmount ?? 0) < 0;
   const overrideNFTSellerAmount =
     exchangeType === NFTOfferExchangeType.XCHForNFT
       ? chiaToMojo(nftSaleInfo?.nftSellerNetAmount ?? 0)
@@ -618,7 +602,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                               The total amount requested includes the asking
                               price, plus the associated creator fees (if the
                               NFT has royalty payments enabled).
-                              {!!imported ? (
+                              {imported ? (
                                 <>
                                   <p />
                                   The optional network fee is not included in
