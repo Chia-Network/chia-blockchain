@@ -137,6 +137,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
+            "/nft_set_nft_did": self.nft_set_nft_did,
             "/nft_get_wallet_did": self.nft_get_wallet_did,
             "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
@@ -1399,6 +1400,22 @@ class WalletRpcApi:
             nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
+    async def nft_set_nft_did(self, request):
+        try:
+            assert self.service.wallet_state_manager is not None
+            wallet_id = uint32(request["wallet_id"])
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            did_id: Optional[bytes32] = None
+            if "did_id" in request:
+                did_id = decode_puzzle_hash(request["did_id"])
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            fee = uint64(request.get("fee", 0))
+            spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        except Exception as e:
+            log.exception(f"Failed to set DID on NFT: {e}")
+            return {"success": False, "error": f"Failed to set DID on NFT: {e}"}
+
     async def nft_get_by_did(self, request) -> Dict:
         did_id: Optional[bytes32] = None
         if "did_id" in request:
@@ -1469,7 +1486,7 @@ class WalletRpcApi:
             txs = await nft_wallet.generate_signed_transaction(
                 [nft_coin_info.coin.amount],
                 [puzzle_hash],
-                coins=[nft_coin_info.coin],
+                coins={nft_coin_info.coin},
                 fee=fee,
             )
             spend_bundle: Optional[SpendBundle] = None
