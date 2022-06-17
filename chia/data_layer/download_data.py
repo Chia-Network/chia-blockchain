@@ -3,7 +3,7 @@ import asyncio
 import os
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Literal, List, Optional
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, Root
@@ -96,9 +96,10 @@ async def write_files_for_root(
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
 
     written = False
+    mode: Literal["wb", "xb"] = "wb" if override else "xb"
 
     try:
-        with open(filename_full_tree, "wb" if override else "xb") as writer:
+        with open(filename_full_tree, mode) as writer:
             await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
         written = True
     except FileExistsError:
@@ -109,10 +110,10 @@ async def write_files_for_root(
             tree_id, root.node_hash, max_generation=root.generation
         )
         if last_seen_generation is None:
-            with open(filename_diff_tree, "wb" if override else "xb") as writer:
+            with open(filename_diff_tree, mode) as writer:
                 await data_store.write_tree_to_file(root, node_hash, tree_id, True, writer)
         else:
-            open(filename_diff_tree, "wb" if override else "xb").close()
+            open(filename_diff_tree, mode).close()
         written = True
     except FileExistsError:
         pass
