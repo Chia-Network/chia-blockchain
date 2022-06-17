@@ -99,7 +99,7 @@ class FullNode:
     _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
     config: Dict
-    server: Any
+    server: Any  # TODO: nope... Optional[ChiaServer]
     log: logging.Logger
     constants: ConsensusConstants
     _shut_down: bool
@@ -158,6 +158,42 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
+
+    def custom_get_connections(self, request_node_type) -> List[Dict[str, Any]]:
+        # TODO: nope...
+        assert self.server is not None
+        # TODO add peaks for peers
+        connections = self.server.get_connections(request_node_type)
+        con_info: List[Dict[str, Any]] = []
+        if self.sync_store is not None:
+            peak_store = self.sync_store.peer_to_peak
+        else:
+            peak_store = None
+        for con in connections:
+            if peak_store is not None and con.peer_node_id in peak_store:
+                peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
+            else:
+                peak_height = None
+                peak_hash = None
+                peak_weight = None
+            con_dict: Dict[str, Any] = {
+                "type": con.connection_type,
+                "local_port": con.local_port,
+                "peer_host": con.peer_host,
+                "peer_port": con.peer_port,
+                "peer_server_port": con.peer_server_port,
+                "node_id": con.peer_node_id,
+                "creation_time": con.creation_time,
+                "bytes_read": con.bytes_read,
+                "bytes_written": con.bytes_written,
+                "last_message_time": con.last_message_time,
+                "peak_height": peak_height,
+                "peak_weight": peak_weight,
+                "peak_hash": peak_hash,
+            }
+            con_info.append(con_dict)
+
+        return con_info
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

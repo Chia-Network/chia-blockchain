@@ -10,7 +10,8 @@ from typing_extensions import Protocol
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
-from chia.server.server import ssl_context_for_client, ssl_context_for_server
+from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
@@ -22,7 +23,27 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
+class CustomGetConnectionsProtocol(Protocol):
+    def __call__(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        pass
+
+
+class RpcServiceProtocol(Protocol):
+    server: Optional[ChiaServer]
+    custom_get_connections: Optional[CustomGetConnectionsProtocol]
+
+    async def on_connect(self, peer: WSChiaConnection) -> None:
+        pass
+
+    def _set_state_changed_callback(self, callback: Callable) -> None:
+        pass
+
+
 class RpcApiProtocol(Protocol):
+    service_name: str
+    # TODO: https://github.com/python/mypy/issues/12990
+    service: Any  # RpcServiceProtocol
+
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         pass
 
@@ -32,7 +53,7 @@ class RpcServer:
     Implementation of RPC server.
     """
 
-    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config):
+    def __init__(self, rpc_api: RpcApiProtocol, service_name: str, stop_cb: Callable, root_path, net_config):
         self.rpc_api = rpc_api
         self.stop_cb: Callable = stop_cb
         self.log = log
@@ -110,43 +131,15 @@ class RpcServer:
             "routes": list(self.get_routes().keys()),
         }
 
-    async def get_connections(self, request: Dict) -> Dict:
+    async def get_connections(self, request: Dict) -> Dict[str, List[Dict[str, Any]]]:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
-            # TODO add peaks for peers
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
-            con_info = []
-            if self.rpc_api.service.sync_store is not None:
-                peak_store = self.rpc_api.service.sync_store.peer_to_peak
-            else:
-                peak_store = None
-            for con in connections:
-                if peak_store is not None and con.peer_node_id in peak_store:
-                    peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
-                else:
-                    peak_height = None
-                    peak_hash = None
-                    peak_weight = None
-                con_dict = {
-                    "type": con.connection_type,
-                    "local_port": con.local_port,
-                    "peer_host": con.peer_host,
-                    "peer_port": con.peer_port,
-                    "peer_server_port": con.peer_server_port,
-                    "node_id": con.peer_node_id,
-                    "creation_time": con.creation_time,
-                    "bytes_read": con.bytes_read,
-                    "bytes_written": con.bytes_written,
-                    "last_message_time": con.last_message_time,
-                    "peak_height": peak_height,
-                    "peak_weight": peak_weight,
-                    "peak_hash": peak_hash,
-                }
-                con_info.append(con_dict)
+        con_info: List[Dict[str, Any]]
+        if self.rpc_api.service.custom_get_connections is not None:
+            con_info = self.rpc_api.service.custom_get_connections(request_node_type=request_node_type)
         else:
             connections = self.rpc_api.service.server.get_connections(request_node_type)
             con_info = [
@@ -173,6 +166,8 @@ class RpcServer:
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
+        # TODO: nope...
+        assert self.rpc_api.service.server is not None
         if getattr(self.rpc_api.service, "server", None) is None or not (
             await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
@@ -307,7 +302,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: Any,
+    rpc_api: RpcApiProtocol,
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,

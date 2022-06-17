@@ -65,6 +65,7 @@ class WalletRpcApi:
         self.service = wallet_node
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
+        self.custom_get_connections: None = None
 
     def get_routes(self) -> Dict[str, Callable]:
         return {

@@ -97,6 +97,7 @@ class WalletNode:
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
     local_node_synced: bool
+    custom_get_connections: None
 
     def __init__(
         self,
@@ -144,6 +145,7 @@ class WalletNode:
         self.LONG_SYNC_THRESHOLD = 200
         self.last_wallet_tx_resend_time: int = 0
         self.wallet_tx_resend_timeout_secs: int = 1800  # Duration in seconds
+        self.custom_get_connections = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -185,9 +187,6 @@ class WalletNode:
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
-        # Makes sure the coin_state_updates get higher priority than new_peak messages
-        self.new_peak_queue = NewPeakQueue(asyncio.PriorityQueue())
-
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
