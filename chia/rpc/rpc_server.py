@@ -17,7 +17,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import select_port
-from chia.util.ws_message import create_payload, create_payload_dict, format_response, pong
+from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -55,12 +55,11 @@ class RpcServer:
         if self.client_session is not None:
             await self.client_session.close()
 
-    async def _state_changed(self, *args):
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        payloads: List[Dict] = await self.rpc_api._state_changed(*args)
+        payloads: List[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
 
-        change = args[0]
         if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
             if data is not None:
@@ -83,10 +82,10 @@ class RpcServer:
                 tb = traceback.format_exc()
                 log.warning(f"Sending data failed. Exception {tb}.")
 
-    def state_changed(self, *args):
+    def state_changed(self, change: str, change_data: Dict[str, Any]) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        asyncio.create_task(self._state_changed(*args))
+        asyncio.create_task(self._state_changed(change, change_data))
 
     def get_routes(self) -> Dict[str, Callable]:
         return {

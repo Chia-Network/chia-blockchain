@@ -154,31 +154,18 @@ class WalletRpcApi:
             "/pw_status": self.pw_status,
         }
 
-    async def _state_changed(self, *args) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
         payloads = []
-        if args[0] is not None and args[0] == "sync_changed":
+        if change in {"sync_changed", "coin_added"}:
             # Metrics is the only current consumer for this event
-            payloads.append(create_payload_dict(args[0], {}, self.service_name, "metrics"))
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if len(args) < 2:
-            return payloads
-
-        data = {
-            "state": args[0],
-        }
-        if args[1] is not None:
-            data["wallet_id"] = args[1]
-        if args[2] is not None:
-            data["additional_data"] = args[2]
-
-        payloads.append(create_payload_dict("state_changed", data, self.service_name, "wallet_ui"))
-
-        if args[0] == "coin_added":
-            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+        if "wallet_id" in change_data or "additional_data" in change_data:
+            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
