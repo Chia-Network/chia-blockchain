@@ -3,7 +3,8 @@ import asyncio
 import os
 import logging
 from pathlib import Path
-from typing import Literal, List, Optional
+from typing import List, Optional
+from typing_extensions import Literal
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import NodeType, Status, SerializedNode, Root
