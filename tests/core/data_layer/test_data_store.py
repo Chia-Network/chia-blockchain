@@ -1,4 +1,5 @@
 import itertools
+import statistics
 import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple, Set
 from random import Random
@@ -82,7 +83,6 @@ async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
     await raw_data_store.create_tree(tree_id=tree_id)
 
 
-@pytest.mark.xfail(strict=True)
 @pytest.mark.parametrize(argnames=["length"], argvalues=[[length] for length in [*range(0, 32), *range(33, 48)]])
 @pytest.mark.asyncio
 async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, length: int) -> None:
@@ -90,6 +90,7 @@ async def test_create_tree_fails_for_not_bytes32(raw_data_store: DataStore, leng
 
     # TODO: require a more specific exception
     with pytest.raises(Exception):
+        # type ignore since we are trying to intentionally pass a bad argument
         await raw_data_store.create_tree(tree_id=bad_tree_id)  # type: ignore[arg-type]
 
 
@@ -212,9 +213,9 @@ async def test_insert_terminal_node_does_nothing_if_matching(data_store: DataSto
 async def test_build_a_tree(
     data_store: DataStore,
     tree_id: bytes32,
-    create_example: Callable[[DataStore, bytes32], Example],
+    create_example: Callable[[DataStore, bytes32], Awaitable[Example]],
 ) -> None:
-    example = await create_example(data_store=data_store, tree_id=tree_id)  # type: ignore
+    example = await create_example(data_store, tree_id)
 
     await _debug_dump(db=data_store.db, description="final")
     actual = await data_store.get_tree_as_program(tree_id=tree_id)
@@ -400,91 +401,55 @@ async def test_inserting_duplicate_key_fails(
         )
 
 
-@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: bytes32) -> None:
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
-            ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
-            ),
-        ),
-    )
+    random = Random()
+    random.seed(100, version=2)
+    hint_keys_values: Dict[bytes, bytes] = {}
+    hashes = []
 
-    for n in [0, 4, 2, 6, 1, 3, 5, 7]:
-        await data_store.autoinsert(
-            key=bytes([n]),
-            value=bytes([0x10 + n, n]),
-            tree_id=tree_id,
-        )
+    for i in range(2000):
+        key = (i + 100).to_bytes(4, byteorder="big")
+        value = (i + 200).to_bytes(4, byteorder="big")
+        node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
+        hashes.append(node_hash)
 
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
-
-    assert result == expected
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    too_tall = {hash: height for hash, height in heights.items() if height > 14}
+    assert too_tall == {}
+    assert 11 <= statistics.mean(heights.values()) <= 12
 
 
-@pytest.mark.xfail()
 @pytest.mark.asyncio()
 async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32) -> None:
-    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    random = Random()
+    random.seed(101, version=2)
+    hint_keys_values: Dict[bytes, bytes] = {}
+    hashes = []
 
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
-            ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
-            ),
-        ),
-    )
+    for i in range(2000):
+        key = (i + 100).to_bytes(4, byteorder="big")
+        value = (i + 200).to_bytes(4, byteorder="big")
+        if i == 0 or i > 10:
+            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
+        else:
+            reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
+            node_hash = await data_store.insert(
+                key=key,
+                value=value,
+                tree_id=tree_id,
+                reference_node_hash=reference_node_hash,
+                side=Side.LEFT,
+                hint_keys_values=hint_keys_values,
+            )
+            ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
+            assert len(ancestors) == i
+        hashes.append(node_hash)
 
-    ns = [1, 5]
-
-    for n in ns:
-        await data_store.delete(key=Program.to(bytes([n])), tree_id=tree_id)
-
-    for n in ns:
-        await data_store.autoinsert(
-            key=bytes([n]),
-            value=bytes([0x10 + n, n]),
-            tree_id=tree_id,
-        )
-
-    result = await data_store.get_tree_as_program(tree_id=tree_id)
-
-    assert result == expected
+    heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
+    too_tall = {hash: height for hash, height in heights.items() if height > 14}
+    assert too_tall == {}
+    assert 11 <= statistics.mean(heights.values()) <= 12
 
 
 @pytest.mark.parametrize(

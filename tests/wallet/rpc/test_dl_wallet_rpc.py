@@ -44,9 +44,6 @@ class TestWalletRpc:
     async def test_wallet_make_transaction(
         self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, bt: BlockTools, self_hostname: str
     ) -> None:
-        test_rpc_port = uint16(21529)
-        test_rpc_port_2 = uint16(21536)
-        test_rpc_port_node = uint16(21530)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -86,31 +83,31 @@ class TestWalletRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-        rpc_cleanup_node = await start_rpc_server(
+        rpc_cleanup_node, node_rpc_port = await start_rpc_server(
             full_node_rpc_api,
             hostname,
             daemon_port,
-            test_rpc_port_node,
+            uint16(0),
             stop_node_cb,
             bt.root_path,
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup_wallet, wallet_1_rpc_port = await start_rpc_server(
             wallet_rpc_api,
             hostname,
             daemon_port,
-            test_rpc_port,
+            uint16(0),
             stop_node_cb,
             bt.root_path,
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup = await start_rpc_server(
+        rpc_cleanup_wallet_2, wallet_2_rpc_port = await start_rpc_server(
             wallet_rpc_api_2,
             hostname,
             daemon_port,
-            test_rpc_port_2,
+            uint16(0),
             stop_node_cb,
             bt.root_path,
             config,
@@ -120,9 +117,9 @@ class TestWalletRpc:
         await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+        client = await WalletRpcClient.create(self_hostname, wallet_1_rpc_port, bt.root_path, config)
         await validate_get_routes(client, wallet_rpc_api)
-        client_2 = await WalletRpcClient.create(self_hostname, test_rpc_port_2, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(self_hostname, wallet_2_rpc_port, bt.root_path, config)
         await validate_get_routes(client_2, wallet_rpc_api_2)
 
         try:
@@ -248,9 +245,14 @@ class TestWalletRpc:
             await client_2.dl_stop_tracking(launcher_id)
             assert await client_2.dl_latest_singleton(lid) is None
 
+            owned_singletons = await client.dl_owned_singletons()
+            owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
+            assert owned_launcher_ids == sorted([launcher_id, launcher_id_2, launcher_id_3])
+
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()
             await rpc_cleanup_node()
+            await rpc_cleanup_wallet()
+            await rpc_cleanup_wallet_2()

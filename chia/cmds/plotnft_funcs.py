@@ -1,4 +1,3 @@
-from collections import Counter
 from decimal import Decimal
 from dataclasses import replace
 
@@ -26,6 +25,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -100,8 +100,8 @@ async def create(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -
                 await asyncio.sleep(0.1)
                 tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
                     return None
         except Exception as e:
             print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
@@ -115,7 +115,6 @@ async def pprint_pool_wallet_state(
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
     pool_state_dict: Dict,
-    plot_counts: Counter,
 ):
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
@@ -128,7 +127,7 @@ async def pprint_pool_wallet_state(
         "Target address (not for plotting): "
         f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
     )
-    print(f"Number of plots: {plot_counts[pool_wallet_info.p2_singleton_puzzle_hash]}")
+    print(f"Number of plots: {pool_state_dict[pool_wallet_info.launcher_id]['plot_count']}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
@@ -182,15 +181,8 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     summaries_response = await wallet_client.get_wallets()
     wallet_id_passed_in = args.get("id", None)
-    plot_counts: Counter = Counter()
     try:
-        pool_state_list: List = (await farmer_client.get_pool_state())["pool_state"]
-        harvesters = await farmer_client.get_harvesters()
-        for d in harvesters["harvesters"]:
-            for plot in d["plots"]:
-                if plot.get("pool_contract_puzzle_hash", None) is not None:
-                    # Non pooled plots will have a None pool_contract_puzzle_hash
-                    plot_counts[hexstr_to_bytes(plot["pool_contract_puzzle_hash"])] += 1
+        pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):
             print(
@@ -219,7 +211,6 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             pool_wallet_info,
             address_prefix,
             pool_state_dict,
-            plot_counts,
         )
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
@@ -236,7 +227,6 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                     pool_wallet_info,
                     address_prefix,
                     pool_state_dict,
-                    plot_counts,
                 )
                 print("")
     farmer_client.close()
@@ -286,8 +276,8 @@ async def submit_tx_with_confirmation(
                 await asyncio.sleep(0.1)
                 tx = await wallet_client.get_transaction(str(1), tx_record.name)
                 if len(tx.sent_to) > 0:
-                    print(f"Transaction submitted to nodes: {tx.sent_to}")
-                    print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_record.name} to get status")
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
                     return None
         except Exception as e:
             print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")

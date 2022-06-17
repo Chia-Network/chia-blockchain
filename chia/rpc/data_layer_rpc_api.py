@@ -53,6 +53,7 @@ class DataLayerRpcApi:
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         return {
             "/create_data_store": self.create_data_store,
+            "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
             "/get_value": self.get_value,
             "/get_keys_values": self.get_keys_values,
@@ -75,6 +76,12 @@ class DataLayerRpcApi:
         txs, value = await self.service.create_store(uint64(fee))
         return {"txs": txs, "id": value.hex()}
 
+    async def get_owned_stores(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        singleton_records = await self.service.get_owned_stores()
+        return {"launcher_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
+
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
@@ -96,7 +103,7 @@ class DataLayerRpcApi:
         res = await self.service.get_keys_values(store_id, root_hash)
         json_nodes = []
         for node in res:
-            json = recurse_jsonify(dataclasses.asdict(node))  # type: ignore[no-untyped-call]
+            json = recurse_jsonify(dataclasses.asdict(node))
             json_nodes.append(json)
         return {"keys_values": json_nodes}
 

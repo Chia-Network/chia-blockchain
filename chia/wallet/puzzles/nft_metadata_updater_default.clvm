@@ -1,0 +1,21 @@
+(mod (CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH solution)
+
+  ; METADATA and METADATA_UPDATER_PUZZLE_HASH are passed in as truths from the layer above
+
+  ; This program returns ((new_metadata new_metadata_updater_puzhash) conditions)
+
+  ; once we find 'u' we don't need to continue looping
+  (defun add_url (METADATA new_url)
+    (if METADATA
+      (if (= (f (f METADATA)) 'u')
+        (c (c 'u' (c new_url (r (f METADATA)))) (r METADATA))
+        (c (f METADATA) (add_url (r METADATA) new_url))
+      )
+      ()
+    )
+  )
+
+  ; main
+  ; returns ((new_metadata new_metadata_updater_puzhash) conditions)
+  (list (list (if solution (add_url CURRENT_METADATA solution) CURRENT_METADATA) METADATA_UPDATER_PUZZLE_HASH) 0)
+)

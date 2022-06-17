@@ -4,7 +4,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 
@@ -18,13 +18,29 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
+
+
+transaction_type_descriptions = {
+    TransactionType.INCOMING_TX: "received",
+    TransactionType.OUTGOING_TX: "sent",
+    TransactionType.COINBASE_REWARD: "rewarded",
+    TransactionType.FEE_REWARD: "rewarded",
+    TransactionType.INCOMING_TRADE: "received in trade",
+    TransactionType.OUTGOING_TRADE: "sent in trade",
+}
+
+
+def transaction_description_from_type(tx: TransactionRecord) -> str:
+    return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
 def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
@@ -35,7 +51,8 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         to_address = encode_puzzle_hash(tx.to_puzzle_hash, address_prefix)
         print(f"Transaction {tx.name}")
         print(f"Status: {'Confirmed' if tx.confirmed else ('In mempool' if tx.is_in_mempool() else 'Pending')}")
-        print(f"Amount {'sent' if tx.sent else 'received'}: {chia_amount} {name}")
+        description = transaction_description_from_type(tx)
+        print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         print("")
@@ -43,12 +60,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return mojo_per_unit
 
@@ -70,12 +87,12 @@ async def get_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return name
 
@@ -115,9 +132,13 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         paginate = sys.stdout.isatty()
     offset = args["offset"]
     limit = args["limit"]
+    sort_key = args["sort_key"]
+    reverse = args["reverse"]
+
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, start=offset, end=(offset + limit), reverse=True
+        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse
     )
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     if len(txs) == 0:
@@ -208,8 +229,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         await asyncio.sleep(0.1)
         tx = await wallet_client.get_transaction(str(wallet_id), tx_id)
         if len(tx.sent_to) > 0:
-            print(f"Transaction submitted to nodes: {tx.sent_to}")
-            print(f"Do chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id} to get status")
+            print(transaction_submitted_msg(tx))
+            print(transaction_status_msg(fingerprint, tx_id))
             return None
 
     print("Transaction not yet submitted to nodes")
@@ -260,7 +281,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     if [] in [offers, requests]:
         print("Not creating offer: Must be offering and requesting at least one asset")
     else:
-        offer_dict: Dict[uint32, int] = {}
+        offer_dict: Dict[Union[uint32, str], int] = {}
         printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
         for item in [*offers, *requests]:
             wallet_id, amount = tuple(item.split(":")[0:2])
@@ -354,7 +375,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested = offer.summary()
+        offered, requested, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.bundle.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -431,7 +452,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
-    offered, requested = offer.summary()
+    offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
@@ -622,3 +643,103 @@ async def execute_with_wallet(
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()
     await wallet_client.await_closed()
+
+
+async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    amount = args["amount"]
+    fee = args["fee"]
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_did_wallet(amount, fee, name)
+        wallet_id = response["wallet_id"]
+        my_did = response["my_did"]
+        print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
+        print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+    except Exception as e:
+        print(f"Failed to create DID wallet: {e}")
+
+
+async def did_set_wallet_name(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    name = args["name"]
+    try:
+        await wallet_client.did_set_wallet_name(wallet_id, name)
+        print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
+    except Exception as e:
+        print(f"Failed to set DID wallet name: {e}")
+
+
+async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        response = await wallet_client.create_new_nft_wallet(None)
+        wallet_id = response["wallet_id"]
+        print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to create NFT wallet: {e}")
+
+
+async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        artist_address = args["artist_address"]
+        hash = args["hash"]
+        uris = args["uris"]
+        fee = args["fee"]
+        response = await wallet_client.mint_nft(wallet_id, artist_address, hash, uris, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to mint NFT: {e}")
+
+
+async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        uri = args["uri"]
+        fee = args["fee"]
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, uri, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"URI added successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to add URI to NFT: {e}")
+
+
+async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        artist_address = args["artist_address"]
+        fee = args["fee"]
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, artist_address, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to transfer NFT: {e}")
+
+
+async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    try:
+        response = await wallet_client.list_nfts(wallet_id)
+        nft_list = response["nft_list"]
+        if len(nft_list) > 0:
+            from chia.wallet.nft_wallet.nft_info import NFTInfo
+
+            indent: str = "   "
+
+            for n in nft_list:
+                nft = NFTInfo.from_json_dict(n)
+                print()
+                print(f"{'Launcher coin ID:'.ljust(23)} {nft.launcher_id}")
+                print(f"{'Current NFT coin ID:'.ljust(23)} {nft.nft_coin_id}")
+                print(f"{'NFT content hash:'.ljust(23)} {nft.data_hash}")
+                print(f"{'Current NFT version:'.ljust(23)} {nft.version}")
+                print()
+                print("URIs:")
+                for uri in nft.data_uris:
+                    print(f"{indent}{uri}")
+        else:
+            print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")

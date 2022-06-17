@@ -346,6 +346,9 @@ class DataLayer:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
 
+    async def get_owned_stores(self) -> List[SingletonRecord]:
+        return await self.wallet_rpc.dl_owned_singletons()
+
     async def get_kv_diff(self, tree_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
         return await self.data_store.get_kv_diff(tree_id, hash_1, hash_2)
 

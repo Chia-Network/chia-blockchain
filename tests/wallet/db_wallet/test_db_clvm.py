@@ -52,23 +52,21 @@ class TestDLLifecycle:
         return self.get_merkle_tree(string).calculate_root()
 
     def hash_merkle_value(self, string: str) -> bytes32:
-        # TODO: Fix hint errors and remove ignore
-        #  Returning Any from function declared to return "bytes32"
-        return Program.to(string).get_tree_hash()  # type: ignore
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
+        return Program.to(string).get_tree_hash()  # type: ignore[no-any-return]
 
     def get_merkle_proof(self, string: str) -> Program:
-        # TODO: Fix hint errors and remove ignore
-        #  Returning Any from function declared to return "Program"
-        return Program.to(self.get_merkle_tree(string).generate_proof(self.hash_merkle_value(string)))  # type: ignore
+        proof = self.get_merkle_tree(string).generate_proof(self.hash_merkle_value(string))
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
+        return Program.to(proof)  # type: ignore[no-any-return]
 
     @pytest_asyncio.fixture(scope="function")
     async def setup_sim_and_singleton(self) -> SetupArgs:
-        # TODO: Fix hint errors and remove ignore
-        #  Call to untyped function "create" in typed context
-        sim = await SpendSim.create()  # type: ignore
-        # TODO: Fix hint errors and remove ignore
-        #  Call to untyped function "SimClient" in typed context
-        sim_client = SimClient(sim)  # type: ignore
+        # https://github.com/Chia-Network/chia-blockchain/pull/11819
+        sim = await SpendSim.create()  # type: ignore[no-untyped-call]
+        sim_client = SimClient(sim)  # type: ignore[no-untyped-call]
         await sim.farm_block()
         await sim.farm_block(ACS_PH)
         fund_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH))[0].coin
@@ -153,9 +151,8 @@ class TestDLLifecycle:
             new_singleton = (await sim_client.get_coin_records_by_parent_ids([singleton.name()]))[0].coin
             assert new_singleton.puzzle_hash == singleton.puzzle_hash
         finally:
-            # TODO: Fix hint errors and remove ignore
-            #  Call to untyped function "close" in typed context
-            await sim.close()  # type: ignore
+            # https://github.com/Chia-Network/chia-blockchain/pull/11819
+            await sim.close()  # type: ignore[no-untyped-call]
 
     @pytest.mark.asyncio()
     async def test_update(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -201,9 +198,8 @@ class TestDLLifecycle:
                 ).get_tree_hash()
             )
         finally:
-            # TODO: Fix hint errors and remove ignore
-            #  Call to untyped function "close" in typed context
-            await sim.close()  # type: ignore
+            # https://github.com/Chia-Network/chia-blockchain/pull/11819
+            await sim.close()  # type: ignore[no-untyped-call]
 
     @pytest.mark.asyncio()
     async def test_offer_cant_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -249,9 +245,8 @@ class TestDLLifecycle:
             with pytest.raises(ValueError, match="clvm raise"):
                 offer_cs.puzzle_reveal.to_program().run(offer_cs.solution.to_program())
         finally:
-            # TODO: Fix hint errors and remove ignore
-            #  Call to untyped function "close" in typed context
-            await sim.close()  # type: ignore
+            # https://github.com/Chia-Network/chia-blockchain/pull/11819
+            await sim.close()  # type: ignore[no-untyped-call]
 
     @pytest.mark.asyncio()
     async def test_offer_can_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -298,9 +293,8 @@ class TestDLLifecycle:
             offer_reward = (await sim_client.get_coin_records_by_parent_ids([good_offer_coin.name()]))[0].coin
             assert offer_reward.puzzle_hash == ACS_2_PH
         finally:
-            # TODO: Fix hint errors and remove ignore
-            #  Call to untyped function "close" in typed context
-            await sim.close()  # type: ignore
+            # https://github.com/Chia-Network/chia-blockchain/pull/11819
+            await sim.close()  # type: ignore[no-untyped-call]
 
     @pytest.mark.asyncio()
     async def test_offer_recovery(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -340,9 +334,8 @@ class TestDLLifecycle:
             offer_reward = (await sim_client.get_coin_records_by_parent_ids([bad_offer_coin.name()]))[0].coin
             assert offer_reward.puzzle_hash == ACS_PH
         finally:
-            # TODO: Fix hint errors and remove ignore
-            #  Call to untyped function "close" in typed context
-            await sim.close()  # type: ignore
+            # https://github.com/Chia-Network/chia-blockchain/pull/11819
+            await sim.close()  # type: ignore[no-untyped-call]
 
     def test_cost(self) -> None:
         import json

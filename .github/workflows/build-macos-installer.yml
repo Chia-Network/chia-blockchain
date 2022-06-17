@@ -1,9 +1,11 @@
-name: MacOS Intel installer on Python 3.9
+name: Build Installer - MacOS Intel
 
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
@@ -12,12 +14,12 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: MacOS Intel Installer on Python 3.9
+    name: MacOS Intel Installer
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -25,7 +27,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [macOS-latest]
+        os: [macos-10.15]
 
     steps:
     - name: Checkout Code
@@ -65,7 +67,7 @@ jobs:
         deactivate
 
     - name: Setup Python environment
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -128,7 +130,7 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        sh install.sh
+        sh install.sh -d
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
@@ -148,7 +150,7 @@ jobs:
         sh build_macos.sh
 
     - name: Upload MacOS artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: chia-installers-macos-dmg-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/

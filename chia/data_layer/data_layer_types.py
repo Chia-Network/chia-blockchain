@@ -53,8 +53,10 @@ class TerminalNode:
     def pair(self) -> Tuple[bytes32, bytes32]:
         return Program.to(self.key), Program.to(self.value)
 
+    # It is unclear how to properly satisfy the generic Row normally, let alone for
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
+    def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":  # type: ignore[type-arg]
         return cls(
             hash=bytes32.fromhex(row["hash"]),
             # generation=row["generation"],
@@ -98,9 +100,8 @@ class ProofOfInclusion:
         )
         sibling_hashes = [layer.other_hash for layer in self.layers]
 
-        # TODO: Remove ignore when done.
-        #       https://github.com/Chia-Network/clvm/pull/102
-        #       https://github.com/Chia-Network/clvm/pull/106
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
 
@@ -114,8 +115,10 @@ class InternalNode:
     pair: Optional[Tuple[Node, Node]] = None
     atom: None = None
 
+    # It is unclear how to properly satisfy the generic Row normally, let alone for
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
+    def from_row(cls, row: aiosqlite.Row) -> "InternalNode":  # type: ignore[type-arg]
         return cls(
             hash=bytes32(hexstr_to_bytes(row["hash"])),
             # generation=row["generation"],
@@ -149,8 +152,10 @@ class Root:
     generation: int
     status: Status
 
+    # It is unclear how to properly satisfy the generic Row normally, let alone for
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> "Root":
+    def from_row(cls, row: aiosqlite.Row) -> "Root":  # type: ignore[type-arg]
         raw_node_hash = row["node_hash"]
         if raw_node_hash is None:
             node_hash = None

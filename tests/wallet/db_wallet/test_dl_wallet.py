@@ -116,6 +116,59 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
+    async def test_get_owned_singletons(self, wallet_node: SimulatorsAndWallets, trusted: bool) -> None:
+        full_nodes, wallets = wallet_node
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
+        wallet_node_0, server_0 = wallets[0]
+        assert wallet_node_0.wallet_state_manager is not None
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+
+        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
+
+        await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+
+        async with wallet_node_0.wallet_state_manager.lock:
+            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+
+        nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
+        current_tree = MerkleTree(nodes)
+        current_root = current_tree.calculate_root()
+
+        expected_launcher_ids = set()
+
+        for i in range(0, 2):
+            dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
+                current_root, fee=uint64(1999999999999)
+            )
+            expected_launcher_ids.add(launcher_id)
+
+            assert await dl_wallet.get_latest_singleton(launcher_id) is not None
+
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
+            await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
+            await full_node_api.process_transaction_records(records=[dl_record, std_record])
+
+            await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
+            await asyncio.sleep(0.5)
+
+        owned_singletons = await dl_wallet.get_owned_singletons()
+        owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
+        assert owned_launcher_ids == sorted(expected_launcher_ids)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
     async def test_tracking_non_owned(self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
