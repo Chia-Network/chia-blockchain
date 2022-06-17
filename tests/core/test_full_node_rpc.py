@@ -199,12 +199,11 @@ class TestRpc:
                 coin_spends = coin_spends + spend_bundle.coin_spends
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+            block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-            assert (
-                len((await full_node_api_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
-            )  # compression has occured
+            assert (len(block.transactions_generator_ref_list) > 0)  # compression has occurred
 
-            block_spends = await client.get_block_spends((await full_node_api_1.get_all_full_blocks())[-1].header_hash)
+            block_spends = await client.get_block_spends(block.header_hash)
 
             assert len(block_spends) == 3
             assert block_spends == coin_spends
