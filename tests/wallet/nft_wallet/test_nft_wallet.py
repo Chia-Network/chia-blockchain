@@ -1,6 +1,6 @@
 import asyncio
-import logging
-from typing import Any, Dict
+import time
+from typing import Any, Awaitable, Callable, Dict, List
 
 import pytest
 from clvm_tools.binutils import disassemble
@@ -23,8 +23,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
     tx = mempool.get_spendbundle(tx_id)
@@ -33,25 +31,30 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
     return True
 
 
-def assert_rpc_response(response, condition_func=None) -> Dict:
+def assert_rpc_response(response: Dict, condition_func: Callable[[Dict[str, Any]], bool] = None) -> Dict:
     assert isinstance(response, dict)
-    assert response.get("success")
     if condition_func:
         assert condition_func(response)
     return response
 
 
-async def wait_rpc_state_condition(timeout, coroutine, params, condition_func) -> Dict:
-    while timeout > 0:
+async def wait_rpc_state_condition(
+    timeout: int,
+    coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
+    params: List[Dict],
+    condition_func: Callable[[Dict[str, Any]], bool],
+) -> Dict:
+    start = time.monotonic()
+    resp = None
+    while time.monotonic() - start < timeout:
         resp = await coroutine(*params)
+        assert isinstance(resp, dict)
         if condition_func(resp):
-            assert isinstance(resp, dict)
             return resp
         await asyncio.sleep(0.5)
-        timeout -= 0.5
     else:
         # timed out
-        assert timeout > 0, resp
+        assert time.monotonic() - start < timeout, resp
     return {}
 
 
@@ -906,12 +909,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     assert len(coins) == 1
     assert coins[0].owner_did.hex() == hex_did_id
 
-    try:
-        wallet_1.wallet_state_manager.wallets[2]
-        raise AssertionError("NFT wallet shouldn't exist yet")
-    except KeyError:
-        # there shouldn't be a nft wallet yet
-        pass
+    assert len(wallet_1.wallet_state_manager.wallets) == 1, "NFT wallet shouldn't exist yet"
     resp = await api_0.nft_transfer_nft(
         dict(
             wallet_id=nft_wallet_0_id,
@@ -960,7 +958,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
     coins_response = await wait_rpc_state_condition(
-        5, api_1.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id")
+        5, api_1.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
     print(wallet_1.wallet_state_manager.wallets)
     nft_wallet_1_id = coins_response.get("wallet_id")
@@ -1172,9 +1170,8 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     # Check DID NFT
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
+        5, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
-
     coins = coins_response["nft_list"]
     assert len(coins) == 1
     assert coins[0].owner_did is None
@@ -1196,13 +1193,16 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id")
+        5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
 
     nft_wallet_1_id = coins_response.get("wallet_id")
     assert nft_wallet_1_id
     resp = await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_1_id)], lambda x: x["nft_list"] and x["nft_list"][0].owner_did
+        5,
+        api_0.nft_get_nfts,
+        [dict(wallet_id=nft_wallet_1_id)],
+        lambda x: len(x["nft_list"]) > 0 and x["nft_list"][0].owner_did,
     )
 
     coins = resp["nft_list"]
@@ -1218,13 +1218,13 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id")
+        5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id") is not None
     )
     nft_wallet_2_id = coins_response.get("wallet_id")
     assert nft_wallet_2_id
     # Check NFT DID
     resp = await wait_rpc_state_condition(
-        10, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_2_id)], lambda x: x["nft_list"]
+        10, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_2_id)], lambda x: len(x["nft_list"]) > 0
     )
     assert resp.get("success")
     coins = resp["nft_list"]
